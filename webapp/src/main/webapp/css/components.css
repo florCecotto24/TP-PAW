@@ -254,3 +254,79 @@ body.modal-open {
         padding: 1rem;
     }
 }
+
+/* Car Card */
+.carcard {
+    display: flex;
+    flex-direction: column;
+    width: 361px;
+    height:fit-content;
+    border: 1px solid rgb(216, 216, 216);
+    border-radius: 15px;
+    margin: 10px;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+    font-family: 'Roboto', sans-serif;
+}
+
+.carcard img {
+    width: 100%;
+    border-radius: 15px 15px 0 0;
+}
+
+.carcard-info {
+    margin: 10px;
+    display: flex;
+    flex: 1;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.carcard-info div{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.carcard-info-text{
+    text-align: left;
+    min-width: 0;
+}
+
+.carcard-info-text * {
+    margin: 2.5px;
+}
+
+.carcard-info-text p {
+    font-size: 18px;
+    font-weight: normal;
+}
+
+.carcard-model {
+    color: grey;
+}
+
+.carcard-brand {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.carcard-price * {
+    margin: 2.5px;
+    text-align: center;
+    font-weight: lighter;
+    font-size: 18px;
+    color: grey;
+}
+
+#carcard-price-amount {
+    color: #3277D8;
+    font-weight: bold;
+    font-size: 30px;
+}
+
+.star {
+    font-weight: bold;
+    color: #FFCD1B;
+}
