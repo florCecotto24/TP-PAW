@@ -49,6 +49,11 @@
             .modal-overlay--md .modal__content { min-height: 340px; }
             .modal-overlay--lg .modal__content { min-height: 460px; }
             .modal__message { white-space: pre-line; }
+            .input-demo-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.5rem; }
+            .input-demo-row .mb-3 { margin-bottom: 0; min-width: 200px; }
+            .input-sm.form-control, .input-sm { padding: 0.35rem 0.5rem; font-size: 0.8rem; }
+            .input-md.form-control, .input-md { padding: 0.5rem 0.75rem; font-size: 0.95rem; }
+            .input-lg.form-control, .input-lg { padding: 0.65rem 1rem; font-size: 1.1rem; }
         </style>
     </head>
 
@@ -79,6 +84,15 @@ Curabitur curae egestas tellus ac duis porta penatibus interdum mi, neque euismo
             </div>
 
             <div class="content">
+                <div class="example-title">Input</div>
+                <div class="input-demo-row">
+                    <paw:input name="demo-sm" label="Small" placeholder="Small size" cssClass="input-sm" />
+                    <paw:input name="demo-md" label="Medium" placeholder="Medium size" cssClass="input-md" />
+                    <paw:input name="demo-lg" label="Large" placeholder="Large size" cssClass="input-lg" />
+                </div>
+            </div>
+
+            <div class="content">
                 <div class="example-title" >CarCard</div>
                 <div class="demo-row">
                     <div class="carcard-col">
@@ -98,6 +112,7 @@ Curabitur curae egestas tellus ac duis porta penatibus interdum mi, neque euismo
                     </div>
                 </div>
             </div>
+
         </div>
         <script src="<c:url value="/js/components.js" />"></script>
     </body>
