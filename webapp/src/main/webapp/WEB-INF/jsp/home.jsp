@@ -60,7 +60,7 @@
     <body>
         <div class="container">
             <header class="page-header">
-                <h1 class="page-title">Kartz</h1>
+                <h1 class="page-title">Ryden</h1>
                 <p class="page-subtitle">Spring Components Demo - Group 8</p>
                 <hr class="page-separator">
             </header>
