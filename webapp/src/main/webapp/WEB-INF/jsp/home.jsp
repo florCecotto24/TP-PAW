@@ -5,10 +5,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Spring Components Demo - Group 8</title>
-        <link href="<c:url value="/css/components.css" />" rel="stylesheet" type="text/css">
+        <%@include file="header.jsp"%>
         <style>
             * {
                 box-sizing: border-box;
@@ -58,7 +55,8 @@
     </head>
 
     <body>
-        <div class="container">
+    <paw:navbar/>
+        <div class="container mt-5 pt-5">
             <header class="page-header">
                 <h1 class="page-title">Ryden</h1>
                 <p class="page-subtitle">Spring Components Demo - Group 8</p>
@@ -115,4 +113,5 @@ Curabitur curae egestas tellus ac duis porta penatibus interdum mi, neque euismo
 
         </div>
         <script src="<c:url value="/js/components.js" />"></script>
+        <%@ include file="footer.jsp"%>
     </body>
