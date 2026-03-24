@@ -165,3 +165,25 @@
         closeModal(getModal(id));
     };
 })();
+
+/* Bootstrap gallery modal: open carousel at clicked slide */
+(function () {
+    function initCarDetailGalleryModal() {
+        var modalEl = document.getElementById('carDetailGalleryModal');
+        if (!modalEl || typeof window.bootstrap === 'undefined') {
+            return;
+        }
+        modalEl.addEventListener('show.bs.modal', function (event) {
+            var trigger = event.relatedTarget;
+            var idx = trigger ? parseInt(trigger.getAttribute('data-carousel-index') || '0', 10) : 0;
+            var carouselEl = modalEl.querySelector('.carousel');
+            if (!carouselEl) {
+                return;
+            }
+            var instance = window.bootstrap.Carousel.getOrCreateInstance(carouselEl);
+            instance.to(idx);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initCarDetailGalleryModal);
+})();
