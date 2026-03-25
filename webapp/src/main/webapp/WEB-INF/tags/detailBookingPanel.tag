@@ -9,6 +9,7 @@
 <%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
 <%@ attribute name="fromDateValue" required="false" type="java.lang.String" %>
 <%@ attribute name="toDateValue" required="false" type="java.lang.String" %>
+<%@ attribute name="carName" required="false" type="java.lang.String" %>
 
 <c:if test="${empty fromDateValue}">
     <c:set var="fromDateValue" value="2024-05-12" />
@@ -16,8 +17,14 @@
 <c:if test="${empty toDateValue}">
     <c:set var="toDateValue" value="2024-05-15" />
 </c:if>
+<c:if test="${empty carName}">
+    <c:set var="carName" value="Mercedes-Benz E-Class 300" />
+</c:if>
+<c:url var="newReservationUrl" value="/reservation/new" />
 
 <div class="detail-booking-panel border rounded-4 p-4 bg-white shadow-sm">
+    <form action="${newReservationUrl}" method="get">
+    <input type="hidden" name="carName" value="${carName}" />
     <div class="d-flex align-items-baseline gap-2 mb-3">
         <span class="detail-price-amount fw-bold">$${pricePerDay}</span>
         <span class="text-secondary">/ per day</span>
@@ -63,7 +70,8 @@
         </div>
     </div>
 
-    <paw:button text="Reserve now" size="lg" type="primary" cssClass="btn-primary w-100 py-3 rounded-3 mb-2" id="detailReserveBtn" />
+    <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReserveBtn">Reserve now</button>
+    </form>
 
     <p class="text-center text-secondary small mb-0 text-uppercase detail-booking-disclaimer">
         You won&apos;t be charged yet
