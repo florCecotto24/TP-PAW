@@ -115,33 +115,18 @@
         <paw:similarVehiclesHeader/>
         <div class="row row-cols-1 row-cols-md-3 g-4">
             <div class="col d-flex justify-content-center">
-                <paw:carCard layout="similar"
-                        brand="BMW" model="Series 5"
-                        stars="4.8" price="115" reviews="0"
-                        pricePeriod="day"
-                        location="Córdoba Capital"
-                        seats="5" transmission="Auto"
-                        detailsHref="${pageContext.request.contextPath}/car-detail"
+                <paw:carCard brand="BMW" model="Series 5" stars="4.8" price="115" reviews="24"
+                        href="${pageContext.request.contextPath}/car-detail"
                         image="https://www.bmw.com.mx/es/local/lista-de-precios-de-autos-bmw/_jcr_content/root/maincontent/contentblueprint_cop_245807772/contentblueprint_143/container/image.coreimg.png/1753708406694/bmw-3-series-ice-lci-modelfinder.png"/>
             </div>
             <div class="col d-flex justify-content-center">
-                <paw:carCard layout="similar"
-                        brand="Audi" model="A6 S-Line"
-                        stars="5.0" price="125" reviews="0"
-                        pricePeriod="day"
-                        location="Villa Belgrano"
-                        seats="5" transmission="Auto"
-                        detailsHref="${pageContext.request.contextPath}/car-detail"
+                <paw:carCard brand="Audi" model="A6 S-Line" stars="5.0" price="125" reviews="30"
+                        href="${pageContext.request.contextPath}/car-detail"
                         image="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&amp;fit=crop&amp;w=800&amp;q=80"/>
             </div>
             <div class="col d-flex justify-content-center">
-                <paw:carCard layout="similar"
-                        brand="Volvo" model="S90"
-                        stars="4.7" price="108" reviews="0"
-                        pricePeriod="day"
-                        location="Nueva Córdoba"
-                        seats="5" transmission="Auto"
-                        detailsHref="${pageContext.request.contextPath}/car-detail"
+                <paw:carCard brand="Volvo" model="S90" stars="4.7" price="108" reviews="18"
+                        href="${pageContext.request.contextPath}/car-detail"
                         image="https://images.unsplash.com/photo-1619682817487-e45dc39de5d6?auto=format&amp;fit=crop&amp;w=800&amp;q=80"/>
             </div>
         </div>
