@@ -16,7 +16,7 @@ public class SearchController {
     public ModelAndView search(@RequestParam(required = false) String query,
                          @RequestParam(required = false) List<String> category,
                          @RequestParam(required = false) List<String> price) {
-        final ModelAndView mav = new ModelAndView("/WEB-INF/jsp/search.jsp");
+        final ModelAndView mav = new ModelAndView("search");
 
         // pass filter options to JSP
         mav.addObject("categories", List.of("Manual", "Hybrid", "Automatic"));

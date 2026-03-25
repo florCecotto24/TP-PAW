@@ -20,14 +20,14 @@ public class HelloWorldController {
     
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public ModelAndView helloWorld(){
-        final ModelAndView mav = new ModelAndView("/WEB-INF/jsp/home.jsp");
+        final ModelAndView mav = new ModelAndView("home");
         mav.addObject("message", "Hello World from Controller");
         return mav;
     }
 
     @RequestMapping(value = "/", method = RequestMethod.POST)
     public ModelAndView createUser(@RequestParam("email") final String email){
-        final ModelAndView mav = new ModelAndView("/WEB-INF/jsp/home.jsp");
+        final ModelAndView mav = new ModelAndView("home");
         Object user = userService.createUser(email);
         mav.addObject("message", "Hello World " + user.toString());
         return mav;

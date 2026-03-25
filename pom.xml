@@ -9,12 +9,16 @@
     <module>webapp</module>
     <module>services</module>
     <module>service-contracts</module>
+    <module>persistence</module>
+    <module>persistence-contracts</module>
+    <module>models</module>
   </modules>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <spring.version>5.3.33</spring.version>
+    <org.postgresql.version>42.2.5</org.postgresql.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -27,6 +31,16 @@
         <groupId>org.springframework</groupId>
         <artifactId>spring-context</artifactId>
         <version>${spring.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-jdbc</artifactId>
+        <version>${spring.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${org.postgresql.version}</version>
       </dependency>
       <!-- JUnit-->
       <dependency>

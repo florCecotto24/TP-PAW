@@ -10,7 +10,7 @@ public class CarDetailController {
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
     public ModelAndView carDetail() {
-        final ModelAndView mav = new ModelAndView("/WEB-INF/jsp/carDetail.jsp");
+        final ModelAndView mav = new ModelAndView("carDetail");
         return mav;
     }
 }
