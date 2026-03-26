@@ -311,6 +311,28 @@ body.modal-open {
     overflow: hidden;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.1);
     background-color: #ffffff;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+    will-change: transform;
+}
+
+.carcard:hover,
+.carcard:focus-within {
+    transform: translateY(-0.5px); /* slight movement up */
+    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.07); /* optional depth */
+}
+
+
+
+/* Accessibility: respect system setting */
+@media (prefers-reduced-motion: reduce) {
+    .carcard {
+        transition: none;
+    }
+
+    .carcard:hover,
+    .carcard:focus-within {
+        transform: none;
+    }
 }
 
 .carcard-image {

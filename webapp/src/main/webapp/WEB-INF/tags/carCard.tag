@@ -37,7 +37,7 @@
     </div>
     <div class="carcard-info">
         <div class="carcard-info-text text">
-            <h3 class="carcard-brand">${brand}</h3>
+            <h4 class="carcard-brand">${brand}</h4>
             <p class="carcard-model">${model}</p>
             <p class="carcard-stars">${stars}<span class="star">&#9733;</span>(${reviews})</p>
         </div>

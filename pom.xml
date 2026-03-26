@@ -63,6 +63,7 @@
     </dependencies>
   </dependencyManagement>
 
+  <!-- ojo -->
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
