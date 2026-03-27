@@ -15,3 +15,15 @@ CREATE TABLE IF NOT EXISTS cars (
     powertrain VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS listings (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(50) NOT NULL,
+    car_id INTEGER NOT NULL REFERENCES cars(id),
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'paused', 'finished')),
+    day_price DECIMAL(10, 2) NOT NULL,
+    start_point VARCHAR(50) NOT NULL,
+    description VARCHAR(200) NOT NULL
+);
+
