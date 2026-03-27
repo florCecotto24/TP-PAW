@@ -37,6 +37,7 @@ public class WebConfig implements WebMvcConfigurer {
         dataSource.setUrl("jdbc:postgresql://localhost/paw");
         dataSource.setUsername("pawdbuser");
         dataSource.setPassword("pawdbpassword");
+
         return dataSource;
     }
 

@@ -17,7 +17,7 @@ public class CarServiceImpl implements CarService{
     }
 
     @Override
-    public Car createCar(final long ownerId, final String plate, final String brand, final String model, final Car.Type type, final Car.Powertrain powertrain, final Car.Trasnmission transmission) {
+    public Car createCar(final long ownerId, final String plate, final String brand, final String model, final Car.Type type, final Car.Powertrain powertrain, final Car.Transmission transmission) {
         return carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission);
     }
 

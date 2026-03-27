@@ -9,7 +9,7 @@ public class Car {
         GASOLINE, DIESEL, ELECTRIC, HYBRID
     }
 
-    public enum Trasnmission {
+    public enum Transmission {
         MANUAL, AUTOMATIC, SEMI_AUTOMATIC
     }
 
@@ -20,10 +20,10 @@ public class Car {
     private final String model;
     private final Type type;
     private final Powertrain powertrain;
-    private final Trasnmission trasnmission;
+    private final Transmission transmission;
 
 
-    public Car(long id, long ownerId, String plate, String brand, String model, Type type, Powertrain powertrain, Trasnmission trasnmission) {
+    public Car(long id, long ownerId, String plate, String brand, String model, Type type, Powertrain powertrain, Transmission transmission) {
         this.id = id;
         this.ownerId = ownerId;
         this.plate = plate;
@@ -31,7 +31,7 @@ public class Car {
         this.model = model;
         this.type = type;
         this.powertrain = powertrain;
-        this.trasnmission = trasnmission;
+        this.transmission = transmission;
     }
 
     public long getId() {
@@ -62,8 +62,8 @@ public class Car {
         return powertrain;
     }
 
-    public Trasnmission getTrasnmission() {
-        return trasnmission;
+    public Transmission getTransmission() {
+        return transmission;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class Car {
                 ", model='" + model + '\'' +
                 ", type=" + type +
                 ", powertrain=" + powertrain +
-                ", trasnmission=" + trasnmission +
+                ", transmission=" + transmission +
                 '}';
     }
 }

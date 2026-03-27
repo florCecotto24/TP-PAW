@@ -23,7 +23,7 @@ public class CarJdbcDao implements CarDao{
             rs.getString("model"),
             Car.Type.valueOf(rs.getString("type")),
             Car.Powertrain.valueOf(rs.getString("powertrain")),
-            Car.Trasnmission.valueOf(rs.getString("transmission"))
+            Car.Transmission.valueOf(rs.getString("transmission"))
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -39,7 +39,7 @@ public class CarJdbcDao implements CarDao{
 
     @Override
     public Car createCar(final long ownerId, final String plate, final String brand, final String model,
-                         final Car.Type type, final Car.Powertrain powertrain, final Car.Trasnmission transmission) {
+                         final Car.Type type, final Car.Powertrain powertrain, final Car.Transmission transmission) {
         final Map<String, Object> values = new HashMap<>();
         values.put("owner_id", ownerId);
         values.put("plate", plate);

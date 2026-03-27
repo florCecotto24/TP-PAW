@@ -36,9 +36,9 @@ public class SearchController {
         // Son mocks para no insertar cars en la BD. Hay que hacerlo desde publish!
         final List<Car> mockResults = List.of(
                 new Car(1L, 1L, "ABC123", "Toyotus", "Corolla", Car.Type.SEDAN, Car.Powertrain.GASOLINE,
-                        Car.Trasnmission.MANUAL),
-                new Car(2L, 1L, "DEF456", "Toyota", "Corolla Hybrid", Car.Type.SEDAN, Car.Powertrain.HYBRID, Car.Trasnmission.AUTOMATIC),
-                new Car(3L, 1L, "GHI789", "Toyota", "bZ4X", Car.Type.SUV, Car.Powertrain.ELECTRIC, Car.Trasnmission.AUTOMATIC)
+                        Car.Transmission.MANUAL),
+                new Car(2L, 1L, "DEF456", "Toyota", "Corolla Hybrid", Car.Type.SEDAN, Car.Powertrain.HYBRID, Car.Transmission.AUTOMATIC),
+                new Car(3L, 1L, "GHI789", "Toyota", "bZ4X", Car.Type.SUV, Car.Powertrain.ELECTRIC, Car.Transmission.AUTOMATIC)
         );
         mav.addObject("results", mockResults);
         return mav;

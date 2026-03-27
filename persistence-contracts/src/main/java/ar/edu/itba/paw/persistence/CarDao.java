@@ -5,7 +5,7 @@ import ar.edu.itba.paw.models.Car;
 import java.util.Optional;
 
 public interface CarDao {
-    Car createCar(long ownerId, String plate, String brand, String model, Car.Type type, Car.Powertrain powertrain, Car.Trasnmission trasnmission);
+    Car createCar(long ownerId, String plate, String brand, String model, Car.Type type, Car.Powertrain powertrain, Car.Transmission transmission);
 
     Optional<Car> getCarById(final long id);
 }
