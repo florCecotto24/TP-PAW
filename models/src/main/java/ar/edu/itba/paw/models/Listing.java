@@ -76,4 +76,18 @@ public class Listing {
         return description;
     }
 
+    @Override
+    public String toString() {
+        return "Listing{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", carId=" + carId +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                ", status=" + status +
+                ", dayPrice=" + dayPrice +
+                ", startPoint='" + startPoint + '\'' +
+                ", description='" + description + '\'' +
+                '}';
+    }
 }

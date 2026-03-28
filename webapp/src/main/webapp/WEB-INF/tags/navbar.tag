@@ -8,7 +8,7 @@
         <div class="d-flex flex-row justify-content-end align-items-center">
             <ul class="navbar-nav nav-pills align-items-center mb-0">
                 <li class="nav-item my-nav-item">
-                    <a class="nav-link d-flex align-items-center" aria-current="page" href="${pageContext.request.contextPath}/search">Explore</a>
+                    <a class="nav-link d-flex align-items-center ${activeTab == 'search' ? 'active' : ''}" aria-current="page" href="${pageContext.request.contextPath}/search">Explore</a>
                 </li>
                 <li class="nav-item px-1">
                     <a class="nav-link d-flex align-items-center">Publish</a>

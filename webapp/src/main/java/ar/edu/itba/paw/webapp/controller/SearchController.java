@@ -41,6 +41,8 @@ public class SearchController {
                 new Car(3L, 1L, "GHI789", "Toyota", "bZ4X", Car.Type.SUV, Car.Powertrain.ELECTRIC, Car.Transmission.AUTOMATIC)
         );
         mav.addObject("results", mockResults);
+        mav.addObject("activeTab", "search");
+
         return mav;
     }
 }

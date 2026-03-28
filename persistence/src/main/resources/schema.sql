@@ -37,3 +37,17 @@ CREATE TABLE IF NOT EXISTS reservations (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS images (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    content_type VARCHAR(50) NOT NULL,
+    data BYTEA NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS car_pictures (
+    id SERIAL PRIMARY KEY,
+    car_id INTEGER NOT NULL REFERENCES cars(id),
+    image_id INTEGER NOT NULL REFERENCES images(id),
+    order INTEGER NOT NULL
+);
