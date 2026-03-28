@@ -58,3 +58,23 @@ out/
 # === OTHERS ===
 *.swp
 *~
+
+# === SMARTTOMCAT / generated webapp conf ===
+.smarttomcat/
+.smarttomcat/**
+
+# Explicit SmartTomcat conf files (for clarity)
+.smarttomcat/webapp/conf/*.xml
+.smarttomcat/webapp/conf/*.properties
+.smarttomcat/webapp/conf/*.xsd
+
+# Common extras used in this multi-module project
+**/target/
+
+# Temporary files and folders
+tmp/
+temp/
+
+# Node modules (if any frontend parts are added)
+node_modules/
+
