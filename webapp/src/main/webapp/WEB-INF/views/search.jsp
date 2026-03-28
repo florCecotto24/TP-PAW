@@ -3,9 +3,10 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>Ryden - Explore</title>
         <%@include file="header.jsp"%>
     </head>
-    <body>
+    <body class="has-fixed-navbar">
         <paw:navbar/>
         <div>
             <div class="search-menu sticky-top w-100">
@@ -16,7 +17,7 @@
                     <paw:filterButton label="Ratings" options="${ratings}"/>
                 </nav>
             </div>
-            <div class="container mt-5">
+            <div class="container">
                 <%-- Header --%>
                 <div class="mb-6 pt-5">
                     <h4 class="font-semibold mb-1">9 cars available</h4>

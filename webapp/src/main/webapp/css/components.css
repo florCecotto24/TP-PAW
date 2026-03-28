@@ -45,6 +45,7 @@ body {
 }
 /* Modal */
 :root {
+    --navbar-height: 65px;
     --color-primary: #3b7be0;
     --color-primary-dark: #2b5fb2;
     --color-primary-soft: #eef4ff;
@@ -70,6 +71,10 @@ body {
     color: var(--color-text);
     background: #f9fbff;
     font-family: inherit;
+}
+
+body.has-fixed-navbar {
+    padding-top: var(--navbar-height);
 }
 
 body.modal-open {
@@ -473,7 +478,7 @@ body.modal-open {
 }
 
 .search-menu {
-    top: 65px;
+    top: var(--navbar-height);
     z-index: 1020;
     background-color: #ffffff;
     padding-top: 1.5rem;
@@ -490,7 +495,7 @@ body.modal-open {
 
 /* --- Car detail page --- */
 .car-detail-page {
-    padding-top: 5.75rem;
+    padding-top: 1.5rem;
 }
 
 .detail-verified-badge {
@@ -574,7 +579,7 @@ body.modal-open {
 
 .detail-booking-sticky {
     position: sticky;
-    top: 5.75rem;
+    top: calc(var(--navbar-height) + 1rem);
 }
 
 @media (max-width: 991.98px) {

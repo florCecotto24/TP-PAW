@@ -6,7 +6,7 @@
 <head>
     <%@include file="header.jsp"%>
 </head>
-<body class="bg-light">
+<body class="bg-light has-fixed-navbar">
 <paw:navbar/>
 
 <main class="car-detail-page container pb-4">

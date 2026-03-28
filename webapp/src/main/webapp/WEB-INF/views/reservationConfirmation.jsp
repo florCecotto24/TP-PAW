@@ -7,7 +7,7 @@
     <%@include file="header.jsp"%>
     <title>Reservation confirmation</title>
 </head>
-<body class="bg-light">
+<body class="bg-light has-fixed-navbar">
 <paw:navbar/>
 
 <c:set var="summaryFromDate" value="${empty fromDate ? 'Not specified' : fromDate}"/>

@@ -54,9 +54,9 @@
         </style>
     </head>
 
-    <body>
+    <body class="has-fixed-navbar">
     <paw:navbar/>
-        <div class="container mt-5 pt-5">
+        <div class="container">
             <header class="page-header">
                 <h1 class="page-title">Ryden</h1>
                 <p class="page-subtitle">Spring Components Demo - Group 8</p>
