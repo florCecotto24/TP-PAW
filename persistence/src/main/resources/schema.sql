@@ -49,5 +49,5 @@ CREATE TABLE IF NOT EXISTS car_pictures (
     id SERIAL PRIMARY KEY,
     car_id INTEGER NOT NULL REFERENCES cars(id),
     image_id INTEGER NOT NULL REFERENCES images(id),
-    order INTEGER NOT NULL
+    display_order INTEGER NOT NULL
 );

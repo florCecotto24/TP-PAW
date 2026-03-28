@@ -5,7 +5,7 @@ import ar.edu.itba.paw.models.CarPicture;
 import java.util.Optional;
 
 public interface CarPictureService {
-    CarPicture createCarPicture(final long carId, final long imageId, final int order);
+    CarPicture createCarPicture(final long carId, final long imageId, final int displayOrder);
 
     Optional<CarPicture> getCarPictureById(final long id);
 }

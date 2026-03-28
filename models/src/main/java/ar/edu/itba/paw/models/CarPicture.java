@@ -4,13 +4,13 @@ public class CarPicture {
     private final long id;
     private final long carId;
     private final long imageId;
-    private final int order;
+    private final int displayOrder;
 
-    public CarPicture(final long id, final long carId, final long imageId, final int order) {
+    public CarPicture(final long id, final long carId, final long imageId, final int displayOrder) {
         this.id = id;
         this.carId = carId;
         this.imageId = imageId;
-        this.order = order;
+        this.displayOrder = displayOrder;
     }
 
     public long getId() {
@@ -25,8 +25,8 @@ public class CarPicture {
         return imageId;
     }
 
-    public int getOrder() {
-        return order;
+    public int getDisplayOrder() {
+        return displayOrder;
     }
 
     @Override
@@ -35,7 +35,7 @@ public class CarPicture {
                 "id=" + id +
                 ", carId=" + carId +
                 ", imageId=" + imageId +
-                ", order=" + order +
+                ", order=" + displayOrder +
                 '}';
     }
 }

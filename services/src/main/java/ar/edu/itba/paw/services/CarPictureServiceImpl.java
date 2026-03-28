@@ -18,11 +18,11 @@ public class CarPictureServiceImpl implements CarPictureService{
     }
 
     @Override
-    public CarPicture createCarPicture(final long carId, final long imageId, final int order) {
+    public CarPicture createCarPicture(final long carId, final long imageId, final int displayOrder) {
         if (imageId <= 0 || imageService.getImageById(imageId).isEmpty()) {
             throw new IllegalArgumentException("Invalid image ID");
         }
-        return carPictureDao.createCarPicture(carId, imageId, order);
+        return carPictureDao.createCarPicture(carId, imageId, displayOrder);
     }
 
     @Override

@@ -5,7 +5,7 @@ import java.util.Optional;
 
 public interface CarPictureDao {
 
-    CarPicture createCarPicture(final long carId, final long imageId, final int order);
+    CarPicture createCarPicture(final long carId, final long imageId, final int displayOrder);
 
     Optional<CarPicture> getCarPictureById(final long id);
 }

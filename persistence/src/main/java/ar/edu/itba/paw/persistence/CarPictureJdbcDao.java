@@ -18,7 +18,7 @@ public class CarPictureJdbcDao implements CarPictureDao{
             rs.getLong("id"),
             rs.getLong("car_id"),
             rs.getLong("image_id"),
-            rs.getInt("order")
+            rs.getInt("display_order")
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -33,14 +33,14 @@ public class CarPictureJdbcDao implements CarPictureDao{
     }
 
     @Override
-    public CarPicture createCarPicture(final long carId, final long imageId, final int order) {
+    public CarPicture createCarPicture(final long carId, final long imageId, final int displayOrder) {
         final Map<String, Object> values = new HashMap<>();
         values.put("car_id", carId);
         values.put("image_id", imageId);
-        values.put("order", order);
+        values.put("display_order", displayOrder);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new CarPicture(id.longValue(), carId, imageId, order);
+        return new CarPicture(id.longValue(), carId, imageId, displayOrder);
     }
 
     @Override
