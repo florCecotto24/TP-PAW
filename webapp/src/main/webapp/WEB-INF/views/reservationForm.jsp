@@ -31,7 +31,12 @@
                         <p class="mb-0"><strong>Location:</strong> ${summaryLocation}</p>
                     </div>
 
+                    <c:if test="${not empty errorMessage}">
+                        <div class="alert alert-danger" role="alert">${errorMessage}</div>
+                    </c:if>
+
                     <form action="<c:url value='/reservation'/>" method="post" class="d-flex flex-column gap-2">
+                        <input type="hidden" name="listingId" value="${listingId}"/>
                         <input type="hidden" name="carName" value="${carName}"/>
                         <input type="hidden" name="fromDate" value="${fromDate}"/>
                         <input type="hidden" name="untilDate" value="${untilDate}"/>

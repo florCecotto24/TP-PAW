@@ -10,7 +10,11 @@
 <%@ attribute name="fromDateValue" required="false" type="java.lang.String" %>
 <%@ attribute name="toDateValue" required="false" type="java.lang.String" %>
 <%@ attribute name="carName" required="false" type="java.lang.String" %>
+<%@ attribute name="listingId" required="false" type="java.lang.String" %>
 
+<c:if test="${empty listingId}">
+    <c:set var="listingId" value="1" />
+</c:if>
 <c:if test="${empty fromDateValue}">
     <c:set var="fromDateValue" value="2024-05-12" />
 </c:if>
@@ -24,6 +28,7 @@
 
 <div class="detail-booking-panel border rounded-4 p-4 bg-white shadow-sm">
     <form action="${newReservationUrl}" method="get">
+    <input type="hidden" name="listingId" value="${listingId}" />
     <input type="hidden" name="carName" value="${carName}" />
     <div class="d-flex align-items-baseline gap-2 mb-3">
         <span class="detail-price-amount fw-bold">$${pricePerDay}</span>

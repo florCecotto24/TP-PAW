@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     updated_at TIMESTAMPTZ NOT NULL
 );
 
+<<<<<<< HEAD
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -51,3 +52,25 @@ CREATE TABLE IF NOT EXISTS car_pictures (
     image_id INTEGER NOT NULL REFERENCES images(id),
     display_order INTEGER NOT NULL
 );
+
+-- mock data para testear mailing
+INSERT INTO users (email, name)
+SELECT 'julian.owner@demo.local', 'Julian S.'
+WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.email = 'julian.owner@demo.local');
+
+INSERT INTO cars (owner_id, plate, brand, model, type, transmission, powertrain)
+SELECT u.id, 'DEMO-001', 'Mercedes-Benz', 'E-Class 300', 'Sedan', 'Automatic', 'Gasoline'
+FROM users u
+WHERE u.email = 'julian.owner@demo.local'
+  AND NOT EXISTS (
+    SELECT 1 FROM cars c
+    INNER JOIN users u2 ON c.owner_id = u2.id
+    WHERE u2.email = 'julian.owner@demo.local'
+  );
+
+INSERT INTO listings (title, car_id, created_at, updated_at, status, day_price, start_point, description)
+SELECT 'Mercedes-Benz E-Class 300', c.id, NOW(), NOW(), 'active', 120.00, 'Córdoba, AR', 'Listing demo — Mercedes E-Class en Córdoba.'
+FROM cars c
+INNER JOIN users u ON c.owner_id = u.id AND u.email = 'julian.owner@demo.local'
+WHERE c.plate = 'DEMO-001'
+  AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.car_id = c.id);

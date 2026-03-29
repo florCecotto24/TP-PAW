@@ -12,7 +12,7 @@ public interface ReservationService {
             long listingId,
             OffsetDateTime startDate,
             OffsetDateTime endDate,
-            Reservation.Status status);
+            String deliveryLocation);
 
     Optional<Reservation> getReservationById(long id);
 }

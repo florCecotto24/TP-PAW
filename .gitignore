@@ -78,3 +78,6 @@ temp/
 # Node modules (if any frontend parts are added)
 node_modules/
 
+# Credentials
+**/mail.properties
+

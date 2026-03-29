@@ -44,4 +44,9 @@ public class UserJdbcDao implements UserDao{
         return jdbcTemplate.query("SELECT * FROM users WHERE id = ?", USER_ROW_MAPPER, id).stream().findAny();
         //ponemos findAny porque el id es unico, entonces o devuelve un resultado o no devuelve nada
     }
+
+    @Override
+    public Optional<User> findByEmail(final String email) {
+        return jdbcTemplate.query("SELECT * FROM users WHERE email = ?", USER_ROW_MAPPER, email).stream().findAny();
+    }
 }

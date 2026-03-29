@@ -10,4 +10,6 @@ public interface UserService {
 
     Optional<User> getUserById(final long id);
 
+    /** Reutiliza el usuario si ya existe el mismo email; si no, lo crea. */
+    User getOrCreateUser(final String email, final String name);
 }

@@ -101,6 +101,7 @@
         <div class="col-lg-4 order-2">
             <div class="detail-booking-sticky">
                 <paw:detailBookingPanel
+                        listingId="1"
                         pricePerDay="120"
                         days="3"
                         subtotal="360"

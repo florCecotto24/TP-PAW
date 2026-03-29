@@ -68,15 +68,14 @@ public class ReservationJdbcDao implements ReservationDao {
             final long riderId,
             final long listingId,
             final OffsetDateTime startDate,
-            final OffsetDateTime endDate,
-            final Reservation.Status status) {
+            final OffsetDateTime endDate) {
         final Timestamp now = new Timestamp(System.currentTimeMillis());
         final Map<String, Object> values = new HashMap<>();
         values.put("rider_id", riderId);
         values.put("listing_id", listingId);
         values.put("start_date", Timestamp.from(startDate.toInstant()));
         values.put("end_date", Timestamp.from(endDate.toInstant()));
-        values.put("status", status.name().toLowerCase());
+        values.put("status", Reservation.Status.ACCEPTED.name().toLowerCase());
         values.put("created_at", now);
         values.put("updated_at", now);
         final Number id = jdbcInsert.executeAndReturnKey(values);
@@ -87,7 +86,7 @@ public class ReservationJdbcDao implements ReservationDao {
                 listingId,
                 startDate,
                 endDate,
-                status,
+                Reservation.Status.ACCEPTED,
                 toOffsetDateTime(now),
                 toOffsetDateTime(now));
     }

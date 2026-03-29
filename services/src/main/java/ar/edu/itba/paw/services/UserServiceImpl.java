@@ -25,4 +25,9 @@ public class UserServiceImpl implements UserService {
     public Optional<User> getUserById(final long id){
         return userDao.getUserById(id);
     }
+
+    @Override
+    public User getOrCreateUser(final String email, final String name) {
+        return userDao.findByEmail(email).orElseGet(() -> userDao.createUser(email, name));
+    }
 }

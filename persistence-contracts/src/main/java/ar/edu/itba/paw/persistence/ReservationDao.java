@@ -7,12 +7,7 @@ import java.util.Optional;
 
 public interface ReservationDao {
 
-    Reservation createReservation(
-            long riderId,
-            long listingId,
-            OffsetDateTime startDate,
-            OffsetDateTime endDate,
-            Reservation.Status status);
+    Reservation createReservation(long riderId, long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
 
     Optional<Reservation> getReservationById(long id);
 }
