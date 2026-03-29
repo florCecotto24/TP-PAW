@@ -7,6 +7,7 @@ import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -103,5 +104,10 @@ public class ListingJdbcDao implements ListingDao {
     @Override
     public Optional<Listing> getListingById(final long id) {
         return jdbcTemplate.query("SELECT * FROM listings WHERE id = ?", LISTING_ROW_MAPPER, id).stream().findAny();
+    }
+
+    @Override
+    public List<Listing> getAllListings() {
+        return jdbcTemplate.query("SELECT * FROM listings ORDER BY created_at DESC", LISTING_ROW_MAPPER);
     }
 }

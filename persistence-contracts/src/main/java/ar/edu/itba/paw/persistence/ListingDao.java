@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence;
 import ar.edu.itba.paw.models.Listing;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface ListingDao {
@@ -16,4 +17,6 @@ public interface ListingDao {
             String description);
 
     Optional<Listing> getListingById(long id);
+
+    List<Listing> getAllListings();
 }

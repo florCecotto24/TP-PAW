@@ -43,6 +43,12 @@ body {
 .text-danger {
     color: #ef4444;
 }
+
+/* Reusable required marker for form labels */
+.required-label::after {
+    content: " *";
+    color: #dc3545;
+}
 /* Modal */
 :root {
     --navbar-height: 65px;
