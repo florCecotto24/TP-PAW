@@ -8,6 +8,7 @@ import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.DatabasePopulator;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -60,6 +61,16 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/css/**").addResourceLocations("/css/");
         registry.addResourceHandler("/js/**").addResourceLocations("/js/");
         registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
+    }
+
+    @Bean
+    public CommonsMultipartResolver multipartResolver() {
+        final CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
+        // Set max upload size to 50MB (in bytes)
+        multipartResolver.setMaxUploadSize(52428800);
+        // Set max in-memory size to 1MB
+        multipartResolver.setMaxInMemorySize(1048576);
+        return multipartResolver;
     }
 
     @Override

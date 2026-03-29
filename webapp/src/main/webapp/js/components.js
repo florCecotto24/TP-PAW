@@ -187,3 +187,55 @@
 
     document.addEventListener('DOMContentLoaded', initCarDetailGalleryModal);
 })();
+
+/* Funciones de PublishForm */
+(function () {
+    var input = document.getElementById("picturesInput");
+    var preview = document.getElementById("picturesPreview");
+
+    if (!input || !preview) {
+        return;
+    }
+
+    input.addEventListener("change", function (event) {
+        var files = event.target.files;
+        preview.innerHTML = "";
+
+        if (!files || files.length === 0) {
+            return;
+        }
+
+        Array.prototype.forEach.call(files, function (file) {
+            if (!file.type || file.type.indexOf("image/") !== 0) {
+                return;
+            }
+
+            var col = document.createElement("div");
+            col.className = "col-6 col-md-4";
+
+            var card = document.createElement("div");
+            card.className = "border rounded p-2";
+
+            var img = document.createElement("img");
+            img.className = "img-fluid rounded";
+            img.style.height = "130px";
+            img.style.objectFit = "cover";
+            img.alt = file.name;
+
+            var name = document.createElement("small");
+            name.className = "d-block text-truncate mt-1";
+            name.textContent = file.name;
+
+            card.appendChild(img);
+            card.appendChild(name);
+            col.appendChild(card);
+            preview.appendChild(col);
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+})();

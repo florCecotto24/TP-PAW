@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,11 +22,13 @@ public class SearchController {
 
     private final CarService carService;
     private final ListingService listingService;
+    private final CarPictureService carPictureService;
 
     @Autowired
-    public SearchController(final CarService carService, final ListingService listingService) {
+    public SearchController(final CarService carService, final ListingService listingService, final CarPictureService carPictureService) {
         this.carService = carService;
         this.listingService = listingService;
+        this.carPictureService = carPictureService;
     }
 
     //    Esto está un toqusín mal, pero es para probar los botones... @Flor
@@ -52,12 +56,22 @@ public class SearchController {
     //Esto funciona. No sé si es la mejor manera de hacerlo... Veremos en clase qué onda.
     private java.util.Optional<SearchResultView> toSearchResult(final Listing listing) {
         return carService.getCarById(listing.getCarId())
-                .map(car -> new SearchResultView(
-                        listing.getId(),
-                        car.getBrand(),
-                        car.getModel(),
-                        listing.getDayPrice()
-                ));
+                .map(car -> {
+                    // Get the first image for this car (if any)
+                    final long imageId = carPictureService.getCarPicturesByCarId(car.getId())
+                            .stream()
+                            .findFirst()
+                            .map(CarPicture::getImageId)
+                            .orElse(0L);
+                    
+                    return new SearchResultView(
+                            listing.getId(),
+                            car.getBrand(),
+                            car.getModel(),
+                            listing.getDayPrice(),
+                            imageId
+                    );
+                });
     }
 
     public static class SearchResultView {
@@ -65,12 +79,14 @@ public class SearchController {
         private final String brand;
         private final String model;
         private final BigDecimal price;
+        private final long imageId;
 
-        public SearchResultView(final long listingId, final String brand, final String model, final BigDecimal price) {
+        public SearchResultView(final long listingId, final String brand, final String model, final BigDecimal price, final long imageId) {
             this.listingId = listingId;
             this.brand = brand;
             this.model = model;
             this.price = price;
+            this.imageId = imageId;
         }
 
         public long getListingId() {
@@ -88,5 +104,10 @@ public class SearchController {
         public BigDecimal getPrice() {
             return price;
         }
+
+        public long getImageId() {
+            return imageId;
+        }
     }
 }
+

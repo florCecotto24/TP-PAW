@@ -29,7 +29,23 @@
                     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-4 g-3">
                         <c:forEach var="car" items="${results}">
                             <div class="col d-flex justify-content-center">
-                            <paw:carCard model="${car.model}" brand="${car.brand}" stars="4.5" price="${car.price}" image="https://www.buyatoyota.com/sharpr/bat/assets/img/vehicle-info/Corolla/2026/hero-image.png" reviews="5" href="${pageContext.request.contextPath}/car-detail"/>
+                                <c:choose>
+                                    <c:when test="${car.imageId > 0}">
+                                        <c:url var="imageUrl" value="/image/${car.imageId}" />
+                                    </c:when>
+                                    <c:otherwise>
+                                        <c:set var="imageUrl" value="" />
+                                    </c:otherwise>
+                                </c:choose>
+
+                                <paw:carCard
+                                        model="${car.model}"
+                                        brand="${car.brand}"
+                                        stars="4.5"
+                                        price="${car.price}"
+                                        image="${imageUrl}"
+                                        reviews="5"
+                                        href="${pageContext.request.contextPath}/car-detail"/>
                             </div>
                         </c:forEach>
                     </div>

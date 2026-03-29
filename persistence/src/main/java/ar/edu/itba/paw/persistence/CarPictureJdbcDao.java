@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,5 +47,10 @@ public class CarPictureJdbcDao implements CarPictureDao{
     @Override
     public Optional<CarPicture> getCarPictureById(final long id) {
         return jdbcTemplate.query("SELECT * FROM car_pictures WHERE id = ?", CAR_PICTURE_ROW_MAPPER, id).stream().findAny();
+    }
+
+    @Override
+    public List<CarPicture> getCarPicturesByCarId(final long carId) {
+        return jdbcTemplate.query("SELECT * FROM car_pictures WHERE car_id = ? ORDER BY display_order", CAR_PICTURE_ROW_MAPPER, carId);
     }
 }

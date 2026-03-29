@@ -19,7 +19,8 @@
                     <h4 class="mb-4">Publish my car</h4>
                     <form:form action="${pageContext.request.contextPath}/publish-car"
                                method="POST"
-                               modelAttribute="publishCarForm">
+                               modelAttribute="publishCarForm"
+                               enctype="multipart/form-data">
 
                         <div class="mb-3">
                             <label class="form-label required-label">Brand</label>
@@ -82,6 +83,14 @@
                             <label class="form-label">Description</label>
                             <form:input path="description" cssClass="form-control"/>
                             <form:errors path="description" cssClass="text-danger d-block"/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label required-label">Pictures</label>
+                            <input id="picturesInput" type="file" name="pictures" class="form-control" accept="image/*" multiple required/>
+                            <small class="text-muted d-block mt-2">Upload 1-8 images (max 5MB total). Accepted: JPG, PNG, WebP</small>
+                            <form:errors path="pictures" cssClass="text-danger d-block"/>
+                            <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>
 
                         <button type="submit" class="btn btn-primary">

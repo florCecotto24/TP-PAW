@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.persistence.CarPictureDao;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -28,5 +29,10 @@ public class CarPictureServiceImpl implements CarPictureService{
     @Override
     public Optional<CarPicture> getCarPictureById(final long id) {
         return carPictureDao.getCarPictureById(id);
+    }
+
+    @Override
+    public List<CarPicture> getCarPicturesByCarId(final long carId) {
+        return carPictureDao.getCarPicturesByCarId(carId);
     }
 }

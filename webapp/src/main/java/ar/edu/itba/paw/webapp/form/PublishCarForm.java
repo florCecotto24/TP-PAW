@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.models.Car;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.constraints.*;
 import java.math.BigDecimal;
@@ -37,6 +38,18 @@ public class PublishCarForm {
 
     @Size(max = 200, message = "Description must be at most 200 characters")
     private String description;
+
+    @NotNull(message = "At least one image is required")
+    @Size(min = 1, max = 8, message = "Upload between 1 and 8 images")
+    private MultipartFile[] pictures;
+
+    public MultipartFile[] getPictures() {
+        return pictures;
+    }
+
+    public void setPictures(MultipartFile[] pictures) {
+        this.pictures = pictures;
+    }
 
     public String getBrand() {
         return brand;

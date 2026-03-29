@@ -1,8 +1,11 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.Image;
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +15,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.validation.Valid;
+import java.io.IOException;
 
 @Controller
 @RequestMapping("/publish-car")
@@ -37,16 +42,23 @@ public class PublishCarFormController {
 
     private final ListingService listingService;
     private final CarService carService;
+    private final ImageService imageService;
+    private final CarPictureService carPictureService;
 
     @Autowired
-    public PublishCarFormController(ListingService listingService, CarService carService) {
+    public PublishCarFormController(ListingService listingService, CarService carService, ImageService imageService, CarPictureService carPictureService) {
         this.listingService = listingService;
         this.carService = carService;
+        this.imageService = imageService;
+        this.carPictureService = carPictureService;
     }
 
     @GetMapping
     public ModelAndView index(@ModelAttribute("publishCarForm") final PublishCarForm form) {
-        return new ModelAndView("publishCarForm");
+        ModelAndView mav = new ModelAndView("publishCarForm");
+        mav.addObject("activeTab", "publish-car");
+
+        return mav;
     }
 
     @PostMapping
@@ -56,11 +68,53 @@ public class PublishCarFormController {
             return index(form);
         }
 
-        final Car car = carService.createCar(22, form.getPlate(), form.getBrand(), form.getModel(), form.getType(),
-                form.getPowertrain(), form.getTransmission());
-        final Listing listing = listingService.createListing(car.getId(), Listing.Status.ACTIVE, form.getPricePerDay(), form.getStartPoint(), form.getDescription());
+        final Car car = carService.createCar(22, form.getPlate(), form.getBrand(), form.getModel(), form.getType(), form.getPowertrain(), form.getTransmission());
+        final Listing listing = listingService.createListing(car.getId(), Listing.Status.ACTIVE, form.getPricePerDay(),
+                form.getStartPoint(), form.getDescription());
+
+        // Process uploaded images and create CarPicture records
+        processPictures(car.getId(), form.getPictures());
 
         //@TODO crear una pestaña de éxito con la info de la publicación y redirigir a esa página
         return new ModelAndView("redirect:/search");
+    }
+
+
+    // Está bien poner esta función acá?
+    /**
+     * Process uploaded pictures and create Image and CarPicture records
+     * @param carId The ID of the car
+     * @param pictures Array of uploaded MultipartFile objects
+     */
+    private void processPictures(final long carId, final MultipartFile[] pictures) {
+        if (pictures == null || pictures.length == 0) {
+            return;
+        }
+
+        int displayOrder = 1;
+        for (final MultipartFile picture : pictures) {
+            // Skip empty files
+            if (picture.isEmpty()) {
+                continue;
+            }
+
+            try {
+                // Extract file information
+                final String fileName = picture.getOriginalFilename();
+                final String contentType = picture.getContentType();
+                final byte[] data = picture.getBytes();
+
+                // Create Image record in the database (service layer)
+                final Image image = imageService.createImage(fileName, contentType, data);
+
+                // Create CarPicture record linking car to image (service layer)
+                carPictureService.createCarPicture(carId, image.getId(), displayOrder);
+
+                displayOrder++;
+            } catch (IOException e) {
+                // Log error and continue with next image
+                System.err.println("Error processing image: " + e.getMessage());
+            }
+        }
     }
 }
