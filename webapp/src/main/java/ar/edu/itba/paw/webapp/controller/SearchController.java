@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
