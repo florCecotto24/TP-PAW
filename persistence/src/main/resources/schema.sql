@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS reservations (
     updated_at TIMESTAMPTZ NOT NULL
 );
 
-<<<<<<< HEAD
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
