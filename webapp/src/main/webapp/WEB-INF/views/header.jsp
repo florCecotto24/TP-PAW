@@ -1,7 +1,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ryden</title>
-<link rel="icon" type="image/svg+xml" href="${pageContext.request.contextPath}/assets/images/Ryden_logo.avif">
+<link rel="icon" type="image/svg+xml" href="${pageContext.request.contextPath}/assets/images/Ryden_logo.ico">
 
 <!-- Google Font: Noto Sans -->
 <link href="https://fonts.googleapis.com/css2?family=Datatype:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">

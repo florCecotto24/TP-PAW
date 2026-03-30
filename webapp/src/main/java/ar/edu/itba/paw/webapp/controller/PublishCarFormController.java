@@ -23,7 +23,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.validation.Valid;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 @Controller
@@ -100,7 +99,7 @@ public class PublishCarFormController {
                 form.getType(),
                 form.getPowertrain(),
                 form.getTransmission());
-        listingService.createListing(
+        final Listing listing = listingService.createListing(
                 car.getId(),
                 Listing.Status.ACTIVE,
                 form.getPricePerDay(),
@@ -110,7 +109,13 @@ public class PublishCarFormController {
 
         processPictures(car.getId(), form.getPictures());
 
-        return new ModelAndView("redirect:/search");
+        ModelAndView mav = new ModelAndView("publishCarConfirmation");
+        mav.addObject("car", car);
+        mav.addObject("listing", listing);
+        mav.addObject("publisher", publisher);
+
+        System.out.println(listing);
+        return mav;
     }
 
     private void processPictures(final long carId, final MultipartFile[] pictures) {

@@ -3,7 +3,7 @@
 <nav class="navbar navbar-expand shadow-sm fixed-top mb-0">
     <div class="container-fluid">
         <a class="navbar-brand ms-3 fw-semibold" href="${pageContext.request.contextPath}/">
-            <img src="${pageContext.request.contextPath}/assets/images/Ryden_logo.avif" alt="Logo" width="30" height="24" class="d-inline-block align-text-top">
+            <img src="${pageContext.request.contextPath}/assets/images/Ryden_logo.ico" alt="Logo" width="30" height="24" class="d-inline-block align-text-top">
             Ryden</a>
         <div class="d-flex flex-row justify-content-end align-items-center">
             <ul class="navbar-nav nav-pills align-items-center mb-0">
