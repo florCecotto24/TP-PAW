@@ -6,112 +6,86 @@
 <html lang="en">
     <head>
         <%@include file="header.jsp"%>
-        <style>
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f0f0f0;
-                color: #333;
-            }
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 1.5rem;
-            }
-            .content { margin-bottom: 2.5rem; }
-            .example-title {
-                font-size: 1.25rem;
-                font-weight: bold;
-                margin-bottom: 1rem;
-                padding-bottom: 0.5rem;
-                border-bottom: 2px solid #ccc;
-            }
-            .page-header { margin-bottom: 5rem; }
-            .page-title { font-size: 2rem; font-weight: bold; margin: 0 0 0.25rem 0; }
-            .page-subtitle { font-size: 1rem; color: #666; margin: 0 0 1rem 0; }
-            .page-separator { border: 0; border-top: 2px solid #ccc; margin: 0 0 1.5rem 0; }
-            .button-showcase { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-            .demo-row { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 1rem; margin-bottom: 1.5rem; justify-content: flex-start; }
-            .demo-size-label { font-size: 0.9rem; color: #666; margin-bottom: 0.5rem; line-height: 1.2; min-height: 1.2em; flex-shrink: 0; }
-            .carcard-col { display: flex; flex-direction: column; align-items: flex-start; }
-            .carcard-wrap { display: inline-block; flex-shrink: 0; }
-            .carcard-wrap.size-sm { transform: scale(0.6); transform-origin: center top; }
-            .carcard-wrap.size-md { transform: scale(0.8); transform-origin: center top; }
-            .carcard-wrap.size-lg { transform: scale(1); transform-origin: center top; }
-            .modal-overlay--sm .modal__content { min-height: 220px; }
-            .modal-overlay--md .modal__content { min-height: 340px; }
-            .modal-overlay--lg .modal__content { min-height: 460px; }
-            .modal__message { white-space: pre-line; }
-            .input-demo-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.5rem; }
-            .input-demo-row .mb-3 { margin-bottom: 0; min-width: 200px; }
-            .input-sm.form-control, .input-sm { padding: 0.35rem 0.5rem; font-size: 0.8rem; }
-            .input-md.form-control, .input-md { padding: 0.5rem 0.75rem; font-size: 0.95rem; }
-            .input-lg.form-control, .input-lg { padding: 0.65rem 1rem; font-size: 1.1rem; }
-        </style>
     </head>
-
-    <body class="has-fixed-navbar">
-    <paw:navbar/>
-        <div class="container">
-            <header class="page-header">
-                <h1 class="page-title">Ryden</h1>
-                <p class="page-subtitle">Spring Components Demo - Group 8</p>
-                <hr class="page-separator">
-            </header>
-
-            <div class="content">
-                <div class="example-title">Button & Modal</div>
-                <div class="button-showcase">
-                    <span data-modal-open="modal-sm"><paw:button text="Open modal SM" size="sm" type="primary" cssClass="btn-primary" /></span>
-                    <paw:modal id="modal-sm" title="Small size modal" size="sm" message="Example content for small size modal."
-                        confirmLabel="Accept" cancelLabel="Cancel" />
-                    <span data-modal-open="modal-md"><paw:button text="Open modal MD" size="md" type="primary" cssClass="btn-primary" /></span>
-                    <paw:modal id="modal-md" title="Medium size modal" size="md" message="Example content for medium size modal (default).
-Lorem ipsum dolor sit amet consectetur adipiscing elit natoque purus feugiat, condimentum duis aenean vestibulum ut montes cras dui enim, curae conubia posuere in dictum convallis nisi nisl elementum. Ligula semper ac fusce vel faucibus placerat lacus, sagittis libero eros id nascetur porttitor quis, ornare hac torquent ad non parturient. Velit interdum luctus varius mi vel leo, nullam dictumst dui fringilla suscipit, gravida est donec massa vestibulum."
-                        confirmLabel="Accept" cancelLabel="Cancel" />
-                    <span data-modal-open="modal-lg"><paw:button text="Open modal LG" size="lg" type="primary" cssClass="btn-primary" /></span>
-                    <paw:modal id="modal-lg" title="Large size modal" size="lg" message="Example content for large size modal.
-Lorem ipsum dolor sit amet consectetur adipiscing elit natoque purus feugiat, condimentum duis aenean vestibulum ut montes cras dui enim, curae conubia posuere in dictum convallis nisi nisl elementum. Ligula semper ac fusce vel faucibus placerat lacus, sagittis libero eros id nascetur porttitor quis, ornare hac torquent ad non parturient. Velit interdum luctus varius mi vel leo, nullam dictumst dui fringilla suscipit, gravida est donec massa vestibulum.
-Curabitur curae egestas tellus ac duis porta penatibus interdum mi, neque euismod volutpat sociosqu blandit dictum placerat vestibulum praesent ligula, maecenas malesuada nullam vivamus id mattis lacinia faucibus. Fermentum ligula nisl ornare lectus convallis rutrum sociosqu hac semper mi habitant iaculis et, dictum nostra primis rhoncus ad bibendum congue suspendisse potenti volutpat sodales enim. Rutrum venenatis ornare felis erat interdum scelerisque suspendisse elementum, convallis vestibulum montes cum ultrices iaculis."
-                        confirmLabel="Accept" cancelLabel="Cancel" />
+    <body>
+        <paw:navbar/>
+        <div>
+            <div class="hero-section w-100 sticky-top">
+                <div class="hero-overlay">
+                    <div class="hero-text text-center text-white mb-4">
+                        <h1 class="fw-bold">Skip the rental car counter</h1>
+                        <p class="lead">Rent just about any car, just about anywhere</p>
+                    </div>
+                    <paw:searchBar/>
                 </div>
             </div>
+            <div class="container mt-5">
+                <section class="carouselSection" id="featuredVehiclesSection">
+                    <paw:carouselHeader title="Featured Vehicles" subtitle="Discover our top picks for you" id="featuredCarsCarousel"/>
+                    <div id="featuredCarsCarousel" class="carousel slide" data-bs-ride="false">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="BMW" model="Series 5" stars="4.8" price="115" reviews="24"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://www.bmw.com.mx/es/local/lista-de-precios-de-autos-bmw/_jcr_content/root/maincontent/contentblueprint_cop_245807772/contentblueprint_143/container/image.coreimg.png/1753708406694/bmw-3-series-ice-lci-modelfinder.png"/>
+                                    </div>
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="Audi" model="A6 S-Line" stars="5.0" price="125" reviews="30"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&amp;fit=crop&amp;w=800&amp;q=80"/>
+                                    </div>
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="Volvo" model="S90" stars="4.7" price="108" reviews="18"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://malevamag.com/wp-content/uploads/2019/12/JeepRenegade.jpg"/>
+                                    </div>
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="Volvo" model="S90" stars="4.7" price="108" reviews="18"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://www.univision.com/_next/image?url=https%3A%2F%2Fst1.uvnimg.com%2Fa8%2F2a%2F6ae6bd4146438b12f17c878e1701%2Fhonda-civic-2016.jpg&w=1280&q=75"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="content">
-                <div class="example-title">Input</div>
-                <div class="input-demo-row">
-                    <paw:input name="demo-sm" label="Small" placeholder="Small size" cssClass="input-sm" />
-                    <paw:input name="demo-md" label="Medium" placeholder="Medium size" cssClass="input-md" />
-                    <paw:input name="demo-lg" label="Large" placeholder="Large size" cssClass="input-lg" />
-                </div>
+                <section class="carouselSection mt-5 pt-5 border-top border-secondary-subtle" id="mostSearchedVehiclesSection">
+                    <paw:carouselHeader title="Most Searched Vehicles" subtitle="Check out our most popular options" id="mostSearchedVehiclesCarousel"/>
+                    <div id="mostSearchedVehiclesCarousel" class="carousel slide" data-bs-ride="false">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="BMW" model="Series 5" stars="4.8" price="115" reviews="24"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://www.bmw.com.mx/es/local/lista-de-precios-de-autos-bmw/_jcr_content/root/maincontent/contentblueprint_cop_245807772/contentblueprint_143/container/image.coreimg.png/1753708406694/bmw-3-series-ice-lci-modelfinder.png"/>
+                                    </div>
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="Audi" model="A6 S-Line" stars="5.0" price="125" reviews="30"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&amp;fit=crop&amp;w=800&amp;q=80"/>
+                                    </div>
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="Volvo" model="S90" stars="4.7" price="108" reviews="18"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://malevamag.com/wp-content/uploads/2019/12/JeepRenegade.jpg"/>
+                                    </div>
+                                    <div class="col d-flex justify-content-center">
+                                        <paw:carCard brand="Volvo" model="S90" stars="4.7" price="108" reviews="18"
+                                                     href="${pageContext.request.contextPath}/car-detail"
+                                                     image="https://www.univision.com/_next/image?url=https%3A%2F%2Fst1.uvnimg.com%2Fa8%2F2a%2F6ae6bd4146438b12f17c878e1701%2Fhonda-civic-2016.jpg&w=1280&q=75"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
-
-            <div class="content">
-                <div class="example-title" >CarCard</div>
-                <div class="demo-row">
-                    <div class="carcard-col">
-                        <div class="carcard-wrap size-sm">
-                            <paw:carCard model="Corolla" brand="Toyota" price="1200" image="https://www.buyatoyota.com/sharpr/bat/assets/img/vehicle-info/Corolla/2026/hero-image.png" />
-                        </div>
-                    </div>
-                    <div class="carcard-col">
-                        <div class="carcard-wrap size-md">
-                            <paw:carCard model="Golf GTI" brand="Volkswagen" price="1500" image="https://media.vw.mediaservice.avp.tech/media/fast/v3_02TXWhbdRjG__3VWbX5MCfdOdDGND1rzmZy0qanTWocUdoKbqyFTmvFSQknyWmSLl87PUndhLLhRcUPhsgGTqc3mwwXB3N4OejmhmzqvJL1YkJBvByoAz-ggqlXu3rfHzzPy3vxPK37YkfDFrw-2Xqg_P3oY3ObCPFGXYjOz8UOp2Fnax1CiFmeKFXMgjW8VLcKSrC5EjOb9eFCrbw4bMSNZGx7iyWK8Vgu1zS8oqttEZ1CdB1vj_VtEB5Pwy7XTdusDOWtbKPg25NNxlPZxEgqZ45kx8xEImWMWKnEM2NmPDeWMPLJ8TFzJGUYi1LbfVV0muWy8OaTldqiaYwu2rWqU8-Jrnxbc-zYqHhk-w3hHXTsUqFg2ZmKnSnWDbTrDF6hr4O-HwkME5gm-Cf9U_RvENpH6DqhTUK_ofoIH0ZbQzuD9jWRPUSeJzJL5Asi14i-RuwGQz0MjSPmcOt4l_DdRlrFfxD_Kj0vE6wQPI_aRXgTfYHYH4inEau4msifoAgUL30BQu-iDqEaRKvoS-gPiDm4BnCdw7OBdAh5GuUkyjX61ug_QaiPAZXoL0S30HX0Q-g3cX-J5yjeUygGygKBZ_F9h-9XfPeQu5FHkfcif4DcQhlFmUGpopymdwv1COplki8RXiB8lnCL8FXC36IdJLKXSIUoRGWiP6OfQL-A_gPiIt638F1G6sG_jv8vdp4ldBF1DfUO_uME6wRv0vsOvbfpvUNgN4FXeOoSwRW0XWjjRCLo_xB7ktjHiA_p3sL1Ka5vcP2L-z3c93D_jucjvG_jfR-fg-8zfBeQOpCeQ1pBOo3UQrqCdAv_Bv5b9Nynf52BA6gb7Hqc8DThu2i7iRxA9iN_j-Kmv0XoK0J3UYPEhvCcxHMJ6Sf8UXreZOcN5GUCy6J7cGJmcv_0_hf3zY08DMbDMNrO3ymr2iy1M1exqk56_tXM1NS8kZmslfPaSinvFNPtoMa1olUqFJ10KhnXzHK9aKYdu2FpObNi2WZ6Yn7WeCEzkTEy8bihmdV2nZxSrbqc1iq1vFW2rWZpuc3pmVlDK5RrWbNsmyuHraPL1pGGVc1ZaUOrWI6ZNx2zadn_Sw1_Z_vqf8gU4AfBAwAA.webp?width=864" />
-                        </div>
-                    </div>
-                    <div class="carcard-col">
-                        <div class="carcard-wrap size-lg">
-                            <paw:carCard model="Serie 3" brand="BMW" price="2200" image="https://www.bmw.com.mx/es/local/lista-de-precios-de-autos-bmw/_jcr_content/root/maincontent/contentblueprint_cop_245807772/contentblueprint_143/container/image.coreimg.png/1753708406694/bmw-3-series-ice-lci-modelfinder.png" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
-        <script src="<c:url value="/js/components.js" />"></script>
+
         <%@ include file="footer.jsp"%>
     </body>
+</html>
