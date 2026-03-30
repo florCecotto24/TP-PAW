@@ -10,8 +10,8 @@
 <body class="bg-light has-fixed-navbar">
 <paw:navbar/>
 
-<c:set var="summaryFromDate" value="${empty fromDate ? 'Not specified' : fromDate}"/>
-<c:set var="summaryUntilDate" value="${empty untilDate ? 'Not specified' : untilDate}"/>
+<c:set var="summaryFromDate" value="${empty fromDateTime ? 'Not specified' : fromDateTime}"/>
+<c:set var="summaryUntilDate" value="${empty untilDateTime ? 'Not specified' : untilDateTime}"/>
 <c:set var="summaryLocation" value="${empty deliveryLocation ? 'Not specified' : deliveryLocation}"/>
 
 <main class="container py-5">

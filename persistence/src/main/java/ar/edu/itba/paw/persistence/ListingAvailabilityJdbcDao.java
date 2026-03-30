@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.ListingAvailability;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -11,19 +11,17 @@ import javax.sql.DataSource;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Repository
-public class ReservationJdbcDao implements ReservationDao {
+public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
 
-    private static final RowMapper<Reservation> RESERVATION_ROW_MAPPER = (rs, rowNum) -> new Reservation(
+    private static final RowMapper<ListingAvailability> ROW_MAPPER = (rs, rowNum) -> new ListingAvailability(
             rs.getLong("id"),
-            rs.getLong("rider_id"),
             rs.getLong("listing_id"),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"),
-            Reservation.Status.valueOf(rs.getString("status").toUpperCase()),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at")
     );
@@ -32,44 +30,38 @@ public class ReservationJdbcDao implements ReservationDao {
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
-    public ReservationJdbcDao(final DataSource dataSource) {
+    public ListingAvailabilityJdbcDao(final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)
-                .withTableName("reservations")
+                .withTableName("listing_availability")
                 .usingGeneratedKeyColumns("id");
     }
 
     @Override
-    public Reservation createReservation(
-            final long riderId,
-            final long listingId,
-            final OffsetDateTime startDate,
-            final OffsetDateTime endDate,
-            final Reservation.Status status) {
+    public ListingAvailability create(final long listingId, final OffsetDateTime startDate,
+            final OffsetDateTime endDate) {
         final Timestamp now = JdbcDateTimeUtils.nowTimestamp();
         final Map<String, Object> values = new HashMap<>();
-        values.put("rider_id", riderId);
         values.put("listing_id", listingId);
         values.put("start_date", JdbcDateTimeUtils.toTimestamp(startDate));
         values.put("end_date", JdbcDateTimeUtils.toTimestamp(endDate));
-        values.put("status", status.name().toLowerCase());
         values.put("created_at", now);
         values.put("updated_at", now);
         final Number id = jdbcInsert.executeAndReturnKey(values);
-
-        return new Reservation(
+        return new ListingAvailability(
                 id.longValue(),
-                riderId,
                 listingId,
                 startDate,
                 endDate,
-                status,
                 JdbcDateTimeUtils.toOffsetDateTime(now),
                 JdbcDateTimeUtils.toOffsetDateTime(now));
     }
 
     @Override
-    public Optional<Reservation> getReservationById(final long id) {
-        return jdbcTemplate.query("SELECT * FROM reservations WHERE id = ?", RESERVATION_ROW_MAPPER, id).stream().findAny();
+    public List<ListingAvailability> findByListingId(final long listingId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM listing_availability WHERE listing_id = ? ORDER BY start_date ASC",
+                ROW_MAPPER,
+                listingId);
     }
 }

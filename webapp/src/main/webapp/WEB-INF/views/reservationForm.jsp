@@ -10,8 +10,8 @@
 <body class="bg-light has-fixed-navbar">
 <paw:navbar/>
 
-<c:set var="summaryFromDate" value="${empty fromDate ? 'Not specified' : fromDate}"/>
-<c:set var="summaryUntilDate" value="${empty untilDate ? 'Not specified' : untilDate}"/>
+<c:set var="summaryFromDate" value="${empty fromDateTime ? 'Not specified' : fromDateTime}"/>
+<c:set var="summaryUntilDate" value="${empty untilDateTime ? 'Not specified' : untilDateTime}"/>
 <c:set var="summaryLocation" value="${empty deliveryLocation ? 'Not specified' : deliveryLocation}"/>
 
 <main class="container py-5">
@@ -27,14 +27,20 @@
                     <div class="border rounded-3 p-3 bg-light-subtle mb-4">
                         <h2 class="h6 fw-bold mb-2">Reservation summary</h2>
                         <p class="mb-1"><strong>Car:</strong> ${carName}</p>
-                        <p class="mb-1"><strong>Dates:</strong> ${summaryFromDate} to ${summaryUntilDate}</p>
+                        <p class="mb-1"><strong>Pickup / return:</strong> ${summaryFromDate} → ${summaryUntilDate}</p>
                         <p class="mb-0"><strong>Location:</strong> ${summaryLocation}</p>
                     </div>
 
                     <form action="<c:url value='/reservation'/>" method="post" class="d-flex flex-column gap-2">
+                        <c:if test="${not empty listingId}">
+                            <input type="hidden" name="listingId" value="${listingId}"/>
+                        </c:if>
+                        <c:if test="${not empty availabilityId}">
+                            <input type="hidden" name="availabilityId" value="${availabilityId}"/>
+                        </c:if>
                         <input type="hidden" name="carName" value="${carName}"/>
-                        <input type="hidden" name="fromDate" value="${fromDate}"/>
-                        <input type="hidden" name="untilDate" value="${untilDate}"/>
+                        <input type="hidden" name="fromDateTime" value="${fromDateTime}"/>
+                        <input type="hidden" name="untilDateTime" value="${untilDateTime}"/>
                         <input type="hidden" name="deliveryLocation" value="${deliveryLocation}"/>
 
                         <paw:input
@@ -57,7 +63,14 @@
                                 required="${true}"/>
 
                         <div class="d-flex gap-2 mt-2">
-                            <a href="<c:url value='/car-detail'/>" class="btn btn-outline-secondary w-50">Back</a>
+                            <c:choose>
+                                <c:when test="${not empty listingId}">
+                                    <a href="<c:url value='/car-detail'><c:param name='listingId' value='${listingId}'/></c:url>" class="btn btn-outline-secondary w-50">Back</a>
+                                </c:when>
+                                <c:otherwise>
+                                    <a href="<c:url value='/car-detail'/>" class="btn btn-outline-secondary w-50">Back</a>
+                                </c:otherwise>
+                            </c:choose>
                             <button type="submit" class="btn btn-primary w-50">Confirm reservation</button>
                         </div>
                     </form>

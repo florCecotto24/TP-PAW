@@ -578,18 +578,18 @@ body.modal-open {
     color: var(--color-primary, #3b7be0);
 }
 
-.detail-booking-disclaimer {
+.detail-reservation-disclaimer {
     letter-spacing: 0.04em;
     font-size: 0.7rem;
 }
 
-.detail-booking-sticky {
+.detail-reservation-sticky {
     position: sticky;
     top: calc(var(--navbar-height) + 1rem);
 }
 
 @media (max-width: 991.98px) {
-    .detail-booking-sticky {
+    .detail-reservation-sticky {
         position: static;
     }
 }
@@ -644,4 +644,17 @@ body.modal-open {
 
 .similarVehiclesSection .carcard {
     max-width: 100%;
+}
+
+.explore-filter-dropdown .dropdown-toggle::after {
+    margin-left: 0.35rem;
+}
+
+.explore-filter-dropdown__panel {
+    min-width: 16rem;
+}
+
+.explore-filter-dropdown__label {
+    font-weight: 500;
+    font-size: 0.9rem;
 }

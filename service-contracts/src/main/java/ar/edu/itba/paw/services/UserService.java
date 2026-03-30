@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.User;
-
 import java.util.Optional;
+
+import ar.edu.itba.paw.models.User;
 
 public interface UserService {
 
@@ -10,4 +10,5 @@ public interface UserService {
 
     Optional<User> getUserById(final long id);
 
+    User findOrCreatePublisher(final String email, final String name);
 }

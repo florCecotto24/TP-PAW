@@ -13,12 +13,15 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public class ImageJdbcDao implements ImageDao{
-    private final static RowMapper<Image> IMAGE_ROW_MAPPER = (rs, rowNum) -> new Image(
-            rs.getLong("id"),
-            rs.getString("name"),
-            rs.getString("content_type"),
-            rs.getBytes("data")
+public class ImageJdbcDao implements ImageDao {
+
+    private static final String SELECT_IMAGE_BY_ID =
+            "SELECT id, content_type, byte_array FROM images WHERE id = ?";
+
+    private static final RowMapper<Image> IMAGE_ROW_MAPPER = (rs, rowNum) -> new Image(
+            rs.getLong(1),
+            rs.getString(2),
+            rs.getBytes(3)
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -33,18 +36,17 @@ public class ImageJdbcDao implements ImageDao{
     }
 
     @Override
-    public Image createImage(final String name, final String contentType, final byte[] data) {
+    public Image createImage(final String contentType, final byte[] data) {
         final Map<String, Object> values = new HashMap<>();
-        values.put("name", name);
         values.put("content_type", contentType);
-        values.put("data", data);
+        values.put("byte_array", data);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new Image(id.longValue(), name, contentType, data);
+        return new Image(id.longValue(), contentType, data);
     }
 
     @Override
     public Optional<Image> getImageById(final long id) {
-        return jdbcTemplate.query("SELECT * FROM images WHERE id = ?", IMAGE_ROW_MAPPER, id).stream().findAny();
+        return jdbcTemplate.query(SELECT_IMAGE_BY_ID, IMAGE_ROW_MAPPER, id).stream().findAny();
     }
 }

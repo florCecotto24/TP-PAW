@@ -1,11 +1,10 @@
 package ar.edu.itba.paw.persistence;
 
 import java.math.BigDecimal;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,38 +19,17 @@ import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingSearchCriteria;
 
 @Repository
 public class ListingJdbcDao implements ListingDao {
-
-
-    private static OffsetDateTime toOffsetDateTime(final Timestamp ts) { // (?) esta funcion la vamos a usar en varios modelos ; quiza conviene ponerla en un archivo aparte
-        if (ts == null) {
-            return null;
-        }
-        return ts.toInstant().atOffset(ZoneOffset.UTC);
-    }
-
-    private static OffsetDateTime readDateTime(ResultSet rs, String column) throws SQLException {
-        final Object o = rs.getObject(column);
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof OffsetDateTime) {
-            return (OffsetDateTime) o;
-        }
-        if (o instanceof Timestamp) {
-            return toOffsetDateTime((Timestamp) o);
-        }
-        return OffsetDateTime.parse(o.toString());
-    }
 
     private static final RowMapper<Listing> LISTING_ROW_MAPPER = (rs, rowNum) -> new Listing(
             rs.getLong("id"),
             rs.getString("title"),
             rs.getLong("car_id"),
-            readDateTime(rs, "created_at"),
-            readDateTime(rs, "updated_at"),
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"),
             Listing.Status.valueOf(rs.getString("status").toUpperCase()),
             rs.getBigDecimal("day_price"),
             rs.getString("start_point"),
@@ -77,7 +55,7 @@ public class ListingJdbcDao implements ListingDao {
             final BigDecimal dayPrice,
             final String startPoint,
             final String description) {
-        final Timestamp now = new Timestamp(System.currentTimeMillis());
+        final Timestamp now = JdbcDateTimeUtils.nowTimestamp();
         final Map<String, Object> values = new HashMap<>();
         values.put("title", title);
         values.put("car_id", carId);
@@ -93,8 +71,8 @@ public class ListingJdbcDao implements ListingDao {
                 id.longValue(),
                 title,
                 carId,
-                toOffsetDateTime(now),
-                toOffsetDateTime(now),
+                JdbcDateTimeUtils.toOffsetDateTime(now),
+                JdbcDateTimeUtils.toOffsetDateTime(now),
                 status,
                 dayPrice,
                 startPoint,
@@ -109,5 +87,92 @@ public class ListingJdbcDao implements ListingDao {
     @Override
     public List<Listing> getAllListings() {
         return jdbcTemplate.query("SELECT * FROM listings ORDER BY created_at DESC", LISTING_ROW_MAPPER);
+    }
+
+    @Override
+    public List<Listing> searchListings(final ListingSearchCriteria criteria) {
+        final StringBuilder sql = new StringBuilder(
+                "SELECT DISTINCT l.* FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
+        final List<Object> args = new ArrayList<>();
+
+        if (criteria.getQuery() != null) {
+            final String q = "%" + escapeLike(criteria.getQuery()) + "%";
+            sql.append("AND (c.brand ILIKE ? ESCAPE '\\' OR c.model ILIKE ? ESCAPE '\\' OR l.title ILIKE ? ESCAPE '\\' ")
+                    .append("OR l.description ILIKE ? ESCAPE '\\' OR l.start_point ILIKE ? ESCAPE '\\') ");
+            for (int i = 0; i < 5; i++) {
+                args.add(q);
+            }
+        }
+
+        final boolean hasTrans = !criteria.getTransmissions().isEmpty();
+        final boolean hasPwr = !criteria.getPowertrains().isEmpty();
+        if (hasTrans || hasPwr) {
+            sql.append("AND (");
+            if (hasTrans) {
+                appendInClause(sql, "c.transmission", criteria.getTransmissions().size());
+                args.addAll(criteria.getTransmissions());
+                if (hasPwr) {
+                    sql.append(" OR ");
+                }
+            }
+            if (hasPwr) {
+                appendInClause(sql, "c.powertrain", criteria.getPowertrains().size());
+                args.addAll(criteria.getPowertrains());
+            }
+            sql.append(") ");
+        }
+
+        if (!criteria.getCarTypes().isEmpty()) {
+            sql.append("AND ");
+            appendInClause(sql, "c.type", criteria.getCarTypes().size());
+            args.addAll(criteria.getCarTypes());
+            sql.append(" ");
+        }
+
+        final List<String> bands = criteria.getPriceBands();
+        if (!bands.isEmpty()) {
+            final boolean wantFree = bands.contains("FREE");
+            final boolean wantPaid = bands.contains("PAID");
+            if (wantFree ^ wantPaid) {
+                if (wantFree) {
+                    sql.append("AND l.day_price = 0 ");
+                } else {
+                    sql.append("AND l.day_price > 0 ");
+                }
+            }
+        }
+
+        if (criteria.hasAvailabilityRange()) {
+            final Instant fromInstant = criteria.getAvailabilityRangeStart();
+            final Instant untilExclusive = criteria.getAvailabilityRangeEndExclusive();
+            final Timestamp fromStart = Timestamp.from(fromInstant);
+            final Timestamp untilTs = Timestamp.from(untilExclusive);
+
+            sql.append("AND EXISTS (")
+                    .append("SELECT 1 FROM listing_availability la WHERE la.listing_id = l.id ")
+                    .append("AND la.start_date <= ? AND la.end_date >= ?) ");
+            args.add(fromStart);
+            args.add(untilTs);
+
+            sql.append("AND NOT EXISTS (")
+                    .append("SELECT 1 FROM reservations r WHERE r.listing_id = l.id ")
+                    .append("AND r.status IN ('accepted', 'started') ")
+                    .append("AND r.start_date < ? AND r.end_date > ?) ");
+            args.add(untilTs);
+            args.add(fromStart);
+        }
+
+        sql.append("ORDER BY l.created_at DESC");
+        return jdbcTemplate.query(sql.toString(), LISTING_ROW_MAPPER, args.toArray());
+    }
+
+    private static void appendInClause(final StringBuilder sql, final String column, final int n) {
+        sql.append(column).append(" IN (");
+        sql.append(String.join(",", Collections.nCopies(n, "?")));
+        sql.append(")");
+    }
+
+    private static String escapeLike(final String raw) {
+        return raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

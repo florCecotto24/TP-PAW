@@ -27,6 +27,15 @@ CREATE TABLE IF NOT EXISTS listings (
     description VARCHAR(200) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS listing_availability(
+    id SERIAL PRIMARY KEY,
+    listing_id INTEGER NOT NULL REFERENCES listings(id),
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS reservations (
     id SERIAL PRIMARY KEY,
     rider_id INTEGER NOT NULL REFERENCES users(id),
@@ -40,9 +49,8 @@ CREATE TABLE IF NOT EXISTS reservations (
 
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
     content_type VARCHAR(50) NOT NULL,
-    data BYTEA NOT NULL
+    byte_array BYTEA NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS car_pictures (
@@ -51,5 +59,6 @@ CREATE TABLE IF NOT EXISTS car_pictures (
     image_id INTEGER NOT NULL REFERENCES images(id),
     display_order INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL
+    updated_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (car_id, display_order)
 );

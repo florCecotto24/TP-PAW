@@ -1,12 +1,31 @@
 package ar.edu.itba.paw.webapp.form;
 
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.validation.constraints.*;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Digits;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PublishCarForm {
+
+    @NotBlank(message = "Your name is required")
+    @Size(max = 50, message = "Name must be at most 50 characters")
+    private String ownerName;
+
+    @NotBlank(message = "Email is required")
+    @Email(message = "Enter a valid email address")
+    @Size(max = 50, message = "Email must be at most 50 characters")
+    private String ownerEmail;
 
     @NotBlank(message = "Brand is required")
     @Size(message = "Brand muste be between 2 and 50 characters", min = 2, max = 50)
@@ -43,12 +62,61 @@ public class PublishCarForm {
     @Size(min = 1, max = 8, message = "Upload between 1 and 8 images")
     private MultipartFile[] pictures;
 
+    private List<AvailabilityRow> availabilityRows = new ArrayList<>();
+
+    public PublishCarForm() {
+        for (int i = 0; i < 5; i++) {
+            availabilityRows.add(new AvailabilityRow());
+        }
+    }
+
+    public List<AvailabilityPeriod> toAvailabilityPeriods() {
+        final List<AvailabilityPeriod> periods = new ArrayList<>();
+        for (final AvailabilityRow row : availabilityRows) {
+            if (row.getFrom() != null && row.getUntil() != null) {
+                periods.add(new AvailabilityPeriod(row.getFrom(), row.getUntil()));
+            }
+        }
+        return periods;
+    }
+
+    public static class AvailabilityRow {
+        @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+        private LocalDateTime from;
+        @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+        private LocalDateTime until;
+
+        public LocalDateTime getFrom() {
+            return from;
+        }
+
+        public void setFrom(final LocalDateTime from) {
+            this.from = from;
+        }
+
+        public LocalDateTime getUntil() {
+            return until;
+        }
+
+        public void setUntil(final LocalDateTime until) {
+            this.until = until;
+        }
+    }
+
     public MultipartFile[] getPictures() {
         return pictures;
     }
 
-    public void setPictures(MultipartFile[] pictures) {
+    public void setPictures(final MultipartFile[] pictures) {
         this.pictures = pictures;
+    }
+
+    public List<AvailabilityRow> getAvailabilityRows() {
+        return availabilityRows;
+    }
+
+    public void setAvailabilityRows(final List<AvailabilityRow> availabilityRows) {
+        this.availabilityRows = availabilityRows;
     }
 
     public String getBrand() {
@@ -121,5 +189,21 @@ public class PublishCarForm {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(final String ownerName) {
+        this.ownerName = ownerName;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+
+    public void setOwnerEmail(final String ownerEmail) {
+        this.ownerEmail = ownerEmail;
     }
 }

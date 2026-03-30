@@ -13,35 +13,52 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public class UserJdbcDao implements UserDao{
+public class UserJdbcDao implements UserDao {
 
-    private final static RowMapper<User> USER_ROW_MAPPER = (rs, rowNum) -> new User(
-            rs.getLong("id"),
-            rs.getString("email"),
-            rs.getString("name")
+    private static final String SELECT_COLUMNS = "id, email, name";
+
+    private static final RowMapper<User> USER_ROW_MAPPER = (rs, rowNum) -> new User(
+            rs.getLong(1),
+            rs.getString(2),
+            rs.getString(3)
     );
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
-    public UserJdbcDao(final DataSource dataSource){
+    public UserJdbcDao(final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert = new SimpleJdbcInsert(dataSource).withTableName("users").usingGeneratedKeyColumns("id");
     }
 
     @Override
-    public User createUser(final String email, final String name){
+    public User createUser(final String email, final String name) {
         final Map<String, Object> values = new HashMap<>();
         values.put("email", email);
         values.put("name", name);
-        final Number user_id = jdbcInsert.executeAndReturnKey(values);
-        return new User(user_id.longValue(), email, name);
+        final Number userId = jdbcInsert.executeAndReturnKey(values);
+        return new User(userId.longValue(), email, name);
     }
 
     @Override
     public Optional<User> getUserById(final long id) {
-        return jdbcTemplate.query("SELECT * FROM users WHERE id = ?", USER_ROW_MAPPER, id).stream().findAny();
-        //ponemos findAny porque el id es unico, entonces o devuelve un resultado o no devuelve nada
+        return jdbcTemplate.query(
+                "SELECT " + SELECT_COLUMNS + " FROM users WHERE id = ?",
+                USER_ROW_MAPPER,
+                id).stream().findAny();
+    }
+
+    @Override
+    public Optional<User> findByEmail(final String email) {
+        return jdbcTemplate.query(
+                "SELECT " + SELECT_COLUMNS + " FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))",
+                USER_ROW_MAPPER,
+                email).stream().findFirst();
+    }
+
+    @Override
+    public void updateUserName(final long userId, final String name) {
+        jdbcTemplate.update("UPDATE users SET name = ? WHERE id = ?", name, userId);
     }
 }

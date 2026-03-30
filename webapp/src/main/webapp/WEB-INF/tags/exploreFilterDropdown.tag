@@ -1,0 +1,58 @@
+<%@ tag language="java" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+
+<%@ attribute name="filterLabel" required="true" type="java.lang.String" %>
+<%@ attribute name="helperText" required="false" type="java.lang.String" %>
+<%@ attribute name="paramName" required="true" type="java.lang.String" %>
+<%@ attribute name="ariaGroup" required="true" type="java.lang.String" %>
+<%@ attribute name="options" required="true" type="java.util.List" %>
+
+<c:set var="pn" value="${paramName}"/>
+<c:set var="pv" value="${paramValues[pn]}"/>
+<c:set var="selCount" value="${empty pv ? 0 : fn:length(pv)}"/>
+
+<div class="dropdown explore-filter-dropdown mx-1 my-1">
+    <button class="btn btn-light border dropdown-toggle rounded-4 d-inline-flex align-items-center gap-1"
+            type="button"
+            id="explore_dd_${ariaGroup}"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="outside"
+            aria-expanded="false"
+            aria-haspopup="true"
+            aria-label="${filterLabel}. Open filter menu.">
+        <span class="explore-filter-dropdown__label">${filterLabel}</span>
+        <c:if test="${selCount gt 0}">
+            <span class="badge text-bg-primary rounded-pill">${selCount}</span>
+        </c:if>
+    </button>
+    <ul class="dropdown-menu shadow explore-filter-dropdown__panel p-0"
+        aria-labelledby="explore_dd_${ariaGroup}">
+        <li>
+            <h6 class="dropdown-header mb-0">${filterLabel}</h6>
+        </li>
+        <c:if test="${not empty helperText}">
+            <li>
+                <span class="dropdown-item-text small text-body-secondary px-3 pb-2 d-block">${helperText}</span>
+            </li>
+        </c:if>
+        <li><hr class="dropdown-divider my-0"></li>
+        <c:forEach var="opt" items="${options}">
+            <c:set var="isOptSel" value="false"/>
+            <c:if test="${not empty pv}">
+                <c:forEach items="${pv}" var="v">
+                    <c:if test="${v eq opt['value']}"><c:set var="isOptSel" value="true"/></c:if>
+                </c:forEach>
+            </c:if>
+            <li>
+                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-3 mb-0" for="explore_${ariaGroup}_${opt['value']}">
+                    <input class="form-check-input flex-shrink-0 js-explore-filter mt-0" type="checkbox"
+                           name="${paramName}" value="${opt['value']}"
+                           id="explore_${ariaGroup}_${opt['value']}"
+                           <c:if test="${isOptSel}">checked="checked"</c:if> />
+                    <span class="small">${opt['label']}</span>
+                </label>
+            </li>
+        </c:forEach>
+    </ul>
+</div>

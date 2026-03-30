@@ -11,14 +11,14 @@
 <%@ attribute name="href" required="false" %>
 
 <c:if test="${empty pricePeriod}">
-    <c:set var="pricePeriod" value="hora" />
+    <c:set var="pricePeriod" value="hour" />
 </c:if>
 <c:choose>
     <c:when test="${pricePeriod eq 'day'}">
         <c:set var="pricePeriodLabel" value="day" />
     </c:when>
     <c:otherwise>
-        <c:set var="pricePeriodLabel" value="hora" />
+        <c:set var="pricePeriodLabel" value="hour" />
     </c:otherwise>
 </c:choose>
 

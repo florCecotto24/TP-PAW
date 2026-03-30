@@ -2,25 +2,26 @@ package ar.edu.itba.paw.models;
 
 import java.time.OffsetDateTime;
 
-public class CarPicture {
+public final class ListingAvailability {
+
     private final long id;
-    private final long carId;
-    private final long imageId;
-    private final int displayOrder;
+    private final long listingId;
+    private final OffsetDateTime startDate;
+    private final OffsetDateTime endDate;
     private final OffsetDateTime createdAt;
     private final OffsetDateTime updatedAt;
 
-    public CarPicture(
+    public ListingAvailability(
             final long id,
-            final long carId,
-            final long imageId,
-            final int displayOrder,
+            final long listingId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
         this.id = id;
-        this.carId = carId;
-        this.imageId = imageId;
-        this.displayOrder = displayOrder;
+        this.listingId = listingId;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -29,16 +30,16 @@ public class CarPicture {
         return id;
     }
 
-    public long getCarId() {
-        return carId;
+    public long getListingId() {
+        return listingId;
     }
 
-    public long getImageId() {
-        return imageId;
+    public OffsetDateTime getStartDate() {
+        return startDate;
     }
 
-    public int getDisplayOrder() {
-        return displayOrder;
+    public OffsetDateTime getEndDate() {
+        return endDate;
     }
 
     public OffsetDateTime getCreatedAt() {

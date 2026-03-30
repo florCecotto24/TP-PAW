@@ -9,4 +9,8 @@ public interface UserDao {
     User createUser(final String email, final String name);
 
     Optional<User> getUserById(final long id);
+
+    Optional<User> findByEmail(final String email);
+
+    void updateUserName(final long userId, final String name);
 }

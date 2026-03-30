@@ -2,21 +2,11 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ attribute name="modalId" required="true" type="java.lang.String" %>
 <%@ attribute name="carouselId" required="true" type="java.lang.String" %>
-<%@ attribute name="mainImage" required="true" type="java.lang.String" %>
-<%@ attribute name="topImage" required="true" type="java.lang.String" %>
-<%@ attribute name="bottomImage" required="true" type="java.lang.String" %>
-<%@ attribute name="mainAlt" required="false" type="java.lang.String" %>
-<%@ attribute name="topAlt" required="false" type="java.lang.String" %>
-<%@ attribute name="bottomAlt" required="false" type="java.lang.String" %>
+<%@ attribute name="imageUrls" required="true" type="java.util.List" %>
+<%@ attribute name="vehicleLabel" required="false" type="java.lang.String" %>
 
-<c:if test="${empty mainAlt}">
-    <c:set var="mainAlt" value="Vehicle" />
-</c:if>
-<c:if test="${empty topAlt}">
-    <c:set var="topAlt" value="Interior" />
-</c:if>
-<c:if test="${empty bottomAlt}">
-    <c:set var="bottomAlt" value="Rear view" />
+<c:if test="${empty vehicleLabel}">
+    <c:set var="vehicleLabel" value="Vehicle" />
 </c:if>
 
 <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true" aria-labelledby="${modalId}Title">
@@ -29,24 +19,23 @@
             <div class="modal-body p-0">
                 <div id="${carouselId}" class="carousel slide" data-bs-ride="false">
                     <div class="carousel-inner">
-                        <div class="carousel-item active">
-                            <img src="${mainImage}" class="d-block w-100 car-detail-carousel-img" alt="${mainAlt}">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="${topImage}" class="d-block w-100 car-detail-carousel-img" alt="${topAlt}">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="${bottomImage}" class="d-block w-100 car-detail-carousel-img" alt="${bottomAlt}">
-                        </div>
+                        <c:forEach items="${imageUrls}" var="u" varStatus="st">
+                            <c:url var="slideSrc" value="${u}" />
+                            <div class="carousel-item<c:if test="${st.first}"> active</c:if>">
+                                <img src="${slideSrc}" class="d-block w-100 car-detail-carousel-img" alt="${vehicleLabel} — photo ${st.count}">
+                            </div>
+                        </c:forEach>
                     </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#${carouselId}" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Previous</span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#${carouselId}" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Next</span>
-                    </button>
+                    <c:if test="${not empty imageUrls}">
+                        <button class="carousel-control-prev" type="button" data-bs-target="#${carouselId}" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#${carouselId}" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </c:if>
                 </div>
             </div>
         </div>

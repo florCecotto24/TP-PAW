@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -10,12 +12,12 @@
 <paw:navbar/>
 
 <main class="car-detail-page container pb-4">
-    <paw:breadcrumbTrail currentLabel="Mercedes-Benz E-Class 300"/>
+    <paw:breadcrumbTrail currentLabel="${listing.title}"/>
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
-            <h1 class="h2 fw-bold mb-0">Mercedes-Benz E-Class 300</h1>
-            <paw:detailListingMeta rating="4.9" reviewCount="18" location="Córdoba, AR"/>
+            <h1 class="h2 fw-bold mb-0"><c:out value="${listing.title}"/></h1>
+            <paw:detailListingMeta rating="4.9" reviewCount="18" location="${listing.startPoint}"/>
         </div>
         <paw:detailToolbarActions/>
     </div>
@@ -24,12 +26,8 @@
         <div class="col-lg-8 order-1">
             <paw:carDetailGalleryGrid
                     modalId="carDetailGalleryModal"
-                    mainImage="${pageContext.request.contextPath}/assets/images/mercedes-exterior.png"
-                    topImage="${pageContext.request.contextPath}/assets/images/mercedes-interior.png"
-                    bottomImage="${pageContext.request.contextPath}/assets/images/mercedes-rear-view.png"
-                    mainAlt="Mercedes-Benz E-Class exterior"
-                    topAlt="Interior dashboard"
-                    bottomAlt="Rear view"/>
+                    imageUrls="${carGalleryImagePaths}"
+                    vehicleLabel="${listing.title}"/>
 
             <paw:hostProfileBar
                     hostName="Julian S."
@@ -43,10 +41,10 @@
                         <paw:specCard icon="people-fill" label="5 seats"/>
                     </div>
                     <div class="col">
-                        <paw:specCard icon="gear-wide-connected" label="Automatic"/>
+                        <paw:specCard icon="gear-wide-connected" label="${car.transmission}"/>
                     </div>
                     <div class="col">
-                        <paw:specCard icon="fuel-pump" label="Premium gasoline"/>
+                        <paw:specCard icon="fuel-pump" label="${car.powertrain}"/>
                     </div>
                     <div class="col">
                         <paw:specCard icon="snow" label="Central A/C"/>
@@ -55,15 +53,41 @@
             </section>
 
             <paw:pickupLocationBlock
-                    address="Av. Corrientes 2000"
+                    address="${listing.startPoint}"
                     mapImageSrc="${pageContext.request.contextPath}/assets/images/map-placeholder.svg"/>
+
+            <section class="mt-5" id="availabilitySection">
+                <h2 class="h5 fw-bold mb-3 d-flex align-items-center gap-2 flex-wrap">
+                    Availability
+                    <c:if test="${not empty listingAvailabilities}">
+                        <span class="badge rounded-pill text-bg-secondary">${fn:length(listingAvailabilities)} window<c:if test="${fn:length(listingAvailabilities) ne 1}">s</c:if></span>
+                    </c:if>
+                </h2>
+                <c:choose>
+                    <c:when test="${empty availabilityLines}">
+                        <p class="text-secondary mb-0">No availability windows published for this listing.</p>
+                    </c:when>
+                    <c:otherwise>
+                        <ul class="list-group list-group-flush border rounded-3 shadow-sm">
+                            <c:forEach items="${availabilityLines}" var="line" varStatus="st">
+                                <li class="list-group-item d-flex align-items-start gap-2 py-3">
+                                    <i class="bi bi-calendar-range text-primary mt-1" aria-hidden="true"></i>
+                                    <div>
+                                        <span class="visually-hidden">Window </span>
+                                        <span class="fw-medium">Period <c:out value="${st.count}"/></span>
+                                        <div class="small text-body-secondary mt-1"><c:out value="${line}"/></div>
+                                    </div>
+                                </li>
+                            </c:forEach>
+                        </ul>
+                    </c:otherwise>
+                </c:choose>
+            </section>
 
             <section class="listingDescriptionSection mt-5" id="descriptionSection">
                 <h2 class="h5 fw-bold mb-3">Description</h2>
                 <p class="listingDescriptionSection__intro text-secondary mb-4">
-                    Experience the luxury and power of the Mercedes-Benz E-Class 300. Ideal for business trips or special
-                    weekend getaways in Córdoba. This vehicle combines cutting-edge technology with exceptional
-                    comfort and an imposing presence on the road.
+                    <c:out value="${listing.description}"/>
                 </p>
                 <div class="d-flex flex-column gap-3">
                     <paw:descriptionFeatureItem
@@ -99,52 +123,38 @@
         </div>
 
         <div class="col-lg-4 order-2">
-            <div class="detail-booking-sticky">
-                <paw:detailBookingPanel
-                        pricePerDay="120"
+            <div class="detail-reservation-sticky">
+                <fmt:formatNumber var="dayPriceStr" value="${listing.dayPrice}" maxFractionDigits="2" minFractionDigits="0" groupingUsed="false"/>
+                <paw:detailReservationPanel
+                        listingId="${listing.id}"
+                        pricePerDay="${dayPriceStr}"
                         days="3"
                         subtotal="360"
                         serviceFee="24"
                         total="384"
-                        deliveryLocation="Córdoba Airport"/>
+                        deliveryLocation="${listing.startPoint}"
+                        fromDateTimeValue="${reservationFromDefault}"
+                        untilDateTimeValue="${reservationUntilDefault}"
+                        reservationPeriods="${reservationPeriods}"
+                        carName="${listing.title}"/>
             </div>
         </div>
     </div>
 
     <section class="similarVehiclesSection mt-5 pt-5 border-top border-secondary-subtle" id="similarVehiclesSection">
         <paw:similarVehiclesHeader/>
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-            <div class="col d-flex justify-content-center">
-                <paw:carCard brand="BMW" model="Series 5" stars="4.8" price="115" reviews="24"
-                        href="${pageContext.request.contextPath}/car-detail"
-                        image="https://www.bmw.com.mx/es/local/lista-de-precios-de-autos-bmw/_jcr_content/root/maincontent/contentblueprint_cop_245807772/contentblueprint_143/container/image.coreimg.png/1753708406694/bmw-3-series-ice-lci-modelfinder.png"/>
-            </div>
-            <div class="col d-flex justify-content-center">
-                <paw:carCard brand="Audi" model="A6 S-Line" stars="5.0" price="125" reviews="30"
-                        href="${pageContext.request.contextPath}/car-detail"
-                        image="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?auto=format&amp;fit=crop&amp;w=800&amp;q=80"/>
-            </div>
-            <div class="col d-flex justify-content-center">
-                <paw:carCard brand="Volvo" model="S90" stars="4.7" price="108" reviews="18"
-                        href="${pageContext.request.contextPath}/car-detail"
-                        image="https://images.unsplash.com/photo-1619682817487-e45dc39de5d6?auto=format&amp;fit=crop&amp;w=800&amp;q=80"/>
-            </div>
-        </div>
+        <p class="text-secondary text-center mb-0">Similar listings will appear here when available.</p>
     </section>
 </main>
 
+<c:if test="${not empty carGalleryImagePaths}">
 <paw:carDetailGalleryModal
         modalId="carDetailGalleryModal"
         carouselId="carDetailCarousel"
-        mainImage="${pageContext.request.contextPath}/assets/images/mercedes-exterior.png"
-        topImage="${pageContext.request.contextPath}/assets/images/mercedes-interior.png"
-        bottomImage="${pageContext.request.contextPath}/assets/images/mercedes-rear-view.png"
-        mainAlt="Mercedes-Benz E-Class exterior"
-        topAlt="Interior dashboard"
-        bottomAlt="Rear view">
-</paw:carDetailGalleryModal>
+        imageUrls="${carGalleryImagePaths}"
+        vehicleLabel="${listing.title}"/>
+</c:if>
 
 <%@include file="footer.jsp"%>
-<script src="<c:url value="/js/components.js"/>"></script>
 </body>
 </html>

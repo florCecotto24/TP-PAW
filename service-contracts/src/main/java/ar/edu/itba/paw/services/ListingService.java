@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingSearchCriteria;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,9 +16,14 @@ public interface ListingService {
             Listing.Status status,
             BigDecimal dayPrice,
             String startPoint,
-            String description);
+            String description,
+            List<AvailabilityPeriod> availabilityPeriods);
 
     Optional<Listing> getListingById(long id);
 
+    List<ListingAvailability> findAvailabilityByListingId(long listingId);
+
     List<Listing> getAllListings();
+
+    List<Listing> searchListings(ListingSearchCriteria criteria);
 }

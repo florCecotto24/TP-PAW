@@ -1,46 +1,70 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ attribute name="mainImage" required="true" type="java.lang.String" %>
-<%@ attribute name="topImage" required="true" type="java.lang.String" %>
-<%@ attribute name="bottomImage" required="true" type="java.lang.String" %>
-<%@ attribute name="mainAlt" required="false" type="java.lang.String" %>
-<%@ attribute name="topAlt" required="false" type="java.lang.String" %>
-<%@ attribute name="bottomAlt" required="false" type="java.lang.String" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ attribute name="imageUrls" required="true" type="java.util.List" %>
 <%@ attribute name="modalId" required="true" type="java.lang.String" %>
+<%@ attribute name="vehicleLabel" required="false" type="java.lang.String" %>
 
-<c:if test="${empty mainAlt}">
-    <c:set var="mainAlt" value="Vehicle" />
-</c:if>
-<c:if test="${empty topAlt}">
-    <c:set var="topAlt" value="Interior" />
-</c:if>
-<c:if test="${empty bottomAlt}">
-    <c:set var="bottomAlt" value="Rear view" />
+<c:if test="${empty vehicleLabel}">
+    <c:set var="vehicleLabel" value="Vehicle" />
 </c:if>
 
-<div class="car-detail-gallery rounded-4 overflow-hidden">
-    <button type="button"
-            class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start"
-            data-bs-toggle="modal"
-            data-bs-target="#${modalId}"
-            data-carousel-index="0"
-            aria-label="Open gallery: ${mainAlt}">
-        <img src="${mainImage}" class="w-100 h-100 car-detail-gallery__img" alt="${mainAlt}">
-    </button>
-    <button type="button"
-            class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
-            data-bs-toggle="modal"
-            data-bs-target="#${modalId}"
-            data-carousel-index="1"
-            aria-label="Open gallery: ${topAlt}">
-        <img src="${topImage}" class="w-100 h-100 car-detail-gallery__img" alt="${topAlt}">
-    </button>
-    <button type="button"
-            class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
-            data-bs-toggle="modal"
-            data-bs-target="#${modalId}"
-            data-carousel-index="2"
-            aria-label="Open gallery: ${bottomAlt}">
-        <img src="${bottomImage}" class="w-100 h-100 car-detail-gallery__img" alt="${bottomAlt}">
-    </button>
-</div>
+<c:choose>
+    <c:when test="${empty imageUrls}">
+        <div class="car-detail-gallery car-detail-gallery--empty rounded-4 overflow-hidden d-flex align-items-center justify-content-center bg-secondary-subtle" style="min-height: 280px;">
+            <div class="text-center text-secondary px-3">
+                <i class="bi bi-image fs-1 d-block mb-2" aria-hidden="true"></i>
+                <p class="mb-0 small">No photos for this listing yet.</p>
+            </div>
+        </div>
+    </c:when>
+    <c:otherwise>
+        <c:set var="u0" value="${imageUrls[0]}" />
+        <c:choose>
+            <c:when test="${fn:length(imageUrls) > 1}">
+                <c:set var="u1" value="${imageUrls[1]}" />
+            </c:when>
+            <c:otherwise>
+                <c:set var="u1" value="${imageUrls[0]}" />
+            </c:otherwise>
+        </c:choose>
+        <c:choose>
+            <c:when test="${fn:length(imageUrls) > 2}">
+                <c:set var="u2" value="${imageUrls[2]}" />
+            </c:when>
+            <c:otherwise>
+                <c:set var="u2" value="${imageUrls[0]}" />
+            </c:otherwise>
+        </c:choose>
+        <c:url var="mainSrc" value="${u0}" />
+        <c:url var="topSrc" value="${u1}" />
+        <c:url var="bottomSrc" value="${u2}" />
+
+        <div class="car-detail-gallery rounded-4 overflow-hidden">
+            <button type="button"
+                    class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#${modalId}"
+                    data-carousel-index="0"
+                    aria-label="Open gallery: ${vehicleLabel}">
+                <img src="${mainSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+            </button>
+            <button type="button"
+                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#${modalId}"
+                    data-carousel-index="1"
+                    aria-label="Open gallery: ${vehicleLabel}">
+                <img src="${topSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+            </button>
+            <button type="button"
+                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#${modalId}"
+                    data-carousel-index="2"
+                    aria-label="Open gallery: ${vehicleLabel}">
+                <img src="${bottomSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+            </button>
+        </div>
+    </c:otherwise>
+</c:choose>

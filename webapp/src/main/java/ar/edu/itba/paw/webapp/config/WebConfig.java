@@ -3,6 +3,9 @@ package ar.edu.itba.paw.webapp.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
@@ -19,6 +22,7 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import javax.sql.DataSource;
 
 @EnableWebMvc
+@EnableTransactionManagement
 @Configuration
 @ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
 public class WebConfig implements WebMvcConfigurer {
@@ -29,6 +33,11 @@ public class WebConfig implements WebMvcConfigurer {
         viewResolver.setPrefix("/WEB-INF/views/");
         viewResolver.setSuffix(".jsp");
         return viewResolver;
+    }
+
+    @Bean
+    public PlatformTransactionManager transactionManager(final DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
     }
 
     @Bean

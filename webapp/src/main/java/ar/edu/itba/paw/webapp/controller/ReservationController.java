@@ -10,14 +10,18 @@ import org.springframework.web.servlet.ModelAndView;
 public class ReservationController {
 
     @RequestMapping(value = "/reservation/new", method = RequestMethod.GET)
-    public ModelAndView newReservation(@RequestParam(value = "carName", required = false) final String carName,
-                                       @RequestParam(value = "fromDate", required = false) final String fromDate,
-                                       @RequestParam(value = "untilDate", required = false) final String untilDate,
+    public ModelAndView newReservation(@RequestParam(value = "listingId", required = false) final Long listingId,
+                                       @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
+                                       @RequestParam(value = "carName", required = false) final String carName,
+                                       @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
+                                       @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
                                        @RequestParam(value = "deliveryLocation", required = false) final String deliveryLocation) {
         final ModelAndView mav = new ModelAndView("reservationForm");
+        mav.addObject("listingId", listingId);
+        mav.addObject("availabilityId", availabilityId);
         mav.addObject("carName", carName == null || carName.isBlank() ? "Mercedes-Benz E-Class 300" : carName);
-        mav.addObject("fromDate", fromDate);
-        mav.addObject("untilDate", untilDate);
+        mav.addObject("fromDateTime", fromDateTime);
+        mav.addObject("untilDateTime", untilDateTime);
         mav.addObject("deliveryLocation", deliveryLocation);
         return mav;
     }
@@ -26,17 +30,21 @@ public class ReservationController {
     public ModelAndView createReservation(@RequestParam("email") final String email,
                                           @RequestParam("name") final String name,
                                           @RequestParam("surname") final String surname,
+                                          @RequestParam(value = "listingId", required = false) final Long listingId,
+                                          @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
                                           @RequestParam(value = "carName", required = false) final String carName,
-                                          @RequestParam(value = "fromDate", required = false) final String fromDate,
-                                          @RequestParam(value = "untilDate", required = false) final String untilDate,
+                                          @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
+                                          @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
                                           @RequestParam(value = "deliveryLocation", required = false) final String deliveryLocation) {
         final ModelAndView mav = new ModelAndView("reservationConfirmation");
         mav.addObject("email", email);
         mav.addObject("name", name);
         mav.addObject("surname", surname);
+        mav.addObject("listingId", listingId);
+        mav.addObject("availabilityId", availabilityId);
         mav.addObject("carName", carName == null || carName.isBlank() ? "Mercedes-Benz E-Class 300" : carName);
-        mav.addObject("fromDate", fromDate);
-        mav.addObject("untilDate", untilDate);
+        mav.addObject("fromDateTime", fromDateTime);
+        mav.addObject("untilDateTime", untilDateTime);
         mav.addObject("deliveryLocation", deliveryLocation);
         return mav;
     }

@@ -180,6 +180,10 @@
             if (!carouselEl) {
                 return;
             }
+            var items = carouselEl.querySelectorAll('.carousel-item');
+            if (items.length > 0) {
+                idx = Math.max(0, Math.min(idx, items.length - 1));
+            }
             var instance = window.bootstrap.Carousel.getOrCreateInstance(carouselEl);
             instance.to(idx);
         });
@@ -238,4 +242,82 @@
             reader.readAsDataURL(file);
         });
     });
+})();
+
+
+(function () {
+    function splitLocalDt(iso) {
+        if (!iso || typeof iso !== 'string') {
+            return { d: '', t: '00:00' };
+        }
+        var parts = iso.trim().split('T');
+        var d = parts[0] || '';
+        var t = '00:00';
+        if (parts.length > 1 && parts[1]) {
+            t = parts[1].substring(0, 5);
+        }
+        return { d: d, t: t };
+    }
+
+    function combine(dVal, tVal) {
+        if (!dVal) {
+            return '';
+        }
+        return dVal + 'T' + (tVal || '00:00');
+    }
+
+    function bindPair(hidden, dateEl, timeEl) {
+        if (!hidden || !dateEl || !timeEl) {
+            return null;
+        }
+        function syncToHidden() {
+            hidden.value = combine(dateEl.value, timeEl.value);
+        }
+        function syncFromHidden() {
+            var s = splitLocalDt(hidden.value);
+            dateEl.value = s.d;
+            timeEl.value = s.t;
+        }
+        function setDateBounds(minFull, maxFull) {
+            dateEl.removeAttribute('min');
+            dateEl.removeAttribute('max');
+            if (minFull && minFull.length >= 10) {
+                dateEl.min = minFull.substring(0, 10);
+            }
+            if (maxFull && maxFull.length >= 10) {
+                dateEl.max = maxFull.substring(0, 10);
+            }
+        }
+        dateEl.addEventListener('change', syncToHidden);
+        timeEl.addEventListener('change', syncToHidden);
+        dateEl.addEventListener('input', syncToHidden);
+        timeEl.addEventListener('input', syncToHidden);
+        syncFromHidden();
+        return { syncToHidden: syncToHidden, syncFromHidden: syncFromHidden, setDateBounds: setDateBounds };
+    }
+
+    function initWrappers() {
+        document.querySelectorAll('[data-paw-dtpair-wrap]').forEach(function (wrap) {
+            var hidId = wrap.getAttribute('data-paw-hidden');
+            var dId = wrap.getAttribute('data-paw-date');
+            var tId = wrap.getAttribute('data-paw-time');
+            bindPair(
+                document.getElementById(hidId),
+                document.getElementById(dId),
+                document.getElementById(tId)
+            );
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initWrappers);
+    } else {
+        initWrappers();
+    }
+
+    window.PawDateTimePair = {
+        bindPair: bindPair,
+        splitLocalDt: splitLocalDt,
+        combine: combine
+    };
 })();
