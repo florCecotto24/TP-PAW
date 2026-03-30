@@ -49,4 +49,16 @@ public final class ListingAvailability {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+    @Override
+    public String toString() {
+        return "ListingAvailability{" +
+                "id=" + id +
+                ", listingId=" + listingId +
+                ", startDate=" + startDate +
+                ", endDate=" + endDate +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
+    }
 }

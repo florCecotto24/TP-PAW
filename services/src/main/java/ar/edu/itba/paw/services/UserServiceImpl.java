@@ -18,8 +18,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User createUser(final String email, final String name){
-        return userDao.createUser(email, name);
+    public User createUser(final String email, final String forename, final String surname) {
+        return userDao.createUser(email, forename, surname);
     }
 
     @Override
@@ -28,15 +28,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findOrCreatePublisher(final String email, final String name) {
+    public User findOrCreatePublisher(final String email, final String forename, final String surname) {
         final String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
-        final String trimmedName = name.trim();
         final Optional<User> existing = userDao.findByEmail(normalizedEmail);
         if (existing.isPresent()) {
             final User u = existing.get();
-            userDao.updateUserName(u.getId(), trimmedName);
-            return new User(u.getId(), u.getEmail(), trimmedName);
+            userDao.updateUserName(u.getId(), forename, surname);
+            return new User(u.getId(), u.getEmail(), forename, surname);
         }
-        return userDao.createUser(normalizedEmail, trimmedName);
+        return userDao.createUser(normalizedEmail, forename, surname);
     }
 }

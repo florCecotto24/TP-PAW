@@ -31,6 +31,12 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label required-label">Your surname</label>
+                            <form:input path="ownerSurname" cssClass="form-control" type="text" autocomplete="surname"/>
+                            <form:errors path="ownerSurname" cssClass="text-danger d-block"/>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label required-label">Email</label>
                             <form:input path="ownerEmail" cssClass="form-control" type="email" autocomplete="email"/>
                             <form:errors path="ownerEmail" cssClass="text-danger d-block"/>

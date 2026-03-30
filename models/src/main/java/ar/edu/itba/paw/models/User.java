@@ -3,12 +3,14 @@ package ar.edu.itba.paw.models;
 public class User {
     private final long id;
     private final String email;
-    private final String name;
+    private final String forename;
+    private final String surname;
 
-    public User(long id, String email, String name){
+    public User(long id, String email, String forename, String surname){
         this.id = id;
         this.email = email;
-        this.name = name;
+        this.forename = forename;
+        this.surname = surname;
     }
 
     public long getId() {
@@ -19,8 +21,12 @@ public class User {
         return email;
     }
 
-    public String getName() {
-        return name;
+    public String getForename() {
+        return forename;
+    }
+
+    public String getSurname() {
+        return surname;
     }
 
     @Override
@@ -28,7 +34,8 @@ public class User {
         return "User{" +
                 "id=" + id +
                 ", email='" + email + '\'' +
-                ", name='" + name + '\'' +
+                ", forename='" + forename + '\'' +
+                ", surname='" + surname + '\'' +
                 '}';
     }
 }

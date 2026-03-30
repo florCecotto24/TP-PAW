@@ -22,6 +22,10 @@ public class PublishCarForm {
     @Size(max = 50, message = "Name must be at most 50 characters")
     private String ownerName;
 
+    @NotBlank(message = "Your surname is required")
+    @Size(max = 50, message = "Surname must be at most 50 characters")
+    private String ownerSurname;
+
     @NotBlank(message = "Email is required")
     @Email(message = "Enter a valid email address")
     @Size(max = 50, message = "Email must be at most 50 characters")
@@ -197,6 +201,14 @@ public class PublishCarForm {
 
     public void setOwnerName(final String ownerName) {
         this.ownerName = ownerName;
+    }
+
+    public String getOwnerSurname() {
+        return ownerSurname;
+    }
+
+    public void setOwnerSurname(final String ownerSurname) {
+        this.ownerSurname = ownerSurname;
     }
 
     public String getOwnerEmail() {

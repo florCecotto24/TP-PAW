@@ -20,14 +20,13 @@ public class CarPictureJdbcDao implements CarPictureDao {
     private static final String SELECT_COLUMNS =
             "id, car_id, image_id, display_order, created_at, updated_at";
 
-    /** Índices fijos: evita fallos del driver al resolver nombres de columna en el ResultSet. */
     private static final RowMapper<CarPicture> CAR_PICTURE_ROW_MAPPER = (rs, rowNum) -> new CarPicture(
-            rs.getLong(1),
-            rs.getLong(2),
-            rs.getLong(3),
-            rs.getInt(4),
-            JdbcDateTimeUtils.toOffsetDateTime(rs.getTimestamp(5)),
-            JdbcDateTimeUtils.toOffsetDateTime(rs.getTimestamp(6))
+            rs.getLong("id"),
+            rs.getLong("car_id"),
+            rs.getLong("image_id"),
+            rs.getInt("display_order"),
+            JdbcDateTimeUtils.toOffsetDateTime(rs.getTimestamp("created_at")),
+            JdbcDateTimeUtils.toOffsetDateTime(rs.getTimestamp("updated_at"))
     );
 
     private final JdbcTemplate jdbcTemplate;

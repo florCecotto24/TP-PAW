@@ -30,15 +30,16 @@ public class HelloWorldController {
 
     @RequestMapping(value = "/", method = RequestMethod.POST)
     public ModelAndView createUser(@RequestParam("email") final String email,
-                                   @RequestParam("name") final String name){
+                                   @RequestParam("forename") final String forename,
+                                   @RequestParam("surname") final String surname) {
         final ModelAndView mav = new ModelAndView("home");
-        User user = userService.createUser(email, name);
-        mav.addObject("message", "Hello World " + user.getName());
+        User user = userService.createUser(email, forename, surname);
+        mav.addObject("message", "Hello World " + user.getForename());
 
         final List<User> mockResults = List.of(
-                new User(1L, "facu@gmail.com", "facu"),
-                new User(2L, "flor@gmail.com", "flor"),
-                new User(3L, "caro@gmail.com", "caro")
+                new User(1L, "facu@gmail.com", "facu", "Krens"),
+                new User(2L, "flor@gmail.com", "flor", "Cecotto"),
+                new User(3L, "caro@gmail.com", "caro", "Castel")
         );
         mav.addObject("results", mockResults);
 

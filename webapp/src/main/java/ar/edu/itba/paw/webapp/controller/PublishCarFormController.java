@@ -91,7 +91,7 @@ public class PublishCarFormController {
             return index(form);
         }
 
-        final User publisher = userService.findOrCreatePublisher(form.getOwnerEmail(), form.getOwnerName());
+        final User publisher = userService.findOrCreatePublisher(form.getOwnerEmail(), form.getOwnerName(), form.getOwnerSurname());
         final Car car = carService.createCar(
                 publisher.getId(),
                 form.getPlate(),
@@ -125,13 +125,14 @@ public class PublishCarFormController {
             }
 
             try {
+                final String filename = picture.getOriginalFilename();
                 final String contentType = picture.getContentType();
-                final byte[] data = readPictureBytes(picture);
+                final byte[] data = picture.getBytes();
                 if (data == null || data.length == 0) {
                     continue;
                 }
 
-                final Image image = imageService.createImage(contentType, data);
+                final Image image = imageService.createImage(filename, contentType, data);
                 carPictureService.createCarPicture(carId, image.getId(), displayOrder);
 
                 displayOrder++;
@@ -139,16 +140,5 @@ public class PublishCarFormController {
                 System.err.println("Error processing image: " + e.getMessage());
             }
         }
-    }
-
-    private static byte[] readPictureBytes(final MultipartFile picture) throws IOException {
-        try (InputStream in = picture.getInputStream()) {
-            final byte[] fromStream = in.readAllBytes();
-            if (fromStream.length > 0) {
-                return fromStream;
-            }
-        }
-        final byte[] direct = picture.getBytes();
-        return direct != null ? direct : new byte[0];
     }
 }

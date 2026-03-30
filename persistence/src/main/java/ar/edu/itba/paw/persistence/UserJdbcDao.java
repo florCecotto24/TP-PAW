@@ -15,12 +15,13 @@ import java.util.Optional;
 @Repository
 public class UserJdbcDao implements UserDao {
 
-    private static final String SELECT_COLUMNS = "id, email, name";
+    private static final String SELECT_COLUMNS = "id, email, forename, surname";
 
     private static final RowMapper<User> USER_ROW_MAPPER = (rs, rowNum) -> new User(
-            rs.getLong(1),
-            rs.getString(2),
-            rs.getString(3)
+            rs.getLong("id"),
+            rs.getString("email"),
+            rs.getString("forename"),
+            rs.getString("surname")
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -33,12 +34,13 @@ public class UserJdbcDao implements UserDao {
     }
 
     @Override
-    public User createUser(final String email, final String name) {
+    public User createUser(final String email, final String forename, final String surname) {
         final Map<String, Object> values = new HashMap<>();
         values.put("email", email);
-        values.put("name", name);
+        values.put("forename", forename);
+        values.put("surname", surname);
         final Number userId = jdbcInsert.executeAndReturnKey(values);
-        return new User(userId.longValue(), email, name);
+        return new User(userId.longValue(), email, forename, surname);
     }
 
     @Override
@@ -58,7 +60,7 @@ public class UserJdbcDao implements UserDao {
     }
 
     @Override
-    public void updateUserName(final long userId, final String name) {
-        jdbcTemplate.update("UPDATE users SET name = ? WHERE id = ?", name, userId);
+    public void updateUserName(final long userId, final String forename, final String surname) {
+         jdbcTemplate.update("UPDATE users SET forename = ?, surname = ? WHERE id = ?", forename, surname, userId);
     }
 }

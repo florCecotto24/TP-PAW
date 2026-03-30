@@ -126,7 +126,7 @@ public class ReservationController {
                     "Selected pickup/return is outside the listing availability.");
         }
 
-        final User rider = userService.findOrCreatePublisher(email, name + " " + surname);
+        final User rider = userService.findOrCreatePublisher(email, name, surname);
         final Reservation reservation;
         try {
             reservation = reservationService.createReservation(

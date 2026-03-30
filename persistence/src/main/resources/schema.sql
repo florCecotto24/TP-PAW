@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS users(
     id SERIAL PRIMARY KEY,
     email VARCHAR(50) NOT NULL,
-    name VARCHAR(50) NOT NULL
+    forename VARCHAR(50) NOT NULL,
+    surname VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS cars (
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS reservations (
 
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
+    image_name VARCHAR(255) NOT NULL,
     content_type VARCHAR(50) NOT NULL,
     byte_array BYTEA NOT NULL
 );

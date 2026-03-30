@@ -16,12 +16,13 @@ import java.util.Optional;
 public class ImageJdbcDao implements ImageDao {
 
     private static final String SELECT_IMAGE_BY_ID =
-            "SELECT id, content_type, byte_array FROM images WHERE id = ?";
+            "SELECT id, image_name, content_type, byte_array FROM images WHERE id = ?";
 
     private static final RowMapper<Image> IMAGE_ROW_MAPPER = (rs, rowNum) -> new Image(
-            rs.getLong(1),
-            rs.getString(2),
-            rs.getBytes(3)
+            rs.getLong("id"),
+            rs.getString("image_name"),
+            rs.getString("content_type"),
+            rs.getBytes("byte_array")
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -36,13 +37,14 @@ public class ImageJdbcDao implements ImageDao {
     }
 
     @Override
-    public Image createImage(final String contentType, final byte[] data) {
+    public Image createImage(final String name, final String contentType, final byte[] data) {
         final Map<String, Object> values = new HashMap<>();
+        values.put("image_name", name);
         values.put("content_type", contentType);
         values.put("byte_array", data);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new Image(id.longValue(), contentType, data);
+        return new Image(id.longValue(), name, contentType, data);
     }
 
     @Override

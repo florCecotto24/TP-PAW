@@ -48,4 +48,16 @@ public class CarPicture {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+    @Override
+    public String toString() {
+        return "CarPicture{" +
+                "id=" + id +
+                ", carId=" + carId +
+                ", imageId=" + imageId +
+                ", displayOrder=" + displayOrder +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
+                '}';
+    }
 }
