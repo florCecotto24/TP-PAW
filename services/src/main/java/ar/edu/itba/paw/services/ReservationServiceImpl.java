@@ -19,12 +19,10 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public Reservation createReservation(
-            final long riderId,
-            final long listingId,
-            final OffsetDateTime startDate,
-            final OffsetDateTime endDate,
-            final Reservation.Status status) {
+    public Reservation createReservation( final long riderId, final long listingId,  final OffsetDateTime startDate,  final OffsetDateTime endDate,  final Reservation.Status status) {
+        if (reservationDao.hasActiveOverlap(listingId, startDate, endDate)) {
+            throw new ReservationConflictException("The selected dates are no longer available for this listing.");
+        }
         return reservationDao.createReservation(riderId, listingId, startDate, endDate, status);
     }
 

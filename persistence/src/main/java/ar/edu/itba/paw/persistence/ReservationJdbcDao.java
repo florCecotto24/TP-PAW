@@ -17,6 +17,8 @@ import java.util.Optional;
 @Repository
 public class ReservationJdbcDao implements ReservationDao {
 
+    private static final String[] BLOCKING_STATUSES = {"accepted", "started"};
+
     private static final RowMapper<Reservation> RESERVATION_ROW_MAPPER = (rs, rowNum) -> new Reservation(
             rs.getLong("id"),
             rs.getLong("rider_id"),
@@ -37,6 +39,26 @@ public class ReservationJdbcDao implements ReservationDao {
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)
                 .withTableName("reservations")
                 .usingGeneratedKeyColumns("id");
+    }
+
+    @Override
+    public boolean hasActiveOverlap(
+            final long listingId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate) {
+        final Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM reservations " +
+                        "WHERE listing_id = ? " +
+                        "AND status IN (?, ?) " +
+                        "AND start_date < ? " +
+                        "AND end_date > ?",
+                Integer.class,
+                listingId,
+                BLOCKING_STATUSES[0],
+                BLOCKING_STATUSES[1],
+                JdbcDateTimeUtils.toTimestamp(endDate),
+                JdbcDateTimeUtils.toTimestamp(startDate));
+        return count > 0;
     }
 
     @Override

@@ -7,6 +7,8 @@ import java.util.Optional;
 
 public interface ReservationDao {
 
+    boolean hasActiveOverlap(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
+
     Reservation createReservation(
             long riderId,
             long listingId,

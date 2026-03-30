@@ -24,6 +24,10 @@
                         You are requesting <strong>${carName}</strong>. Fill in your details so the owner can contact you.
                     </p>
 
+                    <c:if test="${not empty reservationError}">
+                        <div class="alert alert-danger" role="alert">${reservationError}</div>
+                    </c:if>
+
                     <div class="border rounded-3 p-3 bg-light-subtle mb-4">
                         <h2 class="h6 fw-bold mb-2">Reservation summary</h2>
                         <p class="mb-1"><strong>Car:</strong> ${carName}</p>
