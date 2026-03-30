@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Reservation confirmed</title>
+</head>
+<body style="font-family: system-ui, Segoe UI, Arial, sans-serif; line-height: 1.5; color: #1a1a1a;">
+<p th:text="'Hello ' + ${riderFullName} + ','">Hello,</p>
+<p>Your reservation is confirmed. Here are the details:</p>
+<ul>
+    <li><strong>Reservation number:</strong> <span th:text="${reservationId}">0</span></li>
+    <li><strong>Vehicle:</strong> <span th:text="${vehicleLabel}">—</span></li>
+    <li><strong>Pickup:</strong> <span th:text="${startDateFormatted}">—</span></li>
+    <li><strong>Return:</strong> <span th:text="${endDateFormatted}">—</span></li>
+    <li th:if="${hasDeliveryLocation}"><strong>Delivery / pickup location you provided:</strong> <span th:text="${deliveryLocation}">—</span></li>
+</ul>
+<p style="margin: 24px 0;">
+    <a th:href="${ctaUrl}"
+       style="display: inline-block; padding: 12px 20px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        View vehicle listing
+    </a>
+</p>
+<p style="font-size: 0.9em; color: #555;">If the button does not work, copy and paste this link into your browser:<br/>
+    <span th:text="${ctaUrl}" style="word-break: break-all;">https://</span>
+</p>
+<p style="font-size: 0.85em; color: #777;">This message was sent automatically. Please do not reply to this email.</p>
+</body>
+</html>
