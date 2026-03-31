@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
@@ -26,8 +28,10 @@ import org.springframework.core.env.Environment;
 import org.springframework.lang.NonNull;
 
 import javax.sql.DataSource;
+import java.util.concurrent.Executor;
 
 @EnableWebMvc
+@EnableAsync
 @EnableTransactionManagement
 @Configuration
 @Import(SpringMailConfig.class)
@@ -56,6 +60,17 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
     @Bean
     public PlatformTransactionManager transactionManager(final DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean(name = "mailTaskExecutor")
+    public Executor mailTaskExecutor() {
+        final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("mail-async-");
+        executor.initialize();
+        return executor;
     }
 
     @Bean
