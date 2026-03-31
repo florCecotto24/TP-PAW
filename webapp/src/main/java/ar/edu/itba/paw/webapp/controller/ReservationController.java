@@ -134,7 +134,8 @@ public class ReservationController {
                     listingId,
                     startDate,
                     endDate,
-                    Reservation.Status.ACCEPTED);
+                    Reservation.Status.ACCEPTED,
+                    deliveryLocation);
         } catch (final ReservationConflictException e) {
             return reservationFormWithError(
                     listingId,

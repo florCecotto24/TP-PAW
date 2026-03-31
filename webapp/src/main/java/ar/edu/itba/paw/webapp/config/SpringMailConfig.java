@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.config;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Properties;
 
 import org.springframework.beans.BeansException;
@@ -62,6 +63,7 @@ public class SpringMailConfig implements ApplicationContextAware, EnvironmentAwa
         final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
         messageSource.setBasename(requiredProperty("mail.messages.basename"));
         messageSource.setDefaultEncoding(templateEncoding());
+        messageSource.setDefaultLocale(Locale.ENGLISH);
         return messageSource;
     }
 
