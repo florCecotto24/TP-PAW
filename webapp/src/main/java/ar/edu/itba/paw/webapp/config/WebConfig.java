@@ -19,6 +19,10 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
+import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.lang.NonNull;
 
 import javax.sql.DataSource;
 
@@ -26,8 +30,16 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @Configuration
 @Import(SpringMailConfig.class)
+@PropertySource("classpath:application.properties")
 @ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
-public class WebConfig implements WebMvcConfigurer {
+public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
+
+    private Environment environment;
+
+    @Override
+    public void setEnvironment(@NonNull final Environment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     public ViewResolver viewResolver() {
@@ -46,9 +58,9 @@ public class WebConfig implements WebMvcConfigurer {
     public DataSource dataSource() {
         final SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
         dataSource.setDriverClass(org.postgresql.Driver.class);
-        dataSource.setUrl("jdbc:postgresql://localhost/paw");
-        dataSource.setUsername("pawdbuser");
-        dataSource.setPassword("pawdbpassword");
+        dataSource.setUrl(requiredProperty("spring.datasource.url"));
+        dataSource.setUsername(requiredProperty("spring.datasource.username"));
+        dataSource.setPassword(requiredProperty("spring.datasource.password"));
 
         return dataSource;
     }
@@ -87,5 +99,13 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void configureDefaultServletHandling(final DefaultServletHandlerConfigurer configurer) {
         configurer.enable();
+    }
+
+    private String requiredProperty(final String key) {
+        final String value = this.environment.getProperty(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing or empty datasource configuration property: " + key);
+        }
+        return value;
     }
 }
