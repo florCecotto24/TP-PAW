@@ -13,41 +13,7 @@
                 <li class="nav-item px-1">
                     <a class="nav-link d-flex align-items-center ${activeTab == 'publish-car' ? 'active' : ''}" href="${pageContext.request.contextPath}/publish-car">Publish</a>
                 </li>
-                <li class="nav-item px-1">
-                    <a class="nav-link d-flex align-items-center ${activeTab == 'reservations' ? 'active' : ''}">Reservations</a>
-                </li>
-                <li class="nav-item px-1">
-                    <a class="nav-link d-flex align-items-center ${activeTab == 'messages' ? 'active' : ''}"><i class="bi bi-chat-left-fill"></i></a>
-                </li>
-                <li class="nav-item px-1">
-                    <a class="nav-link d-flex align-items-center ${activeTab == 'notifications' ? 'active' : ''}"><i class="bi bi-bell-fill"></i></a>
-                </li>
             </ul>
-            <div class="dropdown-center text-end ms-2 me-3 py-1">
-                <button
-                        class="my-dropdown-button btn btn-light border dropdown-toggle"
-                        data-bs-toggle="dropdown"
-                        type="button"
-                >
-                    <img
-                            src="https://github.com/mdo.png"
-                            alt="mdo"
-                            width="32"
-                            height="32"
-                            class="rounded-circle"
-                    />
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end text-small">
-                    <li class="dropdown-header"><h6>Juan Pérez</h6>juan@gmail.com</li>
-                    <li><hr class="dropdown-divider"/></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>My profile</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-calendar me-2"></i>My reservations</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-car-front-fill me-2"></i>My cars</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
-                    <li><hr class="dropdown-divider" /></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i>Sign out</a></li>
-                </ul>
-            </div>
         </div>
     </div>
 </nav>
