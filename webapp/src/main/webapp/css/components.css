@@ -439,10 +439,6 @@ body.modal-open {
     z-index: 0;
 }
 
-.star {
-    font-weight: bold;
-    color: #FFCD1B;
-}
 
 .no-image-badge i {
     font-size: 6rem;

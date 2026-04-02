@@ -3,10 +3,8 @@
 
 <%@ attribute name="model" required="true" %>
 <%@ attribute name="brand" required="true" %>
-<%@ attribute name="stars" required="true" %>
 <%@ attribute name="price" required="true" %>
 <%@ attribute name="image" required="false" %>
-<%@ attribute name="reviews" required="true" %>
 <%@ attribute name="pricePeriod" required="false" %>
 <%@ attribute name="href" required="false" %>
 
@@ -39,7 +37,6 @@
         <div class="carcard-info-text text">
             <h4 class="carcard-brand">${brand}</h4>
             <p class="carcard-model">${model}</p>
-            <p class="carcard-stars">${stars}<span class="star">&#9733;</span>(${reviews})</p>
         </div>
         <div class="carcard-price text">
             <p class="carcard-price-amount">$${price}</p>

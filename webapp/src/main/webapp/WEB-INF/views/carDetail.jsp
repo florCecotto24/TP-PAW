@@ -121,10 +121,8 @@
                             <paw:carCard
                                     model="${similar.model}"
                                     brand="${similar.brand}"
-                                    stars="4.5"
                                     price="${similar.price}"
                                     image="${similarImageUrl}"
-                                    reviews="5"
                                     pricePeriod="day"
                                     href="${pageContext.request.contextPath}/car-detail?listingId=${similar.listingId}"/>
                         </div>
