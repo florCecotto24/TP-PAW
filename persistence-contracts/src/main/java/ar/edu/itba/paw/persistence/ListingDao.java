@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 
@@ -22,4 +23,11 @@ public interface ListingDao {
     List<Listing> getAllListings();
 
     List<Listing> searchListings(ListingSearchCriteria criteria);
+
+    List<Listing> findSimilarListings(
+            long excludedListingId,
+            Car.Type type,
+            Car.Powertrain powertrain,
+            Car.Transmission transmission,
+            int limit);
 }

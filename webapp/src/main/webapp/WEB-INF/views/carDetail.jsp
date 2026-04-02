@@ -101,7 +101,37 @@
 
     <section class="similarVehiclesSection mt-5 pt-5 border-top border-secondary-subtle" id="similarVehiclesSection">
         <paw:similarVehiclesHeader/>
-        <p class="text-secondary text-center mb-0">Similar listings will appear here when available.</p>
+        <c:choose>
+            <c:when test="${empty similarListings}">
+                <p class="text-secondary text-center mb-0">Similar listings will appear here when available.</p>
+            </c:when>
+            <c:otherwise>
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                    <c:forEach var="similar" items="${similarListings}">
+                        <div class="col d-flex justify-content-center">
+                            <c:choose>
+                                <c:when test="${similar.imageId > 0}">
+                                    <c:url var="similarImageUrl" value="/image/${similar.imageId}" />
+                                </c:when>
+                                <c:otherwise>
+                                    <c:set var="similarImageUrl" value="" />
+                                </c:otherwise>
+                            </c:choose>
+
+                            <paw:carCard
+                                    model="${similar.model}"
+                                    brand="${similar.brand}"
+                                    stars="4.5"
+                                    price="${similar.price}"
+                                    image="${similarImageUrl}"
+                                    reviews="5"
+                                    pricePeriod="day"
+                                    href="${pageContext.request.contextPath}/car-detail?listingId=${similar.listingId}"/>
+                        </div>
+                    </c:forEach>
+                </div>
+            </c:otherwise>
+        </c:choose>
     </section>
 </main>
 

@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.ListingSearchCriteria;
 import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -64,7 +64,7 @@ public class SearchController {
 
         final ListingSearchCriteria criteria =
                 buildCriteria(query, category, transmission, powertrain, price, from, until);
-        final List<SearchResultView> results = listingService.searchListings(criteria).stream()
+        final List<VehicleCardView> results = listingService.searchListings(criteria).stream()
                 .map(listing -> toSearchResult(listing).orElse(null))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
@@ -257,7 +257,7 @@ public class SearchController {
         }
     }
 
-    private Optional<SearchResultView> toSearchResult(final Listing listing) {
+    private Optional<VehicleCardView> toSearchResult(final Listing listing) {
         return carService.getCarById(listing.getCarId())
                 .map(car -> {
                     // Get the first image for this car (if any)
@@ -267,7 +267,7 @@ public class SearchController {
                             .map(CarPicture::getImageId)
                             .orElse(0L);
                     
-                    return new SearchResultView(
+                    return new VehicleCardView(
                             listing.getId(),
                             car.getBrand(),
                             car.getModel(),
@@ -275,42 +275,6 @@ public class SearchController {
                             imageId
                     );
                 });
-    }
-
-    public static class SearchResultView {
-        private final long listingId;
-        private final String brand;
-        private final String model;
-        private final BigDecimal price;
-        private final long imageId;
-
-        public SearchResultView(final long listingId, final String brand, final String model, final BigDecimal price, final long imageId) {
-            this.listingId = listingId;
-            this.brand = brand;
-            this.model = model;
-            this.price = price;
-            this.imageId = imageId;
-        }
-
-        public long getListingId() {
-            return listingId;
-        }
-
-        public String getBrand() {
-            return brand;
-        }
-
-        public String getModel() {
-            return model;
-        }
-
-        public BigDecimal getPrice() {
-            return price;
-        }
-
-        public long getImageId() {
-            return imageId;
-        }
     }
 }
 

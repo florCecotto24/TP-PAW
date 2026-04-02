@@ -11,6 +11,7 @@ import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.dto.ReservationPeriodOption;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 @Controller
 public class CarDetailController {
 
+    private static final int SIMILAR_LISTINGS_LIMIT = 4;
     private static final DateTimeFormatter DT_LOCAL = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
     private static final DateTimeFormatter LABEL_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
@@ -70,6 +72,13 @@ public class CarDetailController {
                 .map(cp -> "/image/" + cp.getImageId())
                 .collect(Collectors.toList());
 
+        final List<VehicleCardView> similarListings = listingService
+                .findSimilarListings(listingId, SIMILAR_LISTINGS_LIMIT)
+                .stream()
+                .map(this::toSimilarVehicleCard)
+                .flatMap(Optional::stream)
+                .collect(Collectors.toList());
+
         final List<ListingAvailability> listingAvailabilities = listingService.findAvailabilityByListingId(listingId);
         final List<String> availabilityLines = new ArrayList<>(listingAvailabilities.size());
         final List<ReservationPeriodOption> reservationPeriods = new ArrayList<>(listingAvailabilities.size());
@@ -95,7 +104,25 @@ public class CarDetailController {
         mav.addObject("reservationPeriods", reservationPeriods);
         mav.addObject("reservationFromDefault", reservationFromDefault);
         mav.addObject("reservationUntilDefault", reservationUntilDefault);
+        mav.addObject("similarListings", similarListings);
         return mav;
+    }
+
+    private Optional<VehicleCardView> toSimilarVehicleCard(final Listing listing) {
+        return carService.getCarById(listing.getCarId())
+                .map(car -> {
+                    final long imageId = carPictureService.getCarPicturesByCarId(car.getId()).stream()
+                            .sorted(Comparator.comparingInt(CarPicture::getDisplayOrder))
+                            .map(CarPicture::getImageId)
+                            .findFirst()
+                            .orElse(0L);
+                    return new VehicleCardView(
+                            listing.getId(),
+                            car.getBrand(),
+                            car.getModel(),
+                            listing.getDayPrice(),
+                            imageId);
+                });
     }
 
     private static ReservationPeriodOption toReservationPeriodOption(final ListingAvailability a) {
@@ -118,4 +145,5 @@ public class CarDetailController {
         }
         return LABEL_FMT.format(startZ) + " — " + LABEL_FMT.format(lastInclusiveZ);
     }
+
 }

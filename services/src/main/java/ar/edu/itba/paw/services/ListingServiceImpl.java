@@ -82,4 +82,23 @@ public class ListingServiceImpl implements ListingService {
     public List<Listing> searchListings(final ListingSearchCriteria criteria) {
         return listingDao.searchListings(criteria);
     }
+
+    @Override
+    public List<Listing> findSimilarListings(final long listingId, final int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("Limit must be greater than zero.");
+        }
+
+        final Listing listing = listingDao.getListingById(listingId)
+                .orElseThrow(() -> new IllegalArgumentException("Listing not found: " + listingId));
+        final Car car = carDao.getCarById(listing.getCarId())
+                .orElseThrow(() -> new IllegalStateException("Car not found for listing: " + listingId));
+
+        return listingDao.findSimilarListings(
+                listingId,
+                car.getType(),
+                car.getPowertrain(),
+                car.getTransmission(),
+                limit);
+    }
 }

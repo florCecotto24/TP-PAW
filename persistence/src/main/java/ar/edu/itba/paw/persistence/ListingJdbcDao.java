@@ -18,6 +18,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
+import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 
@@ -164,6 +165,31 @@ public class ListingJdbcDao implements ListingDao {
 
         sql.append("ORDER BY l.created_at DESC");
         return jdbcTemplate.query(sql.toString(), LISTING_ROW_MAPPER, args.toArray());
+    }
+
+    @Override
+    public List<Listing> findSimilarListings(
+            final long excludedListingId,
+            final Car.Type type,
+            final Car.Powertrain powertrain,
+            final Car.Transmission transmission,
+            final int limit) {
+        return jdbcTemplate.query(
+                "SELECT l.* FROM listings l "
+                        + "INNER JOIN cars c ON l.car_id = c.id "
+                        + "WHERE l.status = 'active' "
+                        + "AND l.id <> ? "
+                        + "AND c.type = ? "
+                        + "AND c.powertrain = ? "
+                        + "AND c.transmission = ? "
+                        + "ORDER BY l.created_at DESC "
+                        + "LIMIT ?",
+                LISTING_ROW_MAPPER,
+                excludedListingId,
+                type.name(),
+                powertrain.name(),
+                transmission.name(),
+                limit);
     }
 
     private static void appendInClause(final StringBuilder sql, final String column, final int n) {
