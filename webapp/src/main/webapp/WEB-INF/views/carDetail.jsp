@@ -17,46 +17,39 @@
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
             <h1 class="h2 fw-bold mb-0"><c:out value="${listing.title}"/></h1>
-            <paw:detailListingMeta rating="4.9" reviewCount="18" location="${listing.startPoint}"/>
+            <paw:detailListingMeta location="${listing.startPoint}"/>
         </div>
-        <paw:detailToolbarActions/>
     </div>
 
     <div class="row g-4 align-items-start">
-        <div class="col-lg-8 order-1">
+        <div class="col-lg-8 order-1 d-flex flex-column gap-4">
             <paw:carDetailGalleryGrid
                     modalId="carDetailGalleryModal"
                     imageUrls="${carGalleryImagePaths}"
                     vehicleLabel="${listing.title}"/>
 
-            <paw:hostProfileBar
-                    hostName="Julian S."
-                    avatarUrl="https://github.com/mdo.png"
-                    responseHint="Responds in under 1 hour"/>
-
-            <section class="mt-5">
+            <!-- Owner contact info -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary"
+                      style="width:40px; height:40px;" aria-hidden="true">
+                    <i class="bi bi-person-fill fs-5"></i>
+                </span>
+                <span class="fw-semibold" aria-label="Owner name">
+                    <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
+                </span>
+            </div>
+            <section>
                 <h2 class="h5 fw-bold mb-3">Specifications</h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">
                     <div class="col">
-                        <paw:specCard icon="people-fill" label="5 seats"/>
+                        <paw:specCard icon="gear-wide-connected" label="${car.transmission.name()}"/>
                     </div>
                     <div class="col">
-                        <paw:specCard icon="gear-wide-connected" label="${car.transmission}"/>
-                    </div>
-                    <div class="col">
-                        <paw:specCard icon="fuel-pump" label="${car.powertrain}"/>
-                    </div>
-                    <div class="col">
-                        <paw:specCard icon="snow" label="Central A/C"/>
+                        <paw:specCard icon="fuel-pump" label="${car.powertrain.name()}"/>
                     </div>
                 </div>
             </section>
-
-            <paw:pickupLocationBlock
-                    address="${listing.startPoint}"
-                    mapImageSrc="${pageContext.request.contextPath}/assets/images/map-placeholder.svg"/>
-
-            <section class="mt-5" id="availabilitySection">
+            <section id="availabilitySection">
                 <h2 class="h5 fw-bold mb-3 d-flex align-items-center gap-2 flex-wrap">
                     Availability
                     <c:if test="${not empty listingAvailabilities}">
@@ -84,42 +77,7 @@
                 </c:choose>
             </section>
 
-            <section class="listingDescriptionSection mt-5" id="descriptionSection">
-                <h2 class="h5 fw-bold mb-3">Description</h2>
-                <p class="listingDescriptionSection__intro text-secondary mb-4">
-                    <c:out value="${listing.description}"/>
-                </p>
-                <div class="d-flex flex-column gap-3">
-                    <paw:descriptionFeatureItem
-                            title="Home delivery"
-                            subtitle="The vehicle can be delivered at the airport or at your hotel."/>
-                    <paw:descriptionFeatureItem
-                            title="Premium insurance"
-                            subtitle="Full coverage included in the reservation price."/>
-                </div>
-            </section>
 
-            <section class="ratingsSection mt-5" id="ratingsSection">
-                <h2 class="h6 fw-bold text-uppercase detailRatingsHeading mb-4 letter-spacing-tight">Ratings and reviews</h2>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <paw:reviewCard
-                                avatarUrl="https://i.pravatar.cc/128?img=32"
-                                userName="Sol Garcia"
-                                fullStars="4"
-                                halfStar="true"
-                                quoteText="Excellent car and very good service. Everything was impeccable during the trip."/>
-                    </div>
-                    <div class="col-md-6">
-                        <paw:reviewCard
-                                avatarUrl="https://i.pravatar.cc/128?img=45"
-                                userName="Julia Maiol"
-                                fullStars="4"
-                                halfStar="true"
-                                quoteText="Very punctual and the car consumes very little. I recommend it without a doubt."/>
-                    </div>
-                </div>
-            </section>
         </div>
 
         <div class="col-lg-4 order-2">

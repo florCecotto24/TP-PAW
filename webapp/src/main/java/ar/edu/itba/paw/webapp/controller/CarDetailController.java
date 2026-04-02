@@ -5,9 +5,11 @@ import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.dto.ReservationPeriodOption;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -34,15 +36,18 @@ public class CarDetailController {
     private final ListingService listingService;
     private final CarService carService;
     private final CarPictureService carPictureService;
+    private final UserService userService;
 
     @Autowired
     public CarDetailController(
             final ListingService listingService,
             final CarService carService,
-            final CarPictureService carPictureService) {
+            final CarPictureService carPictureService,
+            final UserService userService) {
         this.listingService = listingService;
         this.carService = carService;
         this.carPictureService = carPictureService;
+        this.userService = userService;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -56,6 +61,9 @@ public class CarDetailController {
         if (car == null) {
             return new ModelAndView(new RedirectView("/search", true));
         }
+
+        // Fetch owner info
+        final User owner = userService.getUserById(car.getOwnerId()).orElse(null);
 
         final List<String> carGalleryImagePaths = carPictureService.getCarPicturesByCarId(car.getId()).stream()
                 .sorted(Comparator.comparingInt(CarPicture::getDisplayOrder))
@@ -80,6 +88,7 @@ public class CarDetailController {
         final ModelAndView mav = new ModelAndView("carDetail");
         mav.addObject("listing", listing);
         mav.addObject("car", car);
+        mav.addObject("owner", owner);
         mav.addObject("carGalleryImagePaths", carGalleryImagePaths);
         mav.addObject("listingAvailabilities", listingAvailabilities);
         mav.addObject("availabilityLines", availabilityLines);
