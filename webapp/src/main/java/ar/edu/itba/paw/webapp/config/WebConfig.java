@@ -21,6 +21,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.PropertySources;
 import org.springframework.core.env.Environment;
 import org.springframework.lang.NonNull;
 
@@ -30,7 +31,10 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 @Configuration
 @Import(SpringMailConfig.class)
-@PropertySource("classpath:application.properties")
+@PropertySources({
+    @PropertySource("classpath:application.properties"),
+    @PropertySource(value = "classpath:application-${spring.profiles.active}.properties", ignoreResourceNotFound = true)
+})
 @ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
 public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
 
