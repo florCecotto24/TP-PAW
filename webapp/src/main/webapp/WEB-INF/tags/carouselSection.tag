@@ -31,9 +31,18 @@
                     </c:if>
 
                     <div class="col d-flex justify-content-center">
-                        <paw:carCard model="${car.model}" brand="${car.brand}" price="25"
-                                     image="https://www.buyatoyota.com/sharpr/bat/assets/img/vehicle-info/Corolla/2026/hero-image.png"
-                                     href="${pageContext.request.contextPath}/car-detail"/>
+                        <c:choose>
+                            <c:when test="${car.imageId > 0}">
+                                <c:url var="imageUrl" value="/image/${car.imageId}" />
+                            </c:when>
+                            <c:otherwise>
+                                <c:set var="imageUrl" value="" />
+                            </c:otherwise>
+                        </c:choose>
+
+                        <paw:carCard model="${car.model}" brand="${car.brand}" price="${car.price}"
+                                     image="${imageUrl}" pricePeriod="day"
+                                     href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
                     </div>
 
                     <c:if test="${status.index % 4 == 3 || status.last}">
