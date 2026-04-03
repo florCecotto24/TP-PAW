@@ -22,9 +22,13 @@
                 </div>
             </div>
 
+
             <div class="sticky-top w-100 pt-4" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
-                <paw:searchBar />
+                <form method="get" action="${pageContext.request.contextPath}/search">
+                    <paw:searchBar />
+                </form>
             </div>
+
 
             <div class="container mt-5">
                 <section class="carouselSection" id="cheapestVehiclesSection">
