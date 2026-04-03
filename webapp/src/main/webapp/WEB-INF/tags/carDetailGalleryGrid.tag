@@ -9,6 +9,8 @@
     <c:set var="vehicleLabel" value="Vehicle" />
 </c:if>
 
+<c:set var="imgCount" value="${fn:length(imageUrls)}" />
+
 <c:choose>
     <c:when test="${empty imageUrls}">
         <div class="car-detail-gallery car-detail-gallery--empty rounded-4 overflow-hidden d-flex align-items-center justify-content-center bg-secondary-subtle" style="min-height: 280px;">
@@ -18,27 +20,46 @@
             </div>
         </div>
     </c:when>
+    <c:when test="${imgCount == 1}">
+        <c:url var="mainSrc" value="${imageUrls[0]}" />
+        <div class="car-detail-gallery car-detail-gallery--single rounded-4 overflow-hidden">
+            <button type="button"
+                    class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#${modalId}"
+                    data-carousel-index="0"
+                    aria-label="Open gallery: ${vehicleLabel}">
+                <img src="${mainSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+            </button>
+        </div>
+    </c:when>
+    <c:when test="${imgCount == 2}">
+        <c:url var="mainSrc" value="${imageUrls[0]}" />
+        <c:url var="topSrc" value="${imageUrls[1]}" />
+        <div class="car-detail-gallery car-detail-gallery--pair rounded-4 overflow-hidden">
+            <button type="button"
+                    class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#${modalId}"
+                    data-carousel-index="0"
+                    aria-label="Open gallery: ${vehicleLabel}">
+                <img src="${mainSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+            </button>
+            <button type="button"
+                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    data-bs-toggle="modal"
+                    data-bs-target="#${modalId}"
+                    data-carousel-index="1"
+                    aria-label="Open gallery: ${vehicleLabel}">
+                <img src="${topSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+            </button>
+        </div>
+    </c:when>
     <c:otherwise>
-        <c:set var="u0" value="${imageUrls[0]}" />
-        <c:choose>
-            <c:when test="${fn:length(imageUrls) > 1}">
-                <c:set var="u1" value="${imageUrls[1]}" />
-            </c:when>
-            <c:otherwise>
-                <c:set var="u1" value="${imageUrls[0]}" />
-            </c:otherwise>
-        </c:choose>
-        <c:choose>
-            <c:when test="${fn:length(imageUrls) > 2}">
-                <c:set var="u2" value="${imageUrls[2]}" />
-            </c:when>
-            <c:otherwise>
-                <c:set var="u2" value="${imageUrls[0]}" />
-            </c:otherwise>
-        </c:choose>
-        <c:url var="mainSrc" value="${u0}" />
-        <c:url var="topSrc" value="${u1}" />
-        <c:url var="bottomSrc" value="${u2}" />
+        <c:url var="mainSrc" value="${imageUrls[0]}" />
+        <c:url var="topSrc" value="${imageUrls[1]}" />
+        <c:url var="bottomSrc" value="${imageUrls[2]}" />
+        <c:set var="extra" value="${imgCount - 3}" />
 
         <div class="car-detail-gallery rounded-4 overflow-hidden">
             <button type="button"
@@ -58,12 +79,15 @@
                 <img src="${topSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
             </button>
             <button type="button"
-                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
+                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
                     data-bs-toggle="modal"
                     data-bs-target="#${modalId}"
                     data-carousel-index="2"
                     aria-label="Open gallery: ${vehicleLabel}">
                 <img src="${bottomSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <c:if test="${extra > 0}">
+                    <div class="car-detail-gallery__more-overlay" aria-hidden="true">+${extra}</div>
+                </c:if>
             </button>
         </div>
     </c:otherwise>

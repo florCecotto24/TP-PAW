@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
@@ -54,21 +55,18 @@ public class CarDetailController {
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
     public ModelAndView carDetail(@RequestParam(name = "listingId") final long listingId) {
-        final Optional<Listing> listingOpt = listingService.getListingById(listingId);
-        if (listingOpt.isEmpty()) {
+        final Optional<ListingDetail> detailOpt = listingService.getListingDetailById(listingId);
+        if (detailOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/search", true));
         }
-        final Listing listing = listingOpt.get();
-        final Car car = carService.getCarById(listing.getCarId()).orElse(null);
-        if (car == null) {
-            return new ModelAndView(new RedirectView("/search", true));
-        }
+        final ListingDetail detail = detailOpt.get();
+        final Listing listing = detail.getListing();
+        final Car car = detail.getCar();
 
         // Fetch owner info
         final User owner = userService.getUserById(car.getOwnerId()).orElse(null);
 
-        final List<String> carGalleryImagePaths = carPictureService.getCarPicturesByCarId(car.getId()).stream()
-                .sorted(Comparator.comparingInt(CarPicture::getDisplayOrder))
+        final List<String> carGalleryImagePaths = detail.getPictures().stream()
                 .map(cp -> "/image/" + cp.getImageId())
                 .collect(Collectors.toList());
 
@@ -79,7 +77,7 @@ public class CarDetailController {
                 .flatMap(Optional::stream)
                 .collect(Collectors.toList());
 
-        final List<ListingAvailability> listingAvailabilities = listingService.findAvailabilityByListingId(listingId);
+        final List<ListingAvailability> listingAvailabilities = detail.getListingAvailabilities();
         final List<String> availabilityLines = new ArrayList<>(listingAvailabilities.size());
         final List<ReservationPeriodOption> reservationPeriods = new ArrayList<>(listingAvailabilities.size());
         for (final ListingAvailability a : listingAvailabilities) {

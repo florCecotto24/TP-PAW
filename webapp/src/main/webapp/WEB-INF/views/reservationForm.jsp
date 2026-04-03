@@ -45,7 +45,6 @@
                         <input type="hidden" name="carName" value="${carName}"/>
                         <input type="hidden" name="fromDateTime" value="${fromDateTime}"/>
                         <input type="hidden" name="untilDateTime" value="${untilDateTime}"/>
-                        <input type="hidden" name="deliveryLocation" value="${deliveryLocation}"/>
 
                         <paw:input
                                 name="email"

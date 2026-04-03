@@ -2,11 +2,8 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.CarPicture;
-import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.services.CarPictureService;
-import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +22,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller
@@ -35,15 +30,11 @@ public class SearchController {
     private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter DT_LOCAL = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
-    private final CarService carService;
     private final ListingService listingService;
-    private final CarPictureService carPictureService;
 
     @Autowired
-    public SearchController(final CarService carService, final ListingService listingService, final CarPictureService carPictureService) {
-        this.carService = carService;
+    public SearchController(final ListingService listingService) {
         this.listingService = listingService;
-        this.carPictureService = carPictureService;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -64,9 +55,8 @@ public class SearchController {
 
         final ListingSearchCriteria criteria =
                 buildCriteria(query, category, transmission, powertrain, price, from, until);
-        final List<VehicleCardView> results = listingService.searchListings(criteria).stream()
-                .map(listing -> toSearchResult(listing).orElse(null))
-                .filter(Objects::nonNull)
+        final List<VehicleCardView> results = listingService.searchListingCards(criteria).stream()
+                .map(SearchController::toVehicleCardView)
                 .collect(Collectors.toList());
         mav.addObject("results", results);
         mav.addObject("activeTab", "search");
@@ -257,24 +247,13 @@ public class SearchController {
         }
     }
 
-    private Optional<VehicleCardView> toSearchResult(final Listing listing) {
-        return carService.getCarById(listing.getCarId())
-                .map(car -> {
-                    // Get the first image for this car (if any)
-                    final long imageId = carPictureService.getCarPicturesByCarId(car.getId())
-                            .stream()
-                            .findFirst()
-                            .map(CarPicture::getImageId)
-                            .orElse(0L);
-                    
-                    return new VehicleCardView(
-                            listing.getId(),
-                            car.getBrand(),
-                            car.getModel(),
-                            listing.getDayPrice(),
-                            imageId
-                    );
-                });
+    private static VehicleCardView toVehicleCardView(final ListingCard card) {
+        return new VehicleCardView(
+                card.getListingId(),
+                card.getBrand(),
+                card.getModel(),
+                card.getDayPrice(),
+                card.getImageId());
     }
 }
 

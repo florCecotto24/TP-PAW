@@ -38,6 +38,12 @@
                     <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
                 </span>
             </div>
+            <c:if test="${not empty listing.description}">
+                <section>
+                    <h2 class="h5 fw-bold mb-3">Description</h2>
+                    <p class="mb-0"><c:out value="${listing.description}"/></p>
+                </section>
+            </c:if>
             <section>
                 <h2 class="h5 fw-bold mb-3">Specifications</h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">

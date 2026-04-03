@@ -3,6 +3,8 @@ package ar.edu.itba.paw.services;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingCard;
+import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 
 import java.math.BigDecimal;
@@ -21,6 +23,8 @@ public interface ListingService {
 
     Optional<Listing> getListingById(long id);
 
+    Optional<ListingDetail> getListingDetailById(long id);
+
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 
     List<Listing> getAllListings();
@@ -30,6 +34,12 @@ public interface ListingService {
     List<Listing> getCheapestListings(int limit);
 
     List<Listing> getMostRecentListings(int limit);
+
+    List<ListingCard> getCheapestListingCards(int limit);
+
+    List<ListingCard> getMostRecentListingCards(int limit);
+
+    List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
     //limit cantidad maxima de listings que retorna
     List<Listing> findSimilarListings(long listingId, int limit);

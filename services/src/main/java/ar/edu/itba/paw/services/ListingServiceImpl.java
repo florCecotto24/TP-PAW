@@ -4,6 +4,8 @@ import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingCard;
+import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
@@ -69,6 +71,11 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    public Optional<ListingDetail> getListingDetailById(final long id) {
+        return listingDao.getListingDetailById(id);
+    }
+
+    @Override
     public List<ListingAvailability> findAvailabilityByListingId(final long listingId) {
         return listingAvailabilityDao.findByListingId(listingId);
     }
@@ -91,6 +98,21 @@ public class ListingServiceImpl implements ListingService {
     @Override
     public List<Listing> getMostRecentListings(int limit) {
         return listingDao.getMostRecentListings(limit);
+    }
+
+    @Override
+    public List<ListingCard> getCheapestListingCards(final int limit) {
+        return listingDao.getCheapestListingCards(limit);
+    }
+
+    @Override
+    public List<ListingCard> getMostRecentListingCards(final int limit) {
+        return listingDao.getMostRecentListingCards(limit);
+    }
+
+    @Override
+    public List<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
+        return listingDao.searchListingCards(criteria);
     }
 
     @Override

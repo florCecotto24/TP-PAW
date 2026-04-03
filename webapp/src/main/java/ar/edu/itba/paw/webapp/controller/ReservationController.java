@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
@@ -44,15 +45,15 @@ public class ReservationController {
                                        @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
                                        @RequestParam(value = "carName", required = false) final String carName,
                                        @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
-                                       @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
-                                       @RequestParam(value = "deliveryLocation", required = false) final String deliveryLocation) {
+                                       @RequestParam(value = "untilDateTime", required = false) final String untilDateTime) {
         final ModelAndView mav = new ModelAndView("reservationForm");
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("carName", carName == null || carName.isBlank() ? "Mercedes-Benz E-Class 300" : carName);
         mav.addObject("fromDateTime", fromDateTime);
         mav.addObject("untilDateTime", untilDateTime);
-        mav.addObject("deliveryLocation", deliveryLocation);
+        mav.addObject("deliveryLocation", listingId == null ? null :
+                listingService.getListingById(listingId).map(Listing::getStartPoint).orElse(null));
         return mav;
     }
 
@@ -64,18 +65,18 @@ public class ReservationController {
                                           @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
                                           @RequestParam(value = "carName", required = false) final String carName,
                                           @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
-                                          @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
-                                          @RequestParam(value = "deliveryLocation", required = false) final String deliveryLocation) {
-        if (listingId == null || listingService.getListingById(listingId).isEmpty()) {
+                                          @RequestParam(value = "untilDateTime", required = false) final String untilDateTime) {
+        final Optional<Listing> listingOpt = listingId == null ? Optional.empty() : listingService.getListingById(listingId);
+        if (listingOpt.isEmpty()) {
             return reservationFormWithError(
                     listingId,
                     availabilityId,
                     carName,
                     fromDateTime,
                     untilDateTime,
-                    deliveryLocation,
                     "We could not find the listing you are trying to reserve.");
         }
+        final String deliveryLocation = listingOpt.get().getStartPoint();
 
         if (isBlank(fromDateTime) || isBlank(untilDateTime)) {
             return reservationFormWithError(
@@ -84,7 +85,6 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
-                    deliveryLocation,
                     "Select pickup and return date/time before confirming.");
         }
 
@@ -100,7 +100,6 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
-                    deliveryLocation,
                     "Invalid date/time format. Please choose the dates again.");
         }
 
@@ -111,7 +110,6 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
-                    deliveryLocation,
                     "Return date/time must be after pickup date/time.");
         }
 
@@ -122,7 +120,6 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
-                    deliveryLocation,
                     "Selected pickup/return is outside the listing availability.");
         }
 
@@ -142,7 +139,6 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
-                    deliveryLocation,
                     e.getMessage());
         }
 
@@ -166,7 +162,6 @@ public class ReservationController {
             final String carName,
             final String fromDateTime,
             final String untilDateTime,
-            final String deliveryLocation,
             final String errorMessage) {
         final ModelAndView mav = new ModelAndView("reservationForm");
         mav.addObject("listingId", listingId);
@@ -174,7 +169,8 @@ public class ReservationController {
         mav.addObject("carName", carName == null || carName.isBlank() ? "Mercedes-Benz E-Class 300" : carName);
         mav.addObject("fromDateTime", fromDateTime);
         mav.addObject("untilDateTime", untilDateTime);
-        mav.addObject("deliveryLocation", deliveryLocation);
+        mav.addObject("deliveryLocation", listingId == null ? null :
+                listingService.getListingById(listingId).map(Listing::getStartPoint).orElse(null));
         mav.addObject("reservationError", errorMessage);
         return mav;
     }

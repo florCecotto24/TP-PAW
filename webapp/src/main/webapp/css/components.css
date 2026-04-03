@@ -529,6 +529,30 @@ body.modal-open {
     min-height: 0;
 }
 
+.car-detail-gallery--single {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+
+.car-detail-gallery--pair {
+    grid-template-rows: 1fr;
+}
+
+.car-detail-gallery__more-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+}
+
 .car-detail-gallery__img {
     object-fit: cover;
     border-radius: 0.75rem;

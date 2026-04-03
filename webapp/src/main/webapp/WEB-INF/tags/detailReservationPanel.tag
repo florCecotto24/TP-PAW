@@ -93,11 +93,11 @@
         </div>
     </div>
 
-    <div class="d-flex align-items-center bg-white rounded-3 px-3 py-2 border mb-3">
-        <div class="form-floating flex-grow-1 w-100">
-            <input type="text" class="form-control border-0 shadow-none" name="deliveryLocation" id="detail_delivery_location"
-                   value="${deliveryLocation}" aria-label="Delivery location">
-            <label for="detail_delivery_location">Delivery location</label>
+    <div class="d-flex align-items-start gap-2 mb-3">
+        <i class="bi bi-geo-alt text-secondary mt-1" aria-hidden="true"></i>
+        <div class="flex-grow-1 w-100">
+            <small class="text-muted d-block mb-1">Delivery location</small>
+            <p class="mb-0 fw-medium">${deliveryLocation}</p>
         </div>
     </div>
 
