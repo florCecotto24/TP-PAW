@@ -31,9 +31,9 @@
                     </c:if>
 
                     <div class="col d-flex justify-content-center">
-                        <paw:carCard model="${car.model}" brand="${car.brand}" stars="4.5" price="2000000"
+                        <paw:carCard model="${car.model}" brand="${car.brand}" price="25"
                                      image="https://www.buyatoyota.com/sharpr/bat/assets/img/vehicle-info/Corolla/2026/hero-image.png"
-                                     reviews="5" href="${pageContext.request.contextPath}/car-detail"/>
+                                     href="${pageContext.request.contextPath}/car-detail"/>
                     </div>
 
                     <c:if test="${status.index % 4 == 3 || status.last}">
