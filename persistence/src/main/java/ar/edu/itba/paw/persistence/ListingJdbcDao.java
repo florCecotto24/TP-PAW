@@ -168,6 +168,16 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
+    public List<Listing> getCheapestListings(int limit) {
+        return jdbcTemplate.query("SELECT * FROM listings WHERE status = 'active' ORDER BY day_price ASC LIMIT ?", LISTING_ROW_MAPPER, limit);
+    }
+
+    @Override
+    public List<Listing> getMostRecentListings(int limit) {
+        return jdbcTemplate.query("SELECT * FROM listings WHERE status = 'active' ORDER BY created_at DESC LIMIT ?", LISTING_ROW_MAPPER, limit);
+    }
+
+    @Override
     public List<Listing> findSimilarListings(
             final long excludedListingId,
             final Car.Type type,

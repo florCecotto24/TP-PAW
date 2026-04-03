@@ -24,6 +24,10 @@ public interface ListingDao {
 
     List<Listing> searchListings(ListingSearchCriteria criteria);
 
+    List<Listing> getCheapestListings(int limit);
+
+    List<Listing> getMostRecentListings(int limit);
+
     List<Listing> findSimilarListings(
             long excludedListingId,
             Car.Type type,

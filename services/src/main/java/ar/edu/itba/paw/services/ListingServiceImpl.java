@@ -84,6 +84,16 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    public List<Listing> getCheapestListings(int limit) {
+        return listingDao.getCheapestListings(limit);
+    }
+
+    @Override
+    public List<Listing> getMostRecentListings(int limit) {
+        return listingDao.getMostRecentListings(limit);
+    }
+
+    @Override
     public List<Listing> findSimilarListings(final long listingId, final int limit) {
         if (limit <= 0) {
             throw new IllegalArgumentException("Limit must be greater than zero.");

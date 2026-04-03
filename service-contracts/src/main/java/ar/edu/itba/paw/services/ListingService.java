@@ -27,6 +27,10 @@ public interface ListingService {
 
     List<Listing> searchListings(ListingSearchCriteria criteria);
 
+    List<Listing> getCheapestListings(int limit);
+
+    List<Listing> getMostRecentListings(int limit);
+
     //limit cantidad maxima de listings que retorna
     List<Listing> findSimilarListings(long listingId, int limit);
 }
