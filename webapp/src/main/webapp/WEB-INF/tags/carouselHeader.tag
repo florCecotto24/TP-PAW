@@ -9,13 +9,13 @@
     <c:set var="seeAllHref" value="${pageContext.request.contextPath}/search" />
 </c:if>
 <c:if test="${empty title}">
-    <c:set var="title" value="Featured vehicles" />
+    <c:set var="title" value="Cheapest vehicles" />
 </c:if>
 <c:if test="${empty subtitle}">
-    <c:set var="subtitle" value="Discover our top picks for you" />
+    <c:set var="subtitle" value="Discover our cheapest options" />
 </c:if>
 <c:if test="${empty id}">
-    <c:set var="id" value="featuredCarsCarousel" />
+    <c:set var="id" value="cheapestCarsCarousel" />
 </c:if>
 
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 carouselHeader">

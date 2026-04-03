@@ -663,9 +663,8 @@ body.modal-open {
     background-image: url('../assets/images/homepage-photo.jpg');
     background-size: cover;
     background-position: center;
-    position: sticky;
-    top: 0;
-    z-index: 1020;
+    /*top: 0;*/
+    /*z-index: 1020;*/
     width: 100%;
 }
 
@@ -681,4 +680,16 @@ body.modal-open {
 
 .hero-text {
     margin-top: 60px;
+}
+
+.alert-project {
+    background-color: var(--color-primary-soft);
+    border: 2px solid var(--color-primary);
+    border-radius: 8px;
+    color: var(--color-text);
+    padding: 14px 18px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }

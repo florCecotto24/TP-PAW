@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -57,6 +58,32 @@ public class CarJdbcDao implements CarDao{
     public Optional<Car> getCarById(final long id) {
         return jdbcTemplate.query("SELECT * FROM cars WHERE id = ?", CAR_ROW_MAPPER, id).stream().findAny();
         //ponemos findAny porque el id es unico, entonces o devuelve un resultado o no devuelve nada
+    }
+
+
+    //Esto hay que terminar de arreglarlo, no sé cómo vamos a elegir los autos destacados ni los más buscados, por ahora solo devuelve los primeros 8 coches de la base de datos
+    @Override
+    public List<Car> getCheapestCars() {
+        return jdbcTemplate.query(
+                "SELECT cars.* FROM cars " +
+                        "JOIN listings ON listings.car_id = cars.id " +
+                        "WHERE listings.status = 'active' " +
+                        "ORDER BY listings.day_price ASC " +
+                        "LIMIT 8",
+                CAR_ROW_MAPPER
+        );
+    }
+
+    @Override
+    public List<Car> getMostRecentCars() {
+        return jdbcTemplate.query(
+                "SELECT cars.* FROM cars " +
+                        "JOIN listings ON listings.car_id = cars.id " +
+                        "WHERE listings.status = 'active' " +
+                        "ORDER BY listings.created_at DESC " +
+                        "LIMIT 8",
+                CAR_ROW_MAPPER
+        );
     }
 
 }
