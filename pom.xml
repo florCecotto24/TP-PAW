@@ -30,6 +30,8 @@
     <javax-servlet-jsp-api.version>2.3.3</javax-servlet-jsp-api.version>
     <javax-servlet-jsp-jstl-api.version>1.2.2</javax-servlet-jsp-jstl-api.version>
     <javax-validation-api.version>2.0.1.Final</javax-validation-api.version>
+    <junit.jupiter.version>5.11.0</junit.jupiter.version>
+    <mockito.version>5.14.2</mockito.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -58,22 +60,27 @@
         <artifactId>postgresql</artifactId>
         <version>${org.postgresql.version}</version>
       </dependency>
-      <!-- JUnit-->
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.11.0</version>
-        <type>pom</type>
-        <scope>import</scope>
+        <version>${junit.jupiter.version}</version>
       </dependency>
       <dependency>
         <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.jupiter.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-params</artifactId>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>${mockito.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-junit-jupiter</artifactId>
+        <version>${mockito.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -140,22 +147,8 @@
         <groupId>javax.servlet.jsp.jstl</groupId>
         <artifactId>javax.servlet.jsp.jstl-api</artifactId>
         <version>${javax-servlet-jsp-jstl-api.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>javax.validation</groupId>
-        <artifactId>validation-api</artifactId>
-        <version>${javax-validation-api.version}</version>
-      </dependency>
-      
+      </dependency>    
     </dependencies>
   </dependencyManagement>
 
-  <!-- ojo -->
-  <dependencies>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
 </project>

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users(
     id SERIAL PRIMARY KEY,
-    email VARCHAR(50) NOT NULL,
+    email VARCHAR(50) UNIQUE NOT NULL,
     forename VARCHAR(50) NOT NULL,
     surname VARCHAR(50) NOT NULL
 );

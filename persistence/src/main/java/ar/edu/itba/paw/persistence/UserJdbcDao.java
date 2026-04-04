@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import ar.edu.itba.paw.models.EmailNormalizer;
 import ar.edu.itba.paw.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,12 +36,13 @@ public class UserJdbcDao implements UserDao {
 
     @Override
     public User createUser(final String email, final String forename, final String surname) {
+        final String normalizedEmail = EmailNormalizer.normalize(email);
         final Map<String, Object> values = new HashMap<>();
-        values.put("email", email);
+        values.put("email", normalizedEmail);
         values.put("forename", forename);
         values.put("surname", surname);
         final Number userId = jdbcInsert.executeAndReturnKey(values);
-        return new User(userId.longValue(), email, forename, surname);
+        return new User(userId.longValue(), normalizedEmail, forename, surname);
     }
 
     @Override
@@ -53,10 +55,11 @@ public class UserJdbcDao implements UserDao {
 
     @Override
     public Optional<User> findByEmail(final String email) {
+        final String normalizedEmail = EmailNormalizer.normalize(email);
         return jdbcTemplate.query(
                 "SELECT " + SELECT_COLUMNS + " FROM users WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))",
                 USER_ROW_MAPPER,
-                email).stream().findFirst();
+                normalizedEmail).stream().findFirst();
     }
 
     @Override

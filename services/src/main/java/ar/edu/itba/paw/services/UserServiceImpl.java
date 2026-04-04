@@ -1,12 +1,13 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.UserDao;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Locale;
-import java.util.Optional;
+import ar.edu.itba.paw.models.EmailNormalizer;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.persistence.UserDao;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -19,7 +20,11 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User createUser(final String email, final String forename, final String surname) {
-        return userDao.createUser(email, forename, surname);
+        final String normalizedEmail = EmailNormalizer.normalize(email);
+        if (userDao.findByEmail(normalizedEmail).isPresent()) {
+            throw new EmailAlreadyExistsException("A user with this email already exists");
+        }
+        return userDao.createUser(normalizedEmail, forename, surname);
     }
 
     @Override
@@ -27,9 +32,10 @@ public class UserServiceImpl implements UserService {
         return userDao.getUserById(id);
     }
 
+    // to be deleted when real users with spring security are implemented
     @Override
     public User findOrCreatePublisher(final String email, final String forename, final String surname) {
-        final String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        final String normalizedEmail = EmailNormalizer.normalize(email);
         final Optional<User> existing = userDao.findByEmail(normalizedEmail);
         if (existing.isPresent()) {
             final User u = existing.get();
