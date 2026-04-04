@@ -196,7 +196,7 @@ public class ListingJdbcDao implements ListingDao {
     @Override
     public List<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
         final StringBuilder sql = new StringBuilder(
-                "SELECT DISTINCT l.id AS listing_id, l.day_price, c.brand, c.model, "
+                "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
