@@ -60,34 +60,22 @@
     <h2 class="h6 fw-semibold mb-2">Pickup and return</h2>
     <p class="form-text small mb-2">
         <c:choose>
-            <c:when test="${periodCount > 1}">Times use the listing&apos;s timezone (Argentina).</c:when>
-            <c:when test="${periodCount == 1}">Must fall inside the owner&apos;s published window (Argentina time).</c:when>
+            <c:when test="${periodCount > 1}">Times use the listing's timezone (Argentina).</c:when>
+            <c:when test="${periodCount == 1}">Must fall inside the owner's published window (Argentina time).</c:when>
             <c:otherwise>Choose when you need the vehicle.</c:otherwise>
         </c:choose>
     </p>
-    <div class="row g-3 mb-3">
-        <div class="col-md-6">
-            <label class="form-label small mb-1" for="detail_from_d">Pickup</label>
-            <div class="input-group input-group-sm shadow-none">
-                <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
-                <span class="input-group-text border-0 bg-light"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                <input type="date" class="form-control border-0 shadow-none" id="detail_from_d" aria-label="Pickup date"
-                       <c:if test="${periodCount == 1}">min="<c:out value='${fn:substring(singlePeriodMin, 0, 10)}'/>" max="<c:out value='${fn:substring(singlePeriodMax, 0, 10)}'/>"</c:if> />
-                <span class="input-group-text border-0 bg-light"><i class="bi bi-clock" aria-hidden="true"></i></span>
-                <input type="time" class="form-control border-0 shadow-none" id="detail_from_t" step="60" aria-label="Pickup time"/>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label small mb-1" for="detail_until_d">Return</label>
-            <div class="input-group input-group-sm shadow-none">
-                <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
-                <span class="input-group-text border-0 bg-light"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                <input type="date" class="form-control border-0 shadow-none" id="detail_until_d" aria-label="Return date"
-                       <c:if test="${periodCount == 1}">min="<c:out value='${fn:substring(singlePeriodMin, 0, 10)}'/>" max="<c:out value='${fn:substring(singlePeriodMax, 0, 10)}'/>"</c:if> />
-                <span class="input-group-text border-0 bg-light"><i class="bi bi-clock" aria-hidden="true"></i></span>
-                <input type="time" class="form-control border-0 shadow-none" id="detail_until_t" step="60" aria-label="Return time"/>
-            </div>
-        </div>
+    <div class="mb-3">
+        <label class="form-label small mb-2" for="detail_daterange">Pickup and Return Dates</label>
+        <input
+            type="text"
+            id="detail_daterange"
+            class="form-control"
+            placeholder="Select pickup and return dates"
+            readonly
+            aria-label="Select pickup and return date range">
+        <input type="hidden" name="fromDateTime" id="detail_from_hidden"/>
+        <input type="hidden" name="untilDateTime" id="detail_until_hidden"/>
     </div>
 
     <div class="d-flex align-items-start gap-2 mb-3">
@@ -117,217 +105,6 @@
     </form>
 
     <p class="text-center text-secondary small mb-0 text-uppercase detail-reservation-disclaimer">
-        You won&apos;t be charged yet
+        You won't be charged yet
     </p>
 </div>
-
-<script>
-(function () {
-    var initialized = false;
-
-    function initPanel() {
-    if (initialized) {
-        return true;
-    }
-
-    var P = window.PawDateTimePair;
-    if (!P) {
-        return false;
-    }
-
-    var fh = document.getElementById('detail_from_hidden');
-    var fd = document.getElementById('detail_from_d');
-    var ft = document.getElementById('detail_from_t');
-    var uh = document.getElementById('detail_until_hidden');
-    var ud = document.getElementById('detail_until_d');
-    var ut = document.getElementById('detail_until_t');
-    var pricingSummary = document.getElementById('detail_pricing_summary');
-    var daysFormula = document.getElementById('detail_days_formula');
-    var subtotalAmount = document.getElementById('detail_subtotal_amount');
-    var totalAmount = document.getElementById('detail_total_amount');
-
-    var pFrom = P.bindPair(fh, fd, ft);
-    var pUntil = P.bindPair(uh, ud, ut);
-    var form = document.getElementById('detailReservationForm');
-    var dateAlert = document.getElementById('detail_date_alert');
-    var totalHintField = document.getElementById('detail_reservation_total_hint');
-
-    function parseMoney(value) {
-        if (typeof value !== 'string') {
-            return NaN;
-        }
-        return parseFloat(value.replace(',', '.'));
-    }
-
-    function parseLocalDateTime(dateValue, timeValue) {
-        if (!dateValue || !timeValue) {
-            return null;
-        }
-        var dateParts = dateValue.split('-');
-        var timeParts = timeValue.split(':');
-        if (dateParts.length !== 3 || timeParts.length < 2) {
-            return null;
-        }
-        var year = parseInt(dateParts[0], 10);
-        var month = parseInt(dateParts[1], 10);
-        var day = parseInt(dateParts[2], 10);
-        var hour = parseInt(timeParts[0], 10);
-        var minute = parseInt(timeParts[1], 10);
-        var dt = new Date(year, month - 1, day, hour, minute, 0, 0);
-        if (isNaN(dt.getTime())) {
-            return null;
-        }
-        return dt;
-    }
-
-    function formatMoney(value) {
-        var rounded = Math.round(value * 100) / 100;
-        var fixed = rounded.toFixed(2);
-        return fixed.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-    }
-
-    function computeBillableDays(startDate, endDate) {
-        var diffMs = endDate.getTime() - startDate.getTime();
-        if (diffMs <= 0) {
-            return 0;
-        }
-        return Math.ceil(diffMs / 86400000);
-    }
-
-    var dailyPriceValue = parseMoney('<c:out value="${dailyPrice}"/>');
-
-    function hidePricing() {
-        if (pricingSummary) {
-            pricingSummary.hidden = true;
-        }
-        if (totalHintField) {
-            totalHintField.value = '';
-        }
-    }
-
-    function setDateAlertVisible(visible) {
-        if (!dateAlert) {
-            return;
-        }
-        dateAlert.hidden = !visible;
-    }
-
-    function updatePricing() {
-        if (!pricingSummary || !daysFormula || !subtotalAmount || !totalAmount || isNaN(dailyPriceValue)) {
-            return;
-        }
-
-        var startDate = parseLocalDateTime(fd ? fd.value : '', ft ? (ft.value || '00:00') : '');
-        var endDate = parseLocalDateTime(ud ? ud.value : '', ut ? (ut.value || '00:00') : '');
-
-        if (!startDate || !endDate) {
-            hidePricing();
-            return;
-        }
-
-        var days = computeBillableDays(startDate, endDate);
-        if (days <= 0) {
-            hidePricing();
-            return;
-        }
-
-        var total = dailyPriceValue * days;
-        var dailyPriceText = formatMoney(dailyPriceValue);
-        var totalText = formatMoney(total);
-        var dayLabel = days === 1 ? 'day' : 'days';
-
-        daysFormula.textContent = '$' + dailyPriceText + ' × ' + days + ' ' + dayLabel;
-        subtotalAmount.textContent = '$' + totalText;
-        totalAmount.textContent = '$' + totalText;
-        if (totalHintField) {
-            totalHintField.value = totalText;
-        }
-        pricingSummary.hidden = false;
-    }
-
-    if (form) {
-        form.addEventListener('submit', function (event) {
-            if (pFrom) pFrom.syncToHidden();
-            if (pUntil) pUntil.syncToHidden();
-
-            var submitStartDate = parseLocalDateTime(fd ? fd.value : '', ft ? (ft.value || '00:00') : '');
-            var submitEndDate = parseLocalDateTime(ud ? ud.value : '', ut ? (ut.value || '00:00') : '');
-            var hasValidRange = submitStartDate && submitEndDate && computeBillableDays(submitStartDate, submitEndDate) > 0;
-
-            if (!hasValidRange) {
-                event.preventDefault();
-                setDateAlertVisible(true);
-                return;
-            }
-
-            setDateAlertVisible(false);
-        });
-    }
-
-    if (fd) {
-        fd.addEventListener('change', function () { setDateAlertVisible(false); updatePricing(); });
-        fd.addEventListener('input', function () { setDateAlertVisible(false); updatePricing(); });
-    }
-    if (ft) {
-        ft.addEventListener('change', function () { setDateAlertVisible(false); updatePricing(); });
-        ft.addEventListener('input', function () { setDateAlertVisible(false); updatePricing(); });
-    }
-    if (ud) {
-        ud.addEventListener('change', function () { setDateAlertVisible(false); updatePricing(); });
-        ud.addEventListener('input', function () { setDateAlertVisible(false); updatePricing(); });
-    }
-    if (ut) {
-        ut.addEventListener('change', function () { setDateAlertVisible(false); updatePricing(); });
-        ut.addEventListener('input', function () { setDateAlertVisible(false); updatePricing(); });
-    }
-
-    <c:if test="${periodCount > 1}">
-    var sel = document.getElementById('detail_reservation_period');
-    if (sel && pFrom && pUntil) {
-        function applyWindow() {
-            var opt = sel.options[sel.selectedIndex];
-            if (!opt) return;
-            var min = opt.getAttribute('data-min');
-            var max = opt.getAttribute('data-max');
-            if (!min || !max) return;
-            pFrom.setDateBounds(min, max);
-            pUntil.setDateBounds(min, max);
-            if (fh) fh.value = '';
-            if (fd) fd.value = '';
-            if (ft) ft.value = '00:00';
-            if (uh) uh.value = '';
-            if (ud) ud.value = '';
-            if (ut) ut.value = '00:00';
-            updatePricing();
-        }
-        sel.addEventListener('change', applyWindow);
-        applyWindow();
-    }
-    </c:if>
-
-    updatePricing();
-    initialized = true;
-    return true;
-    }
-
-    function boot() {
-        if (initPanel()) {
-            return;
-        }
-        var tries = 0;
-        var maxTries = 40;
-        var retry = window.setInterval(function () {
-            tries += 1;
-            if (initPanel() || tries >= maxTries) {
-                window.clearInterval(retry);
-            }
-        }, 25);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', boot);
-    } else {
-        boot();
-    }
-})();
-</script>

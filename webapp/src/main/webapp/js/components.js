@@ -321,3 +321,96 @@
         combine: combine
     };
 })();
+
+/* Funciones de CarDetail */
+
+(function () {
+    const daterangeInput = document.getElementById('detail_daterange');
+    const fromHidden = document.getElementById('detail_from_hidden');
+    const untilHidden = document.getElementById('detail_until_hidden');
+    const form = document.getElementById('detailReservationForm');
+    const periodSelect = document.getElementById('detail_reservation_period');
+
+    let minDate = null;
+    let maxDate = null;
+
+    // Función para parsear la fecha y hora ISO a objeto Date
+    function parseDateTime(isoString) {
+        if (!isoString) return null;
+        return new Date(isoString);
+    }
+
+    // Función para formatear Date a ISO String (YYYY-MM-DDTHH:mm:ss)
+    function formatDateTime(date) {
+        if (!date) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = '00';
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    }
+
+    // Inicializar flatpickr en modo range
+    const fp = flatpickr(daterangeInput, {
+        mode: 'range',
+        dateFormat: 'Y-m-d H:i',
+        minDate: minDate,
+        maxDate: maxDate,
+        defaultDate: [
+            fromHidden.value ? parseDateTime(fromHidden.value) : null,
+            untilHidden.value ? parseDateTime(untilHidden.value) : null
+        ],
+        onChange: function(selectedDates) {
+            if (selectedDates.length === 2) {
+                fromHidden.value = formatDateTime(selectedDates[0]);
+                untilHidden.value = formatDateTime(selectedDates[1]);
+            } else if (selectedDates.length === 1) {
+                fromHidden.value = formatDateTime(selectedDates[0]);
+                untilHidden.value = '';
+            } else {
+                fromHidden.value = '';
+                untilHidden.value = '';
+            }
+        }
+    });
+
+    // Actualizar restricciones de fechas cuando cambia el período
+    function updateDateBounds() {
+        if (periodSelect) {
+            const selectedOption = periodSelect.options[periodSelect.selectedIndex];
+            const minStr = selectedOption.getAttribute('data-min');
+            const maxStr = selectedOption.getAttribute('data-max');
+
+            if (minStr && maxStr) {
+                minDate = parseDateTime(minStr);
+                maxDate = parseDateTime(maxStr);
+                fp.set('minDate', minDate);
+                fp.set('maxDate', maxDate);
+                // Limpiar selección cuando cambia el período
+                fp.clear();
+                fromHidden.value = '';
+                untilHidden.value = '';
+            }
+        }
+    }
+
+    if (periodSelect) {
+        periodSelect.addEventListener('change', updateDateBounds);
+        // Aplicar restricciones iniciales si hay un solo período
+        updateDateBounds();
+    }
+
+    // Sincronizar valores al submit del formulario
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!fromHidden.value || !untilHidden.value) {
+                e.preventDefault();
+                alert('Please select both pickup and return dates');
+                return false;
+            }
+        });
+    }
+})();
+
