@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ReservationPricingService;
 import ar.edu.itba.paw.services.ReservationConflictException;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -29,15 +31,18 @@ public class ReservationController {
     private final ReservationService reservationService;
     private final UserService userService;
     private final ListingService listingService;
+    private final ReservationPricingService reservationPricingService;
 
     @Autowired
     public ReservationController(
             final ReservationService reservationService,
             final UserService userService,
-            final ListingService listingService) {
+            final ListingService listingService,
+            final ReservationPricingService reservationPricingService) {
         this.reservationService = reservationService;
         this.userService = userService;
         this.listingService = listingService;
+        this.reservationPricingService = reservationPricingService;
     }
 
     @RequestMapping(value = "/reservation/new", method = RequestMethod.GET)
@@ -45,15 +50,21 @@ public class ReservationController {
                                        @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
                                        @RequestParam(value = "carName", required = false) final String carName,
                                        @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
-                                       @RequestParam(value = "untilDateTime", required = false) final String untilDateTime) {
+                                       @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
+                                       @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {
+        final String clientReservationTotal = normalizeClientTotal(reservationTotal).orElse(null);
+        final Optional<String> serverReservationTotal = calculateServerTotalDisplay(listingId, fromDateTime, untilDateTime);
+
+        final Optional<Listing> listingOpt = listingId == null ? Optional.empty() : listingService.getListingById(listingId);
         final ModelAndView mav = new ModelAndView("reservationForm");
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("carName", carName == null || carName.isBlank() ? "Mercedes-Benz E-Class 300" : carName);
         mav.addObject("fromDateTime", fromDateTime);
         mav.addObject("untilDateTime", untilDateTime);
-        mav.addObject("deliveryLocation", listingId == null ? null :
-                listingService.getListingById(listingId).map(Listing::getStartPoint).orElse(null));
+        mav.addObject("deliveryLocation", listingOpt.map(Listing::getStartPoint).orElse(null));
+        mav.addObject("reservationTotal", serverReservationTotal.orElse(null));
+        mav.addObject("clientReservationTotal", clientReservationTotal);
         return mav;
     }
 
@@ -65,7 +76,10 @@ public class ReservationController {
                                           @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
                                           @RequestParam(value = "carName", required = false) final String carName,
                                           @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
-                                          @RequestParam(value = "untilDateTime", required = false) final String untilDateTime) {
+                                          @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
+                                          @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {
+        final String clientReservationTotal = normalizeClientTotal(reservationTotal).orElse(null);
+
         final Optional<Listing> listingOpt = listingId == null ? Optional.empty() : listingService.getListingById(listingId);
         if (listingOpt.isEmpty()) {
             return reservationFormWithError(
@@ -74,6 +88,7 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
+                    clientReservationTotal,
                     "We could not find the listing you are trying to reserve.");
         }
         final String deliveryLocation = listingOpt.get().getStartPoint();
@@ -85,6 +100,7 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
+                    clientReservationTotal,
                     "Select pickup and return date/time before confirming.");
         }
 
@@ -100,6 +116,7 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
+                    clientReservationTotal,
                     "Invalid date/time format. Please choose the dates again.");
         }
 
@@ -110,6 +127,7 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
+                    clientReservationTotal,
                     "Return date/time must be after pickup date/time.");
         }
 
@@ -120,6 +138,7 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
+                    clientReservationTotal,
                     "Selected pickup/return is outside the listing availability.");
         }
 
@@ -139,6 +158,7 @@ public class ReservationController {
                     carName,
                     fromDateTime,
                     untilDateTime,
+                    clientReservationTotal,
                     e.getMessage());
         }
 
@@ -162,17 +182,53 @@ public class ReservationController {
             final String carName,
             final String fromDateTime,
             final String untilDateTime,
+            final String clientReservationTotal,
             final String errorMessage) {
+        final Optional<Listing> listingOpt = listingId == null ? Optional.empty() : listingService.getListingById(listingId);
         final ModelAndView mav = new ModelAndView("reservationForm");
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("carName", carName == null || carName.isBlank() ? "Mercedes-Benz E-Class 300" : carName);
         mav.addObject("fromDateTime", fromDateTime);
         mav.addObject("untilDateTime", untilDateTime);
-        mav.addObject("deliveryLocation", listingId == null ? null :
-                listingService.getListingById(listingId).map(Listing::getStartPoint).orElse(null));
+        mav.addObject("deliveryLocation", listingOpt.map(Listing::getStartPoint).orElse(null));
+        mav.addObject("reservationTotal", calculateServerTotalDisplay(listingId, fromDateTime, untilDateTime).orElse(null));
+        mav.addObject("clientReservationTotal", clientReservationTotal);
         mav.addObject("reservationError", errorMessage);
         return mav;
+    }
+
+    private Optional<String> calculateServerTotalDisplay(
+            final Long listingId,
+            final String fromDateTime,
+            final String untilDateTime) {
+        if (listingId == null || isBlank(fromDateTime) || isBlank(untilDateTime)) {
+            return Optional.empty();
+        }
+
+        try {
+            final OffsetDateTime startDate = parseWallDateTimeToUtc(fromDateTime);
+            final OffsetDateTime endDate = parseWallDateTimeToUtc(untilDateTime);
+            return reservationPricingService.calculateTotal(listingId, startDate, endDate)
+                    .map(this::formatMoney);
+        } catch (final DateTimeParseException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<String> normalizeClientTotal(final String reservationTotal) {
+        if (isBlank(reservationTotal)) {
+            return Optional.empty();
+        }
+        final String trimmed = reservationTotal.trim();
+        if (!trimmed.matches("\\d+(?:\\.\\d+)?")) {
+            return Optional.empty();
+        }
+        return Optional.of(trimmed);
+    }
+
+    private String formatMoney(final BigDecimal amount) {
+        return amount.stripTrailingZeros().toPlainString();
     }
 
     private boolean fitsAvailabilityWindow(

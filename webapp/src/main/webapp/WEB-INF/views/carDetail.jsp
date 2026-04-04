@@ -1,7 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -59,7 +58,7 @@
                 <h2 class="h5 fw-bold mb-3 d-flex align-items-center gap-2 flex-wrap">
                     Availability
                     <c:if test="${not empty listingAvailabilities}">
-                        <span class="badge rounded-pill text-bg-secondary">${fn:length(listingAvailabilities)} window<c:if test="${fn:length(listingAvailabilities) ne 1}">s</c:if></span>
+                        <span class="badge rounded-pill text-bg-secondary"><c:out value="${fn:length(listingAvailabilities)}"/> window<c:if test="${fn:length(listingAvailabilities) ne 1}">s</c:if></span>
                     </c:if>
                 </h2>
                 <c:choose>
@@ -88,14 +87,9 @@
 
         <div class="col-lg-4 order-2">
             <div class="detail-reservation-sticky">
-                <fmt:formatNumber var="dayPriceStr" value="${listing.dayPrice}" maxFractionDigits="2" minFractionDigits="0" groupingUsed="false"/>
                 <paw:detailReservationPanel
                         listingId="${listing.id}"
-                        pricePerDay="${dayPriceStr}"
-                        days="3"
-                        subtotal="360"
-                        serviceFee="24"
-                        total="384"
+                        dailyPrice="${listing.dayPrice}"
                         deliveryLocation="${listing.startPoint}"
                         fromDateTimeValue="${reservationFromDefault}"
                         untilDateTimeValue="${reservationUntilDefault}"

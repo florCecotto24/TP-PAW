@@ -84,13 +84,6 @@ public class CarDetailController {
             availabilityLines.add(formatAvailabilityLine(a));
             reservationPeriods.add(toReservationPeriodOption(a));
         }
-        String reservationFromDefault = "";
-        String reservationUntilDefault = "";
-        if (reservationPeriods.size() == 1) {
-            final ReservationPeriodOption only = reservationPeriods.get(0);
-            reservationFromDefault = only.getMinDateTimeLocal();
-            reservationUntilDefault = only.getMaxDateTimeLocal();
-        }
 
         final ModelAndView mav = new ModelAndView("carDetail");
         mav.addObject("listing", listing);
@@ -100,8 +93,8 @@ public class CarDetailController {
         mav.addObject("listingAvailabilities", listingAvailabilities);
         mav.addObject("availabilityLines", availabilityLines);
         mav.addObject("reservationPeriods", reservationPeriods);
-        mav.addObject("reservationFromDefault", reservationFromDefault);
-        mav.addObject("reservationUntilDefault", reservationUntilDefault);
+        mav.addObject("reservationFromDefault", "");
+        mav.addObject("reservationUntilDefault", "");
         mav.addObject("similarListings", similarListings);
         return mav;
     }

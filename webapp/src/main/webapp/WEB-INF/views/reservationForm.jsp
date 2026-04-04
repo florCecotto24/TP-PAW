@@ -21,30 +21,34 @@
                 <div class="card-body p-4 p-md-5">
                     <h1 class="h4 fw-bold mb-2">Complete your reservation</h1>
                     <p class="text-secondary mb-4">
-                        You are requesting <strong>${carName}</strong>. Fill in your details so the owner can contact you.
+                        You are requesting <strong><c:out value="${carName}"/></strong>. Fill in your details so the owner can contact you.
                     </p>
 
                     <c:if test="${not empty reservationError}">
-                        <div class="alert alert-danger" role="alert">${reservationError}</div>
+                        <div class="alert alert-danger" role="alert"><c:out value="${reservationError}"/></div>
                     </c:if>
 
                     <div class="border rounded-3 p-3 bg-light-subtle mb-4">
                         <h2 class="h6 fw-bold mb-2">Reservation summary</h2>
-                        <p class="mb-1"><strong>Car:</strong> ${carName}</p>
-                        <p class="mb-1"><strong>Pickup / return:</strong> ${summaryFromDate} → ${summaryUntilDate}</p>
-                        <p class="mb-0"><strong>Location:</strong> ${summaryLocation}</p>
+                        <p class="mb-1"><strong>Car:</strong> <c:out value="${carName}"/></p>
+                        <p class="mb-1"><strong>Pickup / return:</strong> <c:out value="${summaryFromDate}"/> → <c:out value="${summaryUntilDate}"/></p>
+                        <p class="mb-1"><strong>Location:</strong> <c:out value="${summaryLocation}"/></p>
+                        <c:if test="${not empty reservationTotal}">
+                            <p class="mb-0"><strong>Total to pay:</strong> $<c:out value="${reservationTotal}"/></p>
+                        </c:if>
                     </div>
 
                     <form action="<c:url value='/reservation'/>" method="post" class="d-flex flex-column gap-2">
                         <c:if test="${not empty listingId}">
-                            <input type="hidden" name="listingId" value="${listingId}"/>
+                            <input type="hidden" name="listingId" value="<c:out value='${listingId}'/>"/>
                         </c:if>
                         <c:if test="${not empty availabilityId}">
-                            <input type="hidden" name="availabilityId" value="${availabilityId}"/>
+                            <input type="hidden" name="availabilityId" value="<c:out value='${availabilityId}'/>"/>
                         </c:if>
-                        <input type="hidden" name="carName" value="${carName}"/>
-                        <input type="hidden" name="fromDateTime" value="${fromDateTime}"/>
-                        <input type="hidden" name="untilDateTime" value="${untilDateTime}"/>
+                        <input type="hidden" name="carName" value="<c:out value='${carName}'/>"/>
+                        <input type="hidden" name="fromDateTime" value="<c:out value='${fromDateTime}'/>"/>
+                        <input type="hidden" name="untilDateTime" value="<c:out value='${untilDateTime}'/>"/>
+                        <input type="hidden" name="reservationTotal" value="<c:out value='${clientReservationTotal}'/>"/>
 
                         <paw:input
                                 name="email"
