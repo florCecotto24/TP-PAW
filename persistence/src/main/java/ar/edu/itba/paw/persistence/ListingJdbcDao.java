@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,19 +16,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.CarPicture;
+import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.User;
 
 @Repository
 public class ListingJdbcDao implements ListingDao {
+
+    private static final String HOME_SECTION_CHEAPEST = "C";
+    private static final String HOME_SECTION_RECENT = "R";
 
     private static final RowMapper<Listing> LISTING_ROW_MAPPER = (rs, rowNum) -> new Listing(
             rs.getLong("id"),
@@ -54,6 +60,7 @@ public class ListingJdbcDao implements ListingDao {
     private static final ResultSetExtractor<Optional<ListingDetail>> LISTING_DETAIL_EXTRACTOR = rs -> {
         Listing listing = null;
         Car car = null;
+        User owner = null;
         final LinkedHashMap<Long, CarPicture> pictures = new LinkedHashMap<>();
         final LinkedHashMap<Long, ListingAvailability> availabilities = new LinkedHashMap<>();
 
@@ -78,6 +85,11 @@ public class ListingJdbcDao implements ListingDao {
                         Car.Type.valueOf(rs.getString("type")),
                         Car.Powertrain.valueOf(rs.getString("powertrain")),
                         Car.Transmission.valueOf(rs.getString("transmission")));
+                owner = new User(
+                        rs.getLong("owner_user_id"),
+                        rs.getString("owner_email"),
+                        rs.getString("owner_forename"),
+                        rs.getString("owner_surname"));
             }
 
             final long cpId = rs.getLong("car_picture_id");
@@ -106,17 +118,19 @@ public class ListingJdbcDao implements ListingDao {
         if (listing == null) {
             return Optional.empty();
         }
-        return Optional.of(new ListingDetail(listing, car,
+        return Optional.of(new ListingDetail(listing, car, owner,
                 new ArrayList<>(pictures.values()),
                 new ArrayList<>(availabilities.values())));
     };
 
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
     public ListingJdbcDao(final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)
                 .withTableName("listings")
                 .usingGeneratedKeyColumns("id");
@@ -165,12 +179,14 @@ public class ListingJdbcDao implements ListingDao {
                 "SELECT l.id AS listing_id, l.title, l.created_at AS listing_created_at, "
                         + "l.updated_at AS listing_updated_at, l.status, l.day_price, l.start_point, l.description, "
                         + "c.id AS car_id, c.owner_id, c.plate, c.brand, c.model, c.type, c.transmission, c.powertrain, "
+                        + "u.id AS owner_user_id, u.email AS owner_email, u.forename AS owner_forename, u.surname AS owner_surname, "
                         + "cp.id AS car_picture_id, cp.image_id, cp.display_order, "
                         + "cp.created_at AS cp_created_at, cp.updated_at AS cp_updated_at, "
                         + "la.id AS availability_id, la.start_date, la.end_date, "
                         + "la.created_at AS la_created_at, la.updated_at AS la_updated_at "
                         + "FROM listings l "
                         + "JOIN cars c ON c.id = l.car_id "
+                        + "JOIN users u ON u.id = c.owner_id "
                         + "LEFT JOIN car_pictures cp ON cp.car_id = c.id "
                         + "LEFT JOIN listing_availability la ON la.listing_id = l.id "
                         + "WHERE l.id = ? "
@@ -187,10 +203,10 @@ public class ListingJdbcDao implements ListingDao {
     public List<Listing> searchListings(final ListingSearchCriteria criteria) {
         final StringBuilder sql = new StringBuilder(
                 "SELECT DISTINCT l.* FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
-        final List<Object> args = new ArrayList<>();
-        appendSearchFilters(sql, args, criteria);
+        final MapSqlParameterSource params = new MapSqlParameterSource();
+        appendSearchFilters(sql, params, criteria);
         sql.append("ORDER BY l.created_at DESC");
-        return jdbcTemplate.query(sql.toString(), LISTING_ROW_MAPPER, args.toArray());
+        return namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_ROW_MAPPER);
     }
 
     @Override
@@ -200,10 +216,10 @@ public class ListingJdbcDao implements ListingDao {
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
-        final List<Object> args = new ArrayList<>();
-        appendSearchFilters(sql, args, criteria);
+        final MapSqlParameterSource params = new MapSqlParameterSource();
+        appendSearchFilters(sql, params, criteria);
         sql.append("ORDER BY l.created_at DESC");
-        return jdbcTemplate.query(sql.toString(), LISTING_CARD_ROW_MAPPER, args.toArray());
+        return namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_CARD_ROW_MAPPER);
     }
 
     @Override
@@ -239,41 +255,81 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public List<Listing> findSimilarListings(
-            final long excludedListingId,
-            final Car.Type type,
-            final Car.Powertrain powertrain,
-            final Car.Transmission transmission,
-            final int limit) {
-        return jdbcTemplate.query(
-                "SELECT l.* FROM listings l "
-                        + "INNER JOIN cars c ON l.car_id = c.id "
-                        + "WHERE l.status = 'active' "
-                        + "AND l.id <> ? "
-                        + "AND c.type = ? "
-                        + "AND c.powertrain = ? "
-                        + "AND c.transmission = ? "
-                        + "ORDER BY l.created_at DESC "
-                        + "LIMIT ?",
-                LISTING_ROW_MAPPER,
-                excludedListingId,
-                type.name(),
-                powertrain.name(),
-                transmission.name(),
-                limit);
+    public HomeListingCards getHomeListingCards(final int limit) {
+        final String sql = "(SELECT :cheapestSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
+                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
+                + "ORDER BY l.day_price ASC LIMIT :homeLimit) "
+                + "UNION ALL "
+                + "(SELECT :recentSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
+                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
+                + "ORDER BY l.created_at DESC LIMIT :homeLimit)";
+
+        final MapSqlParameterSource homeParams = new MapSqlParameterSource()
+                .addValue("cheapestSection", HOME_SECTION_CHEAPEST)
+                .addValue("recentSection", HOME_SECTION_RECENT)
+                .addValue("homeLimit", limit);
+
+        return namedParameterJdbcTemplate.query(
+                sql,
+                homeParams,
+                rs -> {
+                    final List<ListingCard> cheapest = new ArrayList<>();
+                    final List<ListingCard> mostRecent = new ArrayList<>();
+                    while (rs.next()) {
+                        final ListingCard card = new ListingCard(
+                                rs.getLong("listing_id"),
+                                rs.getString("brand"),
+                                rs.getString("model"),
+                                rs.getBigDecimal("day_price"),
+                                rs.getLong("image_id"));
+                        final String section = rs.getString("home_section");
+                        if (HOME_SECTION_CHEAPEST.equals(section)) {
+                            cheapest.add(card);
+                        } else if (HOME_SECTION_RECENT.equals(section)) {
+                            mostRecent.add(card);
+                        }
+                    }
+                    return new HomeListingCards(List.copyOf(cheapest), List.copyOf(mostRecent));
+                });
+    }
+
+    @Override
+    public List<ListingCard> findSimilarListingCards(final long listingId, final int limit) {
+        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "FROM listings l "
+                + "INNER JOIN cars c ON l.car_id = c.id "
+                + "INNER JOIN listings la ON la.id = :listingId "
+                + "INNER JOIN cars ca ON ca.id = la.car_id "
+                + "WHERE l.status = 'active' "
+                + "AND l.id <> :listingId "
+                + "AND c.type = ca.type "
+                + "AND c.powertrain = ca.powertrain "
+                + "AND c.transmission = ca.transmission "
+                + "ORDER BY l.created_at DESC "
+                + "LIMIT :similarLimit";
+
+        final MapSqlParameterSource similarParams = new MapSqlParameterSource()
+                .addValue("listingId", listingId)
+                .addValue("similarLimit", limit);
+
+        return namedParameterJdbcTemplate.query(sql, similarParams, LISTING_CARD_ROW_MAPPER);
     }
 
     private static void appendSearchFilters(
             final StringBuilder sql,
-            final List<Object> args,
+            final MapSqlParameterSource params,
             final ListingSearchCriteria criteria) {
         if (criteria.getQuery() != null) {
             final String q = "%" + escapeLike(criteria.getQuery()) + "%";
-            sql.append("AND (c.brand ILIKE ? ESCAPE '\\' OR c.model ILIKE ? ESCAPE '\\' OR l.title ILIKE ? ESCAPE '\\' ")
-                    .append("OR l.description ILIKE ? ESCAPE '\\' OR l.start_point ILIKE ? ESCAPE '\\') ");
-            for (int i = 0; i < 5; i++) {
-                args.add(q);
-            }
+            sql.append("AND (c.brand ILIKE :search ESCAPE '\\' OR c.model ILIKE :search ESCAPE '\\' OR l.title ILIKE :search ESCAPE '\\' ")
+                    .append("OR l.description ILIKE :search ESCAPE '\\' OR l.start_point ILIKE :search ESCAPE '\\') ");
+            params.addValue("search", q);
         }
 
         final boolean hasTrans = !criteria.getTransmissions().isEmpty();
@@ -281,24 +337,22 @@ public class ListingJdbcDao implements ListingDao {
         if (hasTrans || hasPwr) {
             sql.append("AND (");
             if (hasTrans) {
-                appendInClause(sql, "c.transmission", criteria.getTransmissions().size());
-                args.addAll(criteria.getTransmissions());
+                sql.append("c.transmission IN (:transmissions)");
+                params.addValue("transmissions", criteria.getTransmissions());
                 if (hasPwr) {
                     sql.append(" OR ");
                 }
             }
             if (hasPwr) {
-                appendInClause(sql, "c.powertrain", criteria.getPowertrains().size());
-                args.addAll(criteria.getPowertrains());
+                sql.append("c.powertrain IN (:powertrains)");
+                params.addValue("powertrains", criteria.getPowertrains());
             }
             sql.append(") ");
         }
 
         if (!criteria.getCarTypes().isEmpty()) {
-            sql.append("AND ");
-            appendInClause(sql, "c.type", criteria.getCarTypes().size());
-            args.addAll(criteria.getCarTypes());
-            sql.append(" ");
+            sql.append("AND c.type IN (:carTypes) ");
+            params.addValue("carTypes", criteria.getCarTypes());
         }
 
         final List<String> bands = criteria.getPriceBands();
@@ -322,23 +376,17 @@ public class ListingJdbcDao implements ListingDao {
 
             sql.append("AND EXISTS (")
                     .append("SELECT 1 FROM listing_availability la WHERE la.listing_id = l.id ")
-                    .append("AND la.start_date <= ? AND la.end_date >= ?) ");
-            args.add(fromStart);
-            args.add(untilTs);
+                    .append("AND la.start_date <= :availEnd AND la.end_date >= :availStart) ");
+            params.addValue("availStart", fromStart);
+            params.addValue("availEnd", untilTs);
 
             sql.append("AND NOT EXISTS (")
                     .append("SELECT 1 FROM reservations r WHERE r.listing_id = l.id ")
                     .append("AND r.status IN ('accepted', 'started') ")
-                    .append("AND r.start_date < ? AND r.end_date > ?) ");
-            args.add(untilTs);
-            args.add(fromStart);
+                    .append("AND r.start_date < :resWindowEnd AND r.end_date > :resWindowStart) ");
+            params.addValue("resWindowEnd", untilTs);
+            params.addValue("resWindowStart", fromStart);
         }
-    }
-
-    private static void appendInClause(final StringBuilder sql, final String column, final int n) {
-        sql.append(column).append(" IN (");
-        sql.append(String.join(",", Collections.nCopies(n, "?")));
-        sql.append(")");
     }
 
     private static String escapeLike(final String raw) {

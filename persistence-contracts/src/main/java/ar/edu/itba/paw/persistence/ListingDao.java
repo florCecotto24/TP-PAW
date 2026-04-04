@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
@@ -36,12 +36,12 @@ public interface ListingDao {
 
     List<ListingCard> getMostRecentListingCards(int limit);
 
+    HomeListingCards getHomeListingCards(int limit);
+
     List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
-    List<Listing> findSimilarListings(
-            long excludedListingId,
-            Car.Type type,
-            Car.Powertrain powertrain,
-            Car.Transmission transmission,
-            int limit);
+    /**
+     * Listings similares (mismo type/powertrain/transmission que el auto del listing dado), una sola ida a la BD.
+     */
+    List<ListingCard> findSimilarListingCards(long listingId, int limit);
 }

@@ -26,11 +26,12 @@ public class HomeController {
     public ModelAndView home() {
         final ModelAndView mav = new ModelAndView("home");
 
-        final List<VehicleCardView> cheapestCars = listingService.getCheapestListingCards(8).stream()
+        final var homeCards = listingService.getHomeListingCards(8);
+        final List<VehicleCardView> cheapestCars = homeCards.cheapest().stream()
                 .map(HomeController::toVehicleCardView)
                 .collect(Collectors.toList());
 
-        final List<VehicleCardView> mostRecentCars = listingService.getMostRecentListingCards(8).stream()
+        final List<VehicleCardView> mostRecentCars = homeCards.mostRecent().stream()
                 .map(HomeController::toVehicleCardView)
                 .collect(Collectors.toList());
 

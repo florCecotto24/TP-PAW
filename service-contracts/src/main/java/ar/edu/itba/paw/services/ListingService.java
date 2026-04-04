@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
@@ -39,8 +40,12 @@ public interface ListingService {
 
     List<ListingCard> getMostRecentListingCards(int limit);
 
+    HomeListingCards getHomeListingCards(int limit);
+
     List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
-    //limit cantidad maxima de listings que retorna
-    List<Listing> findSimilarListings(long listingId, int limit);
+    /**
+     * Listings similares (misma categoría mecánica que el listing dado) como tarjetas, una sola consulta SQL.
+     */
+    List<ListingCard> findSimilarListingCards(long listingId, int limit);
 }

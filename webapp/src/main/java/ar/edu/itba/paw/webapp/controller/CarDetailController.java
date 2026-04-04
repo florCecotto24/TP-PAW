@@ -2,15 +2,12 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.services.CarPictureService;
-import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.dto.ReservationPeriodOption;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +21,6 @@ import org.springframework.web.servlet.view.RedirectView;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -37,20 +33,10 @@ public class CarDetailController {
     private static final DateTimeFormatter LABEL_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ListingService listingService;
-    private final CarService carService;
-    private final CarPictureService carPictureService;
-    private final UserService userService;
 
     @Autowired
-    public CarDetailController(
-            final ListingService listingService,
-            final CarService carService,
-            final CarPictureService carPictureService,
-            final UserService userService) {
+    public CarDetailController(final ListingService listingService) {
         this.listingService = listingService;
-        this.carService = carService;
-        this.carPictureService = carPictureService;
-        this.userService = userService;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -63,18 +49,16 @@ public class CarDetailController {
         final Listing listing = detail.getListing();
         final Car car = detail.getCar();
 
-        // Fetch owner info
-        final User owner = userService.getUserById(car.getOwnerId()).orElse(null);
+        final User owner = detail.getOwner();
 
         final List<String> carGalleryImagePaths = detail.getPictures().stream()
                 .map(cp -> "/image/" + cp.getImageId())
                 .collect(Collectors.toList());
 
         final List<VehicleCardView> similarListings = listingService
-                .findSimilarListings(listingId, SIMILAR_LISTINGS_LIMIT)
+                .findSimilarListingCards(listingId, SIMILAR_LISTINGS_LIMIT)
                 .stream()
-                .map(this::toSimilarVehicleCard)
-                .flatMap(Optional::stream)
+                .map(CarDetailController::listingCardToVehicleCardView)
                 .collect(Collectors.toList());
 
         final List<ListingAvailability> listingAvailabilities = detail.getListingAvailabilities();
@@ -99,21 +83,13 @@ public class CarDetailController {
         return mav;
     }
 
-    private Optional<VehicleCardView> toSimilarVehicleCard(final Listing listing) {
-        return carService.getCarById(listing.getCarId())
-                .map(car -> {
-                    final long imageId = carPictureService.getCarPicturesByCarId(car.getId()).stream()
-                            .sorted(Comparator.comparingInt(CarPicture::getDisplayOrder))
-                            .map(CarPicture::getImageId)
-                            .findFirst()
-                            .orElse(0L);
-                    return new VehicleCardView(
-                            listing.getId(),
-                            car.getBrand(),
-                            car.getModel(),
-                            listing.getDayPrice(),
-                            imageId);
-                });
+    private static VehicleCardView listingCardToVehicleCardView(final ListingCard card) {
+        return new VehicleCardView(
+                card.getListingId(),
+                card.getBrand(),
+                card.getModel(),
+                card.getDayPrice(),
+                card.getImageId());
     }
 
     private static ReservationPeriodOption toReservationPeriodOption(final ListingAvailability a) {

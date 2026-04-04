@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
@@ -111,26 +112,23 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    public HomeListingCards getHomeListingCards(final int limit) {
+        if (limit <= 0) {
+            throw new IllegalArgumentException("Limit must be greater than zero.");
+        }
+        return listingDao.getHomeListingCards(limit);
+    }
+
+    @Override
     public List<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
         return listingDao.searchListingCards(criteria);
     }
 
     @Override
-    public List<Listing> findSimilarListings(final long listingId, final int limit) {
+    public List<ListingCard> findSimilarListingCards(final long listingId, final int limit) {
         if (limit <= 0) {
             throw new IllegalArgumentException("Limit must be greater than zero.");
         }
-
-        final Listing listing = listingDao.getListingById(listingId)
-                .orElseThrow(() -> new IllegalArgumentException("Listing not found: " + listingId));
-        final Car car = carDao.getCarById(listing.getCarId())
-                .orElseThrow(() -> new IllegalStateException("Car not found for listing: " + listingId));
-
-        return listingDao.findSimilarListings(
-                listingId,
-                car.getType(),
-                car.getPowertrain(),
-                car.getTransmission(),
-                limit);
+        return listingDao.findSimilarListingCards(listingId, limit);
     }
 }
