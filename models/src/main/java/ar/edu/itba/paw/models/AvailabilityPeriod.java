@@ -39,7 +39,6 @@ public final class AvailabilityPeriod {
     }
 
     public static OffsetDateTime parseWallLocalDateTimeToUtc(final String value) {
-        final LocalDateTime localDateTime = LocalDateTime.parse(value);
-        return localDateTime.atZone(WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+        return WallDateTimeParsing.parseWallLocalDateTimeToUtc(value);
     }
 }

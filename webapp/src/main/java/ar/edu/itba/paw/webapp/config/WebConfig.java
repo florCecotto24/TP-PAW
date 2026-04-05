@@ -1,9 +1,11 @@
 package ar.edu.itba.paw.webapp.config;
 
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -19,6 +21,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
@@ -26,6 +30,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.lang.NonNull;
 
 import javax.sql.DataSource;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 @EnableWebMvc
 @EnableTransactionManagement
@@ -35,7 +41,7 @@ import javax.sql.DataSource;
     @PropertySource("classpath:application.properties"),
     @PropertySource(value = "classpath:application-${spring.profiles.active}.properties", ignoreResourceNotFound = true)
 })
-@ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
+@ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.webapp.support", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
 public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
 
     private Environment environment;
@@ -43,6 +49,22 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
     @Override
     public void setEnvironment(@NonNull final Environment environment) {
         this.environment = environment;
+    }
+
+    @Bean
+    public MessageSource messageSource() {
+        final ReloadableResourceBundleMessageSource bundle = new ReloadableResourceBundleMessageSource();
+        bundle.setBasenames("classpath:messages", "classpath:exception-messages");
+        bundle.setDefaultEncoding(StandardCharsets.UTF_8.name());
+        bundle.setFallbackToSystemLocale(false);
+        return bundle;
+    }
+
+    @Bean
+    public LocaleResolver localeResolver() {
+        final SessionLocaleResolver resolver = new SessionLocaleResolver();
+        resolver.setDefaultLocale(Locale.ENGLISH);
+        return resolver;
     }
 
     @Bean

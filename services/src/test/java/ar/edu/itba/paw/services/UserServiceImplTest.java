@@ -10,6 +10,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.UserDao;
 
@@ -81,7 +83,7 @@ public class UserServiceImplTest {
                 () -> userService.createUser("  TEST@Test.com ", "TestNameDifferent", "TestSurnameDifferent"));
 
         // 3. Assert
-        Assertions.assertEquals("A user with this email already exists", thrown.getMessage());
+        Assertions.assertEquals(MessageKeys.USER_EMAIL_ALREADY_EXISTS, thrown.getMessageCode());
     }
 
     @Test

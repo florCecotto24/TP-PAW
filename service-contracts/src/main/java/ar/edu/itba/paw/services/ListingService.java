@@ -52,4 +52,13 @@ public interface ListingService {
     List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
     List<ListingCard> findSimilarListingCards(long listingId, int limit);
+
+    ListingSearchCriteria buildSearchCriteria(
+            String query,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            List<String> price,
+            String from,
+            String until);
 }

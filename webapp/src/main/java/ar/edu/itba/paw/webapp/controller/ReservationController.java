@@ -1,11 +1,12 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.reservation.ReservationException;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.ReservationConflictException;
-import ar.edu.itba.paw.services.RiderReservationException;
-import ar.edu.itba.paw.services.RiderReservationService;
+import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.webapp.support.LocaleMessages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,17 +19,18 @@ import java.util.Optional;
 @Controller
 public class ReservationController {
 
-    private static final String MSG_CAR_NAME_REQUIRED = "Vehicle name is required.";
-
-    private final RiderReservationService riderReservationService;
+    private final ReservationService reservationService;
     private final ListingService listingService;
+    private final LocaleMessages localeMessages;
 
     @Autowired
     public ReservationController(
-            final RiderReservationService riderReservationService,
-            final ListingService listingService) {
-        this.riderReservationService = riderReservationService;
+            final ReservationService reservationService,
+            final ListingService listingService,
+            final LocaleMessages localeMessages) {
+        this.reservationService = reservationService;
         this.listingService = listingService;
+        this.localeMessages = localeMessages;
     }
 
     @RequestMapping(value = "/reservation/new", method = RequestMethod.GET)
@@ -38,11 +40,11 @@ public class ReservationController {
                                        @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
                                        @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
                                        @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {
-        final String clientReservationTotal = riderReservationService
+        final String clientReservationTotal = reservationService
                 .normalizeClientReservationTotal(reservationTotal)
                 .orElse(null);
         final Optional<String> serverReservationTotal =
-                riderReservationService.reservationTotalDisplay(listingId, fromDateTime, untilDateTime);
+                reservationService.reservationTotalDisplay(listingId, fromDateTime, untilDateTime);
 
         final Optional<Listing> listingOpt = listingId == null ? Optional.empty() : listingService.getListingById(listingId);
         final ModelAndView mav = new ModelAndView("reservationForm");
@@ -67,7 +69,7 @@ public class ReservationController {
                                           @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
                                           @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
                                           @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {
-        final String clientReservationTotal = riderReservationService
+        final String clientReservationTotal = reservationService
                 .normalizeClientReservationTotal(reservationTotal)
                 .orElse(null);
 
@@ -82,14 +84,14 @@ public class ReservationController {
                     fromDateTime,
                     untilDateTime,
                     clientReservationTotal,
-                    MSG_CAR_NAME_REQUIRED);
+                    localeMessages.msg(MessageKeys.RESERVATION_FORM_CAR_NAME_REQUIRED));
         }
 
         final Reservation reservation;
         try {
-            reservation = riderReservationService.submitRiderReservation(
+            reservation = reservationService.submitRiderReservation(
                     email, name, surname, listingId, availabilityId, fromDateTime, untilDateTime);
-        } catch (final RiderReservationException | ReservationConflictException e) {
+        } catch (final ReservationException e) {
             return reservationFormWithError(
                     listingId,
                     availabilityId,
@@ -97,7 +99,7 @@ public class ReservationController {
                     fromDateTime,
                     untilDateTime,
                     clientReservationTotal,
-                    e.getMessage());
+                    localeMessages.msg(e));
         }
 
         final ModelAndView mav = new ModelAndView("reservationConfirmation");
@@ -132,7 +134,7 @@ public class ReservationController {
         mav.addObject("deliveryLocation", listingOpt.map(Listing::getStartPoint).orElse(null));
         mav.addObject(
                 "reservationTotal",
-                riderReservationService.reservationTotalDisplay(listingId, fromDateTime, untilDateTime).orElse(null));
+                reservationService.reservationTotalDisplay(listingId, fromDateTime, untilDateTime).orElse(null));
         mav.addObject("clientReservationTotal", clientReservationTotal);
         mav.addObject("reservationError", errorMessage);
         return mav;

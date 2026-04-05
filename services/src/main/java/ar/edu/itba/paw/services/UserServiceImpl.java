@@ -5,6 +5,8 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.models.EmailNormalizer;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.UserDao;
@@ -22,7 +24,7 @@ public class UserServiceImpl implements UserService {
     public User createUser(final String email, final String forename, final String surname) {
         final String normalizedEmail = EmailNormalizer.normalize(email);
         if (userDao.findByEmail(normalizedEmail).isPresent()) {
-            throw new EmailAlreadyExistsException("A user with this email already exists");
+            throw new EmailAlreadyExistsException(MessageKeys.USER_EMAIL_ALREADY_EXISTS);
         }
         return userDao.createUser(normalizedEmail, forename, surname);
     }

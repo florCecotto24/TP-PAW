@@ -1,10 +1,13 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.dto.ImageUpload;
-import ar.edu.itba.paw.services.CarPublicationService;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
+import ar.edu.itba.paw.webapp.support.LocaleMessages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -39,11 +42,13 @@ public class PublishCarFormController {
         return Car.Transmission.values();
     }
 
-    private final CarPublicationService carPublicationService;
+    private final CarService carService;
+    private final LocaleMessages localeMessages;
 
     @Autowired
-    public PublishCarFormController(final CarPublicationService carPublicationService) {
-        this.carPublicationService = carPublicationService;
+    public PublishCarFormController(final CarService carService, final LocaleMessages localeMessages) {
+        this.carService = carService;
+        this.localeMessages = localeMessages;
     }
 
     @GetMapping
@@ -65,13 +70,15 @@ public class PublishCarFormController {
         try {
             uploads = toImageUploads(form.getPictures());
         } catch (final IOException e) {
-            errors.reject("images.read", "Could not read uploaded images.");
+            errors.reject(
+                    MessageKeys.PUBLISH_IMAGES_READ,
+                    localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
             return index(form);
         }
 
         try {
             final List<AvailabilityPeriod> periods = form.toAvailabilityPeriods();
-            final var result = carPublicationService.publish(
+            final var result = carService.publish(
                     form.getOwnerEmail(),
                     form.getOwnerName(),
                     form.getOwnerSurname(),
@@ -92,8 +99,11 @@ public class PublishCarFormController {
             mav.addObject("listing", result.getListing());
             mav.addObject("publisher", result.getPublisher());
             return mav;
-        } catch (final IllegalArgumentException e) {
-            errors.reject("publish.failed", e.getMessage());
+        } catch (final RydenException e) {
+            final String detail = localeMessages.msg(e);
+            errors.reject(
+                    MessageKeys.PUBLISH_FAILED,
+                    localeMessages.msg(MessageKeys.PUBLISH_FAILED, detail));
             return index(form);
         }
     }

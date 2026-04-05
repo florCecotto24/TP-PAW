@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.services.ListingSearchCriteriaService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,14 +21,10 @@ import java.util.stream.Collectors;
 public class SearchController {
 
     private final ListingService listingService;
-    private final ListingSearchCriteriaService listingSearchCriteriaService;
 
     @Autowired
-    public SearchController(
-            final ListingService listingService,
-            final ListingSearchCriteriaService listingSearchCriteriaService) {
+    public SearchController(final ListingService listingService) {
         this.listingService = listingService;
-        this.listingSearchCriteriaService = listingSearchCriteriaService;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -48,7 +43,7 @@ public class SearchController {
         mav.addObject("powertrainFilterOptions", powertrainFilterOptions());
         mav.addObject("priceFilterOptions", priceFilterOptions());
 
-        final var criteria = listingSearchCriteriaService.build(
+        final var criteria = listingService.buildSearchCriteria(
                 query, category, transmission, powertrain, price, from, until);
         final List<VehicleCardView> results = listingService.searchListingCards(criteria).stream()
                 .map(SearchController::toVehicleCardView)

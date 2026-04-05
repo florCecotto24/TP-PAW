@@ -11,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.persistence.ReservationDao;
 
@@ -24,6 +26,12 @@ public class ReservationServiceImplTest {
 
     @Mock
     private ReservationDao reservationDao;
+
+    @Mock
+    private ListingService listingService;
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private ReservationServiceImpl reservationService;
@@ -65,7 +73,7 @@ public class ReservationServiceImplTest {
                 () -> reservationService.createReservation(1L, 2L, START, END, Reservation.Status.ACCEPTED));
 
         // 3. Assert
-        Assertions.assertEquals("The selected dates are no longer available for this listing.", thrown.getMessage());
+        Assertions.assertEquals(MessageKeys.RESERVATION_CONFLICT_OVERLAP, thrown.getMessageCode());
     }
 
     @Test
