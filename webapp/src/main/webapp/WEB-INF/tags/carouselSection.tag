@@ -27,7 +27,7 @@
                 </div><div class="carousel-item">
                 </c:otherwise>
                 </c:choose>
-                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3 pb-3">
                     </c:if>
 
                     <div class="col d-flex justify-content-center">
