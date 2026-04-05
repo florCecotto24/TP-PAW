@@ -99,8 +99,7 @@ public class ReservationFormController {
                     listing.getId(),
                     startDate,
                     endDate,
-                    Reservation.Status.ACCEPTED,
-                    form.getDeliveryLocation());
+                    Reservation.Status.ACCEPTED);
         } catch (final ReservationConflictException e) {
             errors.reject("reservation.conflict", e.getMessage());
             return new ModelAndView("reservationForm");

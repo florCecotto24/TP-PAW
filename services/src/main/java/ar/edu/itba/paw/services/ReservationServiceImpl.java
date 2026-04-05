@@ -41,11 +41,13 @@ public class ReservationServiceImpl implements ReservationService {
             final long listingId,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
-            final Reservation.Status status,
-            final String deliveryLocation) {
+            final Reservation.Status status) {
         if (reservationDao.hasActiveOverlap(listingId, startDate, endDate)) {
             throw new ReservationConflictException("The selected dates are no longer available for this listing.");
         }
+        final String deliveryLocation = listingService.getListingById(listingId)
+                .map(Listing::getStartPoint)
+                .orElse(null);
         final Reservation reservation =
                 reservationDao.createReservation(riderId, listingId, startDate, endDate, status);
         enqueueReservationConfirmationEmail(riderId, listingId, reservation, deliveryLocation);
