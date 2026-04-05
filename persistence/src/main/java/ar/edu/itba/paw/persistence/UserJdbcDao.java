@@ -66,4 +66,15 @@ public class UserJdbcDao implements UserDao {
     public void updateUserName(final long userId, final String forename, final String surname) {
          jdbcTemplate.update("UPDATE users SET forename = ?, surname = ? WHERE id = ?", forename, surname, userId);
     }
+
+    @Override
+    public Optional<User> getListingOwner(final long listingId) {
+        return jdbcTemplate.query(
+                "SELECT u.id, u.email, u.forename, u.surname FROM users u " +
+                        "JOIN cars c ON c.owner_id = u.id " +
+                        "JOIN listings l ON l.car_id = c.id " +
+                        "WHERE l.id = ?",
+                USER_ROW_MAPPER,
+                listingId).stream().findAny();
+    }
 }

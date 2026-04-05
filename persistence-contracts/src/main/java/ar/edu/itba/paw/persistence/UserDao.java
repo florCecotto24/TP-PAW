@@ -12,4 +12,6 @@ public interface UserDao {
     Optional<User> findByEmail(final String email);
 
     void updateUserName(long userId, String forename, String surname);
+
+    Optional<User> getListingOwner(final long listingId);
 }

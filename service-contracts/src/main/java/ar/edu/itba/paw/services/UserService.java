@@ -12,4 +12,6 @@ public interface UserService {
     Optional<User> getUserById(final long id);
 
     User findOrCreatePublisher(final String email, final String forename, final String surname);
+
+    Optional<User> getListingOwner(final long listingId);
 }

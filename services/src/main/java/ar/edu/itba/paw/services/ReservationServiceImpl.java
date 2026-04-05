@@ -59,6 +59,7 @@ public class ReservationServiceImpl implements ReservationService {
             final String deliveryLocation) {
         try {
             final Optional<User> riderOpt = userService.getUserById(riderId);
+            final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
             final Optional<Listing> listingOpt = listingService.getListingById(listingId);
             if (!riderOpt.isPresent()) {
                 LOG.warn("Skipping reservation confirmation email: user not found for riderId=" + riderId
@@ -71,6 +72,7 @@ public class ReservationServiceImpl implements ReservationService {
                 return;
             }
             final User rider = riderOpt.get();
+            final User listingOwner = listingOwnerOpt.orElseThrow( () -> new ReservationConflictException("Listing owner not found for listingId=" + listingId));
             final Listing listing = listingOpt.get();
             final String vehicleLabel = listing.getTitle();
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
@@ -84,7 +86,9 @@ public class ReservationServiceImpl implements ReservationService {
                     vehicleLabel,
                     reservation.getStartDate(),
                     reservation.getEndDate(),
-                    trimmedDelivery);
+                    trimmedDelivery,
+                    listingOwner.getForename() + " " + listingOwner.getSurname(),
+                    listingOwner.getEmail());
             LOG.info("Queueing reservation confirmation email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());
             emailService.sendReservationConfirmationEmail(payload);

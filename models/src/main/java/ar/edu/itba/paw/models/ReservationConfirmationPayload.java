@@ -13,6 +13,8 @@ public final class ReservationConfirmationPayload {
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
     private final String deliveryLocation;
+    private final String ownerFullName;
+    private final String ownerEmail;
 
     public ReservationConfirmationPayload(
             final String recipientEmail,
@@ -22,7 +24,9 @@ public final class ReservationConfirmationPayload {
             final String vehicleLabel,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
-            final String deliveryLocation) {
+            final String deliveryLocation,
+            final String ownerFullName,
+            final String ownerEmail) {
         this.recipientEmail = Objects.requireNonNull(recipientEmail, "recipientEmail");
         this.riderFullName = Objects.requireNonNull(riderFullName, "riderFullName");
         this.reservationId = reservationId;
@@ -31,6 +35,8 @@ public final class ReservationConfirmationPayload {
         this.startDate = Objects.requireNonNull(startDate, "startDate");
         this.endDate = Objects.requireNonNull(endDate, "endDate");
         this.deliveryLocation = deliveryLocation;
+        this.ownerFullName = ownerFullName;
+        this.ownerEmail = ownerEmail;
     }
 
     public String getRecipientEmail() {
@@ -63,5 +69,13 @@ public final class ReservationConfirmationPayload {
 
     public String getDeliveryLocation() {
         return deliveryLocation;
+    }
+
+    public String getOwnerFullName() {
+        return ownerFullName;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
     }
 }

@@ -47,7 +47,8 @@ public class EmailServiceImpl implements EmailService {
 
     private static final Log LOG = LogFactory.getLog(EmailServiceImpl.class);
 
-    private static final String RESERVATION_CONFIRMATION_TEMPLATE = "html/reservation-confirmation";
+    private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
+    private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
 
     private static final Locale MAIL_LOCALE = Locale.ENGLISH;
 
@@ -73,16 +74,18 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
         try {
-            sendReservationConfirmationEmailSync(payload);
+            sendReservationConfirmationToClient(payload);
+            sendReservationConfirmationToOwner(payload);
             LOG.info("Reservation confirmation email sent to " + payload.getRecipientEmail()
                     + " (reservation id=" + payload.getReservationId() + ")");
+            LOG.info("Reservation confirmation email sent to " + payload.getOwnerEmail()
+                    + " (reservation id=" + payload.getReservationId() + ")");
         } catch (final Exception e) {
-            LOG.error("Failed to send reservation confirmation email to " + payload.getRecipientEmail()
-                    + " (reservation id=" + payload.getReservationId() + ")", e);
+            LOG.error("Failed to send reservation confirmation email (reservation id=" + payload.getReservationId() + ")", e);
         }
     }
 
-    private void sendReservationConfirmationEmailSync(final ReservationConfirmationPayload payload) throws EmailMessagingException {
+    private void sendReservationConfirmationToClient(final ReservationConfirmationPayload payload) throws EmailMessagingException {
         runMail(() -> {
             final DateTimeFormatter dateTimeFormatter =
                     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(MAIL_LOCALE);
@@ -99,21 +102,62 @@ public class EmailServiceImpl implements EmailService {
             final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
             final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
             ctx.setVariable("ctaUrl", ctaUrl);
+            ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+            ctx.setVariable("ownerEmail", payload.getOwnerEmail());
 
-            final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_TEMPLATE, ctx);
-            final MimeMessage mimeMessage = this.mailSender.createMimeMessage();
-            final MimeMessageHelper message = new MimeMessageHelper(mimeMessage, "UTF-8");
+            final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_USER_TEMPLATE, ctx);
+
             final String subject = emailMessageSource.getMessage(
                     "mail.reservation.subject",
-                    new Object[]{payload.getReservationId()},
+                    new Object[]{payload.getVehicleLabel()},
                     MAIL_LOCALE);
-            message.setSubject(subject);
-            final String from = environment.getProperty("mail.from.address", environment.getProperty("mail.server.username", "noreply@localhost"));
-            message.setFrom(from);
-            message.setTo(payload.getRecipientEmail());
-            message.setText(htmlContent, true);
-
-            this.mailSender.send(mimeMessage);
+            sendEmail(payload.getRecipientEmail(), subject, htmlContent);
         });
     }
+
+    private void sendReservationConfirmationToOwner(final ReservationConfirmationPayload payload) throws EmailMessagingException {
+        runMail(() -> {
+            final DateTimeFormatter dateTimeFormatter =
+                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(MAIL_LOCALE);
+            final Context ctx = new Context(MAIL_LOCALE);
+            ctx.setVariable("riderFullName", payload.getRiderFullName());
+            ctx.setVariable("reservationId", payload.getReservationId());
+            ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+            ctx.setVariable("startDateFormatted", dateTimeFormatter.format(payload.getStartDate()));
+            ctx.setVariable("endDateFormatted", dateTimeFormatter.format(payload.getEndDate()));
+            final String delivery = payload.getDeliveryLocation();
+            final boolean hasDelivery = delivery != null && !delivery.isBlank();
+            ctx.setVariable("hasDeliveryLocation", hasDelivery);
+            ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
+            final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+            final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
+            ctx.setVariable("ctaUrl", ctaUrl);
+            ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+            ctx.setVariable("riderEmail", payload.getRecipientEmail());
+
+            final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_OWNER_TEMPLATE, ctx);
+
+            final String subject = emailMessageSource.getMessage(
+                    "mail.reservation.subject",
+                    new Object[]{payload.getVehicleLabel()},
+                    MAIL_LOCALE);
+            sendEmail(payload.getOwnerEmail(), subject, htmlContent);
+        });
+    }
+
+    private void sendEmail(String to, String subject, String htmlBody) {
+        final MimeMessage message = this.mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            final String from = environment.getProperty("mail.from.address", environment.getProperty("mail.server.username", "noreply@localhost"));
+            message.setFrom(from);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            LOG.error("Error enviando mail a "+ to + ":" + e.getMessage());
+        }
+    }
+
 }

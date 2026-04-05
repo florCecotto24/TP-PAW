@@ -44,4 +44,9 @@ public class UserServiceImpl implements UserService {
         }
         return userDao.createUser(normalizedEmail, forename, surname);
     }
+
+    @Override
+    public Optional<User> getListingOwner(final long listingId) {
+        return userDao.getListingOwner(listingId);
+    }
 }
