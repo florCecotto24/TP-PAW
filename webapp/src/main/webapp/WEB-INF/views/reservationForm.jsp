@@ -45,6 +45,9 @@
                         <form:hidden path="fromDateTime"/>
                         <form:hidden path="untilDateTime"/>
                         <form:hidden path="deliveryLocation"/>
+                        <c:if test="${not empty clientReservationTotal}">
+                            <input type="hidden" name="reservationTotal" value="<c:out value='${clientReservationTotal}'/>"/>
+                        </c:if>
 
                         <div>
                             <label for="email" class="form-label">Email</label>

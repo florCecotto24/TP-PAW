@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.WallDateTimeParsing;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.ReservationPeriodOption;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -19,7 +20,6 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +29,6 @@ import java.util.stream.Collectors;
 public class CarDetailController {
 
     private static final int SIMILAR_LISTINGS_LIMIT = 4;
-    private static final DateTimeFormatter DT_LOCAL = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-    private static final DateTimeFormatter LABEL_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ListingService listingService;
 
@@ -98,9 +96,10 @@ public class CarDetailController {
         if (lastInclusiveZ.isBefore(startZ)) {
             lastInclusiveZ = startZ;
         }
-        final String minLocal = startZ.format(DT_LOCAL);
-        final String maxLocal = lastInclusiveZ.format(DT_LOCAL);
-        final String label = LABEL_FMT.format(startZ) + " — " + LABEL_FMT.format(lastInclusiveZ);
+        final String minLocal = startZ.format(WallDateTimeParsing.WALL_INPUT_DATE_TIME);
+        final String maxLocal = lastInclusiveZ.format(WallDateTimeParsing.WALL_INPUT_DATE_TIME);
+        final String label = WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(startZ) + " — "
+                + WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(lastInclusiveZ);
         return new ReservationPeriodOption(a.getId(), label, minLocal, maxLocal);
     }
 
@@ -110,7 +109,8 @@ public class CarDetailController {
         if (lastInclusiveZ.isBefore(startZ)) {
             lastInclusiveZ = startZ;
         }
-        return LABEL_FMT.format(startZ) + " — " + LABEL_FMT.format(lastInclusiveZ);
+        return WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(startZ) + " — "
+                + WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(lastInclusiveZ);
     }
 
 }

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.WallDateTimeParsing;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -85,9 +86,9 @@ public class PublishCarForm {
     }
 
     public static class AvailabilityRow {
-        @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+        @DateTimeFormat(pattern = WallDateTimeParsing.WALL_INPUT_DATE_TIME_PATTERN)
         private LocalDateTime from;
-        @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+        @DateTimeFormat(pattern = WallDateTimeParsing.WALL_INPUT_DATE_TIME_PATTERN)
         private LocalDateTime until;
 
         public LocalDateTime getFrom() {

@@ -6,12 +6,9 @@
 <%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
 <%@ attribute name="fromDateTimeValue" required="false" type="java.lang.String" %>
 <%@ attribute name="untilDateTimeValue" required="false" type="java.lang.String" %>
-<%@ attribute name="carName" required="false" type="java.lang.String" %>
+<%@ attribute name="carName" required="true" type="java.lang.String" %>
 <%@ attribute name="reservationPeriods" required="false" type="java.util.List" %>
 
-<c:if test="${empty carName}">
-    <c:set var="carName" value="Vehicle" />
-</c:if>
 <c:set var="periodCount" value="${empty reservationPeriods ? 0 : fn:length(reservationPeriods)}" />
 
 <c:if test="${periodCount == 1}">
