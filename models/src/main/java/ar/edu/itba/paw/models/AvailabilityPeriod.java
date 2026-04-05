@@ -37,4 +37,9 @@ public final class AvailabilityPeriod {
     public OffsetDateTime endExclusiveInstantUtc() {
         return endInclusive.atZone(WALL_ZONE).plusMinutes(1).toInstant().atOffset(ZoneOffset.UTC);
     }
+
+    public static OffsetDateTime parseWallLocalDateTimeToUtc(final String value) {
+        final LocalDateTime localDateTime = LocalDateTime.parse(value);
+        return localDateTime.atZone(WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+    }
 }

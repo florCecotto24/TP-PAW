@@ -2,14 +2,8 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.services.CarPictureService;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.services.CarPublicationService;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -23,6 +17,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.validation.Valid;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -44,24 +39,11 @@ public class PublishCarFormController {
         return Car.Transmission.values();
     }
 
-    private final ListingService listingService;
-    private final CarService carService;
-    private final ImageService imageService;
-    private final CarPictureService carPictureService;
-    private final UserService userService;
+    private final CarPublicationService carPublicationService;
 
     @Autowired
-    public PublishCarFormController(
-            final ListingService listingService,
-            final CarService carService,
-            final ImageService imageService,
-            final CarPictureService carPictureService,
-            final UserService userService) {
-        this.listingService = listingService;
-        this.carService = carService;
-        this.imageService = imageService;
-        this.carPictureService = carPictureService;
-        this.userService = userService;
+    public PublishCarFormController(final CarPublicationService carPublicationService) {
+        this.carPublicationService = carPublicationService;
     }
 
     @GetMapping
@@ -75,75 +57,61 @@ public class PublishCarFormController {
     public ModelAndView formSubmit(
             @Valid @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
-        final List<AvailabilityPeriod> periods = form.toAvailabilityPeriods();
-        if (periods.isEmpty()) {
-            errors.reject("availability.required", "Add at least one availability period.");
-        }
-        for (final AvailabilityPeriod period : periods) {
-            if (!period.isValidOrder()) {
-                errors.reject("availability.order", "In each period, the end date must be equal or after the start date.");
-                break;
-            }
-        }
-
         if (errors.hasErrors()) {
             return index(form);
         }
 
-        final User publisher = userService.findOrCreatePublisher(form.getOwnerEmail(), form.getOwnerName(), form.getOwnerSurname());
-        final Car car = carService.createCar(
-                publisher.getId(),
-                form.getPlate(),
-                form.getBrand(),
-                form.getModel(),
-                form.getType(),
-                form.getPowertrain(),
-                form.getTransmission());
-        final Listing listing = listingService.createListing(
-                car.getId(),
-                Listing.Status.ACTIVE,
-                form.getPricePerDay(),
-                form.getStartPoint(),
-                form.getDescription(),
-                periods);
+        final List<ImageUpload> uploads;
+        try {
+            uploads = toImageUploads(form.getPictures());
+        } catch (final IOException e) {
+            errors.reject("images.read", "Could not read uploaded images.");
+            return index(form);
+        }
 
-        processPictures(car.getId(), form.getPictures());
+        try {
+            final List<AvailabilityPeriod> periods = form.toAvailabilityPeriods();
+            final var result = carPublicationService.publish(
+                    form.getOwnerEmail(),
+                    form.getOwnerName(),
+                    form.getOwnerSurname(),
+                    form.getPlate(),
+                    form.getBrand(),
+                    form.getModel(),
+                    form.getType(),
+                    form.getPowertrain(),
+                    form.getTransmission(),
+                    form.getPricePerDay(),
+                    form.getStartPoint(),
+                    form.getDescription(),
+                    periods,
+                    uploads);
 
-        ModelAndView mav = new ModelAndView("publishCarConfirmation");
-        mav.addObject("car", car);
-        mav.addObject("listing", listing);
-        mav.addObject("publisher", publisher);
-
-        System.out.println(listing);
-        return mav;
+            final ModelAndView mav = new ModelAndView("publishCarConfirmation");
+            mav.addObject("car", result.getCar());
+            mav.addObject("listing", result.getListing());
+            mav.addObject("publisher", result.getPublisher());
+            return mav;
+        } catch (final IllegalArgumentException e) {
+            errors.reject("publish.failed", e.getMessage());
+            return index(form);
+        }
     }
 
-    private void processPictures(final long carId, final MultipartFile[] pictures) {
-        if (pictures == null || pictures.length == 0) {
-            return;
+    private static List<ImageUpload> toImageUploads(final MultipartFile[] pictures) throws IOException {
+        final List<ImageUpload> out = new ArrayList<>();
+        if (pictures == null) {
+            return out;
         }
-
-        int displayOrder = 1;
         for (final MultipartFile picture : pictures) {
-            if (picture.isEmpty()) {
+            if (picture == null || picture.isEmpty()) {
                 continue;
             }
-
-            try {
-                final String filename = picture.getOriginalFilename();
-                final String contentType = picture.getContentType();
-                final byte[] data = picture.getBytes();
-                if (data == null || data.length == 0) {
-                    continue;
-                }
-
-                final Image image = imageService.createImage(filename, contentType, data);
-                carPictureService.createCarPicture(carId, image.getId(), displayOrder);
-
-                displayOrder++;
-            } catch (final IOException e) {
-                System.err.println("Error processing image: " + e.getMessage());
-            }
+            out.add(new ImageUpload(
+                    picture.getOriginalFilename(),
+                    picture.getContentType(),
+                    picture.getBytes()));
         }
+        return out;
     }
 }

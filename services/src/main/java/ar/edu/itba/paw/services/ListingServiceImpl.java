@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,6 +80,33 @@ public class ListingServiceImpl implements ListingService {
     @Override
     public List<ListingAvailability> findAvailabilityByListingId(final long listingId) {
         return listingAvailabilityDao.findByListingId(listingId);
+    }
+
+    @Override
+    public boolean reservationIntervalFitsListingAvailability(
+            final long listingId,
+            final Long availabilityId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate) {
+        final List<ListingAvailability> availabilities = findAvailabilityByListingId(listingId);
+        if (availabilities.isEmpty()) {
+            return false;
+        }
+        if (availabilityId != null) {
+            return availabilities.stream()
+                    .filter(a -> a.getId() == availabilityId)
+                    .findFirst()
+                    .map(a -> isInsideAvailabilityWindow(a, startDate, endDate))
+                    .orElse(false);
+        }
+        return availabilities.stream().anyMatch(a -> isInsideAvailabilityWindow(a, startDate, endDate));
+    }
+
+    private static boolean isInsideAvailabilityWindow(
+            final ListingAvailability availability,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate) {
+        return !startDate.isBefore(availability.getStartDate()) && !endDate.isAfter(availability.getEndDate());
     }
 
     @Override

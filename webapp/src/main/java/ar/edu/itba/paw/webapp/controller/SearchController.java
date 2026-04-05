@@ -1,9 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.services.ListingSearchCriteriaService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,11 +12,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,14 +21,15 @@ import java.util.stream.Collectors;
 @Controller
 public class SearchController {
 
-    private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
-    private static final DateTimeFormatter DT_LOCAL = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-
     private final ListingService listingService;
+    private final ListingSearchCriteriaService listingSearchCriteriaService;
 
     @Autowired
-    public SearchController(final ListingService listingService) {
+    public SearchController(
+            final ListingService listingService,
+            final ListingSearchCriteriaService listingSearchCriteriaService) {
         this.listingService = listingService;
+        this.listingSearchCriteriaService = listingSearchCriteriaService;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -53,8 +48,8 @@ public class SearchController {
         mav.addObject("powertrainFilterOptions", powertrainFilterOptions());
         mav.addObject("priceFilterOptions", priceFilterOptions());
 
-        final ListingSearchCriteria criteria =
-                buildCriteria(query, category, transmission, powertrain, price, from, until);
+        final var criteria = listingSearchCriteriaService.build(
+                query, category, transmission, powertrain, price, from, until);
         final List<VehicleCardView> results = listingService.searchListingCards(criteria).stream()
                 .map(SearchController::toVehicleCardView)
                 .collect(Collectors.toList());
@@ -115,138 +110,6 @@ public class SearchController {
         return m;
     }
 
-    private static ListingSearchCriteria buildCriteria(
-            final String query,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
-            final List<String> price,
-            final String from,
-            final String until) {
-        final List<String> transmissions = collectTransmissionParams(transmission);
-        final List<String> powertrains = collectPowertrainParams(powertrain);
-        final List<String> mergedCarTypes = collectCarTypeParams(category);
-        final List<String> bands = new ArrayList<>();
-        if (price != null) {
-            for (final String p : price) {
-                if (p == null || p.isBlank()) {
-                    continue;
-                }
-                final String u = p.trim().toUpperCase();
-                if ("FREE".equals(u) || "PAID".equals(u)) {
-                    bands.add(u);
-                }
-            }
-        }
-        Instant rangeStart = parseAvailabilityRangeStart(from);
-        Instant rangeEndExclusive = parseAvailabilityRangeEndExclusive(until);
-        if (rangeStart != null && rangeEndExclusive != null && !rangeEndExclusive.isAfter(rangeStart)) {
-            final Instant rs = parseAvailabilityRangeStart(until);
-            final Instant re = parseAvailabilityRangeEndExclusive(from);
-            rangeStart = rs;
-            rangeEndExclusive = re;
-        }
-        if (rangeStart == null || rangeEndExclusive == null || !rangeEndExclusive.isAfter(rangeStart)) {
-            rangeStart = null;
-            rangeEndExclusive = null;
-        }
-        return new ListingSearchCriteria(
-                query, transmissions, powertrains, mergedCarTypes, bands, rangeStart, rangeEndExclusive);
-    }
-
-    private static List<String> collectCarTypeParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
-        if (raw == null) {
-            return out;
-        }
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Type.valueOf(u);
-                if (!out.contains(u)) {
-                    out.add(u);
-                }
-            } catch (final IllegalArgumentException ignored) {
-                // ignore
-            }
-        }
-        return out;
-    }
-
-    private static List<String> collectTransmissionParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
-        if (raw == null) {
-            return out;
-        }
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Transmission.valueOf(u);
-                out.add(u);
-            } catch (final IllegalArgumentException ignored) {
-                // ignore
-            }
-        }
-        return out;
-    }
-
-    private static List<String> collectPowertrainParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
-        if (raw == null) {
-            return out;
-        }
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Powertrain.valueOf(u);
-                out.add(u);
-            } catch (final IllegalArgumentException ignored) {
-                // ignore
-            }
-        }
-        return out;
-    }
-
-    private static Instant parseAvailabilityRangeStart(final String s) {
-        if (s == null || s.isBlank()) {
-            return null;
-        }
-        final String t = s.trim();
-        try {
-            if (!t.contains("T")) {
-                return LocalDate.parse(t, ISO_DATE).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant();
-            }
-            return LocalDateTime.parse(t, DT_LOCAL).atZone(AvailabilityPeriod.WALL_ZONE).toInstant();
-        } catch (final DateTimeParseException e) {
-            return null;
-        }
-    }
-
-
-    private static Instant parseAvailabilityRangeEndExclusive(final String s) {
-        if (s == null || s.isBlank()) {
-            return null;
-        }
-        final String t = s.trim();
-        try {
-            if (!t.contains("T")) {
-                return LocalDate.parse(t, ISO_DATE).plusDays(1).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant();
-            }
-            return LocalDateTime.parse(t, DT_LOCAL).atZone(AvailabilityPeriod.WALL_ZONE).plusMinutes(1).toInstant();
-        } catch (final DateTimeParseException e) {
-            return null;
-        }
-    }
-
     private static VehicleCardView toVehicleCardView(final ListingCard card) {
         return new VehicleCardView(
                 card.getListingId(),
@@ -256,4 +119,3 @@ public class SearchController {
                 card.getImageId());
     }
 }
-

@@ -1,5 +1,10 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Optional;
+
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
@@ -7,10 +12,6 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
 
 public interface ListingService {
 
@@ -28,6 +29,12 @@ public interface ListingService {
 
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 
+    boolean reservationIntervalFitsListingAvailability(
+            long listingId,
+            Long availabilityId,
+            OffsetDateTime startDate,
+            OffsetDateTime endDate);
+
     List<Listing> getAllListings();
 
     List<Listing> searchListings(ListingSearchCriteria criteria);
@@ -44,8 +51,5 @@ public interface ListingService {
 
     List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
-    /**
-     * Listings similares (misma categoría mecánica que el listing dado) como tarjetas, una sola consulta SQL.
-     */
     List<ListingCard> findSimilarListingCards(long listingId, int limit);
 }
