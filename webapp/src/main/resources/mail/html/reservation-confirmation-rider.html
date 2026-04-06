@@ -1,35 +1,35 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <meta charset="UTF-8"/>
-    <title th:text="#{mail.reservation.emailTitle}">Reservation confirmed</title>
+    <title th:text="#{mail.reservationConfirmation.emailTitle}">Reservation confirmed</title>
 </head>
 <body style="font-family: system-ui, Segoe UI, Arial, sans-serif; line-height: 1.5; color: #1a1a1a;">
-<p th:text="#{mail.reservation.greeting(${riderFullName})}">Hello,</p>
-<p th:text="#{mail.reservation.intro}">Intro</p>
+<p th:text="#{mail.reservationConfirmation.greeting(${riderFullName})}">Hello,</p>
+<p th:text="#{mail.reservationConfirmation.introRider}">Intro</p>
 <ul>
-    <li><strong th:text="#{mail.reservation.label.number}">#</strong> <span th:text="${reservationId}">0</span></li>
-    <li><strong th:text="#{mail.reservation.label.vehicle}">Vehicle</strong> <span th:text="${vehicleLabel}">—</span></li>
-    <li><strong th:text="#{mail.reservation.label.pickup}">Pickup</strong> <span th:text="${startDateFormatted}">—</span></li>
-    <li><strong th:text="#{mail.reservation.label.return}">Return</strong> <span th:text="${endDateFormatted}">—</span></li>
+    <li><strong th:text="#{mail.reservationConfirmation.reservationNumber}">#</strong> <span th:text="${reservationId}">0</span></li>
+    <li><strong th:text="#{mail.reservationConfirmation.vehicle}">Vehicle</strong> <span th:text="${vehicleLabel}">—</span></li>
+    <li><strong th:text="#{mail.reservationConfirmation.pickup}">Pickup</strong> <span th:text="${startDateFormatted}">—</span></li>
+    <li><strong th:text="#{mail.reservationConfirmation.returnLabel}">Return</strong> <span th:text="${endDateFormatted}">—</span></li>
     <li th:if="${hasDeliveryLocation}">
-        <strong th:text="#{mail.reservation.label.delivery}">Location</strong>
+        <strong th:text="#{mail.reservationConfirmation.deliveryLocation}">Location</strong>
         <span th:text="${deliveryLocation}">—</span>
     </li>
 </ul>
 
-<p th:text="#{mail.reservation.ownerinfo}"></p>
-<p th:text="#{mail.reservation.credentials(${ownerFullName}, ${ownerEmail})}"></p>
+<p th:text="#{mail.reservationConfirmation.promptContactOwner}"></p>
+<p th:text="#{mail.reservationConfirmation.credentialsLine(${ownerFullName}, ${ownerEmail})}"></p>
 
 <p style="margin: 24px 0;">
     <a th:href="${ctaUrl}"
        style="display: inline-block; padding: 12px 20px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;"
-       th:text="#{mail.reservation.cta}">CTA</a>
+       th:text="#{mail.reservationConfirmation.viewListing}">CTA</a>
 </p>
 <p style="font-size: 0.9em; color: #555;">
-    <span th:text="#{mail.reservation.fallbackLink}">Link help</span><br/>
+    <span th:text="#{mail.reservationConfirmation.fallbackLink}">Link help</span><br/>
     <span th:text="${ctaUrl}" style="word-break: break-all;">https://</span>
 </p>
-<p style="font-size: 0.85em; color: #777;" th:text="#{mail.reservation.footer}">Footer</p>
+<p style="font-size: 0.85em; color: #777;" th:text="#{mail.reservationConfirmation.footer}">Footer</p>
 </body>
 </html>

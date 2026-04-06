@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.models;
 
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Objects;
 
 public final class ReservationConfirmationPayload {
@@ -15,6 +16,7 @@ public final class ReservationConfirmationPayload {
     private final String deliveryLocation;
     private final String ownerFullName;
     private final String ownerEmail;
+    private final Locale messageLocale;
 
     public ReservationConfirmationPayload(
             final String recipientEmail,
@@ -26,7 +28,8 @@ public final class ReservationConfirmationPayload {
             final OffsetDateTime endDate,
             final String deliveryLocation,
             final String ownerFullName,
-            final String ownerEmail) {
+            final String ownerEmail,
+            final Locale messageLocale) {
         this.recipientEmail = Objects.requireNonNull(recipientEmail, "recipientEmail");
         this.riderFullName = Objects.requireNonNull(riderFullName, "riderFullName");
         this.reservationId = reservationId;
@@ -37,6 +40,7 @@ public final class ReservationConfirmationPayload {
         this.deliveryLocation = deliveryLocation;
         this.ownerFullName = ownerFullName;
         this.ownerEmail = ownerEmail;
+        this.messageLocale = Objects.requireNonNull(messageLocale, "messageLocale");
     }
 
     public String getRecipientEmail() {
@@ -77,5 +81,9 @@ public final class ReservationConfirmationPayload {
 
     public String getOwnerEmail() {
         return ownerEmail;
+    }
+
+    public Locale getMessageLocale() {
+        return messageLocale;
     }
 }

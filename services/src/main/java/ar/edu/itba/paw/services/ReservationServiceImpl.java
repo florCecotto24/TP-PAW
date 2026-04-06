@@ -12,6 +12,7 @@ import ar.edu.itba.paw.persistence.ReservationDao;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -104,7 +106,8 @@ public class ReservationServiceImpl implements ReservationService {
                     reservation.getEndDate(),
                     trimmedDelivery,
                     listingOwner.getForename() + " " + listingOwner.getSurname(),
-                    listingOwner.getEmail());
+                    listingOwner.getEmail(),
+                    resolveMailMessageLocale());
             LOG.info("Queueing reservation confirmation email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());
             emailService.sendReservationConfirmationEmail(payload);
@@ -211,6 +214,14 @@ public class ReservationServiceImpl implements ReservationService {
 
     private String formatMoney(final BigDecimal amount) {
         return amount.stripTrailingZeros().toPlainString();
+    }
+
+    private static Locale resolveMailMessageLocale() {
+        final Locale locale = LocaleContextHolder.getLocale();
+        if (locale != null && "es".equalsIgnoreCase(locale.getLanguage())) {
+            return Locale.forLanguageTag("es");
+        }
+        return Locale.ENGLISH;
     }
 
     private static boolean isBlank(final String value) {

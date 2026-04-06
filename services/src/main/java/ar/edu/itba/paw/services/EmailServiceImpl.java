@@ -54,18 +54,16 @@ public class EmailServiceImpl implements EmailService {
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
 
-    private static final Locale MAIL_LOCALE = Locale.ENGLISH;
-    private static final DateTimeFormatter MAIL_DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(MAIL_LOCALE);
-
-    private static String formatWallDateTime(final java.time.OffsetDateTime dateTime) {
+    private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         if (dateTime == null) {
             return "";
         }
-        TimeZone timeZone = LocaleContextHolder.getTimeZone();
-        ZoneId zoneId = timeZone.toZoneId();
-        return MAIL_DATE_TIME_FORMATTER.format(
-                dateTime.toInstant().atZone(zoneId).toLocalDateTime());
+        final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
+        final DateTimeFormatter formatter =
+                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale);
+        final TimeZone timeZone = LocaleContextHolder.getTimeZone();
+        final ZoneId zoneId = timeZone.toZoneId();
+        return formatter.format(dateTime.toInstant().atZone(zoneId).toLocalDateTime());
     }
 
     @Autowired
@@ -90,12 +88,13 @@ public class EmailServiceImpl implements EmailService {
             return;
         }
 
-        final Context ctx = new Context(MAIL_LOCALE);
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
         ctx.setVariable("riderFullName", payload.getRiderFullName());
         ctx.setVariable("reservationId", payload.getReservationId());
         ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
-        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate()));
-        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate()));
+        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate(), mailLocale));
+        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate(), mailLocale));
         final String delivery = payload.getDeliveryLocation();
         final boolean hasDelivery = delivery != null && !delivery.isBlank();
         ctx.setVariable("hasDeliveryLocation", hasDelivery);
@@ -124,9 +123,9 @@ public class EmailServiceImpl implements EmailService {
             final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_USER_TEMPLATE, ctx);
 
             final String subject = emailMessageSource.getMessage(
-                    "mail.reservation.subject",
+                    "mail.reservationConfirmation.subject",
                     new Object[]{payload.getVehicleLabel()},
-                    MAIL_LOCALE);
+                    payload.getMessageLocale());
             sendEmail(payload.getRecipientEmail(), subject, htmlContent);
         });
     }
@@ -138,9 +137,9 @@ public class EmailServiceImpl implements EmailService {
             final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_OWNER_TEMPLATE, ctx);
 
             final String subject = emailMessageSource.getMessage(
-                    "mail.reservation.subject",
+                    "mail.reservationConfirmation.subject",
                     new Object[]{payload.getVehicleLabel()},
-                    MAIL_LOCALE);
+                    payload.getMessageLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);
         });
     }

@@ -28,11 +28,12 @@ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerCo
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 
@@ -66,8 +67,9 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
 
     @Bean
     public LocaleResolver localeResolver() {
-        final SessionLocaleResolver resolver = new SessionLocaleResolver();
+        final AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
         resolver.setDefaultLocale(Locale.ENGLISH);
+        resolver.setSupportedLocales(Arrays.asList(Locale.ENGLISH, Locale.forLanguageTag("es")));
         return resolver;
     }
 
