@@ -28,7 +28,7 @@ public final class JdbcDateTimeUtils {
             return null;
         }
         if (o instanceof OffsetDateTime) {
-            return (OffsetDateTime) o;
+            return ((OffsetDateTime) o).withOffsetSameInstant(ZoneOffset.UTC);
         }
         if (o instanceof Timestamp) {
             return toOffsetDateTime((Timestamp) o);

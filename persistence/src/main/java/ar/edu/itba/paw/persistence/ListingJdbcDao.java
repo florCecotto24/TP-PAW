@@ -221,7 +221,8 @@ public class ListingJdbcDao implements ListingDao {
         final MapSqlParameterSource params = new MapSqlParameterSource();
         appendSearchFilters(sql, params, criteria);
         sql.append("ORDER BY l.created_at DESC");
-        return namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_ROW_MAPPER);
+        final List<Listing> result = namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_ROW_MAPPER);
+        return filterByAvailabilityCoverage(criteria, result, Listing::getId);
     }
 
     @Override
@@ -234,7 +235,8 @@ public class ListingJdbcDao implements ListingDao {
         final MapSqlParameterSource params = new MapSqlParameterSource();
         appendSearchFilters(sql, params, criteria);
         sql.append("ORDER BY l.created_at DESC");
-        return namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_CARD_ROW_MAPPER);
+        final List<ListingCard> result = namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_CARD_ROW_MAPPER);
+        return filterByAvailabilityCoverage(criteria, result, ListingCard::getListingId);
     }
 
     @Override
@@ -342,8 +344,9 @@ public class ListingJdbcDao implements ListingDao {
             final ListingSearchCriteria criteria) {
         if (criteria.getQuery() != null) {
             final String q = "%" + escapeLike(criteria.getQuery()) + "%";
-            sql.append("AND (c.brand ILIKE :search ESCAPE '\\' OR c.model ILIKE :search ESCAPE '\\' OR l.title ILIKE :search ESCAPE '\\' ")
-                    .append("OR l.description ILIKE :search ESCAPE '\\' OR l.start_point ILIKE :search ESCAPE '\\') ");
+            sql.append("AND (LOWER(c.brand) LIKE LOWER(:search) ESCAPE '\\' OR LOWER(c.model) LIKE LOWER(:search) ESCAPE '\\' ")
+                    .append("OR LOWER(l.title) LIKE LOWER(:search) ESCAPE '\\' OR LOWER(l.description) LIKE LOWER(:search) ESCAPE '\\' ")
+                    .append("OR LOWER(l.start_point) LIKE LOWER(:search) ESCAPE '\\') ");
             params.addValue("search", q);
         }
 
@@ -386,21 +389,6 @@ public class ListingJdbcDao implements ListingDao {
         if (criteria.hasAvailabilityRange()) {
             final Instant fromInstant = criteria.getAvailabilityRangeStart();
             final Instant untilExclusive = criteria.getAvailabilityRangeEndExclusive();
-            final LocalDate availFromDay = fromInstant.atZone(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-            final LocalDate availUntilDay = untilExclusive.minusNanos(1).atZone(AvailabilityPeriod.WALL_ZONE)
-                    .toLocalDate();
-
-            sql.append("AND NOT EXISTS (")
-                    .append("SELECT 1 FROM generate_series(CAST(:availStart AS TIMESTAMP), CAST(:availEnd AS TIMESTAMP), ")
-                    .append("INTERVAL '1 day') AS gs(wall_day) ")
-                    .append("WHERE NOT EXISTS (")
-                    .append("SELECT 1 FROM listing_availability la WHERE la.listing_id = l.id ")
-                    .append("AND la.is_active = TRUE ")
-                    .append("AND la.start_date <= CAST(gs.wall_day AS DATE) ")
-                    .append("AND la.end_date >= CAST(gs.wall_day AS DATE))) ");
-            params.addValue("availStart", JdbcDateTimeUtils.toSqlDate(availFromDay));
-            params.addValue("availEnd", JdbcDateTimeUtils.toSqlDate(availUntilDay));
-
             sql.append("AND NOT EXISTS (")
                     .append("SELECT 1 FROM reservations r WHERE r.listing_id = l.id ")
                     .append("AND r.status IN ('accepted', 'started') ")
@@ -408,6 +396,89 @@ public class ListingJdbcDao implements ListingDao {
             params.addValue("resWindowEnd", Timestamp.from(untilExclusive));
             params.addValue("resWindowStart", Timestamp.from(fromInstant));
         }
+    }
+
+    private <T> List<T> filterByAvailabilityCoverage(
+            final ListingSearchCriteria criteria,
+            final List<T> rows,
+            final java.util.function.ToLongFunction<T> listingIdExtractor) {
+        if (!criteria.hasAvailabilityRange() || rows.isEmpty()) {
+            return rows;
+        }
+        final LocalDate fromDay = criteria.getAvailabilityRangeStart().atZone(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate untilDay = criteria.getAvailabilityRangeEndExclusive().minusNanos(1)
+                .atZone(AvailabilityPeriod.WALL_ZONE)
+                .toLocalDate();
+        final List<Long> listingIds = rows.stream()
+                .mapToLong(listingIdExtractor)
+                .distinct()
+                .boxed()
+                .toList();
+        final Map<Long, List<DateRange>> rangesByListingId = loadAvailabilityRangesByListingId(listingIds, fromDay, untilDay);
+        return rows.stream()
+                .filter(row -> coversEveryDay(rangesByListingId.get(listingIdExtractor.applyAsLong(row)), fromDay, untilDay))
+                .toList();
+    }
+
+    private Map<Long, List<DateRange>> loadAvailabilityRangesByListingId(
+            final List<Long> listingIds,
+            final LocalDate fromDay,
+            final LocalDate untilDay) {
+        if (listingIds.isEmpty()) {
+            return Map.of();
+        }
+
+        final MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("listingIds", listingIds)
+                .addValue("fromDay", JdbcDateTimeUtils.toSqlDate(fromDay))
+                .addValue("untilDay", JdbcDateTimeUtils.toSqlDate(untilDay));
+
+        final List<ListingDateRange> rows = namedParameterJdbcTemplate.query(
+                "SELECT listing_id, start_date, end_date FROM listing_availability "
+                        + "WHERE is_active = TRUE "
+                        + "AND listing_id IN (:listingIds) "
+                        + "AND start_date <= :untilDay "
+                        + "AND end_date >= :fromDay "
+                        + "ORDER BY listing_id ASC, start_date ASC, end_date ASC",
+                params,
+                (rs, rowNum) -> new ListingDateRange(
+                        rs.getLong("listing_id"),
+                        JdbcDateTimeUtils.readLocalDate(rs, "start_date"),
+                        JdbcDateTimeUtils.readLocalDate(rs, "end_date")));
+
+        final Map<Long, List<DateRange>> rangesByListingId = new HashMap<>();
+        for (final ListingDateRange row : rows) {
+            rangesByListingId.computeIfAbsent(row.listingId(), ignored -> new ArrayList<>())
+                    .add(new DateRange(row.start(), row.end()));
+        }
+        return rangesByListingId;
+    }
+
+    private static boolean coversEveryDay(final List<DateRange> ranges, final LocalDate fromDay, final LocalDate untilDay) {
+        if (ranges == null || ranges.isEmpty()) {
+            return false;
+        }
+
+        LocalDate nextDayToCover = fromDay;
+        for (final DateRange range : ranges) {
+            if (range.end().isBefore(nextDayToCover)) {
+                continue;
+            }
+            if (range.start().isAfter(nextDayToCover)) {
+                return false;
+            }
+            if (!range.end().isBefore(untilDay)) {
+                return true;
+            }
+            nextDayToCover = range.end().plusDays(1);
+        }
+        return nextDayToCover.isAfter(untilDay);
+    }
+
+    private record ListingDateRange(long listingId, LocalDate start, LocalDate end) {
+    }
+
+    private record DateRange(LocalDate start, LocalDate end) {
     }
 
     private static String escapeLike(final String raw) {
