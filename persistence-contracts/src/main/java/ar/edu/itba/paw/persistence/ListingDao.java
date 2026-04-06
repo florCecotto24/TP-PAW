@@ -43,8 +43,5 @@ public interface ListingDao {
 
     List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
-    /**
-     * Listings similares (mismo type/powertrain/transmission que el auto del listing dado), una sola ida a la BD.
-     */
     List<ListingCard> findSimilarListingCards(long listingId, int limit);
 }
