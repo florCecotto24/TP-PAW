@@ -54,18 +54,6 @@
                     </div>
                 </div>
             </section>
-            <section id="availabilitySection">
-                <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.booking"/></h2>
-                <c:choose>
-                    <c:when test="${hasBookableDays}">
-                        <p class="text-secondary mb-0"><spring:message code="carDetail.hasBookableDays"/></p>
-                    </c:when>
-                    <c:otherwise>
-                        <p class="text-secondary mb-0"><spring:message code="carDetail.noBookableDays"/></p>
-                    </c:otherwise>
-                </c:choose>
-            </section>
-
 
         </div>
 
