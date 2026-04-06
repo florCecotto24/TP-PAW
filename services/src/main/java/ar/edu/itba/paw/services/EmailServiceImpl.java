@@ -1,8 +1,10 @@
 package ar.edu.itba.paw.services;
 
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Locale;
+import java.util.TimeZone;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
@@ -12,6 +14,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
 
 @Service
@@ -51,6 +55,18 @@ public class EmailServiceImpl implements EmailService {
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
 
     private static final Locale MAIL_LOCALE = Locale.ENGLISH;
+    private static final DateTimeFormatter MAIL_DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(MAIL_LOCALE);
+
+    private static String formatWallDateTime(final java.time.OffsetDateTime dateTime) {
+        if (dateTime == null) {
+            return "";
+        }
+        TimeZone timeZone = LocaleContextHolder.getTimeZone();
+        ZoneId zoneId = timeZone.toZoneId();
+        return MAIL_DATE_TIME_FORMATTER.format(
+                dateTime.toInstant().atZone(zoneId).toLocalDateTime());
+    }
 
     @Autowired
     private Environment environment;
@@ -73,9 +89,25 @@ public class EmailServiceImpl implements EmailService {
             LOG.error("sendReservationConfirmationEmail called with null payload");
             return;
         }
+
+        final Context ctx = new Context(MAIL_LOCALE);
+        ctx.setVariable("riderFullName", payload.getRiderFullName());
+        ctx.setVariable("reservationId", payload.getReservationId());
+        ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate()));
+        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate()));
+        final String delivery = payload.getDeliveryLocation();
+        final boolean hasDelivery = delivery != null && !delivery.isBlank();
+        ctx.setVariable("hasDeliveryLocation", hasDelivery);
+        ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
+        ctx.setVariable("ctaUrl", ctaUrl);
+
         try {
-            sendReservationConfirmationToClient(payload);
-            sendReservationConfirmationToOwner(payload);
+            sendReservationConfirmationToClient(payload, ctx);
+            sendReservationConfirmationToOwner(payload, ctx);
             LOG.info("Reservation confirmation email sent to " + payload.getRecipientEmail()
                     + " (reservation id=" + payload.getReservationId() + ")");
             LOG.info("Reservation confirmation email sent to " + payload.getOwnerEmail()
@@ -85,26 +117,10 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private void sendReservationConfirmationToClient(final ReservationConfirmationPayload payload) throws EmailMessagingException {
+    private void sendReservationConfirmationToClient(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
         runMail(() -> {
-            final DateTimeFormatter dateTimeFormatter =
-                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(MAIL_LOCALE);
-            final Context ctx = new Context(MAIL_LOCALE);
-            ctx.setVariable("riderFullName", payload.getRiderFullName());
-            ctx.setVariable("reservationId", payload.getReservationId());
-            ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
-            ctx.setVariable("startDateFormatted", dateTimeFormatter.format(payload.getStartDate()));
-            ctx.setVariable("endDateFormatted", dateTimeFormatter.format(payload.getEndDate()));
-            final String delivery = payload.getDeliveryLocation();
-            final boolean hasDelivery = delivery != null && !delivery.isBlank();
-            ctx.setVariable("hasDeliveryLocation", hasDelivery);
-            ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
-            final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
-            final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
-            ctx.setVariable("ctaUrl", ctaUrl);
-            ctx.setVariable("ownerFullName", payload.getOwnerFullName());
-            ctx.setVariable("ownerEmail", payload.getOwnerEmail());
 
+            ctx.setVariable("ownerEmail", payload.getOwnerEmail());
             final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_USER_TEMPLATE, ctx);
 
             final String subject = emailMessageSource.getMessage(
@@ -115,24 +131,8 @@ public class EmailServiceImpl implements EmailService {
         });
     }
 
-    private void sendReservationConfirmationToOwner(final ReservationConfirmationPayload payload) throws EmailMessagingException {
+    private void sendReservationConfirmationToOwner(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
         runMail(() -> {
-            final DateTimeFormatter dateTimeFormatter =
-                    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(MAIL_LOCALE);
-            final Context ctx = new Context(MAIL_LOCALE);
-            ctx.setVariable("riderFullName", payload.getRiderFullName());
-            ctx.setVariable("reservationId", payload.getReservationId());
-            ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
-            ctx.setVariable("startDateFormatted", dateTimeFormatter.format(payload.getStartDate()));
-            ctx.setVariable("endDateFormatted", dateTimeFormatter.format(payload.getEndDate()));
-            final String delivery = payload.getDeliveryLocation();
-            final boolean hasDelivery = delivery != null && !delivery.isBlank();
-            ctx.setVariable("hasDeliveryLocation", hasDelivery);
-            ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
-            final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
-            final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
-            ctx.setVariable("ctaUrl", ctaUrl);
-            ctx.setVariable("ownerFullName", payload.getOwnerFullName());
             ctx.setVariable("riderEmail", payload.getRecipientEmail());
 
             final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_OWNER_TEMPLATE, ctx);
