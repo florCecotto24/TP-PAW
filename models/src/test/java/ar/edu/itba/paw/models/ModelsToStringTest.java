@@ -87,13 +87,12 @@ class ModelsToStringTest {
                 LocalDate.of(2026, 4, 20),
                 LocalDate.of(2026, 4, 25),
                 OffsetDateTime.parse("2026-04-05T09:00:00Z"),
-                OffsetDateTime.parse("2026-04-05T09:30:00Z"),
-                true);
+                OffsetDateTime.parse("2026-04-05T09:30:00Z"));
         // Exercise
         final String result = availability.toString();
         // Assert
         final String expected = "ListingAvailability{id=8, listingId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
-                + "createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z, active=true}";
+                + "createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z}";
         Assertions.assertEquals(expected, result);
     }
 

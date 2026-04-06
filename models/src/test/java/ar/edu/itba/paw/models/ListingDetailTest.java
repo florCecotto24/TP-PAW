@@ -42,8 +42,7 @@ class ListingDetailTest {
                         LocalDate.of(2026, 4, 10),
                         LocalDate.of(2026, 4, 12),
                         OffsetDateTime.parse("2026-04-05T10:00:00Z"),
-                        OffsetDateTime.parse("2026-04-05T10:10:00Z"),
-                        true)));
+                        OffsetDateTime.parse("2026-04-05T10:10:00Z"))));
 
         final ListingDetail detail = new ListingDetail(listing, car, owner, pictures, availabilities);
 

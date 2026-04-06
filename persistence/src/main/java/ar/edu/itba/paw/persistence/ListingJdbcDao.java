@@ -118,8 +118,7 @@ public class ListingJdbcDao implements ListingDao {
                         JdbcDateTimeUtils.readLocalDate(rs, "start_date"),
                         JdbcDateTimeUtils.readLocalDate(rs, "end_date"),
                         JdbcDateTimeUtils.readOffsetDateTime(rs, "la_created_at"),
-                        JdbcDateTimeUtils.readOffsetDateTime(rs, "la_updated_at"),
-                        rs.getBoolean("la_is_active")));
+                        JdbcDateTimeUtils.readOffsetDateTime(rs, "la_updated_at")));
             }
         }
 
@@ -198,12 +197,12 @@ public class ListingJdbcDao implements ListingDao {
                         + "cp.id AS car_picture_id, cp.image_id, cp.display_order, "
                         + "cp.created_at AS cp_created_at, cp.updated_at AS cp_updated_at, "
                         + "la.id AS availability_id, la.start_date, la.end_date, "
-                        + "la.created_at AS la_created_at, la.updated_at AS la_updated_at, la.is_active AS la_is_active "
+                        + "la.created_at AS la_created_at, la.updated_at AS la_updated_at "
                         + "FROM listings l "
                         + "JOIN cars c ON c.id = l.car_id "
                         + "JOIN users u ON u.id = c.owner_id "
                         + "LEFT JOIN car_pictures cp ON cp.car_id = c.id "
-                        + "LEFT JOIN listing_availability la ON la.listing_id = l.id AND la.is_active = TRUE "
+                        + "LEFT JOIN listing_availability la ON la.listing_id = l.id "
                         + "WHERE l.id = ? "
                         + "ORDER BY cp.display_order ASC, la.start_date ASC",
                 LISTING_DETAIL_EXTRACTOR, id);
@@ -435,8 +434,7 @@ public class ListingJdbcDao implements ListingDao {
 
         final List<ListingDateRange> rows = namedParameterJdbcTemplate.query(
                 "SELECT listing_id, start_date, end_date FROM listing_availability "
-                        + "WHERE is_active = TRUE "
-                        + "AND listing_id IN (:listingIds) "
+                        + "WHERE listing_id IN (:listingIds) "
                         + "AND start_date <= :untilDay "
                         + "AND end_date >= :fromDay "
                         + "ORDER BY listing_id ASC, start_date ASC, end_date ASC",

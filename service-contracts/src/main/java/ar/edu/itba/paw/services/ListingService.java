@@ -32,6 +32,8 @@ public interface ListingService {
 
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 
+    List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(long listingId);
+
     boolean reservationIntervalFitsListingAvailability(
             long listingId,
             Long availabilityId,

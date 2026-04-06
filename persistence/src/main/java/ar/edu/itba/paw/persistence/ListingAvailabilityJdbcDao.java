@@ -13,7 +13,6 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Repository
 public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
@@ -24,9 +23,7 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
             JdbcDateTimeUtils.readLocalDate(rs, "start_date"),
             JdbcDateTimeUtils.readLocalDate(rs, "end_date"),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"),
-            rs.getBoolean("is_active")
-    );
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"));
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
@@ -49,7 +46,6 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
         values.put("end_date", JdbcDateTimeUtils.toSqlDate(endInclusive));
         values.put("created_at", now);
         values.put("updated_at", now);
-        values.put("is_active", Boolean.TRUE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
         return new ListingAvailability(
                 id.longValue(),
@@ -57,42 +53,14 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
                 startInclusive,
                 endInclusive,
                 JdbcDateTimeUtils.toOffsetDateTime(now),
-                JdbcDateTimeUtils.toOffsetDateTime(now),
-                true);
+                JdbcDateTimeUtils.toOffsetDateTime(now));
     }
 
     @Override
     public List<ListingAvailability> findByListingId(final long listingId) {
         return jdbcTemplate.query(
-                "SELECT * FROM listing_availability WHERE listing_id = ? AND is_active = TRUE ORDER BY start_date ASC",
+                "SELECT * FROM listing_availability WHERE listing_id = ? ORDER BY start_date ASC",
                 ROW_MAPPER,
                 listingId);
-    }
-
-    @Override
-    public Optional<ListingAvailability> findActiveById(final long id) {
-        return jdbcTemplate.query(
-                "SELECT * FROM listing_availability WHERE id = ? AND is_active = TRUE",
-                ROW_MAPPER,
-                id).stream().findFirst();
-    }
-
-    @Override
-    public void setActive(final long id, final boolean active) {
-        jdbcTemplate.update(
-                "UPDATE listing_availability SET is_active = ?, updated_at = ? WHERE id = ?",
-                active,
-                JdbcDateTimeUtils.nowTimestamp(),
-                id);
-    }
-
-    @Override
-    public void updateDateRange(final long id, final LocalDate startInclusive, final LocalDate endInclusive) {
-        jdbcTemplate.update(
-                "UPDATE listing_availability SET start_date = ?, end_date = ?, updated_at = ? WHERE id = ?",
-                JdbcDateTimeUtils.toSqlDate(startInclusive),
-                JdbcDateTimeUtils.toSqlDate(endInclusive),
-                JdbcDateTimeUtils.nowTimestamp(),
-                id);
     }
 }

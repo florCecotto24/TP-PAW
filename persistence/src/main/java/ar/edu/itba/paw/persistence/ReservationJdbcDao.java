@@ -11,6 +11,7 @@ import javax.sql.DataSource;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -59,6 +60,16 @@ public class ReservationJdbcDao implements ReservationDao {
                 JdbcDateTimeUtils.toTimestamp(endDate),
                 JdbcDateTimeUtils.toTimestamp(startDate));
         return count > 0;
+    }
+
+    @Override
+    public List<Reservation> findBlockingByListingId(final long listingId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations WHERE listing_id = ? AND LOWER(status) IN (?, ?) ORDER BY start_date ASC",
+                RESERVATION_ROW_MAPPER,
+                listingId,
+                ACTIVE_OVERLAP_STATUSES[0],
+                ACTIVE_OVERLAP_STATUSES[1]);
     }
 
     @Override

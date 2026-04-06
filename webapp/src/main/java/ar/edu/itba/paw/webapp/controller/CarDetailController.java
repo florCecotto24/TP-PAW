@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.User;
@@ -57,10 +57,10 @@ public class CarDetailController {
                 .map(CarDetailController::listingCardToVehicleCardView)
                 .collect(Collectors.toList());
 
-        final List<ListingAvailability> listingAvailabilities = detail.getListingAvailabilities();
-        final List<LocalDateSegment> rawSegments = new ArrayList<>(listingAvailabilities.size());
-        for (final ListingAvailability a : listingAvailabilities) {
-            rawSegments.add(new LocalDateSegment(a.getStartInclusive(), a.getEndInclusive()));
+        final List<AvailabilityPeriod> bookable = listingService.getBookableWallAvailabilityPeriods(listingId);
+        final List<LocalDateSegment> rawSegments = new ArrayList<>(bookable.size());
+        for (final AvailabilityPeriod p : bookable) {
+            rawSegments.add(new LocalDateSegment(p.getStartInclusive(), p.getEndInclusive()));
         }
         final List<LocalDateSegment> bookableSegments = BookableWallRangesJson.mergeAdjacentSegments(rawSegments);
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);

@@ -1,12 +1,6 @@
 package ar.edu.itba.paw.services;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -19,12 +13,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ReservationDao;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,9 +30,6 @@ public class ReservationServiceImplTest {
 
     @Mock
     private ListingService listingService;
-
-    @Mock
-    private ListingAvailabilityDao listingAvailabilityDao;
 
     @Mock
     private UserService userService;

@@ -10,6 +10,8 @@ public interface ReservationDao {
 
     boolean hasActiveOverlap(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
 
+    List<Reservation> findBlockingByListingId(long listingId);
+
     Reservation createReservation(
             long riderId,
             long listingId,

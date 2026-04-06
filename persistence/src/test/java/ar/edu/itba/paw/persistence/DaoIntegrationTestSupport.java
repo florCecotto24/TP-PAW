@@ -140,14 +140,13 @@ public abstract class DaoIntegrationTestSupport {
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
         jdbcTemplate.update(
-                "INSERT INTO listing_availability(id, listing_id, start_date, end_date, created_at, updated_at, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO listing_availability(id, listing_id, start_date, end_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                 id,
                 listingId,
                 Date.valueOf(startDate),
                 Date.valueOf(endDate),
                 Timestamp.from(createdAt.toInstant()),
-                Timestamp.from(updatedAt.toInstant()),
-                Boolean.TRUE);
+                Timestamp.from(updatedAt.toInstant()));
     }
 
     protected void insertReservation(

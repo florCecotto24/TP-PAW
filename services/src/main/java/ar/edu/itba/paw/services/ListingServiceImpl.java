@@ -10,10 +10,12 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.WallDateTimeParsing;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
+import ar.edu.itba.paw.persistence.ReservationDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,15 +40,18 @@ public class ListingServiceImpl implements ListingService {
     private final ListingDao listingDao;
     private final ListingAvailabilityDao listingAvailabilityDao;
     private final CarDao carDao;
+    private final ReservationDao reservationDao;
 
     @Autowired
     public ListingServiceImpl(
             final ListingDao listingDao,
             final ListingAvailabilityDao listingAvailabilityDao,
-            final CarDao carDao) {
+            final CarDao carDao,
+            final ReservationDao reservationDao) {
         this.listingDao = listingDao;
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.carDao = carDao;
+        this.reservationDao = reservationDao;
     }
 
     @Override
@@ -119,30 +126,75 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(final long listingId) {
+        final TreeSet<LocalDate> days = new TreeSet<>();
+        for (final ListingAvailability la : findAvailabilityByListingId(listingId)) {
+            LocalDate d = la.getStartInclusive();
+            while (!d.isAfter(la.getEndInclusive())) {
+                days.add(d);
+                d = d.plusDays(1);
+            }
+        }
+        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
+        for (final Reservation r : reservationDao.findBlockingByListingId(listingId)) {
+            LocalDate d = r.getStartDate().toInstant().atZone(wall).toLocalDate();
+            final LocalDate until = r.getEndDate().toInstant().atZone(wall).toLocalDate();
+            while (!d.isAfter(until)) {
+                days.remove(d);
+                d = d.plusDays(1);
+            }
+        }
+        return mergeAdjacentWallDaysToPeriods(days);
+    }
+
+    private static List<AvailabilityPeriod> mergeAdjacentWallDaysToPeriods(final SortedSet<LocalDate> days) {
+        if (days.isEmpty()) {
+            return List.of();
+        }
+        final List<AvailabilityPeriod> out = new ArrayList<>();
+        LocalDate segStart = null;
+        LocalDate prev = null;
+        for (final LocalDate d : days) {
+            if (segStart == null) {
+                segStart = d;
+                prev = d;
+            } else if (d.equals(prev.plusDays(1))) {
+                prev = d;
+            } else {
+                out.add(new AvailabilityPeriod(segStart, prev));
+                segStart = d;
+                prev = d;
+            }
+        }
+        out.add(new AvailabilityPeriod(segStart, prev));
+        return List.copyOf(out);
+    }
+
+    @Override
     public boolean reservationIntervalFitsListingAvailability(
             final long listingId,
             final Long availabilityId,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate) {
-        final List<ListingAvailability> availabilities = findAvailabilityByListingId(listingId);
-        if (availabilities.isEmpty()) {
-            return false;
-        }
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
         final LocalDate pickupDay = startDate.toInstant().atZone(wall).toLocalDate();
         final LocalDate returnDay = endDate.toInstant().atZone(wall).toLocalDate();
-        return everyWallDayCoveredByAvailabilities(pickupDay, returnDay, availabilities);
+        final List<AvailabilityPeriod> bookable = getBookableWallAvailabilityPeriods(listingId);
+        return everyWallDayCoveredByAvailabilityPeriods(pickupDay, returnDay, bookable);
     }
 
-    private static boolean everyWallDayCoveredByAvailabilities(
+    private static boolean everyWallDayCoveredByAvailabilityPeriods(
             final LocalDate pickupDay,
             final LocalDate returnDay,
-            final List<ListingAvailability> active) {
+            final List<AvailabilityPeriod> periods) {
+        if (periods.isEmpty()) {
+            return false;
+        }
         LocalDate d = pickupDay;
         while (!d.isAfter(returnDay)) {
             final LocalDate day = d;
-            final boolean covered = active.stream().anyMatch(
-                    a -> !day.isBefore(a.getStartInclusive()) && !day.isAfter(a.getEndInclusive()));
+            final boolean covered = periods.stream().anyMatch(
+                    p -> !day.isBefore(p.getStartInclusive()) && !day.isAfter(p.getEndInclusive()));
             if (!covered) {
                 return false;
             }

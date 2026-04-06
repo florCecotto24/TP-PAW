@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS listing_availability(
     end_date DATE NOT NULL CHECK (end_date >= start_date),
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );

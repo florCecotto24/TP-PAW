@@ -11,7 +11,6 @@ public final class ListingAvailability {
     private final LocalDate endInclusive;
     private final OffsetDateTime createdAt;
     private final OffsetDateTime updatedAt;
-    private final boolean active;
 
     public ListingAvailability(
             final long id,
@@ -19,15 +18,13 @@ public final class ListingAvailability {
             final LocalDate startInclusive,
             final LocalDate endInclusive,
             final OffsetDateTime createdAt,
-            final OffsetDateTime updatedAt,
-            final boolean active) {
+            final OffsetDateTime updatedAt) {
         this.id = id;
         this.listingId = listingId;
         this.startInclusive = startInclusive;
         this.endInclusive = endInclusive;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.active = active;
     }
 
     public long getId() {
@@ -54,20 +51,15 @@ public final class ListingAvailability {
         return updatedAt;
     }
 
-    public boolean isActive() {
-        return active;
-    }
-
     @Override
     public String toString() {
-        return "ListingAvailability{" +
-                "id=" + id +
-                ", listingId=" + listingId +
-                ", startInclusive=" + startInclusive +
-                ", endInclusive=" + endInclusive +
-                ", createdAt=" + createdAt +
-                ", updatedAt=" + updatedAt +
-                ", active=" + active +
-                '}';
+        return "ListingAvailability{"
+                + "id=" + id
+                + ", listingId=" + listingId
+                + ", startInclusive=" + startInclusive
+                + ", endInclusive=" + endInclusive
+                + ", createdAt=" + createdAt
+                + ", updatedAt=" + updatedAt
+                + '}';
     }
 }
