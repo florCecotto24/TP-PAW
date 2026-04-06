@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.models;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 import org.junit.jupiter.api.Assertions;
@@ -44,12 +46,15 @@ class ModelsToStringTest {
                 Listing.Status.ACTIVE,
                 new BigDecimal("150.00"),
                 "Belgrano",
-                "Description");
+                "Description",
+                LocalTime.of(10, 0),
+                LocalTime.of(18, 0));
         // Exercise
         final String result = listing.toString();
         // Assert
         final String expected = "Listing{id=3, title='Trip', carId=9, createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, "
-                + "status=ACTIVE, dayPrice=150.00, startPoint='Belgrano', description='Description'}";
+                + "status=ACTIVE, dayPrice=150.00, startPoint='Belgrano', description='Description', "
+                + "checkInTime=10:00, checkOutTime=18:00}";
         Assertions.assertEquals(expected, result);
     }
 
@@ -79,15 +84,16 @@ class ModelsToStringTest {
         final ListingAvailability availability = new ListingAvailability(
                 8L,
                 11L,
-                OffsetDateTime.parse("2026-04-20T08:00:00Z"),
-                OffsetDateTime.parse("2026-04-20T18:00:00Z"),
+                LocalDate.of(2026, 4, 20),
+                LocalDate.of(2026, 4, 25),
                 OffsetDateTime.parse("2026-04-05T09:00:00Z"),
-                OffsetDateTime.parse("2026-04-05T09:30:00Z"));
+                OffsetDateTime.parse("2026-04-05T09:30:00Z"),
+                true);
         // Exercise
         final String result = availability.toString();
         // Assert
-        final String expected = "ListingAvailability{id=8, listingId=11, startDate=2026-04-20T08:00Z, endDate=2026-04-20T18:00Z, "
-                + "createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z}";
+        final String expected = "ListingAvailability{id=8, listingId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
+                + "createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z, active=true}";
         Assertions.assertEquals(expected, result);
     }
 

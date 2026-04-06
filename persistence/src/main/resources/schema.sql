@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS listings (
     day_price DECIMAL(10, 2) NOT NULL,
     start_point VARCHAR(50) NOT NULL,
     description VARCHAR(200) NOT NULL,
+    check_in_time TIME NOT NULL,
+    check_out_time TIME NOT NULL,
 
     FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
 );
@@ -35,10 +37,11 @@ CREATE TABLE IF NOT EXISTS listings (
 CREATE TABLE IF NOT EXISTS listing_availability(
     id SERIAL PRIMARY KEY,
     listing_id INTEGER NOT NULL,
-    start_date TIMESTAMPTZ NOT NULL,
-    end_date TIMESTAMPTZ NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL CHECK (end_date >= start_date),
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
 
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );

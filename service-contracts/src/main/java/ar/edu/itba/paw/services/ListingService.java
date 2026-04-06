@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,8 @@ public interface ListingService {
             BigDecimal dayPrice,
             String startPoint,
             String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime,
             List<AvailabilityPeriod> availabilityPeriods);
 
     Optional<Listing> getListingById(long id);

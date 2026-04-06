@@ -45,7 +45,7 @@ import java.util.concurrent.Executor;
     @PropertySource("classpath:application.properties"),
     @PropertySource(value = "classpath:application-${spring.profiles.active}.properties", ignoreResourceNotFound = true)
 })
-@ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.webapp.support", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
+@ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.webapp.util", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
 public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
 
     private Environment environment;

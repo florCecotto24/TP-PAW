@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.webapp.support;
+package ar.edu.itba.paw.webapp.util;
 
 import ar.edu.itba.paw.exception.RydenException;
 import org.springframework.beans.factory.annotation.Autowired;

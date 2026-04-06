@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +40,8 @@ public interface CarService {
             final BigDecimal pricePerDay,
             final String startPoint,
             final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime,
             final List<AvailabilityPeriod> periods,
             final List<ImageUpload> images);
 }

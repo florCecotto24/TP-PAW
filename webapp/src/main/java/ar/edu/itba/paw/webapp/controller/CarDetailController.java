@@ -1,16 +1,15 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.WallDateTimeParsing;
 import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.webapp.dto.ReservationPeriodOption;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
+import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
+import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -60,21 +58,21 @@ public class CarDetailController {
                 .collect(Collectors.toList());
 
         final List<ListingAvailability> listingAvailabilities = detail.getListingAvailabilities();
-        final List<String> availabilityLines = new ArrayList<>(listingAvailabilities.size());
-        final List<ReservationPeriodOption> reservationPeriods = new ArrayList<>(listingAvailabilities.size());
+        final List<LocalDateSegment> rawSegments = new ArrayList<>(listingAvailabilities.size());
         for (final ListingAvailability a : listingAvailabilities) {
-            availabilityLines.add(formatAvailabilityLine(a));
-            reservationPeriods.add(toReservationPeriodOption(a));
+            rawSegments.add(new LocalDateSegment(a.getStartInclusive(), a.getEndInclusive()));
         }
+        final List<LocalDateSegment> bookableSegments = BookableWallRangesJson.mergeAdjacentSegments(rawSegments);
+        final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
+        final boolean hasBookableDays = !bookableSegments.isEmpty();
 
         final ModelAndView mav = new ModelAndView("carDetail");
         mav.addObject("listing", listing);
         mav.addObject("car", car);
         mav.addObject("owner", owner);
         mav.addObject("carGalleryImagePaths", carGalleryImagePaths);
-        mav.addObject("listingAvailabilities", listingAvailabilities);
-        mav.addObject("availabilityLines", availabilityLines);
-        mav.addObject("reservationPeriods", reservationPeriods);
+        mav.addObject("hasBookableDays", hasBookableDays);
+        mav.addObject("bookableWallRangesJson", bookableWallRangesJson);
         mav.addObject("reservationFromDefault", "");
         mav.addObject("reservationUntilDefault", "");
         mav.addObject("similarListings", similarListings);
@@ -88,29 +86,6 @@ public class CarDetailController {
                 card.getModel(),
                 card.getDayPrice(),
                 card.getImageId());
-    }
-
-    private static ReservationPeriodOption toReservationPeriodOption(final ListingAvailability a) {
-        final ZonedDateTime startZ = a.getStartDate().atZoneSameInstant(AvailabilityPeriod.WALL_ZONE);
-        ZonedDateTime lastInclusiveZ = a.getEndDate().minusNanos(1).atZoneSameInstant(AvailabilityPeriod.WALL_ZONE);
-        if (lastInclusiveZ.isBefore(startZ)) {
-            lastInclusiveZ = startZ;
-        }
-        final String minLocal = startZ.format(WallDateTimeParsing.WALL_INPUT_DATE_TIME);
-        final String maxLocal = lastInclusiveZ.format(WallDateTimeParsing.WALL_INPUT_DATE_TIME);
-        final String label = WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(startZ) + " — "
-                + WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(lastInclusiveZ);
-        return new ReservationPeriodOption(a.getId(), label, minLocal, maxLocal);
-    }
-
-    private static String formatAvailabilityLine(final ListingAvailability a) {
-        final ZonedDateTime startZ = a.getStartDate().atZoneSameInstant(AvailabilityPeriod.WALL_ZONE);
-        ZonedDateTime lastInclusiveZ = a.getEndDate().minusNanos(1).atZoneSameInstant(AvailabilityPeriod.WALL_ZONE);
-        if (lastInclusiveZ.isBefore(startZ)) {
-            lastInclusiveZ = startZ;
-        }
-        return WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(startZ) + " — "
-                + WallDateTimeParsing.WALL_DISPLAY_DATE_TIME.format(lastInclusiveZ);
     }
 
 }

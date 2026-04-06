@@ -1,29 +1,33 @@
 package ar.edu.itba.paw.models;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 public final class ListingAvailability {
 
     private final long id;
     private final long listingId;
-    private final OffsetDateTime startDate;
-    private final OffsetDateTime endDate;
+    private final LocalDate startInclusive;
+    private final LocalDate endInclusive;
     private final OffsetDateTime createdAt;
     private final OffsetDateTime updatedAt;
+    private final boolean active;
 
     public ListingAvailability(
             final long id,
             final long listingId,
-            final OffsetDateTime startDate,
-            final OffsetDateTime endDate,
+            final LocalDate startInclusive,
+            final LocalDate endInclusive,
             final OffsetDateTime createdAt,
-            final OffsetDateTime updatedAt) {
+            final OffsetDateTime updatedAt,
+            final boolean active) {
         this.id = id;
         this.listingId = listingId;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.startInclusive = startInclusive;
+        this.endInclusive = endInclusive;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.active = active;
     }
 
     public long getId() {
@@ -34,12 +38,12 @@ public final class ListingAvailability {
         return listingId;
     }
 
-    public OffsetDateTime getStartDate() {
-        return startDate;
+    public LocalDate getStartInclusive() {
+        return startInclusive;
     }
 
-    public OffsetDateTime getEndDate() {
-        return endDate;
+    public LocalDate getEndInclusive() {
+        return endInclusive;
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -50,15 +54,20 @@ public final class ListingAvailability {
         return updatedAt;
     }
 
+    public boolean isActive() {
+        return active;
+    }
+
     @Override
     public String toString() {
         return "ListingAvailability{" +
                 "id=" + id +
                 ", listingId=" + listingId +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
+                ", startInclusive=" + startInclusive +
+                ", endInclusive=" + endInclusive +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
+                ", active=" + active +
                 '}';
     }
 }

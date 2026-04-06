@@ -7,7 +7,7 @@ import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
-import ar.edu.itba.paw.webapp.support.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;

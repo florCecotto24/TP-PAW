@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.models;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 public class Listing {
@@ -18,6 +19,8 @@ public class Listing {
     private final BigDecimal dayPrice;
     private final String startPoint;
     private final String description;
+    private final LocalTime checkInTime;
+    private final LocalTime checkOutTime;
 
     public Listing(
             final long id,
@@ -28,7 +31,9 @@ public class Listing {
             final Status status,
             final BigDecimal dayPrice,
             final String startPoint,
-            final String description) {
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime) {
         this.id = id;
         this.title = title;
         this.carId = carId;
@@ -38,6 +43,8 @@ public class Listing {
         this.dayPrice = dayPrice;
         this.startPoint = startPoint;
         this.description = description;
+        this.checkInTime = checkInTime;
+        this.checkOutTime = checkOutTime;
     }
 
     public long getId() {
@@ -76,6 +83,14 @@ public class Listing {
         return description;
     }
 
+    public LocalTime getCheckInTime() {
+        return checkInTime;
+    }
+
+    public LocalTime getCheckOutTime() {
+        return checkOutTime;
+    }
+
     @Override
     public String toString() {
         return "Listing{" +
@@ -88,6 +103,8 @@ public class Listing {
                 ", dayPrice=" + dayPrice +
                 ", startPoint='" + startPoint + '\'' +
                 ", description='" + description + '\'' +
+                ", checkInTime=" + checkInTime +
+                ", checkOutTime=" + checkOutTime +
                 '}';
     }
 }

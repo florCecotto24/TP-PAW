@@ -64,7 +64,7 @@
                             <label class="form-label required-label">Type</label>
                             <form:select cssClass="form-select" path="type">
                                 <form:option value="" label="Select a type" />
-                                <form:options items="${carTypes}" />
+                                <form:options items="${carTypeOptions}"/>
                             </form:select>
                             <form:errors path="type" cssClass="text-danger d-block"/>
                         </div>
@@ -73,7 +73,7 @@
                             <label class="form-label required-label">Powertrain</label>
                             <form:select cssClass="form-select" path="powertrain">
                                 <form:option value="" label="Select the powertrain"/>
-                                <form:options items="${powertrains}" />
+                                <form:options items="${powertrainOptions}"/>
                             </form:select>
                             <form:errors path="powertrain" cssClass="text-danger d-block"/>
                         </div>
@@ -82,7 +82,7 @@
                             <label class="form-label required-label">Transmission</label>
                             <form:select cssClass="form-select" path="transmission">
                                 <form:option value="" label="Select the transmission"/>
-                                <form:options items="${transmissions}" />
+                                <form:options items="${transmissionOptions}"/>
                             </form:select>
                             <form:errors path="transmission" cssClass="text-danger d-block"/>
                         </div>
@@ -105,42 +105,52 @@
                             <form:errors path="description" cssClass="text-danger d-block"/>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label required-label">Availability (up to 5 periods)</label>
-                            <p class="small text-muted mb-2">From / until are inclusive (minute precision). Times default to 00:00 when you pick a date. Zone: Argentina.</p>
-                            <c:forEach items="${publishCarForm.availabilityRows}" var="row" varStatus="st">
-                                <div class="row g-2 mb-3 align-items-end">
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1" for="avail_from_d_${st.index}">From</label>
-                                        <div class="input-group input-group-sm shadow-none"
-                                             data-paw-dtpair-wrap
-                                             data-paw-hidden="avail_from_h_${st.index}"
-                                             data-paw-date="avail_from_d_${st.index}"
-                                             data-paw-time="avail_from_t_${st.index}">
-                                            <form:hidden path="availabilityRows[${st.index}].from" id="avail_from_h_${st.index}"/>
-                                            <span class="input-group-text border-0 bg-light"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                                            <input type="date" class="form-control border-0 shadow-none" id="avail_from_d_${st.index}" aria-label="From date"/>
-                                            <span class="input-group-text border-0 bg-light"><i class="bi bi-clock" aria-hidden="true"></i></span>
-                                            <input type="time" class="form-control border-0 shadow-none" id="avail_from_t_${st.index}" step="60" aria-label="From time"/>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small mb-1" for="avail_until_d_${st.index}">Until</label>
-                                        <div class="input-group input-group-sm shadow-none"
-                                             data-paw-dtpair-wrap
-                                             data-paw-hidden="avail_until_h_${st.index}"
-                                             data-paw-date="avail_until_d_${st.index}"
-                                             data-paw-time="avail_until_t_${st.index}">
-                                            <form:hidden path="availabilityRows[${st.index}].until" id="avail_until_h_${st.index}"/>
-                                            <span class="input-group-text border-0 bg-light"><i class="bi bi-calendar3" aria-hidden="true"></i></span>
-                                            <input type="date" class="form-control border-0 shadow-none" id="avail_until_d_${st.index}" aria-label="Until date"/>
-                                            <span class="input-group-text border-0 bg-light"><i class="bi bi-clock" aria-hidden="true"></i></span>
-                                            <input type="time" class="form-control border-0 shadow-none" id="avail_until_t_${st.index}" step="60" aria-label="Until time"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </c:forEach>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label required-label" for="checkInTime">Check-in time</label>
+                                <form:input path="checkInTime" type="time" cssClass="form-control" id="checkInTime" step="60"/>
+                                <form:errors path="checkInTime" cssClass="text-danger d-block"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label required-label" for="checkOutTime">Check-out time</label>
+                                <form:input path="checkOutTime" type="time" cssClass="form-control" id="checkOutTime" step="60"/>
+                                <form:errors path="checkOutTime" cssClass="text-danger d-block"/>
+                            </div>
                         </div>
+
+                        <div class="mb-4" id="publishAvailabilitySection">
+                            <label class="form-label required-label">Availability</label>
+                            <p class="small text-muted mb-2">Inclusive calendar days (Argentina). Pick-up and return times use check-in / check-out above. Select one range per row; add more periods as needed (max 10).</p>
+                            <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
+                            <div id="publish_availability_rows">
+                                <c:forEach items="${publishCarForm.availabilityRows}" var="row" varStatus="st">
+                                    <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
+                                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                                            <span class="small text-secondary">Period <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span></span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="Remove period">Remove</button>
+                                        </div>
+                                        <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="Select date range on calendar" aria-label="Availability date range"/>
+                                        <form:hidden path="availabilityRows[${st.index}].from" cssClass="paw-avail-from"/>
+                                        <form:hidden path="availabilityRows[${st.index}].until" cssClass="paw-avail-until"/>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="publish_avail_add">
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i> Add period
+                            </button>
+                        </div>
+
+                        <template id="publish_avail_row_template">
+                            <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
+                                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                                    <span class="small text-secondary">Period <span class="publish-avail-index">1</span></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="Remove period">Remove</button>
+                                </div>
+                                <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="Select date range on calendar" aria-label="Availability date range"/>
+                                <input type="hidden" class="paw-avail-from" name="availabilityRows[__IDX__].from" value=""/>
+                                <input type="hidden" class="paw-avail-until" name="availabilityRows[__IDX__].until" value=""/>
+                            </div>
+                        </template>
 
                         <div class="mb-3">
                             <span class="form-label required-label d-block">Pictures</span>

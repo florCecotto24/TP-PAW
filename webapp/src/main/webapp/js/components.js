@@ -267,14 +267,23 @@
     }
 
     function bindPair(hidden, dateEl, timeEl) {
-        if (!hidden || !dateEl || !timeEl) {
+        if (!hidden || !dateEl) {
             return null;
         }
         function syncToHidden() {
+            if (!timeEl) {
+                hidden.value = dateEl.value || '';
+                return;
+            }
             hidden.value = combine(dateEl.value, timeEl.value);
         }
         function syncFromHidden() {
-            var s = splitLocalDt(hidden.value);
+            var v = hidden.value || '';
+            if (!timeEl) {
+                dateEl.value = v.length >= 10 ? v.substring(0, 10) : '';
+                return;
+            }
+            var s = splitLocalDt(v);
             dateEl.value = s.d;
             timeEl.value = s.t;
         }
@@ -289,9 +298,11 @@
             }
         }
         dateEl.addEventListener('change', syncToHidden);
-        timeEl.addEventListener('change', syncToHidden);
         dateEl.addEventListener('input', syncToHidden);
-        timeEl.addEventListener('input', syncToHidden);
+        if (timeEl) {
+            timeEl.addEventListener('change', syncToHidden);
+            timeEl.addEventListener('input', syncToHidden);
+        }
         syncFromHidden();
         return { syncToHidden: syncToHidden, syncFromHidden: syncFromHidden, setDateBounds: setDateBounds };
     }
@@ -301,10 +312,11 @@
             var hidId = wrap.getAttribute('data-paw-hidden');
             var dId = wrap.getAttribute('data-paw-date');
             var tId = wrap.getAttribute('data-paw-time');
+            var timeEl = (tId && tId.length) ? document.getElementById(tId) : null;
             bindPair(
                 document.getElementById(hidId),
                 document.getElementById(dId),
-                document.getElementById(tId)
+                timeEl
             );
         });
     }
@@ -322,95 +334,392 @@
     };
 })();
 
-/* Funciones de CarDetail */
-
+/* Flatpickr range helper (search, car detail, publish availability) */
 (function () {
-    const daterangeInput = document.getElementById('detail_daterange');
-    const fromHidden = document.getElementById('detail_from_hidden');
-    const untilHidden = document.getElementById('detail_until_hidden');
-    const form = document.getElementById('detailReservationForm');
-    const periodSelect = document.getElementById('detail_reservation_period');
+    function pad2(n) {
+        return String(n).padStart(2, '0');
+    }
 
-    let minDate = null;
-    let maxDate = null;
-
-    // Función para parsear la fecha y hora ISO a objeto Date
-    function parseDateTime(isoString) {
-        if (!isoString) return null;
+    function parseIsoLocalDateTime(isoString) {
+        if (!isoString) {
+            return null;
+        }
         return new Date(isoString);
     }
 
-    // Función para formatear Date a ISO String (YYYY-MM-DDTHH:mm:ss)
-    function formatDateTime(date) {
-        if (!date) return '';
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const seconds = '00';
-        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    function formatIsoLocalDateTime(date) {
+        if (!date) {
+            return '';
+        }
+        return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate()) + 'T' +
+            pad2(date.getHours()) + ':' + pad2(date.getMinutes()) + ':00';
     }
 
-    // Inicializar flatpickr en modo range
-    const fp = flatpickr(daterangeInput, {
-        mode: 'range',
-        dateFormat: 'Y-m-d H:i',
-        minDate: minDate,
-        maxDate: maxDate,
-        defaultDate: [
-            fromHidden.value ? parseDateTime(fromHidden.value) : null,
-            untilHidden.value ? parseDateTime(untilHidden.value) : null
-        ],
-        onChange: function(selectedDates) {
-            if (selectedDates.length === 2) {
-                fromHidden.value = formatDateTime(selectedDates[0]);
-                untilHidden.value = formatDateTime(selectedDates[1]);
-            } else if (selectedDates.length === 1) {
-                fromHidden.value = formatDateTime(selectedDates[0]);
-                untilHidden.value = '';
-            } else {
-                fromHidden.value = '';
-                untilHidden.value = '';
-            }
+    function formatIsoLocalDate(date) {
+        if (!date) {
+            return '';
         }
-    });
+        return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+    }
 
-    // Actualizar restricciones de fechas cuando cambia el período
-    function updateDateBounds() {
-        if (periodSelect) {
-            const selectedOption = periodSelect.options[periodSelect.selectedIndex];
-            const minStr = selectedOption.getAttribute('data-min');
-            const maxStr = selectedOption.getAttribute('data-max');
+    function normalizeWallHm(s) {
+        if (!s) {
+            return '00:00';
+        }
+        var t = String(s).trim();
+        return t.length >= 5 ? t.substring(0, 5) : t;
+    }
 
-            if (minStr && maxStr) {
-                minDate = parseDateTime(minStr);
-                maxDate = parseDateTime(maxStr);
-                fp.set('minDate', minDate);
-                fp.set('maxDate', maxDate);
-                // Limpiar selección cuando cambia el período
+    function localNoonFromYmd(ymd) {
+        if (!ymd || ymd.length < 10) {
+            return null;
+        }
+        var p = ymd.substring(0, 10).split('-');
+        if (p.length !== 3) {
+            return null;
+        }
+        return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 12, 0, 0);
+    }
+
+    function localWallDayStartFromYmd(ymd) {
+        if (!ymd || ymd.length < 10) {
+            return null;
+        }
+        var p = ymd.substring(0, 10).split('-');
+        if (p.length !== 3) {
+            return null;
+        }
+        return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 0, 0, 0, 0);
+    }
+
+    function localWallDayEndFromYmd(ymd) {
+        if (!ymd || ymd.length < 10) {
+            return null;
+        }
+        var p = ymd.substring(0, 10).split('-');
+        if (p.length !== 3) {
+            return null;
+        }
+        return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10), 23, 59, 59, 999);
+    }
+
+    /**
+     * @param {object} opts
+     * @param {object} [opts.combineWallTimes] if set, date-only range; hiddens get yyyy-MM-ddTHH:mm using these wall times
+     * @param {Array<{from: Date, to: Date}>} [opts.enable] Flatpickr inclusive ranges; use local start/end-of-day, not noon
+     * @param {boolean} [opts.disableAllDates] if true, no day is selectable
+     * @returns {{ fp: object, setBounds: Function, clear: Function, destroy: Function } | null}
+     */
+    function initRange(opts) {
+        if (typeof flatpickr === 'undefined') {
+            return null;
+        }
+        var anchor = typeof opts.anchor === 'string' ? document.getElementById(opts.anchor) : opts.anchor;
+        var fromHidden = typeof opts.fromHidden === 'string' ? document.getElementById(opts.fromHidden) : opts.fromHidden;
+        var untilHidden = typeof opts.untilHidden === 'string' ? document.getElementById(opts.untilHidden) : opts.untilHidden;
+        if (!anchor || !fromHidden || !untilHidden) {
+            return null;
+        }
+        var combine = opts.combineWallTimes;
+        var pickupHm = combine ? normalizeWallHm(combine.pickup) : '';
+        var returnHm = combine ? normalizeWallHm(combine.returnDeadline) : '';
+        var enableTime = combine ? false : !!opts.enableTime;
+        var dateFormat = opts.dateFormat || (enableTime ? 'Y-m-d H:i' : 'Y-m-d');
+        var fmtOut = enableTime ? formatIsoLocalDateTime : formatIsoLocalDate;
+        var fpConfig = {
+            mode: 'range',
+            enableTime: enableTime,
+            time_24hr: true,
+            dateFormat: dateFormat,
+            minDate: opts.minDate != null ? opts.minDate : undefined,
+            maxDate: opts.maxDate != null ? opts.maxDate : undefined,
+            defaultDate: opts.defaultDate,
+            onChange: function (selectedDates) {
+                if (combine) {
+                    if (selectedDates.length === 2) {
+                        fromHidden.value = formatIsoLocalDate(selectedDates[0]) + 'T' + pickupHm;
+                        untilHidden.value = formatIsoLocalDate(selectedDates[1]) + 'T' + returnHm;
+                    } else if (selectedDates.length === 1) {
+                        fromHidden.value = formatIsoLocalDate(selectedDates[0]) + 'T' + pickupHm;
+                        untilHidden.value = '';
+                    } else {
+                        fromHidden.value = '';
+                        untilHidden.value = '';
+                    }
+                    return;
+                }
+                if (selectedDates.length === 2) {
+                    fromHidden.value = fmtOut(selectedDates[0]);
+                    untilHidden.value = fmtOut(selectedDates[1]);
+                } else if (selectedDates.length === 1) {
+                    fromHidden.value = fmtOut(selectedDates[0]);
+                    untilHidden.value = '';
+                } else {
+                    fromHidden.value = '';
+                    untilHidden.value = '';
+                }
+            }
+        };
+        if (opts.disableAllDates) {
+            fpConfig.disable = [function () { return true; }];
+        } else if (opts.enable && opts.enable.length > 0) {
+            fpConfig.enable = opts.enable;
+            fpConfig.disable = [];
+        } else {
+            fpConfig.disable = opts.disable || [];
+        }
+        var fp = flatpickr(anchor, fpConfig);
+        return {
+            fp: fp,
+            setBounds: function (minD, maxD) {
+                fp.set('minDate', minD != null ? minD : null);
+                fp.set('maxDate', maxD != null ? maxD : null);
+            },
+            clear: function () {
                 fp.clear();
                 fromHidden.value = '';
                 untilHidden.value = '';
+            },
+            destroy: function () {
+                fp.destroy();
             }
+        };
+    }
+
+    window.PawFlatpickrRange = {
+        init: initRange,
+        parseIsoLocalDateTime: parseIsoLocalDateTime,
+        formatIsoLocalDateTime: formatIsoLocalDateTime,
+        formatIsoLocalDate: formatIsoLocalDate,
+        localNoonFromYmd: localNoonFromYmd,
+        localWallDayStartFromYmd: localWallDayStartFromYmd,
+        localWallDayEndFromYmd: localWallDayEndFromYmd
+    };
+})();
+
+(function () {
+    var fromPicker = document.getElementById('search_from_picker');
+    var untilPicker = document.getElementById('search_until_picker');
+    var fromHidden = document.getElementById('search_from_hidden');
+    var untilHidden = document.getElementById('search_until_hidden');
+    if (!fromPicker || !untilPicker || !fromHidden || !untilHidden || typeof flatpickr === 'undefined') {
+        return;
+    }
+    function parseYmdToLocalNoon(ymd) {
+        if (!ymd || ymd.length < 10) {
+            return null;
         }
+        var d = ymd.substring(0, 10).split('-');
+        if (d.length !== 3) {
+            return null;
+        }
+        return new Date(parseInt(d[0], 10), parseInt(d[1], 10) - 1, parseInt(d[2], 10), 12, 0, 0);
     }
-
-    if (periodSelect) {
-        periodSelect.addEventListener('change', updateDateBounds);
-        // Aplicar restricciones iniciales si hay un solo período
-        updateDateBounds();
-    }
-
-    // Sincronizar valores al submit del formulario
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            if (!fromHidden.value || !untilHidden.value) {
-                e.preventDefault();
-                alert('Please select both pickup and return dates');
-                return false;
+    function initOne(anchor, hidden) {
+        var def = parseYmdToLocalNoon(hidden.value);
+        flatpickr(anchor, {
+            mode: 'single',
+            enableTime: false,
+            dateFormat: 'Y-m-d',
+            defaultDate: def || undefined,
+            onChange: function (selectedDates) {
+                hidden.value = selectedDates.length && window.PawFlatpickrRange
+                    ? PawFlatpickrRange.formatIsoLocalDate(selectedDates[0])
+                    : '';
             }
         });
     }
+    initOne(fromPicker, fromHidden);
+    initOne(untilPicker, untilHidden);
+})();
+
+/* Car detail: only days inside merged listing_availability segments are selectable (Flatpickr enable) */
+(function () {
+    var daterangeInput = document.getElementById('detail_daterange');
+    var fromHidden = document.getElementById('detail_from_hidden');
+    var untilHidden = document.getElementById('detail_until_hidden');
+    var form = document.getElementById('detailReservationForm');
+    if (!daterangeInput || !fromHidden || !untilHidden || !form || !window.PawFlatpickrRange) {
+        return;
+    }
+
+    function parseBookableRangesJson(raw) {
+        if (!raw || typeof raw !== 'string') {
+            return [];
+        }
+        try {
+            var parsed = JSON.parse(raw.trim());
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+            var out = [];
+            for (var i = 0; i < parsed.length; i++) {
+                var seg = parsed[i];
+                if (!seg || typeof seg.from !== 'string' || typeof seg.to !== 'string') {
+                    continue;
+                }
+                var fromD = PawFlatpickrRange.localWallDayStartFromYmd(seg.from);
+                var toD = PawFlatpickrRange.localWallDayEndFromYmd(seg.to);
+                if (fromD && toD) {
+                    out.push({ from: fromD, to: toD });
+                }
+            }
+            return out;
+        } catch (e) {
+            return [];
+        }
+    }
+
+    var pickAttr = form.getAttribute('data-pickup-time') || '10:00';
+    var retAttr = form.getAttribute('data-return-time') || '18:00';
+    var segments = parseBookableRangesJson(form.getAttribute('data-bookable-ranges'));
+    var enable = segments.map(function (s) {
+        return { from: s.from, to: s.to };
+    });
+
+    var dd = [];
+    if (fromHidden.value && fromHidden.value.length >= 10) {
+        var d1 = PawFlatpickrRange.localWallDayStartFromYmd(fromHidden.value);
+        if (d1) {
+            dd.push(d1);
+        }
+    }
+    if (untilHidden.value && untilHidden.value.length >= 10) {
+        var d2 = PawFlatpickrRange.localWallDayStartFromYmd(untilHidden.value);
+        if (d2) {
+            dd.push(d2);
+        }
+    }
+
+    var initOpts = {
+        anchor: daterangeInput,
+        fromHidden: fromHidden,
+        untilHidden: untilHidden,
+        combineWallTimes: { pickup: pickAttr, returnDeadline: retAttr },
+        dateFormat: 'Y-m-d',
+        defaultDate: dd.length ? dd : undefined
+    };
+    if (enable.length > 0) {
+        initOpts.enable = enable;
+    } else {
+        initOpts.disableAllDates = true;
+    }
+
+    var ctrl = PawFlatpickrRange.init(initOpts);
+    if (!ctrl) {
+        return;
+    }
+
+    form.addEventListener('submit', function (e) {
+        if (!fromHidden.value || !untilHidden.value) {
+            e.preventDefault();
+            alert('Please select both pickup and return dates');
+            return false;
+        }
+    });
+})();
+
+/* Publish: dynamic availability rows (date-only range) */
+(function () {
+    var root = document.getElementById('publish_availability_rows');
+    var tpl = document.getElementById('publish_avail_row_template');
+    var addBtn = document.getElementById('publish_avail_add');
+    if (!root || !tpl || !addBtn || !window.PawFlatpickrRange) {
+        return;
+    }
+
+    var MAX_ROWS = 10;
+
+    function reindexRows() {
+        var rows = root.querySelectorAll('[data-publish-avail-row]');
+        rows.forEach(function (row, i) {
+            row.querySelectorAll('.publish-avail-index').forEach(function (el) {
+                el.textContent = String(i + 1);
+            });
+            var fromH = row.querySelector('.paw-avail-from');
+            var untilH = row.querySelector('.paw-avail-until');
+            if (fromH) {
+                fromH.name = 'availabilityRows[' + i + '].from';
+            }
+            if (untilH) {
+                untilH.name = 'availabilityRows[' + i + '].until';
+            }
+        });
+    }
+
+    function initRow(row) {
+        var anchor = row.querySelector('.paw-avail-range-input');
+        var fromH = row.querySelector('.paw-avail-from');
+        var untilH = row.querySelector('.paw-avail-until');
+        if (!anchor || !fromH || !untilH) {
+            return;
+        }
+        var defaults = [];
+        if (fromH.value && untilH.value) {
+            defaults.push(new Date(fromH.value + 'T00:00:00'));
+            defaults.push(new Date(untilH.value + 'T00:00:00'));
+        }
+        var c = PawFlatpickrRange.init({
+            anchor: anchor,
+            fromHidden: fromH,
+            untilHidden: untilH,
+            enableTime: false,
+            dateFormat: 'Y-m-d',
+            defaultDate: defaults.length ? defaults : undefined
+        });
+        row._pawAvailFp = c;
+    }
+
+    function destroyRowFp(row) {
+        if (row._pawAvailFp && row._pawAvailFp.fp) {
+            row._pawAvailFp.destroy();
+        }
+        row._pawAvailFp = null;
+    }
+
+    root.querySelectorAll('[data-publish-avail-row]').forEach(initRow);
+
+    addBtn.addEventListener('click', function () {
+        var n = root.querySelectorAll('[data-publish-avail-row]').length;
+        if (n >= MAX_ROWS) {
+            return;
+        }
+        var html = tpl.innerHTML.replace(/__IDX__/g, '0');
+        var wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        var row = wrap.firstElementChild;
+        root.appendChild(row);
+        reindexRows();
+        initRow(row);
+    });
+
+    root.addEventListener('click', function (e) {
+        var btn = e.target.closest('.publish-avail-remove');
+        if (!btn) {
+            return;
+        }
+        var row = btn.closest('[data-publish-avail-row]');
+        if (!row || !root.contains(row)) {
+            return;
+        }
+        var rows = root.querySelectorAll('[data-publish-avail-row]');
+        if (rows.length <= 1) {
+            destroyRowFp(row);
+            row.querySelectorAll('.paw-avail-from, .paw-avail-until').forEach(function (h) { h.value = ''; });
+            var anchor = row.querySelector('.paw-avail-range-input');
+            if (anchor) {
+                anchor.value = '';
+            }
+            initRow(row);
+            return;
+        }
+        destroyRowFp(row);
+        row.remove();
+        reindexRows();
+        root.querySelectorAll('[data-publish-avail-row]').forEach(function (r) {
+            destroyRowFp(r);
+        });
+        root.querySelectorAll('[data-publish-avail-row]').forEach(initRow);
+    });
 })();
 

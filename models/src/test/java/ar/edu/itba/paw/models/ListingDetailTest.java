@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.models;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +24,9 @@ class ListingDetailTest {
                 Listing.Status.ACTIVE,
                 new BigDecimal("99.99"),
                 "Palermo",
-                "Great city car");
+                "Great city car",
+                LocalTime.of(10, 0),
+                LocalTime.of(18, 0));
 
         final Car car = new Car(2L, 3L, "AA123BB", "Toyota", "Yaris", Car.Type.HATCHBACK,
                 Car.Powertrain.HYBRID, Car.Transmission.AUTOMATIC);
@@ -35,10 +39,11 @@ class ListingDetailTest {
 
         final List<ListingAvailability> availabilities = new ArrayList<>(List.of(
                 new ListingAvailability(20L, 1L,
-                        OffsetDateTime.parse("2026-04-10T00:00:00Z"),
-                        OffsetDateTime.parse("2026-04-10T23:59:00Z"),
+                        LocalDate.of(2026, 4, 10),
+                        LocalDate.of(2026, 4, 12),
                         OffsetDateTime.parse("2026-04-05T10:00:00Z"),
-                        OffsetDateTime.parse("2026-04-05T10:10:00Z"))));
+                        OffsetDateTime.parse("2026-04-05T10:10:00Z"),
+                        true)));
 
         final ListingDetail detail = new ListingDetail(listing, car, owner, pictures, availabilities);
 

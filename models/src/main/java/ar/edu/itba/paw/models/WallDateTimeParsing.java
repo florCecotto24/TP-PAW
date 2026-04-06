@@ -22,6 +22,9 @@ public final class WallDateTimeParsing {
     /** Human-readable range labels in the car detail UI. */
     public static final DateTimeFormatter WALL_DISPLAY_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+    /** Day-only labels (listing availability windows). */
+    public static final DateTimeFormatter WALL_DISPLAY_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private WallDateTimeParsing() {
     }
 

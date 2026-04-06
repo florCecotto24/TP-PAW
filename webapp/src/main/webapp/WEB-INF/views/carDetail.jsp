@@ -1,6 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,29 +54,13 @@
                 </div>
             </section>
             <section id="availabilitySection">
-                <h2 class="h5 fw-bold mb-3 d-flex align-items-center gap-2 flex-wrap">
-                    Availability
-                    <c:if test="${not empty listingAvailabilities}">
-                        <span class="badge rounded-pill text-bg-secondary"><c:out value="${fn:length(listingAvailabilities)}"/> window<c:if test="${fn:length(listingAvailabilities) ne 1}">s</c:if></span>
-                    </c:if>
-                </h2>
+                <h2 class="h5 fw-bold mb-3">Booking</h2>
                 <c:choose>
-                    <c:when test="${empty availabilityLines}">
-                        <p class="text-secondary mb-0">No availability windows published for this listing.</p>
+                    <c:when test="${hasBookableDays}">
+                        <p class="text-secondary mb-0">Available days are shown in the calendar on the right.</p>
                     </c:when>
                     <c:otherwise>
-                        <ul class="list-group list-group-flush border rounded-3 shadow-sm">
-                            <c:forEach items="${availabilityLines}" var="line" varStatus="st">
-                                <li class="list-group-item d-flex align-items-start gap-2 py-3">
-                                    <i class="bi bi-calendar-range text-primary mt-1" aria-hidden="true"></i>
-                                    <div>
-                                        <span class="visually-hidden">Window </span>
-                                        <span class="fw-medium">Period <c:out value="${st.count}"/></span>
-                                        <div class="small text-body-secondary mt-1"><c:out value="${line}"/></div>
-                                    </div>
-                                </li>
-                            </c:forEach>
-                        </ul>
+                        <p class="text-secondary mb-0">This listing has no bookable dates at the moment.</p>
                     </c:otherwise>
                 </c:choose>
             </section>
@@ -93,8 +76,10 @@
                         deliveryLocation="${listing.startPoint}"
                         fromDateTimeValue="${reservationFromDefault}"
                         untilDateTimeValue="${reservationUntilDefault}"
-                        reservationPeriods="${reservationPeriods}"
-                        carName="${listing.title}"/>
+                        bookableWallRangesJson="${bookableWallRangesJson}"
+                        carName="${listing.title}"
+                        pickupTime="${listing.checkInTime}"
+                        returnTime="${listing.checkOutTime}"/>
             </div>
         </div>
     </div>

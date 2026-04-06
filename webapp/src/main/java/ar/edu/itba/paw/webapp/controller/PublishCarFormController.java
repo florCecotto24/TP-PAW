@@ -4,10 +4,10 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
-import ar.edu.itba.paw.webapp.support.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.CarEnumOptions;
+import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -22,24 +22,25 @@ import javax.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/publish-car")
 public class PublishCarFormController {
 
-    @ModelAttribute("carTypes")
-    public Car.Type[] carTypes() {
-        return Car.Type.values();
+    @ModelAttribute("carTypeOptions")
+    public Map<String, String> carTypeOptions() {
+        return CarEnumOptions.carTypeSelectOptions();
     }
 
-    @ModelAttribute("powertrains")
-    public Car.Powertrain[] powertrains() {
-        return Car.Powertrain.values();
+    @ModelAttribute("powertrainOptions")
+    public Map<String, String> powertrainOptions() {
+        return CarEnumOptions.powertrainSelectOptions();
     }
 
-    @ModelAttribute("transmissions")
-    public Car.Transmission[] transmissions() {
-        return Car.Transmission.values();
+    @ModelAttribute("transmissionOptions")
+    public Map<String, String> transmissionOptions() {
+        return CarEnumOptions.transmissionSelectOptions();
     }
 
     private final CarService carService;
@@ -91,6 +92,8 @@ public class PublishCarFormController {
                     form.getPricePerDay(),
                     form.getStartPoint(),
                     form.getDescription(),
+                    form.getCheckInTime(),
+                    form.getCheckOutTime(),
                     periods,
                     uploads);
 

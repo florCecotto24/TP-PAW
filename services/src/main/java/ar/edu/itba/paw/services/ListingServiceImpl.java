@@ -20,10 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ListingServiceImpl implements ListingService {
@@ -50,6 +55,8 @@ public class ListingServiceImpl implements ListingService {
             final BigDecimal dayPrice,
             final String startPoint,
             final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime,
             final List<AvailabilityPeriod> availabilityPeriods) {
         if (availabilityPeriods == null || availabilityPeriods.isEmpty()) {
             throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_REQUIRED);
@@ -63,14 +70,37 @@ public class ListingServiceImpl implements ListingService {
                 .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_CAR_NOT_FOUND, carId));
         final String title = car.getBrand() + " " + car.getModel();
 
-        final Listing listing = listingDao.createListing(carId, title, status, dayPrice, startPoint, description);
-        for (final AvailabilityPeriod period : availabilityPeriods) {
+        final Listing listing = listingDao.createListing(
+                carId, title, status, dayPrice, startPoint, description, checkInTime, checkOutTime);
+        for (final AvailabilityPeriod period : mergeAdjacentAvailabilityPeriods(availabilityPeriods)) {
             listingAvailabilityDao.create(
                     listing.getId(),
-                    period.startInstantUtc(),
-                    period.endExclusiveInstantUtc());
+                    period.getStartInclusive(),
+                    period.getEndInclusive());
         }
         return listing;
+    }
+
+    private static List<AvailabilityPeriod> mergeAdjacentAvailabilityPeriods(final List<AvailabilityPeriod> periods) {
+        final List<AvailabilityPeriod> sorted = periods.stream()
+                .sorted(Comparator.comparing(AvailabilityPeriod::getStartInclusive))
+                .collect(Collectors.toList());
+        final List<AvailabilityPeriod> out = new ArrayList<>();
+        AvailabilityPeriod cur = sorted.get(0);
+        for (int i = 1; i < sorted.size(); i++) {
+            final AvailabilityPeriod next = sorted.get(i);
+            if (!next.getStartInclusive().isAfter(cur.getEndInclusive().plusDays(1))) {
+                final LocalDate newEnd = cur.getEndInclusive().isBefore(next.getEndInclusive())
+                        ? next.getEndInclusive()
+                        : cur.getEndInclusive();
+                cur = new AvailabilityPeriod(cur.getStartInclusive(), newEnd);
+            } else {
+                out.add(cur);
+                cur = next;
+            }
+        }
+        out.add(cur);
+        return out;
     }
 
     @Override
@@ -98,21 +128,27 @@ public class ListingServiceImpl implements ListingService {
         if (availabilities.isEmpty()) {
             return false;
         }
-        if (availabilityId != null) {
-            return availabilities.stream()
-                    .filter(a -> a.getId() == availabilityId)
-                    .findFirst()
-                    .map(a -> isInsideAvailabilityWindow(a, startDate, endDate))
-                    .orElse(false);
-        }
-        return availabilities.stream().anyMatch(a -> isInsideAvailabilityWindow(a, startDate, endDate));
+        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
+        final LocalDate pickupDay = startDate.toInstant().atZone(wall).toLocalDate();
+        final LocalDate returnDay = endDate.toInstant().atZone(wall).toLocalDate();
+        return everyWallDayCoveredByAvailabilities(pickupDay, returnDay, availabilities);
     }
 
-    private static boolean isInsideAvailabilityWindow(
-            final ListingAvailability availability,
-            final OffsetDateTime startDate,
-            final OffsetDateTime endDate) {
-        return !startDate.isBefore(availability.getStartDate()) && !endDate.isAfter(availability.getEndDate());
+    private static boolean everyWallDayCoveredByAvailabilities(
+            final LocalDate pickupDay,
+            final LocalDate returnDay,
+            final List<ListingAvailability> active) {
+        LocalDate d = pickupDay;
+        while (!d.isAfter(returnDay)) {
+            final LocalDate day = d;
+            final boolean covered = active.stream().anyMatch(
+                    a -> !day.isBefore(a.getStartInclusive()) && !day.isAfter(a.getEndInclusive()));
+            if (!covered) {
+                return false;
+            }
+            d = d.plusDays(1);
+        }
+        return true;
     }
 
     @Override

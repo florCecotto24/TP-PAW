@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.form;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.WallDateTimeParsing;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,7 +12,8 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,16 +63,25 @@ public class PublishCarForm {
     @Size(max = 200, message = "Description must be at most 200 characters")
     private String description;
 
+    @NotNull(message = "Check-in time is required")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
+    private LocalTime checkInTime;
+
+    @NotNull(message = "Check-out time is required")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
+    private LocalTime checkOutTime;
+
     @NotNull(message = "At least one image is required")
     @Size(min = 1, max = 8, message = "Upload between 1 and 8 images")
     private MultipartFile[] pictures;
 
+    @Size(max = 10, message = "At most 10 availability periods")
     private List<AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public PublishCarForm() {
-        for (int i = 0; i < 5; i++) {
-            availabilityRows.add(new AvailabilityRow());
-        }
+        checkInTime = LocalTime.of(10, 0);
+        checkOutTime = LocalTime.of(18, 0);
+        availabilityRows.add(new AvailabilityRow());
     }
 
     public List<AvailabilityPeriod> toAvailabilityPeriods() {
@@ -86,24 +95,24 @@ public class PublishCarForm {
     }
 
     public static class AvailabilityRow {
-        @DateTimeFormat(pattern = WallDateTimeParsing.WALL_INPUT_DATE_TIME_PATTERN)
-        private LocalDateTime from;
-        @DateTimeFormat(pattern = WallDateTimeParsing.WALL_INPUT_DATE_TIME_PATTERN)
-        private LocalDateTime until;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate from;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate until;
 
-        public LocalDateTime getFrom() {
+        public LocalDate getFrom() {
             return from;
         }
 
-        public void setFrom(final LocalDateTime from) {
+        public void setFrom(final LocalDate from) {
             this.from = from;
         }
 
-        public LocalDateTime getUntil() {
+        public LocalDate getUntil() {
             return until;
         }
 
-        public void setUntil(final LocalDateTime until) {
+        public void setUntil(final LocalDate until) {
             this.until = until;
         }
     }
@@ -218,5 +227,21 @@ public class PublishCarForm {
 
     public void setOwnerEmail(final String ownerEmail) {
         this.ownerEmail = ownerEmail;
+    }
+
+    public LocalTime getCheckInTime() {
+        return checkInTime;
+    }
+
+    public void setCheckInTime(final LocalTime checkInTime) {
+        this.checkInTime = checkInTime;
+    }
+
+    public LocalTime getCheckOutTime() {
+        return checkOutTime;
+    }
+
+    public void setCheckOutTime(final LocalTime checkOutTime) {
+        this.checkOutTime = checkOutTime;
     }
 }

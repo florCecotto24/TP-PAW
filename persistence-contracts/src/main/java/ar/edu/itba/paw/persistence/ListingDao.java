@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,7 +19,9 @@ public interface ListingDao {
             Listing.Status status,
             BigDecimal dayPrice,
             String startPoint,
-            String description);
+            String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime);
 
     Optional<Listing> getListingById(long id);
 

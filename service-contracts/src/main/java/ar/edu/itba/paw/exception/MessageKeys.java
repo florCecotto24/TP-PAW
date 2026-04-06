@@ -15,6 +15,8 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_DATES_INVALID_FORMAT = "reservation.rider.datesInvalidFormat";
     public static final String RESERVATION_RIDER_END_NOT_AFTER_START = "reservation.rider.endNotAfterStart";
     public static final String RESERVATION_RIDER_OUTSIDE_AVAILABILITY = "reservation.rider.outsideAvailability";
+    public static final String RESERVATION_RIDER_AVAILABILITY_PERIOD_REQUIRED =
+            "reservation.rider.availabilityPeriodRequired";
     public static final String RESERVATION_FORM_CAR_NAME_REQUIRED = "reservation.form.carNameRequired";
 
     /* user */

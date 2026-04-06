@@ -9,10 +9,11 @@ import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
@@ -20,10 +21,11 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
     private static final RowMapper<ListingAvailability> ROW_MAPPER = (rs, rowNum) -> new ListingAvailability(
             rs.getLong("id"),
             rs.getLong("listing_id"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"),
+            JdbcDateTimeUtils.readLocalDate(rs, "start_date"),
+            JdbcDateTimeUtils.readLocalDate(rs, "end_date"),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at")
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"),
+            rs.getBoolean("is_active")
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -38,30 +40,59 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
     }
 
     @Override
-    public ListingAvailability create(final long listingId, final OffsetDateTime startDate,
-            final OffsetDateTime endDate) {
+    public ListingAvailability create(final long listingId, final LocalDate startInclusive,
+            final LocalDate endInclusive) {
         final Timestamp now = JdbcDateTimeUtils.nowTimestamp();
         final Map<String, Object> values = new HashMap<>();
         values.put("listing_id", listingId);
-        values.put("start_date", JdbcDateTimeUtils.toTimestamp(startDate));
-        values.put("end_date", JdbcDateTimeUtils.toTimestamp(endDate));
+        values.put("start_date", JdbcDateTimeUtils.toSqlDate(startInclusive));
+        values.put("end_date", JdbcDateTimeUtils.toSqlDate(endInclusive));
         values.put("created_at", now);
         values.put("updated_at", now);
+        values.put("is_active", Boolean.TRUE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
         return new ListingAvailability(
                 id.longValue(),
                 listingId,
-                startDate,
-                endDate,
+                startInclusive,
+                endInclusive,
                 JdbcDateTimeUtils.toOffsetDateTime(now),
-                JdbcDateTimeUtils.toOffsetDateTime(now));
+                JdbcDateTimeUtils.toOffsetDateTime(now),
+                true);
     }
 
     @Override
     public List<ListingAvailability> findByListingId(final long listingId) {
         return jdbcTemplate.query(
-                "SELECT * FROM listing_availability WHERE listing_id = ? ORDER BY start_date ASC",
+                "SELECT * FROM listing_availability WHERE listing_id = ? AND is_active = TRUE ORDER BY start_date ASC",
                 ROW_MAPPER,
                 listingId);
+    }
+
+    @Override
+    public Optional<ListingAvailability> findActiveById(final long id) {
+        return jdbcTemplate.query(
+                "SELECT * FROM listing_availability WHERE id = ? AND is_active = TRUE",
+                ROW_MAPPER,
+                id).stream().findFirst();
+    }
+
+    @Override
+    public void setActive(final long id, final boolean active) {
+        jdbcTemplate.update(
+                "UPDATE listing_availability SET is_active = ?, updated_at = ? WHERE id = ?",
+                active,
+                JdbcDateTimeUtils.nowTimestamp(),
+                id);
+    }
+
+    @Override
+    public void updateDateRange(final long id, final LocalDate startInclusive, final LocalDate endInclusive) {
+        jdbcTemplate.update(
+                "UPDATE listing_availability SET start_date = ?, end_date = ?, updated_at = ? WHERE id = ?",
+                JdbcDateTimeUtils.toSqlDate(startInclusive),
+                JdbcDateTimeUtils.toSqlDate(endInclusive),
+                JdbcDateTimeUtils.nowTimestamp(),
+                id);
     }
 }

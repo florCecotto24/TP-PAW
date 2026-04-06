@@ -5,20 +5,29 @@ import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
@@ -28,6 +37,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
+    private final ListingAvailabilityDao listingAvailabilityDao;
     private final UserService userService;
     private final EmailService emailService;
 
@@ -35,10 +45,12 @@ public class ReservationServiceImpl implements ReservationService {
     public ReservationServiceImpl(
             final ReservationDao reservationDao,
             final ListingService listingService,
+            final ListingAvailabilityDao listingAvailabilityDao,
             final UserService userService,
             final EmailService emailService) {
         this.reservationDao = reservationDao;
         this.listingService = listingService;
+        this.listingAvailabilityDao = listingAvailabilityDao;
         this.userService = userService;
         this.emailService = emailService;
     }
@@ -147,6 +159,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     public Reservation submitRiderReservation(
             final String email,
             final String name,
@@ -176,12 +189,102 @@ public class ReservationServiceImpl implements ReservationService {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
         }
         final User rider = userService.findOrCreatePublisher(email, name, surname);
-        return createReservation(
+        final Reservation reservation = createReservation(
                 rider.getId(),
                 listingId,
                 startDate,
                 endDate,
                 Reservation.Status.ACCEPTED);
+        consumeAvailabilityForReservation(listingId, startDate, endDate);
+        return reservation;
+    }
+
+    private void consumeAvailabilityForReservation(
+            final long listingId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate) {
+        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
+        final LocalDate p = startDate.toInstant().atZone(wall).toLocalDate();
+        final LocalDate r = endDate.toInstant().atZone(wall).toLocalDate();
+        final List<ListingAvailability> active = new ArrayList<>(listingAvailabilityDao.findByListingId(listingId));
+        if (!everyWallDayCoveredByAvailabilities(p, r, active)) {
+            throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
+        }
+        final List<ListingAvailability> overlapping = active.stream()
+                .filter(a -> !a.getEndInclusive().isBefore(p) && !a.getStartInclusive().isAfter(r))
+                .sorted(Comparator.comparing(ListingAvailability::getStartInclusive))
+                .collect(Collectors.toList());
+        for (final ListingAvailability row : overlapping) {
+            consumeAvailabilitySliceOnRow(listingId, row, p, r);
+        }
+        mergeAdjacentActiveAvailabilities(listingId);
+    }
+
+    private static boolean everyWallDayCoveredByAvailabilities(
+            final LocalDate pickupDay,
+            final LocalDate returnDay,
+            final List<ListingAvailability> active) {
+        LocalDate d = pickupDay;
+        while (!d.isAfter(returnDay)) {
+            final LocalDate day = d;
+            final boolean covered = active.stream().anyMatch(
+                    a -> !day.isBefore(a.getStartInclusive()) && !day.isAfter(a.getEndInclusive()));
+            if (!covered) {
+                return false;
+            }
+            d = d.plusDays(1);
+        }
+        return true;
+    }
+
+    private void consumeAvailabilitySliceOnRow(
+            final long listingId,
+            final ListingAvailability row,
+            final LocalDate reservationStart,
+            final LocalDate reservationEnd) {
+        final LocalDate a = row.getStartInclusive();
+        final LocalDate b = row.getEndInclusive();
+        final LocalDate overlapStart = a.isAfter(reservationStart) ? a : reservationStart;
+        final LocalDate overlapEnd = b.isBefore(reservationEnd) ? b : reservationEnd;
+        if (overlapStart.isAfter(overlapEnd)) {
+            return;
+        }
+        if (row.getListingId() != listingId) {
+            throw new IllegalStateException("listing_availability.listing_id mismatch");
+        }
+        listingAvailabilityDao.setActive(row.getId(), false);
+        if (a.isBefore(overlapStart)) {
+            listingAvailabilityDao.create(listingId, a, overlapStart.minusDays(1));
+        }
+        if (b.isAfter(overlapEnd)) {
+            listingAvailabilityDao.create(listingId, overlapEnd.plusDays(1), b);
+        }
+    }
+
+    private void mergeAdjacentActiveAvailabilities(final long listingId) {
+        while (true) {
+            final List<ListingAvailability> active = listingAvailabilityDao.findByListingId(listingId);
+            if (active.size() < 2) {
+                return;
+            }
+            boolean merged = false;
+            for (int i = 0; i < active.size() - 1; i++) {
+                final ListingAvailability a = active.get(i);
+                final ListingAvailability b = active.get(i + 1);
+                if (!b.getStartInclusive().isAfter(a.getEndInclusive().plusDays(1))) {
+                    final LocalDate newEnd = a.getEndInclusive().isBefore(b.getEndInclusive())
+                            ? b.getEndInclusive()
+                            : a.getEndInclusive();
+                    listingAvailabilityDao.updateDateRange(a.getId(), a.getStartInclusive(), newEnd);
+                    listingAvailabilityDao.setActive(b.getId(), false);
+                    merged = true;
+                    break;
+                }
+            }
+            if (!merged) {
+                return;
+            }
+        }
     }
 
     @Override

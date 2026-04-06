@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,6 +82,8 @@ public class CarServiceImpl implements CarService {
             final BigDecimal pricePerDay,
             final String startPoint,
             final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime,
             final List<AvailabilityPeriod> periods,
             final List<ImageUpload> images) {
         final User publisher = userService.findOrCreatePublisher(ownerEmail, ownerName, ownerSurname);
@@ -98,6 +101,8 @@ public class CarServiceImpl implements CarService {
                 pricePerDay,
                 startPoint,
                 description,
+                checkInTime,
+                checkOutTime,
                 periods);
 
         int displayOrder = 1;

@@ -3,6 +3,8 @@ package ar.edu.itba.paw.persistence;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -21,6 +23,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.models.HomeListingCards;
@@ -46,7 +49,9 @@ public class ListingJdbcDao implements ListingDao {
             Listing.Status.valueOf(rs.getString("status").toUpperCase()),
             rs.getBigDecimal("day_price"),
             rs.getString("start_point"),
-            rs.getString("description")
+            rs.getString("description"),
+            JdbcDateTimeUtils.readLocalTime(rs, "check_in_time"),
+            JdbcDateTimeUtils.readLocalTime(rs, "check_out_time")
     );
 
     private static final RowMapper<ListingCard> LISTING_CARD_ROW_MAPPER = (rs, rowNum) -> new ListingCard(
@@ -75,7 +80,9 @@ public class ListingJdbcDao implements ListingDao {
                         Listing.Status.valueOf(rs.getString("status").toUpperCase()),
                         rs.getBigDecimal("day_price"),
                         rs.getString("start_point"),
-                        rs.getString("description"));
+                        rs.getString("description"),
+                        JdbcDateTimeUtils.readLocalTime(rs, "check_in_time"),
+                        JdbcDateTimeUtils.readLocalTime(rs, "check_out_time"));
                 car = new Car(
                         rs.getLong("car_id"),
                         rs.getLong("owner_id"),
@@ -108,10 +115,11 @@ public class ListingJdbcDao implements ListingDao {
                 availabilities.put(laId, new ListingAvailability(
                         laId,
                         rs.getLong("listing_id"),
-                        JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"),
-                        JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"),
+                        JdbcDateTimeUtils.readLocalDate(rs, "start_date"),
+                        JdbcDateTimeUtils.readLocalDate(rs, "end_date"),
                         JdbcDateTimeUtils.readOffsetDateTime(rs, "la_created_at"),
-                        JdbcDateTimeUtils.readOffsetDateTime(rs, "la_updated_at")));
+                        JdbcDateTimeUtils.readOffsetDateTime(rs, "la_updated_at"),
+                        rs.getBoolean("la_is_active")));
             }
         }
 
@@ -143,7 +151,9 @@ public class ListingJdbcDao implements ListingDao {
             final Listing.Status status,
             final BigDecimal dayPrice,
             final String startPoint,
-            final String description) {
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime) {
         final Timestamp now = JdbcDateTimeUtils.nowTimestamp();
         final Map<String, Object> values = new HashMap<>();
         values.put("title", title);
@@ -154,6 +164,8 @@ public class ListingJdbcDao implements ListingDao {
         values.put("day_price", dayPrice);
         values.put("start_point", startPoint);
         values.put("description", description);
+        values.put("check_in_time", java.sql.Time.valueOf(checkInTime));
+        values.put("check_out_time", java.sql.Time.valueOf(checkOutTime));
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
         return new Listing(
@@ -165,7 +177,9 @@ public class ListingJdbcDao implements ListingDao {
                 status,
                 dayPrice,
                 startPoint,
-                description);
+                description,
+                checkInTime,
+                checkOutTime);
     }
 
     @Override
@@ -178,17 +192,18 @@ public class ListingJdbcDao implements ListingDao {
         return jdbcTemplate.query(
                 "SELECT l.id AS listing_id, l.title, l.created_at AS listing_created_at, "
                         + "l.updated_at AS listing_updated_at, l.status, l.day_price, l.start_point, l.description, "
+                        + "l.check_in_time, l.check_out_time, "
                         + "c.id AS car_id, c.owner_id, c.plate, c.brand, c.model, c.type, c.transmission, c.powertrain, "
                         + "u.id AS owner_user_id, u.email AS owner_email, u.forename AS owner_forename, u.surname AS owner_surname, "
                         + "cp.id AS car_picture_id, cp.image_id, cp.display_order, "
                         + "cp.created_at AS cp_created_at, cp.updated_at AS cp_updated_at, "
                         + "la.id AS availability_id, la.start_date, la.end_date, "
-                        + "la.created_at AS la_created_at, la.updated_at AS la_updated_at "
+                        + "la.created_at AS la_created_at, la.updated_at AS la_updated_at, la.is_active AS la_is_active "
                         + "FROM listings l "
                         + "JOIN cars c ON c.id = l.car_id "
                         + "JOIN users u ON u.id = c.owner_id "
                         + "LEFT JOIN car_pictures cp ON cp.car_id = c.id "
-                        + "LEFT JOIN listing_availability la ON la.listing_id = l.id "
+                        + "LEFT JOIN listing_availability la ON la.listing_id = l.id AND la.is_active = TRUE "
                         + "WHERE l.id = ? "
                         + "ORDER BY cp.display_order ASC, la.start_date ASC",
                 LISTING_DETAIL_EXTRACTOR, id);
@@ -371,21 +386,27 @@ public class ListingJdbcDao implements ListingDao {
         if (criteria.hasAvailabilityRange()) {
             final Instant fromInstant = criteria.getAvailabilityRangeStart();
             final Instant untilExclusive = criteria.getAvailabilityRangeEndExclusive();
-            final Timestamp fromStart = Timestamp.from(fromInstant);
-            final Timestamp untilTs = Timestamp.from(untilExclusive);
+            final LocalDate availFromDay = fromInstant.atZone(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+            final LocalDate availUntilDay = untilExclusive.minusNanos(1).atZone(AvailabilityPeriod.WALL_ZONE)
+                    .toLocalDate();
 
-            sql.append("AND EXISTS (")
+            sql.append("AND NOT EXISTS (")
+                    .append("SELECT 1 FROM generate_series(CAST(:availStart AS TIMESTAMP), CAST(:availEnd AS TIMESTAMP), ")
+                    .append("INTERVAL '1 day') AS gs(wall_day) ")
+                    .append("WHERE NOT EXISTS (")
                     .append("SELECT 1 FROM listing_availability la WHERE la.listing_id = l.id ")
-                    .append("AND la.start_date <= :availEnd AND la.end_date >= :availStart) ");
-            params.addValue("availStart", fromStart);
-            params.addValue("availEnd", untilTs);
+                    .append("AND la.is_active = TRUE ")
+                    .append("AND la.start_date <= CAST(gs.wall_day AS DATE) ")
+                    .append("AND la.end_date >= CAST(gs.wall_day AS DATE))) ");
+            params.addValue("availStart", JdbcDateTimeUtils.toSqlDate(availFromDay));
+            params.addValue("availEnd", JdbcDateTimeUtils.toSqlDate(availUntilDay));
 
             sql.append("AND NOT EXISTS (")
                     .append("SELECT 1 FROM reservations r WHERE r.listing_id = l.id ")
                     .append("AND r.status IN ('accepted', 'started') ")
                     .append("AND r.start_date < :resWindowEnd AND r.end_date > :resWindowStart) ");
-            params.addValue("resWindowEnd", untilTs);
-            params.addValue("resWindowStart", fromStart);
+            params.addValue("resWindowEnd", Timestamp.from(untilExclusive));
+            params.addValue("resWindowStart", Timestamp.from(fromInstant));
         }
     }
 
