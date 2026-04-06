@@ -1,5 +1,6 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="fullStars" required="true" type="java.lang.Integer" %>
 <%@ attribute name="halfStar" required="false" type="java.lang.Boolean" %>
 
@@ -13,7 +14,8 @@
 </c:if>
 <c:set var="emptyCount" value="${5 - fullStars - extraHalf}" />
 
-<div class="reviewStarsRow d-inline-flex align-items-center gap-0" role="img" aria-label="Rating ${fullStars} out of 5">
+<spring:message code="reviewStarsRow.ratingAriaLabel" arguments="${fullStars}" var="ratingAria"/>
+<div class="reviewStarsRow d-inline-flex align-items-center gap-0" role="img" aria-label="${ratingAria}">
     <c:forEach begin="1" end="${fullStars}" var="ignored">
         <i class="bi bi-star-fill text-primary" aria-hidden="true"></i>
     </c:forEach>

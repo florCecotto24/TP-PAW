@@ -1,4 +1,5 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <nav class="navbar navbar-expand shadow-sm fixed-top mb-0">
     <div class="container-fluid">
@@ -8,10 +9,10 @@
         <div class="d-flex flex-row justify-content-end align-items-center">
             <ul class="navbar-nav nav-pills align-items-center mb-0">
                 <li class="nav-item my-nav-item">
-                    <a class="nav-link d-flex align-items-center ${activeTab == 'search' ? 'active' : ''}" aria-current="page" href="${pageContext.request.contextPath}/search">Explore</a>
+                    <a class="nav-link d-flex align-items-center ${activeTab == 'search' ? 'active' : ''}" aria-current="page" href="${pageContext.request.contextPath}/search"><spring:message code="navbar.explore"/></a>
                 </li>
                 <li class="nav-item px-1">
-                    <a class="nav-link d-flex align-items-center ${activeTab == 'publish-car' ? 'active' : ''}" href="${pageContext.request.contextPath}/publish-car">Publish</a>
+                    <a class="nav-link d-flex align-items-center ${activeTab == 'publish-car' ? 'active' : ''}" href="${pageContext.request.contextPath}/publish-car"><spring:message code="navbar.publish"/></a>
                 </li>
             </ul>
         </div>

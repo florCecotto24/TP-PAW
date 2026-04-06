@@ -1,10 +1,11 @@
 <%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Ryden - Explore</title>
+        <title><spring:message code="search.pageTitle"/></title>
         <%@include file="header.jsp"%>
     </head>
     <body class="has-fixed-navbar">
@@ -14,29 +15,37 @@
                 <paw:searchBar/>
                 <nav class="navbar navbar-expand-lg d-flex justify-content-center align-items-center border py-2 flex-wrap gap-1"
                      aria-label="Search filters">
+                    <spring:message code="search.filter.category" var="categoryLabel"/>
+                    <spring:message code="search.filter.category.helper" var="categoryHelper"/>
                     <paw:exploreFilterDropdown
-                            filterLabel="Category"
-                            helperText="Body style from the listing (sedan, hatchback, SUV, etc.). Several choices are combined with OR."
+                            filterLabel="${categoryLabel}"
+                            helperText="${categoryHelper}"
                             paramName="category"
                             ariaGroup="category"
                             options="${categoryFilterOptions}"/>
                     <span class="vr d-none d-md-inline-block align-self-stretch my-2 mx-1"></span>
+                    <spring:message code="search.filter.transmission" var="transmissionLabel"/>
+                    <spring:message code="search.filter.transmission.helper" var="transmissionHelper"/>
                     <paw:exploreFilterDropdown
-                            filterLabel="Transmission"
-                            helperText="Gearbox type. You can pick more than one (e.g. manual and automatic)."
+                            filterLabel="${transmissionLabel}"
+                            helperText="${transmissionHelper}"
                             paramName="transmission"
                             ariaGroup="transmission"
                             options="${transmissionFilterOptions}"/>
+                    <spring:message code="search.filter.powertrain" var="powertrainLabel"/>
+                    <spring:message code="search.filter.powertrain.helper" var="powertrainHelper"/>
                     <paw:exploreFilterDropdown
-                            filterLabel="Engine / fuel"
-                            helperText="Engine or fuel type of the vehicle."
+                            filterLabel="${powertrainLabel}"
+                            helperText="${powertrainHelper}"
                             paramName="powertrain"
                             ariaGroup="powertrain"
                             options="${powertrainFilterOptions}"/>
                     <span class="vr d-none d-md-inline-block align-self-stretch my-2 mx-1"></span>
+                    <spring:message code="search.filter.price" var="priceLabel"/>
+                    <spring:message code="search.filter.price.helper" var="priceHelper"/>
                     <paw:exploreFilterDropdown
-                            filterLabel="Price"
-                            helperText="Free: zero price per day. Paid: price greater than zero."
+                            filterLabel="${priceLabel}"
+                            helperText="${priceHelper}"
                             paramName="price"
                             ariaGroup="price"
                             options="${priceFilterOptions}"/>
@@ -44,7 +53,7 @@
             </form>
             <div class="container">
                 <div class="mb-6 pt-5">
-                    <h4 class="font-semibold mb-1">${fn:length(results)} cars available</h4>
+                    <h4 class="font-semibold mb-1"><spring:message code="search.resultsCount" arguments="${fn:length(results)}"/></h4>
                 </div>
 
                 <div class="text-center">

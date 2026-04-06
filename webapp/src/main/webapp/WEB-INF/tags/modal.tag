@@ -15,6 +15,7 @@
 <%@ attribute name="closable" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="showFooter" required="false" type="java.lang.Boolean" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <c:set var="modalSize" value="${not empty size ? size : 'md'}" />
 <c:set var="modalVariant" value="${not empty variant ? variant : 'default'}" />
@@ -39,7 +40,8 @@
     <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="${id}-title" tabindex="-1">
         <div class="modal__content">
             <c:if test="${modalClosable}">
-                <button type="button" class="modal__close" aria-label="Cerrar modal" data-modal-close="${id}">
+                <spring:message code="modal.closeAriaLabel" var="closeModalAria"/>
+                <button type="button" class="modal__close" aria-label="${closeModalAria}" data-modal-close="${id}">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </c:if>

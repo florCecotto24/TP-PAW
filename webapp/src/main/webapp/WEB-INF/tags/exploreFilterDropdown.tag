@@ -1,6 +1,7 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <%@ attribute name="filterLabel" required="true" type="java.lang.String" %>
 <%@ attribute name="helperText" required="false" type="java.lang.String" %>
@@ -20,20 +21,21 @@
             data-bs-auto-close="outside"
             aria-expanded="false"
             aria-haspopup="true"
-            aria-label="${filterLabel}. Open filter menu.">
-        <span class="explore-filter-dropdown__label">${filterLabel}</span>
+            <spring:message code="exploreFilterDropdown.ariaLabel" arguments="${filterLabel}" var="ddAriaLabel"/>
+            aria-label="${ddAriaLabel}">
+        <span class="explore-filter-dropdown__label"><c:out value="${filterLabel}"/></span>
         <c:if test="${selCount gt 0}">
-            <span class="badge text-bg-primary rounded-pill">${selCount}</span>
+            <span class="badge text-bg-primary rounded-pill"><c:out value="${selCount}"/></span>
         </c:if>
     </button>
     <ul class="dropdown-menu shadow explore-filter-dropdown__panel p-0"
         aria-labelledby="explore_dd_${ariaGroup}">
         <li>
-            <h6 class="dropdown-header mb-0">${filterLabel}</h6>
+            <h6 class="dropdown-header mb-0"><c:out value="${filterLabel}"/></h6>
         </li>
         <c:if test="${not empty helperText}">
             <li>
-                <span class="dropdown-item-text small text-body-secondary px-3 pb-2 d-block">${helperText}</span>
+                <span class="dropdown-item-text small text-body-secondary px-3 pb-2 d-block"><c:out value="${helperText}"/></span>
             </li>
         </c:if>
         <li><hr class="dropdown-divider my-0"></li>
@@ -50,7 +52,7 @@
                            name="${paramName}" value="${e.key}"
                            id="explore_${ariaGroup}_${e.key}"
                            <c:if test="${isOptSel}">checked="checked"</c:if> />
-                    <span class="small">${e.value}</span>
+                    <span class="small"><c:out value="${e.value}"/></span>
                 </label>
             </li>
         </c:forEach>

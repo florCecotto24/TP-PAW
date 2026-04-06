@@ -1,5 +1,6 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="listingId" required="true" type="java.lang.Long" %>
 <%@ attribute name="dailyPrice" required="true" type="java.lang.String" %>
 <%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
@@ -23,27 +24,29 @@
 
     <div class="d-flex align-items-baseline gap-2 mb-3">
         <span class="detail-price-amount fw-bold">$<c:out value="${dailyPrice}"/></span>
-        <span class="text-secondary">/ per day</span>
+        <span class="text-secondary"><spring:message code="detailReservationPanel.perDay"/></span>
     </div>
 
-    <h2 class="h6 fw-semibold mb-2">Pickup and return</h2>
+    <h2 class="h6 fw-semibold mb-2"><spring:message code="detailReservationPanel.pickupReturn"/></h2>
     <p class="form-text small mb-2">
-        <span class="text-muted">Scheduled for this listing (Argentina)</span><br/>
-        <strong>Pick up at:</strong>
+        <span class="text-muted"><spring:message code="detailReservationPanel.scheduledRegion"/></span><br/>
+        <strong><spring:message code="detailReservationPanel.pickupAt"/></strong>
         <c:out value="${not empty pickupTime ? pickupTime : '—'}"/>
         <span class="text-muted mx-1">·</span>
-        <strong>Return by:</strong>
+        <strong><spring:message code="detailReservationPanel.returnBy"/></strong>
         <c:out value="${not empty returnTime ? returnTime : '—'}"/>
     </p>
     <div class="mb-3">
-        <label class="form-label small mb-2" for="detail_daterange">Pickup and return dates</label>
+        <label class="form-label small mb-2" for="detail_daterange"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
+        <spring:message code="detailReservationPanel.dates.placeholder" var="datesPlaceholder"/>
+        <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
         <input
             type="text"
             id="detail_daterange"
             class="form-control"
-            placeholder="Select pickup day and return day"
+            placeholder="${datesPlaceholder}"
             readonly
-            aria-label="Select pickup and return calendar days">
+            aria-label="${datesAriaLabel}">
         <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
         <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
     </div>
@@ -51,7 +54,7 @@
     <div class="d-flex align-items-start gap-2 mb-3">
         <i class="bi bi-geo-alt text-secondary mt-1" aria-hidden="true"></i>
         <div class="flex-grow-1 w-100">
-            <small class="text-muted d-block mb-1">Delivery location</small>
+            <small class="text-muted d-block mb-1"><spring:message code="detailReservationPanel.deliveryLocation"/></small>
             <p class="mb-0 fw-medium"><c:out value="${deliveryLocation}"/></p>
         </div>
     </div>
@@ -62,19 +65,21 @@
             <span id="detail_subtotal_amount"></span>
         </div>
         <div class="d-flex justify-content-between align-items-baseline mb-4">
-            <span class="fw-semibold">Total</span>
+            <span class="fw-semibold"><spring:message code="detailReservationPanel.total"/></span>
             <span class="detail-total-amount fw-bold fs-4" id="detail_total_amount"></span>
         </div>
     </div>
 
     <div class="alert alert-danger mb-3" id="detail_date_alert" role="alert" hidden>
-        Please select valid pickup and return dates to continue.
+        <spring:message code="detailReservationPanel.dateAlert"/>
     </div>
 
-    <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">Start reservation</button>
+    <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">
+        <spring:message code="detailReservationPanel.startReservation"/>
+    </button>
     </form>
 
     <p class="text-center text-secondary small mb-0 text-uppercase detail-reservation-disclaimer">
-        You won't be charged yet
+        <spring:message code="detailReservationPanel.disclaimer"/>
     </p>
 </div>

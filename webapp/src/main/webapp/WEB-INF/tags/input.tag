@@ -22,7 +22,7 @@
 <div class="mb-3">
     <c:if test="${not empty label}">
         <label for="${id}" class="form-label custom-label">
-            ${label}
+            <c:out value="${label}"/>
             <c:if test="${required}">
                 <span class="text-danger">*</span>
             </c:if>

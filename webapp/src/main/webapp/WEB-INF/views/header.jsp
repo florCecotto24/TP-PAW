@@ -1,6 +1,8 @@
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ryden</title>
+<title><spring:message code="app.title"/></title>
 <link rel="icon" type="image/svg+xml" href="${pageContext.request.contextPath}/assets/images/Ryden_logo.ico">
 
 <!-- Google Font: Noto Sans -->

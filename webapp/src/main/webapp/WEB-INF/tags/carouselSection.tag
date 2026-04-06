@@ -1,6 +1,7 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="cars" required="true" type="java.util.List" %>
 <%@ attribute name="title" required="true" type="java.lang.String" %>
 <%@ attribute name="subtitle" required="true" type="java.lang.String" %>
@@ -11,7 +12,7 @@
 <c:choose>
     <c:when test="${empty cars}">
         <div class="alert-project" role="alert">
-            No vehicles available at the moment.
+            <spring:message code="carouselSection.noVehicles"/>
         </div>
     </c:when>
     <c:otherwise>

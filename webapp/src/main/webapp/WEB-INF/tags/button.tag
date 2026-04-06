@@ -8,8 +8,10 @@
 <%@ attribute name="id" required="false" %>
 <%@ attribute name="cssClass" required="false" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
-<c:set var="btnText" value="${not empty text ? text : 'Button'}"/>
+<spring:message code="common.button" var="defaultBtnText"/>
+<c:set var="btnText" value="${not empty text ? text : defaultBtnText}"/>
 <c:set var="btnType" value="${not empty type ? type : 'primary'}"/>
 <c:set var="btnSize" value="${not empty size ? size : 'md'}"/>
 <c:set var="btnDisabled" value="${disabled ne null ? disabled : false}"/>

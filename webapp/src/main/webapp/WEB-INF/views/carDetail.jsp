@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,12 +39,12 @@
             </div>
             <c:if test="${not empty listing.description}">
                 <section>
-                    <h2 class="h5 fw-bold mb-3">Description</h2>
+                    <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.description"/></h2>
                     <p class="mb-0"><c:out value="${listing.description}"/></p>
                 </section>
             </c:if>
             <section>
-                <h2 class="h5 fw-bold mb-3">Specifications</h2>
+                <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.specification"/></h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">
                     <div class="col">
                         <paw:specCard icon="gear-wide-connected" label="${car.transmission.name()}"/>
@@ -54,13 +55,13 @@
                 </div>
             </section>
             <section id="availabilitySection">
-                <h2 class="h5 fw-bold mb-3">Booking</h2>
+                <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.booking"/></h2>
                 <c:choose>
                     <c:when test="${hasBookableDays}">
-                        <p class="text-secondary mb-0">Available days are shown in the calendar on the right.</p>
+                        <p class="text-secondary mb-0"><spring:message code="carDetail.hasBookableDays"/></p>
                     </c:when>
                     <c:otherwise>
-                        <p class="text-secondary mb-0">This listing has no bookable dates at the moment.</p>
+                        <p class="text-secondary mb-0"><spring:message code="carDetail.noBookableDays"/></p>
                     </c:otherwise>
                 </c:choose>
             </section>
@@ -88,7 +89,7 @@
         <paw:similarVehiclesHeader/>
         <c:choose>
             <c:when test="${empty similarListings}">
-                <p class="text-secondary text-center mb-0">Similar listings will appear here when available.</p>
+                <p class="text-secondary text-center mb-0"><spring:message code="carDetail.similarListingsWhenAvailable"/></p>
             </c:when>
             <c:otherwise>
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">

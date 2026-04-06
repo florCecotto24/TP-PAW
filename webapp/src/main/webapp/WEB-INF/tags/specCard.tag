@@ -5,5 +5,5 @@
 
 <div class="spec-card border rounded-4 p-3 text-center h-100 d-flex flex-column align-items-center justify-content-center gap-2">
     <i class="bi bi-${icon} fs-3 text-primary" aria-hidden="true"></i>
-    <span class="small fw-medium text-dark">${label}</span>
+    <span class="small fw-medium text-dark"><c:out value="${label}"/></span>
 </div>

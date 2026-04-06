@@ -1,5 +1,6 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="seeAllHref" required="false" type="java.lang.String" %>
 <%@ attribute name="title" required="false" type="java.lang.String" %>
 <%@ attribute name="subtitle" required="false" type="java.lang.String" %>
@@ -9,10 +10,12 @@
     <c:set var="seeAllHref" value="${pageContext.request.contextPath}/search" />
 </c:if>
 <c:if test="${empty title}">
-    <c:set var="title" value="Cheapest vehicles" />
+    <spring:message code="carouselHeader.defaultTitle" var="defaultTitle"/>
+    <c:set var="title" value="${defaultTitle}" />
 </c:if>
 <c:if test="${empty subtitle}">
-    <c:set var="subtitle" value="Discover our cheapest options" />
+    <spring:message code="carouselHeader.defaultSubtitle" var="defaultSubtitle"/>
+    <c:set var="subtitle" value="${defaultSubtitle}" />
 </c:if>
 <c:if test="${empty id}">
     <c:set var="id" value="cheapestCarsCarousel" />

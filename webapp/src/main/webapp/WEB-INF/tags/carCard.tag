@@ -1,5 +1,6 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <%@ attribute name="model" required="true" %>
 <%@ attribute name="brand" required="true" %>
@@ -13,10 +14,12 @@
 </c:if>
 <c:choose>
     <c:when test="${pricePeriod eq 'day'}">
-        <c:set var="pricePeriodLabel" value="day" />
+        <spring:message code="common.day" var="dayLabel"/>
+        <c:set var="pricePeriodLabel" value="${dayLabel}" />
     </c:when>
     <c:otherwise>
-        <c:set var="pricePeriodLabel" value="hour" />
+        <spring:message code="common.hour" var="hourLabel"/>
+        <c:set var="pricePeriodLabel" value="${hourLabel}" />
     </c:otherwise>
 </c:choose>
 
@@ -35,15 +38,16 @@
     </div>
     <div class="carcard-info">
         <div class="carcard-info-text text">
-            <h4 class="carcard-brand">${brand}</h4>
-            <p class="carcard-model">${model}</p>
+            <h4 class="carcard-brand"><c:out value="${brand}"/></h4>
+            <p class="carcard-model"><c:out value="${model}"/></p>
         </div>
         <div class="carcard-price text">
-            <p class="carcard-price-amount">$${price}</p>
-            <p>/${pricePeriodLabel}</p>
+            <p class="carcard-price-amount">$<c:out value="${price}"/></p>
+            <p>/<c:out value="${pricePeriodLabel}"/></p>
         </div>
     </div>
     <c:if test="${not empty href}">
-        <a href="${href}" class="stretched-link carcard-stretched-link" aria-label="View ${brand} ${model}"></a>
+        <spring:message code="carCard.viewAriaLabel" arguments="${brand}, ${model}" var="viewAriaLabel"/>
+        <a href="${href}" class="stretched-link carcard-stretched-link" aria-label="${viewAriaLabel}"></a>
     </c:if>
 </div>

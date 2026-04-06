@@ -1,17 +1,20 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="currentLabel" required="true" type="java.lang.String" %>
 <%@ attribute name="homeLabel" required="false" type="java.lang.String" %>
 <%@ attribute name="homeHref" required="false" type="java.lang.String" %>
 
 <c:if test="${empty homeLabel}">
-    <c:set var="homeLabel" value="Home" />
+    <spring:message code="breadcrumbTrail.defaultHomeLabel" var="defaultHomeLabel"/>
+    <c:set var="homeLabel" value="${defaultHomeLabel}" />
 </c:if>
 <c:if test="${empty homeHref}">
     <c:set var="homeHref" value="${pageContext.request.contextPath}/" />
 </c:if>
 
-<nav aria-label="breadcrumb">
+<spring:message code="breadcrumbTrail.ariaLabel" var="breadcrumbAria"/>
+<nav aria-label="${breadcrumbAria}">
     <ol class="breadcrumb mb-2 small">
         <li class="breadcrumb-item">
             <a href="${homeHref}" class="text-decoration-none">${homeLabel}</a>
