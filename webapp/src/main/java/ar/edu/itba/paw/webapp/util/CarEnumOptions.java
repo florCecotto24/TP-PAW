@@ -2,8 +2,10 @@ package ar.edu.itba.paw.webapp.util;
 
 import ar.edu.itba.paw.models.Car;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public final class CarEnumOptions {
 
@@ -27,7 +29,7 @@ public final class CarEnumOptions {
         for (final Car.Type t : Car.Type.values()) {
             m.put(t.name(), getEnumName(t.name()));
         }
-        return m;
+        return sortByLabel(m);
     }
 
     public static Map<String, String> powertrainSelectOptions() {
@@ -36,7 +38,7 @@ public final class CarEnumOptions {
         m.put("ELECTRIC", "Electric");
         m.put("DIESEL", "Diesel");
         m.put("GASOLINE", "Gasoline");
-        return m;
+        return sortByLabel(m);
     }
 
     public static Map<String, String> transmissionSelectOptions() {
@@ -44,6 +46,12 @@ public final class CarEnumOptions {
         m.put("MANUAL", "Manual");
         m.put("AUTOMATIC", "Automatic");
         m.put("SEMI_AUTOMATIC", "Semi-automatic");
-        return m;
+        return sortByLabel(m);
+    }
+
+    private static Map<String, String> sortByLabel(final Map<String, String> unsorted) {
+        return unsorted.entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getValue, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));
     }
 }
