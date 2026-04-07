@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
@@ -177,6 +178,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (!endDate.isAfter(startDate)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_END_NOT_AFTER_START);
         }
+        validateReservationPickupNotBeforeToday(startDate);
         if (!listingService.reservationIntervalFitsListingAvailability(listingId, availabilityId, startDate, endDate)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
         }
@@ -214,6 +216,14 @@ public class ReservationServiceImpl implements ReservationService {
 
     private String formatMoney(final BigDecimal amount) {
         return amount.stripTrailingZeros().toPlainString();
+    }
+
+    private static void validateReservationPickupNotBeforeToday(final OffsetDateTime startDate) {
+        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate startDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        if (startDay.isBefore(today)) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_NOT_FROM_TODAY);
+        }
     }
 
     private static Locale resolveMailMessageLocale() {

@@ -431,7 +431,7 @@
             enableTime: enableTime,
             time_24hr: true,
             dateFormat: dateFormat,
-            minDate: opts.minDate != null ? opts.minDate : undefined,
+            minDate: ('minDate' in opts) ? opts.minDate : 'today',
             maxDate: opts.maxDate != null ? opts.maxDate : undefined,
             defaultDate: opts.defaultDate,
             onChange: function (selectedDates) {
@@ -521,6 +521,7 @@
             mode: 'single',
             enableTime: false,
             dateFormat: 'Y-m-d',
+            minDate: 'today',
             defaultDate: def || undefined,
             onChange: function (selectedDates) {
                 hidden.value = selectedDates.length && window.PawFlatpickrRange

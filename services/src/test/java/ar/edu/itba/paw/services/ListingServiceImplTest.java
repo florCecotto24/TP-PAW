@@ -1,8 +1,14 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingDetail;
+import ar.edu.itba.paw.persistence.CarDao;
+import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
+import ar.edu.itba.paw.persistence.ReservationDao;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +18,10 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,6 +29,15 @@ public class ListingServiceImplTest {
 
     @Mock
     private ListingDao listingDao;
+
+    @Mock
+    private ListingAvailabilityDao listingAvailabilityDao;
+
+    @Mock
+    private CarDao carDao;
+
+    @Mock
+    private ReservationDao reservationDao;
 
     @InjectMocks
     private ListingServiceImpl listingService;
@@ -124,6 +141,5 @@ public class ListingServiceImplTest {
     public void testGetAllListingsWhenThereAreNoListings(){
     }
 
-    
 
 }

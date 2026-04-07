@@ -14,6 +14,7 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_DATES_REQUIRED = "reservation.rider.datesRequired";
     public static final String RESERVATION_RIDER_DATES_INVALID_FORMAT = "reservation.rider.datesInvalidFormat";
     public static final String RESERVATION_RIDER_END_NOT_AFTER_START = "reservation.rider.endNotAfterStart";
+    public static final String RESERVATION_RIDER_DATES_NOT_FROM_TODAY = "reservation.rider.datesNotFromToday";
     public static final String RESERVATION_RIDER_OUTSIDE_AVAILABILITY = "reservation.rider.outsideAvailability";
     public static final String RESERVATION_RIDER_AVAILABILITY_PERIOD_REQUIRED =
             "reservation.rider.availabilityPeriodRequired";
@@ -25,6 +26,7 @@ public final class MessageKeys {
     /* listing */
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";
+    public static final String LISTING_AVAILABILITY_INCLUDES_PAST_DATES = "listing.availability.includesPastDates";
     public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";
     public static final String LISTING_LIMIT_POSITIVE = "listing.limit.positive";
 

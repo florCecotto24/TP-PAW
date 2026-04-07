@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
@@ -14,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
@@ -161,6 +163,10 @@ public class ReservationServiceImplTest {
                         CREATED_AT,
                         UPDATED_AT));
 
+        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
+        final String fromWall = fromDay.atTime(10, 0).toString();
+        final String untilWall = fromDay.plusDays(4).atTime(18, 0).toString();
+
         // 2. Execute
         final Reservation result = reservationService.submitRiderReservation(
                 riderEmail,
@@ -168,8 +174,8 @@ public class ReservationServiceImplTest {
                 riderSurname,
                 listingId,
                 null,
-                "2026-06-01T10:00",
-                "2026-06-05T18:00");
+                fromWall,
+                untilWall);
 
         // 3. Assert
         Assertions.assertEquals(reservationId, result.getId());
@@ -178,7 +184,28 @@ public class ReservationServiceImplTest {
         Assertions.assertEquals(Reservation.Status.ACCEPTED, result.getStatus());
     }
 
+    @Test
+    public void submitRiderReservationWhenWallDatesBeforeTodayThrowsRiderReservationException() {
+        final long listingId = 2L;
+        final Listing listing = Mockito.mock(Listing.class);
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
 
+        final LocalDate yesterday = LocalDate.now(AvailabilityPeriod.WALL_ZONE).minusDays(1);
+        final String fromWall = yesterday.atTime(10, 0).toString();
+        final String untilWall = yesterday.plusDays(2).atTime(18, 0).toString();
+
+        final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
+                () -> reservationService.submitRiderReservation(
+                        "rider@example.com",
+                        "R",
+                        "Rider",
+                        listingId,
+                        null,
+                        fromWall,
+                        untilWall));
+
+        Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_DATES_NOT_FROM_TODAY, thrown.getMessageCode());
+    }
 
     @Test
     public void testGetReservationByIdWhenReservationExists() {

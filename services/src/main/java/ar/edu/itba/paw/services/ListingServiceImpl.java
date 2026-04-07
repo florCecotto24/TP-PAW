@@ -73,6 +73,7 @@ public class ListingServiceImpl implements ListingService {
                 throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
             }
         }
+        validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_CAR_NOT_FOUND, carId));
         final String title = car.getBrand() + " " + car.getModel();
@@ -86,6 +87,15 @@ public class ListingServiceImpl implements ListingService {
                     period.getEndInclusive());
         }
         return listing;
+    }
+
+    private static void validateAvailabilityIncludesNoDatesBeforeToday(final List<AvailabilityPeriod> periods) {
+        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        for (final AvailabilityPeriod period : periods) {
+            if (period.getStartInclusive().isBefore(today)) {
+                throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INCLUDES_PAST_DATES);
+            }
+        }
     }
 
     private static List<AvailabilityPeriod> mergeAdjacentAvailabilityPeriods(final List<AvailabilityPeriod> periods) {
