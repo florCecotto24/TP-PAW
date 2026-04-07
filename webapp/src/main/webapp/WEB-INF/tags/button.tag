@@ -21,7 +21,7 @@
 
 <c:choose>
     <c:when test="${not empty href and not btnDisabled}">
-        <a href="${href}"
+        <a href="<c:out value='${href}'/>"
            class="${classes}"
            <c:if test="${not empty id}">id="${id}"</c:if>
            <c:if test="${not empty onclick}">onclick="${onclick}" </c:if>

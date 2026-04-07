@@ -26,7 +26,7 @@
                             <c:url var="slideSrc" value="${u}" />
                             <div class="carousel-item<c:if test="${st.first}"> active</c:if>">
                                 <spring:message code="carDetailGalleryModal.photoAlt" arguments="${vehicleLabel}, ${st.count}" var="photoAlt"/>
-                                <img src="${slideSrc}" class="d-block w-100 car-detail-carousel-img" alt="${photoAlt}">
+                                <img src="<c:out value='${slideSrc}'/>" class="d-block w-100 car-detail-carousel-img" alt="<c:out value='${photoAlt}'/>">
                             </div>
                         </c:forEach>
                     </div>

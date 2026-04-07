@@ -16,7 +16,7 @@
     <h3 class="h4 fw-bold mb-2"><c:out value="${address}"/></h3>
     <c:choose>
         <c:when test="${not empty mapLinkHref}">
-            <a href="${mapLinkHref}" class="d-inline-flex align-items-center gap-1 text-decoration-none mb-3">
+            <a href="<c:out value='${mapLinkHref}'/>" class="d-inline-flex align-items-center gap-1 text-decoration-none mb-3">
                 <i class="bi bi-map" aria-hidden="true"></i>
                 <spring:message code="pickupLocationBlock.viewMap"/>
             </a>
@@ -30,6 +30,6 @@
     </c:choose>
     <div class="rounded-4 overflow-hidden border pickup-map-placeholder">
         <spring:message code="pickupLocationBlock.mapPreviewAlt" var="mapPreviewAlt"/>
-        <img src="${mapImageSrc}" class="w-100 d-block" alt="${mapPreviewAlt}">
+        <img src="<c:out value='${mapImageSrc}'/>" class="w-100 d-block" alt="<c:out value='${mapPreviewAlt}'/>">
     </div>
 </div>

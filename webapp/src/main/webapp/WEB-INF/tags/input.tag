@@ -30,12 +30,12 @@
     </c:if>
 
     <input
-        type="${type}"
-        name="${name}"
-        id="${id}"
-        class="form-control custom-input ${cssClass}"
-        <c:if test="${not empty placeholder}">placeholder="${placeholder}"</c:if>
-        <c:if test="${not empty value}">value="${value}"</c:if>
+        type="<c:out value='${type}'/>"
+        name="<c:out value='${name}'/>"
+        id="<c:out value='${id}'/>"
+        class="form-control custom-input <c:out value='${cssClass}'/>"
+        <c:if test="${not empty placeholder}">placeholder="<c:out value='${placeholder}'/>"</c:if>
+        <c:if test="${not empty value}">value="<c:out value='${value}'/>"</c:if>
         <c:if test="${required}">required</c:if>
         <c:if test="${disabled}">disabled</c:if>
         <c:if test="${readonly}">readonly</c:if>

@@ -32,7 +32,7 @@
                 </div>
             </c:when>
             <c:otherwise>
-                <img src="${image}" alt="${brand} ${model}">
+                <img src="<c:out value='${image}'/>" alt="<c:out value='${brand} ${model}'/>">
             </c:otherwise>
         </c:choose>
     </div>

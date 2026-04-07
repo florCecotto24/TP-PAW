@@ -32,7 +32,7 @@
                     data-bs-target="#${modalId}"
                     data-carousel-index="0"
                     aria-label="${openGalleryAria}">
-                <img src="${mainSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <img src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
             </button>
         </div>
     </c:when>
@@ -47,7 +47,7 @@
                     data-bs-target="#${modalId}"
                     data-carousel-index="0"
                     aria-label="${openGalleryAria}">
-                <img src="${mainSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <img src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
             </button>
             <button type="button"
                     class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
@@ -55,7 +55,7 @@
                     data-bs-target="#${modalId}"
                     data-carousel-index="1"
                     aria-label="${openGalleryAria}">
-                <img src="${topSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <img src="<c:out value='${topSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
             </button>
         </div>
     </c:when>
@@ -73,7 +73,7 @@
                     data-bs-target="#${modalId}"
                     data-carousel-index="0"
                     aria-label="${openGalleryAria}">
-                <img src="${mainSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <img src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
             </button>
             <button type="button"
                     class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start"
@@ -81,7 +81,7 @@
                     data-bs-target="#${modalId}"
                     data-carousel-index="1"
                     aria-label="${openGalleryAria}">
-                <img src="${topSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <img src="<c:out value='${topSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
             </button>
             <button type="button"
                     class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
@@ -89,7 +89,7 @@
                     data-bs-target="#${modalId}"
                     data-carousel-index="2"
                     aria-label="${openGalleryAria}">
-                <img src="${bottomSrc}" class="w-100 h-100 car-detail-gallery__img" alt="${vehicleLabel}">
+                <img src="<c:out value='${bottomSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
                 <c:if test="${extra > 0}">
                     <div class="car-detail-gallery__more-overlay" aria-hidden="true">+<c:out value="${extra}"/></div>
                 </c:if>

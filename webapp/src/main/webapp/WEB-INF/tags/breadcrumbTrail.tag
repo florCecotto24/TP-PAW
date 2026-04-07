@@ -17,8 +17,8 @@
 <nav aria-label="${breadcrumbAria}">
     <ol class="breadcrumb mb-2 small">
         <li class="breadcrumb-item">
-            <a href="${homeHref}" class="text-decoration-none">${homeLabel}</a>
+            <a href="${homeHref}" class="text-decoration-none"><c:out value="${homeLabel}"/></a>
         </li>
-        <li class="breadcrumb-item active text-muted" aria-current="page">${currentLabel}</li>
+        <li class="breadcrumb-item active text-muted" aria-current="page"><c:out value="${currentLabel}"/></li>>
     </ol>
 </nav>
