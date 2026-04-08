@@ -19,7 +19,7 @@
                  alt="<spring:message code="error.imageAlt"/>"
                  style="width: min(320px, 80vw); height: auto; margin-bottom: 2rem; opacity: 0.9;">
 
-            <h1 class="fw-bold mb-2" style="font-size: 4rem; color: var(--color-primary, #3b7be0);">${statusCode}</h1>
+            <h1 class="fw-bold mb-2" style="font-size: 4rem; color: var(--color-primary, #3b7be0);"><c:out value="${statusCode}"/></h1>
 
             <h2 class="fw-semibold mb-3">
                 <spring:message code="${messageKey}.title"/>
