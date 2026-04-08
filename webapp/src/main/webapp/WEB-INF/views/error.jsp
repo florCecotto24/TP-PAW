@@ -12,8 +12,6 @@
     </head>
 
     <body>
-        <paw:navbar />
-
         <div class="d-flex flex-column align-items-center justify-content-center text-center py-5 px-3" style="min-height: calc(100vh - var(--navbar-height, 64px) - 80px);">
             <img src="${pageContext.request.contextPath}/assets/images/sad_mate.png"
                  alt="<spring:message code="error.imageAlt"/>"
