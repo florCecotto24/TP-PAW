@@ -30,37 +30,37 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.ownerName"/></label>
-                            <form:input path="ownerName" cssClass="form-control" type="text" autocomplete="name"/>
+                            <form:input path="ownerName" cssClass="form-control" cssErrorClass="form-control is-invalid" type="text" autocomplete="name"/>
                             <form:errors path="ownerName" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.ownerSurname"/></label>
-                            <form:input path="ownerSurname" cssClass="form-control" type="text" autocomplete="surname"/>
+                            <form:input path="ownerSurname" cssClass="form-control" cssErrorClass="form-control is-invalid" type="text" autocomplete="surname"/>
                             <form:errors path="ownerSurname" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.email"/></label>
-                            <form:input path="ownerEmail" cssClass="form-control"/>
+                            <form:input path="ownerEmail" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                             <form:errors path="ownerEmail" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.brand"/></label>
-                            <form:input path="brand" cssClass="form-control"/>
+                            <form:input path="brand" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                             <form:errors path="brand" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.model"/></label>
-                            <form:input path="model" cssClass="form-control"/>
+                            <form:input path="model" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                             <form:errors path="model" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.plate"/></label>
-                            <form:input path="plate" cssClass="form-control"/>
+                            <form:input path="plate" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                             <form:errors path="plate" cssClass="text-danger d-block"/>
                         </div>
 
@@ -96,31 +96,31 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" cssClass="form-control" type="number" step="0.01"/>
+                            <form:input path="pricePerDay" cssClass="form-control" cssErrorClass="form-control is-invalid" type="number" step="0.01"/>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.startPoint"/></label>
-                            <form:input path="startPoint" cssClass="form-control"/>
+                            <form:input path="startPoint" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                             <form:errors path="startPoint" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label"><spring:message code="publishCar.form.description"/></label>
-                            <form:input path="description" cssClass="form-control"/>
+                            <form:input path="description" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                             <form:errors path="description" cssClass="text-danger d-block"/>
                         </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label required-label" for="checkInTime"><spring:message code="publishCar.form.checkInTime"/></label>
-                                <form:input path="checkInTime" type="time" cssClass="form-control" id="checkInTime" step="60"/>
+                                <form:input path="checkInTime" type="time" cssClass="form-control" cssErrorClass="form-control is-invalid" id="checkInTime" step="60"/>
                                 <form:errors path="checkInTime" cssClass="text-danger d-block"/>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label required-label" for="checkOutTime"><spring:message code="publishCar.form.checkOutTime"/></label>
-                                <form:input path="checkOutTime" type="time" cssClass="form-control" id="checkOutTime" step="60"/>
+                                <form:input path="checkOutTime" type="time" cssClass="form-control" cssErrorClass="form-control is-invalid" id="checkOutTime" step="60"/>
                                 <form:errors path="checkOutTime" cssClass="text-danger d-block"/>
                             </div>
                         </div>
