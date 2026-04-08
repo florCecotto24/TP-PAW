@@ -56,30 +56,73 @@
                     <h4 class="font-semibold mb-1"><spring:message code="search.resultsCount" arguments="${fn:length(results)}"/></h4>
                 </div>
 
-                <div class="text-center">
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-4 g-3">
-                        <c:forEach var="car" items="${results}">
-                            <div class="col d-flex justify-content-center">
-                                <c:choose>
-                                    <c:when test="${car.imageId > 0}">
-                                        <c:url var="imageUrl" value="/image/${car.imageId}" />
-                                    </c:when>
-                                    <c:otherwise>
-                                        <c:set var="imageUrl" value="" />
-                                    </c:otherwise>
-                                </c:choose>
+                <c:set var="hasActiveSearchFilters"
+                       value="${not empty param.query or not empty param.from or not empty param.until or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
+                <c:url var="resetSearchUrl" value="/search"/>
+                <c:url var="publishCarUrl" value="/publish-car"/>
 
-                                <paw:carCard
-                                        model="${car.model}"
-                                        brand="${car.brand}"
-                                        price="${car.price}"
-                                        image="${imageUrl}"
-                                        pricePeriod="day"
-                                        href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
+                <c:choose>
+                    <c:when test="${empty results}">
+                        <div class="search-empty-state text-center">
+                            <div class="search-empty-state__icon" aria-hidden="true">
+                                <i class="bi bi-search"></i>
                             </div>
-                        </c:forEach>
-                    </div>
-                </div>
+                            <c:choose>
+                                <c:when test="${hasActiveSearchFilters}">
+                                    <h2 class="h4 fw-semibold mb-2"><spring:message code="search.empty.title"/></h2>
+                                    <p class="text-secondary mb-0 search-empty-state__text">
+                                        <spring:message code="search.empty.description"/>
+                                    </p>
+                                    <div class="search-empty-state__actions">
+                                        <a href="${resetSearchUrl}" class="btn btn-primary btn-action btn-action-md">
+                                            <spring:message code="search.empty.reset"/>
+                                        </a>
+                                        <a href="${publishCarUrl}" class="btn btn-outline-secondary btn-action btn-action-md">
+                                            <spring:message code="home.cta.button"/>
+                                        </a>
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <h2 class="h4 fw-semibold mb-2"><spring:message code="search.empty.noListings.title"/></h2>
+                                    <p class="text-secondary mb-0 search-empty-state__text">
+                                        <spring:message code="search.empty.noListings.description"/>
+                                    </p>
+                                    <div class="search-empty-state__actions">
+                                        <a href="${publishCarUrl}" class="btn btn-primary btn-action btn-action-md">
+                                            <spring:message code="home.cta.button"/>
+                                        </a>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <div class="text-center">
+                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-4 g-3">
+                                <c:forEach var="car" items="${results}">
+                                    <div class="col d-flex justify-content-center">
+                                        <c:choose>
+                                            <c:when test="${car.imageId > 0}">
+                                                <c:url var="imageUrl" value="/image/${car.imageId}" />
+                                            </c:when>
+                                            <c:otherwise>
+                                                <c:set var="imageUrl" value="" />
+                                            </c:otherwise>
+                                        </c:choose>
+
+                                        <paw:carCard
+                                                model="${car.model}"
+                                                brand="${car.brand}"
+                                                price="${car.price}"
+                                                image="${imageUrl}"
+                                                pricePeriod="day"
+                                                href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
             </div>
         </div>
         <%@include file="footer.jsp"%>

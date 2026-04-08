@@ -20,65 +20,66 @@ import java.util.List;
 
 public class PublishCarForm {
 
-    @NotBlank(message = "Your name is required")
-    @Size(max = 50, message = "Name must be at most 50 characters")
+    @NotBlank(message = "{validation.ownerName.notBlank}")
+    @Size(max = 50, message = "{validation.ownerName.size}")
     private String ownerName;
 
-    @NotBlank(message = "Your surname is required")
-    @Size(max = 50, message = "Surname must be at most 50 characters")
+    @NotBlank(message = "{validation.ownerSurname.notBlank}")
+    @Size(max = 50, message = "{validation.ownerSurname.size}")
     private String ownerSurname;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
-    @Size(max = 50, message = "Email must be at most 50 characters")
+    @NotBlank(message = "{validation.email.notBlank}")
+    @Email(message = "{validation.email.invalid}")
+    @Size(max = 50, message = "{validation.email.size}")
     private String ownerEmail;
 
-    @NotBlank(message = "Brand is required")
-    @Size(message = "Brand muste be between 2 and 50 characters", min = 2, max = 50)
+    @NotBlank(message = "{validation.brand.notBlank}")
+    @Size(message = "{validation.brand.size}", min = 2, max = 50)
     private String brand;
 
-    @NotBlank(message = "Model is required")
+    @NotBlank(message = "{validation.model.notBlank}")
     private String model;
 
-    @NotBlank(message = "Plate is required")
     @Size(min = 6, max = 10, message = "Plate must be between 6 and 10 characters")
+    @NotBlank(message = "{validation.plate.notBlank}")
     // Acá podríamos poner las validaciones de las patentes argentinas (dividir entre nuevas y viejas)
     private String plate;
 
-    @NotNull(message = "Type is required")
+    @NotNull(message = "{validation.type.notNull}")
     private Car.Type type;
 
-    @NotNull(message = "Powertrain is required")
+    @NotNull(message = "{validation.powertrain.notNull}")
     private Car.Powertrain powertrain;
 
-    @NotNull(message = "Transmission is required")
+    @NotNull(message = "{validation.transmission.notNull}")
     private Car.Transmission transmission;
 
-    @NotNull(message = "Price per day is required")
-    @DecimalMin(value = "0.01", message = "Price must be greater than 0")
-    @Digits(integer = 10, fraction = 2, message = "Price must have up to 2 decimals")
+    @NotNull(message = "{validation.pricePerDay.notNull}")
+    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}")
+    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}")
     private BigDecimal pricePerDay;
 
-    @NotBlank(message = "Start point is required")
     @Size(max = 250, message = "Description must be at most 250 characters")
+    @NotBlank(message = "{validation.startPoint.notBlank}")
     private String startPoint;
 
-    @Size(max = 200, message = "Description must be at most 200 characters")
+    @Size(max = 200, message = "{validation.description.size}")
     private String description;
 
-    @NotNull(message = "Check-in time is required")
+    @NotNull(message = "{validation.checkInTime.notNull}")
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkInTime;
 
-    @NotNull(message = "Check-out time is required")
+    @NotNull(message = "{validation.checkOutTime.notNull}")
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
 
-    @NotNull(message = "At least one image is required")
-    @Size(min = 1, max = 8, message = "Upload between 1 and 8 images")
+    @NotNull(message = "{validation.pictures.notNull}")
+    @Size(min = 1, max = 8, message = "{validation.pictures.size}")
     private MultipartFile[] pictures;
 
     @Size(min = 1, max = 10, message = "Add between 1 and 10 availability periods")
+    @Size(max = 10, message = "{validation.availabilityRows.size}")
     private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public PublishCarForm() {

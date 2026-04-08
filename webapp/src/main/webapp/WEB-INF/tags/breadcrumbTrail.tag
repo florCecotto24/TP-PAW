@@ -19,6 +19,6 @@
         <li class="breadcrumb-item">
             <a href="<c:out value='${homeHref}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${homeLabel}"/></a>
         </li>
-        <li class="breadcrumb-item active text-muted" aria-current="page"><c:out value="${currentLabel}"/></li>>
+        <li class="breadcrumb-item active text-muted" aria-current="page"><c:out value="${currentLabel}"/></li>
     </ol>
 </nav>

@@ -30,7 +30,7 @@
               <p><strong><spring:message code="publishCar.confirmation.brand"/></strong> <c:out value="${car.brand}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/> </p>
               <p><strong><spring:message code="publishCar.confirmation.pricePerDay"/></strong> $<c:out value="${listing.dayPrice}"/></p>
-              <p class="${not empty listing.description ? "d-block" : "d-none"}"><strong>Description:</strong> <c:out value="${listing.description}"/></p>
+              <p class="${not empty listing.description ? "d-block" : "d-none"}"><strong><spring:message code="publishCar.confirmation.description"/></strong> <c:out value="${listing.description}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.type"/></strong> <c:out value="${car.type.prettyName()}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.powertrain"/></strong> <c:out value="${car.powertrain.prettyName()}"/></p>
@@ -39,7 +39,7 @@
           </div>
 
 
-          <a href="<c:url value='/search'/>" class="btn btn-primary px-4"><spring:message code="common.backToSearch"/></a>
+          <a href="<c:url value='/search'/>" class="btn btn-primary btn-action btn-action-md"><spring:message code="common.backToSearch"/></a>
         </div>
       </div>
     </div>

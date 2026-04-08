@@ -283,7 +283,8 @@ public class ListingServiceImpl implements ListingService {
                     continue;
                 }
                 final String u = p.trim().toUpperCase();
-                if ("FREE".equals(u) || "PAID".equals(u)) {
+                if ("UNDER_5000".equals(u) || "5000_TO_15000".equals(u)
+                        || "15000_TO_30000".equals(u) || "OVER_30000".equals(u)) {
                     bands.add(u);
                 }
             }

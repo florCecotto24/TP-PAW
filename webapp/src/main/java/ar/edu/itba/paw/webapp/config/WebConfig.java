@@ -30,6 +30,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
+import org.springframework.validation.Validator;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
@@ -65,6 +67,18 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         bundle.setDefaultEncoding(StandardCharsets.UTF_8.name());
         bundle.setFallbackToSystemLocale(false);
         return bundle;
+    }
+
+    @Bean
+    public LocalValidatorFactoryBean localValidatorFactoryBean() {
+        final LocalValidatorFactoryBean bean = new LocalValidatorFactoryBean();
+        bean.setValidationMessageSource(messageSource());
+        return bean;
+    }
+
+    @Override
+    public Validator getValidator() {
+        return localValidatorFactoryBean();
     }
 
     @Bean

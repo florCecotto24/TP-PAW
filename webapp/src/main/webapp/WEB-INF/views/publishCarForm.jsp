@@ -12,6 +12,8 @@
 <paw:navbar/>
 
 <main class="container py-5">
+    <spring:message code="publishCar.form.title" var="publishFormTitle"/>
+    <paw:breadcrumbTrail currentLabel="${publishFormTitle}"/>
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
             <div class="card border-0 shadow-sm rounded-4">
@@ -154,9 +156,9 @@
                             <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
                                 <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
                                     <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>
-                                    <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="Remove period">Remove</button>
+                                    <button type="button" class="btn btn-outline-danger btn-action btn-action-sm publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
                                 </div>
-                                <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="Select date range on calendar" aria-label="Availability date range"/>
+                                <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
                                 <input type="hidden" class="paw-avail-from" name="availabilityRows[__IDX__].from" value=""/>
                                 <input type="hidden" class="paw-avail-until" name="availabilityRows[__IDX__].until" value=""/>
                             </div>

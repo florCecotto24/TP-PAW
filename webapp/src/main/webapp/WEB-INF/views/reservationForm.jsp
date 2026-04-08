@@ -55,13 +55,13 @@
                         </div>
 
                         <div>
-                            <label for="name" class="form-label"><spring:message code="reservationForm.firstName"/></label>
+                            <label for="name" class="form-label required-label"><spring:message code="reservationForm.firstName"/></label>
                             <form:input path="name" id="name" cssClass="form-control" placeholder="Your first name" />
                             <form:errors path="name" cssClass="text-danger small d-block mt-1" />
                         </div>
 
                         <div>
-                            <label for="surname" class="form-label"><spring:message code="reservationForm.lastName"/></label>
+                            <label for="surname" class="form-label required-label"><spring:message code="reservationForm.lastName"/></label>
                             <form:input path="surname" id="surname" cssClass="form-control" placeholder="Your last name" />
                             <form:errors path="surname" cssClass="text-danger small d-block mt-1" />
                         </div>

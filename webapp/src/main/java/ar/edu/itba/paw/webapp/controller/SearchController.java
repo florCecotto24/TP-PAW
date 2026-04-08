@@ -55,8 +55,10 @@ public class SearchController {
 
     private static Map<String, String> priceFilterOptions() {
         final Map<String, String> m = new LinkedHashMap<>();
-        m.put("FREE", "Free");
-        m.put("PAID", "Paid");
+        m.put("UNDER_5000", "Under $5,000");
+        m.put("5000_TO_15000", "$5,000 – $15,000");
+        m.put("15000_TO_30000", "$15,000 – $30,000");
+        m.put("OVER_30000", "Over $30,000");
         return m;
     }
 
