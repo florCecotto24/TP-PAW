@@ -16,20 +16,20 @@
 <div class="dropdown explore-filter-dropdown mx-1 my-1">
     <button class="btn btn-light border dropdown-toggle rounded-4 d-inline-flex align-items-center gap-1"
             type="button"
-            id="explore_dd_${ariaGroup}"
+            id="explore_dd_<c:out value='${ariaGroup}'/>"
             data-bs-toggle="dropdown"
             data-bs-auto-close="outside"
             aria-expanded="false"
             aria-haspopup="true"
             <spring:message code="exploreFilterDropdown.ariaLabel" arguments="${filterLabel}" var="ddAriaLabel"/>
-            aria-label="${ddAriaLabel}">
+            aria-label="<c:out value='${ddAriaLabel}'/>">
         <span class="explore-filter-dropdown__label"><c:out value="${filterLabel}"/></span>
         <c:if test="${selCount gt 0}">
             <span class="badge text-bg-primary rounded-pill"><c:out value="${selCount}"/></span>
         </c:if>
     </button>
     <ul class="dropdown-menu shadow explore-filter-dropdown__panel p-0"
-        aria-labelledby="explore_dd_${ariaGroup}">
+        aria-labelledby="explore_dd_<c:out value='${ariaGroup}'/>">
         <li>
             <h6 class="dropdown-header mb-0"><c:out value="${filterLabel}"/></h6>
         </li>
@@ -47,10 +47,10 @@
                 </c:forEach>
             </c:if>
             <li>
-                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-3 mb-0" for="explore_${ariaGroup}_${e.key}">
+                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-3 mb-0" for="explore_<c:out value='${ariaGroup}'/><c:out value='${e.key}'/>">
                     <input class="form-check-input flex-shrink-0 js-explore-filter mt-0" type="checkbox"
-                           name="${paramName}" value="${e.key}"
-                           id="explore_${ariaGroup}_${e.key}"
+                           name="<c:out value='${paramName}'/>" value="<c:out value='${e.key}'/>"
+                           id="explore_<c:out value='${ariaGroup}'/><c:out value='${e.key}'/>"
                            <c:if test="${isOptSel}">checked="checked"</c:if> />
                     <span class="small"><c:out value="${e.value}"/></span>
                 </label>

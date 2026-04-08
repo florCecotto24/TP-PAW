@@ -27,10 +27,10 @@
         <p class="text-secondary small mb-0"><c:out value="${subtitle}"/></p>
     </div>
     <div class="d-flex gap-2">
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-target="#<c:out value="${id}"/>" data-bs-slide="prev">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-target="#<c:out value='${id}'/>" data-bs-slide="prev">
             <i class="bi bi-chevron-left"></i>
         </button>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-target="#<c:out value="${id}"/>" data-bs-slide="next">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-target="#<c:out value='${id}'/>" data-bs-slide="next">
             <i class="bi bi-chevron-right"></i>
         </button>
     </div>

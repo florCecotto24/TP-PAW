@@ -48,6 +48,6 @@
     </div>
     <c:if test="${not empty href}">
         <spring:message code="carCard.viewAriaLabel" arguments="${brand}, ${model}" var="viewAriaLabel"/>
-        <a href="${href}" class="stretched-link carcard-stretched-link" aria-label="${viewAriaLabel}"></a>
+        <a href="<c:out value='${href}' escapeXml='false'/>" class="stretched-link carcard-stretched-link" aria-label="<c:out value='${viewAriaLabel}'/>"></a>
     </c:if>
 </div>

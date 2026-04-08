@@ -15,7 +15,7 @@
 <c:set var="emptyCount" value="${5 - fullStars - extraHalf}" />
 
 <spring:message code="reviewStarsRow.ratingAriaLabel" arguments="${fullStars}" var="ratingAria"/>
-<div class="reviewStarsRow d-inline-flex align-items-center gap-0" role="img" aria-label="${ratingAria}">
+<div class="reviewStarsRow d-inline-flex align-items-center gap-0" role="img" aria-label="<c:out value='${ratingAria}'/>">
     <c:forEach begin="1" end="${fullStars}" var="ignored">
         <i class="bi bi-star-fill text-primary" aria-hidden="true"></i>
     </c:forEach>

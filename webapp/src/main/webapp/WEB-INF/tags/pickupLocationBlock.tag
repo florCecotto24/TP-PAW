@@ -16,7 +16,7 @@
     <h3 class="h4 fw-bold mb-2"><c:out value="${address}"/></h3>
     <c:choose>
         <c:when test="${not empty mapLinkHref}">
-            <a href="<c:out value='${mapLinkHref}'/>" class="d-inline-flex align-items-center gap-1 text-decoration-none mb-3">
+            <a href="<c:out value='${mapLinkHref}' escapeXml='false'/>" class="d-inline-flex align-items-center gap-1 text-decoration-none mb-3">
                 <i class="bi bi-map" aria-hidden="true"></i>
                 <spring:message code="pickupLocationBlock.viewMap"/>
             </a>

@@ -16,7 +16,7 @@
         </div>
     </c:when>
     <c:otherwise>
-        <div id="${id}" class="carousel slide" data-bs-ride="false">
+        <div id="<c:out value='${id}'/>" class="carousel slide" data-bs-ride="false">
             <div class="carousel-inner">
                 <c:forEach items="${cars}" var="car" varStatus="status">
                 <c:if test="${status.index % 4 == 0}">

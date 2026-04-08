@@ -23,7 +23,7 @@
     <input type="hidden" name="reservationTotal" id="detail_reservation_total_hint" value="" />
 
     <div class="d-flex align-items-baseline gap-2 mb-3">
-        <span class="detail-price-amount fw-bold">$<c:out value="${dailyPrice}"/></span>
+        <span class="detail-price-amount fw-bold">$<c:out value='${dailyPrice}'/></span>
         <span class="text-secondary"><spring:message code="detailReservationPanel.perDay"/></span>
     </div>
 
@@ -44,9 +44,9 @@
             type="text"
             id="detail_daterange"
             class="form-control"
-            placeholder="${datesPlaceholder}"
+            placeholder="<c:out value='${datesPlaceholder}'/>"
             readonly
-            aria-label="${datesAriaLabel}">
+            aria-label="<c:out value='${datesAriaLabel}'/>">
         <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
         <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
     </div>

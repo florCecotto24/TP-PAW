@@ -22,7 +22,7 @@
         <h2 class="h5 fw-bold mb-1"><c:out value="${title}"/></h2>
         <p class="text-secondary small mb-0"><c:out value="${subtitle}"/></p>
     </div>
-    <a href="<c:out value='${seeAllHref}'/>" class="d-inline-flex align-items-center gap-1 text-decoration-none fw-semibold similarVehiclesSeeAll">
+    <a href="<c:out value='${seeAllHref}' escapeXml='false'/>" class="d-inline-flex align-items-center gap-1 text-decoration-none fw-semibold similarVehiclesSeeAll">
         <spring:message code="common.seeAll"/>
         <i class="bi bi-arrow-right" aria-hidden="true"></i>
     </a>

@@ -22,10 +22,9 @@
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4 p-md-5 text-center">
                     <h1 class="h3 fw-bold mb-3"><spring:message code="reservationConfirmation.heading"/></h1>
-                    <p class="mb-2">Thank you, <c:out value="${name} ${surname}"/>.</p>
+                    <p class="mb-2"><spring:message code="reservationConfirmation.greeting" arguments="${name},${surname}"/></p>
                     <p class="text-secondary mb-4">
-                        The owner of <strong><c:out value="${carName}"/></strong> will contact you at
-                        <strong><c:out value="${email}"/></strong> to coordinate the vehicle handoff.
+                        <spring:message code="reservationConfirmation.contactMessage" arguments="${carName},${email}"/>
                     </p>
 
                     <a href="<c:url value='/search'/>" class="btn btn-primary px-4"><spring:message code="common.backToSearch"/></a>

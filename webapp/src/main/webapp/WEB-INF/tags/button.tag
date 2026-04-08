@@ -21,19 +21,19 @@
 
 <c:choose>
     <c:when test="${not empty href and not btnDisabled}">
-        <a href="<c:out value='${href}'/>"
-           class="${classes}"
-           <c:if test="${not empty id}">id="${id}"</c:if>
-           <c:if test="${not empty onclick}">onclick="${onclick}" </c:if>
+        <a href="<c:out value='${href}' escapeXml='false'/>"
+           class="<c:out value='${classes}'/>"
+           <c:if test="${not empty id}">id="<c:out value='${id}'/>"</c:if>
+           <c:if test="${not empty onclick}">onclick="<c:out value='${onclick}'/>" </c:if>
         >
             <c:out value="${btnText}"/>
         </a>
     </c:when>
     <c:otherwise>
         <button type="button"
-                class="${classes}"
-                <c:if test="${not empty id}">id="${id}"</c:if>
-                <c:if test="${not empty onclick}">onclick="${onclick}"</c:if>
+                class="<c:out value='${classes}'/>"
+                <c:if test="${not empty id}">id="<c:out value='${id}'/>"</c:if>
+                <c:if test="${not empty onclick}">onclick="<c:out value='${onclick}'/>"</c:if>
                 <c:if test="${btnDisabled}">disabled</c:if>
         >
             <c:out value="${btnText}"/>

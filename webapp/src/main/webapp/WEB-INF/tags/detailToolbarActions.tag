@@ -14,11 +14,11 @@
 </c:if>
 
 <div class="d-flex flex-shrink-0 gap-2 detail-toolbar-actions">
-    <button type="button" class="btn btn-light border rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2" id="detailShareBtn" aria-label="${shareLabel}">
+    <button type="button" class="btn btn-light border rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2" id="detailShareBtn" aria-label="<c:out value='${shareLabel}'/>">
         <i class="bi bi-share" aria-hidden="true"></i>
         <span><c:out value="${shareLabel}"/></span>
     </button>
-    <button type="button" class="btn btn-light border rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2" id="detailSaveBtn" aria-label="${saveLabel}">
+    <button type="button" class="btn btn-light border rounded-3 d-inline-flex align-items-center gap-2 px-3 py-2" id="detailSaveBtn" aria-label="<c:out value='${saveLabel}'/>">
         <i class="bi bi-heart" aria-hidden="true"></i>
         <span><c:out value="${saveLabel}"/></span>
     </button>

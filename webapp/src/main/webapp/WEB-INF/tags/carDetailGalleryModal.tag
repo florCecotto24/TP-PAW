@@ -11,16 +11,16 @@
     <c:set var="vehicleLabel" value="${defaultVehicleLabel}" />
 </c:if>
 
-<div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true" aria-labelledby="${modalId}Title">
+<div class="modal fade" id="<c:out value='${modalId}'/>" tabindex="-1" aria-hidden="true" aria-labelledby="<c:out value='${modalId}'/>Title">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content bg-dark text-white border-0">
             <div class="modal-header border-0">
-                <h2 class="modal-title fs-6" id="${modalId}Title"><spring:message code="carDetailGalleryModal.title"/></h2>
+                <h2 class="modal-title fs-6" id="<c:out value='${modalId}'/>Title"><spring:message code="carDetailGalleryModal.title"/></h2>
                 <spring:message code="common.close" var="closeLabel"/>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="${closeLabel}"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<c:out value='${closeLabel}'/>"></button>
             </div>
             <div class="modal-body p-0">
-                <div id="${carouselId}" class="carousel slide" data-bs-ride="false">
+                <div id="<c:out value='${carouselId}'/>" class="carousel slide" data-bs-ride="false">
                     <div class="carousel-inner">
                         <c:forEach items="${imageUrls}" var="u" varStatus="st">
                             <c:url var="slideSrc" value="${u}" />
@@ -31,11 +31,11 @@
                         </c:forEach>
                     </div>
                     <c:if test="${not empty imageUrls}">
-                        <button class="carousel-control-prev" type="button" data-bs-target="#${carouselId}" data-bs-slide="prev">
+                        <button class="carousel-control-prev" type="button" data-bs-target="#<c:out value='${carouselId}'/>" data-bs-slide="prev">
                             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                             <span class="visually-hidden"><spring:message code="common.previous"/></span>
                         </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#${carouselId}" data-bs-slide="next">
+                        <button class="carousel-control-next" type="button" data-bs-target="#<c:out value='${carouselId}'/>" data-bs-slide="next">
                             <span class="carousel-control-next-icon" aria-hidden="true"></span>
                             <span class="visually-hidden"><spring:message code="common.next"/></span>
                         </button>

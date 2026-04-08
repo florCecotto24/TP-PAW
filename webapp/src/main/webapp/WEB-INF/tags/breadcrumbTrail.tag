@@ -14,10 +14,10 @@
 </c:if>
 
 <spring:message code="breadcrumbTrail.ariaLabel" var="breadcrumbAria"/>
-<nav aria-label="${breadcrumbAria}">
+<nav aria-label="<c:out value='${breadcrumbAria}'/>">
     <ol class="breadcrumb mb-2 small">
         <li class="breadcrumb-item">
-            <a href="${homeHref}" class="text-decoration-none"><c:out value="${homeLabel}"/></a>
+            <a href="<c:out value='${homeHref}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${homeLabel}"/></a>
         </li>
         <li class="breadcrumb-item active text-muted" aria-current="page"><c:out value="${currentLabel}"/></li>>
     </ol>

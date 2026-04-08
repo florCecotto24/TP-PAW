@@ -133,10 +133,10 @@
                                 <c:forEach items="${publishCarForm.availabilityRows}" var="row" varStatus="st">
                                     <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
                                         <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                            <span class="small text-secondary">${periodLabel} <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span></span>
-                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="${removeLabel}">${removeLabel}</button>
+                                            <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span></span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
                                         </div>
-                                        <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="${dateRangePlaceholder}" aria-label="Availability date range"/>
+                                        <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
                                         <form:hidden path="availabilityRows[${st.index}].from" cssClass="paw-avail-from"/>
                                         <form:hidden path="availabilityRows[${st.index}].until" cssClass="paw-avail-until"/>
                                     </div>
@@ -150,7 +150,7 @@
                         <template id="publish_avail_row_template">
                             <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
                                 <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                    <span class="small text-secondary">${periodLabel} <span class="publish-avail-index">1</span></span>
+                                    <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>an>
                                     <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="Remove period">Remove</button>
                                 </div>
                                 <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="Select date range on calendar" aria-label="Availability date range"/>

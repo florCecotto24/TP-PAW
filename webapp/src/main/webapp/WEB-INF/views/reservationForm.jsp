@@ -19,7 +19,7 @@
                 <div class="card-body p-4 p-md-5">
                     <h1 class="h4 fw-bold mb-2"><spring:message code="reservationForm.heading"/></h1>
                     <p class="text-secondary mb-4">
-                        You are requesting <strong><c:out value="${reservationForm.carName}"/></strong>. Fill in your details so the owner can contact you.
+                        <spring:message code="reservationForm.description" arguments="${reservationForm.carName}"/>
                     </p>
 
                     <c:if test="${not empty reservationError}">

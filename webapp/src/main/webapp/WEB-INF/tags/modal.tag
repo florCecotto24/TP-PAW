@@ -30,24 +30,24 @@
 <c:set var="modalClasses" value="modal-overlay modal-overlay--${modalSize} modal-overlay--${modalVariant} ${modalCssClass}${modalOpen ? ' is-open' : ''}" />
 
 <c:if test="${not empty triggerLabel}">
-    <button type="button" class="${modalTriggerClass}" data-modal-open="${id}">
+    <button type="button" class="${modalTriggerClass}" data-modal-open="<c:out value='${id}'/>">
         <c:out value="${triggerLabel}" />
     </button>
 </c:if>
 
-<div id="${id}" class="${modalClasses}" data-modal aria-hidden="${not modalOpen}">
-    <div class="modal__backdrop" data-modal-close="${id}"></div>
-    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="${id}-title" tabindex="-1">
+<div id="<c:out value='${id}'/>" class="<c:out value='${modalClasses}'/>" data-modal aria-hidden="${not modalOpen}">
+    <div class="modal__backdrop" data-modal-close="<c:out value='${id}'/>"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="<c:out value='${id}'/><c:out value='-title'/>" tabindex="-1">
         <div class="modal__content">
             <c:if test="${modalClosable}">
                 <spring:message code="modal.closeAriaLabel" var="closeModalAria"/>
-                <button type="button" class="modal__close" aria-label="${closeModalAria}" data-modal-close="${id}">
+                <button type="button" class="modal__close" aria-label="${closeModalAria}" data-modal-close="<c:out value='${id}'/>">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </c:if>
 
             <div class="modal__header">
-                <h2 id="${id}-title" class="modal__title">
+                <h2 id="<c:out value='${id}'/><c:out value='-title'/>" class="modal__title">
                     <c:out value="${title}" />
                 </h2>
             </div>
@@ -64,12 +64,12 @@
             <c:if test="${modalHasFooter}">
                 <div class="modal__footer">
                     <c:if test="${not empty cancelLabel}">
-                        <button type="button" class="${modalCancelClass}" data-modal-action="cancel" data-modal-close="${id}">
+                        <button type="button" class="<c:out value='${modalCancelClass}'/>" data-modal-action="cancel" data-modal-close="<c:out value='${id}'/>">
                             <c:out value="${cancelLabel}" />
                         </button>
                     </c:if>
                     <c:if test="${not empty confirmLabel}">
-                        <button type="button" class="${modalConfirmClass}" data-modal-action="confirm" data-modal-close="${id}">
+                        <button type="button" class="<c:out value='${modalConfirmClass}'/>" data-modal-action="confirm" data-modal-close="<c:out value='${id}'/>">
                             <c:out value="${confirmLabel}" />
                         </button>
                     </c:if>
