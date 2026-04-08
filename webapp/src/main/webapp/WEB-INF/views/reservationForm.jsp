@@ -18,7 +18,7 @@
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4 p-md-5">
                     <h1 class="h4 fw-bold mb-2"><spring:message code="reservationForm.heading"/></h1>
-                    <spring:message code="reservationForm.description.before"/><strong><c:out value="${reservationForm.carName}"/></strong><spring:message code="reservationForm.description.after"/>
+                    <spring:message code="reservationForm.description.before"/> <strong><c:out value="${reservationForm.carName}"/></strong><spring:message code="reservationForm.description.after"/>
 
                     <c:if test="${not empty reservationError}">
                         <div class="alert alert-danger" role="alert"><c:out value="${reservationError}"/></div>

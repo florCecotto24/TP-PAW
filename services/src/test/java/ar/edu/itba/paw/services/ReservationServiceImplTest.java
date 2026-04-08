@@ -52,6 +52,8 @@ public class ReservationServiceImplTest {
                 10L, riderId, listingId, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT);
 
         Mockito.when(reservationDao.hasActiveOverlap(listingId, START, END)).thenReturn(false);
+        Mockito.when(userService.getListingOwner(listingId))
+                .thenReturn(Optional.of(new User(99L, "owner@example.com", "O", "Owner")));
         Mockito.when(reservationDao.createReservation(
                 riderId, listingId, START, END, Reservation.Status.ACCEPTED)).thenReturn(created);
 
@@ -81,6 +83,22 @@ public class ReservationServiceImplTest {
         Assertions.assertEquals(MessageKeys.RESERVATION_CONFLICT_OVERLAP, thrown.getMessageCode());
     }
 
+    @Test
+    public void testCreateReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
+        final long riderId = 1L;
+        final long listingId = 2L;
+        Mockito.when(reservationDao.hasActiveOverlap(listingId, START, END)).thenReturn(false);
+        Mockito.when(userService.getListingOwner(listingId))
+                .thenReturn(Optional.of(new User(riderId, "same@example.com", "S", "Same")));
+
+        final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
+                () -> reservationService.createReservation(
+                        riderId, listingId, START, END, Reservation.Status.ACCEPTED));
+
+        Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
+        Mockito.verify(reservationDao, Mockito.never()).createReservation(
+                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any());
+    }
 
     @Test
     public void submitRiderReservationWhenListingNotFoundThrowsRiderReservationException() {
@@ -205,6 +223,46 @@ public class ReservationServiceImplTest {
                         untilWall));
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_DATES_NOT_FROM_TODAY, thrown.getMessageCode());
+    }
+
+    @Test
+    public void submitRiderReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
+        final long listingId = 2L;
+        final long sameUserId = 5L;
+        final String email = "owner@test.com";
+        final Listing listing = Mockito.mock(Listing.class);
+        final User ownerAndRider = new User(sameUserId, email, "Owner", "User");
+
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(listingService.reservationIntervalFitsListingAvailability(
+                Mockito.eq(listingId),
+                Mockito.isNull(),
+                Mockito.any(OffsetDateTime.class),
+                Mockito.any(OffsetDateTime.class))).thenReturn(true);
+        Mockito.when(userService.findOrCreatePublisher(email, "Owner", "User")).thenReturn(ownerAndRider);
+        Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(ownerAndRider));
+        Mockito.when(reservationDao.hasActiveOverlap(
+                Mockito.eq(listingId),
+                Mockito.any(OffsetDateTime.class),
+                Mockito.any(OffsetDateTime.class))).thenReturn(false);
+
+        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
+        final String fromWall = fromDay.atTime(10, 0).toString();
+        final String untilWall = fromDay.plusDays(2).atTime(18, 0).toString();
+
+        final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
+                () -> reservationService.submitRiderReservation(
+                        email,
+                        "Owner",
+                        "User",
+                        listingId,
+                        null,
+                        fromWall,
+                        untilWall));
+
+        Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
+        Mockito.verify(reservationDao, Mockito.never()).createReservation(
+                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test

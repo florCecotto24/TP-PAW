@@ -21,7 +21,9 @@
             <spring:message code="publishCar.confirmation.greeting.before"/>
             <c:out value="${publisher.forename}"/> <c:out value="${publisher.surname}"/><spring:message code="publishCar.confirmation.greeting.after"/>
           </p>
-          <spring:message code="publishCar.confirmation.message.before"/><strong><c:out value="${listing.title}"/></strong><spring:message code="publishCar.confirmation.message.after"/>
+          <p class="mb-2">
+            <spring:message code="publishCar.confirmation.message.before"/> <strong><c:out value="${listing.title}"/></strong> <spring:message code="publishCar.confirmation.message.after"/>
+          </p>
           <p class="text-secondary"><spring:message code="publishCar.confirmation.details"/></p>
           <div class="card mb-3 mt-3">
             <div class="card-body text-start">

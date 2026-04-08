@@ -1,5 +1,20 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Locale;
+import java.util.Optional;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
@@ -9,20 +24,6 @@ import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeParseException;
-import java.util.Locale;
-import java.util.Optional;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
@@ -56,6 +57,10 @@ public class ReservationServiceImpl implements ReservationService {
             final Reservation.Status status) {
         if (reservationDao.hasActiveOverlap(listingId, startDate, endDate)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
+        }
+        final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
+        if (listingOwnerOpt.isPresent() && listingOwnerOpt.get().getId() == riderId) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
         }
         final String deliveryLocation = listingService.getListingById(listingId)
                 .map(Listing::getStartPoint)
