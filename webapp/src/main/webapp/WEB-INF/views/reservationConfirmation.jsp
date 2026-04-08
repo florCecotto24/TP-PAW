@@ -22,9 +22,16 @@
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4 p-md-5 text-center">
                     <h1 class="h3 fw-bold mb-3"><spring:message code="reservationConfirmation.heading"/></h1>
-                    <p class="mb-2"><spring:message code="reservationConfirmation.greeting" arguments="${name},${surname}"/></p>
+                    <p class="mb-2">
+                        <spring:message code="reservationConfirmation.greeting.before"/>
+                        <c:out value="${name}"/> <c:out value="${surname}"/><spring:message code="reservationConfirmation.greeting.after"/>
+                    </p>
                     <p class="text-secondary mb-4">
-                        <spring:message code="reservationConfirmation.contactMessage" arguments="${carName},${email}"/>
+                        <spring:message code="reservationConfirmation.contactMessage.beforeCar"/>
+                        <strong><c:out value="${carName}"/></strong>
+                        <spring:message code="reservationConfirmation.contactMessage.afterCar"/>
+                        <strong><c:out value="${email}"/></strong>
+                        <spring:message code="reservationConfirmation.contactMessage.afterEmail"/>
                     </p>
 
                     <a href="<c:url value='/search'/>" class="btn btn-primary px-4"><spring:message code="common.backToSearch"/></a>

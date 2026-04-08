@@ -39,7 +39,7 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.email"/></label>
-                            <form:input path="ownerEmail" cssClass="form-control" type="email" autocomplete="email"/>
+                            <form:input path="ownerEmail" cssClass="form-control"/>
                             <form:errors path="ownerEmail" cssClass="text-danger d-block"/>
                         </div>
 
@@ -93,7 +93,7 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" cssClass="form-control"/>
+                            <form:input path="pricePerDay" cssClass="form-control" type="number" step="0.01"/>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
 
@@ -134,11 +134,13 @@
                                     <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
                                         <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
                                             <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span></span>
-                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove ${st.first ? "d-none" : "" }" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
                                         </div>
                                         <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
                                         <form:hidden path="availabilityRows[${st.index}].from" cssClass="paw-avail-from"/>
                                         <form:hidden path="availabilityRows[${st.index}].until" cssClass="paw-avail-until"/>
+                                        <form:errors path="availabilityRows[${st.index}].from" cssClass="text-danger d-block"/>
+                                        <form:errors path="availabilityRows[${st.index}].until" cssClass="text-danger d-block"/>
                                     </div>
                                 </c:forEach>
                             </div>
@@ -150,7 +152,7 @@
                         <template id="publish_avail_row_template">
                             <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
                                 <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                    <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>an>
+                                    <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>
                                     <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="Remove period">Remove</button>
                                 </div>
                                 <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="Select date range on calendar" aria-label="Availability date range"/>

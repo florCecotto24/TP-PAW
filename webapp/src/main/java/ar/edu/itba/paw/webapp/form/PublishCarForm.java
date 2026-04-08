@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.Car;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.Email;
@@ -54,7 +55,7 @@ public class PublishCarForm {
 
     @NotNull(message = "Price per day is required")
     @DecimalMin(value = "0.01", message = "Price must be greater than 0")
-    @Digits(integer = 8, fraction = 2, message = "Price must have up to 2 decimals")
+    @Digits(integer = 10, fraction = 2, message = "Price must have up to 2 decimals")
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "Start point is required")
@@ -75,8 +76,8 @@ public class PublishCarForm {
     @Size(min = 1, max = 8, message = "Upload between 1 and 8 images")
     private MultipartFile[] pictures;
 
-    @Size(max = 10, message = "At most 10 availability periods")
-    private List<AvailabilityRow> availabilityRows = new ArrayList<>();
+    @Size(min = 1, max = 10, message = "Add between 1 and 10 availability periods")
+    private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public PublishCarForm() {
         checkInTime = LocalTime.of(10, 0);
@@ -95,8 +96,11 @@ public class PublishCarForm {
     }
 
     public static class AvailabilityRow {
+        @NotNull(message = "Start date is required")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate from;
+
+        @NotNull(message = "End date is required")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
 

@@ -17,10 +17,11 @@
       <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4 p-md-5 text-center">
           <h1 class="h3 fw-bold mb-3"><spring:message code="publishCar.confirmation.title"/></h1>
-          <p class="mb-2"><spring:message code="publishCar.confirmation.greeting" arguments="${publisher.forename},${publisher.surname}"/></p>
-          <p class="text-secondary mb-3">
-            <spring:message code="publishCar.confirmation.message" arguments="${listing.title}"/>
+          <p class="mb-2">
+            <spring:message code="publishCar.confirmation.greeting.before"/>
+            <c:out value="${publisher.forename}"/> <c:out value="${publisher.surname}"/><spring:message code="publishCar.confirmation.greeting.after"/>
           </p>
+          <spring:message code="publishCar.confirmation.message.before"/><strong><c:out value="${listing.title}"/></strong><spring:message code="publishCar.confirmation.message.after"/>
           <p class="text-secondary"><spring:message code="publishCar.confirmation.details"/></p>
           <div class="card mb-3 mt-3">
             <div class="card-body text-start">

@@ -18,9 +18,7 @@
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body p-4 p-md-5">
                     <h1 class="h4 fw-bold mb-2"><spring:message code="reservationForm.heading"/></h1>
-                    <p class="text-secondary mb-4">
-                        <spring:message code="reservationForm.description" arguments="${reservationForm.carName}"/>
-                    </p>
+                    <spring:message code="reservationForm.description.before"/><strong><c:out value="${reservationForm.carName}"/></strong><spring:message code="reservationForm.description.after"/>
 
                     <c:if test="${not empty reservationError}">
                         <div class="alert alert-danger" role="alert"><c:out value="${reservationError}"/></div>
@@ -52,7 +50,7 @@
 
                         <div>
                             <label for="email" class="form-label"><spring:message code="reservationForm.email"/></label>
-                            <form:input path="email" id="email" type="email" cssClass="form-control" placeholder="name@example.com" />
+                            <form:input path="email" cssClass="form-control" placeholder="name@example.com" />
                             <form:errors path="email" cssClass="text-danger small d-block mt-1" />
                         </div>
 
