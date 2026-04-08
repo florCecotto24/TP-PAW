@@ -10,6 +10,7 @@ import org.springframework.context.annotation.PropertySources;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
+import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
@@ -104,6 +105,15 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         dataSource.setUrl(requiredProperty("spring.datasource.url"));
         dataSource.setUsername(requiredProperty("spring.datasource.username"));
         dataSource.setPassword(requiredProperty("spring.datasource.password"));
+
+        Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/migration")
+                .baselineOnMigrate(true)
+                .baselineVersion("1")
+                .failOnMissingLocations(false)
+                .load()
+                .migrate();
 
         return dataSource;
     }
