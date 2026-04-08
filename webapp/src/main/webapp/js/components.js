@@ -193,6 +193,23 @@
 })();
 
 /* Funciones de PublishForm */
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("publishCarFormEl");
+    const submitBtn = document.getElementById("publishCarSubmitBtn");
+
+    if (!form || !submitBtn) return;
+
+    form.addEventListener("submit", function () {
+        if (submitBtn.disabled) return;
+
+        submitBtn.disabled = true;
+        submitBtn.classList.add("disabled");
+        submitBtn.querySelector(".publish-submit-default")?.classList.add("d-none");
+        submitBtn.querySelector(".publish-submit-loading")?.classList.remove("d-none");
+        submitBtn.setAttribute("aria-busy", "true");
+    });
+});
+
 (function () {
     var input = document.getElementById("picturesInput");
     var preview = document.getElementById("picturesPreview");

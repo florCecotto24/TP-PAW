@@ -18,7 +18,8 @@
                 <div class="card-body p-4 p-md-5">
 
                     <h4 class="mb-4"><spring:message code="publishCar.form.title"/></h4>
-                    <form:form action="${pageContext.request.contextPath}/publish-car"
+                    <form:form id="publishCarFormEl"
+                               action="${pageContext.request.contextPath}/publish-car"
                                method="POST"
                                modelAttribute="publishCarForm"
                                enctype="multipart/form-data">
@@ -172,8 +173,14 @@
                             <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg"></i> <spring:message code="publishCar.form.submit"/>
+                        <button type="submit" class="btn btn-primary" id="publishCarSubmitBtn">
+                            <span class="publish-submit-default">
+                                <i class="bi bi-check-lg"></i> <spring:message code="publishCar.form.submit"/>
+                            </span>
+                            <span class="publish-submit-loading d-none" aria-live="polite">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <spring:message code="publishCar.form.submit"/>
+                            </span>
                         </button>
 
                     </form:form>
