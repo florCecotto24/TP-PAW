@@ -27,7 +27,7 @@
                         <spring:message code="reservationConfirmation.contactMessage" arguments="${carName},${email}"/>
                     </p>
 
-                    <a href="<c:url value='/search'/>" class="btn btn-primary px-4"><spring:message code="common.backToSearch"/></a>
+                    <a href="<c:url value='/search'/>" class="btn btn-primary btn-action btn-action-md"><spring:message code="common.backToSearch"/></a>
                 </div>
             </div>
         </div>

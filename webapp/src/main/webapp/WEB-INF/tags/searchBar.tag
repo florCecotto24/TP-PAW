@@ -17,7 +17,7 @@
 <div class="container mb-4">
     <div class="d-flex align-items-center bg-white rounded-4 px-3 py-2 shadow gap-2 flex-wrap">
 
-        <div class="form-floating flex-grow-1" style="min-width: 12rem;">
+        <div class="form-floating flex-grow-1 searchBar__query">
             <spring:message code="searchBar.query.ariaLabel" var="queryAriaLabel"/>
             <spring:message code="searchBar.query.label" var="queryLabel"/>
             <input type="text" class="form-control border-0 shadow-none" aria-label="<c:out value='${queryAriaLabel}'/>" id="search_query"
@@ -27,8 +27,8 @@
 
         <div class="vr flex-shrink-0 d-none d-md-block"></div>
 
-        <div class="d-flex flex-wrap gap-2 flex-grow-1 align-items-end" style="min-width: 14rem;">
-            <div class="flex-grow-1" style="min-width: 7rem;">
+        <div class="d-flex flex-wrap gap-2 flex-grow-1 align-items-end searchBar__dates">
+            <div class="flex-grow-1 searchBar__dateField">
                 <label class="form-label small text-secondary mb-1" for="search_from_picker"><spring:message code="searchBar.from"/></label>
                 <spring:message code="searchBar.date.placeholder" var="datePlaceholder"/>
                 <spring:message code="searchBar.from.ariaLabel" var="fromAriaLabel"/>
@@ -36,7 +36,7 @@
                        readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${fromAriaLabel}'/>"/>
                 <input type="hidden" name="from" id="search_from_hidden" value="<c:out value='${fromDateOnly}'/>"/>
             </div>
-            <div class="flex-grow-1" style="min-width: 7rem;">
+            <div class="flex-grow-1 searchBar__dateField">
                 <label class="form-label small text-secondary mb-1" for="search_until_picker"><spring:message code="searchBar.until"/></label>
                 <spring:message code="searchBar.until.ariaLabel" var="untilAriaLabel"/>
                 <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_until_picker"
@@ -48,7 +48,7 @@
         <div class="vr flex-shrink-0 d-none d-md-block"></div>
 
         <spring:message code="searchBar.submit.ariaLabel" var="submitAriaLabel"/>
-        <button type="submit" class="btn btn-primary rounded-3 ms-md-3 p-2 flex-shrink-0" aria-label="<c:out value='${submitAriaLabel}'/>">
+        <button type="submit" class="btn btn-primary btn-action btn-action-md searchBar__submit ms-md-3 flex-shrink-0" aria-label="<c:out value='${submitAriaLabel}'/>">
             <i class="bi bi-search fs-5 search-btn" aria-hidden="true"></i>
         </button>
     </div>

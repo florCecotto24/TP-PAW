@@ -17,7 +17,7 @@
 <c:set var="btnDisabled" value="${disabled ne null ? disabled : false}"/>
 <c:set var="btnCssClass" value="${not empty cssClass ? cssClass : ''}"/>
 
-<c:set var="classes" value="btn btn-${btnSize} ${btnCssClass}" />
+<c:set var="classes" value="btn btn-${btnType} btn-action btn-action-${btnSize} ${btnCssClass}" />
 
 <c:choose>
     <c:when test="${not empty href and not btnDisabled}">

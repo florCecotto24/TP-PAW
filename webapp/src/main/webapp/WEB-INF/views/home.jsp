@@ -24,7 +24,7 @@
             </div>
 
 
-            <div class="sticky-top w-100 pt-4" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
+            <div class="sticky-top w-100 pt-4 home-search-shell">
                 <form method="get" action="${pageContext.request.contextPath}/search">
                     <paw:searchBar />
                 </form>
@@ -51,28 +51,28 @@
                     <h2 class="mb-5 fw-semibold"><spring:message code="home.features.title"/></h2>
                     <div class="row g-4">
                         <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle home-feature-icon">
                                 <i class="bi bi-shield fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.safe.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.safe.desc"/></p>
                         </div>
                         <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle home-feature-icon">
                                 <i class="bi bi-currency-dollar fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.price.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.price.desc"/></p>
                         </div>
                         <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle home-feature-icon">
                                 <i class="bi bi-clock fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.hours.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.hours.desc"/></p>
                         </div>
                         <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle home-feature-icon">
                                 <i class="bi bi-star fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.premium.title"/></h5>
@@ -82,12 +82,12 @@
                 </section>
             </div>
 
-            <section class="cta-banner text-center text-white py-5 w-100" style="background-color: var(--color-primary, #3b7be0);">
+            <section class="cta-banner home-cta-banner text-center text-white py-5 w-100">
                 <div class="container py-4 my-2">
                     <h2 class="fw-bold mb-3"><spring:message code="home.cta.title"/></h2>
-                    <p class="lead mb-4" style="font-size: 1.1rem; opacity: 0.9;"><spring:message code="home.cta.desc"/></p>
+                    <p class="lead home-cta-copy"><spring:message code="home.cta.desc"/></p>
                     <spring:message code="home.cta.button" var="ctaButtonText"/>
-                    <paw:button href="${pageContext.request.contextPath}/publish-car" text="${ctaButtonText}" size="lg" cssClass="btn-light text-primary fw-semibold px-4 rounded-3 shadow-sm" />
+                    <paw:button href="${pageContext.request.contextPath}/publish-car" text="${ctaButtonText}" type="light" size="lg" cssClass="text-primary shadow-sm home-cta-button" />
                 </div>
             </section>
         </div>

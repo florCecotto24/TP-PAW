@@ -74,7 +74,7 @@
         <spring:message code="detailReservationPanel.dateAlert"/>
     </div>
 
-    <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">
+    <button type="submit" class="btn btn-primary btn-action btn-action-lg btn-action-block mb-2" id="detailReservationSubmitBtn">
         <spring:message code="detailReservationPanel.startReservation"/>
     </button>
     </form>

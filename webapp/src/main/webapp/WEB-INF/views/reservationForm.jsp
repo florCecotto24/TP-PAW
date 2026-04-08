@@ -51,33 +51,33 @@
                         </c:if>
 
                         <div>
-                            <label for="email" class="form-label"><spring:message code="reservationForm.email"/></label>
-                            <form:input path="email" id="email" type="email" cssClass="form-control" placeholder="name@example.com" />
+                            <label for="email" class="form-label required-label"><spring:message code="reservationForm.email"/></label>
+                            <form:input path="email" id="email" type="email" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="name@example.com" />
                             <form:errors path="email" cssClass="text-danger small d-block mt-1" />
                         </div>
 
                         <div>
-                            <label for="name" class="form-label"><spring:message code="reservationForm.firstName"/></label>
-                            <form:input path="name" id="name" cssClass="form-control" placeholder="Your first name" />
+                            <label for="name" class="form-label required-label"><spring:message code="reservationForm.firstName"/></label>
+                            <form:input path="name" id="name" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="Your first name" />
                             <form:errors path="name" cssClass="text-danger small d-block mt-1" />
                         </div>
 
                         <div>
-                            <label for="surname" class="form-label"><spring:message code="reservationForm.lastName"/></label>
-                            <form:input path="surname" id="surname" cssClass="form-control" placeholder="Your last name" />
+                            <label for="surname" class="form-label required-label"><spring:message code="reservationForm.lastName"/></label>
+                            <form:input path="surname" id="surname" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="Your last name" />
                             <form:errors path="surname" cssClass="text-danger small d-block mt-1" />
                         </div>
 
-                        <div class="d-flex gap-2 mt-2">
+                        <div class="btn-action-row mt-2">
                             <c:choose>
                                 <c:when test="${not empty reservationForm.listingId}">
-                                    <a href="<c:url value='/car-detail'><c:param name='listingId' value='${reservationForm.listingId}'/></c:url>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
+                                    <a href="<c:url value='/car-detail'><c:param name='listingId' value='${reservationForm.listingId}'/></c:url>" class="btn btn-outline-secondary btn-action btn-action-md"><spring:message code="common.back"/></a>
                                 </c:when>
                                 <c:otherwise>
-                                    <a href="<c:url value='/car-detail'/>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
+                                    <a href="<c:url value='/'/>" class="btn btn-outline-secondary btn-action btn-action-md"><spring:message code="common.back"/></a>
                                 </c:otherwise>
                             </c:choose>
-                            <button type="submit" class="btn btn-primary w-50"><spring:message code="reservationForm.confirm"/></button>
+                            <button type="submit" class="btn btn-primary btn-action btn-action-md"><spring:message code="reservationForm.confirm"/></button>
                         </div>
                     </form:form>
                 </div>

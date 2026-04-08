@@ -20,9 +20,9 @@
 <c:set var="modalSize" value="${not empty size ? size : 'md'}" />
 <c:set var="modalVariant" value="${not empty variant ? variant : 'default'}" />
 <c:set var="modalCssClass" value="${not empty cssClass ? cssClass : ''}" />
-<c:set var="modalTriggerClass" value="${not empty triggerClass ? triggerClass : 'btn btn-primary btn-md'}" />
-<c:set var="modalConfirmClass" value="${not empty confirmClass ? confirmClass : 'btn btn-primary btn-md'}" />
-<c:set var="modalCancelClass" value="${not empty cancelClass ? cancelClass : 'btn btn-secondary btn-md'}" />
+<c:set var="modalTriggerClass" value="${not empty triggerClass ? triggerClass : 'btn btn-primary btn-action btn-action-md'}" />
+<c:set var="modalConfirmClass" value="${not empty confirmClass ? confirmClass : 'btn btn-primary btn-action btn-action-md'}" />
+<c:set var="modalCancelClass" value="${not empty cancelClass ? cancelClass : 'btn btn-secondary btn-action btn-action-md'}" />
 <c:set var="modalOpen" value="${open ne null ? open : false}" />
 <c:set var="modalClosable" value="${closable ne null ? closable : true}" />
 <c:set var="modalShowFooter" value="${showFooter ne null ? showFooter : true}" />

@@ -22,17 +22,17 @@ public class ReservationForm {
     @NotNull
     private String carName;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Enter a valid email address")
-    @Size(max = 50, message = "Email must be at most 50 characters")
+    @NotBlank(message = "{validation.email.notBlank}")
+    @Email(message = "{validation.email.invalid}")
+    @Size(max = 50, message = "{validation.email.size}")
     private String email;
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "Name must be at most 50 characters")
+    @NotBlank(message = "{validation.name.notBlank}")
+    @Size(max = 50, message = "{validation.name.size}")
     private String name;
 
-    @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Surname must be at most 50 characters")
+    @NotBlank(message = "{validation.surname.notBlank}")
+    @Size(max = 50, message = "{validation.surname.size}")
     private String surname;
 
     public Long getListingId() {

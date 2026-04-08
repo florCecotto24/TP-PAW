@@ -18,5 +18,5 @@
         </div>
     </div>
     <spring:message code="hostProfileBar.contact" var="contactText"/>
-    <paw:button text="${contactText}" size="sm" type="primary" cssClass="btn-outline-secondary detail-contact-btn" id="detailContactBtn" />
+    <paw:button text="${contactText}" size="sm" type="outline-secondary" cssClass="detail-contact-btn" id="detailContactBtn" />
 </div>

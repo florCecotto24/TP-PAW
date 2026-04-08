@@ -374,14 +374,21 @@ public class ListingJdbcDao implements ListingDao {
 
         final List<String> bands = criteria.getPriceBands();
         if (!bands.isEmpty()) {
-            final boolean wantFree = bands.contains("FREE");
-            final boolean wantPaid = bands.contains("PAID");
-            if (wantFree ^ wantPaid) {
-                if (wantFree) {
-                    sql.append("AND l.day_price = 0 ");
-                } else {
-                    sql.append("AND l.day_price > 0 ");
-                }
+            final List<String> conditions = new ArrayList<>();
+            if (bands.contains("UNDER_5000")) {
+                conditions.add("l.day_price < 5000");
+            }
+            if (bands.contains("5000_TO_15000")) {
+                conditions.add("(l.day_price >= 5000 AND l.day_price < 15000)");
+            }
+            if (bands.contains("15000_TO_30000")) {
+                conditions.add("(l.day_price >= 15000 AND l.day_price < 30000)");
+            }
+            if (bands.contains("OVER_30000")) {
+                conditions.add("l.day_price >= 30000");
+            }
+            if (!conditions.isEmpty()) {
+                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
             }
         }
 
