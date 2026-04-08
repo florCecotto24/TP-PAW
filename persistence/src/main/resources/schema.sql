@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS listings (
     updated_at TIMESTAMPTZ NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'paused', 'finished')),
     day_price DECIMAL(10, 2) NOT NULL,
-    start_point VARCHAR(50) NOT NULL,
+    start_point TEXT NOT NULL,
     description VARCHAR(200) NOT NULL,
     check_in_time TIME NOT NULL,
     check_out_time TIME NOT NULL,

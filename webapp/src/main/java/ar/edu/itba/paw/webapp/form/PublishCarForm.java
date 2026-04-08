@@ -41,6 +41,7 @@ public class PublishCarForm {
     private String model;
 
     @NotBlank(message = "Plate is required")
+    @Size(min = 6, max = 10, message = "Plate must be between 6 and 10 characters")
     // Acá podríamos poner las validaciones de las patentes argentinas (dividir entre nuevas y viejas)
     private String plate;
 
@@ -59,6 +60,7 @@ public class PublishCarForm {
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "Start point is required")
+    @Size(max = 250, message = "Description must be at most 250 characters")
     private String startPoint;
 
     @Size(max = 200, message = "Description must be at most 200 characters")
