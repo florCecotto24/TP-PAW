@@ -49,7 +49,7 @@
                         </c:if>
 
                         <div>
-                            <label for="email" class="form-label"><spring:message code="reservationForm.email"/></label>
+                            <label for="email" class="form-label required-label"><spring:message code="reservationForm.email"/></label>
                             <form:input path="email" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="name@example.com" />
                             <form:errors path="email" cssClass="text-danger small d-block mt-1" />
                         </div>

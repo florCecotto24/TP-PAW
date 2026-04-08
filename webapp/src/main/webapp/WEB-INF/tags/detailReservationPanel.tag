@@ -36,20 +36,6 @@
         <strong><spring:message code="detailReservationPanel.returnBy"/></strong>
         <c:out value="${not empty returnTime ? returnTime : '—'}"/>
     </p>
-    <div class="mb-3">
-        <label class="form-label small mb-2" for="detail_daterange"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
-        <spring:message code="detailReservationPanel.dates.placeholder" var="datesPlaceholder"/>
-        <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
-        <input
-            type="text"
-            id="detail_daterange"
-            class="form-control"
-            placeholder="<c:out value='${datesPlaceholder}'/>"
-            readonly
-            aria-label="<c:out value='${datesAriaLabel}'/>">
-        <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
-        <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
-    </div>
 
     <div class="d-flex align-items-start gap-2 mb-3">
         <i class="bi bi-geo-alt text-secondary mt-1" aria-hidden="true"></i>
@@ -68,6 +54,21 @@
             <span class="fw-semibold"><spring:message code="detailReservationPanel.total"/></span>
             <span class="detail-total-amount fw-bold fs-4" id="detail_total_amount"></span>
         </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label small mb-2" for="detail_daterange"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
+        <spring:message code="detailReservationPanel.dates.placeholder" var="datesPlaceholder"/>
+        <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
+        <input
+                type="text"
+                id="detail_daterange"
+                class="form-control"
+                placeholder="<c:out value='${datesPlaceholder}'/>"
+                readonly
+                aria-label="<c:out value='${datesAriaLabel}'/>">
+        <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
+        <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
     </div>
 
     <div class="alert alert-danger mb-3" id="detail_date_alert" role="alert" hidden>

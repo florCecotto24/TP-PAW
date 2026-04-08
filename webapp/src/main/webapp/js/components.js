@@ -557,8 +557,24 @@ document.addEventListener("DOMContentLoaded", function () {
     var fromHidden = document.getElementById('detail_from_hidden');
     var untilHidden = document.getElementById('detail_until_hidden');
     var form = document.getElementById('detailReservationForm');
+    var dateAlert = document.getElementById('detail_date_alert');
     if (!daterangeInput || !fromHidden || !untilHidden || !form || !window.PawFlatpickrRange) {
         return;
+    }
+
+    function hasCompleteRange() {
+        return !!fromHidden.value && !!untilHidden.value;
+    }
+
+    function syncDateAlert() {
+        if (!dateAlert) {
+            return;
+        }
+        if (hasCompleteRange()) {
+            dateAlert.setAttribute('hidden', 'hidden');
+        } else {
+            dateAlert.removeAttribute('hidden');
+        }
     }
 
     function parseBookableRangesJson(raw) {
@@ -628,10 +644,13 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
     }
 
+    daterangeInput.addEventListener('change', syncDateAlert);
+    daterangeInput.addEventListener('input', syncDateAlert);
+
     form.addEventListener('submit', function (e) {
-        if (!fromHidden.value || !untilHidden.value) {
+        syncDateAlert();
+        if (!hasCompleteRange()) {
             e.preventDefault();
-            alert('Please select both pickup and return dates');
             return false;
         }
     });
