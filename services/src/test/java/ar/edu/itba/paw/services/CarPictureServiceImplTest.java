@@ -1,11 +1,24 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.persistence.CarPictureDao;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.image.ImageValidationException;
+import ar.edu.itba.paw.models.CarPicture;
+import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.persistence.CarPictureDao;
 
 @ExtendWith(MockitoExtension.class)
 public class CarPictureServiceImplTest {
@@ -20,60 +33,121 @@ public class CarPictureServiceImplTest {
     private CarPictureServiceImpl carPictureService;
 
     @Test
-    public void testCreateCarPictureWhenImageExists(){
+    public void testCreateCarPictureWhenImageExists() {
         // 1. Arrange
+        final long carId = 1L;
+        final long imageId = 2L;
+        final int displayOrder = 3;
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
+        final byte[] data = {0x01, 0x02};
+        final Image image = new Image(imageId, "photo.jpg", "image/jpeg", data);
+        final CarPicture carPicture = new CarPicture(10L, carId, imageId, displayOrder, createdAt, updatedAt);
+
+        Mockito.when(imageService.getImageById(imageId)).thenReturn(Optional.of(image));
+        Mockito.when(carPictureDao.createCarPicture(carId, imageId, displayOrder)).thenReturn(carPicture);
 
         // 2. Execute
+        final CarPicture result = carPictureService.createCarPicture(carId, imageId, displayOrder);
 
         // 3. Assert
-
+        Assertions.assertNotNull(result);
+        Assertions.assertSame(carPicture, result);
     }
 
     @Test
-    public void testCreateCarPictureWhenImageDoesNotExist(){
+    public void testCreateCarPictureWhenImageDoesNotExist() {
         // 1. Arrange
+        final long carId = 1L;
+        final long imageId = 2L;
+        final int displayOrder = 1;
+        Mockito.when(imageService.getImageById(imageId)).thenReturn(Optional.empty());
 
-        // 2. Execute
-
-        // 3. Assert
-
+        // 2. Execute and 3. Assert
+        final ImageValidationException ex = Assertions.assertThrows(
+                ImageValidationException.class,
+                () -> carPictureService.createCarPicture(carId, imageId, displayOrder));
+        Assertions.assertEquals(MessageKeys.IMAGE_INVALID_ID, ex.getMessageCode());
     }
 
     @Test
-    public void testGetCarPictureByCarIdWhenCarExists() {
+    public void testCreateCarPictureWhenImageIdNotPositive() {
         // 1. Arrange
+        final long carId = 1L;
+        final long imageId = 0L;
+        final int displayOrder = 1;
 
-        // 2. Execute
-
-        // 3. Assert
-
+        // 2. Execute and 3. Assert
+        final ImageValidationException ex = Assertions.assertThrows(
+                ImageValidationException.class,
+                () -> carPictureService.createCarPicture(carId, imageId, displayOrder));
+        Assertions.assertEquals(MessageKeys.IMAGE_INVALID_ID, ex.getMessageCode());
     }
 
     @Test
-    public void testGetCarPictureByCarIdWhenCarDoesNotExist() {
+    public void testGetCarPictureByIdWhenPictureExists() {
         // 1. Arrange
+        final long pictureId = 50L;
+        final long carId = 5L;
+        final long imageId = 6L;
+        final int displayOrder = 1;
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
+        final CarPicture carPicture = new CarPicture(pictureId, carId, imageId, displayOrder, createdAt, updatedAt);
+        Mockito.when(carPictureDao.getCarPictureById(pictureId)).thenReturn(Optional.of(carPicture));
 
         // 2. Execute
+        final Optional<CarPicture> result = carPictureService.getCarPictureById(pictureId);
 
         // 3. Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertSame(carPicture, result.get());
     }
 
+    @Test
+    public void testGetCarPictureByIdWhenPictureDoesNotExist() {
+        // 1. Arrange
+        final long pictureId = 51L;
+        Mockito.when(carPictureDao.getCarPictureById(pictureId)).thenReturn(Optional.empty());
+
+        // 2. Execute
+        final Optional<CarPicture> result = carPictureService.getCarPictureById(pictureId);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isEmpty());
+    }
 
     @Test
     public void testGetCarPicturesByCarIdWhenCarExists() {
         // 1. Arrange
+        final long carId = 7L;
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-04-01T08:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-04-02T08:00:00Z");
+        final CarPicture p1 = new CarPicture(100L, carId, 20L, 1, createdAt, updatedAt);
+        final CarPicture p2 = new CarPicture(101L, carId, 21L, 2, createdAt, updatedAt);
+        final List<CarPicture> pictures = new ArrayList<>();
+        pictures.add(p1);
+        pictures.add(p2);
+        Mockito.when(carPictureDao.getCarPicturesByCarId(carId)).thenReturn(pictures);
 
         // 2. Execute
+        final List<CarPicture> result = carPictureService.getCarPicturesByCarId(carId);
 
         // 3. Assert
+        Assertions.assertEquals(pictures, result);
     }
 
     @Test
-    public void testGetCarPicturesByCarIdWhenCarDoesNotExist() {        
+    public void testGetCarPicturesByCarIdWhenCarDoesNotExist() {
         // 1. Arrange
+        final long carId = 8L;
+        final List<CarPicture> empty = Collections.emptyList();
+        Mockito.when(carPictureDao.getCarPicturesByCarId(carId)).thenReturn(empty);
 
         // 2. Execute
+        final List<CarPicture> result = carPictureService.getCarPicturesByCarId(carId);
 
         // 3. Assert
+        Assertions.assertTrue(result.isEmpty());
     }
 }
