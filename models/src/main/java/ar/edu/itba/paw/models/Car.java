@@ -1,16 +1,22 @@
 package ar.edu.itba.paw.models;
 
 public class Car {
-    public enum Type {
+    public interface PrettyNamed {
+        default String prettyName() {
+            return ((Enum<?>) this).name().replace("_", " ").toLowerCase();
+        }
+    }
+
+    public enum Type implements PrettyNamed{
         SEDAN, HATCHBACK, SUV, COUPE, CONVERTIBLE, WAGON, VAN, PICKUP
     }
 
-    public enum Powertrain {
+    public enum Powertrain implements PrettyNamed{
         GASOLINE, DIESEL, ELECTRIC, HYBRID
     }
 
-    public enum Transmission {
-        MANUAL, AUTOMATIC, SEMI_AUTOMATIC
+    public enum Transmission implements PrettyNamed{
+        MANUAL, AUTOMATIC, SEMI_AUTOMATIC;
     }
 
     private final long id;
