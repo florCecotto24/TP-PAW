@@ -1,6 +1,6 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="hostName" required="true" type="java.lang.String" %>
 <%@ attribute name="avatarUrl" required="true" type="java.lang.String" %>
@@ -18,5 +18,5 @@
         </div>
     </div>
     <spring:message code="hostProfileBar.contact" var="contactText"/>
-    <paw:button text="${contactText}" size="sm" type="primary" cssClass="btn-outline-secondary detail-contact-btn" id="detailContactBtn" />
+    <ryden:button text="${contactText}" size="sm" type="primary" cssClass="btn-outline-secondary detail-contact-btn" id="detailContactBtn" />
 </div>

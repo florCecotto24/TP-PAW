@@ -1,9 +1,13 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.dto.CarPublicationResult;
+import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.Image;
 import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
@@ -11,6 +15,7 @@ import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.WallDateTimeParsing;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
@@ -41,17 +46,26 @@ public class ListingServiceImpl implements ListingService {
     private final ListingAvailabilityDao listingAvailabilityDao;
     private final CarDao carDao;
     private final ReservationDao reservationDao;
+    private final UserService userService;
+    private final ImageService imageService;
+    private final CarPictureService carPictureService;
 
     @Autowired
     public ListingServiceImpl(
             final ListingDao listingDao,
             final ListingAvailabilityDao listingAvailabilityDao,
             final CarDao carDao,
-            final ReservationDao reservationDao) {
+            final ReservationDao reservationDao,
+            final UserService userService,
+            final ImageService imageService,
+            final CarPictureService carPictureService) {
         this.listingDao = listingDao;
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.carDao = carDao;
         this.reservationDao = reservationDao;
+        this.userService = userService;
+        this.imageService = imageService;
+        this.carPictureService = carPictureService;
     }
 
     @Override
@@ -87,6 +101,61 @@ public class ListingServiceImpl implements ListingService {
                     period.getEndInclusive());
         }
         return listing;
+    }
+
+    @Override
+    @Transactional
+    public CarPublicationResult publish(
+            final long ownerId,
+            final String plate,
+            final String brand,
+            final String model,
+            final Car.Type type,
+            final Car.Powertrain powertrain,
+            final Car.Transmission transmission,
+            final BigDecimal pricePerDay,
+            final String startPoint,
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime,
+            final List<AvailabilityPeriod> periods,
+            final List<ImageUpload> images) {
+        final User publisher = userService.getUserById(ownerId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        final Car car = carDao.createCar(
+                publisher.getId(),
+                plate,
+                brand,
+                model,
+                type,
+                powertrain,
+                transmission);
+        final Listing listing = createListing(
+                car.getId(),
+                Listing.Status.ACTIVE,
+                pricePerDay,
+                startPoint,
+                description,
+                checkInTime,
+                checkOutTime,
+                periods);
+
+        int displayOrder = 1;
+        if (images != null) {
+            for (final ImageUpload picture : images) {
+                if (picture.getData() == null || picture.getData().length == 0) {
+                    continue;
+                }
+                final Image image = imageService.createImage(
+                        picture.getFilename(),
+                        picture.getContentType(),
+                        picture.getData());
+                carPictureService.createCarPicture(car.getId(), image.getId(), displayOrder);
+                displayOrder++;
+            }
+        }
+
+        return new CarPublicationResult(publisher, car, listing);
     }
 
     private static void validateAvailabilityIncludesNoDatesBeforeToday(final List<AvailabilityPeriod> periods) {

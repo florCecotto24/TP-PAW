@@ -7,4 +7,6 @@ public interface ImageDao {
     Image createImage(final String name, final String contentType, final byte[] data);
 
     Optional<Image> getImageById(final long id);
+
+    void deleteImage(long id);
 }

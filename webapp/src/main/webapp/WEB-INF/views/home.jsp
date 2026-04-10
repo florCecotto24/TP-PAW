@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <!DOCTYPE html>
@@ -12,7 +12,7 @@
     </head>
 
     <body>
-        <paw:navbar />
+        <ryden:navbar />
         <div>
             <div class="hero-section w-100">
                 <div class="hero-overlay pb-2">
@@ -26,7 +26,7 @@
 
             <div class="sticky-top w-100 pt-4" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
                 <form method="get" action="${pageContext.request.contextPath}/search">
-                    <paw:searchBar />
+                    <ryden:searchBar />
                 </form>
             </div>
 
@@ -35,7 +35,7 @@
                 <section class="carouselSection" id="cheapestVehiclesSection">
                     <spring:message code="home.cheapest.title" var="cheapestTitle"/>
                     <spring:message code="home.cheapest.subtitle" var="cheapestSubtitle"/>
-                    <paw:carouselSection cars="${cheapestCars}" title="${cheapestTitle}"
+                    <ryden:carouselSection cars="${cheapestCars}" title="${cheapestTitle}"
                                          subtitle="${cheapestSubtitle}" id="cheapestVehiclesCarousel" />
                 </section>
 
@@ -43,7 +43,7 @@
                             id="mostRecentVehiclesSection">
                     <spring:message code="home.recent.title" var="recentTitle"/>
                     <spring:message code="home.recent.subtitle" var="recentSubtitle"/>
-                    <paw:carouselSection cars="${mostRecentCars}" title="${recentTitle}"
+                    <ryden:carouselSection cars="${mostRecentCars}" title="${recentTitle}"
                                 subtitle="${recentSubtitle}" id="mostRecentVehiclesCarousel" />
                 </section>
 
@@ -87,7 +87,7 @@
                     <h2 class="fw-bold mb-3"><spring:message code="home.cta.title"/></h2>
                     <p class="lead mb-4" style="font-size: 1.1rem; opacity: 0.9;"><spring:message code="home.cta.desc"/></p>
                     <spring:message code="home.cta.button" var="ctaButtonText"/>
-                    <paw:button href="${pageContext.request.contextPath}/publish-car" text="${ctaButtonText}" size="lg" cssClass="btn-light text-primary fw-semibold px-4 rounded-3 shadow-sm" />
+                    <ryden:button href="${pageContext.request.contextPath}/publish-car" text="${ctaButtonText}" size="lg" cssClass="btn-light text-primary fw-semibold px-4 rounded-3 shadow-sm" />
                 </div>
             </section>
         </div>

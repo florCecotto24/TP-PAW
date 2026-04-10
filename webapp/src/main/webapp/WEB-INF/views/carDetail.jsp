@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -8,21 +8,21 @@
     <%@include file="header.jsp"%>
 </head>
 <body class="bg-light has-fixed-navbar">
-<paw:navbar/>
+<ryden:navbar/>
 
 <main class="car-detail-page container pb-4">
-    <paw:breadcrumbTrail currentLabel="${listing.title}"/>
+    <ryden:breadcrumbTrail currentLabel="${listing.title}"/>
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
             <h1 class="h2 fw-bold mb-0"><c:out value="${listing.title}"/></h1>
-            <paw:detailListingMeta location="${listing.startPoint}"/>
+            <ryden:detailListingMeta location="${listing.startPoint}"/>
         </div>
     </div>
 
     <div class="row g-4 align-items-start">
         <div class="col-lg-8 order-1 d-flex flex-column gap-4">
-            <paw:carDetailGalleryGrid
+            <ryden:carDetailGalleryGrid
                     modalId="carDetailGalleryModal"
                     imageUrls="${carGalleryImagePaths}"
                     vehicleLabel="${listing.title}"/>
@@ -47,10 +47,10 @@
                 <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.specification"/></h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">
                     <div class="col">
-                        <paw:specCard icon="gear-wide-connected" label="${car.transmission.name()}"/>
+                        <ryden:specCard icon="gear-wide-connected" label="${car.transmission.name()}"/>
                     </div>
                     <div class="col">
-                        <paw:specCard icon="fuel-pump" label="${car.powertrain.name()}"/>
+                        <ryden:specCard icon="fuel-pump" label="${car.powertrain.name()}"/>
                     </div>
                 </div>
             </section>
@@ -59,7 +59,7 @@
 
         <div class="col-lg-4 order-2">
             <div class="detail-reservation-sticky">
-                <paw:detailReservationPanel
+                <ryden:detailReservationPanel
                         listingId="${listing.id}"
                         dailyPrice="${listing.dayPrice}"
                         deliveryLocation="${listing.startPoint}"
@@ -74,7 +74,7 @@
     </div>
 
     <section class="similarVehiclesSection mt-5 pt-5 border-top border-secondary-subtle" id="similarVehiclesSection">
-        <paw:similarVehiclesHeader/>
+        <ryden:similarVehiclesHeader/>
         <c:choose>
             <c:when test="${empty similarListings}">
                 <p class="text-secondary text-center mb-0"><spring:message code="carDetail.similarListingsWhenAvailable"/></p>
@@ -92,7 +92,7 @@
                                 </c:otherwise>
                             </c:choose>
 
-                            <paw:carCard
+                            <ryden:carCard
                                     model="${similar.model}"
                                     brand="${similar.brand}"
                                     price="${similar.price}"
@@ -108,7 +108,7 @@
 </main>
 
 <c:if test="${not empty carGalleryImagePaths}">
-<paw:carDetailGalleryModal
+<ryden:carDetailGalleryModal
         modalId="carDetailGalleryModal"
         carouselId="carDetailCarousel"
         imageUrls="${carGalleryImagePaths}"

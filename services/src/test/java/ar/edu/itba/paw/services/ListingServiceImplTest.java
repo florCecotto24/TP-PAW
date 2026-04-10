@@ -19,8 +19,12 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.dto.CarPublicationResult;
+import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.CarPicture;
+import ar.edu.itba.paw.models.Image;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingDetail;
@@ -40,12 +44,20 @@ public class ListingServiceImplTest {
     @Mock
     private ListingAvailabilityDao listingAvailabilityDao;
 
-    @SuppressWarnings("unused")
     @Mock
     private CarDao carDao;
 
     @Mock
     private ReservationDao reservationDao;
+
+    @Mock
+    private UserService userService;
+
+    @Mock
+    private ImageService imageService;
+
+    @Mock
+    private CarPictureService carPictureService;
 
     @InjectMocks
     private ListingServiceImpl listingService;
@@ -372,5 +384,91 @@ public class ListingServiceImplTest {
 
         // 3. Assert
         Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testPublishCreatesCarListingAndPictures() {
+        final long carId = 1L;
+        final long ownerId = 2L;
+        final long listingId = 3L;
+        final long imageId = 4L;
+        final long carPictureId = 5L;
+        final String plate = "testPlate";
+        final String brand = "testBrand";
+        final String model = "testModel";
+        final Car.Type type = Car.Type.HATCHBACK;
+        final Car.Powertrain powertrain = Car.Powertrain.GASOLINE;
+        final Car.Transmission transmission = Car.Transmission.MANUAL;
+        final BigDecimal pricePerDay = new BigDecimal("100");
+        final String expectedTitle = brand + " " + model;
+        final String startPoint = "testStartPoint";
+        final String description = "testDescription";
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T12:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-02T12:00:00Z");
+        final Listing.Status status = Listing.Status.ACTIVE;
+        final LocalTime checkInTime = LocalTime.of(10, 0);
+        final LocalTime checkOutTime = LocalTime.of(12, 0);
+        final LocalDate startDate = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
+        final LocalDate endDate = startDate.plusDays(30);
+        final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
+        final String imageName = "imageNameTest";
+        final String imageType = "contentTypeTest";
+
+        final Image image = new Image(imageId, imageName, imageType, imageData);
+        final Car car = new Car(carId, ownerId, plate, brand, model, type, powertrain, transmission);
+        final Listing listing = new Listing(
+                listingId,
+                expectedTitle,
+                carId,
+                createdAt,
+                updatedAt,
+                status,
+                pricePerDay,
+                startPoint,
+                description,
+                checkInTime,
+                checkOutTime);
+        final User user = new User(ownerId, "owner@test.com", "ownerName", "ownerSurname");
+        final CarPicture carPicture = new CarPicture(carPictureId, carId, imageId, 1, createdAt, updatedAt);
+        final List<AvailabilityPeriod> periods = List.of(new AvailabilityPeriod(startDate, endDate));
+        final List<ImageUpload> uploads = List.of(new ImageUpload(imageName, imageType, imageData));
+
+        Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(user));
+        Mockito.when(carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission)).thenReturn(car);
+        Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(car));
+        Mockito.when(listingDao.createListing(
+                carId,
+                expectedTitle,
+                Listing.Status.ACTIVE,
+                pricePerDay,
+                startPoint,
+                description,
+                checkInTime,
+                checkOutTime)).thenReturn(listing);
+        Mockito.when(listingAvailabilityDao.create(listingId, startDate, endDate))
+                .thenReturn(new ListingAvailability(10L, listingId, startDate, endDate, createdAt, updatedAt));
+        Mockito.when(imageService.createImage(imageName, imageType, imageData)).thenReturn(image);
+        Mockito.when(carPictureService.createCarPicture(carId, image.getId(), 1)).thenReturn(carPicture);
+
+        final CarPublicationResult result = listingService.publish(
+                ownerId,
+                plate,
+                brand,
+                model,
+                type,
+                powertrain,
+                transmission,
+                pricePerDay,
+                startPoint,
+                description,
+                checkInTime,
+                checkOutTime,
+                periods,
+                uploads);
+
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(user, result.getPublisher());
+        Assertions.assertEquals(car, result.getCar());
+        Assertions.assertEquals(listing, result.getListing());
     }
 }

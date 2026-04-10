@@ -6,7 +6,10 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import ar.edu.itba.paw.dto.CarPublicationResult;
+import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.HomeListingCards;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
@@ -25,6 +28,25 @@ public interface ListingService {
             LocalTime checkInTime,
             LocalTime checkOutTime,
             List<AvailabilityPeriod> availabilityPeriods);
+
+    /**
+     * Publica un auto con aviso, disponibilidad e imágenes (flujo de publicación completo).
+     */
+    CarPublicationResult publish(
+            long ownerId,
+            String plate,
+            String brand,
+            String model,
+            Car.Type type,
+            Car.Powertrain powertrain,
+            Car.Transmission transmission,
+            BigDecimal pricePerDay,
+            String startPoint,
+            String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime,
+            List<AvailabilityPeriod> periods,
+            List<ImageUpload> images);
 
     Optional<Listing> getListingById(long id);
 

@@ -8,6 +8,17 @@ public class Image {
     private final String contentType;
     private final byte[] data;
 
+    public static boolean isImageContentType(final String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        final String t = contentType.trim();
+        if (t.isEmpty()) {
+            return false;
+        }
+        return t.regionMatches(true, 0, "image/", 0, 6);
+    }
+
     public Image(final long id, final String name, final String contentType, final byte[] data) {
         this.id = id;
         this.name = name;

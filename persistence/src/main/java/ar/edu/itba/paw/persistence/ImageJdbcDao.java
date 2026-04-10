@@ -51,4 +51,9 @@ public class ImageJdbcDao implements ImageDao {
     public Optional<Image> getImageById(final long id) {
         return jdbcTemplate.query(SELECT_IMAGE_BY_ID, IMAGE_ROW_MAPPER, id).stream().findAny();
     }
+
+    @Override
+    public void deleteImage(final long id) {
+        jdbcTemplate.update("DELETE FROM images WHERE id = ?", id);
+    }
 }

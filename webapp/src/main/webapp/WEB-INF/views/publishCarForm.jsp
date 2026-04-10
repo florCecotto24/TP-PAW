@@ -1,4 +1,4 @@
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
@@ -9,11 +9,11 @@
     <%@include file="header.jsp" %>
 </head>
 <body class="has-fixed-navbar">
-<paw:navbar/>
+<ryden:navbar/>
 
 <main class="container py-5">
     <spring:message code="publishCar.form.title" var="publishFormTitle"/>
-    <paw:breadcrumbTrail currentLabel="${publishFormTitle}"/>
+    <ryden:breadcrumbTrail currentLabel="${publishFormTitle}"/>
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
             <div class="card border-0 shadow-sm rounded-4">
@@ -28,22 +28,10 @@
 
                         <form:errors element="div" cssClass="alert alert-danger"/>
 
-                        <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.ownerName"/></label>
-                            <form:input path="ownerName" cssClass="form-control" cssErrorClass="form-control is-invalid" type="text" autocomplete="name"/>
-                            <form:errors path="ownerName" cssClass="text-danger d-block"/>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.ownerSurname"/></label>
-                            <form:input path="ownerSurname" cssClass="form-control" cssErrorClass="form-control is-invalid" type="text" autocomplete="surname"/>
-                            <form:errors path="ownerSurname" cssClass="text-danger d-block"/>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.email"/></label>
-                            <form:input path="ownerEmail" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                            <form:errors path="ownerEmail" cssClass="text-danger d-block"/>
+                        <div class="mb-4 p-3 rounded-3 bg-light border">
+                            <p class="mb-1 small text-muted"><spring:message code="publishCar.form.publishingAs"/></p>
+                            <p class="mb-0 fw-semibold"><c:out value="${publisherDisplayName}"/></p>
+                            <p class="mb-0 text-secondary small"><c:out value="${publisherEmail}"/></p>
                         </div>
 
                         <div class="mb-3">
@@ -139,9 +127,9 @@
                                             <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span></span>
                                             <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove ${st.first ? "d-none" : "" }" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
                                         </div>
-                                        <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
-                                        <form:hidden path="availabilityRows[${st.index}].from" cssClass="paw-avail-from"/>
-                                        <form:hidden path="availabilityRows[${st.index}].until" cssClass="paw-avail-until"/>
+                                        <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
+                                        <form:hidden path="availabilityRows[${st.index}].from" cssClass="ryden-avail-from"/>
+                                        <form:hidden path="availabilityRows[${st.index}].until" cssClass="ryden-avail-until"/>
                                         <form:errors path="availabilityRows[${st.index}].from" cssClass="text-danger d-block"/>
                                         <form:errors path="availabilityRows[${st.index}].until" cssClass="text-danger d-block"/>
                                     </div>
@@ -158,19 +146,24 @@
                                     <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>
                                     <button type="button" class="btn btn-outline-danger btn-action btn-action-sm publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
                                 </div>
-                                <input type="text" class="form-control form-control-sm paw-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
-                                <input type="hidden" class="paw-avail-from" name="availabilityRows[__IDX__].from" value=""/>
-                                <input type="hidden" class="paw-avail-until" name="availabilityRows[__IDX__].until" value=""/>
+                                <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
+                                <input type="hidden" class="ryden-avail-from" name="availabilityRows[__IDX__].from" value=""/>
+                                <input type="hidden" class="ryden-avail-until" name="availabilityRows[__IDX__].until" value=""/>
                             </div>
                         </template>
 
+                        <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="publishImageTooLargeMsg" htmlEscape="true"/>
+                        <spring:message code="validation.pictures.mustBeImage" var="publishMustBeImageMsg" htmlEscape="true"/>
                         <div class="mb-3">
                             <span class="form-label required-label d-block"><spring:message code="publishCar.form.pictures"/></span>
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden" accept="image/*" multiple required aria-label="Vehicle photos"/>
+                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden" accept="image/*" multiple required aria-label="Vehicle photos"
+                                       data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
+                                       data-upload-image-too-large="<c:out value='${publishImageTooLargeMsg}'/>"
+                                       data-upload-not-image-msg="<c:out value='${publishMustBeImageMsg}'/>"/>
                                 <label for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
-                            </div>
-                            <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint"/></small>
+                            </div>selec
+                            <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint" arguments="${uploadMaxImageMegabytes}"/></small>
                             <form:errors path="pictures" cssClass="text-danger d-block"/>
                             <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>

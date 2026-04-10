@@ -66,7 +66,7 @@
         modal.setAttribute('aria-hidden', 'false');
         updateBodyLock();
         focusFirstElement(modal);
-        dispatchModalEvent(modal, 'paw:modal-open');
+        dispatchModalEvent(modal, 'ryden:modal-open');
     }
 
     function closeModal(modal, action) {
@@ -77,7 +77,7 @@
         modal.classList.remove(OPEN_CLASS);
         modal.setAttribute('aria-hidden', 'true');
         updateBodyLock();
-        dispatchModalEvent(modal, 'paw:modal-close', action);
+        dispatchModalEvent(modal, 'ryden:modal-close', action);
 
         var state = modalState.get(modal);
         if (state && state.previousActiveElement && typeof state.previousActiveElement.focus === 'function') {
@@ -157,11 +157,11 @@
         updateBodyLock();
     });
 
-    window.PawModal = window.PawModal || {};
-    window.PawModal.open = function (id) {
+    window.RydenModal = window.RydenModal || {};
+    window.RydenModal.open = function (id) {
         openModal(getModal(id));
     };
-    window.PawModal.close = function (id) {
+    window.RydenModal.close = function (id) {
         closeModal(getModal(id));
     };
 })();
@@ -211,6 +211,32 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 (function () {
+    function rydenParseMaxImageBytes(inputEl) {
+        if (!inputEl) {
+            return NaN;
+        }
+        var raw = inputEl.getAttribute("data-upload-max-image-bytes");
+        if (!raw) {
+            return NaN;
+        }
+        var n = parseInt(raw, 10);
+        return isNaN(n) ? NaN : n;
+    }
+
+    function rydenImageTooLargeMessage(inputEl) {
+        if (!inputEl) {
+            return "";
+        }
+        return inputEl.getAttribute("data-upload-image-too-large") || "";
+    }
+
+    function rydenNotImageMessage(inputEl) {
+        if (!inputEl) {
+            return "";
+        }
+        return inputEl.getAttribute("data-upload-not-image-msg") || "";
+    }
+
     var input = document.getElementById("picturesInput");
     var preview = document.getElementById("picturesPreview");
 
@@ -226,11 +252,34 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        Array.prototype.forEach.call(files, function (file) {
-            if (!file.type || file.type.indexOf("image/") !== 0) {
+        var maxBytes = rydenParseMaxImageBytes(input);
+        var tooLargeMsg = rydenImageTooLargeMessage(input);
+        if (maxBytes > 0) {
+            for (var i = 0; i < files.length; i++) {
+                if (files[i].size > maxBytes) {
+                    if (tooLargeMsg) {
+                        window.alert(tooLargeMsg);
+                    }
+                    input.value = "";
+                    return;
+                }
+            }
+        }
+
+        var notImgMsg = rydenNotImageMessage(input);
+        for (var j = 0; j < files.length; j++) {
+            var fj = files[j];
+            var t = (fj.type || "").toLowerCase();
+            if (!t || t.indexOf("image/") !== 0) {
+                if (notImgMsg) {
+                    window.alert(notImgMsg);
+                }
+                input.value = "";
                 return;
             }
+        }
 
+        Array.prototype.forEach.call(files, function (file) {
             var col = document.createElement("div");
             col.className = "col-6 col-md-4";
 
@@ -258,6 +307,63 @@ document.addEventListener("DOMContentLoaded", function () {
             };
             reader.readAsDataURL(file);
         });
+    });
+})();
+
+(function () {
+    function rydenParseMaxImageBytes(inputEl) {
+        if (!inputEl) {
+            return NaN;
+        }
+        var raw = inputEl.getAttribute("data-upload-max-image-bytes");
+        if (!raw) {
+            return NaN;
+        }
+        var n = parseInt(raw, 10);
+        return isNaN(n) ? NaN : n;
+    }
+
+    function rydenImageTooLargeMessage(inputEl) {
+        if (!inputEl) {
+            return "";
+        }
+        return inputEl.getAttribute("data-upload-image-too-large") || "";
+    }
+
+    function rydenNotImageMessage(inputEl) {
+        if (!inputEl) {
+            return "";
+        }
+        return inputEl.getAttribute("data-upload-not-image-msg") || "";
+    }
+
+    var profileInput = document.getElementById("profilePictureInput");
+    if (!profileInput) {
+        return;
+    }
+
+    profileInput.addEventListener("change", function () {
+        var file = profileInput.files && profileInput.files[0];
+        if (!file) {
+            return;
+        }
+        var maxBytes = rydenParseMaxImageBytes(profileInput);
+        var tooLargeMsg = rydenImageTooLargeMessage(profileInput);
+        if (maxBytes > 0 && file.size > maxBytes) {
+            if (tooLargeMsg) {
+                window.alert(tooLargeMsg);
+            }
+            profileInput.value = "";
+            return;
+        }
+        var ft = (file.type || "").toLowerCase();
+        if (!ft || ft.indexOf("image/") !== 0) {
+            var nim = rydenNotImageMessage(profileInput);
+            if (nim) {
+                window.alert(nim);
+            }
+            profileInput.value = "";
+        }
     });
 })();
 
@@ -325,10 +431,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function initWrappers() {
-        document.querySelectorAll('[data-paw-dtpair-wrap]').forEach(function (wrap) {
-            var hidId = wrap.getAttribute('data-paw-hidden');
-            var dId = wrap.getAttribute('data-paw-date');
-            var tId = wrap.getAttribute('data-paw-time');
+        document.querySelectorAll('[data-ryden-dtpair-wrap]').forEach(function (wrap) {
+            var hidId = wrap.getAttribute('data-ryden-hidden');
+            var dId = wrap.getAttribute('data-ryden-date');
+            var tId = wrap.getAttribute('data-ryden-time');
             var timeEl = (tId && tId.length) ? document.getElementById(tId) : null;
             bindPair(
                 document.getElementById(hidId),
@@ -344,7 +450,7 @@ document.addEventListener("DOMContentLoaded", function () {
         initWrappers();
     }
 
-    window.PawDateTimePair = {
+    window.RydenDateTimePair = {
         bindPair: bindPair,
         splitLocalDt: splitLocalDt,
         combine: combine
@@ -503,7 +609,7 @@ document.addEventListener("DOMContentLoaded", function () {
         };
     }
 
-    window.PawFlatpickrRange = {
+    window.RydenFlatpickrRange = {
         init: initRange,
         parseIsoLocalDateTime: parseIsoLocalDateTime,
         formatIsoLocalDateTime: formatIsoLocalDateTime,
@@ -541,8 +647,8 @@ document.addEventListener("DOMContentLoaded", function () {
             minDate: 'today',
             defaultDate: def || undefined,
             onChange: function (selectedDates) {
-                hidden.value = selectedDates.length && window.PawFlatpickrRange
-                    ? PawFlatpickrRange.formatIsoLocalDate(selectedDates[0])
+                hidden.value = selectedDates.length && window.RydenFlatpickrRange
+                    ? RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0])
                     : '';
             }
         });
@@ -558,7 +664,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var untilHidden = document.getElementById('detail_until_hidden');
     var form = document.getElementById('detailReservationForm');
     var dateAlert = document.getElementById('detail_date_alert');
-    if (!daterangeInput || !fromHidden || !untilHidden || !form || !window.PawFlatpickrRange) {
+    if (!daterangeInput || !fromHidden || !untilHidden || !form || !window.RydenFlatpickrRange) {
         return;
     }
 
@@ -592,8 +698,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (!seg || typeof seg.from !== 'string' || typeof seg.to !== 'string') {
                     continue;
                 }
-                var fromD = PawFlatpickrRange.localWallDayStartFromYmd(seg.from);
-                var toD = PawFlatpickrRange.localWallDayEndFromYmd(seg.to);
+                var fromD = RydenFlatpickrRange.localWallDayStartFromYmd(seg.from);
+                var toD = RydenFlatpickrRange.localWallDayEndFromYmd(seg.to);
                 if (fromD && toD) {
                     out.push({ from: fromD, to: toD });
                 }
@@ -613,13 +719,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var dd = [];
     if (fromHidden.value && fromHidden.value.length >= 10) {
-        var d1 = PawFlatpickrRange.localWallDayStartFromYmd(fromHidden.value);
+        var d1 = RydenFlatpickrRange.localWallDayStartFromYmd(fromHidden.value);
         if (d1) {
             dd.push(d1);
         }
     }
     if (untilHidden.value && untilHidden.value.length >= 10) {
-        var d2 = PawFlatpickrRange.localWallDayStartFromYmd(untilHidden.value);
+        var d2 = RydenFlatpickrRange.localWallDayStartFromYmd(untilHidden.value);
         if (d2) {
             dd.push(d2);
         }
@@ -639,7 +745,7 @@ document.addEventListener("DOMContentLoaded", function () {
         initOpts.disableAllDates = true;
     }
 
-    var ctrl = PawFlatpickrRange.init(initOpts);
+    var ctrl = RydenFlatpickrRange.init(initOpts);
     if (!ctrl) {
         return;
     }
@@ -661,7 +767,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var root = document.getElementById('publish_availability_rows');
     var tpl = document.getElementById('publish_avail_row_template');
     var addBtn = document.getElementById('publish_avail_add');
-    if (!root || !tpl || !addBtn || !window.PawFlatpickrRange) {
+    if (!root || !tpl || !addBtn || !window.RydenFlatpickrRange) {
         return;
     }
 
@@ -673,8 +779,8 @@ document.addEventListener("DOMContentLoaded", function () {
             row.querySelectorAll('.publish-avail-index').forEach(function (el) {
                 el.textContent = String(i + 1);
             });
-            var fromH = row.querySelector('.paw-avail-from');
-            var untilH = row.querySelector('.paw-avail-until');
+            var fromH = row.querySelector('.ryden-avail-from');
+            var untilH = row.querySelector('.ryden-avail-until');
             if (fromH) {
                 fromH.name = 'availabilityRows[' + i + '].from';
             }
@@ -685,9 +791,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function initRow(row) {
-        var anchor = row.querySelector('.paw-avail-range-input');
-        var fromH = row.querySelector('.paw-avail-from');
-        var untilH = row.querySelector('.paw-avail-until');
+        var anchor = row.querySelector('.ryden-avail-range-input');
+        var fromH = row.querySelector('.ryden-avail-from');
+        var untilH = row.querySelector('.ryden-avail-until');
         if (!anchor || !fromH || !untilH) {
             return;
         }
@@ -696,7 +802,7 @@ document.addEventListener("DOMContentLoaded", function () {
             defaults.push(new Date(fromH.value + 'T00:00:00'));
             defaults.push(new Date(untilH.value + 'T00:00:00'));
         }
-        var c = PawFlatpickrRange.init({
+        var c = RydenFlatpickrRange.init({
             anchor: anchor,
             fromHidden: fromH,
             untilHidden: untilH,
@@ -704,14 +810,14 @@ document.addEventListener("DOMContentLoaded", function () {
             dateFormat: 'Y-m-d',
             defaultDate: defaults.length ? defaults : undefined
         });
-        row._pawAvailFp = c;
+        row._rydenAvailFp = c;
     }
 
     function destroyRowFp(row) {
-        if (row._pawAvailFp && row._pawAvailFp.fp) {
-            row._pawAvailFp.destroy();
+        if (row._rydenAvailFp && row._rydenAvailFp.fp) {
+            row._rydenAvailFp.destroy();
         }
-        row._pawAvailFp = null;
+        row._rydenAvailFp = null;
     }
 
     root.querySelectorAll('[data-publish-avail-row]').forEach(initRow);
@@ -742,8 +848,8 @@ document.addEventListener("DOMContentLoaded", function () {
         var rows = root.querySelectorAll('[data-publish-avail-row]');
         if (rows.length <= 1) {
             destroyRowFp(row);
-            row.querySelectorAll('.paw-avail-from, .paw-avail-until').forEach(function (h) { h.value = ''; });
-            var anchor = row.querySelector('.paw-avail-range-input');
+            row.querySelectorAll('.ryden-avail-from, .ryden-avail-until').forEach(function (h) { h.value = ''; });
+            var anchor = row.querySelector('.ryden-avail-range-input');
             if (anchor) {
                 anchor.value = '';
             }

@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +9,7 @@
   <title>Publish confirmation</title>
 </head>
 <body class="bg-light has-fixed-navbar">
-<paw:navbar/>
+<ryden:navbar/>
 
 <main class="container py-5">
   <div class="row justify-content-center">

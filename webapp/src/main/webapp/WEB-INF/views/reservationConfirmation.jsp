@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -9,7 +9,7 @@
     <title><spring:message code="reservationConfirmation.title"/></title>
 </head>
 <body class="bg-light has-fixed-navbar">
-<paw:navbar/>
+<ryden:navbar/>
 
 <spring:message code="common.notSpecified" var="notSpecified"/>
 <c:set var="summaryFromDate" value="${empty fromDateTime ? notSpecified : fromDateTime}"/>

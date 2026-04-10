@@ -4,11 +4,15 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.MultipartImageValidation;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,28 +47,60 @@ public class PublishCarFormController {
         return CarEnumOptions.transmissionSelectOptions();
     }
 
-    private final CarService carService;
+    private final ListingService listingService;
     private final LocaleMessages localeMessages;
+    private final ImageService imageService;
+    private final MultipartImageValidation multipartImageValidation;
 
     @Autowired
-    public PublishCarFormController(final CarService carService, final LocaleMessages localeMessages) {
-        this.carService = carService;
+    public PublishCarFormController(
+            final ListingService listingService,
+            final LocaleMessages localeMessages,
+            final ImageService imageService,
+            final MultipartImageValidation multipartImageValidation) {
+        this.listingService = listingService;
         this.localeMessages = localeMessages;
+        this.imageService = imageService;
+        this.multipartImageValidation = multipartImageValidation;
+    }
+
+    @ModelAttribute("uploadMaxImageBytes")
+    public long uploadMaxImageBytes() {
+        return imageService.getMaxImageBytes();
+    }
+
+    @ModelAttribute("uploadMaxImageMegabytes")
+    public long uploadMaxImageMegabytes() {
+        return imageService.getMaxImageMegabytesRoundedUp();
     }
 
     @GetMapping
-    public ModelAndView index(@ModelAttribute("publishCarForm") final PublishCarForm form) {
+    public ModelAndView index(
+            final Authentication authentication,
+            @ModelAttribute("publishCarForm") final PublishCarForm form) {
         final ModelAndView mav = new ModelAndView("publishCarForm");
         mav.addObject("activeTab", "publish-car");
+        final var me = WebAuthUtils.requireCurrentUser(authentication);
+        mav.addObject("publisherEmail", me.getUsername());
+        mav.addObject("publisherDisplayName", me.getForename() + " " + me.getSurname());
         return mav;
     }
 
     @PostMapping
     public ModelAndView formSubmit(
+            final Authentication authentication,
             @Valid @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
         if (errors.hasErrors()) {
-            return index(form);
+            return index(authentication, form);
+        }
+
+        if (!multipartImageValidation.validateFilesAreImages(form.getPictures(), errors, "pictures")) {
+            return index(authentication, form);
+        }
+
+        if (!multipartImageValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
+            return index(authentication, form);
         }
 
         final List<ImageUpload> uploads;
@@ -74,15 +110,14 @@ public class PublishCarFormController {
             errors.reject(
                     MessageKeys.PUBLISH_IMAGES_READ,
                     localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
-            return index(form);
+            return index(authentication, form);
         }
 
         try {
             final List<AvailabilityPeriod> periods = form.toAvailabilityPeriods();
-            final var result = carService.publish(
-                    form.getOwnerEmail(),
-                    form.getOwnerName(),
-                    form.getOwnerSurname(),
+            final long ownerId = WebAuthUtils.requireCurrentUser(authentication).getUserId();
+            final var result = listingService.publish(
+                    ownerId,
                     form.getPlate(),
                     form.getBrand(),
                     form.getModel(),
@@ -107,7 +142,7 @@ public class PublishCarFormController {
             errors.reject(
                     MessageKeys.PUBLISH_FAILED,
                     localeMessages.msg(MessageKeys.PUBLISH_FAILED, detail));
-            return index(form);
+            return index(authentication, form);
         }
     }
 

@@ -1,12 +1,13 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.Image;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import java.util.Optional;
+import ar.edu.itba.paw.models.Image;
 
 public class ImageJdbcDaoTest extends DaoIntegrationTestSupport {
 
@@ -44,6 +45,21 @@ public class ImageJdbcDaoTest extends DaoIntegrationTestSupport {
         // Exercise & Assert
         Assertions.assertThrows(DataIntegrityViolationException.class,
                 () -> imageDao.createImage("a.png", null, new byte[] {1}));
+    }
+
+    @Test
+    public void testDeleteImageRemovesRow() {
+        // Arrange
+        final byte[] data = new byte[] {9};
+        final String contentType = "image/png";
+        final String name = "x.png";
+
+        // Exercise
+        final Image created = imageDao.createImage(name, contentType, data);
+        imageDao.deleteImage(created.getId());
+
+        // Assert
+        Assertions.assertTrue(imageDao.getImageById(created.getId()).isEmpty());
     }
 }
 

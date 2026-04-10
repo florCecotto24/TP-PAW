@@ -4,10 +4,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.concurrent.Executor;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -23,15 +26,16 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.DatabasePopulator;
+import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.web.multipart.commons.CommonsMultipartResolver;
-import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory;
+import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
@@ -41,16 +45,25 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+import ar.edu.itba.paw.models.UserValidationPolicy;
+
 @EnableWebMvc
 @EnableAsync
 @EnableTransactionManagement
 @Configuration
-@Import(SpringMailConfig.class)
+@Import({SpringMailConfig.class, WebAuthConfig.class, ValidationWebConfig.class})
 @PropertySources({
     @PropertySource("classpath:application.properties"),
     @PropertySource(value = "classpath:application-${spring.profiles.active}.properties", ignoreResourceNotFound = true)
 })
-@ComponentScan({"ar.edu.itba.paw.webapp.controller", "ar.edu.itba.paw.webapp.util", "ar.edu.itba.paw.services", "ar.edu.itba.paw.persistence"})
+@ComponentScan({
+        "ar.edu.itba.paw.webapp.controller",
+        "ar.edu.itba.paw.webapp.util",
+        "ar.edu.itba.paw.webapp.security",
+        "ar.edu.itba.paw.webapp.validation",
+        "ar.edu.itba.paw.services",
+        "ar.edu.itba.paw.persistence"
+})
 public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
 
     private Environment environment;
@@ -70,15 +83,33 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
     }
 
     @Bean
-    public LocalValidatorFactoryBean localValidatorFactoryBean() {
-        final LocalValidatorFactoryBean bean = new LocalValidatorFactoryBean();
-        bean.setValidationMessageSource(messageSource());
-        return bean;
+    public UserValidationPolicy userValidationPolicy() {
+        final int min = this.environment.getProperty("app.validation.registration-password-min-length", Integer.class, 8);
+        final int max = this.environment.getProperty("app.validation.profile-phone-max-length", Integer.class, 20);
+        final String pattern = this.environment.getProperty("app.validation.profile-phone-pattern", "^[0-9+]+$");
+        if (min < 1) {
+            throw new IllegalArgumentException("app.validation.registration-password-min-length must be >= 1, got " + min);
+        }
+        if (max < 1) {
+            throw new IllegalArgumentException("app.validation.profile-phone-max-length must be >= 1, got " + max);
+        }
+        final Pattern compiled;
+        try {
+            compiled = Pattern.compile(pattern);
+        } catch (final PatternSyntaxException e) {
+            throw new IllegalArgumentException("app.validation.profile-phone-pattern is not a valid regex: " + pattern, e);
+        }
+        return new UserValidationPolicy(min, max, compiled);
     }
 
-    @Override
-    public Validator getValidator() {
-        return localValidatorFactoryBean();
+    @Bean
+    public LocalValidatorFactoryBean localValidatorFactoryBean(
+            final MessageSource messageSource,
+            final AutowireCapableBeanFactory beanFactory) {
+        final LocalValidatorFactoryBean bean = new LocalValidatorFactoryBean();
+        bean.setValidationMessageSource(messageSource);
+        bean.setConstraintValidatorFactory(new SpringConstraintValidatorFactory(beanFactory));
+        return bean;
     }
 
     @Bean
@@ -121,12 +152,16 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         dataSource.setUsername(requiredProperty("spring.datasource.username"));
         dataSource.setPassword(requiredProperty("spring.datasource.password"));
 
+        final ResourceDatabasePopulator schemaBootstrap = new ResourceDatabasePopulator();
+        schemaBootstrap.addScript(new ClassPathResource("schema.sql"));
+        DatabasePopulatorUtils.execute(schemaBootstrap, dataSource);
+
         Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(true)
                 .baselineVersion("1")
-                .failOnMissingLocations(false)
+                .failOnMissingLocations(true)
                 .load()
                 .migrate();
 
@@ -156,8 +191,10 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
 
     @Bean
     public CommonsMultipartResolver multipartResolver() {
+        final long maxRequest = Long.parseLong(
+                environment.getProperty("app.upload.max-multipart-request-bytes", "188743680").trim());
         final CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
-        multipartResolver.setMaxUploadSize(52428800);
+        multipartResolver.setMaxUploadSize(maxRequest);
         multipartResolver.setMaxInMemorySize(1048576);
         return multipartResolver;
     }

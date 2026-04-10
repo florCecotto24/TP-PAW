@@ -8,7 +8,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Digits;
-import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -19,19 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PublishCarForm {
-
-    @NotBlank(message = "{validation.ownerName.notBlank}")
-    @Size(max = 50, message = "{validation.ownerName.size}")
-    private String ownerName;
-
-    @NotBlank(message = "{validation.ownerSurname.notBlank}")
-    @Size(max = 50, message = "{validation.ownerSurname.size}")
-    private String ownerSurname;
-
-    @NotBlank(message = "{validation.email.notBlank}")
-    @Email(message = "{validation.email.invalid}")
-    @Size(max = 50, message = "{validation.email.size}")
-    private String ownerEmail;
 
     @NotBlank(message = "{validation.brand.notBlank}")
     @Size(message = "{validation.brand.size}", min = 2, max = 50)
@@ -210,30 +196,6 @@ public class PublishCarForm {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public String getOwnerName() {
-        return ownerName;
-    }
-
-    public void setOwnerName(final String ownerName) {
-        this.ownerName = ownerName;
-    }
-
-    public String getOwnerSurname() {
-        return ownerSurname;
-    }
-
-    public void setOwnerSurname(final String ownerSurname) {
-        this.ownerSurname = ownerSurname;
-    }
-
-    public String getOwnerEmail() {
-        return ownerEmail;
-    }
-
-    public void setOwnerEmail(final String ownerEmail) {
-        this.ownerEmail = ownerEmail;
     }
 
     public LocalTime getCheckInTime() {

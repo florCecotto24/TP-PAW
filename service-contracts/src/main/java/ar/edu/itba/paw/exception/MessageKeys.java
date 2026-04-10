@@ -21,9 +21,16 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_AVAILABILITY_PERIOD_REQUIRED =
             "reservation.rider.availabilityPeriodRequired";
     public static final String RESERVATION_FORM_CAR_NAME_REQUIRED = "reservation.form.carNameRequired";
+    public static final String RESERVATION_RIDER_USER_NOT_FOUND = "reservation.rider.userNotFound";
 
     /* user */
     public static final String USER_EMAIL_ALREADY_EXISTS = "user.email.alreadyExists";
+    public static final String USER_ACCOUNT_NOT_FOUND = "user.account.notFound";
+    public static final String USER_PROFILE_PHONE_INVALID = "user.profile.phoneInvalid";
+    public static final String USER_PROFILE_BIRTH_DATE_FUTURE = "user.profile.birthDateFuture";
+    public static final String USER_VERIFICATION_CODE_INVALID = "user.verification.codeInvalid";
+    public static final String USER_REGISTRATION_PASSWORD_MISMATCH = "user.registration.passwordMismatch";
+    public static final String USER_REGISTRATION_PASSWORD_TOO_SHORT = "user.registration.passwordTooShort";
 
     /* listing */
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
@@ -34,6 +41,8 @@ public final class MessageKeys {
 
     /* image */
     public static final String IMAGE_INVALID_ID = "image.invalidId";
+    public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";
+    public static final String IMAGE_CONTENT_TYPE_NOT_IMAGE = "image.contentType.notImage";
 
     /* publish form */
     public static final String PUBLISH_IMAGES_READ = "publish.images.read";

@@ -1,4 +1,4 @@
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
@@ -9,15 +9,15 @@
         <%@include file="header.jsp"%>
     </head>
     <body class="has-fixed-navbar">
-        <paw:navbar/>
+        <ryden:navbar/>
         <div>
             <form id="exploreSearchForm" class="search-menu sticky-top w-100" method="get" action="${pageContext.request.contextPath}/search">
-                <paw:searchBar/>
+                <ryden:searchBar/>
                 <nav class="navbar navbar-expand-lg d-flex justify-content-center align-items-center border py-2 flex-wrap gap-1"
                      aria-label="Search filters">
                     <spring:message code="search.filter.category" var="categoryLabel"/>
                     <spring:message code="search.filter.category.helper" var="categoryHelper"/>
-                    <paw:exploreFilterDropdown
+                    <ryden:exploreFilterDropdown
                             filterLabel="${categoryLabel}"
                             helperText="${categoryHelper}"
                             paramName="category"
@@ -26,7 +26,7 @@
                     <span class="vr d-none d-md-inline-block align-self-stretch my-2 mx-1"></span>
                     <spring:message code="search.filter.transmission" var="transmissionLabel"/>
                     <spring:message code="search.filter.transmission.helper" var="transmissionHelper"/>
-                    <paw:exploreFilterDropdown
+                    <ryden:exploreFilterDropdown
                             filterLabel="${transmissionLabel}"
                             helperText="${transmissionHelper}"
                             paramName="transmission"
@@ -34,7 +34,7 @@
                             options="${transmissionFilterOptions}"/>
                     <spring:message code="search.filter.powertrain" var="powertrainLabel"/>
                     <spring:message code="search.filter.powertrain.helper" var="powertrainHelper"/>
-                    <paw:exploreFilterDropdown
+                    <ryden:exploreFilterDropdown
                             filterLabel="${powertrainLabel}"
                             helperText="${powertrainHelper}"
                             paramName="powertrain"
@@ -43,7 +43,7 @@
                     <span class="vr d-none d-md-inline-block align-self-stretch my-2 mx-1"></span>
                     <spring:message code="search.filter.price" var="priceLabel"/>
                     <spring:message code="search.filter.price.helper" var="priceHelper"/>
-                    <paw:exploreFilterDropdown
+                    <ryden:exploreFilterDropdown
                             filterLabel="${priceLabel}"
                             helperText="${priceHelper}"
                             paramName="price"
@@ -110,7 +110,7 @@
                                             </c:otherwise>
                                         </c:choose>
 
-                                        <paw:carCard
+                                        <ryden:carCard
                                                 model="${car.model}"
                                                 brand="${car.brand}"
                                                 price="${car.price}"

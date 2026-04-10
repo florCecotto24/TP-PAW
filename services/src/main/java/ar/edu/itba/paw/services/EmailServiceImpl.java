@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
 
 @Service
@@ -53,6 +52,7 @@ public class EmailServiceImpl implements EmailService {
 
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
+    private static final String EMAIL_VERIFICATION_TEMPLATE = "html/email-verification-code";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         if (dateTime == null) {
@@ -113,6 +113,32 @@ public class EmailServiceImpl implements EmailService {
                     + " (reservation id=" + payload.getReservationId() + ")");
         } catch (final Exception e) {
             LOG.error("Failed to send reservation confirmation email (reservation id=" + payload.getReservationId() + ")", e);
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendEmailVerificationCode(final String to, final String code, final Locale locale) {
+        if (to == null || to.isBlank() || code == null) {
+            LOG.error("sendEmailVerificationCode: missing to or code");
+            return;
+        }
+        final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
+        final Context ctx = new Context(mailLocale);
+        ctx.setVariable("code", code);
+        final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        final String contextPath = environment.getProperty("mail.app.context.path", "").replaceAll("/+$", "");
+        ctx.setVariable("verifyUrl", baseUrl + contextPath + "/verify-email");
+
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(EMAIL_VERIFICATION_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.emailVerification.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOG.info("Email verification code sent to " + to);
+        } catch (final Exception e) {
+            LOG.error("Failed to send email verification code to " + to, e);
         }
     }
 

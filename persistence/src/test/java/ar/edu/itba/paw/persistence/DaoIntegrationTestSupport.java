@@ -31,12 +31,25 @@ public abstract class DaoIntegrationTestSupport {
         jdbcTemplate.update("DELETE FROM listings");
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM images");
+        jdbcTemplate.update("DELETE FROM email_verification_codes");
         jdbcTemplate.update("DELETE FROM users");
     }
 
     protected void insertUser(final long id, final String email, final String forename, final String surname) {
-        jdbcTemplate.update("INSERT INTO users(id, email, forename, surname) VALUES (?, ?, ?, ?)",
-                id, email, forename, surname);
+        insertUser(id, email, forename, surname, null);
+    }
+
+    protected void insertUser(
+            final long id,
+            final String email,
+            final String forename,
+            final String surname,
+            final String passwordHash) {
+        final Boolean emailValidated = passwordHash != null && !passwordHash.isBlank();
+        jdbcTemplate.update(
+                "INSERT INTO users(id, email, forename, surname, password_hash, email_validated, phone_number, birth_date, profile_picture_id) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                id, email, forename, surname, passwordHash, emailValidated, null, null, null);
     }
 
     protected void insertCar(

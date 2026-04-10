@@ -1,28 +1,35 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.persistence.ImageDao;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
+import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.persistence.ImageDao;
 
 @ExtendWith(MockitoExtension.class)
 public class ImageServiceImplTest {
 
+    private static final String LIMIT_ONE_MIB = String.valueOf(1024L * 1024L);
+
     @Mock
     private ImageDao imageDao;
 
-    @InjectMocks
     private ImageServiceImpl imageService;
 
+    @BeforeEach
+    public void setUp() {
+        imageService = new ImageServiceImpl(imageDao, LIMIT_ONE_MIB);
+    }
+
     @Test
-    public void testGetImageByIdWhenImageExists(){
+    public void testGetImageByIdWhenImageExists() {
         // 1. Arrange
         final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
         final Image image = new Image(1L, "imageName", "image/png", imageData);
@@ -40,7 +47,7 @@ public class ImageServiceImplTest {
     }
 
     @Test
-    public void testGetImageByIdWhenImageDoesNotExist(){
+    public void testGetImageByIdWhenImageDoesNotExist() {
         // 1. Arrange
         Mockito.when(imageDao.getImageById(Mockito.anyLong())).thenReturn(Optional.empty());
 
@@ -52,7 +59,7 @@ public class ImageServiceImplTest {
     }
 
     @Test
-    public void testCreateImage(){
+    public void testCreateImage() {
         // 1. Arrange
         final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
         final Image image = new Image(1L, "imageName", "image/png", imageData);

@@ -159,9 +159,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Reservation submitRiderReservation(
-            final String email,
-            final String name,
-            final String surname,
+            final long riderId,
             final Long listingId,
             final Long availabilityId,
             final String fromDateTime,
@@ -169,6 +167,8 @@ public class ReservationServiceImpl implements ReservationService {
         if (listingId == null || listingService.getListingById(listingId).isEmpty()) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND);
         }
+        final User rider = userService.getUserById(riderId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_USER_NOT_FOUND));
         if (isBlank(fromDateTime) || isBlank(untilDateTime)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_REQUIRED);
         }
@@ -187,7 +187,6 @@ public class ReservationServiceImpl implements ReservationService {
         if (!listingService.reservationIntervalFitsListingAvailability(listingId, availabilityId, startDate, endDate)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
         }
-        final User rider = userService.findOrCreatePublisher(email, name, surname);
         return createReservation(
                 rider.getId(),
                 listingId,

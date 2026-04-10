@@ -109,9 +109,7 @@ public class ReservationServiceImplTest {
         // 2. Execute
         final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
                 () -> reservationService.submitRiderReservation(
-                        "rider@example.com",
-                        "R",
-                        "Rider",
+                        1L,
                         listingId,
                         null,
                         "2026-06-01T10:00",
@@ -121,11 +119,29 @@ public class ReservationServiceImplTest {
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND, thrown.getMessageCode());
     }
 
-    // (!) to be updated when real users with spring security are implemented.
-    // it does not throw any exception when rider is not found
-    // because findOrCreatePublisher creates the rider if it does not exist.
     @Test
-    public void submitRiderReservationWhenRiderNotFoundThrowsRiderReservationException() {
+    public void testSubmitRiderReservationWhenRiderAccountMissingThrowsRiderReservationException() {
+        // 1. Arrange
+        final long listingId = 2L;
+        final long riderId = 99L;
+        final Listing listing = Mockito.mock(Listing.class);
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.empty());
+
+        // 2. Execute and 3. Assert
+        final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
+                () -> reservationService.submitRiderReservation(
+                        riderId,
+                        listingId,
+                        null,
+                        "2026-06-01T10:00",
+                        "2026-06-05T18:00"));
+
+        Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_USER_NOT_FOUND, thrown.getMessageCode());
+    }
+
+    @Test
+    public void testSubmitRiderReservationWhenValidReturnsReservation() {
         // 1. Arrange
         final long listingId = 2L;
         final long riderId = 42L;
@@ -147,16 +163,13 @@ public class ReservationServiceImplTest {
         Mockito.when(listing.getTitle()).thenReturn("Test vehicle");
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(createdRider));
 
         Mockito.when(listingService.reservationIntervalFitsListingAvailability(
                 Mockito.eq(listingId),
                 Mockito.isNull(),
                 Mockito.any(OffsetDateTime.class),
                 Mockito.any(OffsetDateTime.class))).thenReturn(true);
-
-        Mockito.when(userService.findOrCreatePublisher(riderEmail, riderName, riderSurname)).thenReturn(createdRider);
-
-        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(createdRider));
 
         Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(listingOwner));
 
@@ -187,9 +200,7 @@ public class ReservationServiceImplTest {
 
         // 2. Execute
         final Reservation result = reservationService.submitRiderReservation(
-                riderEmail,
-                riderName,
-                riderSurname,
+                riderId,
                 listingId,
                 null,
                 fromWall,
@@ -203,20 +214,22 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void submitRiderReservationWhenWallDatesBeforeTodayThrowsRiderReservationException() {
+    public void testSubmitRiderReservationWhenWallDatesBeforeTodayThrowsRiderReservationException() {
+        // 1. Arrange
         final long listingId = 2L;
+        final long riderId = 1L;
         final Listing listing = Mockito.mock(Listing.class);
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(new User(riderId, "r@example.com", "R", "Rider")));
 
         final LocalDate yesterday = LocalDate.now(AvailabilityPeriod.WALL_ZONE).minusDays(1);
         final String fromWall = yesterday.atTime(10, 0).toString();
         final String untilWall = yesterday.plusDays(2).atTime(18, 0).toString();
 
+        // 2. Execute and 3. Assert
         final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
                 () -> reservationService.submitRiderReservation(
-                        "rider@example.com",
-                        "R",
-                        "Rider",
+                        riderId,
                         listingId,
                         null,
                         fromWall,
@@ -239,7 +252,7 @@ public class ReservationServiceImplTest {
                 Mockito.isNull(),
                 Mockito.any(OffsetDateTime.class),
                 Mockito.any(OffsetDateTime.class))).thenReturn(true);
-        Mockito.when(userService.findOrCreatePublisher(email, "Owner", "User")).thenReturn(ownerAndRider);
+        Mockito.when(userService.getUserById(sameUserId)).thenReturn(Optional.of(ownerAndRider));
         Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(ownerAndRider));
         Mockito.when(reservationDao.hasActiveOverlap(
                 Mockito.eq(listingId),
@@ -252,9 +265,7 @@ public class ReservationServiceImplTest {
 
         final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
                 () -> reservationService.submitRiderReservation(
-                        email,
-                        "Owner",
-                        "User",
+                        sameUserId,
                         listingId,
                         null,
                         fromWall,

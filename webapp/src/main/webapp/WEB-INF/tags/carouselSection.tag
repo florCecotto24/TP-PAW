@@ -1,13 +1,13 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="cars" required="true" type="java.util.List" %>
 <%@ attribute name="title" required="true" type="java.lang.String" %>
 <%@ attribute name="subtitle" required="true" type="java.lang.String" %>
 <%@ attribute name="id" required="true" type="java.lang.String" %>
 
-<paw:carouselHeader title="${title}" subtitle="${subtitle}" id="${id}"/>
+<ryden:carouselHeader title="${title}" subtitle="${subtitle}" id="${id}"/>
 
 <c:choose>
     <c:when test="${empty cars}">
@@ -41,7 +41,7 @@
                             </c:otherwise>
                         </c:choose>
 
-                        <paw:carCard model="${car.model}" brand="${car.brand}" price="${car.price}"
+                        <ryden:carCard model="${car.model}" brand="${car.brand}" price="${car.price}"
                                      image="${imageUrl}" pricePeriod="day"
                                      href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
                     </div>

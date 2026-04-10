@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="paw" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
@@ -10,7 +10,7 @@
     <title><spring:message code="reservationForm.title"/></title>
 </head>
 <body class="bg-light has-fixed-navbar">
-<paw:navbar/>
+<ryden:navbar/>
 
 <main class="container py-5">
     <div class="row justify-content-center">
@@ -48,22 +48,16 @@
                             <input type="hidden" name="reservationTotal" value="<c:out value='${clientReservationTotal}'/>"/>
                         </c:if>
 
-                        <div>
-                            <label for="email" class="form-label required-label"><spring:message code="reservationForm.email"/></label>
-                            <form:input path="email" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="name@example.com" />
-                            <form:errors path="email" cssClass="text-danger small d-block mt-1" />
-                        </div>
-
-                        <div>
-                            <label for="name" class="form-label required-label"><spring:message code="reservationForm.firstName"/></label>
-                            <form:input path="name" id="name" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="Your first name" />
-                            <form:errors path="name" cssClass="text-danger small d-block mt-1" />
-                        </div>
-
-                        <div>
-                            <label for="surname" class="form-label required-label"><spring:message code="reservationForm.lastName"/></label>
-                            <form:input path="surname" id="surname" cssClass="form-control" cssErrorClass="form-control is-invalid" placeholder="Your last name" />
-                            <form:errors path="surname" cssClass="text-danger small d-block mt-1" />
+                        <div class="border rounded-3 p-3 bg-light-subtle mb-3">
+                            <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.account.title"/></h2>
+                            <p class="mb-1">
+                                <strong><spring:message code="reservationForm.account.name"/></strong>
+                                <c:out value="${riderForename}"/> <c:out value="${riderSurname}"/>
+                            </p>
+                            <p class="mb-0">
+                                <strong><spring:message code="reservationForm.account.email"/></strong>
+                                <c:out value="${riderEmail}"/>
+                            </p>
                         </div>
 
                         <div class="d-flex gap-2 mt-2">
