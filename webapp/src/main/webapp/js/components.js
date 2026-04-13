@@ -1,4 +1,95 @@
+/* Character validation: phone (only digits and +), numeric codes, plate (alphanumeric). */
+(function () {
+    function maxLenAttr(el) {
+        var m = parseInt(el.getAttribute("maxlength"), 10);
+        if (!isNaN(m) && m > 0) {
+            return m;
+        }
+        m = parseInt(el.getAttribute("data-max-len"), 10);
+        return !isNaN(m) && m > 0 ? m : 999;
+    }
 
+    function bindPhone(el) {
+        var cap = maxLenAttr(el);
+        el.addEventListener("beforeinput", function (e) {
+            if (e.data === null || e.data === "") {
+                return;
+            }
+            if (!/^[0-9+]+$/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+        el.addEventListener("input", function () {
+            el.value = el.value.replace(/[^0-9+]/g, "").slice(0, cap);
+        });
+        el.addEventListener("paste", function (e) {
+            var raw = (e.clipboardData || window.clipboardData).getData("text");
+            var cleaned = String(raw || "").replace(/[^0-9+]/g, "").slice(0, cap);
+            e.preventDefault();
+            var start = el.selectionStart;
+            var end = el.selectionEnd;
+            el.value = el.value.slice(0, start) + cleaned + el.value.slice(end);
+            var pos = start + cleaned.length;
+            el.setSelectionRange(pos, pos);
+        });
+    }
+
+    function bindDigitsOnly(el) {
+        var cap = maxLenAttr(el);
+        el.addEventListener("beforeinput", function (e) {
+            if (e.data === null || e.data === "") {
+                return;
+            }
+            if (!/^\d$/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+        el.addEventListener("input", function () {
+            el.value = el.value.replace(/\D/g, "").slice(0, cap);
+        });
+        el.addEventListener("paste", function (e) {
+            var raw = (e.clipboardData || window.clipboardData).getData("text");
+            var cleaned = String(raw || "").replace(/\D/g, "").slice(0, cap);
+            e.preventDefault();
+            var start = el.selectionStart;
+            var end = el.selectionEnd;
+            el.value = el.value.slice(0, start) + cleaned + el.value.slice(end);
+            var pos = start + cleaned.length;
+            el.setSelectionRange(pos, pos);
+        });
+    }
+
+    function bindPlate(el) {
+        var cap = maxLenAttr(el);
+        el.addEventListener("beforeinput", function (e) {
+            if (e.data === null || e.data === "") {
+                return;
+            }
+            if (!/^[A-Za-z0-9]$/.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+        el.addEventListener("input", function () {
+            el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, cap);
+        });
+        el.addEventListener("paste", function (e) {
+            var raw = (e.clipboardData || window.clipboardData).getData("text");
+            var cleaned = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, cap);
+            e.preventDefault();
+            var start = el.selectionStart;
+            var end = el.selectionEnd;
+            el.value = el.value.slice(0, start) + cleaned + el.value.slice(end);
+            var pos = start + cleaned.length;
+            el.setSelectionRange(pos, pos);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("input[data-ryden-phone]").forEach(bindPhone);
+        document.querySelectorAll("input[data-ryden-digits-only]").forEach(bindDigitsOnly);
+        document.querySelectorAll("input[data-ryden-plate]").forEach(bindPlate);
+    });
+})();
 
 /* Funciones modal */
 (function () {
@@ -192,24 +283,7 @@
     document.addEventListener('DOMContentLoaded', initCarDetailGalleryModal);
 })();
 
-/* Funciones de PublishForm */
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("publishCarFormEl");
-    const submitBtn = document.getElementById("publishCarSubmitBtn");
-
-    if (!form || !submitBtn) return;
-
-    form.addEventListener("submit", function () {
-        if (submitBtn.disabled) return;
-
-        submitBtn.disabled = true;
-        submitBtn.classList.add("disabled");
-        submitBtn.querySelector(".publish-submit-default")?.classList.add("d-none");
-        submitBtn.querySelector(".publish-submit-loading")?.classList.remove("d-none");
-        submitBtn.setAttribute("aria-busy", "true");
-    });
-});
-
+/* Publish car form: early image validation (red message, no alert) + submission */
 (function () {
     function rydenParseMaxImageBytes(inputEl) {
         if (!inputEl) {
@@ -239,75 +313,149 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var input = document.getElementById("picturesInput");
     var preview = document.getElementById("picturesPreview");
+    var form = document.getElementById("publishCarFormEl");
+    var submitBtn = document.getElementById("publishCarSubmitBtn");
+    var errEl = document.getElementById("publishPicturesClientError");
+    var labelEl = document.getElementById("picturesChooseLabel");
+    var requiredMsg = (input && input.getAttribute("data-publish-pictures-required")) || "";
 
-    if (!input || !preview) {
-        return;
+    function hidePublishPicturesClientError() {
+        if (errEl) {
+            errEl.textContent = "";
+            errEl.classList.add("d-none");
+        }
+        if (labelEl) {
+            labelEl.classList.remove("is-invalid");
+        }
     }
 
-    input.addEventListener("change", function (event) {
-        var files = event.target.files;
-        preview.innerHTML = "";
-
-        if (!files || files.length === 0) {
-            return;
+    function showPublishPicturesClientError(msg) {
+        if (errEl) {
+            errEl.textContent = msg || "";
+            errEl.classList.toggle("d-none", !msg);
         }
+        if (labelEl && msg) {
+            labelEl.classList.add("is-invalid");
+        }
+    }
 
+    function validatePublishPictureFiles(files) {
+        if (!files || files.length === 0) {
+            return requiredMsg || "";
+        }
         var maxBytes = rydenParseMaxImageBytes(input);
         var tooLargeMsg = rydenImageTooLargeMessage(input);
         if (maxBytes > 0) {
-            for (var i = 0; i < files.length; i++) {
+            var i;
+            for (i = 0; i < files.length; i++) {
                 if (files[i].size > maxBytes) {
-                    if (tooLargeMsg) {
-                        window.alert(tooLargeMsg);
-                    }
-                    input.value = "";
-                    return;
+                    return tooLargeMsg || "";
                 }
             }
         }
-
         var notImgMsg = rydenNotImageMessage(input);
-        for (var j = 0; j < files.length; j++) {
+        var j;
+        for (j = 0; j < files.length; j++) {
             var fj = files[j];
             var t = (fj.type || "").toLowerCase();
             if (!t || t.indexOf("image/") !== 0) {
-                if (notImgMsg) {
-                    window.alert(notImgMsg);
+                return notImgMsg || "";
+            }
+        }
+        return "";
+    }
+
+    var retainedBlock = document.getElementById("publishRetainedPictures");
+
+    if (input && preview) {
+        input.addEventListener("change", function (event) {
+            hidePublishPicturesClientError();
+            var files = event.target.files;
+            preview.innerHTML = "";
+            if (retainedBlock) {
+                if (files && files.length > 0) {
+                    retainedBlock.classList.add("d-none");
+                } else {
+                    retainedBlock.classList.remove("d-none");
                 }
+            }
+            if (!files || files.length === 0) {
+                return;
+            }
+            var err = validatePublishPictureFiles(files);
+            if (err) {
+                showPublishPicturesClientError(err);
                 input.value = "";
                 return;
             }
-        }
+            Array.prototype.forEach.call(files, function (file) {
+                var col = document.createElement("div");
+                col.className = "col-6 col-md-4";
 
-        Array.prototype.forEach.call(files, function (file) {
-            var col = document.createElement("div");
-            col.className = "col-6 col-md-4";
+                var card = document.createElement("div");
+                card.className = "border rounded p-2";
 
-            var card = document.createElement("div");
-            card.className = "border rounded p-2";
+                var img = document.createElement("img");
+                img.className = "img-fluid rounded";
+                img.style.height = "130px";
+                img.style.objectFit = "cover";
+                img.alt = file.name;
 
-            var img = document.createElement("img");
-            img.className = "img-fluid rounded";
-            img.style.height = "130px";
-            img.style.objectFit = "cover";
-            img.alt = file.name;
+                var name = document.createElement("small");
+                name.className = "d-block text-truncate mt-1";
+                name.textContent = file.name;
 
-            var name = document.createElement("small");
-            name.className = "d-block text-truncate mt-1";
-            name.textContent = file.name;
+                card.appendChild(img);
+                card.appendChild(name);
+                col.appendChild(card);
+                preview.appendChild(col);
 
-            card.appendChild(img);
-            card.appendChild(name);
-            col.appendChild(card);
-            preview.appendChild(col);
-
-            var reader = new FileReader();
-            reader.onload = function (e) {
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
         });
-    });
+    }
+
+    if (form && submitBtn) {
+        form.addEventListener("submit", function (e) {
+            if (submitBtn.disabled) {
+                return;
+            }
+            if (input) {
+                var retained = 0;
+                if (form && form.getAttribute) {
+                    retained = parseInt(form.getAttribute("data-publish-retained-count") || "0", 10) || 0;
+                }
+                var hasFiles = input.files && input.files.length > 0;
+                var err = "";
+                if (!hasFiles && retained > 0) {
+                    err = "";
+                } else {
+                    err = validatePublishPictureFiles(input.files);
+                }
+                if (err) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showPublishPicturesClientError(err);
+                    return;
+                }
+            }
+            submitBtn.disabled = true;
+            submitBtn.classList.add("disabled");
+            var def = submitBtn.querySelector(".publish-submit-default");
+            var load = submitBtn.querySelector(".publish-submit-loading");
+            if (def) {
+                def.classList.add("d-none");
+            }
+            if (load) {
+                load.classList.remove("d-none");
+            }
+            submitBtn.setAttribute("aria-busy", "true");
+        });
+    }
 })();
 
 (function () {
@@ -342,7 +490,18 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
     }
 
+    var profileClientErr = document.getElementById("profilePictureClientError");
+
+    function rydenShowProfileClientError(msg) {
+        if (!profileClientErr) {
+            return;
+        }
+        profileClientErr.textContent = msg || "";
+        profileClientErr.classList.toggle("d-none", !msg);
+    }
+
     profileInput.addEventListener("change", function () {
+        rydenShowProfileClientError("");
         var file = profileInput.files && profileInput.files[0];
         if (!file) {
             return;
@@ -351,7 +510,7 @@ document.addEventListener("DOMContentLoaded", function () {
         var tooLargeMsg = rydenImageTooLargeMessage(profileInput);
         if (maxBytes > 0 && file.size > maxBytes) {
             if (tooLargeMsg) {
-                window.alert(tooLargeMsg);
+                rydenShowProfileClientError(tooLargeMsg);
             }
             profileInput.value = "";
             return;
@@ -360,7 +519,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!ft || ft.indexOf("image/") !== 0) {
             var nim = rydenNotImageMessage(profileInput);
             if (nim) {
-                window.alert(nim);
+                rydenShowProfileClientError(nim);
             }
             profileInput.value = "";
         }
@@ -457,7 +616,7 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 })();
 
-/* Flatpickr range helper (search, car detail, publish availability) */
+/* Flatpickr range helper (search, publish availability; car-detail reservation uses detailReservationForm.js) */
 (function () {
     function pad2(n) {
         return String(n).padStart(2, '0');
@@ -657,107 +816,28 @@ document.addEventListener("DOMContentLoaded", function () {
     initOne(untilPicker, untilHidden);
 })();
 
-/* Car detail: only days inside merged listing_availability segments are selectable (Flatpickr enable) */
+/* Perfil: fecha de nacimiento (Flatpickr single, Y-m-d, coherente con búsqueda/reservas) */
 (function () {
-    var daterangeInput = document.getElementById('detail_daterange');
-    var fromHidden = document.getElementById('detail_from_hidden');
-    var untilHidden = document.getElementById('detail_until_hidden');
-    var form = document.getElementById('detailReservationForm');
-    var dateAlert = document.getElementById('detail_date_alert');
-    if (!daterangeInput || !fromHidden || !untilHidden || !form || !window.RydenFlatpickrRange) {
+    var birthEl = document.getElementById("profileBirthDateInput");
+    if (!birthEl || typeof flatpickr === "undefined" || !window.RydenFlatpickrRange) {
         return;
     }
-
-    function hasCompleteRange() {
-        return !!fromHidden.value && !!untilHidden.value;
-    }
-
-    function syncDateAlert() {
-        if (!dateAlert) {
-            return;
-        }
-        if (hasCompleteRange()) {
-            dateAlert.setAttribute('hidden', 'hidden');
-        } else {
-            dateAlert.removeAttribute('hidden');
-        }
-    }
-
-    function parseBookableRangesJson(raw) {
-        if (!raw || typeof raw !== 'string') {
-            return [];
-        }
-        try {
-            var parsed = JSON.parse(raw.trim());
-            if (!Array.isArray(parsed)) {
-                return [];
-            }
-            var out = [];
-            for (var i = 0; i < parsed.length; i++) {
-                var seg = parsed[i];
-                if (!seg || typeof seg.from !== 'string' || typeof seg.to !== 'string') {
-                    continue;
-                }
-                var fromD = RydenFlatpickrRange.localWallDayStartFromYmd(seg.from);
-                var toD = RydenFlatpickrRange.localWallDayEndFromYmd(seg.to);
-                if (fromD && toD) {
-                    out.push({ from: fromD, to: toD });
-                }
-            }
-            return out;
-        } catch (e) {
-            return [];
-        }
-    }
-
-    var pickAttr = form.getAttribute('data-pickup-time') || '10:00';
-    var retAttr = form.getAttribute('data-return-time') || '18:00';
-    var segments = parseBookableRangesJson(form.getAttribute('data-bookable-ranges'));
-    var enable = segments.map(function (s) {
-        return { from: s.from, to: s.to };
-    });
-
-    var dd = [];
-    if (fromHidden.value && fromHidden.value.length >= 10) {
-        var d1 = RydenFlatpickrRange.localWallDayStartFromYmd(fromHidden.value);
-        if (d1) {
-            dd.push(d1);
-        }
-    }
-    if (untilHidden.value && untilHidden.value.length >= 10) {
-        var d2 = RydenFlatpickrRange.localWallDayStartFromYmd(untilHidden.value);
-        if (d2) {
-            dd.push(d2);
-        }
-    }
-
-    var initOpts = {
-        anchor: daterangeInput,
-        fromHidden: fromHidden,
-        untilHidden: untilHidden,
-        combineWallTimes: { pickup: pickAttr, returnDeadline: retAttr },
-        dateFormat: 'Y-m-d',
-        defaultDate: dd.length ? dd : undefined
-    };
-    if (enable.length > 0) {
-        initOpts.enable = enable;
-    } else {
-        initOpts.disableAllDates = true;
-    }
-
-    var ctrl = RydenFlatpickrRange.init(initOpts);
-    if (!ctrl) {
-        return;
-    }
-
-    daterangeInput.addEventListener('change', syncDateAlert);
-    daterangeInput.addEventListener('input', syncDateAlert);
-
-    form.addEventListener('submit', function (e) {
-        syncDateAlert();
-        if (!hasCompleteRange()) {
-            e.preventDefault();
-            return false;
+    var maxYmd = birthEl.getAttribute("data-max-ymd");
+    var initial = (birthEl.value && birthEl.value.length >= 10)
+        ? RydenFlatpickrRange.localNoonFromYmd(birthEl.value.substring(0, 10))
+        : null;
+    flatpickr(birthEl, {
+        mode: "single",
+        enableTime: false,
+        dateFormat: "Y-m-d",
+        minDate: "1900-01-01",
+        maxDate: maxYmd || "today",
+        defaultDate: initial || undefined,
+        allowInput: false,
+        onChange: function (selectedDates) {
+            birthEl.value = selectedDates.length && window.RydenFlatpickrRange
+                ? RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0])
+                : "";
         }
     });
 })();
@@ -863,6 +943,48 @@ document.addEventListener("DOMContentLoaded", function () {
             destroyRowFp(r);
         });
         root.querySelectorAll('[data-publish-avail-row]').forEach(initRow);
+    });
+})();
+
+/* Mostrar / ocultar contraseña (botón .ryden-password-toggle dentro de .input-group) */
+(function () {
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".ryden-password-toggle").forEach(function (btn) {
+            if (btn.getAttribute("data-ryden-bound") === "1") {
+                return;
+            }
+            btn.setAttribute("data-ryden-bound", "1");
+            btn.addEventListener("click", function () {
+                var group = btn.closest(".input-group");
+                if (!group) {
+                    return;
+                }
+                var pwInput = group.querySelector("input");
+                if (!pwInput) {
+                    return;
+                }
+                var showLabel = btn.getAttribute("data-label-show") || "Show password";
+                var hideLabel = btn.getAttribute("data-label-hide") || "Hide password";
+                var icon = btn.querySelector(".bi");
+                if (pwInput.type === "password") {
+                    pwInput.type = "text";
+                    btn.setAttribute("aria-pressed", "true");
+                    btn.setAttribute("aria-label", hideLabel);
+                    if (icon) {
+                        icon.classList.remove("bi-eye");
+                        icon.classList.add("bi-eye-slash");
+                    }
+                } else {
+                    pwInput.type = "password";
+                    btn.setAttribute("aria-pressed", "false");
+                    btn.setAttribute("aria-label", showLabel);
+                    if (icon) {
+                        icon.classList.remove("bi-eye-slash");
+                        icon.classList.add("bi-eye");
+                    }
+                }
+            });
+        });
     });
 })();
 

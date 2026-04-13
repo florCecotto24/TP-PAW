@@ -14,6 +14,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
@@ -41,19 +45,34 @@ public class WebAuthConfig {
     }
 
     @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
+    public RequestCache requestCache() {
+        return new HttpSessionRequestCache();
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(
             final HttpSecurity http,
             final AuthenticationManager authenticationManager,
             final UserDetailsService userDetailsService,
-            final AuthenticationFailureHandler authenticationFailureHandler) throws Exception {
+            final AuthenticationFailureHandler authenticationFailureHandler,
+            final SecurityContextRepository securityContextRepository,
+            final RequestCache requestCache) throws Exception {
         http
                 .authenticationManager(authenticationManager)
+                .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
+                .requestCache(rc -> rc.requestCache(requestCache))
                 .authorizeHttpRequests(auth -> auth
                         .antMatchers("/css/**", "/js/**", "/assets/**").permitAll()
                         .antMatchers("/error").permitAll()
                         .antMatchers("/search", "/car-detail").permitAll()
                         .antMatchers("/image/**").permitAll()
-                        .antMatchers("/register", "/register/**", "/verify-email").permitAll()
+                        .antMatchers("/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
+                        .permitAll()
                         .antMatchers("/publish-car", "/publish-car/**").authenticated()
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()

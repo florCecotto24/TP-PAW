@@ -29,6 +29,10 @@ public final class MessageKeys {
     public static final String USER_PROFILE_PHONE_INVALID = "user.profile.phoneInvalid";
     public static final String USER_PROFILE_BIRTH_DATE_FUTURE = "user.profile.birthDateFuture";
     public static final String USER_VERIFICATION_CODE_INVALID = "user.verification.codeInvalid";
+    public static final String USER_VERIFICATION_CODE_ALREADY_ACTIVE = "user.verification.codeAlreadyActive";
+    public static final String USER_PASSWORD_RESET_CODE_INVALID = "user.passwordReset.codeInvalid";
+    public static final String USER_PASSWORD_RESET_CODE_ALREADY_ACTIVE = "user.passwordReset.codeAlreadyActive";
+    public static final String USER_PASSWORD_CURRENT_INCORRECT = "user.password.currentIncorrect";
     public static final String USER_REGISTRATION_PASSWORD_MISMATCH = "user.registration.passwordMismatch";
     public static final String USER_REGISTRATION_PASSWORD_TOO_SHORT = "user.registration.passwordTooShort";
 

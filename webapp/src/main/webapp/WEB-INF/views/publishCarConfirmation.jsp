@@ -32,9 +32,12 @@
               <p><strong><spring:message code="publishCar.confirmation.pricePerDay"/></strong> $<c:out value="${listing.dayPrice}"/></p>
               <p class="${not empty listing.description ? "d-block" : "d-none"}"><strong><spring:message code="publishCar.confirmation.description"/></strong> <c:out value="${listing.description}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
-              <p><strong><spring:message code="publishCar.confirmation.type"/></strong> <c:out value="${car.type.prettyName()}"/></p>
-              <p><strong><spring:message code="publishCar.confirmation.powertrain"/></strong> <c:out value="${car.powertrain.prettyName()}"/></p>
-              <p><strong><spring:message code="publishCar.confirmation.transmission"/></strong> <c:out value="${car.transmission.prettyName()}"/></p>
+              <spring:message code="enum.car.type.${car.type.name()}" var="confirmCarTypeLabel"/>
+              <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="confirmPowertrainLabel"/>
+              <spring:message code="enum.car.transmission.${car.transmission.name()}" var="confirmTransmissionLabel"/>
+              <p><strong><spring:message code="publishCar.confirmation.type"/></strong> <c:out value="${confirmCarTypeLabel}"/></p>
+              <p><strong><spring:message code="publishCar.confirmation.powertrain"/></strong> <c:out value="${confirmPowertrainLabel}"/></p>
+              <p><strong><spring:message code="publishCar.confirmation.transmission"/></strong> <c:out value="${confirmTransmissionLabel}"/></p>
             </div>
           </div>
 

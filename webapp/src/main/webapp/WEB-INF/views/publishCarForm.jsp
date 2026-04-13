@@ -20,11 +20,13 @@
                 <div class="card-body p-4 p-md-5">
 
                     <h4 class="mb-4"><spring:message code="publishCar.form.title"/></h4>
+                    <spring:message code="publishCar.form.pictures.clientRequired" var="publishPicturesClientRequired" htmlEscape="true"/>
                     <form:form id="publishCarFormEl"
                                action="${pageContext.request.contextPath}/publish-car"
                                method="POST"
                                modelAttribute="publishCarForm"
-                               enctype="multipart/form-data">
+                               enctype="multipart/form-data"
+                               data-publish-retained-count="<c:out value='${retainedPicturesCount}'/>">
 
                         <form:errors element="div" cssClass="alert alert-danger"/>
 
@@ -48,7 +50,8 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.plate"/></label>
-                            <form:input path="plate" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <form:input path="plate" cssClass="form-control" cssErrorClass="form-control is-invalid"
+                                        maxlength="10" data-ryden-plate="true" style="text-transform:uppercase"/>
                             <form:errors path="plate" cssClass="text-danger d-block"/>
                         </div>
 
@@ -157,13 +160,29 @@
                         <div class="mb-3">
                             <span class="form-label required-label d-block"><spring:message code="publishCar.form.pictures"/></span>
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden" accept="image/*" multiple required aria-label="Vehicle photos"
+                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden" accept="image/*" multiple aria-label="Vehicle photos"
+                                       data-publish-pictures-required="${publishPicturesClientRequired}"
                                        data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
                                        data-upload-image-too-large="<c:out value='${publishImageTooLargeMsg}'/>"
                                        data-upload-not-image-msg="<c:out value='${publishMustBeImageMsg}'/>"/>
-                                <label for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
-                            </div>selec
+                                <label id="picturesChooseLabel" for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
+                            </div>
                             <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint" arguments="${uploadMaxImageMegabytes}"/></small>
+                            <c:if test="${retainedPicturesCount > 0}">
+                                <div id="publishRetainedPictures" class="row g-2 mt-2">
+                                    <c:forEach var="rpIdx" begin="0" end="${retainedPicturesCount - 1}">
+                                        <div class="col-6 col-md-4">
+                                            <div class="border rounded p-2">
+                                                <img class="img-fluid rounded"
+                                                     style="height:130px;object-fit:cover;width:100%"
+                                                     alt=""
+                                                     src="${pageContext.request.contextPath}/publish-car/retained-picture/${rpIdx}"/>
+                                            </div>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:if>
+                            <div id="publishPicturesClientError" class="alert alert-danger d-none mt-2 py-2 small" role="alert"></div>
                             <form:errors path="pictures" cssClass="text-danger d-block"/>
                             <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>

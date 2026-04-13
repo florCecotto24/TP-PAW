@@ -1,9 +1,10 @@
 package ar.edu.itba.paw.webapp.form;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.multipart.MultipartFile;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
@@ -11,11 +12,12 @@ import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
+
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
+
+import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.Car;
 
 public class PublishCarForm {
 
@@ -60,8 +62,10 @@ public class PublishCarForm {
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
 
-    @NotNull(message = "{validation.pictures.notNull}")
-    @Size(min = 1, max = 8, message = "{validation.pictures.size}")
+    /**
+     * Can be empty in a retry: the pictures may be in session (see {@code PublishCarFormController}).
+     */
+    @Size(max = 8, message = "{validation.pictures.size}")
     private MultipartFile[] pictures;
 
     @Size(min = 1, max = 10, message = "Add between 1 and 10 availability periods")

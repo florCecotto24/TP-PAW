@@ -47,10 +47,12 @@
                 <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.specification"/></h2>
                 <div class="row row-cols-2 row-cols-md-4 g-3">
                     <div class="col">
-                        <ryden:specCard icon="gear-wide-connected" label="${car.transmission.name()}"/>
+                        <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
+                        <ryden:specCard icon="gear-wide-connected" label="${carTransmissionLabel}"/>
                     </div>
                     <div class="col">
-                        <ryden:specCard icon="fuel-pump" label="${car.powertrain.name()}"/>
+                        <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
+                        <ryden:specCard icon="fuel-pump" label="${carPowertrainLabel}"/>
                     </div>
                 </div>
             </section>
@@ -92,13 +94,14 @@
                                 </c:otherwise>
                             </c:choose>
 
+                            <c:url var="similarCarDetailUrl" value="/car-detail"><c:param name="listingId" value="${similar.listingId}"/></c:url>
                             <ryden:carCard
                                     model="${similar.model}"
                                     brand="${similar.brand}"
                                     price="${similar.price}"
                                     image="${similarImageUrl}"
                                     pricePeriod="day"
-                                    href="${pageContext.request.contextPath}/car-detail?listingId=${similar.listingId}"/>
+                                    href="${similarCarDetailUrl}"/>
                         </div>
                     </c:forEach>
                 </div>
@@ -116,5 +119,6 @@
 </c:if>
 
 <%@include file="footer.jsp"%>
+<script src="<c:url value='/js/detailReservationForm.js'/>"></script>
 </body>
 </html>

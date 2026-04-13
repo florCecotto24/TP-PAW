@@ -1,18 +1,21 @@
 package ar.edu.itba.paw.services;
 
 import java.time.LocalDate;
+import java.util.Locale;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.User;
 
 public interface UserService {
 
-    /** @throws ar.edu.itba.paw.exception.user.EmailAlreadyExistsException if the normalized email is already registered */
-    User createUser(final String email, final String forename, final String surname);
+    /**
+     * Step 1 of registration: creates the user with password (BCrypt) and unverified email.
+     * @throws ar.edu.itba.paw.exception.user.EmailAlreadyExistsException if the normalized email is already registered
+     * @throws ar.edu.itba.paw.exception.user.RegistrationPasswordException on mismatch or too short
+     */
+    User registerUser(String email, String forename, String surname, String password, String passwordConfirm);
 
     Optional<User> findByEmail(String email);
-
-    void setRegistrationPassword(long userId, String password, String passwordConfirm);
 
     Optional<User> getUserById(final long id);
 
@@ -20,6 +23,11 @@ public interface UserService {
     Optional<User> findByEmailForAuthentication(final String email);
 
     Optional<User> getListingOwner(final long listingId);
+
+    /**
+     * Updates first name and last name (max 50 characters each, no whitespace).
+     */
+    void updateDisplayName(long userId, String forename, String surname);
 
     /**
      * Phone: digits and {@code +} only, max 20 chars. Blank input is stored as {@code null}.
@@ -36,4 +44,19 @@ public interface UserService {
      * @throws ar.edu.itba.paw.exception.image.ImageValidationException when payload exceeds configured max size
      */
     void updateProfilePicture(long userId, String originalFilename, String contentType, byte[] data);
+
+    /** Removes the profile picture and deletes the associated image row if it exists. */
+    void clearProfilePicture(long userId);
+
+    /**
+     * Changes the password of the authenticated user validating the current one.
+     * @throws ar.edu.itba.paw.exception.user.IncorrectCurrentPasswordException if the current password does not match
+     */
+    void changePassword(long userId, String currentPassword, String newPassword, String newPasswordConfirm);
+
+    /**
+         * Usuario legacy sin {@code password_hash}: genera una contraseña aleatoria, la persiste hasheada y la envía por correo en texto plano.
+         * Si el usuario ya tiene contraseña, no hace nada (idempotente).
+     */
+    void assignRandomPasswordAndEmailForLegacyUser(long userId, String email, Locale locale);
 }

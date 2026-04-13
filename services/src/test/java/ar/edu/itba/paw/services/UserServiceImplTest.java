@@ -37,6 +37,9 @@ public class UserServiceImplTest {
     private ImageService imageService;
 
     @Mock
+    private EmailService emailService;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private UserServiceImpl userService;
@@ -46,6 +49,7 @@ public class UserServiceImplTest {
         userService = new UserServiceImpl(
                 userDao,
                 imageService,
+                emailService,
                 passwordEncoder,
                 new UserValidationPolicy(8, 20, Pattern.compile("^[0-9+]+$")));
     }
@@ -81,15 +85,17 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void testCreateUserWhenUserDoesNotExist() {
+    public void testRegisterUserWhenUserDoesNotExist() {
         // 1. Arrange
-        final User user = new User(1L, "test@test.com", "TestName", "TestSurname", null, false, null, null, null);
+        final User user = new User(1L, "test@test.com", "TestName", "TestSurname", "ENC", false, null, null, null);
         Mockito.when(userDao.findByEmail("test@test.com")).thenReturn(Optional.empty());
-        Mockito.when(userDao.createUser(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.isNull()))
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("ENC");
+        Mockito.when(userDao.createUser(Mockito.eq("test@test.com"), Mockito.eq("TestName"), Mockito.eq("TestSurname"), Mockito.eq("ENC")))
                 .thenReturn(user);
 
         // 2. Execute
-        final User result = userService.createUser("  Test@Test.COM ", "TestName", "TestSurname");
+        final User result = userService.registerUser(
+                "  Test@Test.COM ", "TestName", "TestSurname", "password12", "password12");
 
         // 3. Assert
         Assertions.assertNotNull(result);
@@ -100,49 +106,78 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void testCreateUserWhenUserAlreadyExists() {
+    public void testRegisterUserWhenUserAlreadyExists() {
         // 1. Arrange
         final User existing = new User(1L, "test@test.com", "TestName", "TestSurname");
         Mockito.when(userDao.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
 
         // 2. Execute and 3. Assert
         final EmailAlreadyExistsException thrown = Assertions.assertThrows(EmailAlreadyExistsException.class,
-                () -> userService.createUser("  TEST@Test.com ", "TestNameDifferent", "TestSurnameDifferent"));
+                () -> userService.registerUser(
+                        "  TEST@Test.com ", "TestNameDifferent", "TestSurnameDifferent", "password12", "password12"));
         Assertions.assertEquals(MessageKeys.USER_EMAIL_ALREADY_EXISTS, thrown.getMessageCode());
     }
 
     @Test
-    public void testUpdatePhoneNumberWhenValidDoesNotThrow() {
+    public void testUpdateDisplayNameWhenUserExistsDoesNotThrow() {
+        // 1. Arrange
         final User user = new User(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
+        // 2. Execute and 3. Assert
+        Assertions.assertDoesNotThrow(() -> userService.updateDisplayName(1L, "  Ada ", " Lovelace "));
+
+    }
+
+    @Test
+    public void testUpdateDisplayNameUserMissingThrows() {
+        // 1. Arrange
+        Mockito.when(userDao.getUserById(99L)).thenReturn(Optional.empty());
+
+        Assertions.assertThrows(UserNotFoundException.class,
+                () -> userService.updateDisplayName(99L, "X", "Y"));
+    }
+
+    @Test
+    public void testUpdatePhoneNumberWhenValidDoesNotThrow() {
+        // 1. Arrange
+        final User user = new User(1L, "u@mail.com", "A", "B");
+        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
+
+        // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> userService.updatePhoneNumber(1L, "  +5411  "));
     }
 
     @Test
     public void testUpdateBirthDateDoesNotThrow() {
+        // 1. Arrange
         final User user = new User(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final LocalDate birth = LocalDate.of(2000, 1, 2);
 
+        // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> userService.updateBirthDate(1L, birth));
     }
 
     @Test
     public void testUpdateBirthDateTodayDoesNotThrow() {
+        // 1. Arrange
         final User user = new User(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
 
+        // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> userService.updateBirthDate(1L, today));
     }
 
     @Test
     public void testUpdateBirthDateFutureThrows() {
+        // 1. Arrange
         final User user = new User(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final LocalDate future = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
 
+        // 2. Execute and 3. Assert
         final InvalidProfileBirthDateException thrown = Assertions.assertThrows(InvalidProfileBirthDateException.class,
                 () -> userService.updateBirthDate(1L, future));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_BIRTH_DATE_FUTURE, thrown.getMessageCode());
@@ -151,17 +186,21 @@ public class UserServiceImplTest {
 
     @Test
     public void testUpdatePhoneNumberWhenBlankDoesNotThrow() {
+        // 1. Arrange
         final User user = new User(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
+        // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> userService.updatePhoneNumber(1L, "   \t"));
     }
 
     @Test
     public void testUpdatePhoneNumberInvalidPhoneThrows() {
+        // 1. Arrange
         final User user = new User(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
+        // 2. Execute and 3. Assert
         final InvalidProfilePhoneException thrown = Assertions.assertThrows(InvalidProfilePhoneException.class,
                 () -> userService.updatePhoneNumber(1L, "12a34"));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_PHONE_INVALID, thrown.getMessageCode());
@@ -183,16 +222,20 @@ public class UserServiceImplTest {
 
     @Test
     public void testUpdatePhoneNumberUserMissingThrows() {
+        // 1. Arrange
         Mockito.when(userDao.getUserById(99L)).thenReturn(Optional.empty());
 
+        // 2. Execute and 3. Assert
         Assertions.assertThrows(UserNotFoundException.class,
                 () -> userService.updatePhoneNumber(99L, "+1"));
     }
 
     @Test
     public void testUpdateBirthDateUserMissingThrows() {
+        // 1. Arrange
         Mockito.when(userDao.getUserById(99L)).thenReturn(Optional.empty());
 
+        // 2. Execute and 3. Assert
         Assertions.assertThrows(UserNotFoundException.class,
                 () -> userService.updateBirthDate(99L, LocalDate.of(2000, 1, 1)));
     }

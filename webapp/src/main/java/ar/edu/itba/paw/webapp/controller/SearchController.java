@@ -11,19 +11,19 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller
 public class SearchController {
 
     private final ListingService listingService;
+    private final CarEnumOptions carEnumOptions;
 
     @Autowired
-    public SearchController(final ListingService listingService) {
+    public SearchController(final ListingService listingService, final CarEnumOptions carEnumOptions) {
         this.listingService = listingService;
+        this.carEnumOptions = carEnumOptions;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -37,10 +37,10 @@ public class SearchController {
             @RequestParam(required = false) final String until) {
         final ModelAndView mav = new ModelAndView("search");
 
-        mav.addObject("categoryFilterOptions", CarEnumOptions.carTypeSelectOptions());
-        mav.addObject("transmissionFilterOptions", CarEnumOptions.transmissionSelectOptions());
-        mav.addObject("powertrainFilterOptions", CarEnumOptions.powertrainSelectOptions());
-        mav.addObject("priceFilterOptions", priceFilterOptions());
+        mav.addObject("categoryFilterOptions", carEnumOptions.carTypeSelectOptions());
+        mav.addObject("transmissionFilterOptions", carEnumOptions.transmissionSelectOptions());
+        mav.addObject("powertrainFilterOptions", carEnumOptions.powertrainSelectOptions());
+        mav.addObject("priceFilterOptions", carEnumOptions.searchPriceBandOptions());
 
         final var criteria = listingService.buildSearchCriteria(
                 query, category, transmission, powertrain, price, from, until);
@@ -51,15 +51,6 @@ public class SearchController {
         mav.addObject("activeTab", "search");
 
         return mav;
-    }
-
-    private static Map<String, String> priceFilterOptions() {
-        final Map<String, String> m = new LinkedHashMap<>();
-        m.put("UNDER_5000", "Under $5,000");
-        m.put("5000_TO_15000", "$5,000 – $15,000");
-        m.put("15000_TO_30000", "$15,000 – $30,000");
-        m.put("OVER_30000", "Over $30,000");
-        return m;
     }
 
     private static VehicleCardView toVehicleCardView(final ListingCard card) {

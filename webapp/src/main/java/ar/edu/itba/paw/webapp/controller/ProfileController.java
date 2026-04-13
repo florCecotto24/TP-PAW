@@ -4,10 +4,16 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -24,6 +30,7 @@ import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.UserValidationPolicy;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.ProfileUpdateForm;
 import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
@@ -39,6 +46,7 @@ public class ProfileController {
     private final ImageService imageService;
     private final MultipartImageValidation multipartImageValidation;
     private final UserValidationPolicy userValidationPolicy;
+    private final SecurityContextRepository securityContextRepository;
 
     @Autowired
     public ProfileController(
@@ -46,12 +54,14 @@ public class ProfileController {
             final LocaleMessages localeMessages,
             final ImageService imageService,
             final MultipartImageValidation multipartImageValidation,
-            final UserValidationPolicy userValidationPolicy) {
+            final UserValidationPolicy userValidationPolicy,
+            final SecurityContextRepository securityContextRepository) {
         this.userService = userService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
         this.multipartImageValidation = multipartImageValidation;
         this.userValidationPolicy = userValidationPolicy;
+        this.securityContextRepository = securityContextRepository;
     }
 
     @ModelAttribute("profilePhoneMaxLength")
@@ -101,6 +111,8 @@ public class ProfileController {
             final Authentication authentication,
             @Valid @ModelAttribute("profileForm") final ProfileUpdateForm profileForm,
             final BindingResult bindingResult,
+            final HttpServletRequest request,
+            final HttpServletResponse response,
             final RedirectAttributes redirectAttributes) {
         final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
         final LocalDate birthParsed = parseAndValidateBirthDate(profileForm.getBirthDate(), bindingResult);
@@ -108,12 +120,14 @@ public class ProfileController {
             return "profile";
         }
         try {
+            userService.updateDisplayName(details.getUserId(), profileForm.getForename(), profileForm.getSurname());
             userService.updatePhoneNumber(details.getUserId(), profileForm.getPhoneNumber());
             userService.updateBirthDate(details.getUserId(), birthParsed);
         } catch (final RydenException e) {
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile";
         }
+        refreshPrincipalDisplayName(authentication, profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
         redirectAttributes.addFlashAttribute("profileSaved", Boolean.TRUE);
         return "redirect:/profile";
     }
@@ -156,11 +170,88 @@ public class ProfileController {
         return "redirect:/profile";
     }
 
+    @PostMapping("/picture/delete")
+    public String deleteProfilePicture(
+            final Authentication authentication,
+            final RedirectAttributes redirectAttributes) {
+        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        try {
+            userService.clearProfilePicture(details.getUserId());
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("profilePictureErrorMessage", localeMessages.msg(e));
+            return "redirect:/profile";
+        }
+        redirectAttributes.addFlashAttribute("profilePictureDeleted", Boolean.TRUE);
+        return "redirect:/profile";
+    }
+
+    @GetMapping("/password")
+    public String passwordFormGet(final Authentication authentication, final Model model) {
+        WebAuthUtils.requireCurrentUser(authentication);
+        model.addAttribute("profilePasswordForm", new ProfilePasswordChangeForm());
+        return "profile-password";
+    }
+
+    @PostMapping("/password")
+    public String passwordFormPost(
+            final Authentication authentication,
+            @Valid @ModelAttribute("profilePasswordForm") final ProfilePasswordChangeForm profilePasswordForm,
+            final BindingResult bindingResult,
+            final RedirectAttributes redirectAttributes) {
+        WebAuthUtils.requireCurrentUser(authentication);
+        if (bindingResult.hasErrors()) {
+            return "profile-password";
+        }
+        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        try {
+            userService.changePassword(
+                    details.getUserId(),
+                    profilePasswordForm.getCurrentPassword(),
+                    profilePasswordForm.getPassword(),
+                    profilePasswordForm.getPasswordConfirm());
+        } catch (final RydenException e) {
+            bindingResult.reject("profile.password.failed", localeMessages.msg(e));
+            return "profile-password";
+        }
+        redirectAttributes.addFlashAttribute("profilePasswordSaved", Boolean.TRUE);
+        return "redirect:/profile";
+    }
+
     private void populateFormFromUser(final long userId, final ProfileUpdateForm form) {
         userService.getUserById(userId).ifPresent(u -> {
+            form.setForename(u.getForename());
+            form.setSurname(u.getSurname());
             u.getPhoneNumber().ifPresent(form::setPhoneNumber);
             u.getBirthDate().ifPresent(bd -> form.setBirthDate(bd.toString()));
         });
+    }
+
+    private void refreshPrincipalDisplayName(
+            final Authentication authentication,
+            final String forename,
+            final String surname,
+            final HttpServletRequest request,
+            final HttpServletResponse response) {
+        if (!(authentication.getPrincipal() instanceof RydenUserDetails)) {
+            return;
+        }
+        final RydenUserDetails old = (RydenUserDetails) authentication.getPrincipal();
+        final RydenUserDetails updated = new RydenUserDetails(
+                old.getUserId(),
+                old.getUsername(),
+                forename,
+                surname,
+                old.getPassword(),
+                old.getAuthorities());
+        final UsernamePasswordAuthenticationToken newAuth = new UsernamePasswordAuthenticationToken(
+                updated,
+                authentication.getCredentials(),
+                updated.getAuthorities());
+        newAuth.setDetails(authentication.getDetails());
+        final SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(newAuth);
+        SecurityContextHolder.setContext(context);
+        this.securityContextRepository.saveContext(context, request, response);
     }
 
     private static LocalDate parseAndValidateBirthDate(final String raw, final BindingResult errors) {

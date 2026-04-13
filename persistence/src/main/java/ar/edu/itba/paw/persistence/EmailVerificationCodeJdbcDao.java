@@ -43,4 +43,14 @@ public class EmailVerificationCodeJdbcDao implements EmailVerificationCodeDao {
                 Timestamp.from(now));
         return n > 0;
     }
+
+    @Override
+    public boolean hasActiveCode(final long userId, final Instant now) {
+        final Integer n = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM email_verification_codes WHERE user_id = ? AND expires_at > ?",
+                Integer.class,
+                userId,
+                Timestamp.from(now));
+        return n != null && n > 0;
+    }
 }

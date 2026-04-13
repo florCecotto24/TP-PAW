@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
+import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.EmailNormalizer;
 import ar.edu.itba.paw.models.User;
@@ -39,8 +40,34 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     @Override
     @Transactional
-    public void issueNewCode(final long userId, final String email, final Locale locale) {
+    public void issueFreshVerificationCode(final long userId, final String email, final Locale locale) {
         emailVerificationCodeDao.deleteForUser(userId);
+        insertAndSend(userId, email, locale);
+    }
+
+    @Override
+    @Transactional
+    public void ensurePendingVerificationCode(final long userId, final String email, final Locale locale) {
+        final Instant now = Instant.now();
+        if (emailVerificationCodeDao.hasActiveCode(userId, now)) {
+            return;
+        }
+        emailVerificationCodeDao.deleteForUser(userId);
+        insertAndSend(userId, email, locale);
+    }
+
+    @Override
+    @Transactional
+    public void resendVerificationCode(final long userId, final String email, final Locale locale) {
+        final Instant now = Instant.now();
+        if (emailVerificationCodeDao.hasActiveCode(userId, now)) {
+            throw new VerificationCodeAlreadyActiveException(MessageKeys.USER_VERIFICATION_CODE_ALREADY_ACTIVE);
+        }
+        emailVerificationCodeDao.deleteForUser(userId);
+        insertAndSend(userId, email, locale);
+    }
+
+    private void insertAndSend(final long userId, final String email, final Locale locale) {
         final String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         final Instant now = Instant.now();
         emailVerificationCodeDao.insert(userId, code, now.plus(CODE_TTL), now);

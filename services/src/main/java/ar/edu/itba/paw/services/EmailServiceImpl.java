@@ -53,6 +53,8 @@ public class EmailServiceImpl implements EmailService {
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
     private static final String EMAIL_VERIFICATION_TEMPLATE = "html/email-verification-code";
+    private static final String MIGRATED_PASSWORD_TEMPLATE = "html/migrated-password";
+    private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         if (dateTime == null) {
@@ -139,6 +141,53 @@ public class EmailServiceImpl implements EmailService {
             LOG.info("Email verification code sent to " + to);
         } catch (final Exception e) {
             LOG.error("Failed to send email verification code to " + to, e);
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendMigratedUserPassword(final String to, final String plainPassword, final Locale locale) {
+        if (to == null || to.isBlank() || plainPassword == null || plainPassword.isBlank()) {
+            LOG.error("sendMigratedUserPassword: missing to or password");
+            return;
+        }
+        final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
+        final Context ctx = new Context(mailLocale);
+        ctx.setVariable("plainPassword", plainPassword);
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(MIGRATED_PASSWORD_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.migratedPassword.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOG.info("Migrated user password email sent to " + to);
+        } catch (final Exception e) {
+            LOG.error("Failed to send migrated password email to " + to, e);
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendPasswordResetCode(final String to, final String code, final Locale locale) {
+        if (to == null || to.isBlank() || code == null) {
+            LOG.error("sendPasswordResetCode: missing to or code");
+            return;
+        }
+        final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
+        final Context ctx = new Context(mailLocale);
+        ctx.setVariable("code", code);
+        final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        final String contextPath = environment.getProperty("mail.app.context.path", "").replaceAll("/+$", "");
+        ctx.setVariable("resetUrl", baseUrl + contextPath + "/forgot-password/reset");
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(PASSWORD_RESET_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.passwordReset.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOG.info("Password reset code sent to " + to);
+        } catch (final Exception e) {
+            LOG.error("Failed to send password reset code to " + to, e);
         }
     }
 

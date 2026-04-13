@@ -25,6 +25,16 @@
             <spring:message code="profile.picture.saved"/>
         </div>
     </c:if>
+    <c:if test="${profilePictureDeleted}">
+        <div class="alert alert-success" role="alert">
+            <spring:message code="profile.picture.deleted"/>
+        </div>
+    </c:if>
+    <c:if test="${profilePasswordSaved}">
+        <div class="alert alert-success" role="alert">
+            <spring:message code="profile.password.savedBanner"/>
+        </div>
+    </c:if>
     <c:if test="${not empty profilePictureErrorMessage}">
         <div class="alert alert-danger" role="alert">
             <c:out value="${profilePictureErrorMessage}"/>
@@ -32,14 +42,19 @@
     </c:if>
     <c:if test="${not empty profilePictureErrorCode}">
         <div class="alert alert-danger" role="alert">
-            <spring:message code="${profilePictureErrorCode}"/>
+            <%-- Códigos fijados en servidor; no usar code="${...}" sin acotar (riesgo de inyección en atributo). --%>
+            <c:choose>
+                <c:when test="${profilePictureErrorCode eq 'profile.picture.required'}"><spring:message code="profile.picture.required"/></c:when>
+                <c:when test="${profilePictureErrorCode eq 'profile.picture.notImage'}"><spring:message code="profile.picture.notImage"/></c:when>
+                <c:when test="${profilePictureErrorCode eq 'profile.picture.readFailed'}"><spring:message code="profile.picture.readFailed"/></c:when>
+                <c:otherwise><spring:message code="profile.picture.readFailed"/></c:otherwise>
+            </c:choose>
         </div>
     </c:if>
 
-    <p class="text-muted mb-1"><spring:message code="profile.name"/></p>
-    <p class="fw-semibold mb-3"><c:out value="${userForename}"/> <c:out value="${userSurname}"/></p>
     <p class="text-muted mb-1"><spring:message code="profile.email"/></p>
     <p class="fw-semibold mb-4"><c:out value="${userEmail}"/></p>
+    <p class="small text-muted mb-4"><spring:message code="profile.email.hint"/></p>
 
     <h2 class="h5 mb-3"><spring:message code="profile.picture.sectionTitle"/></h2>
     <c:if test="${not empty profilePictureImageId}">
@@ -47,10 +62,11 @@
             <img src="<c:url value='/image/${profilePictureImageId}'/>" alt="" class="rounded-circle border object-fit-cover" width="96" height="96"/>
         </div>
     </c:if>
+    <div id="profilePictureClientError" class="alert alert-danger d-none" role="alert"></div>
     <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="profileImageTooLargeMsg" htmlEscape="true"/>
     <spring:message code="validation.pictures.mustBeImage" var="profileMustBeImageMsg" htmlEscape="true"/>
     <form id="profilePictureForm" method="post" action="<c:url value='/profile/picture'/>" enctype="multipart/form-data">
-        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+        <%@ include file="includes/csrfHidden.jspf" %>
         <div class="mb-3">
             <label for="profilePictureInput" class="form-label"><spring:message code="profile.picture.label"/></label>
             <input type="file" class="form-control" id="profilePictureInput" name="profilePicture" accept="image/*"
@@ -59,29 +75,49 @@
                    data-upload-not-image-msg="<c:out value='${profileMustBeImageMsg}'/>"/>
             <div class="form-text"><spring:message code="profile.picture.hint" arguments="${uploadMaxImageMegabytes}"/></div>
         </div>
-        <button type="submit" class="btn btn-outline-primary mb-4"><spring:message code="profile.picture.submit"/></button>
+        <button type="submit" class="btn btn-outline-primary me-2 mb-4"><spring:message code="profile.picture.submit"/></button>
     </form>
+    <c:if test="${not empty profilePictureImageId}">
+        <form method="post" action="<c:url value='/profile/picture/delete'/>" class="d-inline-block mb-4">
+            <%@ include file="includes/csrfHidden.jspf" %>
+            <button type="submit" class="btn btn-outline-danger"><spring:message code="profile.picture.delete"/></button>
+        </form>
+    </c:if>
+
+    <h2 class="h5 mb-3"><spring:message code="profile.password.sectionTitle"/></h2>
+    <p class="text-muted small mb-3"><spring:message code="profile.password.sectionHint"/></p>
+    <a class="btn btn-outline-primary mb-4" href="<c:url value='/profile/password'/>"><spring:message code="profile.password.goToChange"/></a>
 
     <h2 class="h5 mb-3"><spring:message code="profile.optionalSection"/></h2>
     <spring:message code="profile.phone.placeholder" var="profilePhonePlaceholder" htmlEscape="true"/>
     <form:form modelAttribute="profileForm" method="post" cssClass="needs-validation" novalidate="novalidate"
                action="${pageContext.request.contextPath}/profile">
+        <%@ include file="includes/csrfHidden.jspf" %>
         <form:errors path="*" element="div" cssClass="alert alert-danger" delimiter=" "/>
 
         <div class="mb-3">
+            <label for="forename" class="form-label"><spring:message code="profile.forename"/></label>
+            <form:input path="forename" id="forename" cssClass="form-control" maxlength="50" autocomplete="given-name"/>
+            <form:errors path="forename" cssClass="text-danger small d-block" element="div"/>
+        </div>
+        <div class="mb-3">
+            <label for="surname" class="form-label"><spring:message code="profile.surname"/></label>
+            <form:input path="surname" id="surname" cssClass="form-control" maxlength="50" autocomplete="family-name"/>
+            <form:errors path="surname" cssClass="text-danger small d-block" element="div"/>
+        </div>
+        <div class="mb-3">
             <label for="phoneNumber" class="form-label"><spring:message code="profile.phone"/></label>
-            <input type="text" class="form-control" id="phoneNumber" name="profileForm.phoneNumber" autocomplete="tel"
-                   maxlength="<c:out value='${profilePhoneMaxLength}'/>"
-                   value="<c:out value='${profileForm.phoneNumber}'/>"
-                   placeholder="<c:out value='${profilePhonePlaceholder}'/>"/>
+            <form:input path="phoneNumber" id="phoneNumber" cssClass="form-control" maxlength="${profilePhoneMaxLength}"
+                        autocomplete="tel" inputmode="tel" pattern="[0-9+]*" data-ryden-phone="true"
+                        placeholder="<c:out value='${profilePhonePlaceholder}'/>"/>
             <form:errors path="phoneNumber" cssClass="text-danger small d-block" element="div"/>
             <div class="form-text"><spring:message code="profile.phone.hint"/></div>
         </div>
         <div class="mb-4">
-            <label for="birthDate" class="form-label"><spring:message code="profile.birthDate"/></label>
-            <input type="date" class="form-control" id="birthDate" name="profileForm.birthDate"
-                   max="<c:out value='${profileBirthDateMax}'/>"
-                   value="<c:out value='${profileForm.birthDate}'/>"/>
+            <label for="profileBirthDateInput" class="form-label"><spring:message code="profile.birthDate"/></label>
+            <%-- Texto + Flatpickr (mismo stack que búsqueda / reservas); valor ISO yyyy-MM-dd para el servidor --%>
+            <form:input path="birthDate" id="profileBirthDateInput" cssClass="form-control" autocomplete="bday"
+                        readonly="true" data-max-ymd="<c:out value='${profileBirthDateMax}'/>"/>
             <form:errors path="birthDate" cssClass="text-danger small d-block" element="div"/>
             <div class="form-text"><spring:message code="profile.birthDate.hint"/></div>
         </div>

@@ -24,23 +24,20 @@ public class RydenAuthenticationFailureHandler extends SimpleUrlAuthenticationFa
             final HttpServletRequest request,
             final HttpServletResponse response,
             final AuthenticationException exception) throws IOException, ServletException {
+        if (exception instanceof LegacyPasswordMailedException) {
+            getRedirectStrategy().sendRedirect(request, response, "/login?legacyPasswordSent=1");
+            return;
+        }
         final EmailNotValidatedException emailNotValidated = findEmailNotValidated(exception);
         if (emailNotValidated != null) {
             final HttpSession session = request.getSession(true);
-            final String email = emailNotValidated.getEmail();
-            if (email != null && !email.isBlank()) {
-                session.setAttribute(RegistrationSessionAttributes.PENDING_VERIFY_EMAIL, email.trim());
+            final String em = emailNotValidated.getEmail();
+            if (em != null && !em.isBlank()) {
+                session.setAttribute(RegistrationSessionAttributes.PENDING_VERIFY_EMAIL, em.trim());
             } else {
                 session.removeAttribute(RegistrationSessionAttributes.PENDING_VERIFY_EMAIL);
             }
             getRedirectStrategy().sendRedirect(request, response, "/verify-email?fromLogin=1");
-            return;
-        }
-        if (exception instanceof RegistrationIncompleteException) {
-            final HttpSession session = request.getSession(true);
-            session.setAttribute(RegistrationSessionAttributes.PENDING_PASSWORD_USER_ID,
-                    ((RegistrationIncompleteException) exception).getUserId());
-            getRedirectStrategy().sendRedirect(request, response, "/register/password");
             return;
         }
         super.onAuthenticationFailure(request, response, exception);

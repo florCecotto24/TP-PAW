@@ -731,3 +731,12 @@ body.modal-open {
     align-items: center;
     gap: 10px;
 }
+
+#picturesChooseLabel.is-invalid {
+    border-color: var(--bs-danger);
+    color: var(--bs-danger);
+}
+
+.input-group .ryden-password-toggle {
+    flex-shrink: 0;
+}

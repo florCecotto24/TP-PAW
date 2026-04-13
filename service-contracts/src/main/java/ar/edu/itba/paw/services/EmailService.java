@@ -9,4 +9,8 @@ public interface EmailService {
     void sendReservationConfirmationEmail(ReservationConfirmationPayload payload);
 
     void sendEmailVerificationCode(String to, String code, Locale locale);
+
+    void sendMigratedUserPassword(String to, String plainPassword, Locale locale);
+
+    void sendPasswordResetCode(String to, String code, Locale locale);
 }

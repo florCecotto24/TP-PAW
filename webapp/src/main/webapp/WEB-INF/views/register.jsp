@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
@@ -17,33 +18,61 @@
     <c:if test="${registerEmailTaken}">
         <div class="alert alert-danger" role="alert"><spring:message code="register.emailTaken"/></div>
     </c:if>
-    <c:if test="${registerFieldError}">
-        <div class="alert alert-danger" role="alert"><spring:message code="register.fieldRequired"/></div>
-    </c:if>
 
-    <form method="post" action="${pageContext.request.contextPath}/register" class="needs-validation" novalidate>
-        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+    <spring:message code="common.password.show" var="lblPwShow" htmlEscape="true"/>
+    <spring:message code="common.password.hide" var="lblPwHide" htmlEscape="true"/>
+
+    <form:form modelAttribute="registrationAccountForm" method="post" cssClass="needs-validation" novalidate="novalidate"
+               action="${pageContext.request.contextPath}/register">
+        <%@ include file="includes/csrfHidden.jspf" %>
+        <form:errors path="*" element="div" cssClass="alert alert-danger" delimiter=" "/>
+
         <div class="mb-3">
             <label for="forename" class="form-label"><spring:message code="register.forename"/></label>
-            <input type="text" class="form-control" id="forename" name="forename" required maxlength="50"
-                   value="<c:out value='${forename}'/>"/>
+            <form:input path="forename" id="forename" cssClass="form-control" maxlength="50" required="required"/>
+            <form:errors path="forename" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">
             <label for="surname" class="form-label"><spring:message code="register.surname"/></label>
-            <input type="text" class="form-control" id="surname" name="surname" required maxlength="50"
-                   value="<c:out value='${surname}'/>"/>
+            <form:input path="surname" id="surname" cssClass="form-control" maxlength="50" required="required"/>
+            <form:errors path="surname" cssClass="text-danger small d-block" element="div"/>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label"><spring:message code="register.email"/></label>
+            <form:input path="email" id="email" type="email" cssClass="form-control" maxlength="50" required="required"/>
+            <form:errors path="email" cssClass="text-danger small d-block" element="div"/>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label"><spring:message code="register.password"/></label>
+            <div class="input-group">
+                <form:password path="password" id="password" cssClass="form-control" autocomplete="new-password" required="required"/>
+                <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
+                        data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
+                        aria-label="<c:out value='${lblPwShow}'/>">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+            </div>
+            <form:errors path="password" cssClass="text-danger small d-block" element="div"/>
+            <div class="form-text"><spring:message code="registerPassword.hint" arguments="${registrationPasswordMinLength}"/></div>
         </div>
         <div class="mb-4">
-            <label for="email" class="form-label"><spring:message code="register.email"/></label>
-            <input type="email" class="form-control" id="email" name="email" required maxlength="50"
-                   value="<c:out value='${email}'/>"/>
+            <label for="passwordConfirm" class="form-label"><spring:message code="register.passwordConfirm"/></label>
+            <div class="input-group">
+                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control" autocomplete="new-password" required="required"/>
+                <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
+                        data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
+                        aria-label="<c:out value='${lblPwShow}'/>">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                </button>
+            </div>
+            <form:errors path="passwordConfirm" cssClass="text-danger small d-block" element="div"/>
         </div>
         <button type="submit" class="btn btn-primary w-100"><spring:message code="register.submit"/></button>
-    </form>
+    </form:form>
     <p class="text-center mt-3 small">
         <a href="<c:url value='/login'/>"><spring:message code="navbar.login"/></a>
     </p>
 </div>
-<%@include file="footer.jsp" %>
+<%@ include file="includes/footerScripts.jspf" %>
 </body>
 </html>

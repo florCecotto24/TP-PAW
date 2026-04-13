@@ -12,10 +12,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import ar.edu.itba.paw.models.UserValidationPolicy;
-import ar.edu.itba.paw.webapp.form.RegistrationPasswordForm;
+import ar.edu.itba.paw.webapp.form.RegistrationPasswordConfirmFields;
 
 @Component
-public class RegistrationPasswordRulesValidator implements ConstraintValidator<RegistrationPasswordRules, RegistrationPasswordForm> {
+public class RegistrationPasswordRulesValidator implements ConstraintValidator<RegistrationPasswordRules, RegistrationPasswordConfirmFields> {
 
     private final UserValidationPolicy policy;
     private final MessageSource messageSource;
@@ -27,7 +27,7 @@ public class RegistrationPasswordRulesValidator implements ConstraintValidator<R
     }
 
     @Override
-    public boolean isValid(final RegistrationPasswordForm form, final ConstraintValidatorContext context) {
+    public boolean isValid(final RegistrationPasswordConfirmFields form, final ConstraintValidatorContext context) {
         if (form == null) {
             return true;
         }

@@ -1,20 +1,21 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.Reservation;
-import org.junit.jupiter.api.BeforeEach;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
+
+import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.Reservation;
 
 @SpringJUnitConfig
 @ContextConfiguration(classes = TestPersistenceConfig.class)
@@ -32,6 +33,7 @@ public abstract class DaoIntegrationTestSupport {
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM images");
         jdbcTemplate.update("DELETE FROM email_verification_codes");
+        jdbcTemplate.update("DELETE FROM password_reset_codes");
         jdbcTemplate.update("DELETE FROM users");
     }
 

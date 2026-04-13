@@ -1,52 +1,73 @@
 package ar.edu.itba.paw.webapp.util;
 
 import ar.edu.itba.paw.models.Car;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public final class CarEnumOptions {
+@Component
+public class CarEnumOptions {
 
-    private CarEnumOptions() {
+    private static final String[] SEARCH_PRICE_BAND_KEYS = {
+            "UNDER_5000", "5000_TO_15000", "15000_TO_30000", "OVER_30000"
+    };
+
+    private final MessageSource messageSource;
+
+    @Autowired
+    public CarEnumOptions(@Qualifier("messageSource") final MessageSource messageSource) {
+        this.messageSource = messageSource;
     }
 
-    public static String getEnumName(final String enumName) {
-        final String[] parts = enumName.toLowerCase().split("_");
-        final StringBuilder sb = new StringBuilder();
-        for (final String p : parts) {
-            if (sb.length() > 0) {
-                sb.append(' ');
-            }
-            sb.append(Character.toUpperCase(p.charAt(0))).append(p, 1, p.length());
-        }
-        return sb.toString();
+    private Locale locale() {
+        return LocaleContextHolder.getLocale();
     }
 
-    public static Map<String, String> carTypeSelectOptions() {
+    private String label(final String code, final String defaultIfMissing) {
+        return messageSource.getMessage(code, null, defaultIfMissing, locale());
+    }
+
+    public Map<String, String> carTypeSelectOptions() {
         final Map<String, String> m = new LinkedHashMap<>();
         for (final Car.Type t : Car.Type.values()) {
-            m.put(t.name(), getEnumName(t.name()));
+            m.put(t.name(), label("enum.car.type." + t.name(), t.name()));
         }
         return sortByLabel(m);
     }
 
-    public static Map<String, String> powertrainSelectOptions() {
+    public Map<String, String> powertrainSelectOptions() {
         final Map<String, String> m = new LinkedHashMap<>();
-        m.put("HYBRID", "Hybrid");
-        m.put("ELECTRIC", "Electric");
-        m.put("DIESEL", "Diesel");
-        m.put("GASOLINE", "Gasoline");
+        for (final Car.Powertrain p : Car.Powertrain.values()) {
+            m.put(p.name(), label("enum.car.powertrain." + p.name(), p.name()));
+        }
         return sortByLabel(m);
     }
 
-    public static Map<String, String> transmissionSelectOptions() {
+    public Map<String, String> transmissionSelectOptions() {
         final Map<String, String> m = new LinkedHashMap<>();
-        m.put("MANUAL", "Manual");
-        m.put("AUTOMATIC", "Automatic");
-        m.put("SEMI_AUTOMATIC", "Semi-automatic");
+        for (final Car.Transmission t : Car.Transmission.values()) {
+            m.put(t.name(), label("enum.car.transmission." + t.name(), t.name()));
+        }
         return sortByLabel(m);
+    }
+
+    /**
+     * Search price buckets in ascending order (not sorted alphabetically by label).
+     */
+    public Map<String, String> searchPriceBandOptions() {
+        final Map<String, String> m = new LinkedHashMap<>();
+        for (final String k : SEARCH_PRICE_BAND_KEYS) {
+            m.put(k, label("enum.search.price." + k, k));
+        }
+        return m;
     }
 
     private static Map<String, String> sortByLabel(final Map<String, String> unsorted) {
