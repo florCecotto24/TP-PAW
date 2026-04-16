@@ -52,8 +52,47 @@
                 </nav>
             </form>
             <div class="container">
-                <div class="mb-6 pt-5">
-                    <h4 class="font-semibold mb-1"><spring:message code="search.resultsCount" arguments="${fn:length(results)}"/></h4>
+
+                <%-- Build baseUrl preserving all filter params except page and sort --%>
+                <c:url var="searchBaseUrl" value="/search">
+                    <c:if test="${not empty param.query}">
+                        <c:param name="query" value="${param.query}"/>
+                    </c:if>
+                    <c:if test="${not empty param.from}">
+                        <c:param name="from" value="${param.from}"/>
+                    </c:if>
+                    <c:if test="${not empty param.until}">
+                        <c:param name="until" value="${param.until}"/>
+                    </c:if>
+                    <c:forEach var="cat" items="${paramValues.category}">
+                        <c:param name="category" value="${cat}"/>
+                    </c:forEach>
+                    <c:forEach var="tr" items="${paramValues.transmission}">
+                        <c:param name="transmission" value="${tr}"/>
+                    </c:forEach>
+                    <c:forEach var="pw" items="${paramValues.powertrain}">
+                        <c:param name="powertrain" value="${pw}"/>
+                    </c:forEach>
+                    <c:forEach var="pr" items="${paramValues.price}">
+                        <c:param name="price" value="${pr}"/>
+                    </c:forEach>
+                </c:url>
+
+                <div class="mb-3 pt-5 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <h4 class="font-semibold mb-0">
+                        <c:choose>
+                            <c:when test="${searchPage.totalItems > 0}">
+                                <spring:message code="search.resultsRange"
+                                    arguments="${searchPage.firstItemNumber},${searchPage.lastItemNumber},${searchPage.totalItems}"/>
+                            </c:when>
+                            <c:otherwise>
+                                <spring:message code="search.resultsCount" arguments="0"/>
+                            </c:otherwise>
+                        </c:choose>
+                    </h4>
+                    <c:if test="${not empty results}">
+                        <ryden:sortBar baseUrl="${searchBaseUrl}" currentSort="${currentSort}"/>
+                    </c:if>
                 </div>
 
                 <c:set var="hasActiveSearchFilters"
@@ -121,6 +160,12 @@
                                 </c:forEach>
                             </div>
                         </div>
+
+                        <ryden:pagination
+                                currentPage="${searchPage.currentPage}"
+                                totalPages="${searchPage.totalPages}"
+                                baseUrl="${searchBaseUrl}"
+                                sortParam="${currentSort}"/>
                     </c:otherwise>
                 </c:choose>
             </div>

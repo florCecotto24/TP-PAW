@@ -76,7 +76,7 @@
     </div>
 
     <section class="similarVehiclesSection mt-5 pt-5 border-top border-secondary-subtle" id="similarVehiclesSection">
-        <ryden:similarVehiclesHeader/>
+        <ryden:similarVehiclesHeader seeAllHref="${pageContext.request.contextPath}${similarSearchUrl}"/>
         <c:choose>
             <c:when test="${empty similarListings}">
                 <p class="text-secondary text-center mb-0"><spring:message code="carDetail.similarListingsWhenAvailable"/></p>

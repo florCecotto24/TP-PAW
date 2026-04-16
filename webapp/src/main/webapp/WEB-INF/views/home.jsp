@@ -35,16 +35,52 @@
                 <section class="carouselSection" id="cheapestVehiclesSection">
                     <spring:message code="home.cheapest.title" var="cheapestTitle"/>
                     <spring:message code="home.cheapest.subtitle" var="cheapestSubtitle"/>
-                    <ryden:carouselSection cars="${cheapestCars}" title="${cheapestTitle}"
-                                         subtitle="${cheapestSubtitle}" id="cheapestVehiclesCarousel" />
+
+                    <%-- Build cheapest carousel page nav hrefs --%>
+                    <c:remove var="cheapestPrevHref"/>
+                    <c:remove var="cheapestNextHref"/>
+                    <c:if test="${cheapestCarsPage.hasPrevious}">
+                        <c:url var="cheapestPrevHref" value="/">
+                            <c:param name="cheapestPage" value="${cheapestCarsPage.currentPage - 1}"/>
+                            <c:param name="recentPage"   value="${recentCarsPage.currentPage}"/>
+                        </c:url>
+                    </c:if>
+                    <c:if test="${cheapestCarsPage.hasNext}">
+                        <c:url var="cheapestNextHref" value="/">
+                            <c:param name="cheapestPage" value="${cheapestCarsPage.currentPage + 1}"/>
+                            <c:param name="recentPage"   value="${recentCarsPage.currentPage}"/>
+                        </c:url>
+                    </c:if>
+
+                    <ryden:carouselSection cars="${cheapestCarsPage.content}" title="${cheapestTitle}"
+                                         subtitle="${cheapestSubtitle}" id="cheapestVehiclesCarousel"
+                                         prevPageHref="${cheapestPrevHref}" nextPageHref="${cheapestNextHref}"/>
                 </section>
 
                 <section class="carouselSection mt-5 pt-5 border-top border-secondary-subtle"
                             id="mostRecentVehiclesSection">
                     <spring:message code="home.recent.title" var="recentTitle"/>
                     <spring:message code="home.recent.subtitle" var="recentSubtitle"/>
-                    <ryden:carouselSection cars="${mostRecentCars}" title="${recentTitle}"
-                                subtitle="${recentSubtitle}" id="mostRecentVehiclesCarousel" />
+
+                    <%-- Build recent carousel page nav hrefs --%>
+                    <c:remove var="recentPrevHref"/>
+                    <c:remove var="recentNextHref"/>
+                    <c:if test="${recentCarsPage.hasPrevious}">
+                        <c:url var="recentPrevHref" value="/">
+                            <c:param name="cheapestPage" value="${cheapestCarsPage.currentPage}"/>
+                            <c:param name="recentPage"   value="${recentCarsPage.currentPage - 1}"/>
+                        </c:url>
+                    </c:if>
+                    <c:if test="${recentCarsPage.hasNext}">
+                        <c:url var="recentNextHref" value="/">
+                            <c:param name="cheapestPage" value="${cheapestCarsPage.currentPage}"/>
+                            <c:param name="recentPage"   value="${recentCarsPage.currentPage + 1}"/>
+                        </c:url>
+                    </c:if>
+
+                    <ryden:carouselSection cars="${recentCarsPage.content}" title="${recentTitle}"
+                                subtitle="${recentSubtitle}" id="mostRecentVehiclesCarousel"
+                                prevPageHref="${recentPrevHref}" nextPageHref="${recentNextHref}"/>
                 </section>
 
                 <section class="features-section mt-5 pt-5 pb-5 border-top border-secondary-subtle text-center" id="whyChooseUsSection">

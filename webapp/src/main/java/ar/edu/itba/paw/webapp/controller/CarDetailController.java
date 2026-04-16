@@ -76,6 +76,10 @@ public class CarDetailController {
         mav.addObject("reservationFromDefault", "");
         mav.addObject("reservationUntilDefault", "");
         mav.addObject("similarListings", similarListings);
+        final String similarSearchUrl = "/search?category=" + car.getType().name()
+                + "&transmission=" + car.getTransmission().name()
+                + "&powertrain=" + car.getPowertrain().name();
+        mav.addObject("similarSearchUrl", similarSearchUrl);
         return mav;
     }
 

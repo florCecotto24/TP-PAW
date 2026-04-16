@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.WallDateTimeParsing;
@@ -303,13 +304,13 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
-    public List<ListingCard> getCheapestListingCards(final int limit) {
-        return listingDao.getCheapestListingCards(limit);
+    public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize) {
+        return listingDao.getCheapestListingCards(page, pageSize);
     }
 
     @Override
-    public List<ListingCard> getMostRecentListingCards(final int limit) {
-        return listingDao.getMostRecentListingCards(limit);
+    public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize) {
+        return listingDao.getMostRecentListingCards(page, pageSize);
     }
 
     @Override
@@ -321,8 +322,14 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
-    public List<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
-        return listingDao.searchListingCards(criteria);
+    public Page<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
+        final List<ListingCard> all = listingDao.searchListingCards(criteria);
+        final long total = all.size();
+        final int offset = criteria.getPage() * criteria.getPageSize();
+        final List<ListingCard> slice = all.subList(
+                Math.min(offset, all.size()),
+                Math.min(offset + criteria.getPageSize(), all.size()));
+        return new Page<>(slice, criteria.getPage(), criteria.getPageSize(), total);
     }
 
     @Override
@@ -333,6 +340,8 @@ public class ListingServiceImpl implements ListingService {
         return listingDao.findSimilarListingCards(listingId, limit);
     }
 
+    private static final int PAGE_SIZE = 8;
+
     @Override
     public ListingSearchCriteria buildSearchCriteria(
             final String query,
@@ -341,7 +350,9 @@ public class ListingServiceImpl implements ListingService {
             final List<String> powertrain,
             final List<String> price,
             final String from,
-            final String until) {
+            final String until,
+            final int page,
+            final String sort) {
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
         final List<String> mergedCarTypes = collectCarTypeParams(category);
@@ -370,8 +381,13 @@ public class ListingServiceImpl implements ListingService {
             rangeStart = null;
             rangeEndExclusive = null;
         }
+        final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
+        final String sortBy  = sortParts.length > 0 ? sortParts[0].trim() : "date";
+        final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new ListingSearchCriteria(
-                query, transmissions, powertrains, mergedCarTypes, bands, rangeStart, rangeEndExclusive);
+                query, transmissions, powertrains, mergedCarTypes, bands,
+                rangeStart, rangeEndExclusive,
+                page, PAGE_SIZE, sortBy, sortDir);
     }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {

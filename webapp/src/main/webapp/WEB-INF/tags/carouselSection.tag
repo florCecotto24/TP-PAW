@@ -2,12 +2,15 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<%@ attribute name="cars" required="true" type="java.util.List" %>
-<%@ attribute name="title" required="true" type="java.lang.String" %>
-<%@ attribute name="subtitle" required="true" type="java.lang.String" %>
-<%@ attribute name="id" required="true" type="java.lang.String" %>
+<%@ attribute name="cars"         required="true"  type="java.util.List" %>
+<%@ attribute name="title"        required="true"  type="java.lang.String" %>
+<%@ attribute name="subtitle"     required="true"  type="java.lang.String" %>
+<%@ attribute name="id"           required="true"  type="java.lang.String" %>
+<%@ attribute name="prevPageHref" required="false" type="java.lang.String" %>
+<%@ attribute name="nextPageHref" required="false" type="java.lang.String" %>
 
-<ryden:carouselHeader title="${title}" subtitle="${subtitle}" id="${id}"/>
+<ryden:carouselHeader title="${title}" subtitle="${subtitle}" id="${id}"
+                      prevPageHref="${prevPageHref}" nextPageHref="${nextPageHref}"/>
 
 <c:choose>
     <c:when test="${empty cars}">

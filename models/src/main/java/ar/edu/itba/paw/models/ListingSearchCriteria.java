@@ -12,6 +12,10 @@ public final class ListingSearchCriteria {
     private final List<String> priceBands;
     private final Instant availabilityRangeStart;
     private final Instant availabilityRangeEndExclusive;
+    private final int page;
+    private final int pageSize;
+    private final String sortBy;
+    private final String sortDirection;
 
     public ListingSearchCriteria(
             final String query,
@@ -21,6 +25,22 @@ public final class ListingSearchCriteria {
             final List<String> priceBands,
             final Instant availabilityRangeStart,
             final Instant availabilityRangeEndExclusive) {
+        this(query, transmissions, powertrains, carTypes, priceBands,
+                availabilityRangeStart, availabilityRangeEndExclusive, 0, 8, "date", "desc");
+    }
+
+    public ListingSearchCriteria(
+            final String query,
+            final List<String> transmissions,
+            final List<String> powertrains,
+            final List<String> carTypes,
+            final List<String> priceBands,
+            final Instant availabilityRangeStart,
+            final Instant availabilityRangeEndExclusive,
+            final int page,
+            final int pageSize,
+            final String sortBy,
+            final String sortDirection) {
         this.query = query != null && !query.isBlank() ? query.trim() : null;
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
         this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);
@@ -28,6 +48,10 @@ public final class ListingSearchCriteria {
         this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
         this.availabilityRangeStart = availabilityRangeStart;
         this.availabilityRangeEndExclusive = availabilityRangeEndExclusive;
+        this.page = Math.max(0, page);
+        this.pageSize = pageSize > 0 ? pageSize : 8;
+        this.sortBy = sortBy != null ? sortBy : "date";
+        this.sortDirection = "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
     }
 
     public String getQuery() {
@@ -62,5 +86,21 @@ public final class ListingSearchCriteria {
         return availabilityRangeStart != null
                 && availabilityRangeEndExclusive != null
                 && availabilityRangeEndExclusive.isAfter(availabilityRangeStart);
+    }
+
+    public int getPage() {
+        return page;
+    }
+
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public String getSortBy() {
+        return sortBy;
+    }
+
+    public String getSortDirection() {
+        return sortDirection;
     }
 }

@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Page;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
@@ -35,9 +36,9 @@ public interface ListingDao {
 
     List<Listing> getMostRecentListings(int limit);
 
-    List<ListingCard> getCheapestListingCards(int limit);
+    Page<ListingCard> getCheapestListingCards(int page, int pageSize);
 
-    List<ListingCard> getMostRecentListingCards(int limit);
+    Page<ListingCard> getMostRecentListingCards(int page, int pageSize);
 
     HomeListingCards getHomeListingCards(int limit);
 

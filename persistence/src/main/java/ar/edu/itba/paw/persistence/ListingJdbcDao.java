@@ -32,6 +32,7 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.User;
 
 @Repository
@@ -39,6 +40,12 @@ public class ListingJdbcDao implements ListingDao {
 
     private static final String HOME_SECTION_CHEAPEST = "C";
     private static final String HOME_SECTION_RECENT = "R";
+
+    private static final Map<String, String> SORT_COLUMNS = Map.of(
+            "price", "l.day_price",
+            "date",  "l.created_at"
+    );
+    private static final String DEFAULT_ORDER_BY = "l.created_at DESC";
 
     private static final RowMapper<Listing> LISTING_ROW_MAPPER = (rs, rowNum) -> new Listing(
             rs.getLong("id"),
@@ -233,7 +240,7 @@ public class ListingJdbcDao implements ListingDao {
                         + "FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
         final MapSqlParameterSource params = new MapSqlParameterSource();
         appendSearchFilters(sql, params, criteria);
-        sql.append("ORDER BY l.created_at DESC");
+        sql.append("ORDER BY ").append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()));
         final List<ListingCard> result = namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_CARD_ROW_MAPPER);
         return filterByAvailabilityCoverage(criteria, result, ListingCard::getListingId);
     }
@@ -249,25 +256,37 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public List<ListingCard> getCheapestListingCards(final int limit) {
-        return jdbcTemplate.query(
+    public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize) {
+        final long total = countActiveListings();
+        final int offset = page * pageSize;
+        final List<ListingCard> content = jdbcTemplate.query(
                 "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                        + "WHERE l.status = 'active' ORDER BY l.day_price ASC LIMIT ?",
-                LISTING_CARD_ROW_MAPPER, limit);
+                        + "WHERE l.status = 'active' ORDER BY l.day_price ASC LIMIT ? OFFSET ?",
+                LISTING_CARD_ROW_MAPPER, pageSize, offset);
+        return new Page<>(content, page, pageSize, total);
     }
 
     @Override
-    public List<ListingCard> getMostRecentListingCards(final int limit) {
-        return jdbcTemplate.query(
+    public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize) {
+        final long total = countActiveListings();
+        final int offset = page * pageSize;
+        final List<ListingCard> content = jdbcTemplate.query(
                 "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                        + "WHERE l.status = 'active' ORDER BY l.created_at DESC LIMIT ?",
-                LISTING_CARD_ROW_MAPPER, limit);
+                        + "WHERE l.status = 'active' ORDER BY l.created_at DESC LIMIT ? OFFSET ?",
+                LISTING_CARD_ROW_MAPPER, pageSize, offset);
+        return new Page<>(content, page, pageSize, total);
+    }
+
+    private long countActiveListings() {
+        final Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM listings WHERE status = 'active'", Long.class);
+        return count != null ? count : 0L;
     }
 
     @Override
@@ -335,6 +354,12 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("similarLimit", limit);
 
         return namedParameterJdbcTemplate.query(sql, similarParams, LISTING_CARD_ROW_MAPPER);
+    }
+
+    private static String buildOrderBy(final String sortBy, final String sortDirection) {
+        final String col = SORT_COLUMNS.getOrDefault(sortBy, "l.created_at");
+        final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
+        return col + " " + dir;
     }
 
     private static void appendSearchFilters(

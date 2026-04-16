@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Page;
 
 public interface ListingService {
 
@@ -70,13 +71,13 @@ public interface ListingService {
 
     List<Listing> getMostRecentListings(int limit);
 
-    List<ListingCard> getCheapestListingCards(int limit);
+    Page<ListingCard> getCheapestListingCards(int page, int pageSize);
 
-    List<ListingCard> getMostRecentListingCards(int limit);
+    Page<ListingCard> getMostRecentListingCards(int page, int pageSize);
 
     HomeListingCards getHomeListingCards(int limit);
 
-    List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
+    Page<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
     List<ListingCard> findSimilarListingCards(long listingId, int limit);
 
@@ -87,5 +88,7 @@ public interface ListingService {
             List<String> powertrain,
             List<String> price,
             String from,
-            String until);
+            String until,
+            int page,
+            String sort);
 }

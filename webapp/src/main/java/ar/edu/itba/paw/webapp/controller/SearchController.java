@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ListingCard;
+import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
@@ -34,8 +35,12 @@ public class SearchController {
             @RequestParam(required = false) final List<String> powertrain,
             @RequestParam(required = false) final List<String> price,
             @RequestParam(required = false) final String from,
-            @RequestParam(required = false) final String until) {
+            @RequestParam(required = false) final String until,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) final String sort) {
         final ModelAndView mav = new ModelAndView("search");
+
+        page = Math.max(0, page);
 
         mav.addObject("categoryFilterOptions", carEnumOptions.carTypeSelectOptions());
         mav.addObject("transmissionFilterOptions", carEnumOptions.transmissionSelectOptions());
@@ -43,11 +48,15 @@ public class SearchController {
         mav.addObject("priceFilterOptions", carEnumOptions.searchPriceBandOptions());
 
         final var criteria = listingService.buildSearchCriteria(
-                query, category, transmission, powertrain, price, from, until);
-        final List<VehicleCardView> results = listingService.searchListingCards(criteria).stream()
+                query, category, transmission, powertrain, price, from, until, page, sort);
+        final Page<ListingCard> resultPage = listingService.searchListingCards(criteria);
+        final List<VehicleCardView> results = resultPage.getContent().stream()
                 .map(SearchController::toVehicleCardView)
                 .collect(Collectors.toList());
+
         mav.addObject("results", results);
+        mav.addObject("searchPage", resultPage);
+        mav.addObject("currentSort", sort != null ? sort : "date,desc");
         mav.addObject("activeTab", "search");
 
         return mav;
