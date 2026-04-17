@@ -1,19 +1,26 @@
 package ar.edu.itba.paw.webapp.config;
 
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.RememberMeAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
@@ -29,6 +36,8 @@ import ar.edu.itba.paw.webapp.security.RydenUserDetailsService;
 @EnableWebSecurity
 public class WebAuthConfig {
 
+    static final String REMEMBER_ME_KEY = "ryden-webapp-remember-me-key";
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -40,8 +49,15 @@ public class WebAuthConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(final RydenAuthenticationProvider rydenAuthenticationProvider) {
-        return new ProviderManager(Collections.singletonList(rydenAuthenticationProvider));
+    public RememberMeAuthenticationProvider rememberMeAuthenticationProvider() {
+        return new RememberMeAuthenticationProvider(REMEMBER_ME_KEY);
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            final RydenAuthenticationProvider rydenAuthenticationProvider,
+            final RememberMeAuthenticationProvider rememberMeAuthenticationProvider) {
+        return new ProviderManager(Arrays.asList(rydenAuthenticationProvider, rememberMeAuthenticationProvider));
     }
 
     @Bean
@@ -55,13 +71,19 @@ public class WebAuthConfig {
     }
 
     @Bean
+    public LogoutHandler contextPathAuthCookieClearingLogoutHandler() {
+        return WebAuthConfig::expireAuthCookies;
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(
             final HttpSecurity http,
             final AuthenticationManager authenticationManager,
             final UserDetailsService userDetailsService,
             final AuthenticationFailureHandler authenticationFailureHandler,
             final SecurityContextRepository securityContextRepository,
-            final RequestCache requestCache) throws Exception {
+            final RequestCache requestCache,
+            final LogoutHandler contextPathAuthCookieClearingLogoutHandler) throws Exception {
         http
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
@@ -79,6 +101,9 @@ public class WebAuthConfig {
                         .antMatchers("/logout").authenticated()
                         .antMatchers("/profile", "/profile/**").hasRole("USER")
                         .anyRequest().permitAll())
+                .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.sendRedirect(request.getContextPath() + "/");
+                }))
                 .formLogin(form -> form
                         .loginPage("/login")
                         .loginProcessingUrl("/login")
@@ -90,13 +115,35 @@ public class WebAuthConfig {
                         .logoutRequestMatcher(new OrRequestMatcher(
                                 new AntPathRequestMatcher("/logout", "GET"),
                                 new AntPathRequestMatcher("/logout", "POST")))
+                        .addLogoutHandler(contextPathAuthCookieClearingLogoutHandler)
                         .logoutSuccessUrl("/login?logout")
                         .invalidateHttpSession(true)
                         .deleteCookies("remember-me", "JSESSIONID"))
                 .rememberMe(remember -> remember
-                        .key("paw-webapp-remember-me-key")
+                        .key(REMEMBER_ME_KEY)
+                        .rememberMeParameter("remember-me")
+                        .rememberMeCookieName("remember-me")
                         .tokenValiditySeconds((int) TimeUnit.DAYS.toSeconds(30))
                         .userDetailsService(userDetailsService));
         return http.build();
+    }
+
+    private static void expireAuthCookies(
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            @SuppressWarnings("unused") final Authentication authentication) {
+        final String path = request.getContextPath() != null && !request.getContextPath().isEmpty()
+                ? request.getContextPath()
+                : "/";
+        for (final String name : new String[] {"remember-me", "JSESSIONID"}) {
+            final Cookie c = new Cookie(name, null);
+            c.setPath(path);
+            c.setMaxAge(0);
+            c.setHttpOnly(true);
+            if (request.isSecure()) {
+                c.setSecure(true);
+            }
+            response.addCookie(c);
+        }
     }
 }

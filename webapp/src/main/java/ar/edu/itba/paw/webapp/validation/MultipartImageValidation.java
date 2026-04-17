@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.webapp.util;
+package ar.edu.itba.paw.webapp.validation;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,6 +12,7 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.Image;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
 @Component
 public class MultipartImageValidation {

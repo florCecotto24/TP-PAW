@@ -35,6 +35,7 @@
     <mockito.version>5.14.2</mockito.version>
     <hsqldb.version>2.7.4</hsqldb.version>
     <flyway.version>11.20.2</flyway.version>
+    <jetty.maven.version>9.4.58.v20250814</jetty.maven.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -215,6 +216,18 @@
               <version>${org.postgresql.version}</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-maven-plugin</artifactId>
+          <version>${jetty.maven.version}</version>
+          <configuration>
+            <scanIntervalSeconds>10</scanIntervalSeconds>
+            <port>8080</port>
+            <webApp>
+              <persistSession>true</persistSession>
+            </webApp>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

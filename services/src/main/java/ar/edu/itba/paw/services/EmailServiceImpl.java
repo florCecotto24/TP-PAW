@@ -1,10 +1,6 @@
 package ar.edu.itba.paw.services;
 
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Locale;
-import java.util.TimeZone;
 
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
@@ -14,7 +10,6 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -25,6 +20,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.WallDateTimeDisplayFormat;
 
 @Service
 public class EmailServiceImpl implements EmailService {
@@ -57,15 +53,8 @@ public class EmailServiceImpl implements EmailService {
     private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
-        if (dateTime == null) {
-            return "";
-        }
         final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
-        final DateTimeFormatter formatter =
-                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale);
-        final TimeZone timeZone = LocaleContextHolder.getTimeZone();
-        final ZoneId zoneId = timeZone.toZoneId();
-        return formatter.format(dateTime.toInstant().atZone(zoneId).toLocalDateTime());
+        return WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(dateTime, locale);
     }
 
     @Autowired

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 
@@ -24,6 +25,7 @@ import ar.edu.itba.paw.services.PasswordResetService;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
 import ar.edu.itba.paw.webapp.security.ForgotPasswordSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
 @RequestMapping("/forgot-password")
@@ -49,21 +51,22 @@ public class ForgotPasswordController {
     }
 
     @GetMapping
-    public String forgotForm(final Authentication authentication) {
+    public String forgotForm(final HttpServletRequest request, final Authentication authentication) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         return "forgot-password";
     }
 
     @PostMapping
     public String forgotSubmit(
+            final HttpServletRequest request,
             final Authentication authentication,
             @RequestParam("email") final String email,
             final HttpSession session,
             final RedirectAttributes redirectAttributes) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         if (!StringUtils.hasText(email)) {
             redirectAttributes.addFlashAttribute("forgotFieldError", Boolean.TRUE);
@@ -87,12 +90,13 @@ public class ForgotPasswordController {
 
     @GetMapping("/reset")
     public String resetForm(
+            final HttpServletRequest request,
             final Authentication authentication,
             final HttpSession session,
             final Model model,
             final RedirectAttributes redirectAttributes) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         if (session.getAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL) == null) {
             redirectAttributes.addFlashAttribute("forgotSessionExpired", Boolean.TRUE);
@@ -104,13 +108,14 @@ public class ForgotPasswordController {
 
     @PostMapping("/reset")
     public String resetSubmit(
+            final HttpServletRequest request,
             final Authentication authentication,
             final HttpSession session,
             @Valid @ModelAttribute("forgotPasswordResetForm") final ForgotPasswordResetForm form,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         final Object rawEmail = session.getAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL);
         if (!(rawEmail instanceof String) || !StringUtils.hasText((String) rawEmail)) {

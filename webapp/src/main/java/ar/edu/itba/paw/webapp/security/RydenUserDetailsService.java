@@ -24,6 +24,9 @@ public class RydenUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(final String email) throws UsernameNotFoundException {
         final User user = userService.findByEmailForAuthentication(email)
                 .orElseThrow(() -> new UsernameNotFoundException("No user for email"));
+        if (!Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
+            throw new UsernameNotFoundException("Email not validated");
+        }
         final String hash = user.getPasswordHash()
                 .filter(h -> !h.isBlank())
                 .orElseThrow(() -> new UsernameNotFoundException("User has no password"));

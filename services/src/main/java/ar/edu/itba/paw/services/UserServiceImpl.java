@@ -187,6 +187,7 @@ public class UserServiceImpl implements UserService {
         }
         final String plain = randomMigrationPlainPassword();
         userDao.updatePasswordHash(userId, passwordEncoder.encode(plain));
+        userDao.updateEmailValidated(userId, true);
         emailService.sendMigratedUserPassword(withHash.getEmail(), plain, locale);
     }
 

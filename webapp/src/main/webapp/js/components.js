@@ -419,16 +419,26 @@
         });
     }
 
+    function publishCarRetainedPictureDomCount() {
+        var block = document.getElementById("publishRetainedPictures");
+        if (!block) {
+            return 0;
+        }
+        return block.querySelectorAll("img").length;
+    }
+
     if (form && submitBtn) {
         form.addEventListener("submit", function (e) {
             if (submitBtn.disabled) {
                 return;
             }
             if (input) {
-                var retained = 0;
+                var retainedAttr = 0;
                 if (form && form.getAttribute) {
-                    retained = parseInt(form.getAttribute("data-publish-retained-count") || "0", 10) || 0;
+                    retainedAttr = parseInt(form.getAttribute("data-publish-retained-count") || "0", 10) || 0;
                 }
+                var retainedDom = publishCarRetainedPictureDomCount();
+                var retained = Math.max(retainedAttr, retainedDom);
                 var hasFiles = input.files && input.files.length > 0;
                 var err = "";
                 if (!hasFiles && retained > 0) {

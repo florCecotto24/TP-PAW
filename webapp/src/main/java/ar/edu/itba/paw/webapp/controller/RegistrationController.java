@@ -33,6 +33,7 @@ import ar.edu.itba.paw.webapp.form.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.security.RegistrationSessionAttributes;
 import ar.edu.itba.paw.webapp.security.SessionLoginService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
 public class RegistrationController {
@@ -71,9 +72,12 @@ public class RegistrationController {
     }
 
     @GetMapping("/register")
-    public String registerForm(final Authentication authentication, final Model model) {
+    public String registerForm(
+            final HttpServletRequest request,
+            final Authentication authentication,
+            final Model model) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/register");
         }
         final RegistrationAccountForm form = new RegistrationAccountForm();
         copyRegisterFlashToForm(model, form);
@@ -98,12 +102,13 @@ public class RegistrationController {
 
     @PostMapping("/register")
     public String registerSubmit(
+            final HttpServletRequest request,
             final Authentication authentication,
             @Valid @ModelAttribute("registrationAccountForm") final RegistrationAccountForm registrationAccountForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/register");
         }
         if (bindingResult.hasErrors()) {
             return "register";
@@ -139,7 +144,7 @@ public class RegistrationController {
             final HttpServletRequest request,
             final Model model) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
         final boolean fromLoginFlow = StringUtils.hasText(fromLogin)
                 && ("1".equals(fromLogin) || "true".equalsIgnoreCase(fromLogin));
@@ -163,11 +168,12 @@ public class RegistrationController {
 
     @PostMapping("/verify-email/resend")
     public String verifyResend(
+            final HttpServletRequest request,
             final Authentication authentication,
             @RequestParam("email") final String email,
             final RedirectAttributes redirectAttributes) {
         if (isSignedIn(authentication)) {
-            return "redirect:/";
+            return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
         if (!StringUtils.hasText(email)) {
             redirectAttributes.addFlashAttribute("verifyFieldError", Boolean.TRUE);

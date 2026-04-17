@@ -189,6 +189,10 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
     }
 
+    /**
+     * Multipart vía Apache Commons FileUpload (integrated in Spring {@link CommonsMultipartResolver}),
+     * With {@code MultipartFilter} declared in {@code web.xml} before Spring Security.
+     */
     @Bean
     public CommonsMultipartResolver multipartResolver() {
         final long maxRequest = Long.parseLong(

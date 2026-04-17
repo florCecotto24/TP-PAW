@@ -8,6 +8,7 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -31,15 +32,18 @@ public class ReservationFormController {
     private final ListingService listingService;
     private final ReservationService reservationService;
     private final LocaleMessages localeMessages;
+    private final WallDateTimeUiFormatter wallDateTimeUiFormatter;
 
     @Autowired
     public ReservationFormController(
             final ListingService listingService,
             final ReservationService reservationService,
-            final LocaleMessages localeMessages) {
+            final LocaleMessages localeMessages,
+            final WallDateTimeUiFormatter wallDateTimeUiFormatter) {
         this.listingService = listingService;
         this.reservationService = reservationService;
         this.localeMessages = localeMessages;
+        this.wallDateTimeUiFormatter = wallDateTimeUiFormatter;
     }
 
     @GetMapping("/new")
@@ -70,6 +74,7 @@ public class ReservationFormController {
         mav.addObject("riderSurname", rider.getSurname());
         mav.addObject("riderEmail", rider.getUsername());
         addReservationPricingToModel(mav, listingId, fromDateTime, untilDateTime, reservationTotal);
+        wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         return mav;
     }
 
@@ -99,6 +104,7 @@ public class ReservationFormController {
             mav.addObject("riderSurname", riderErr.getSurname());
             mav.addObject("riderEmail", riderErr.getUsername());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+            wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             return mav;
         }
 
@@ -111,6 +117,7 @@ public class ReservationFormController {
             mav.addObject("riderSurname", riderCar.getSurname());
             mav.addObject("riderEmail", riderCar.getUsername());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+            wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             return mav;
         }
 
@@ -132,6 +139,7 @@ public class ReservationFormController {
             mav.addObject("riderSurname", riderEx.getSurname());
             mav.addObject("riderEmail", riderEx.getUsername());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+            wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             return mav;
         }
 
@@ -147,6 +155,7 @@ public class ReservationFormController {
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
+        wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         return mav;
     }
 

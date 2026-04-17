@@ -12,8 +12,8 @@
 <ryden:navbar/>
 
 <spring:message code="common.notSpecified" var="notSpecified"/>
-<c:set var="summaryFromDate" value="${empty fromDateTime ? notSpecified : fromDateTime}"/>
-<c:set var="summaryUntilDate" value="${empty untilDateTime ? notSpecified : untilDateTime}"/>
+<c:set var="summaryFromDate" value="${empty fromDateTimeDisplay ? (empty fromDateTime ? notSpecified : fromDateTime) : fromDateTimeDisplay}"/>
+<c:set var="summaryUntilDate" value="${empty untilDateTimeDisplay ? (empty untilDateTime ? notSpecified : untilDateTime) : untilDateTimeDisplay}"/>
 <c:set var="summaryLocation" value="${empty deliveryLocation ? notSpecified : deliveryLocation}"/>
 
 <main class="container py-5">

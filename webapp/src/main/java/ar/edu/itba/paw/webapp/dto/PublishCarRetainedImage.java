@@ -3,14 +3,15 @@ package ar.edu.itba.paw.webapp.dto;
 import java.io.Serializable;
 
 /**
- * Pictures from the publish car form saved in session when the POST fails,
- * so that a retry without choosing files again keeps the images.
+ * Metadata of a retained picture between POST with errors: the binary content lives on disk (temporary on the server).
  */
-public record PublishCarRetainedImage(String filename, String contentType, byte[] data) implements Serializable {
+public record PublishCarRetainedImage(String stashToken, String filename, String contentType) implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     public PublishCarRetainedImage {
-        data = data != null ? data : new byte[0];
+        stashToken = stashToken != null ? stashToken : "";
+        filename = filename != null ? filename : "";
+        contentType = contentType != null ? contentType : "";
     }
 }

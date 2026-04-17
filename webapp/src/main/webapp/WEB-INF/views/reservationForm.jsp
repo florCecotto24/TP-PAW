@@ -27,7 +27,17 @@
                     <div class="border rounded-3 p-3 bg-light-subtle mb-4">
                         <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.summary.title"/></h2>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.car"/></strong> <c:out value="${reservationForm.carName}"/></p>
-                        <p class="mb-1"><strong><spring:message code="reservationForm.summary.pickupReturn"/></strong> <c:out value="${reservationForm.fromDateTime}"/> → <c:out value="${reservationForm.untilDateTime}"/></p>
+                        <p class="mb-1"><strong><spring:message code="reservationForm.summary.pickupReturn"/></strong>
+                            <c:choose>
+                                <c:when test="${not empty fromDateTimeDisplay}"><c:out value="${fromDateTimeDisplay}"/></c:when>
+                                <c:otherwise><c:out value="${reservationForm.fromDateTime}"/></c:otherwise>
+                            </c:choose>
+                            →
+                            <c:choose>
+                                <c:when test="${not empty untilDateTimeDisplay}"><c:out value="${untilDateTimeDisplay}"/></c:when>
+                                <c:otherwise><c:out value="${reservationForm.untilDateTime}"/></c:otherwise>
+                            </c:choose>
+                        </p>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.location"/></strong> <c:out value="${reservationForm.deliveryLocation}"/></p>
                         <c:if test="${not empty reservationTotal}">
                             <p class="mb-0"><strong><spring:message code="reservationForm.summary.total"/></strong> $<c:out value="${reservationTotal}"/></p>

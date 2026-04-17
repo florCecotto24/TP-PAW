@@ -3,9 +3,9 @@ package ar.edu.itba.paw.webapp.controller;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,9 +31,9 @@ import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
-import ar.edu.itba.paw.webapp.util.MultipartImageValidation;
 import ar.edu.itba.paw.webapp.util.PublishCarPictureSessionStash;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.MultipartImageValidation;
 
 @Controller
 @RequestMapping("/publish-car")
@@ -44,6 +45,7 @@ public class PublishCarFormController {
     private final MultipartImageValidation multipartImageValidation;
     private final PublishCarPictureSessionStash pictureStash;
     private final CarEnumOptions carEnumOptions;
+    private final LocalValidatorFactoryBean publishCarFormValidator;
 
     @Autowired
     public PublishCarFormController(
@@ -52,13 +54,15 @@ public class PublishCarFormController {
             final ImageService imageService,
             final MultipartImageValidation multipartImageValidation,
             final PublishCarPictureSessionStash pictureStash,
-            final CarEnumOptions carEnumOptions) {
+            final CarEnumOptions carEnumOptions,
+            final LocalValidatorFactoryBean localValidatorFactoryBean) {
         this.listingService = listingService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
         this.multipartImageValidation = multipartImageValidation;
         this.pictureStash = pictureStash;
         this.carEnumOptions = carEnumOptions;
+        this.publishCarFormValidator = localValidatorFactoryBean;
     }
 
     @ModelAttribute("carTypeOptions")
@@ -86,15 +90,12 @@ public class PublishCarFormController {
         return imageService.getMaxImageMegabytesRoundedUp();
     }
 
-    @ModelAttribute("publishCarForm")
-    public PublishCarForm publishCarForm() {
-        return new PublishCarForm();
-    }
-
     @GetMapping
     public ModelAndView index(final Authentication authentication, final HttpSession session) {
         pictureStash.clear(session);
-        return publishCarFormView(authentication, session);
+        final ModelAndView mav = publishCarFormView(authentication, session);
+        mav.addObject("publishCarForm", new PublishCarForm());
+        return mav;
     }
 
     @GetMapping("/retained-picture/{index:\\d+}")
@@ -107,18 +108,32 @@ public class PublishCarFormController {
         if (img == null) {
             return ResponseEntity.notFound().build();
         }
+        final Optional<byte[]> bytes;
+        try {
+            bytes = pictureStash.readRetainedBytes(session, index);
+        } catch (final IOException e) {
+            return ResponseEntity.notFound().build();
+        }
+        if (bytes.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
         final MediaType mediaType = PublishCarPictureSessionStash.safeImageMediaType(img.contentType());
-        return ResponseEntity.ok().contentType(mediaType).body(img.data());
+        return ResponseEntity.ok().contentType(mediaType).body(bytes.get());
     }
 
     @PostMapping
     public ModelAndView formSubmit(
             final Authentication authentication,
-            @Valid @ModelAttribute("publishCarForm") final PublishCarForm form,
+            @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors,
             final HttpSession session) {
+        pictureStash.trySyncFromForm(form, session, errors);
         if (errors.hasErrors()) {
-            pictureStash.trySyncFromForm(form, session, errors);
+            return publishCarFormView(authentication, session);
+        }
+
+        publishCarFormValidator.validate(form, errors);
+        if (errors.hasErrors()) {
             return publishCarFormView(authentication, session);
         }
 

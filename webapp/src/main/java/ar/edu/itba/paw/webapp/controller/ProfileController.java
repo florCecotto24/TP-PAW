@@ -34,7 +34,7 @@ import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.ProfileUpdateForm;
 import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
-import ar.edu.itba.paw.webapp.util.MultipartImageValidation;
+import ar.edu.itba.paw.webapp.validation.MultipartImageValidation;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
