@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.ReservationCard;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -16,6 +18,10 @@ public interface ReservationService {
             Reservation.Status status);
 
     Optional<Reservation> getReservationById(long id);
+
+    Optional<Reservation> getRiderReservationById(long riderId, long reservationId);
+
+    Page<ReservationCard> getRiderReservationCards(long riderId, int page, int pageSize);
 
     Optional<String> normalizeClientReservationTotal(String reservationTotal);
 

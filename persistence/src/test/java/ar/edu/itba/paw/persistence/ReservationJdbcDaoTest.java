@@ -2,7 +2,9 @@ package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.ReservationCard;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
@@ -104,6 +107,44 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
                         OffsetDateTime.parse("2026-07-01T10:00:00Z"),
                         OffsetDateTime.parse("2026-07-02T10:00:00Z"),
                         Reservation.Status.ACCEPTED));
+    }
+
+    @Test
+    public void testGetRiderReservationCards() {
+        // Arrange
+        final OffsetDateTime created = OffsetDateTime.parse("2026-07-01T10:00:00Z");
+        insertUser(1L, "owner@mail.com", "Owner", "One");
+        insertUser(2L, "rider@mail.com", "Rider", "Two");
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertListing(100L, 10L, "Listing", Listing.Status.ACTIVE, new BigDecimal("30.00"), created.minusDays(10));
+        insertReservation(
+                300L,
+                2L,
+                100L,
+                OffsetDateTime.parse("2026-07-10T00:00:00Z"),
+                OffsetDateTime.parse("2026-07-12T00:00:00Z"),
+                Reservation.Status.ACCEPTED,
+                created,
+                created);
+        insertReservation(
+                301L,
+                2L,
+                100L,
+                OffsetDateTime.parse("2026-07-20T00:00:00Z"),
+                OffsetDateTime.parse("2026-07-22T00:00:00Z"),
+                Reservation.Status.CANCELLED,
+                created.plusDays(1),
+                created.plusDays(1));
+
+        // Exercise
+        final Page<ReservationCard> cardsPage = reservationDao.getRiderReservationCards(2L, 0, 8);
+        final List<ReservationCard> cards = cardsPage.getContent();
+
+        // Assert
+        Assertions.assertEquals(2, cards.size());
+        Assertions.assertEquals(301L, cards.get(0).getReservationId());
+        Assertions.assertEquals("Ford", cards.get(0).getBrand());
+        Assertions.assertEquals(2L, cardsPage.getTotalItems());
     }
 }
 

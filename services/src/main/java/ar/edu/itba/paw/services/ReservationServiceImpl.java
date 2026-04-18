@@ -20,7 +20,9 @@ import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.ReservationCard;
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
@@ -125,6 +127,17 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public Optional<Reservation> getReservationById(final long id) {
         return reservationDao.getReservationById(id);
+    }
+
+    @Override
+    public Optional<Reservation> getRiderReservationById(final long riderId, final long reservationId) {
+        return reservationDao.getReservationById(reservationId)
+                .filter(reservation -> reservation.getRiderId() == riderId);
+    }
+
+    @Override
+    public Page<ReservationCard> getRiderReservationCards(final long riderId, final int page, final int pageSize) {
+        return reservationDao.getRiderReservationCards(riderId, page, pageSize);
     }
 
     @Override

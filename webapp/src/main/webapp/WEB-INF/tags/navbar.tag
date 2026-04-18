@@ -18,12 +18,14 @@
                     <a class="nav-link d-flex align-items-center ${activeTab == 'publish-car' ? 'active' : ''}" href="${pageContext.request.contextPath}/publish-car"><spring:message code="navbar.publish"/></a>
                 </li>
                 <sec:authorize access="isAuthenticated()">
-                    <c:if test="${navIsOwner}">
-                        <li class="nav-item px-1">
-                            <a class="nav-link d-flex align-items-center ${activeTab == 'my-listings' ? 'active' : ''}"
-                               href="${pageContext.request.contextPath}/my-listings"><spring:message code="navbar.myListings"/></a>
-                        </li>
-                    </c:if>
+                    <li class="nav-item px-1">
+                        <a class="nav-link d-flex align-items-center ${activeTab == 'my-listings' ? 'active' : ''}"
+                           href="${pageContext.request.contextPath}/my-listings"><spring:message code="navbar.myListings"/></a>
+                    </li>
+                    <li class="nav-item px-1">
+                        <a class="nav-link d-flex align-items-center ${activeTab == 'my-reservations' ? 'active' : ''}"
+                           href="${pageContext.request.contextPath}/my-reservations"><spring:message code="navbar.myReservations"/></a>
+                    </li>
                 </sec:authorize>
                 <sec:authorize access="isAnonymous()">
                     <li class="nav-item px-1">

@@ -740,3 +740,100 @@ body.modal-open {
 .input-group .ryden-password-toggle {
     flex-shrink: 0;
 }
+
+.reservation-management-header {
+    max-width: 70ch;
+}
+
+.reservation-card {
+    display: block;
+    border-radius: 1rem;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.reservation-card:hover,
+.reservation-card:focus-visible {
+    transform: translateY(-1px);
+}
+
+.reservation-card:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+}
+
+.reservation-card__surface {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.reservation-card__media-wrap {
+    min-height: 190px;
+}
+
+.reservation-card__media {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.reservation-card__media--placeholder {
+    background: #f3f4f6;
+}
+
+.reservation-card__meta-label {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.reservation-status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.35rem 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.reservation-status-badge--accepted {
+    background: rgba(22, 163, 74, 0.14);
+    color: #166534;
+}
+
+.reservation-status-badge--started {
+    background: rgba(37, 99, 235, 0.14);
+    color: #1d4ed8;
+}
+
+.reservation-status-badge--cancelled {
+    background: rgba(220, 38, 38, 0.14);
+    color: #b91c1c;
+}
+
+.reservation-status-badge--finished {
+    background: rgba(71, 85, 105, 0.18);
+    color: #334155;
+}
+
+.reservation-detail-car-media {
+    width: min(100%, 220px);
+    aspect-ratio: 4 / 3;
+    flex-shrink: 0;
+    background: #f3f4f6;
+}
+
+.reservation-detail-sticky {
+    position: sticky;
+    top: calc(var(--navbar-height) + 1rem);
+}
+
+@media (max-width: 991.98px) {
+    .reservation-detail-sticky {
+        position: static;
+    }
+}
+

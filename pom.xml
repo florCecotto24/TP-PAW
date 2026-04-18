@@ -224,9 +224,6 @@
           <configuration>
             <scanIntervalSeconds>10</scanIntervalSeconds>
             <port>8080</port>
-            <webApp>
-              <persistSession>true</persistSession>
-            </webApp>
           </configuration>
         </plugin>
       </plugins>

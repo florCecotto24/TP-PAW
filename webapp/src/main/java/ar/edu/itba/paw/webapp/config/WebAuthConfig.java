@@ -97,6 +97,7 @@ public class WebAuthConfig {
                         .permitAll()
                         .antMatchers("/publish-car", "/publish-car/**").authenticated()
                         .antMatchers("/my-listings", "/my-listings/**").authenticated()
+                        .antMatchers("/my-reservations", "/my-reservations/**").authenticated()
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
                         .antMatchers("/logout").authenticated()

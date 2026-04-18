@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.persistence;
 
 import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.ReservationCard;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -29,6 +31,18 @@ public class ReservationJdbcDao implements ReservationDao {
             Reservation.Status.valueOf(rs.getString("status").toUpperCase()),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at")
+    );
+
+    private static final RowMapper<ReservationCard> RESERVATION_CARD_ROW_MAPPER = (rs, rowNum) -> new ReservationCard(
+            rs.getLong("reservation_id"),
+            rs.getLong("listing_id"),
+            rs.getString("brand"),
+            rs.getString("model"),
+            rs.getBigDecimal("day_price"),
+            rs.getLong("image_id"),
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"),
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"),
+            Reservation.Status.valueOf(rs.getString("status").toUpperCase())
     );
 
     private final JdbcTemplate jdbcTemplate;
@@ -104,5 +118,30 @@ public class ReservationJdbcDao implements ReservationDao {
     @Override
     public Optional<Reservation> getReservationById(final long id) {
         return jdbcTemplate.query("SELECT * FROM reservations WHERE id = ?", RESERVATION_ROW_MAPPER, id).stream().findAny();
+    }
+
+    @Override
+    public Page<ReservationCard> getRiderReservationCards(final long riderId, final int page, final int pageSize) {
+        final Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM reservations WHERE rider_id = ?",
+                Long.class,
+                riderId);
+        final int offset = page * pageSize;
+        final List<ReservationCard> content = jdbcTemplate.query(
+                "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
+                        + "c.brand, c.model, l.day_price, "
+                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                        + "FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE r.rider_id = ? "
+                        + "ORDER BY r.created_at DESC "
+                        + "LIMIT ? OFFSET ?",
+                RESERVATION_CARD_ROW_MAPPER,
+                riderId,
+                pageSize,
+                offset);
+        return new Page<>(content, page, pageSize, total != null ? total : 0L);
     }
 }
