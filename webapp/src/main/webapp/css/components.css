@@ -513,7 +513,6 @@ body.modal-open {
 .search-menu {
     top: var(--navbar-height);
     z-index: 1020;
-    background-color: #ffffff;
     padding-top: 1.5rem;
 }
 

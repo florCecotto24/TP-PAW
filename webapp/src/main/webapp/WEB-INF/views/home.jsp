@@ -25,9 +25,16 @@
 
 
             <div class="sticky-top w-100 pt-4" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
-                <form method="get" action="${pageContext.request.contextPath}/search">
-                    <ryden:searchBar />
-                </form>
+                <ryden:searchWithFilters
+                        formId="homeSearchForm"
+                        formClass="search-menu w-100"
+                        actionPath="/search"
+                        showFilters="true"
+                        autoSubmitOnFilterChange="false"
+                        categoryFilterOptions="${categoryFilterOptions}"
+                        transmissionFilterOptions="${transmissionFilterOptions}"
+                        powertrainFilterOptions="${powertrainFilterOptions}"
+                        priceFilterOptions="${priceFilterOptions}"/>
             </div>
 
 

@@ -12,46 +12,16 @@
     <body class="has-fixed-navbar">
         <ryden:navbar/>
         <div>
-            <form id="exploreSearchForm" class="search-menu sticky-top w-100" method="get" action="${pageContext.request.contextPath}/search">
-                <ryden:searchBar/>
-                <nav class="navbar navbar-expand-lg d-flex justify-content-center align-items-center border py-2 flex-wrap gap-1"
-                     aria-label="Search filters">
-                    <spring:message code="search.filter.category" var="categoryLabel"/>
-                    <spring:message code="search.filter.category.helper" var="categoryHelper"/>
-                    <ryden:exploreFilterDropdown
-                            filterLabel="${categoryLabel}"
-                            helperText="${categoryHelper}"
-                            paramName="category"
-                            ariaGroup="category"
-                            options="${categoryFilterOptions}"/>
-                    <span class="vr d-none d-md-inline-block align-self-stretch my-2 mx-1"></span>
-                    <spring:message code="search.filter.transmission" var="transmissionLabel"/>
-                    <spring:message code="search.filter.transmission.helper" var="transmissionHelper"/>
-                    <ryden:exploreFilterDropdown
-                            filterLabel="${transmissionLabel}"
-                            helperText="${transmissionHelper}"
-                            paramName="transmission"
-                            ariaGroup="transmission"
-                            options="${transmissionFilterOptions}"/>
-                    <spring:message code="search.filter.powertrain" var="powertrainLabel"/>
-                    <spring:message code="search.filter.powertrain.helper" var="powertrainHelper"/>
-                    <ryden:exploreFilterDropdown
-                            filterLabel="${powertrainLabel}"
-                            helperText="${powertrainHelper}"
-                            paramName="powertrain"
-                            ariaGroup="powertrain"
-                            options="${powertrainFilterOptions}"/>
-                    <span class="vr d-none d-md-inline-block align-self-stretch my-2 mx-1"></span>
-                    <spring:message code="search.filter.price" var="priceLabel"/>
-                    <spring:message code="search.filter.price.helper" var="priceHelper"/>
-                    <ryden:exploreFilterDropdown
-                            filterLabel="${priceLabel}"
-                            helperText="${priceHelper}"
-                            paramName="price"
-                            ariaGroup="price"
-                            options="${priceFilterOptions}"/>
-                </nav>
-            </form>
+            <ryden:searchWithFilters
+                    formId="exploreSearchForm"
+                    formClass="search-menu sticky-top w-100"
+                    actionPath="/search"
+                    showFilters="true"
+                    autoSubmitOnFilterChange="true"
+                    categoryFilterOptions="${categoryFilterOptions}"
+                    transmissionFilterOptions="${transmissionFilterOptions}"
+                    powertrainFilterOptions="${powertrainFilterOptions}"
+                    priceFilterOptions="${priceFilterOptions}"/>
             <div class="container">
 
                 <%-- Build baseUrl preserving all filter params except page and sort --%>
@@ -172,16 +142,5 @@
             </div>
         </div>
         <%@include file="footer.jsp"%>
-        <script>
-            (function () {
-                var form = document.getElementById('exploreSearchForm');
-                if (!form) return;
-                form.querySelectorAll('.js-explore-filter').forEach(function (cb) {
-                    cb.addEventListener('change', function () {
-                        form.submit();
-                    });
-                });
-            })();
-        </script>
     </body>
 </html>

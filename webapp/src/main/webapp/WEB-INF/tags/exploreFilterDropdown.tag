@@ -24,9 +24,9 @@
             <spring:message code="exploreFilterDropdown.ariaLabel" arguments="${filterLabel}" var="ddAriaLabel"/>
             aria-label="<c:out value='${ddAriaLabel}'/>">
         <span class="explore-filter-dropdown__label"><c:out value="${filterLabel}"/></span>
-        <c:if test="${selCount gt 0}">
-            <span class="badge text-bg-primary rounded-pill"><c:out value="${selCount}"/></span>
-        </c:if>
+        <span class="badge text-bg-primary rounded-pill <c:if test='${selCount eq 0}'>d-none</c:if>" data-filter-count="true">
+            <c:out value="${selCount}"/>
+        </span>
     </button>
     <ul class="dropdown-menu shadow explore-filter-dropdown__panel p-0"
         aria-labelledby="explore_dd_<c:out value='${ariaGroup}'/>">

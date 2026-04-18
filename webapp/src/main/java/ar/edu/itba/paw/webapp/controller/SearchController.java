@@ -4,7 +4,6 @@ import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,12 +18,10 @@ import java.util.stream.Collectors;
 public class SearchController {
 
     private final ListingService listingService;
-    private final CarEnumOptions carEnumOptions;
 
     @Autowired
-    public SearchController(final ListingService listingService, final CarEnumOptions carEnumOptions) {
+    public SearchController(final ListingService listingService) {
         this.listingService = listingService;
-        this.carEnumOptions = carEnumOptions;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -42,10 +39,6 @@ public class SearchController {
 
         page = Math.max(0, page);
 
-        mav.addObject("categoryFilterOptions", carEnumOptions.carTypeSelectOptions());
-        mav.addObject("transmissionFilterOptions", carEnumOptions.transmissionSelectOptions());
-        mav.addObject("powertrainFilterOptions", carEnumOptions.powertrainSelectOptions());
-        mav.addObject("priceFilterOptions", carEnumOptions.searchPriceBandOptions());
 
         final var criteria = listingService.buildSearchCriteria(
                 query, category, transmission, powertrain, price, from, until, page, sort);
