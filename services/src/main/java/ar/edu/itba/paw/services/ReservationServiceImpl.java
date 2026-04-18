@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Optional;
@@ -31,7 +31,6 @@ import ar.edu.itba.paw.persistence.ReservationDao;
 public class ReservationServiceImpl implements ReservationService {
 
     private static final Log LOG = LogFactory.getLog(ReservationServiceImpl.class);
-    private static final long MINUTES_PER_DAY = 24L * 60L;
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
@@ -227,8 +226,9 @@ public class ReservationServiceImpl implements ReservationService {
         if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
             return 0;
         }
-        final long totalMinutes = Duration.between(startDate, endDate).toMinutes();
-        return (totalMinutes + MINUTES_PER_DAY - 1L) / MINUTES_PER_DAY;
+        final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate returnDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        return Math.max(0L, ChronoUnit.DAYS.between(pickupDay, returnDay));
     }
 
     private String formatMoney(final BigDecimal amount) {

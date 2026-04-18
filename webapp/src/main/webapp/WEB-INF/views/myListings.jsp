@@ -9,9 +9,14 @@
     </head>
     <body class="has-fixed-navbar">
         <ryden:navbar/>
-        <div class="container pt-5">
-            <div class="mb-3 pt-5 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <h4 class="font-semibold mb-0">
+        <div class="container pt-5 pb-4">
+            <section class="reservation-management-header mt-4 pt-5 mb-4">
+                <h1 class="h3 fw-bold mb-2"><spring:message code="myListings.heading"/></h1>
+                <p class="text-secondary mb-0"><spring:message code="myListings.subheading"/></p>
+            </section>
+
+            <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h2 class="h5 mb-0">
                     <c:choose>
                         <c:when test="${myListingsPage.totalItems > 0}">
                             <spring:message code="myListings.resultsRange"
@@ -21,7 +26,7 @@
                             <spring:message code="myListings.resultsCount" arguments="0"/>
                         </c:otherwise>
                     </c:choose>
-                </h4>
+                </h2>
             </div>
 
             <c:url var="myListingsBaseUrl" value="/my-listings"/>
@@ -80,5 +85,4 @@
         <%@include file="footer.jsp"%>
     </body>
 </html>
-
 

@@ -18,7 +18,7 @@
             currentLabel="${reservation.id}"/>
 
     <section class="reservation-management-header mb-4">
-        <h1 class="h3 fw-bold mb-2"><spring:message code="myReservationDetail.heading" arguments="${reservation.id}"/></h1>
+                        <h1 class="h3 fw-bold mb-2"><spring:message code="myReservationDetail.heading"/></h1>
         <p class="text-secondary mb-0"><spring:message code="myReservationDetail.subheading"/></p>
     </section>
 
@@ -68,12 +68,6 @@
                             <p class="mb-0 fw-medium"><c:out value="${returnDateTime}"/></p>
                         </div>
                         <div class="col-sm-6">
-                            <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.status"/></p>
-                            <span class="reservation-status-badge reservation-status-badge--${statusKey}">
-                                <spring:message code="enum.reservation.status.${statusKey}"/>
-                            </span>
-                        </div>
-                        <div class="col-sm-6">
                             <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.pickupLocation"/></p>
                             <p class="mb-0 fw-medium"><c:out value="${listing.startPoint}"/></p>
                         </div>
@@ -85,8 +79,10 @@
         <div class="col-lg-4">
             <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky">
                 <div class="card-body p-4">
-                    <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.totalPrice"/></p>
-                    <p class="h2 fw-bold text-primary mb-4">$<c:out value="${totalPrice}"/></p>
+                    <div class="reservation-price-compact mb-3">
+                        <span class="reservation-card__meta-label mb-0"><spring:message code="myReservationDetail.totalPrice"/></span>
+                        <span class="h2 fw-bold text-primary mb-0">$<c:out value="${totalPrice}"/></span>
+                    </div>
 
                     <div class="d-grid gap-2">
                         <button type="button" class="btn btn-primary" disabled>

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -304,6 +305,42 @@ public class ReservationServiceImplTest {
 
         // 3. Assert
         Assertions.assertFalse(result.isPresent());
+    }
+
+    @Test
+    public void calculateBillableDaysWhenWallDatesSpanFifteenDaysReturnsFifteen() {
+        final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");
+        final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-30T18:00");
+
+        final long billableDays = reservationService.calculateBillableDays(startDate, endDate);
+
+        Assertions.assertEquals(15L, billableDays);
+    }
+
+    @Test
+    public void calculateBillableDaysWhenCrossingMidnightReturnsOne() {
+        final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T23:00");
+        final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-16T01:00");
+
+        final long billableDays = reservationService.calculateBillableDays(startDate, endDate);
+
+        Assertions.assertEquals(1L, billableDays);
+    }
+
+    @Test
+    public void calculateTotalWhenWallDatesSpanFifteenDaysReturnsExpectedMoney() {
+        final long listingId = 2L;
+        final Listing listing = Mockito.mock(Listing.class);
+        final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");
+        final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-30T18:00");
+
+        Mockito.when(listing.getDayPrice()).thenReturn(BigDecimal.valueOf(150L));
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+
+        final Optional<BigDecimal> total = reservationService.calculateTotal(listingId, startDate, endDate);
+
+        Assertions.assertTrue(total.isPresent());
+        Assertions.assertEquals(0, BigDecimal.valueOf(2250L).compareTo(total.get()));
     }
 
 }

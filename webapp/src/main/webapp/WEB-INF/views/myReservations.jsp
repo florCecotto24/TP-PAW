@@ -31,6 +31,7 @@
     </div>
 
     <c:url var="myReservationsBaseUrl" value="/my-reservations"/>
+    <c:url var="reserveCarUrl" value="/search"/>
 
     <c:choose>
         <c:when test="${empty results}">
@@ -42,6 +43,11 @@
                 <p class="text-secondary mb-0 search-empty-state__text">
                     <spring:message code="myReservations.empty.description"/>
                 </p>
+                <div class="search-empty-state__actions">
+                    <a href="<c:out value='${reserveCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
+                        <spring:message code="myReservations.empty.reserve"/>
+                    </a>
+                </div>
             </div>
         </c:when>
         <c:otherwise>
@@ -66,16 +72,10 @@
                                 </div>
                                 <div class="col-12 col-md-9">
                                     <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                                        <div class="d-flex flex-wrap align-items-start gap-2">
                                             <div>
                                                 <h3 class="h5 fw-semibold mb-1"><c:out value="${reservation.brand} ${reservation.model}"/></h3>
-                                                <p class="text-secondary mb-0 small">
-                                                    <spring:message code="myReservations.card.bookingRef" arguments="${reservation.reservationId}"/>
-                                                </p>
                                             </div>
-                                            <span class="reservation-status-badge reservation-status-badge--${reservation.statusKey}">
-                                                <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
-                                            </span>
                                         </div>
 
                                         <div class="row g-3">
@@ -89,9 +89,11 @@
                                             </div>
                                         </div>
 
-                                        <div class="d-flex justify-content-between align-items-center pt-1">
-                                            <span class="reservation-card__meta-label mb-0"><spring:message code="myReservations.card.totalPrice"/></span>
-                                            <span class="h5 mb-0 fw-bold text-primary">$<c:out value="${reservation.totalPrice}"/></span>
+                                        <div class="pt-1">
+                                            <div class="reservation-price-compact">
+                                                <span class="reservation-card__meta-label mb-0"><spring:message code="myReservations.card.totalPrice"/></span>
+                                                <span class="h5 mb-0 fw-bold text-primary">$<c:out value="${reservation.totalPrice}"/></span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

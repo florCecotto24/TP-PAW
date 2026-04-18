@@ -66,6 +66,7 @@ body {
 /* Modal */
 :root {
     --navbar-height: 65px;
+    --bs-danger: #dc3545;
     --color-primary: #3b7be0;
     --color-primary-dark: #2b5fb2;
     --color-primary-soft: #eef4ff;
@@ -733,8 +734,8 @@ body.modal-open {
 }
 
 #picturesChooseLabel.is-invalid {
-    border-color: var(--bs-danger);
-    color: var(--bs-danger);
+    border-color: var(--bs-danger, #dc3545);
+    color: var(--bs-danger, #dc3545);
 }
 
 .input-group .ryden-password-toggle {
@@ -786,6 +787,13 @@ body.modal-open {
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+}
+
+.reservation-price-compact {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem;
 }
 
 .reservation-status-badge {
