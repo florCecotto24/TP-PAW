@@ -200,6 +200,7 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         final CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
         multipartResolver.setMaxUploadSize(maxRequest);
         multipartResolver.setMaxInMemorySize(1048576);
+        multipartResolver.setDefaultEncoding(StandardCharsets.UTF_8.name());
         return multipartResolver;
     }
 
