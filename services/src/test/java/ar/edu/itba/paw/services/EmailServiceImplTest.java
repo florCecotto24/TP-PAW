@@ -87,6 +87,7 @@ public class EmailServiceImplTest {
         final String ownerName = "Owner Name";
         final String ownerEmail = "owner@test.com";
         final String subject = "Subject brandTest modelTest";
+        final String reservationTotal = "100.00";
         final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
                 riderEmail,
                 riderName,
@@ -98,6 +99,7 @@ public class EmailServiceImplTest {
                 startPoint,
                 ownerName,
                 ownerEmail,
+                reservationTotal,
                 locale);
 
         Mockito.when(environment.getProperty("mail.app.public.base.url", "http://localhost:8080"))

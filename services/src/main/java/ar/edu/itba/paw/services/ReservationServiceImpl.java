@@ -103,6 +103,13 @@ public class ReservationServiceImpl implements ReservationService {
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
             final String trimmedDelivery =
                     deliveryLocation == null || deliveryLocation.isBlank() ? null : deliveryLocation.trim();
+            final String reservationTotal = calculateTotal(listingId, reservation.getStartDate(), reservation.getEndDate()).map(this::formatMoney)
+                    .orElse(null);
+            if (reservationTotal == null) {
+                LOG.warn("Skipping reservation confirmation email: could not calculate total for listingId=" + listingId
+                        + " reservationId=" + reservation.getId());
+                return;
+            }
             final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
                     rider.getEmail(),
                     riderFullName,
@@ -114,6 +121,7 @@ public class ReservationServiceImpl implements ReservationService {
                     trimmedDelivery,
                     listingOwner.getForename() + " " + listingOwner.getSurname(),
                     listingOwner.getEmail(),
+                    reservationTotal,
                     resolveMailMessageLocale());
             LOG.info("Queueing reservation confirmation email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());

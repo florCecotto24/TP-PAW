@@ -16,6 +16,7 @@ public final class ReservationConfirmationPayload {
     private final String deliveryLocation;
     private final String ownerFullName;
     private final String ownerEmail;
+    private final String reservationTotal;
     private final Locale messageLocale;
 
     public ReservationConfirmationPayload(
@@ -29,6 +30,7 @@ public final class ReservationConfirmationPayload {
             final String deliveryLocation,
             final String ownerFullName,
             final String ownerEmail,
+            final String reservationTotal,
             final Locale messageLocale) {
         this.recipientEmail = Objects.requireNonNull(recipientEmail, "recipientEmail");
         this.riderFullName = Objects.requireNonNull(riderFullName, "riderFullName");
@@ -40,6 +42,7 @@ public final class ReservationConfirmationPayload {
         this.deliveryLocation = deliveryLocation;
         this.ownerFullName = ownerFullName;
         this.ownerEmail = ownerEmail;
+        this.reservationTotal = reservationTotal;
         this.messageLocale = Objects.requireNonNull(messageLocale, "messageLocale");
     }
 
@@ -85,5 +88,9 @@ public final class ReservationConfirmationPayload {
 
     public Locale getMessageLocale() {
         return messageLocale;
+    }
+
+    public String getReservationTotal() {
+        return reservationTotal;
     }
 }

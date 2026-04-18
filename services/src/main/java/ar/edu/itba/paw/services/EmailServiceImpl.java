@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -81,6 +82,7 @@ public class EmailServiceImpl implements EmailService {
 
         final Locale mailLocale = payload.getMessageLocale();
         final Context ctx = new Context(mailLocale);
+        ctx.setVariable("reservationTotal", payload.getReservationTotal());
         ctx.setVariable("riderFullName", payload.getRiderFullName());
         ctx.setVariable("reservationId", payload.getReservationId());
         ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
@@ -211,12 +213,14 @@ public class EmailServiceImpl implements EmailService {
     private void sendEmail(String to, String subject, String htmlBody) {
         final MimeMessage message = this.mailSender.createMimeMessage();
         try {
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_RELATED, "UTF-8");
             helper.setTo(to);
             final String from = environment.getProperty("mail.from.address", environment.getProperty("mail.server.username", "noreply@localhost"));
             message.setFrom(from);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
+            ClassPathResource logo = new ClassPathResource("static/images/logo_transparent.png");
+            helper.addInline("logo", logo);
             mailSender.send(message);
         } catch (MessagingException e) {
             LOG.error("Error enviando mail a "+ to + ":" + e.getMessage());
