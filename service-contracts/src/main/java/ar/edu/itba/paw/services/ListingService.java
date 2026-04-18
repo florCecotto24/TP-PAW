@@ -75,6 +75,10 @@ public interface ListingService {
 
     Page<ListingCard> getMostRecentListingCards(int page, int pageSize);
 
+    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize);
+
+    boolean hasListingsByOwner(long ownerId);
+
     HomeListingCards getHomeListingCards(int limit);
 
     Page<ListingCard> searchListingCards(ListingSearchCriteria criteria);

@@ -314,6 +314,18 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    public Page<ListingCard> getOwnerListingCards(final long ownerId, final int page, final int pageSize) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = pageSize > 0 ? pageSize : PAGE_SIZE;
+        return listingDao.getOwnerListingCards(ownerId, safePage, safePageSize);
+    }
+
+    @Override
+    public boolean hasListingsByOwner(final long ownerId) {
+        return listingDao.hasListingsByOwner(ownerId);
+    }
+
+    @Override
     public HomeListingCards getHomeListingCards(final int limit) {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);

@@ -225,6 +225,37 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
+    public void testGetOwnerListingCardsReturnsOnlyOwnerListingsOrderedByDate() {
+        final OffsetDateTime base = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        insertUser(1L, "owner1@mail.com", "Owner", "One");
+        insertUser(2L, "owner2@mail.com", "Owner", "Two");
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertCar(11L, 2L, "P2", "VW", "Golf", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertListing(100L, 10L, "Mine-old", Listing.Status.ACTIVE, new BigDecimal("60.00"), base);
+        insertListing(101L, 10L, "Mine-new", Listing.Status.PAUSED, new BigDecimal("70.00"), base.plusDays(1));
+        insertListing(102L, 11L, "Not-mine", Listing.Status.ACTIVE, new BigDecimal("40.00"), base.plusDays(2));
+
+        final var page = listingDao.getOwnerListingCards(1L, 0, 8);
+
+        Assertions.assertEquals(2, page.getTotalItems());
+        Assertions.assertEquals(2, page.getContent().size());
+        Assertions.assertEquals(101L, page.getContent().get(0).getListingId());
+        Assertions.assertEquals(100L, page.getContent().get(1).getListingId());
+    }
+
+    @Test
+    public void testHasListingsByOwner() {
+        final OffsetDateTime base = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        insertUser(1L, "owner@mail.com", "Owner", "One");
+        insertUser(2L, "other@mail.com", "Other", "Two");
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertListing(100L, 10L, "Mine", Listing.Status.ACTIVE, new BigDecimal("60.00"), base);
+
+        Assertions.assertTrue(listingDao.hasListingsByOwner(1L));
+        Assertions.assertFalse(listingDao.hasListingsByOwner(2L));
+    }
+
+    @Test
     public void testCreateListingWithNullTitleFailsByConstraint() {
         // Arrange
         insertUser(1L, "owner@mail.com", "Owner", "One");

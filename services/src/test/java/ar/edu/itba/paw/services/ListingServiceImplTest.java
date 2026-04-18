@@ -27,7 +27,9 @@ import ar.edu.itba.paw.models.CarPicture;
 import ar.edu.itba.paw.models.Image;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
+import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.persistence.CarDao;
@@ -384,6 +386,30 @@ public class ListingServiceImplTest {
 
         // 3. Assert
         Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testGetOwnerListingCardsDelegatesToDao() {
+        final long ownerId = 5L;
+        final int page = 2;
+        final int pageSize = 8;
+        final List<ListingCard> cards = List.of(new ListingCard(100L, "Ford", "Focus", new BigDecimal("100.00"), 0L));
+        final Page<ListingCard> ownerPage = new Page<>(cards, page, pageSize, 1);
+        Mockito.when(listingDao.getOwnerListingCards(ownerId, page, pageSize)).thenReturn(ownerPage);
+
+        final Page<ListingCard> result = listingService.getOwnerListingCards(ownerId, page, pageSize);
+
+        Assertions.assertEquals(ownerPage, result);
+    }
+
+    @Test
+    public void testHasListingsByOwnerDelegatesToDao() {
+        final long ownerId = 5L;
+        Mockito.when(listingDao.hasListingsByOwner(ownerId)).thenReturn(true);
+
+        final boolean result = listingService.hasListingsByOwner(ownerId);
+
+        Assertions.assertTrue(result);
     }
 
     @Test

@@ -1,0 +1,84 @@
+<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title><spring:message code="myListings.pageTitle"/></title>
+        <%@include file="header.jsp"%>
+    </head>
+    <body class="has-fixed-navbar">
+        <ryden:navbar/>
+        <div class="container pt-5">
+            <div class="mb-3 pt-5 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h4 class="font-semibold mb-0">
+                    <c:choose>
+                        <c:when test="${myListingsPage.totalItems > 0}">
+                            <spring:message code="myListings.resultsRange"
+                                            arguments="${myListingsPage.firstItemNumber},${myListingsPage.lastItemNumber},${myListingsPage.totalItems}"/>
+                        </c:when>
+                        <c:otherwise>
+                            <spring:message code="myListings.resultsCount" arguments="0"/>
+                        </c:otherwise>
+                    </c:choose>
+                </h4>
+            </div>
+
+            <c:url var="myListingsBaseUrl" value="/my-listings"/>
+            <c:url var="publishCarUrl" value="/publish-car"/>
+
+            <c:choose>
+                <c:when test="${empty results}">
+                    <div class="search-empty-state text-center">
+                        <div class="search-empty-state__icon" aria-hidden="true">
+                            <i class="bi bi-car-front"></i>
+                        </div>
+                        <h2 class="h4 fw-semibold mb-2"><spring:message code="myListings.empty.title"/></h2>
+                        <p class="text-secondary mb-0 search-empty-state__text">
+                            <spring:message code="myListings.empty.description"/>
+                        </p>
+                        <div class="search-empty-state__actions">
+                            <a href="<c:out value='${publishCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
+                                <spring:message code="home.cta.button"/>
+                            </a>
+                        </div>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="text-center">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-4 g-3">
+                            <c:forEach var="car" items="${results}">
+                                <div class="col d-flex justify-content-center">
+                                    <c:choose>
+                                        <c:when test="${car.imageId > 0}">
+                                            <c:url var="imageUrl" value="/image/${car.imageId}" />
+                                        </c:when>
+                                        <c:otherwise>
+                                            <c:set var="imageUrl" value="" />
+                                        </c:otherwise>
+                                    </c:choose>
+
+                                    <ryden:carCard
+                                            model="${car.model}"
+                                            brand="${car.brand}"
+                                            price="${car.price}"
+                                            image="${imageUrl}"
+                                            pricePeriod="day"
+                                            href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
+                                </div>
+                            </c:forEach>
+                        </div>
+                    </div>
+
+                    <ryden:pagination
+                            currentPage="${myListingsPage.currentPage}"
+                            totalPages="${myListingsPage.totalPages}"
+                            baseUrl="${myListingsBaseUrl}"/>
+                </c:otherwise>
+            </c:choose>
+        </div>
+        <%@include file="footer.jsp"%>
+    </body>
+</html>
+
+

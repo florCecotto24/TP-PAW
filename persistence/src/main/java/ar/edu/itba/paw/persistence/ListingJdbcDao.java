@@ -283,9 +283,45 @@ public class ListingJdbcDao implements ListingDao {
         return new Page<>(content, page, pageSize, total);
     }
 
+    @Override
+    public Page<ListingCard> getOwnerListingCards(final long ownerId, final int page, final int pageSize) {
+        final long total = countOwnerListings(ownerId);
+        final int offset = page * pageSize;
+        final List<ListingCard> content = jdbcTemplate.query(
+                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                        + "FROM listings l JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? ORDER BY l.created_at DESC LIMIT ? OFFSET ?",
+                LISTING_CARD_ROW_MAPPER,
+                ownerId,
+                pageSize,
+                offset);
+        return new Page<>(content, page, pageSize, total);
+    }
+
+    @Override
+    public boolean hasListingsByOwner(final long ownerId) {
+        final Integer exists = jdbcTemplate.queryForObject(
+                "SELECT CASE WHEN EXISTS ("
+                        + "SELECT 1 FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?"
+                        + ") THEN 1 ELSE 0 END",
+                Integer.class,
+                ownerId);
+        return exists != null && exists == 1;
+    }
+
     private long countActiveListings() {
         final Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM listings WHERE status = 'active'", Long.class);
+        return count != null ? count : 0L;
+    }
+
+    private long countOwnerListings(final long ownerId) {
+        final Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?",
+                Long.class,
+                ownerId);
         return count != null ? count : 0L;
     }
 
