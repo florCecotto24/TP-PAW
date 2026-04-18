@@ -28,6 +28,17 @@ public interface ListingDao {
 
     Optional<ListingDetail> getListingDetailById(long id);
 
+    boolean updateOwnerListing(
+            long ownerId,
+            long listingId,
+            BigDecimal dayPrice,
+            String startPoint,
+            String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime);
+
+    boolean deleteOwnerListing(long ownerId, long listingId);
+
     List<Listing> getAllListings();
 
     List<Listing> searchListings(ListingSearchCriteria criteria);

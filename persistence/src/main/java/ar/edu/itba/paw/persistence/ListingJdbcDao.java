@@ -216,6 +216,40 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
+    public boolean updateOwnerListing(
+            final long ownerId,
+            final long listingId,
+            final BigDecimal dayPrice,
+            final String startPoint,
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime) {
+        final int updated = jdbcTemplate.update(
+                "UPDATE listings l SET day_price = ?, start_point = ?, description = ?, check_in_time = ?, "
+                        + "check_out_time = ?, updated_at = ? WHERE l.id = ? AND EXISTS ("
+                        + "SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = ?)",
+                dayPrice,
+                startPoint,
+                description,
+                java.sql.Time.valueOf(checkInTime),
+                java.sql.Time.valueOf(checkOutTime),
+                JdbcDateTimeUtils.nowTimestamp(),
+                listingId,
+                ownerId);
+        return updated > 0;
+    }
+
+    @Override
+    public boolean deleteOwnerListing(final long ownerId, final long listingId) {
+        final int deleted = jdbcTemplate.update(
+                "DELETE FROM listings l WHERE l.id = ? AND EXISTS ("
+                        + "SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = ?)",
+                listingId,
+                ownerId);
+        return deleted > 0;
+    }
+
+    @Override
     public List<Listing> getAllListings() {
         return jdbcTemplate.query("SELECT * FROM listings ORDER BY created_at DESC", LISTING_ROW_MAPPER);
     }

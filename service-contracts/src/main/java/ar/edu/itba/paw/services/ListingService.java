@@ -53,6 +53,17 @@ public interface ListingService {
 
     Optional<ListingDetail> getListingDetailById(long id);
 
+    boolean updateOwnerListing(
+            long ownerId,
+            long listingId,
+            BigDecimal dayPrice,
+            String startPoint,
+            String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime);
+
+    boolean deleteOwnerListing(long ownerId, long listingId);
+
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 
     List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(long listingId);

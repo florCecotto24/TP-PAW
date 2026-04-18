@@ -102,7 +102,7 @@
 
                     <hr class="my-4">
                     <c:url var="listingUrl" value="/car-detail">
-                        <c:param name="listingId" value="${listing.id}"/>
+                        <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
                     </c:url>
                     <a href="<c:out value='${listingUrl}'/>" class="btn btn-light border w-100">
                         <spring:message code="myReservationDetail.actions.viewListing"/>

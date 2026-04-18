@@ -57,29 +57,43 @@
                     </div>
                 </c:when>
                 <c:otherwise>
-                    <div class="text-center">
-                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-4 g-3">
-                            <c:forEach var="car" items="${results}">
-                                <div class="col d-flex justify-content-center">
-                                    <c:choose>
-                                        <c:when test="${car.imageId > 0}">
-                                            <c:url var="imageUrl" value="/image/${car.imageId}" />
-                                        </c:when>
-                                        <c:otherwise>
-                                            <c:set var="imageUrl" value="" />
-                                        </c:otherwise>
-                                    </c:choose>
-
-                                    <ryden:carCard
-                                            model="${car.model}"
-                                            brand="${car.brand}"
-                                            price="${car.price}"
-                                            image="${imageUrl}"
-                                            pricePeriod="day"
-                                            href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
-                                </div>
-                            </c:forEach>
-                        </div>
+                    <div class="d-flex flex-column gap-3">
+                        <c:forEach var="car" items="${results}">
+                            <c:url var="listingDetailUrl" value="/my-listings/${car.listingId}"/>
+                            <a href="<c:out value='${listingDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
+                                <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface">
+                                    <div class="row g-0 align-items-stretch">
+                                        <div class="col-12 col-md-3 reservation-card__media-wrap">
+                                            <c:choose>
+                                                <c:when test="${car.imageId > 0}">
+                                                    <c:url var="listingImgUrl" value="/image/${car.imageId}"/>
+                                                    <img src="<c:out value='${listingImgUrl}'/>" alt="<c:out value='${car.brand} ${car.model}'/>" class="reservation-card__media">
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <div class="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
+                                                        <i class="bi bi-car-front fs-1" aria-hidden="true"></i>
+                                                    </div>
+                                                </c:otherwise>
+                                            </c:choose>
+                                        </div>
+                                        <div class="col-12 col-md-9">
+                                            <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
+                                                <div>
+                                                    <h3 class="h5 fw-semibold mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
+                                                    <p class="text-secondary mb-0"><spring:message code="myListings.card.manageHint"/></p>
+                                                </div>
+                                                <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                                    <div class="reservation-price-compact">
+                                                        <span class="reservation-card__meta-label mb-0"><spring:message code="myListings.card.pricePerDay"/></span>
+                                                        <span class="h5 mb-0 fw-bold text-primary">$<c:out value="${car.price}"/></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+                            </a>
+                        </c:forEach>
                     </div>
 
                     <ryden:pagination

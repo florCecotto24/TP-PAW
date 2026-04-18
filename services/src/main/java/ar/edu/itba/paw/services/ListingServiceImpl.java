@@ -201,6 +201,34 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional
+    public boolean updateOwnerListing(
+            final long ownerId,
+            final long listingId,
+            final BigDecimal dayPrice,
+            final String startPoint,
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime) {
+        final String safeStartPoint = startPoint == null ? "" : startPoint.trim();
+        final String safeDescription = description == null ? "" : description.trim();
+        return listingDao.updateOwnerListing(
+                ownerId,
+                listingId,
+                dayPrice,
+                safeStartPoint,
+                safeDescription,
+                checkInTime,
+                checkOutTime);
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteOwnerListing(final long ownerId, final long listingId) {
+        return listingDao.deleteOwnerListing(ownerId, listingId);
+    }
+
+    @Override
     public List<ListingAvailability> findAvailabilityByListingId(final long listingId) {
         return listingAvailabilityDao.findByListingId(listingId);
     }
