@@ -34,11 +34,17 @@
 
             <c:choose>
                 <c:when test="${empty results}">
+                    <spring:message var="myListings.emptyTitle" code="myListings.empty.title"/>
+                    <spring:message var="myListings.emptyDescription" code="myListings.empty.description"/>
+                    <spring:message var="homeCtaButton" code="home.cta.button"/>
+
                     <div class="search-empty-state text-center">
                         <div class="search-empty-state__icon" aria-hidden="true">
                             <i class="bi bi-car-front"></i>
                         </div>
-                        <h2 class="h4 fw-semibold mb-2"><spring:message code="myListings.empty.title"/></h2>
+                        <h2 class="h4 fw-semibold mb-2">
+                            <spring:message code="myListings.empty.title"/>
+                        </h2>
                         <p class="text-secondary mb-0 search-empty-state__text">
                             <spring:message code="myListings.empty.description"/>
                         </p>
