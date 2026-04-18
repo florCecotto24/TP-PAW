@@ -43,7 +43,7 @@
                 <p class="text-secondary mb-0 search-empty-state__text">
                     <spring:message code="myReservations.empty.description"/>
                 </p>
-                <div class="search-empty-state__actions">
+                <div class="search-empty-state__actions mt-4">
                     <a href="<c:out value='${reserveCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
                         <spring:message code="myReservations.empty.reserve"/>
                     </a>

@@ -42,7 +42,7 @@
                         <p class="text-secondary mb-0 search-empty-state__text">
                             <spring:message code="myListings.empty.description"/>
                         </p>
-                        <div class="search-empty-state__actions">
+                        <div class="search-empty-state__actions mt-4">
                             <a href="<c:out value='${publishCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
                                 <spring:message code="home.cta.button"/>
                             </a>
