@@ -235,7 +235,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
         final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
         final LocalDate returnDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        return Math.max(0L, ChronoUnit.DAYS.between(pickupDay, returnDay));
+        return Math.max(1L, ChronoUnit.DAYS.between(pickupDay, returnDay.plusDays(1)));
     }
 
     private String formatMoney(final BigDecimal amount) {

@@ -82,10 +82,7 @@ public class MyReservationsController {
         final Locale locale = LocaleContextHolder.getLocale();
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String totalPrice = reservationService
-                .calculateTotal(reservation.getListingId(), reservation.getStartDate(), reservation.getEndDate())
-                .map(MyReservationsController::formatMoney)
-                .orElse("-");
+        final String totalPrice = reservation.getTotalPrice().toString();
         final long carImageId = listingDetail.getPictures().isEmpty() ? 0L : listingDetail.getPictures().get(0).getImageId();
 
         final ModelAndView mav = new ModelAndView("myReservationDetail");
