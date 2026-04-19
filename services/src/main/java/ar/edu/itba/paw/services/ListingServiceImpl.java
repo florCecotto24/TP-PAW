@@ -209,10 +209,11 @@ public class ListingServiceImpl implements ListingService {
             final String startPoint,
             final String description,
             final LocalTime checkInTime,
-            final LocalTime checkOutTime) {
+            final LocalTime checkOutTime,
+            final List<AvailabilityPeriod> availabilityPeriods) {
         final String safeStartPoint = startPoint == null ? "" : startPoint.trim();
         final String safeDescription = description == null ? "" : description.trim();
-        return listingDao.updateOwnerListing(
+        boolean updated = listingDao.updateOwnerListing(
                 ownerId,
                 listingId,
                 dayPrice,
@@ -220,6 +221,13 @@ public class ListingServiceImpl implements ListingService {
                 safeDescription,
                 checkInTime,
                 checkOutTime);
+        if (updated && availabilityPeriods != null) {
+            listingAvailabilityDao.deleteByListingId(listingId);
+            for (final AvailabilityPeriod p : availabilityPeriods) {
+                listingAvailabilityDao.create(listingId, p.getStartInclusive(), p.getEndInclusive());
+            }
+        }
+        return updated;
     }
 
     @Override

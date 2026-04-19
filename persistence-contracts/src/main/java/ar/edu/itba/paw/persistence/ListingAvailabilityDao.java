@@ -10,4 +10,6 @@ public interface ListingAvailabilityDao {
     ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive);
 
     List<ListingAvailability> findByListingId(long listingId);
+
+    void deleteByListingId(long listingId);
 }

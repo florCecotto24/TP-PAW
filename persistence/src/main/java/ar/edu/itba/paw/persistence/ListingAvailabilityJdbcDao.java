@@ -63,4 +63,9 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
                 ROW_MAPPER,
                 listingId);
     }
+
+    @Override
+    public void deleteByListingId(final long listingId) {
+        jdbcTemplate.update("DELETE FROM listing_availability WHERE listing_id = ?", listingId);
+    }
 }

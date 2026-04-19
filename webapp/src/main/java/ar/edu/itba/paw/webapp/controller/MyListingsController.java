@@ -24,9 +24,12 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import javax.validation.Valid;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import ar.edu.itba.paw.models.ListingAvailability;
 
 @Controller
 @RequestMapping("/my-listings")
@@ -95,7 +98,8 @@ public class MyListingsController {
                 editForm.getStartPoint(),
                 editForm.getDescription(),
                 editForm.getCheckInTime(),
-                editForm.getCheckOutTime());
+                editForm.getCheckOutTime(),
+                editForm.toAvailabilityPeriods());
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 
@@ -125,6 +129,18 @@ public class MyListingsController {
         if (editForm.getCheckOutTime() == null) {
             editForm.setCheckOutTime(listing.getCheckOutTime());
         }
+        if (editForm.getAvailabilityRows().isEmpty() || (editForm.getAvailabilityRows().size() == 1 && editForm.getAvailabilityRows().get(0).getFrom() == null)) {
+            final List<ListingEditForm.AvailabilityRow> rows = new ArrayList<>();
+            for (final ListingAvailability la : detail.getListingAvailabilities()) {
+                final ListingEditForm.AvailabilityRow row = new ListingEditForm.AvailabilityRow();
+                row.setFrom(la.getStartInclusive());
+                row.setUntil(la.getEndInclusive());
+                rows.add(row);
+            }
+            if (!rows.isEmpty()) {
+                editForm.setAvailabilityRows(rows);
+            }
+        }
 
         final long carImageId = detail.getPictures().isEmpty() ? 0L : detail.getPictures().get(0).getImageId();
         final ModelAndView mav = new ModelAndView("myListingDetail");
@@ -148,4 +164,3 @@ public class MyListingsController {
                 card.getImageId());
     }
 }
-

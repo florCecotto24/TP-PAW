@@ -60,7 +60,8 @@ public interface ListingService {
             String startPoint,
             String description,
             LocalTime checkInTime,
-            LocalTime checkOutTime);
+            LocalTime checkOutTime,
+            List<AvailabilityPeriod> availabilityPeriods);
 
     boolean deleteOwnerListing(long ownerId, long listingId);
 
