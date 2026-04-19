@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     start_date TIMESTAMPTZ NOT NULL,
     end_date TIMESTAMPTZ NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('accepted', 'started', 'cancelled', 'finished')),
+    total_price DECIMAL(10, 2) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
 

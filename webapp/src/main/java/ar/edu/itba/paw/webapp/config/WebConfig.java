@@ -30,6 +30,7 @@ import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -49,6 +50,7 @@ import ar.edu.itba.paw.models.UserValidationPolicy;
 
 @EnableWebMvc
 @EnableAsync
+@EnableScheduling
 @EnableTransactionManagement
 @Configuration
 @Import({SpringMailConfig.class, WebAuthConfig.class, ValidationWebConfig.class})

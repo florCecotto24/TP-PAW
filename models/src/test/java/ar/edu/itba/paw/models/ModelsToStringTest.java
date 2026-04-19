@@ -69,12 +69,13 @@ class ModelsToStringTest {
                 OffsetDateTime.parse("2026-04-12T08:00:00Z"),
                 Reservation.Status.ACCEPTED,
                 OffsetDateTime.parse("2026-04-01T09:00:00Z"),
-                OffsetDateTime.parse("2026-04-01T10:00:00Z"));
+                OffsetDateTime.parse("2026-04-01T10:00:00Z"),
+                new BigDecimal("300.00"));
         // Exercise
         final String result = reservation.toString();
         // Assert
         final String expected = "Reservation{id=5, riderId=7, listingId=11, startDate=2026-04-10T08:00Z, endDate=2026-04-12T08:00Z, "
-                + "status=ACCEPTED, createdAt=2026-04-01T09:00Z, updatedAt=2026-04-01T10:00Z}";
+                + "status=ACCEPTED, createdAt=2026-04-01T09:00Z, updatedAt=2026-04-01T10:00Z, totalPrice=300.00}";
         Assertions.assertEquals(expected, result);
     }
 

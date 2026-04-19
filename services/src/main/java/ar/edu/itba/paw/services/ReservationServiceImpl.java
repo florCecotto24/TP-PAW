@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
+import java.time.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -66,8 +67,13 @@ public class ReservationServiceImpl implements ReservationService {
         final String deliveryLocation = listingService.getListingById(listingId)
                 .map(Listing::getStartPoint)
                 .orElse(null);
+        final String reservationTotal = calculateTotal(listingId, startDate, endDate).map(this::formatMoney)
+                .orElse(null);
+        if (reservationTotal == null) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID);
+        }
         final Reservation reservation =
-                reservationDao.createReservation(riderId, listingId, startDate, endDate, status);
+                reservationDao.createReservation(riderId, listingId, startDate, endDate, status, new BigDecimal(reservationTotal));
         enqueueReservationConfirmationEmail(riderId, listingId, reservation, deliveryLocation);
         return reservation;
     }
@@ -103,13 +109,6 @@ public class ReservationServiceImpl implements ReservationService {
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
             final String trimmedDelivery =
                     deliveryLocation == null || deliveryLocation.isBlank() ? null : deliveryLocation.trim();
-            final String reservationTotal = calculateTotal(listingId, reservation.getStartDate(), reservation.getEndDate()).map(this::formatMoney)
-                    .orElse(null);
-            if (reservationTotal == null) {
-                LOG.warn("Skipping reservation confirmation email: could not calculate total for listingId=" + listingId
-                        + " reservationId=" + reservation.getId());
-                return;
-            }
             final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
                     rider.getEmail(),
                     riderFullName,
@@ -121,7 +120,7 @@ public class ReservationServiceImpl implements ReservationService {
                     trimmedDelivery,
                     listingOwner.getForename() + " " + listingOwner.getSurname(),
                     listingOwner.getEmail(),
-                    reservationTotal,
+                    reservation.getTotalPrice().toString(),
                     resolveMailMessageLocale());
             LOG.info("Queueing reservation confirmation email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());

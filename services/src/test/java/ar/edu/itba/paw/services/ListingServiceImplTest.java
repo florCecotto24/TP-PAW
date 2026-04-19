@@ -223,7 +223,8 @@ public class ListingServiceImplTest {
                 LocalDateTime.of(2026, 1, 2, 20, 0).atZone(wall).toOffsetDateTime(),
                 Reservation.Status.ACCEPTED,
                 createdAt,
-                updatedAt);
+                updatedAt,
+                new BigDecimal("100.00"));
         Mockito.when(reservationDao.findBlockingByListingId(listingId)).thenReturn(List.of(blocking));
 
         // 2. Execute

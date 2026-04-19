@@ -18,6 +18,7 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_OUTSIDE_AVAILABILITY = "reservation.rider.outsideAvailability";
     public static final String RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING =
             "reservation.rider.cannotReserveOwnListing";
+    public static final String RESERVATION_TOTAL_PRICE_INVALID = "reservation.totalPrice.invalid";
     public static final String RESERVATION_RIDER_AVAILABILITY_PERIOD_REQUIRED =
             "reservation.rider.availabilityPeriodRequired";
     public static final String RESERVATION_FORM_CAR_NAME_REQUIRED = "reservation.form.carNameRequired";

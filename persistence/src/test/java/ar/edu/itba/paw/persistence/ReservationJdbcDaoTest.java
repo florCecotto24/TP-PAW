@@ -31,7 +31,7 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
         insertListing(100L, 10L, "Listing", Listing.Status.ACTIVE, new BigDecimal("30.00"), start.minusDays(20));
 
         // Exercise
-        final Reservation created = reservationDao.createReservation(2L, 100L, start, end, Reservation.Status.ACCEPTED);
+        final Reservation created = reservationDao.createReservation(2L, 100L, start, end, Reservation.Status.ACCEPTED, new BigDecimal("150.00"));
         final Optional<Reservation> found = reservationDao.getReservationById(created.getId());
 
         // Assert
@@ -106,7 +106,8 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
                         999L,
                         OffsetDateTime.parse("2026-07-01T10:00:00Z"),
                         OffsetDateTime.parse("2026-07-02T10:00:00Z"),
-                        Reservation.Status.ACCEPTED));
+                        Reservation.Status.ACCEPTED,
+                        new BigDecimal("30.00")));
     }
 
     @Test

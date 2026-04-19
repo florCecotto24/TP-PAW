@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 public class Reservation {
@@ -16,6 +17,7 @@ public class Reservation {
     private final Status status;
     private final OffsetDateTime createdAt;
     private final OffsetDateTime updatedAt;
+    private final BigDecimal totalPrice;
 
     public Reservation(
             final long id,
@@ -25,7 +27,8 @@ public class Reservation {
             final OffsetDateTime endDate,
             final Status status,
             final OffsetDateTime createdAt,
-            final OffsetDateTime updatedAt) {
+            final OffsetDateTime updatedAt,
+            final BigDecimal totalPrice) {
         this.id = id;
         this.riderId = riderId;
         this.listingId = listingId;
@@ -34,6 +37,7 @@ public class Reservation {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.totalPrice = totalPrice;
     }
 
     public long getId() {
@@ -68,6 +72,10 @@ public class Reservation {
         return updatedAt;
     }
 
+    public BigDecimal getTotalPrice() {
+        return totalPrice;
+    }
+
     @Override
     public String toString() {
         return "Reservation{" +
@@ -79,6 +87,7 @@ public class Reservation {
                 ", status=" + status +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
+                ", totalPrice=" + totalPrice +
                 '}';
     }
 }

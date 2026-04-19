@@ -29,6 +29,7 @@ public class ReservationServiceImplTest {
     private static final OffsetDateTime END = OffsetDateTime.parse("2026-06-05T18:00:00Z");
     private static final OffsetDateTime CREATED_AT = OffsetDateTime.parse("2026-05-01T12:00:00Z");
     private static final OffsetDateTime UPDATED_AT = OffsetDateTime.parse("2026-05-01T12:00:00Z");
+    private static final BigDecimal TOTAL_PRICE = new BigDecimal("200");
 
     @Mock
     private ReservationDao reservationDao;
@@ -49,14 +50,17 @@ public class ReservationServiceImplTest {
         // 1. Arrange
         final long riderId = 1L;
         final long listingId = 2L;
+        final Listing listing = Mockito.mock(Listing.class);
         final Reservation created = new Reservation(
-                10L, riderId, listingId, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT);
+                10L, riderId, listingId, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT, TOTAL_PRICE);
 
         Mockito.when(reservationDao.hasActiveOverlap(listingId, START, END)).thenReturn(false);
         Mockito.when(userService.getListingOwner(listingId))
                 .thenReturn(Optional.of(new User(99L, "owner@example.com", "O", "Owner")));
+        Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
         Mockito.when(reservationDao.createReservation(
-                riderId, listingId, START, END, Reservation.Status.ACCEPTED)).thenReturn(created);
+                riderId, listingId, START, END, Reservation.Status.ACCEPTED, TOTAL_PRICE)).thenReturn(created);
 
         // 2. Execute
         final Reservation result = reservationService.createReservation(
@@ -98,7 +102,7 @@ public class ReservationServiceImplTest {
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
         Mockito.verify(reservationDao, Mockito.never()).createReservation(
-                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any());
+                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -162,6 +166,7 @@ public class ReservationServiceImplTest {
 
         Mockito.when(listing.getStartPoint()).thenReturn("Start point");
         Mockito.when(listing.getTitle()).thenReturn("Test vehicle");
+        Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(createdRider));
@@ -184,7 +189,8 @@ public class ReservationServiceImplTest {
                 Mockito.eq(listingId),
                 Mockito.any(OffsetDateTime.class),
                 Mockito.any(OffsetDateTime.class),
-                Mockito.eq(Reservation.Status.ACCEPTED)))
+                Mockito.eq(Reservation.Status.ACCEPTED),
+                        Mockito.any(BigDecimal.class)))
                 .thenAnswer(inv -> new Reservation(
                         reservationId,
                         createdRider.getId(),
@@ -193,7 +199,8 @@ public class ReservationServiceImplTest {
                         inv.getArgument(3),
                         Reservation.Status.ACCEPTED,
                         CREATED_AT,
-                        UPDATED_AT));
+                        UPDATED_AT,
+                        TOTAL_PRICE));
 
         final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
         final String fromWall = fromDay.atTime(10, 0).toString();
@@ -274,14 +281,14 @@ public class ReservationServiceImplTest {
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
         Mockito.verify(reservationDao, Mockito.never()).createReservation(
-                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any());
+                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     public void testGetReservationByIdWhenReservationExists() {
         // 1. Arrange
         final Reservation reservation = new Reservation(
-                1L, 1L, 1L, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT);
+                1L, 1L, 1L, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT, TOTAL_PRICE);
         Mockito.when(reservationDao.getReservationById(1L)).thenReturn(Optional.of(reservation));
 
         // 2. Execute

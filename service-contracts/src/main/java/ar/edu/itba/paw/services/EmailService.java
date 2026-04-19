@@ -13,4 +13,6 @@ public interface EmailService {
     void sendMigratedUserPassword(String to, String plainPassword, Locale locale);
 
     void sendPasswordResetCode(String to, String code, Locale locale);
+
+    void sendReservationReminderEmail(final ReservationConfirmationPayload payload);
 }

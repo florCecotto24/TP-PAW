@@ -52,6 +52,7 @@ public class EmailServiceImpl implements EmailService {
     private static final String EMAIL_VERIFICATION_TEMPLATE = "html/email-verification-code";
     private static final String MIGRATED_PASSWORD_TEMPLATE = "html/migrated-password";
     private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
+    private static final String RESERVATION_REMINDER_TEMPLATE = "html/reservation-reminder-rider";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
@@ -179,6 +180,45 @@ public class EmailServiceImpl implements EmailService {
             LOG.info("Password reset code sent to " + to);
         } catch (final Exception e) {
             LOG.error("Failed to send password reset code to " + to, e);
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendReservationReminderEmail(final ReservationConfirmationPayload payload) {
+        if (payload == null) {
+            LOG.error("sendReservationConfirmationEmail called with null payload");
+            return;
+        }
+
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        ctx.setVariable("reservationTotal", payload.getReservationTotal());
+        ctx.setVariable("riderFullName", payload.getRiderFullName());
+        ctx.setVariable("reservationId", payload.getReservationId());
+        ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate(), mailLocale));
+        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate(), mailLocale));
+        final String delivery = payload.getDeliveryLocation();
+        final boolean hasDelivery = delivery != null && !delivery.isBlank();
+        ctx.setVariable("hasDeliveryLocation", hasDelivery);
+        ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
+        ctx.setVariable("ctaUrl", ctaUrl);
+
+        final String to = payload.getRecipientEmail();
+
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_REMINDER_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.reservationReminder.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOG.info("Reminder sent to " + to);
+        } catch (final Exception e) {
+            LOG.error("Failed to reminder to " + to, e);
         }
     }
 

@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -30,7 +31,8 @@ public class ReservationJdbcDao implements ReservationDao {
             JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"),
             Reservation.Status.valueOf(rs.getString("status").toUpperCase()),
             JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at")
+            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"),
+            rs.getBigDecimal("total_price")
     );
 
     private static final RowMapper<ReservationCard> RESERVATION_CARD_ROW_MAPPER = (rs, rowNum) -> new ReservationCard(
@@ -92,7 +94,8 @@ public class ReservationJdbcDao implements ReservationDao {
             final long listingId,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
-            final Reservation.Status status) {
+            final Reservation.Status status,
+            final BigDecimal totalPrice) {
         final Timestamp now = JdbcDateTimeUtils.nowTimestamp();
         final Map<String, Object> values = new HashMap<>();
         values.put("rider_id", riderId);
@@ -100,6 +103,7 @@ public class ReservationJdbcDao implements ReservationDao {
         values.put("start_date", JdbcDateTimeUtils.toTimestamp(startDate));
         values.put("end_date", JdbcDateTimeUtils.toTimestamp(endDate));
         values.put("status", status.name().toLowerCase());
+        values.put("total_price", totalPrice);
         values.put("created_at", now);
         values.put("updated_at", now);
         final Number id = jdbcInsert.executeAndReturnKey(values);
@@ -112,12 +116,25 @@ public class ReservationJdbcDao implements ReservationDao {
                 endDate,
                 status,
                 JdbcDateTimeUtils.toOffsetDateTime(now),
-                JdbcDateTimeUtils.toOffsetDateTime(now));
+                JdbcDateTimeUtils.toOffsetDateTime(now),
+                totalPrice);
     }
 
     @Override
     public Optional<Reservation> getReservationById(final long id) {
         return jdbcTemplate.query("SELECT * FROM reservations WHERE id = ?", RESERVATION_ROW_MAPPER, id).stream().findAny();
+    }
+
+    @Override
+    public List<Reservation> getReminderReservations(final OffsetDateTime from, final OffsetDateTime to) {
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations " +
+                        "WHERE status = 'accepted' " +
+                        "AND start_date >= ? " +
+                        "AND start_date < ?",
+                RESERVATION_ROW_MAPPER,
+                JdbcDateTimeUtils.toTimestamp(from),
+                JdbcDateTimeUtils.toTimestamp(to));
     }
 
     @Override
