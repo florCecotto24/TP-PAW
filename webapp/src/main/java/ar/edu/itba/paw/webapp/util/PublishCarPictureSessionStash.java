@@ -78,10 +78,6 @@ public class PublishCarPictureSessionStash {
         session.removeAttribute(SESSION_ATTRIBUTE);
     }
 
-    public int stashSize(final HttpSession session) {
-        return readStash(session).size();
-    }
-
     /**
      * @return metadata or {@code null} if the index does not exist
      */
@@ -93,8 +89,39 @@ public class PublishCarPictureSessionStash {
         return list.get(index);
     }
 
-    public Optional<byte[]> readRetainedBytes(final HttpSession session, final int index) throws IOException {
-        final PublishCarRetainedImage meta = getOrNull(session, index);
+    public PublishCarRetainedImage getOrNull(final HttpSession session, final String token) {
+        if (token == null || token.isBlank()) return null;
+        return readStash(session).stream()
+                .filter(r -> token.equals(r.stashToken()))
+                .findFirst().orElse(null);
+    }
+
+    public List<String> getStashedTokens(final HttpSession session) {
+        return readStash(session).stream()
+                .map(PublishCarRetainedImage::stashToken)
+                .toList();
+    }
+
+    public boolean removeByToken(final HttpSession session, final String token) {
+        if (token == null || token.isBlank()) return false;
+        final List<PublishCarRetainedImage> list = new ArrayList<>(readStash(session));
+        final boolean removed = list.removeIf(r -> {
+            if (token.equals(r.stashToken())) {
+                try {
+                    Files.deleteIfExists(stashFile(session.getId(), token));
+                } catch (IOException ignored) {}
+                return true;
+            }
+            return false;
+        });
+        if (removed) {
+            session.setAttribute(SESSION_ATTRIBUTE, list);
+        }
+        return removed;
+    }
+
+    public Optional<byte[]> readRetainedBytes(final HttpSession session, final String token) throws IOException {
+        final PublishCarRetainedImage meta = getOrNull(session, token);
         if (meta == null || meta.stashToken().isBlank()) {
             return Optional.empty();
         }

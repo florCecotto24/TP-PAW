@@ -367,64 +367,144 @@
 
     var retainedBlock = document.getElementById("publishRetainedPictures");
 
-    if (input && preview) {
-        input.addEventListener("change", function (event) {
-            hidePublishPicturesClientError();
-            var files = event.target.files;
-            preview.innerHTML = "";
-            if (retainedBlock) {
-                if (files && files.length > 0) {
-                    retainedBlock.classList.add("d-none");
-                } else {
-                    retainedBlock.classList.remove("d-none");
-                }
+    var selectedFiles = [];
+
+    function renderPreview() {
+        preview.innerHTML = "";
+        if (retainedBlock) {
+            if (selectedFiles.length > 0) {
+                retainedBlock.classList.add("d-none");
+            } else {
+                retainedBlock.classList.remove("d-none");
             }
-            if (!files || files.length === 0) {
-                return;
-            }
-            var err = validatePublishPictureFiles(files);
-            if (err) {
-                showPublishPicturesClientError(err);
-                input.value = "";
-                return;
-            }
-            Array.prototype.forEach.call(files, function (file) {
-                var col = document.createElement("div");
-                col.className = "col-6 col-md-4";
+        }
 
-                var card = document.createElement("div");
-                card.className = "border rounded p-2";
+        var dt = new DataTransfer();
+        selectedFiles.forEach(function(f) { dt.items.add(f); });
+        input.files = dt.files;
 
-                var img = document.createElement("img");
-                img.className = "img-fluid rounded";
-                img.style.height = "130px";
-                img.style.objectFit = "cover";
-                img.alt = file.name;
+        if (selectedFiles.length === 0) {
+            return;
+        }
 
-                var name = document.createElement("small");
-                name.className = "d-block text-truncate mt-1";
-                name.textContent = file.name;
+        var err = validatePublishPictureFiles(selectedFiles);
+        if (err) {
+            showPublishPicturesClientError(err);
+            selectedFiles = [];
+            input.value = "";
+            renderPreview();
+            return;
+        }
 
-                card.appendChild(img);
-                card.appendChild(name);
-                col.appendChild(card);
-                preview.appendChild(col);
+        selectedFiles.forEach(function (file, index) {
+            var col = document.createElement("div");
+            col.className = "col-6 col-md-4";
 
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+            var card = document.createElement("div");
+            card.className = "border rounded p-2 position-relative";
+
+            var img = document.createElement("img");
+            img.className = "img-fluid rounded";
+            img.style.height = "130px";
+            img.style.objectFit = "cover";
+            img.style.width = "100%";
+            img.alt = file.name;
+
+            var name = document.createElement("small");
+            name.className = "d-block text-truncate mt-1";
+            name.textContent = file.name;
+
+            var removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "btn btn-sm btn-danger position-absolute top-0 end-0 m-1";
+            removeBtn.setAttribute("aria-label", "Remove image");
+            removeBtn.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
+
+            removeBtn.addEventListener("click", function() {
+                selectedFiles.splice(index, 1);
+                renderPreview();
             });
+
+            card.appendChild(img);
+            card.appendChild(name);
+            card.appendChild(removeBtn);
+            col.appendChild(card);
+            preview.appendChild(col);
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         });
     }
 
+    if (input && preview) {
+        input.addEventListener("change", function (event) {
+            hidePublishPicturesClientError();
+            var newFiles = event.target.files;
+
+            if (newFiles && newFiles.length > 0) {
+                for (var i = 0; i < newFiles.length; i++) {
+                    var isDuplicate = false;
+                    for (var j = 0; j < selectedFiles.length; j++) {
+                        if (selectedFiles[j].name === newFiles[i].name && selectedFiles[j].size === newFiles[i].size) {
+                            isDuplicate = true;
+                            break;
+                        }
+                    }
+                    if (!isDuplicate) {
+                        selectedFiles.push(newFiles[i]);
+                    }
+                }
+            }
+            renderPreview();
+        });
+    }
+
+    if (retainedBlock) {
+        var btnNodes = retainedBlock.querySelectorAll('.ryden-publish-remove-retained-btn');
+        for (var i = 0; i < btnNodes.length; i++) {
+            btnNodes[i].addEventListener('click', function(e) {
+                e.preventDefault();
+                var btn = e.currentTarget;
+                var url = btn.getAttribute('data-remove-url');
+                var col = btn.closest('[data-retained-picture-col]');
+
+                var csrfInput = form ? form.querySelector('input[name="_csrf"]') : null;
+                var formData = new URLSearchParams();
+                if (csrfInput) {
+                    formData.append('_csrf', csrfInput.value);
+                }
+
+                if (url && col) {
+                    btn.disabled = true;
+                    fetch(url, {
+                        method: 'POST',
+                        body: formData
+                    }).then(function(res) {
+                        if (res.ok) {
+                            col.remove();
+                            // If it's the last one, hide the container.
+                            if (retainedBlock.querySelectorAll('[data-retained-picture-col]').length === 0) {
+                                retainedBlock.classList.add("d-none");
+                            }
+                        } else {
+                            btn.disabled = false;
+                        }
+                    }).catch(function(err) {
+                        btn.disabled = false;
+                    });
+                }
+            });
+        }
+    }
+
     function publishCarRetainedPictureDomCount() {
-        var block = document.getElementById("publishRetainedPictures");
-        if (!block) {
+        if (!retainedBlock) {
             return 0;
         }
-        return block.querySelectorAll("img").length;
+        return retainedBlock.querySelectorAll('[data-retained-picture-col]').length;
     }
 
     if (form && submitBtn) {

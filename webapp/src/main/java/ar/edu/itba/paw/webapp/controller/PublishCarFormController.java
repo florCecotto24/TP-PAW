@@ -98,19 +98,19 @@ public class PublishCarFormController {
         return mav;
     }
 
-    @GetMapping("/retained-picture/{index:\\d+}")
+    @GetMapping("/retained-picture/{token}")
     public ResponseEntity<byte[]> retainedPicture(
             final Authentication authentication,
             final HttpSession session,
-            @PathVariable final int index) {
+            @PathVariable final String token) {
         WebAuthUtils.requireCurrentUser(authentication);
-        final PublishCarRetainedImage img = pictureStash.getOrNull(session, index);
+        final PublishCarRetainedImage img = pictureStash.getOrNull(session, token);
         if (img == null) {
             return ResponseEntity.notFound().build();
         }
         final Optional<byte[]> bytes;
         try {
-            bytes = pictureStash.readRetainedBytes(session, index);
+            bytes = pictureStash.readRetainedBytes(session, token);
         } catch (final IOException e) {
             return ResponseEntity.notFound().build();
         }
@@ -121,12 +121,24 @@ public class PublishCarFormController {
         return ResponseEntity.ok().contentType(mediaType).body(bytes.get());
     }
 
-    @PostMapping
-    public ModelAndView formSubmit(
+    @PostMapping("/retained-picture/{token}/remove")
+    public ResponseEntity<Void> removeRetainedPicture(
             final Authentication authentication,
+            final HttpSession session,
+            @PathVariable final String token) {
+        WebAuthUtils.requireCurrentUser(authentication);
+        if (pictureStash.removeByToken(session, token)) {
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping
+    public ModelAndView publish(
+            final Authentication authentication,
+            final HttpSession session,
             @ModelAttribute("publishCarForm") final PublishCarForm form,
-            final BindingResult errors,
-            final HttpSession session) {
+            final BindingResult errors) {
         pictureStash.trySyncFromForm(form, session, errors);
         if (errors.hasErrors()) {
             return publishCarFormView(authentication, session);
@@ -217,7 +229,10 @@ public class PublishCarFormController {
         final var me = WebAuthUtils.requireCurrentUser(authentication);
         mav.addObject("publisherEmail", me.getUsername());
         mav.addObject("publisherDisplayName", me.getForename() + " " + me.getSurname());
-        mav.addObject("retainedPicturesCount", pictureStash.stashSize(session));
+        final List<String> stashedTokens = pictureStash.getStashedTokens(session);
+        mav.addObject("retainedPictureTokens", stashedTokens);
+        mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
         return mav;
     }
+
 }

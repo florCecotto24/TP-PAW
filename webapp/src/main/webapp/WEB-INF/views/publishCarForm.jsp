@@ -157,6 +157,7 @@
 
                         <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="publishImageTooLargeMsg" htmlEscape="true"/>
                         <spring:message code="validation.pictures.mustBeImage" var="publishMustBeImageMsg" htmlEscape="true"/>
+                        <spring:message code="publishCar.form.removeImage" var="removeImageLabel"/>
                         <div class="mb-3">
                             <span class="form-label required-label d-block"><spring:message code="publishCar.form.pictures"/></span>
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
@@ -168,15 +169,19 @@
                                 <label id="picturesChooseLabel" for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
                             </div>
                             <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint" arguments="${uploadMaxImageMegabytes}"/></small>
-                            <c:if test="${retainedPicturesCount > 0}">
+                            <c:if test="${not empty retainedPictureTokens}">
                                 <div id="publishRetainedPictures" class="row g-2 mt-2">
-                                    <c:forEach var="rpIdx" begin="0" end="${retainedPicturesCount - 1}">
-                                        <div class="col-6 col-md-4">
-                                            <div class="border rounded p-2">
+                                    <c:forEach var="rpToken" items="${retainedPictureTokens}">
+                                        <div class="col-6 col-md-4" data-retained-picture-col>
+                                            <div class="border rounded p-2 position-relative">
                                                 <img class="img-fluid rounded"
                                                      style="height:130px;object-fit:cover;width:100%"
                                                      alt=""
-                                                     src="${pageContext.request.contextPath}/publish-car/retained-picture/${rpIdx}"/>
+                                                     src="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}"/>
+                                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 ryden-publish-remove-retained-btn"
+                                                        aria-label="${removeImageLabel}" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}/remove">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                                </button>
                                             </div>
                                         </div>
                                     </c:forEach>
@@ -206,3 +211,4 @@
 <%@include file="footer.jsp" %>
 </body>
 </html>
+
