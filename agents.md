@@ -15,8 +15,8 @@ The project is divided into the following modules:
 
 ## Technologies
 
-- **Backend**: Java 21, Spring 5.3 (MVC, JDBC, Context, TX, Context Support for mail).
-- **Database**: PostgreSQL (runtime), HSQLDB (DAO / persistence tests).
+- **Backend**: Java 21, Spring 5.3 (MVC, JDBC, Context, TX, Context Support for mail), Spring Security 5.7.14.
+- **Database**: PostgreSQL (runtime), HSQLDB (DAO / persistence tests). Schema managed via **Flyway** (`V2__`, `V3__` migrations under `classpath:db/migration`).
 - **Web UI**: JSP (`webapp/src/main/webapp/WEB-INF/views/`), Spring form tags, custom JSP tags under `WEB-INF/tags/`.
 - **Client scripts**: Shared JS in `webapp/src/main/webapp/js/` (e.g. **Flatpickr** for date/range pickers, loaded from CDN in `header.jsp` / `footer.jsp`).
 - **Email**: JavaMail, **Thymeleaf** HTML templates (`webapp/src/main/resources/mail/html/`), separate `ResourceBundleMessageSource` for mail copy (`mail/MailMessages` + locale variants).
@@ -29,7 +29,7 @@ The project is divided into the following modules:
 
 - Java 21
 - Maven
-- PostgreSQL reachable with credentials defined in **`webapp/src/main/resources/application.properties`** (`spring.datasource.url`, `spring.datasource.username`, `spring.datasource.password`). Optional overrides: `application-${spring.profiles.active}.properties` (see `@PropertySources` in `WebConfig`).
+- PostgreSQL reachable with credentials defined in **`webapp/src/main/resources/application.properties`** (`spring.datasource.url`, `spring.datasource.username`, `spring.datasource.password`). Optional overrides: `application-${spring.profiles.active}.properties` (see `@PropertySources` in `WebConfig`). Local development: use `application-local.properties` for a local PostgreSQL instance.
 
 ### Key commands
 
@@ -78,8 +78,10 @@ mvn test
 ### Coding style
 
 - **Dependency injection**: Constructor injection with Spring `@Autowired` (as used in existing services/config).
-- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`) plus `web.xml` for servlet bootstrap.
-- **Persistence**: Plain SQL with `JdbcTemplate`; schema applied via `DataSourceInitializer` and `schema.sql` (under `persistence` resources, on the classpath for the webapp module).
+- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, `ValidationWebConfig`) plus `web.xml` for servlet bootstrap.
+- **Persistence**: Plain SQL with `JdbcTemplate`; schema initialized via `DataSourceInitializer` (schema-bootstrap) and `schema.sql` (under `persistence/src/main/resources`), then Flyway migrations applied from `db/migration/` (e.g., `V2__*.sql`, `V3__*.sql`).
+- **Security**: Configured in `WebAuthConfig` with Spring Security 5.7.14. Uses `@EnableWebSecurity`, `SecurityFilterChain`, custom `RydenAuthenticationProvider` and `RydenUserDetailsService`. Remember-me support, session-based auth, CSRF protection.
+- **Validation**: `ValidationWebConfig` implements `WebMvcConfigurer` to inject `LocalValidatorFactoryBean` as the MVC validator. Bean validation and Spring form validation combined.
 
 ### Dependency management
 
@@ -98,9 +100,33 @@ mvn test
 
 - Domain / validation strings for exceptions: **`exception-messages.properties`** (and `_es`), keyed consistently with **`ar.edu.itba.paw.exception.MessageKeys`**.
 
+### Application properties
+
+- **Main config**: `webapp/src/main/resources/application.properties` defines database credentials, server port, context path (`/api`), upload limits, validation rules (password min-length, phone pattern), and mail links context.
+- **Profile-specific**: `application-local.properties` for local PostgreSQL development (overrides `spring.datasource.*` settings).
+- **Mail config**: `mail/emailconfig.properties` and `mail/javamail.properties` under `webapp/src/main/resources/mail/`.
+
+### Flyway database migrations
+
+- **Location**: `classpath:db/migration/` (under `webapp/src/main/resources/db/migration/`).
+- **Schema bootstrap**: `schema.sql` loaded first via `DataSourceInitializer`, then Flyway migrations applied.
+- **Flyway config** (in `WebConfig.java`): `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
+- **Existing migrations**: `V2__users_extend_profile_and_auth.sql`, `V3__email_verification_codes.sql`.
+- **Note**: New migrations should follow naming convention `V<number>__<description>.sql`.
+
 ### Directory structure (per module)
 
 - `src/main/java`: Java sources.
 - `src/main/resources`: Config, SQL, i18n bundles, mail templates.
 - `src/test/java`: Tests.
 - `webapp/src/main/webapp`: JSPs, CSS, JS, `WEB-INF/web.xml`.
+- **webapp component scan** (`WebConfig`): Covers `ar.edu.itba.paw.webapp.controller`, `ar.edu.itba.paw.webapp.util`, `ar.edu.itba.paw.webapp.security`, `ar.edu.itba.paw.webapp.validation`, plus `ar.edu.itba.paw.services` and `ar.edu.itba.paw.persistence`.
+
+### Key services and DAOs
+
+- **User**: `UserService` / `UserDao` — authentication, registration, profile management.
+- **Car & Listing**: `CarService` / `CarDao`, `ListingService` / `ListingDao` — rental inventory.
+- **Reservation**: `ReservationService` / `ReservationDao` — booking management.
+- **Email & verification**: `EmailService`, `EmailVerificationService` / `EmailVerificationCodeDao`, `PasswordResetService` / `PasswordResetCodeDao` — password reset flows, async email sending.
+- **Image & picture**: `ImageService` / `ImageDao`, `CarPictureService` / `CarPictureDao` — image uploads and associations.
+- **Session listener**: `PublishCarStashSessionListener` (in `webapp/src/main/java/ar/edu/itba/paw/webapp/listener/`) manages session state for car publish forms.

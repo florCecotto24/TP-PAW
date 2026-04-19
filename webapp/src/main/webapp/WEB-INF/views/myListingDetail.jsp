@@ -68,7 +68,7 @@
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
                     <form:form method="post"
-                               action="<c:out value='${editListingUrl}'/>"
+                               action="${editListingUrl}"
                                modelAttribute="editForm"
                                class="row g-3">
                         <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
