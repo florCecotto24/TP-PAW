@@ -17,11 +17,9 @@
     <div class="profile-header">
         <h1 class="profile-header__title"><spring:message code="profile.heading"/></h1>
         <div class="profile-header__actions">
-            <!-- Modo lectura: solo botón Edit -->
             <button id="editProfileBtn" type="button" class="btn btn-primary" style="display: none;">
                 <spring:message code="profile.edit"/>
             </button>
-            <!-- Modo edición: Cancel y Save Changes -->
             <div id="editingActions" style="display: none;">
                 <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary">
                     <spring:message code="common.cancel"/>
@@ -115,7 +113,6 @@
         </div>
     </div>
 
-    <!-- Modo lectura: mostrar datos sin editar -->
     <div class="profile-card profile-card--section" id="profileViewSection">
         <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
         <hr class="profile-card__divider">
