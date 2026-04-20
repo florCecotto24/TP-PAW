@@ -280,8 +280,65 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     public Optional<Reservation> cancelReservation(final long reservationId) {
         reservationDao.updateReservationStatus(reservationId, Reservation.Status.CANCELLED.name().toLowerCase());
-        return reservationDao.getReservationById(reservationId);
+        final Optional<Reservation> reservationOpt = reservationDao.getReservationById(reservationId);
+        if (reservationOpt.isPresent()) {
+            enqueueCancellationEmail(reservationId, reservationOpt.get());
+        }
+        return reservationOpt;
+    }
+
+    private void enqueueCancellationEmail(
+            final long reservationId,
+            final Reservation reservation) {
+        try {
+            final long riderId = reservation.getRiderId();
+            final long listingId = reservation.getListingId();
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
+            final Optional<Listing> listingOpt = listingService.getListingById(listingId);
+            if (riderOpt.isEmpty()) {
+                LOGGER.atWarn().log("Skipping reservation cancellation email: user not found for riderId=" + riderId
+                        + " reservationId=" + reservationId);
+                return;
+            }
+            if (listingOpt.isEmpty()) {
+                LOGGER.atWarn().log("Skipping reservation cancellation email: listing not found for listingId=" + listingId
+                        + " reservationId=" + reservationId);
+                return;
+            }
+            if (listingOwnerOpt.isEmpty()) {
+                LOGGER.atWarn().log("Skipping reservation cancellation email: listing owner not found for listingId=" + listingId
+                        + " reservationId=" + reservationId);
+                return;
+            }
+            final User rider = riderOpt.get();
+            final User listingOwner = listingOwnerOpt.get();
+            final Listing listing = listingOpt.get();
+            final String vehicleLabel = listing.getTitle();
+            final String riderFullName = rider.getForename() + " " + rider.getSurname();
+            final String trimmedDelivery =
+                    listing.getStartPoint() == null || listing.getStartPoint().isBlank() ? null : listing.getStartPoint().trim();
+            final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
+                    rider.getEmail(),
+                    riderFullName,
+                    reservation.getId(),
+                    listingId,
+                    vehicleLabel,
+                    reservation.getStartDate(),
+                    reservation.getEndDate(),
+                    trimmedDelivery,
+                    listingOwner.getForename() + " " + listingOwner.getSurname(),
+                    listingOwner.getEmail(),
+                    reservation.getTotalPrice().toString(),
+                    resolveMailMessageLocale());
+            LOGGER.atInfo().log("Queueing reservation cancellation email to " + rider.getEmail()
+                    + " for reservation id=" + reservationId);
+            emailService.sendReservationCancellationEmail(payload);
+        } catch (final Exception e) {
+            LOGGER.atError().log("Could not enqueue reservation cancellation email for reservation id=" + reservationId, e);
+        }
     }
 }

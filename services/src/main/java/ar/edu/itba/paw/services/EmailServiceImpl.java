@@ -45,6 +45,8 @@ public class EmailServiceImpl implements EmailService {
 
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
+    private static final String RESERVATION_CANCELLATION_USER_TEMPLATE = "html/reservation-cancellation-rider";
+    private static final String RESERVATION_CANCELLATION_OWNER_TEMPLATE = "html/reservation-cancellation-owner";
     private static final String EMAIL_VERIFICATION_TEMPLATE = "html/email-verification-code";
     private static final String MIGRATED_PASSWORD_TEMPLATE = "html/migrated-password";
     private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
@@ -242,6 +244,73 @@ public class EmailServiceImpl implements EmailService {
 
             final String subject = emailMessageSource.getMessage(
                     "mail.reservationConfirmation.subject",
+                    new Object[]{payload.getVehicleLabel()},
+                    payload.getMessageLocale());
+            sendEmail(payload.getOwnerEmail(), subject, htmlContent);
+        });
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendReservationCancellationEmail(final ReservationConfirmationPayload payload) {
+        if (payload == null) {
+            LOGGER.atError().log("sendReservationCancellationEmail called with null payload");
+            return;
+        }
+
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        ctx.setVariable("reservationTotal", payload.getReservationTotal());
+        ctx.setVariable("riderFullName", payload.getRiderFullName());
+        ctx.setVariable("reservationId", payload.getReservationId());
+        ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate(), mailLocale));
+        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate(), mailLocale));
+        final String delivery = payload.getDeliveryLocation();
+        final boolean hasDelivery = delivery != null && !delivery.isBlank();
+        ctx.setVariable("hasDeliveryLocation", hasDelivery);
+        ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        final String ctaUrlRider = baseUrl + "/my-reservations/" + payload.getReservationId();
+        ctx.setVariable("ctaUrlRider", ctaUrlRider);
+        final String ctaUrlOwner = baseUrl + "/my-listings/" + payload.getListingId();
+        ctx.setVariable("ctaUrlOwner", ctaUrlOwner);
+
+        try {
+            sendReservationCancellationToClient(payload, ctx);
+            sendReservationCancellationToOwner(payload, ctx);
+            LOGGER.atInfo().log("Reservation cancellation email sent to " + payload.getRecipientEmail()
+                    + " (reservation id=" + payload.getReservationId() + ")");
+            LOGGER.atInfo().log("Reservation cancellation email sent to " + payload.getOwnerEmail()
+                    + " (reservation id=" + payload.getReservationId() + ")");
+        } catch (final Exception e) {
+            LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to send reservation cancellation email (reservation id={})");
+        }
+    }
+
+    private void sendReservationCancellationToClient(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+        runMail(() -> {
+
+            ctx.setVariable("ownerEmail", payload.getOwnerEmail());
+            final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CANCELLATION_USER_TEMPLATE, ctx);
+
+            final String subject = emailMessageSource.getMessage(
+                    "mail.reservationCancelled.subject",
+                    new Object[]{payload.getVehicleLabel()},
+                    payload.getMessageLocale());
+            sendEmail(payload.getRecipientEmail(), subject, htmlContent);
+        });
+    }
+
+    private void sendReservationCancellationToOwner(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+        runMail(() -> {
+            ctx.setVariable("riderEmail", payload.getRecipientEmail());
+
+            final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CANCELLATION_OWNER_TEMPLATE, ctx);
+
+            final String subject = emailMessageSource.getMessage(
+                    "mail.reservationCancelled.subject",
                     new Object[]{payload.getVehicleLabel()},
                     payload.getMessageLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);

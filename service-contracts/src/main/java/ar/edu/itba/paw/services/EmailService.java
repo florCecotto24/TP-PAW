@@ -8,6 +8,8 @@ public interface EmailService {
 
     void sendReservationConfirmationEmail(ReservationConfirmationPayload payload);
 
+    void sendReservationCancellationEmail(ReservationConfirmationPayload payload);
+
     void sendEmailVerificationCode(String to, String code, Locale locale);
 
     void sendMigratedUserPassword(String to, String plainPassword, Locale locale);
