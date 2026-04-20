@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.persistence.CarDao;
@@ -20,6 +21,7 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional
     public Car createCar(
             final long ownerId,
             final String plate,
@@ -32,16 +34,19 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Car> getCarById(final long id) {
         return carDao.getCarById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Car> getCheapestCars() {
         return carDao.getCheapestCars();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Car> getMostRecentCars() {
         return carDao.getMostRecentCars();
     }

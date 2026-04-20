@@ -191,11 +191,13 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Listing> getListingById(final long id) {
         return listingDao.getListingById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<ListingDetail> getListingDetailById(final long id) {
         return listingDao.getListingDetailById(id);
     }
@@ -237,11 +239,13 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ListingAvailability> findAvailabilityByListingId(final long listingId) {
         return listingAvailabilityDao.findByListingId(listingId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(final long listingId) {
         final TreeSet<LocalDate> days = new TreeSet<>();
         for (final ListingAvailability la : findAvailabilityByListingId(listingId)) {
@@ -287,6 +291,7 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean reservationIntervalFitsListingAvailability(
             final long listingId,
             final Long availabilityId,
@@ -320,36 +325,43 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Listing> getAllListings() {
         return listingDao.getAllListings();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Listing> searchListings(final ListingSearchCriteria criteria) {
         return listingDao.searchListings(criteria);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Listing> getCheapestListings(int limit) {
         return listingDao.getCheapestListings(limit);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Listing> getMostRecentListings(int limit) {
         return listingDao.getMostRecentListings(limit);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize) {
         return listingDao.getCheapestListingCards(page, pageSize);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize) {
         return listingDao.getMostRecentListingCards(page, pageSize);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ListingCard> getOwnerListingCards(final long ownerId, final int page, final int pageSize) {
         final int safePage = Math.max(0, page);
         final int safePageSize = pageSize > 0 ? pageSize : PAGE_SIZE;
@@ -357,11 +369,13 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean hasListingsByOwner(final long ownerId) {
         return listingDao.hasListingsByOwner(ownerId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public HomeListingCards getHomeListingCards(final int limit) {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);
@@ -370,6 +384,7 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
         final List<ListingCard> all = listingDao.searchListingCards(criteria);
         final long total = all.size();
@@ -381,6 +396,7 @@ public class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ListingCard> findSimilarListingCards(final long listingId, final int limit) {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);

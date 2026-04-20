@@ -18,7 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
 
+@CheckOutAfterCheckIn
 public class PublishCarForm {
 
     @NotBlank(message = "{validation.brand.notBlank}")

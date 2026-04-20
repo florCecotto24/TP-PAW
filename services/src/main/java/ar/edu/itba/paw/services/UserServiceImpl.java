@@ -74,21 +74,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> findByEmail(final String email) {
         return userDao.findByEmail(EmailNormalizer.normalize(email));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> getUserById(final long id) {
         return userDao.getUserById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> findByEmailForAuthentication(final String email) {
         return userDao.findByEmailForAuthentication(email);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<User> getListingOwner(final long listingId) {
         return userDao.getListingOwner(listingId);
     }
@@ -101,6 +105,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void updatePhoneNumber(final long userId, final String phoneRaw) {
         userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final String phone = normalizeOptionalPhone(phoneRaw);
@@ -114,6 +119,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void updateBirthDate(final long userId, final LocalDate birthDate) {
         userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (birthDate != null) {

@@ -51,6 +51,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     public Reservation createReservation(
             final long riderId,
             final long listingId,
@@ -131,17 +132,20 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Reservation> getReservationById(final long id) {
         return reservationDao.getReservationById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Reservation> getRiderReservationById(final long riderId, final long reservationId) {
         return reservationDao.getReservationById(reservationId)
                 .filter(reservation -> reservation.getRiderId() == riderId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ReservationCard> getRiderReservationCards(final long riderId, final int page, final int pageSize) {
         return reservationDao.getRiderReservationCards(riderId, page, pageSize);
     }
@@ -159,6 +163,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<String> reservationTotalDisplay(
             final Long listingId,
             final String fromDateTime,
@@ -215,6 +220,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<BigDecimal> calculateTotal(
             final long listingId,
             final OffsetDateTime startDate,

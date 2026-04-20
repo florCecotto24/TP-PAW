@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
@@ -50,6 +51,7 @@ public class ImageServiceImpl implements ImageService {
     }
 
     @Override
+    @Transactional
     public Image createImage(final String name, final String contentType, final byte[] data) {
         if (!Image.isImageContentType(contentType)) {
             throw new ImageValidationException(MessageKeys.IMAGE_CONTENT_TYPE_NOT_IMAGE);
@@ -66,11 +68,13 @@ public class ImageServiceImpl implements ImageService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Image> getImageById(final long id) {
         return imageDao.getImageById(id);
     }
 
     @Override
+    @Transactional
     public void deleteImage(final long id) {
         imageDao.deleteImage(id);
     }

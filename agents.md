@@ -130,3 +130,41 @@ mvn test
 - **Email & verification**: `EmailService`, `EmailVerificationService` / `EmailVerificationCodeDao`, `PasswordResetService` / `PasswordResetCodeDao` — password reset flows, async email sending.
 - **Image & picture**: `ImageService` / `ImageDao`, `CarPictureService` / `CarPictureDao` — image uploads and associations.
 - **Session listener**: `PublishCarStashSessionListener` (in `webapp/src/main/java/ar/edu/itba/paw/webapp/listener/`) manages session state for car publish forms.
+
+## Logging
+
+Use SLF4J (never Log4j or `java.util.logging`). Declare the logger as:
+
+```java
+private static final Logger LOGGER = LoggerFactory.getLogger(ClassName.class);
+```
+
+Always use parameterized logging to avoid string construction overhead:
+```java
+LOGGER.debug("Creating user with email {}", email); // correct
+LOGGER.debug("Creating user with email " + email);  // wrong
+```
+
+## Transactions
+
+All service methods must be annotated with `@Transactional` (import: `org.springframework.transaction.annotation.Transactional`). 
+Read-only methods must use `@Transactional(readOnly = true)` — this is also a hint for DB connection pool routing (primary/replica).
+
+**Critical proxy limitation**: `@Transactional` is applied via Spring proxy. Internal calls within the same class (e.g. `this.someMethod()`) bypass the proxy and will NOT be transactional, even if annotated. Only public interface methods get the transactional behavior. Annotate every method individually rather than relying on class-level annotations plus internal delegation.
+
+## Controller cross-cutting concerns
+
+### Shared model attributes
+Use the anottation `@ControllerAdvice` for exposing `@ModelAttribute's across all the controllers.
+
+
+## Spring AOP annotations enabled in WebConfig
+
+- `@Async` — for fire-and-forget methods (e.g., sending emails). Methods must
+  receive locale and user as arguments; do NOT access `LocaleContextHolder` or
+  `SecurityContextHolder` inside an `@Async` method (different thread).
+- `@Scheduled` — for recurring background tasks.
+- `@Cacheable` — for caching expensive computations.
+
+These work via proxies (same limitation as `@Transactional`): they only apply
+to public interface methods called from outside the class.

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
@@ -22,6 +23,7 @@ public class CarPictureServiceImpl implements CarPictureService{
     }
 
     @Override
+    @Transactional
     public CarPicture createCarPicture(final long carId, final long imageId, final int displayOrder) {
         if (imageId <= 0 || imageService.getImageById(imageId).isEmpty()) {
             throw new ImageValidationException(MessageKeys.IMAGE_INVALID_ID);
@@ -30,11 +32,13 @@ public class CarPictureServiceImpl implements CarPictureService{
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<CarPicture> getCarPictureById(final long id) {
         return carPictureDao.getCarPictureById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CarPicture> getCarPicturesByCarId(final long carId) {
         return carPictureDao.getCarPicturesByCarId(carId);
     }
