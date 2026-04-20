@@ -19,7 +19,6 @@
 
     <c:url var="reserveCarUrl" value="/search"/>
 
-    <!-- NAV TABS -->
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link ${empty param.tab or param.tab eq 'rider' ? 'active' : ''}" id="rider-tab" data-bs-toggle="tab" data-bs-target="#rider-pane" type="button" role="tab" aria-controls="rider-pane" aria-selected="${empty param.tab or param.tab eq 'rider' ? 'true' : 'false'}">
@@ -33,9 +32,7 @@
         </li>
     </ul>
 
-    <!-- TAB CONTENT -->
     <div class="tab-content">
-        <!-- RIDER RESERVATIONS TAB -->
         <div class="tab-pane fade ${empty param.tab or param.tab eq 'rider' ? 'show active' : ''}" id="rider-pane" role="tabpanel" aria-labelledby="rider-tab">
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h3 class="h6 mb-0">
@@ -135,7 +132,6 @@
             </c:choose>
         </div>
 
-        <!-- OWNER RESERVATIONS TAB -->
         <div class="tab-pane fade ${param.tab eq 'owner' ? 'show active' : ''}" id="owner-pane" role="tabpanel" aria-labelledby="owner-tab">
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h3 class="h6 mb-0">

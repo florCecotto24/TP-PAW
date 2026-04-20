@@ -99,8 +99,8 @@
                         <c:choose>
                             <c:when test="${canCancel}">
                                 <form:form method="post" action="${cancelUrl}" cssClass="d-grid">
-                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-                                    <input type="hidden" name="role" value="${reservationRole}"/>
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <input type="hidden" name="role" value="<c:out value='${reservationRole}'/>"/>
                                     <button type="submit" class="btn btn-outline-danger">
                                         <spring:message code="myReservationDetail.actions.cancel"/>
                                     </button>
