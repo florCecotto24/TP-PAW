@@ -18,6 +18,12 @@
     </section>
 
     <c:url var="reserveCarUrl" value="/search"/>
+    <c:url var="myReservationsRiderPaginationBaseUrl" value="/my-reservations">
+        <c:param name="tab" value="rider"/>
+    </c:url>
+    <c:url var="myReservationsOwnerPaginationBaseUrl" value="/my-reservations">
+        <c:param name="tab" value="owner"/>
+    </c:url>
 
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
@@ -126,7 +132,7 @@
                     <ryden:pagination
                             currentPage="${riderReservationsPage.currentPage}"
                             totalPages="${riderReservationsPage.totalPages}"
-                            baseUrl="/my-reservations?tab=rider"
+                            baseUrl="${myReservationsRiderPaginationBaseUrl}"
                             pageParam="riderPage"/>
                 </c:otherwise>
             </c:choose>
@@ -222,7 +228,7 @@
                     <ryden:pagination
                             currentPage="${ownerReservationsPage.currentPage}"
                             totalPages="${ownerReservationsPage.totalPages}"
-                            baseUrl="/my-reservations?tab=owner"
+                            baseUrl="${myReservationsOwnerPaginationBaseUrl}"
                             pageParam="ownerPage"/>
                 </c:otherwise>
             </c:choose>
