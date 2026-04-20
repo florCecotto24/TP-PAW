@@ -4,6 +4,7 @@ import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+import ar.edu.itba.paw.webapp.validation.NoPunctuation;
 import ar.edu.itba.paw.webapp.validation.RegistrationPasswordRules;
 
 @RegistrationPasswordRules
@@ -11,10 +12,12 @@ public class RegistrationAccountForm implements RegistrationPasswordConfirmField
 
     @NotBlank(message = "{register.forename.required}")
     @Size(max = 50)
+    @NoPunctuation
     private String forename = "";
 
     @NotBlank(message = "{register.surname.required}")
     @Size(max = 50)
+    @NoPunctuation
     private String surname = "";
 
     @NotBlank(message = "{register.email.required}")

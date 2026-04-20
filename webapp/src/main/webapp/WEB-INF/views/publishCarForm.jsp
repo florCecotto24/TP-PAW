@@ -51,7 +51,7 @@
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.plate"/></label>
                             <form:input path="plate" cssClass="form-control" cssErrorClass="form-control is-invalid"
-                                        maxlength="10" data-ryden-plate="true" style="text-transform:uppercase"/>
+                                        maxlength="10" data-ryden-plate="true" data-ryden-no-punctuation="true" style="text-transform:uppercase"/>
                             <form:errors path="plate" cssClass="text-danger d-block"/>
                         </div>
 

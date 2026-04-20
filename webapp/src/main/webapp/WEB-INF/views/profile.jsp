@@ -151,12 +151,12 @@
             <div class="profile-fields-grid">
                 <div class="mb-3">
                     <label for="forename" class="form-label"><spring:message code="profile.forename"/></label>
-                    <form:input path="forename" id="forename" cssClass="form-control" maxlength="50" autocomplete="given-name"/>
+                    <form:input path="forename" id="forename" cssClass="form-control" maxlength="50" autocomplete="given-name" data-ryden-no-punctuation="true"/>
                     <form:errors path="forename" cssClass="text-danger small d-block" element="div"/>
                 </div>
                 <div class="mb-3">
                     <label for="surname" class="form-label"><spring:message code="profile.surname"/></label>
-                    <form:input path="surname" id="surname" cssClass="form-control" maxlength="50" autocomplete="family-name"/>
+                    <form:input path="surname" id="surname" cssClass="form-control" maxlength="50" autocomplete="family-name" data-ryden-no-punctuation="true"/>
                     <form:errors path="surname" cssClass="text-danger small d-block" element="div"/>
                 </div>
                 <div class="mb-3">

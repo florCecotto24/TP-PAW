@@ -29,12 +29,12 @@
 
         <div class="mb-3">
             <label for="forename" class="form-label"><spring:message code="register.forename"/></label>
-            <form:input path="forename" id="forename" cssClass="form-control" maxlength="50" required="required"/>
+            <form:input path="forename" id="forename" cssClass="form-control mb-1" maxlength="50" autocomplete="given-name" data-ryden-no-punctuation="true"/>
             <form:errors path="forename" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">
             <label for="surname" class="form-label"><spring:message code="register.surname"/></label>
-            <form:input path="surname" id="surname" cssClass="form-control" maxlength="50" required="required"/>
+            <form:input path="surname" id="surname" cssClass="form-control mb-1" maxlength="50" autocomplete="family-name" data-ryden-no-punctuation="true"/>
             <form:errors path="surname" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">

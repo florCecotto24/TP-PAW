@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.models.Car;
 import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.NoPunctuation;
 
 @CheckOutAfterCheckIn
 public class PublishCarForm {
@@ -33,6 +34,7 @@ public class PublishCarForm {
     @Size(min = 6, max = 10, message = "Plate must be between 6 and 10 characters")
     @NotBlank(message = "{validation.plate.notBlank}")
     // Acá podríamos poner las validaciones de las patentes argentinas (dividir entre nuevas y viejas)
+    @NoPunctuation
     private String plate;
 
     @NotNull(message = "{validation.type.notNull}")

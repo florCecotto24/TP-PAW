@@ -3,16 +3,19 @@ package ar.edu.itba.paw.webapp.form;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+import ar.edu.itba.paw.webapp.validation.NoPunctuation;
 import ar.edu.itba.paw.webapp.validation.PhoneNumber;
 
 public class ProfileUpdateForm {
 
     @NotBlank(message = "{profile.forename.required}")
     @Size(max = 50, message = "{profile.forename.size}")
+    @NoPunctuation
     private String forename = "";
 
     @NotBlank(message = "{profile.surname.required}")
     @Size(max = 50, message = "{profile.surname.size}")
+    @NoPunctuation
     private String surname = "";
 
     @PhoneNumber

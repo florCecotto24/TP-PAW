@@ -84,10 +84,36 @@
         });
     }
 
+    function bindNoPunctuation(el) {
+        var cap = maxLenAttr(el);
+        el.addEventListener("beforeinput", function (e) {
+            if (e.data === null || e.data === "") {
+                return;
+            }
+            if (/[^\p{L}\p{N}\s]/u.test(e.data)) {
+                e.preventDefault();
+            }
+        });
+        el.addEventListener("input", function () {
+            el.value = el.value.replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, cap);
+        });
+        el.addEventListener("paste", function (e) {
+            var raw = (e.clipboardData || window.clipboardData).getData("text");
+            var cleaned = String(raw || "").replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, cap);
+            e.preventDefault();
+            var start = el.selectionStart;
+            var end = el.selectionEnd;
+            el.value = el.value.slice(0, start) + cleaned + el.value.slice(end);
+            var pos = start + cleaned.length;
+            el.setSelectionRange(pos, pos);
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll("input[data-ryden-phone]").forEach(bindPhone);
         document.querySelectorAll("input[data-ryden-digits-only]").forEach(bindDigitsOnly);
         document.querySelectorAll("input[data-ryden-plate]").forEach(bindPlate);
+        document.querySelectorAll("input[data-ryden-no-punctuation]").forEach(bindNoPunctuation);
     });
 })();
 
