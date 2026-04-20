@@ -30,6 +30,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.WallDateTimeDisplayFormat;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 @Controller
 @RequestMapping("/my-listings")
@@ -145,6 +147,7 @@ public class MyListingsController {
         final long carImageId = detail.getPictures().isEmpty() ? 0L : detail.getPictures().get(0).getImageId();
         final ModelAndView mav = new ModelAndView("myListingDetail");
         mav.addObject("listing", listing);
+        mav.addObject("listingCreatedAtDisplay", WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(listing.getCreatedAt(), LocaleContextHolder.getLocale()));
         mav.addObject("car", detail.getCar());
         mav.addObject("owner", detail.getOwner());
         mav.addObject("availabilities", detail.getListingAvailabilities());

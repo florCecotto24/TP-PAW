@@ -58,7 +58,7 @@
                                 <span class="badge text-bg-primary"><c:out value="${listingStatusLabel}"/></span>
                             </div>
                             <p class="mb-0 text-secondary small">
-                                <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listing.createdAt}"/>
+                                <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
                             </p>
                         </div>
                     </div>
