@@ -80,7 +80,6 @@
                                             <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
                                                 <div>
                                                     <h3 class="h5 fw-semibold mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                                                    <p class="text-secondary mb-0"><spring:message code="myListings.card.manageHint"/></p>
                                                 </div>
                                                 <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                                     <div class="reservation-price-compact">
