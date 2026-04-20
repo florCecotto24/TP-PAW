@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
@@ -45,19 +46,30 @@ public class MyReservationsController {
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
             final Authentication authentication,
-            @RequestParam(defaultValue = "0") int page) {
+            @RequestParam(defaultValue = "0") int riderPage,
+            @RequestParam(defaultValue = "0") int ownerPage) {
         final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
-        page = Math.max(0, page);
+        riderPage = Math.max(0, riderPage);
+        ownerPage = Math.max(0, ownerPage);
 
-        final Page<ReservationCard> resultPage = reservationService.getRiderReservationCards(details.getUserId(), page, PAGE_SIZE);
+        // Rider reservations (reservations made BY the user)
+        final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(details.getUserId(), riderPage, PAGE_SIZE);
         final Locale locale = LocaleContextHolder.getLocale();
-        final List<ReservationCardView> reservations = resultPage.getContent().stream()
+        final List<ReservationCardView> riderReservations = riderResultPage.getContent().stream()
+                .map(card -> toReservationCardView(card, locale))
+                .collect(Collectors.toList());
+
+        // Owner reservations (reservations made ON the user's cars)
+        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(details.getUserId(), ownerPage, PAGE_SIZE);
+        final List<ReservationCardView> ownerReservations = ownerResultPage.getContent().stream()
                 .map(card -> toReservationCardView(card, locale))
                 .collect(Collectors.toList());
 
         final ModelAndView mav = new ModelAndView("myReservations");
-        mav.addObject("results", reservations);
-        mav.addObject("myReservationsPage", resultPage);
+        mav.addObject("riderReservations", riderReservations);
+        mav.addObject("riderReservationsPage", riderResultPage);
+        mav.addObject("ownerReservations", ownerReservations);
+        mav.addObject("ownerReservationsPage", ownerResultPage);
         mav.addObject("activeTab", "my-reservations");
         return mav;
     }
@@ -65,9 +77,13 @@ public class MyReservationsController {
     @GetMapping("/my-reservations/{reservationId}")
     public ModelAndView reservationDetail(
             final Authentication authentication,
-            @PathVariable("reservationId") final long reservationId) {
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam(defaultValue = "rider") final String role) {
         final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
-        final Optional<Reservation> reservationOpt = reservationService.getRiderReservationById(details.getUserId(), reservationId);
+        final Optional<Reservation> reservationOpt = "owner".equals(role)
+                ? reservationService.getOwnerReservationById(details.getUserId(), reservationId)
+                : reservationService.getRiderReservationById(details.getUserId(), reservationId);
+        
         if (reservationOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
         }
@@ -96,6 +112,7 @@ public class MyReservationsController {
         mav.addObject("totalPrice", totalPrice);
         mav.addObject("carImageId", carImageId);
         mav.addObject("activeTab", "my-reservations");
+        mav.addObject("reservationRole", role);
         return mav;
     }
 
@@ -120,6 +137,25 @@ public class MyReservationsController {
 
     private static String formatMoney(final BigDecimal amount) {
         return amount.stripTrailingZeros().toPlainString();
+    }
+
+    @PostMapping("/my-reservations/{reservationId}/cancel")
+    public ModelAndView cancelReservation(
+            final Authentication authentication,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam(defaultValue = "rider") final String role) {
+        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final Optional<Reservation> reservationOpt = "owner".equals(role)
+                ? reservationService.getOwnerReservationById(details.getUserId(), reservationId)
+                : reservationService.getRiderReservationById(details.getUserId(), reservationId);
+        
+        if (reservationOpt.isPresent()) {
+            reservationService.cancelReservation(reservationId);
+        }
+        
+        final ModelAndView mav = new ModelAndView("reservationCancelled");
+        mav.addObject("reservationRole", role);
+        return mav;
     }
 }
 

@@ -25,7 +25,13 @@ public interface ReservationDao {
 
     Optional<Reservation> getReservationById(long id);
 
+    Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
+
     Page<ReservationCard> getRiderReservationCards(long riderId, int page, int pageSize);
 
     List<Reservation> getReminderReservations(final OffsetDateTime from, final OffsetDateTime to);
+
+    Page<ReservationCard> getOwnerReservationCards(long ownerId, int page, int pageSize);
+
+    int updateReservationStatus(long reservationId, String status);
 }

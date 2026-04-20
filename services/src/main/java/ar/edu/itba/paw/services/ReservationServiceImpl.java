@@ -145,8 +145,20 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Reservation> getOwnerReservationById(final long ownerId, final long reservationId) {
+        return reservationDao.getOwnerReservationById(ownerId, reservationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<ReservationCard> getRiderReservationCards(final long riderId, final int page, final int pageSize) {
         return reservationDao.getRiderReservationCards(riderId, page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReservationCard> getOwnerReservationCards(final long ownerId, final int page, final int pageSize) {
+        return reservationDao.getOwnerReservationCards(ownerId, page, pageSize);
     }
 
     @Override
@@ -265,5 +277,11 @@ public class ReservationServiceImpl implements ReservationService {
 
     private static boolean isBlank(final String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    @Override
+    public Optional<Reservation> cancelReservation(final long reservationId) {
+        reservationDao.updateReservationStatus(reservationId, Reservation.Status.CANCELLED.name().toLowerCase());
+        return reservationDao.getReservationById(reservationId);
     }
 }

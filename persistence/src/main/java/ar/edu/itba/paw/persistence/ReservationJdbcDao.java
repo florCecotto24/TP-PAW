@@ -138,6 +138,18 @@ public class ReservationJdbcDao implements ReservationDao {
     }
 
     @Override
+    public Optional<Reservation> getOwnerReservationById(final long ownerId, final long reservationId) {
+        return jdbcTemplate.query(
+                "SELECT r.* FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE r.id = ? AND c.owner_id = ?",
+                RESERVATION_ROW_MAPPER,
+                reservationId,
+                ownerId).stream().findAny();
+    }
+
+    @Override
     public Page<ReservationCard> getRiderReservationCards(final long riderId, final int page, final int pageSize) {
         final Long total = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM reservations WHERE rider_id = ?",
@@ -160,5 +172,42 @@ public class ReservationJdbcDao implements ReservationDao {
                 pageSize,
                 offset);
         return new Page<>(content, page, pageSize, total != null ? total : 0L);
+    }
+
+    @Override
+    public Page<ReservationCard> getOwnerReservationCards(final long ownerId, final int page, final int pageSize) {
+        final Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ?",
+                Long.class,
+                ownerId);
+        final int offset = page * pageSize;
+        final List<ReservationCard> content = jdbcTemplate.query(
+                "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
+                        + "c.brand, c.model, l.day_price, "
+                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                        + "FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? "
+                        + "ORDER BY r.created_at DESC "
+                        + "LIMIT ? OFFSET ?",
+                RESERVATION_CARD_ROW_MAPPER,
+                ownerId,
+                pageSize,
+                offset);
+        return new Page<>(content, page, pageSize, total != null ? total : 0L);
+    }
+
+    @Override
+    public int updateReservationStatus(final long reservationId, final String status) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET status = ?, updated_at = ? WHERE id = ?",
+                status,
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
     }
 }

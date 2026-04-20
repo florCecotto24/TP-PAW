@@ -2,6 +2,7 @@
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -72,6 +73,10 @@
                             <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.pickupLocation"/></p>
                             <p class="mb-0 fw-medium"><c:out value="${listing.startPoint}"/></p>
                         </div>
+                        <div class="col-sm-6">
+                            <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.status"/></p>
+                            <p class="mb-0 fw-medium"><spring:message code="enum.reservation.status.${statusKey}"/></p>
+                        </div>
                     </div>
                 </div>
             </article>
@@ -86,18 +91,43 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-primary" disabled>
+                        <!-- <button type="button" class="btn btn-primary" disabled>
                             <spring:message code="myReservationDetail.actions.modify"/>
-                        </button>
-                        <button type="button" class="btn btn-outline-danger" disabled>
-                            <spring:message code="myReservationDetail.actions.cancel"/>
-                        </button>
-                        <c:if test="${not empty owner.email}">
+                        </button> -->
+                        <c:set var="canCancel" value="${reservation.status.name() eq 'ACCEPTED'}"/>
+                        <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
+                        <c:choose>
+                            <c:when test="${canCancel}">
+                                <form:form method="post" action="${cancelUrl}" cssClass="d-grid">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                                    <input type="hidden" name="role" value="${reservationRole}"/>
+                                    <button type="submit" class="btn btn-outline-danger">
+                                        <spring:message code="myReservationDetail.actions.cancel"/>
+                                    </button>
+                                </form:form>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="alert alert-info mb-0" role="alert">
+                                    <c:choose>
+                                        <c:when test="${statusKey eq 'cancelled'}">
+                                            <p class="mb-0"><spring:message code="myReservationDetail.alert.cancelled"/></p>
+                                        </c:when>
+                                        <c:when test="${statusKey eq 'started'}">
+                                            <p class="mb-0"><spring:message code="myReservationDetail.alert.inProgress"/></p>
+                                        </c:when>
+                                        <c:when test="${statusKey eq 'finished'}">
+                                            <p class="mb-0"><spring:message code="myReservationDetail.alert.finished"/></p>
+                                        </c:when>
+                                    </c:choose>
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
+                        <!-- <c:if test="${not empty owner.email}">
                             <spring:message code="myReservationDetail.actions.contactOwner" var="contactOwnerLabel"/>
                             <a href="mailto:<c:out value='${owner.email}'/>" class="btn btn-outline-secondary">
                                 <c:out value="${contactOwnerLabel}"/>
                             </a>
-                        </c:if>
+                        </c:if> -->
                     </div>
 
                     <hr class="my-4">

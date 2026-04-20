@@ -5,10 +5,16 @@
 <%@ attribute name="currentPage" required="true" type="java.lang.Integer" %>
 <%@ attribute name="totalPages"  required="true" type="java.lang.Integer" %>
 <%@ attribute name="baseUrl"     required="true" type="java.lang.String" %>
+<%@ attribute name="pageParam"   required="false" type="java.lang.String" %>
 <%@ attribute name="sortParam"   required="false" type="java.lang.String" %>
 
 <%-- Renders nothing when there is only one page --%>
 <c:if test="${totalPages > 1}">
+    <%-- Set default pageParam if not provided --%>
+    <c:if test="${empty pageParam}">
+        <c:set var="pageParam" value="page"/>
+    </c:if>
+    
     <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&amp;' : '?'}"/>
     <c:if test="${not empty sortParam}">
         <c:set var="sortSuffix" value="&amp;sort=${sortParam}"/>
@@ -27,7 +33,7 @@
             <li class="page-item${currentPage == 0 ? ' disabled' : ''}">
                 <c:choose>
                     <c:when test="${currentPage > 0}">
-                        <a class="page-link" href="${baseUrl}${sep}page=${currentPage - 1}${sortSuffix}">
+                        <a class="page-link" href="${baseUrl}${sep}${pageParam}=${currentPage - 1}${sortSuffix}">
                             <c:out value="${prevLabel}"/>
                         </a>
                     </c:when>
@@ -44,7 +50,7 @@
             <%-- First page + leading ellipsis --%>
             <c:if test="${windowStart > 0}">
                 <li class="page-item">
-                    <a class="page-link" href="${baseUrl}${sep}page=0${sortSuffix}">1</a>
+                    <a class="page-link" href="${baseUrl}${sep}${pageParam}=0${sortSuffix}">1</a>
                 </li>
                 <c:if test="${windowStart > 1}">
                     <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
@@ -59,7 +65,7 @@
                             <span class="page-link">${p + 1}</span>
                         </c:when>
                         <c:otherwise>
-                            <a class="page-link" href="${baseUrl}${sep}page=${p}${sortSuffix}">${p + 1}</a>
+                            <a class="page-link" href="${baseUrl}${sep}${pageParam}=${p}${sortSuffix}">${p + 1}</a>
                         </c:otherwise>
                     </c:choose>
                 </li>
@@ -71,7 +77,7 @@
                     <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
                 </c:if>
                 <li class="page-item">
-                    <a class="page-link" href="${baseUrl}${sep}page=${totalPages - 1}${sortSuffix}">${totalPages}</a>
+                    <a class="page-link" href="${baseUrl}${sep}${pageParam}=${totalPages - 1}${sortSuffix}">${totalPages}</a>
                 </li>
             </c:if>
 
@@ -79,7 +85,7 @@
             <li class="page-item${currentPage >= totalPages - 1 ? ' disabled' : ''}">
                 <c:choose>
                     <c:when test="${currentPage < totalPages - 1}">
-                        <a class="page-link" href="${baseUrl}${sep}page=${currentPage + 1}${sortSuffix}">
+                        <a class="page-link" href="${baseUrl}${sep}${pageParam}=${currentPage + 1}${sortSuffix}">
                             <c:out value="${nextLabel}"/>
                         </a>
                     </c:when>

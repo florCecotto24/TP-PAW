@@ -21,7 +21,11 @@ public interface ReservationService {
 
     Optional<Reservation> getRiderReservationById(long riderId, long reservationId);
 
+    Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
+
     Page<ReservationCard> getRiderReservationCards(long riderId, int page, int pageSize);
+
+    Page<ReservationCard> getOwnerReservationCards(long ownerId, int page, int pageSize);
 
     Optional<String> normalizeClientReservationTotal(String reservationTotal);
 
@@ -43,4 +47,6 @@ public interface ReservationService {
     Optional<BigDecimal> calculateTotal(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
 
     long calculateBillableDays(OffsetDateTime startDate, OffsetDateTime endDate);
+
+    Optional<Reservation> cancelReservation(long reservationId);
 }
