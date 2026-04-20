@@ -126,7 +126,7 @@ mvn test
 
 - **User**: `UserService` / `UserDao` — authentication, registration, profile management.
 - **Car & Listing**: `CarService` / `CarDao`, `ListingService` / `ListingDao` — rental inventory.
-- **Reservation**: `ReservationService` / `ReservationDao` — booking management.
+- **Reservation**: `ReservationService` / `ReservationDao` — reservation management.
 - **Email & verification**: `EmailService`, `EmailVerificationService` / `EmailVerificationCodeDao`, `PasswordResetService` / `PasswordResetCodeDao` — password reset flows, async email sending.
 - **Image & picture**: `ImageService` / `ImageDao`, `CarPictureService` / `CarPictureDao` — image uploads and associations.
 - **Session listener**: `PublishCarStashSessionListener` (in `webapp/src/main/java/ar/edu/itba/paw/webapp/listener/`) manages session state for car publish forms.
