@@ -87,19 +87,24 @@
     function bindNoPunctuation(el) {
         var cap = maxLenAttr(el);
         el.addEventListener("beforeinput", function (e) {
+            if (e.isComposing) return;
             if (e.data === null || e.data === "") {
                 return;
             }
-            if (/[^\p{L}\p{N}\s]/u.test(e.data)) {
+            if (/[^\p{L}\p{M}\p{N}\s]/u.test(e.data)) {
                 e.preventDefault();
             }
         });
-        el.addEventListener("input", function () {
-            el.value = el.value.replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, cap);
+        el.addEventListener("input", function (e) {
+            if (e.isComposing) return;
+            el.value = el.value.replace(/[^\p{L}\p{M}\p{N}\s]/gu, "").slice(0, cap);
+        });
+        el.addEventListener("compositionend", function () {
+            el.value = el.value.replace(/[^\p{L}\p{M}\p{N}\s]/gu, "").slice(0, cap);
         });
         el.addEventListener("paste", function (e) {
             var raw = (e.clipboardData || window.clipboardData).getData("text");
-            var cleaned = String(raw || "").replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, cap);
+            var cleaned = String(raw || "").replace(/[^\p{L}\p{M}\p{N}\s]/gu, "").slice(0, cap);
             e.preventDefault();
             var start = el.selectionStart;
             var end = el.selectionEnd;
