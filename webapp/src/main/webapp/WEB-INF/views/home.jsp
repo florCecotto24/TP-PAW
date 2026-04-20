@@ -24,7 +24,7 @@
             </div>
 
 
-            <div class="sticky-top w-100 pt-4" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
+            <div class="sticky-top w-100 pt-2" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
                 <ryden:searchWithFilters
                         formId="homeSearchForm"
                         formClass="search-menu w-100"

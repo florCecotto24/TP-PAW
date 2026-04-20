@@ -95,8 +95,10 @@ public class EmailServiceImpl implements EmailService {
         ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
         final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
-        final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
-        ctx.setVariable("ctaUrl", ctaUrl);
+        final String ctaUrlRider = baseUrl + "/my-reservations/" + payload.getReservationId();
+        ctx.setVariable("ctaUrlRider", ctaUrlRider);
+        final String ctaUrlOwner = baseUrl + "/my-listings/" + payload.getListingId();
+        ctx.setVariable("ctaUrlOwner", ctaUrlOwner);
 
         try {
             sendReservationConfirmationToClient(payload, ctx);
@@ -205,7 +207,7 @@ public class EmailServiceImpl implements EmailService {
         ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
         final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
-        final String ctaUrl = baseUrl + "/car-detail?listingId=" + payload.getListingId();
+        final String ctaUrl = baseUrl + "/my-reservations/" + payload.getReservationId();
         ctx.setVariable("ctaUrl", ctaUrl);
 
         final String to = payload.getRecipientEmail();

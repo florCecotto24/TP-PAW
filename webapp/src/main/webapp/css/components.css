@@ -511,9 +511,10 @@ body.modal-open {
 }
 
 .search-menu {
-    top: var(--navbar-height);
-    z-index: 1020;
+    top: 55px;
+    z-index: 1000;
     padding-top: 1.5rem;
+    background-color: #f9fbff;
 }
 
 /* Filter button */

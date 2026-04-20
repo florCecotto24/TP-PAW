@@ -90,26 +90,13 @@
 
     </div>
 
-    <!-- OWNER CONTACT CARD -->
-    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
-                padding:20px; margin-bottom:24px;">
-
-        <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:12px;"
-           th:text="#{mail.reservationConfirmation.promptContactOwner}">
-        </p>
-        <p style="font-size:13px; color:#4b5563; line-height:1.6; margin:0;"
-           th:text="#{mail.reservationConfirmation.credentialsLine(${ownerFullName}, ${ownerEmail})}">
-        </p>
-
-    </div>
-
     <!-- CTA BUTTON -->
     <div style="margin-bottom:20px;">
         <a th:href="${ctaUrl}"
            style="display:inline-block; padding:12px 24px; background-color:#4338ca;
                 color:#ffffff; text-decoration:none; border-radius:8px;
                 font-size:14px; font-weight:600;"
-           th:text="#{mail.reservationConfirmation.viewListing}">
+           th:text="#{mail.reservationConfirmation.viewReservation}">
             View listing
         </a>
     </div>
@@ -117,7 +104,7 @@
     <!-- FALLBACK LINK -->
     <p style="font-size:12px; color:#9ca3af; line-height:1.8; margin-bottom:20px;">
         <span th:text="#{mail.reservationConfirmation.fallbackLink}">Link help</span><br/>
-        <span th:text="${ctaUrl}" style="word-break:break-all; color:#4338ca;">https://</span>
+        <span th:text="${ctaUrlRider}" style="word-break:break-all; color:#4338ca;">https://</span>
     </p>
 
     <!-- FOOTER -->
