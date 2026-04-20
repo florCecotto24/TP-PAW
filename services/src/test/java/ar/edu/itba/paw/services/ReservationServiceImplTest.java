@@ -315,23 +315,23 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void calculateBillableDaysWhenWallDatesSpanFifteenDaysReturnsFifteen() {
+    public void calculateBillableDaysWhenWallDatesSpanSixteenDaysReturnsSixteen() {
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");
         final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-30T18:00");
 
         final long billableDays = reservationService.calculateBillableDays(startDate, endDate);
 
-        Assertions.assertEquals(15L, billableDays);
+        Assertions.assertEquals(16L, billableDays);
     }
 
     @Test
-    public void calculateBillableDaysWhenCrossingMidnightReturnsOne() {
+    public void calculateBillableDaysWhenCrossingMidnightReturnsTwo() {
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T23:00");
         final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-16T01:00");
 
         final long billableDays = reservationService.calculateBillableDays(startDate, endDate);
 
-        Assertions.assertEquals(1L, billableDays);
+        Assertions.assertEquals(2L, billableDays);
     }
 
     @Test
@@ -347,7 +347,7 @@ public class ReservationServiceImplTest {
         final Optional<BigDecimal> total = reservationService.calculateTotal(listingId, startDate, endDate);
 
         Assertions.assertTrue(total.isPresent());
-        Assertions.assertEquals(0, BigDecimal.valueOf(2250L).compareTo(total.get()));
+        Assertions.assertEquals(0, BigDecimal.valueOf(2400L).compareTo(total.get()));
     }
 
 }
