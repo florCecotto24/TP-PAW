@@ -5,14 +5,13 @@ import java.util.Locale;
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -36,16 +35,13 @@ public class EmailServiceImpl implements EmailService {
             action.run();
         } catch (final EmailMessagingException e) {
             throw e;
-        } catch (final MessagingException e) {
-            throw new EmailMessagingException(e);
-        } catch (final MailException e) {
-            throw new EmailMessagingException(e);
         } catch (final Exception e) {
             throw new EmailMessagingException(e);
         }
     }
 
-    private static final Log LOG = LogFactory.getLog(EmailServiceImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
+
 
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
@@ -77,7 +73,7 @@ public class EmailServiceImpl implements EmailService {
     @Async("mailTaskExecutor")
     public void sendReservationConfirmationEmail(final ReservationConfirmationPayload payload) {
         if (payload == null) {
-            LOG.error("sendReservationConfirmationEmail called with null payload");
+            LOGGER.atError().log("sendReservationConfirmationEmail called with null payload");
             return;
         }
 
@@ -103,12 +99,12 @@ public class EmailServiceImpl implements EmailService {
         try {
             sendReservationConfirmationToClient(payload, ctx);
             sendReservationConfirmationToOwner(payload, ctx);
-            LOG.info("Reservation confirmation email sent to " + payload.getRecipientEmail()
+            LOGGER.atInfo().log("Reservation confirmation email sent to " + payload.getRecipientEmail()
                     + " (reservation id=" + payload.getReservationId() + ")");
-            LOG.info("Reservation confirmation email sent to " + payload.getOwnerEmail()
+            LOGGER.atInfo().log("Reservation confirmation email sent to " + payload.getOwnerEmail()
                     + " (reservation id=" + payload.getReservationId() + ")");
         } catch (final Exception e) {
-            LOG.error("Failed to send reservation confirmation email (reservation id=" + payload.getReservationId() + ")", e);
+            LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to send reservation confirmation email (reservation id={})");
         }
     }
 
@@ -116,7 +112,7 @@ public class EmailServiceImpl implements EmailService {
     @Async("mailTaskExecutor")
     public void sendEmailVerificationCode(final String to, final String code, final Locale locale) {
         if (to == null || to.isBlank() || code == null) {
-            LOG.error("sendEmailVerificationCode: missing to or code");
+            LOGGER.atError().log("sendEmailVerificationCode: missing to or code");
             return;
         }
         final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
@@ -132,9 +128,9 @@ public class EmailServiceImpl implements EmailService {
                 final String subject = emailMessageSource.getMessage("mail.emailVerification.subject", null, mailLocale);
                 sendEmail(to, subject, htmlContent);
             });
-            LOG.info("Email verification code sent to " + to);
+            LOGGER.atInfo().addArgument(to).log("Email verification code sent to {}");
         } catch (final Exception e) {
-            LOG.error("Failed to send email verification code to " + to, e);
+            LOGGER.atError().addArgument(to).log("Failed to send email verification code to {}");
         }
     }
 
@@ -142,7 +138,7 @@ public class EmailServiceImpl implements EmailService {
     @Async("mailTaskExecutor")
     public void sendMigratedUserPassword(final String to, final String plainPassword, final Locale locale) {
         if (to == null || to.isBlank() || plainPassword == null || plainPassword.isBlank()) {
-            LOG.error("sendMigratedUserPassword: missing to or password");
+            LOGGER.atError().log("sendMigratedUserPassword: missing to or password");
             return;
         }
         final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
@@ -154,9 +150,9 @@ public class EmailServiceImpl implements EmailService {
                 final String subject = emailMessageSource.getMessage("mail.migratedPassword.subject", null, mailLocale);
                 sendEmail(to, subject, htmlContent);
             });
-            LOG.info("Migrated user password email sent to " + to);
+            LOGGER.atInfo().addArgument(to).log("Migrated user password email sent to {}");
         } catch (final Exception e) {
-            LOG.error("Failed to send migrated password email to " + to, e);
+            LOGGER.atError().addArgument(to).log("Failed to send migrated password email to {}");
         }
     }
 
@@ -164,7 +160,7 @@ public class EmailServiceImpl implements EmailService {
     @Async("mailTaskExecutor")
     public void sendPasswordResetCode(final String to, final String code, final Locale locale) {
         if (to == null || to.isBlank() || code == null) {
-            LOG.error("sendPasswordResetCode: missing to or code");
+            LOGGER.atError().log("sendPasswordResetCode: missing to or code");
             return;
         }
         final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
@@ -179,9 +175,9 @@ public class EmailServiceImpl implements EmailService {
                 final String subject = emailMessageSource.getMessage("mail.passwordReset.subject", null, mailLocale);
                 sendEmail(to, subject, htmlContent);
             });
-            LOG.info("Password reset code sent to " + to);
+            LOGGER.atInfo().addArgument(to).log("Password reset code sent to {}");
         } catch (final Exception e) {
-            LOG.error("Failed to send password reset code to " + to, e);
+            LOGGER.atError().addArgument(to).log("Failed to send password reset code to {}");
         }
     }
 
@@ -189,7 +185,7 @@ public class EmailServiceImpl implements EmailService {
     @Async("mailTaskExecutor")
     public void sendReservationReminderEmail(final ReservationConfirmationPayload payload) {
         if (payload == null) {
-            LOG.error("sendReservationConfirmationEmail called with null payload");
+            LOGGER.atError().log("sendReservationConfirmationEmail called with null payload");
             return;
         }
 
@@ -218,9 +214,9 @@ public class EmailServiceImpl implements EmailService {
                 final String subject = emailMessageSource.getMessage("mail.reservationReminder.subject", null, mailLocale);
                 sendEmail(to, subject, htmlContent);
             });
-            LOG.info("Reminder sent to " + to);
+            LOGGER.atInfo().addArgument(to).log("Reminder sent to {}");
         } catch (final Exception e) {
-            LOG.error("Failed to reminder to " + to, e);
+            LOGGER.atError().addArgument(to).log("Failed to reminder to {}");
         }
     }
 
@@ -265,7 +261,7 @@ public class EmailServiceImpl implements EmailService {
             helper.addInline("logo", logo);
             mailSender.send(message);
         } catch (MessagingException e) {
-            LOG.error("Error enviando mail a "+ to + ":" + e.getMessage());
+            LOGGER.atError().log("Error enviando mail a "+ to + ":" + e.getMessage());
         }
     }
 

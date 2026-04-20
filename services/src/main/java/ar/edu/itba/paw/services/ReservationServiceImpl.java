@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
-import java.time.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
@@ -9,8 +8,8 @@ import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,7 @@ import ar.edu.itba.paw.persistence.ReservationDao;
 @Service
 public class ReservationServiceImpl implements ReservationService {
 
-    private static final Log LOG = LogFactory.getLog(ReservationServiceImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationServiceImpl.class);
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
@@ -89,17 +88,17 @@ public class ReservationServiceImpl implements ReservationService {
             final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
             final Optional<Listing> listingOpt = listingService.getListingById(listingId);
             if (riderOpt.isEmpty()) {
-                LOG.warn("Skipping reservation confirmation email: user not found for riderId=" + riderId
+                LOGGER.atWarn().log("Skipping reservation confirmation email: user not found for riderId=" + riderId
                         + " reservationId=" + reservation.getId());
                 return;
             }
             if (listingOpt.isEmpty()) {
-                LOG.warn("Skipping reservation confirmation email: listing not found for listingId=" + listingId
+                LOGGER.atWarn().log("Skipping reservation confirmation email: listing not found for listingId=" + listingId
                         + " reservationId=" + reservation.getId());
                 return;
             }
             if (listingOwnerOpt.isEmpty()) {
-                LOG.warn("Skipping reservation confirmation email: listing owner not found for listingId=" + listingId
+                LOGGER.atWarn().log("Skipping reservation confirmation email: listing owner not found for listingId=" + listingId
                         + " reservationId=" + reservation.getId());
                 return;
             }
@@ -123,11 +122,11 @@ public class ReservationServiceImpl implements ReservationService {
                     listingOwner.getEmail(),
                     reservation.getTotalPrice().toString(),
                     resolveMailMessageLocale());
-            LOG.info("Queueing reservation confirmation email to " + rider.getEmail()
+            LOGGER.atInfo().log("Queueing reservation confirmation email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());
             emailService.sendReservationConfirmationEmail(payload);
         } catch (final Exception e) {
-            LOG.error("Could not enqueue reservation confirmation email for reservation id=" + reservation.getId(), e);
+            LOGGER.atError().log("Could not enqueue reservation confirmation email for reservation id=" + reservation.getId(), e);
         }
     }
 

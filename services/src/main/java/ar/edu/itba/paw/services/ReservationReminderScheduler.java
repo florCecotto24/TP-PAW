@@ -6,8 +6,8 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Optional;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,7 +23,7 @@ import ar.edu.itba.paw.persistence.ReservationDao;
 @Component
 public class ReservationReminderScheduler {
 
-    private static final Log LOG = LogFactory.getLog(ReservationReminderScheduler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationReminderScheduler.class);
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
@@ -48,19 +48,19 @@ public class ReservationReminderScheduler {
         final OffsetDateTime from = tomorrow.atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         final OffsetDateTime to = tomorrow.plusDays(1).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         final var reservations = reservationDao.getReminderReservations(from, to);
-        LOG.info("Found " + reservations.size() + " reservations to send reminders for");
+        LOGGER.atInfo().log("Found " + reservations.size() + " reservations to send reminders for");
 
         for (final Reservation reservation : reservations) {
             try {
                 final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
                 final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
                 if (riderOpt.isEmpty()) {
-                    LOG.warn("Skipping reservation reminder email: user not found for riderId=" + reservation.getRiderId()
+                    LOGGER.atWarn().log("Skipping reservation reminder email: user not found for riderId=" + reservation.getRiderId()
                             + " reservationId=" + reservation.getId());
                     continue;
                 }
                 if (listingOpt.isEmpty()) {
-                    LOG.warn("Skipping reservation reminder email: listing not found for listingId=" + reservation.getListingId()
+                    LOGGER.atWarn().log("Skipping reservation reminder email: listing not found for listingId=" + reservation.getListingId()
                             + " reservationId=" + reservation.getId());
                     continue;
                 }
@@ -80,11 +80,11 @@ public class ReservationReminderScheduler {
                         null,
                         reservation.getTotalPrice().toString(),
                         resolveMailMessageLocale());
-                LOG.info("Queueing reservation reminder email to " + rider.getEmail()
+                LOGGER.atInfo().log("Queueing reservation reminder email to " + rider.getEmail()
                         + " for reservation id=" + reservation.getId());
                 emailService.sendReservationReminderEmail(payload);
             } catch (final Exception e) {
-                LOG.error("Could not send reservation reminder email for reservation id=" + reservation.getId(), e);
+                LOGGER.atError().log("Could not send reservation reminder email for reservation id=" + reservation.getId(), e);
             }
         }
     }

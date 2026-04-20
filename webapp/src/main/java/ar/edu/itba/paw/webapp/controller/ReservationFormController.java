@@ -10,6 +10,8 @@ import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -28,6 +30,9 @@ import java.util.Optional;
 @Controller
 @RequestMapping("/reservation")
 public class ReservationFormController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationFormController.class);
+
 
     private final ListingService listingService;
     private final ReservationService reservationService;
@@ -124,6 +129,11 @@ public class ReservationFormController {
         final Reservation reservation;
         try {
             final long riderId = WebAuthUtils.requireCurrentUser(authentication).getUserId();
+
+            LOGGER.atInfo().log("Submitting reservation for riderId={}, listingId={}, availabilityId={}, " +
+                            "fromDateTime={}, untilDateTime={}",
+                    riderId, listingId, availabilityId, form.getFromDateTime(), form.getUntilDateTime());
+
             reservation = reservationService.submitRiderReservation(
                     riderId,
                     listingId,
