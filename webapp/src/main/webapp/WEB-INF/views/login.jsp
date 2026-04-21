@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="login.title"/> — <spring:message code="app.title"/></title>
+    <title><spring:message code="app.title"/> — <spring:message code="login.title"/></title>
     <%@include file="header.jsp" %>
 </head>
 <body>
