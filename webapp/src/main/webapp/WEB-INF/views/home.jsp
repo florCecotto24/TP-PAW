@@ -7,7 +7,7 @@
 <html lang="en">
 
     <head>
-        <title>Ryden - Home</title>
+        <title><spring:message code="app.title"/> - <spring:message code="home.pageTitle"/></title>
         <%@include file="header.jsp" %>
     </head>
 
