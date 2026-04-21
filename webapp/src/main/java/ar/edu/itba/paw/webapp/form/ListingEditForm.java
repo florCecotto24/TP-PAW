@@ -1,18 +1,19 @@
 package ar.edu.itba.paw.webapp.form;
 
-import org.springframework.format.annotation.DateTimeFormat;
-
-import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.Digits;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
-import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.validation.Valid;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.Digits;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+
+import org.springframework.format.annotation.DateTimeFormat;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
 
@@ -37,7 +38,7 @@ public class ListingEditForm {
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
 
-    @Size(min = 1, max = 10, message = "Add between 1 and 10 availability periods")
+    @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}")
     private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public ListingEditForm() {
@@ -55,11 +56,11 @@ public class ListingEditForm {
     }
 
     public static class AvailabilityRow {
-        @NotNull(message = "Start date is required")
+        @NotNull(message = "{validation.availabilityRow.from.notNull}")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate from;
 
-        @NotNull(message = "End date is required")
+        @NotNull(message = "{validation.availabilityRow.until.notNull}")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
 

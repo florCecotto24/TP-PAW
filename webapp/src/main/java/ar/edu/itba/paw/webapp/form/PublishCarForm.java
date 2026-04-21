@@ -31,7 +31,7 @@ public class PublishCarForm {
     @NotBlank(message = "{validation.model.notBlank}")
     private String model;
 
-    @Size(min = 6, max = 10, message = "Plate must be between 6 and 10 characters")
+    @Size(min = 6, max = 10, message = "{validation.plate.size}")
     @NotBlank(message = "{validation.plate.notBlank}")
     // Acá podríamos poner las validaciones de las patentes argentinas (dividir entre nuevas y viejas)
     @NoPunctuation
@@ -51,7 +51,7 @@ public class PublishCarForm {
     @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}")
     private BigDecimal pricePerDay;
 
-    @Size(max = 250, message = "Description must be at most 250 characters")
+    @Size(max = 250, message = "{validation.startPoint.size}")
     @NotBlank(message = "{validation.startPoint.notBlank}")
     private String startPoint;
 
@@ -72,7 +72,7 @@ public class PublishCarForm {
     @Size(max = 8, message = "{validation.pictures.size}")
     private MultipartFile[] pictures;
 
-    @Size(min = 1, max = 10, message = "Add between 1 and 10 availability periods")
+    @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}")
     @Size(max = 10, message = "{validation.availabilityRows.size}")
     private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
 
@@ -93,11 +93,11 @@ public class PublishCarForm {
     }
 
     public static class AvailabilityRow {
-        @NotNull(message = "Start date is required")
+        @NotNull(message = "{validation.availabilityRow.from.notNull}")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate from;
 
-        @NotNull(message = "End date is required")
+        @NotNull(message = "{validation.availabilityRow.until.notNull}")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
 
