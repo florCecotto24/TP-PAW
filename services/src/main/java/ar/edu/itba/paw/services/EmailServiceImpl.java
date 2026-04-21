@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import java.util.List;
 import java.util.Locale;
 
 import javax.mail.MessagingException;
@@ -51,6 +52,7 @@ public class EmailServiceImpl implements EmailService {
     private static final String MIGRATED_PASSWORD_TEMPLATE = "html/migrated-password";
     private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
     private static final String RESERVATION_REMINDER_TEMPLATE = "html/reservation-reminder-rider";
+    private static final String LISTING_DELETION_TEMPLATE = "html/listing-deleted-owner";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
@@ -278,7 +280,7 @@ public class EmailServiceImpl implements EmailService {
         ctx.setVariable("ctaUrlOwner", ctaUrlOwner);
 
         try {
-            sendReservationCancellationToClient(payload, ctx);
+            sendReservationCancellationToClient(payload, ctx, payload.getRecipientEmail());
             sendReservationCancellationToOwner(payload, ctx);
             LOGGER.atInfo().log("Reservation cancellation email sent to " + payload.getRecipientEmail()
                     + " (reservation id=" + payload.getReservationId() + ")");
@@ -289,7 +291,84 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private void sendReservationCancellationToClient(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendListingDeletionEmail(final List<ReservationConfirmationPayload> reservationsToCancel) {
+        if (reservationsToCancel == null || reservationsToCancel.isEmpty()) {
+            LOGGER.atError().log("sendListingDeletionEmail called with null or empty reservationsToCancel");
+            return;
+        }
+
+        final ReservationConfirmationPayload ownerPayload = reservationsToCancel.getFirst();
+        if (ownerPayload == null) {
+            LOGGER.atError().log("sendListingDeletionEmail called with a null payload entry");
+            return;
+        }
+
+        final String baseUrl = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        for (final ReservationConfirmationPayload reservationPayload : reservationsToCancel) {
+            if (reservationPayload == null || reservationPayload.getReservationId() <= 0) {
+                continue;
+            }
+
+            final Locale mailLocale = reservationPayload.getMessageLocale();
+            final Context cancellationCtx = new Context(mailLocale);
+            cancellationCtx.setVariable("reservationTotal", reservationPayload.getReservationTotal());
+            cancellationCtx.setVariable("riderFullName", reservationPayload.getRiderFullName());
+            cancellationCtx.setVariable("reservationId", reservationPayload.getReservationId());
+            cancellationCtx.setVariable("vehicleLabel", reservationPayload.getVehicleLabel());
+            cancellationCtx.setVariable("startDateFormatted", formatWallDateTime(reservationPayload.getStartDate(), mailLocale));
+            cancellationCtx.setVariable("endDateFormatted", formatWallDateTime(reservationPayload.getEndDate(), mailLocale));
+            final String delivery = reservationPayload.getDeliveryLocation();
+            final boolean hasDelivery = delivery != null && !delivery.isBlank();
+            cancellationCtx.setVariable("hasDeliveryLocation", hasDelivery);
+            cancellationCtx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
+            cancellationCtx.setVariable("ownerFullName", reservationPayload.getOwnerFullName());
+            cancellationCtx.setVariable("ctaUrl", baseUrl + "/my-reservations/" + reservationPayload.getReservationId());
+
+            try {
+                sendReservationCancellationToClient(reservationPayload, cancellationCtx, reservationPayload.getRecipientEmail());
+                LOGGER.atInfo().addArgument(reservationPayload.getRecipientEmail())
+                        .addArgument(reservationPayload.getListingId())
+                        .log("Reservation cancellation email sent to {} (listing id={})");
+            } catch (final Exception e) {
+                LOGGER.atError().addArgument(reservationPayload.getListingId())
+                        .log("Failed to send reservation cancellation email (listing id={})");
+            }
+        }
+
+        try {
+            final Locale ownerLocale = ownerPayload.getMessageLocale();
+            final Context ownerCtx = new Context(ownerLocale);
+            ownerCtx.setVariable("vehicleLabel", ownerPayload.getVehicleLabel());
+            ownerCtx.setVariable("ownerFullName", ownerPayload.getOwnerFullName());
+            ownerCtx.setVariable("pricePerDay", ownerPayload.getReservationTotal());
+            ownerCtx.setVariable("ctaUrl", baseUrl + "/my-listings/" + ownerPayload.getListingId());
+            sendListingDeletionToOwner(ownerPayload, ownerCtx);
+            LOGGER.atInfo().addArgument(ownerPayload.getOwnerEmail()).addArgument(ownerPayload.getListingId())
+                    .log("Listing deletion owner email sent to {} (listing id={})");
+        } catch (final Exception e) {
+            LOGGER.atError().addArgument(ownerPayload.getListingId())
+                    .log("Failed to send listing deletion owner email (listing id={})");
+        }
+    }
+
+    private void sendListingDeletionToOwner(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+        runMail(() -> {
+
+            ctx.setVariable("ownerEmail", payload.getOwnerEmail());
+            final String htmlContent = this.htmlTemplateEngine.process(LISTING_DELETION_TEMPLATE, ctx);
+
+            final String subject = emailMessageSource.getMessage(
+                    "mail.listingDeleted.subject",
+                    new Object[]{payload.getVehicleLabel()},
+                    payload.getMessageLocale());
+            sendEmail(payload.getOwnerEmail(), subject, htmlContent);
+        });
+    }
+
+    private void sendReservationCancellationToClient(final ReservationConfirmationPayload payload, Context ctx,
+                                                     String to) throws EmailMessagingException {
         runMail(() -> {
 
             ctx.setVariable("ownerEmail", payload.getOwnerEmail());
@@ -299,7 +378,7 @@ public class EmailServiceImpl implements EmailService {
                     "mail.reservationCancelled.subject",
                     new Object[]{payload.getVehicleLabel()},
                     payload.getMessageLocale());
-            sendEmail(payload.getRecipientEmail(), subject, htmlContent);
+            sendEmail(to, subject, htmlContent);
         });
     }
 

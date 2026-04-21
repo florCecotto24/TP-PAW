@@ -34,4 +34,6 @@ public interface ReservationDao {
     Page<ReservationCard> getOwnerReservationCards(long ownerId, int page, int pageSize);
 
     int updateReservationStatus(long reservationId, String status);
+
+    List<Reservation> getListingActiveReservations(long listingId);
 }

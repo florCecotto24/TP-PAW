@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import java.util.List;
 import java.util.Locale;
 
 import ar.edu.itba.paw.models.ReservationConfirmationPayload;
@@ -17,4 +18,6 @@ public interface EmailService {
     void sendPasswordResetCode(String to, String code, Locale locale);
 
     void sendReservationReminderEmail(final ReservationConfirmationPayload payload);
+
+    void sendListingDeletionEmail(List<ReservationConfirmationPayload> reservationsToCancel);
 }

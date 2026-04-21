@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -289,6 +290,13 @@ public class ReservationServiceImpl implements ReservationService {
         }
         return reservationOpt;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> getReservationsForCancellation(final long listingId) {
+        return reservationDao.getListingActiveReservations(listingId);
+    }
+
 
     private void enqueueCancellationEmail(
             final long reservationId,

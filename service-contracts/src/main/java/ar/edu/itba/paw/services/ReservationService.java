@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.Page;
@@ -49,4 +50,6 @@ public interface ReservationService {
     long calculateBillableDays(OffsetDateTime startDate, OffsetDateTime endDate);
 
     Optional<Reservation> cancelReservation(long reservationId);
+
+    List<Reservation> getReservationsForCancellation(final long listingId);
 }

@@ -210,4 +210,14 @@ public class ReservationJdbcDao implements ReservationDao {
                 JdbcDateTimeUtils.nowTimestamp(),
                 reservationId);
     }
+
+    @Override
+    public List<Reservation> getListingActiveReservations(final long listingId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations WHERE listing_id = ? AND status in (? , ?) ORDER BY start_date ASC",
+                RESERVATION_ROW_MAPPER,
+                listingId,
+                "accepted",
+                "started");
+    }
 }
