@@ -51,7 +51,7 @@ public class SearchController {
                 .map(SearchController::toVehicleCardView)
                 .collect(Collectors.toList());
 
-        final String safeSort = VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
+        final String safeSort = sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
         mav.addObject("results", results);
         mav.addObject("searchPage", resultPage);
         mav.addObject("currentSort", safeSort);
