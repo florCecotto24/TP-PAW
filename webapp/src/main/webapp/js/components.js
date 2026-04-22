@@ -122,6 +122,50 @@
     });
 })();
 
+/* Disable auth submit buttons after first submit to prevent double posting. */
+(function () {
+    function bindSingleSubmit(form) {
+        if (!form || form.getAttribute("data-ryden-single-submit-bound") === "1") {
+            return;
+        }
+        form.setAttribute("data-ryden-single-submit-bound", "1");
+
+        form.addEventListener("submit", function (event) {
+            if (form.getAttribute("data-ryden-submitting") === "1") {
+                event.preventDefault();
+                return;
+            }
+
+            window.setTimeout(function () {
+                if (event.defaultPrevented) {
+                    return;
+                }
+                if (typeof form.checkValidity === "function" && !form.checkValidity()) {
+                    return;
+                }
+
+                var submitter = event.submitter;
+                if (!submitter || submitter.form !== form) {
+                    submitter = form.querySelector("button[type='submit'], input[type='submit']");
+                }
+                if (!submitter) {
+                    return;
+                }
+
+                form.setAttribute("data-ryden-submitting", "1");
+                submitter.disabled = true;
+                submitter.classList.add("disabled");
+                submitter.setAttribute("aria-disabled", "true");
+                submitter.setAttribute("aria-busy", "true");
+            }, 0);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("form[data-ryden-disable-submit-once='true']").forEach(bindSingleSubmit);
+    });
+})();
+
 /* Funciones modal */
 (function () {
 

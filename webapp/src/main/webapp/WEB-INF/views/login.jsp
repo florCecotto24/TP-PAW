@@ -43,7 +43,8 @@
     <spring:message code="common.password.show" var="lblPwShow" htmlEscape="true"/>
     <spring:message code="common.password.hide" var="lblPwHide" htmlEscape="true"/>
 
-    <form method="post" action="${pageContext.request.contextPath}/login" class="needs-validation" novalidate>
+    <form method="post" action="${pageContext.request.contextPath}/login" class="needs-validation" novalidate
+          data-ryden-disable-submit-once="true">
         <%@ include file="includes/csrfHidden.jspf" %>
 
         <div class="mb-3">

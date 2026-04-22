@@ -23,6 +23,7 @@
     <spring:message code="common.password.hide" var="lblPwHide" htmlEscape="true"/>
 
     <form:form modelAttribute="registrationAccountForm" method="post" cssClass="needs-validation" novalidate="novalidate"
+               data-ryden-disable-submit-once="true"
                action="${pageContext.request.contextPath}/register">
         <%@ include file="includes/csrfHidden.jspf" %>
         <form:errors path="*" element="div" cssClass="alert alert-danger" delimiter=" "/>
