@@ -113,44 +113,6 @@
                             <form:errors path="description" cssClass="text-danger d-block"/>
                         </div>
 
-                        <spring:message code="publishCar.form.remove" var="removeLabel"/>
-                        <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
-                        <spring:message code="publishCar.form.period" var="periodLabel"/>
-                        <div class="col-12" id="publishAvailabilitySection">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
-                            <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.hint"/></p>
-                            <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
-                            <div id="publish_availability_rows">
-                                <c:forEach items="${editForm.availabilityRows}" var="row" varStatus="st">
-                                    <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
-                                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                            <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span></span>
-                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
-                                        </div>
-                                        <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
-                                        <form:hidden path="availabilityRows[${st.index}].from" cssClass="ryden-avail-from"/>
-                                        <form:hidden path="availabilityRows[${st.index}].until" cssClass="ryden-avail-until"/>
-                                        <form:errors path="availabilityRows[${st.index}].from" cssClass="text-danger d-block"/>
-                                        <form:errors path="availabilityRows[${st.index}].until" cssClass="text-danger d-block"/>
-                                    </div>
-                                </c:forEach>
-                            </div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="publish_avail_add">
-                                <i class="bi bi-plus-lg" aria-hidden="true"></i> <spring:message code="publishCar.form.addPeriod"/>
-                            </button>
-                        </div>
-
-                        <template id="publish_avail_row_template">
-                            <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
-                                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                    <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>
-                                    <button type="button" class="btn btn-outline-danger btn-action btn-action-sm publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
-                                </div>
-                                <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
-                                <input type="hidden" class="ryden-avail-from" name="availabilityRows[__IDX__].from" value=""/>
-                                <input type="hidden" class="ryden-avail-until" name="availabilityRows[__IDX__].until" value=""/>
-                            </div>
-                        </template>
 
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">

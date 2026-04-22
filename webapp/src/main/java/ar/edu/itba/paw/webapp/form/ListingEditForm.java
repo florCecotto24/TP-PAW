@@ -1,12 +1,7 @@
 package ar.edu.itba.paw.webapp.form;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
@@ -15,7 +10,6 @@ import javax.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
 import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
 
 @CheckOutAfterCheckIn
@@ -41,56 +35,6 @@ public class ListingEditForm implements ListingTimeWindow {
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
 
-    @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}")
-    private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
-
-    public ListingEditForm() {
-        availabilityRows.add(new AvailabilityRow());
-    }
-
-    public List<AvailabilityPeriod> toAvailabilityPeriods() {
-        final List<AvailabilityPeriod> periods = new ArrayList<>();
-        for (final AvailabilityRow row : availabilityRows) {
-            if (row.getFrom() != null && row.getUntil() != null) {
-                periods.add(new AvailabilityPeriod(row.getFrom(), row.getUntil()));
-            }
-        }
-        return periods;
-    }
-
-    public static class AvailabilityRow {
-        @NotNull(message = "{validation.availabilityRow.from.notNull}")
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        private LocalDate from;
-
-        @NotNull(message = "{validation.availabilityRow.until.notNull}")
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        private LocalDate until;
-
-        public LocalDate getFrom() {
-            return from;
-        }
-
-        public void setFrom(final LocalDate from) {
-            this.from = from;
-        }
-
-        public LocalDate getUntil() {
-            return until;
-        }
-
-        public void setUntil(final LocalDate until) {
-            this.until = until;
-        }
-    }
-
-    public List<AvailabilityRow> getAvailabilityRows() {
-        return availabilityRows;
-    }
-
-    public void setAvailabilityRows(final List<AvailabilityRow> availabilityRows) {
-        this.availabilityRows = availabilityRows;
-    }
 
     public BigDecimal getPricePerDay() {
         return pricePerDay;
