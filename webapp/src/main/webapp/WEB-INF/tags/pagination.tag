@@ -17,7 +17,7 @@
     
     <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&amp;' : '?'}"/>
     <c:if test="${not empty sortParam}">
-        <c:set var="sortSuffix" value="&amp;sort=${sortParam}"/>
+        <c:set var="sortSuffix" value="&amp;sort=${fn:escapeXml(sortParam)}"/>
     </c:if>
     <c:if test="${empty sortParam}">
         <c:set var="sortSuffix" value=""/>

@@ -12,10 +12,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
 public class SearchController {
+
+    private static final String DEFAULT_SORT = "date,desc";
+    private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
 
     private final ListingService listingService;
 
@@ -47,9 +51,10 @@ public class SearchController {
                 .map(SearchController::toVehicleCardView)
                 .collect(Collectors.toList());
 
+        final String safeSort = VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
         mav.addObject("results", results);
         mav.addObject("searchPage", resultPage);
-        mav.addObject("currentSort", sort != null ? sort : "date,desc");
+        mav.addObject("currentSort", safeSort);
         mav.addObject("activeTab", "search");
 
         return mav;
