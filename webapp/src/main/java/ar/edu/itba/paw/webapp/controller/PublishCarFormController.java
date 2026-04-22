@@ -10,7 +10,6 @@ import javax.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -25,6 +24,7 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
@@ -91,19 +91,21 @@ public class PublishCarFormController {
     }
 
     @GetMapping
-    public ModelAndView index(final Authentication authentication, final HttpSession session) {
+    public ModelAndView index(
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            final HttpSession session) {
         pictureStash.clear(session);
-        final ModelAndView mav = publishCarFormView(authentication, session);
+        final ModelAndView mav = publishCarFormView(currentUser, session);
         mav.addObject("publishCarForm", new PublishCarForm());
         return mav;
     }
 
     @GetMapping("/retained-picture/{token}")
     public ResponseEntity<byte[]> retainedPicture(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpSession session,
             @PathVariable final String token) {
-        WebAuthUtils.requireCurrentUser(authentication);
+        WebAuthUtils.requireUser(currentUser);
         final PublishCarRetainedImage img = pictureStash.getOrNull(session, token);
         if (img == null) {
             return ResponseEntity.notFound().build();
@@ -123,10 +125,10 @@ public class PublishCarFormController {
 
     @PostMapping("/retained-picture/{token}/remove")
     public ResponseEntity<Void> removeRetainedPicture(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpSession session,
             @PathVariable final String token) {
-        WebAuthUtils.requireCurrentUser(authentication);
+        WebAuthUtils.requireUser(currentUser);
         if (pictureStash.removeByToken(session, token)) {
             return ResponseEntity.ok().build();
         }
@@ -135,35 +137,35 @@ public class PublishCarFormController {
 
     @PostMapping
     public ModelAndView publish(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpSession session,
             @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
         pictureStash.trySyncFromForm(form, session, errors);
         if (errors.hasErrors()) {
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
 
         publishCarFormValidator.validate(form, errors);
         if (errors.hasErrors()) {
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
 
         pictureStash.validatePicturePresence(form, session, errors);
         if (errors.hasErrors()) {
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
 
         final int fromForm = PublishCarPictureSessionStash.countNonEmptyMultipart(form.getPictures());
         if (fromForm > 0) {
             if (!multipartImageValidation.validateFilesAreImages(form.getPictures(), errors, "pictures")) {
                 pictureStash.trySyncFromForm(form, session, errors);
-                return publishCarFormView(authentication, session);
+                return publishCarFormView(currentUser, session);
             }
             if (!multipartImageValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
                 pictureStash.trySyncFromForm(form, session, errors);
-                return publishCarFormView(authentication, session);
+                return publishCarFormView(currentUser, session);
             }
         }
 
@@ -175,21 +177,21 @@ public class PublishCarFormController {
                     MessageKeys.PUBLISH_IMAGES_READ,
                     localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
 
         if (!multipartImageValidation.validateImageUploadsAreImages(uploads, errors, "pictures")) {
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
         if (!multipartImageValidation.validateImageUploadsWithinMaxSize(uploads, errors)) {
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
 
         try {
             final List<AvailabilityPeriod> periods = form.toAvailabilityPeriods();
-            final long ownerId = WebAuthUtils.requireCurrentUser(authentication).getUserId();
+            final long ownerId = WebAuthUtils.requireUser(currentUser).getId();
             final var result = listingService.publish(
                     ownerId,
                     form.getPlate(),
@@ -219,15 +221,15 @@ public class PublishCarFormController {
                     MessageKeys.PUBLISH_FAILED,
                     localeMessages.msg(MessageKeys.PUBLISH_FAILED, detail));
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(authentication, session);
+            return publishCarFormView(currentUser, session);
         }
     }
 
-    private ModelAndView publishCarFormView(final Authentication authentication, final HttpSession session) {
+    private ModelAndView publishCarFormView(final User currentUser, final HttpSession session) {
         final ModelAndView mav = new ModelAndView("publishCarForm");
         mav.addObject("activeTab", "publish-car");
-        final var me = WebAuthUtils.requireCurrentUser(authentication);
-        mav.addObject("publisherEmail", me.getUsername());
+        final User me = WebAuthUtils.requireUser(currentUser);
+        mav.addObject("publisherEmail", me.getEmail());
         mav.addObject("publisherDisplayName", me.getForename() + " " + me.getSurname());
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);

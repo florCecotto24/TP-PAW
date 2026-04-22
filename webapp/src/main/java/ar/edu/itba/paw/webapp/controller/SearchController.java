@@ -5,10 +5,9 @@ import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,12 +41,12 @@ public class SearchController {
             @RequestParam(required = false) final String until,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String sort,
-            final Authentication authentication) {
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser) {
         final ModelAndView mav = new ModelAndView("search");
 
         page = Math.max(0, page);
 
-        final User viewer = WebAuthUtils.viewerUser(authentication).orElse(null);
+        final User viewer = currentUser;
 
         final var criteria = listingService.buildSearchCriteria(
                 query, category, transmission, powertrain, price, from, until, page, sort, viewer);

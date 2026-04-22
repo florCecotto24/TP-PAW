@@ -4,6 +4,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationException;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
@@ -13,7 +14,6 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,7 +53,7 @@ public class ReservationFormController {
 
     @GetMapping("/new")
     public ModelAndView index(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam(name = "listingId") final long listingId,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "carName", required = false) final String carName,
@@ -74,10 +74,10 @@ public class ReservationFormController {
 
         final ModelAndView mav = new ModelAndView("reservationForm");
         mav.addObject("availabilityId", availabilityId);
-        final var rider = WebAuthUtils.requireCurrentUser(authentication);
+        final User rider = WebAuthUtils.requireUser(currentUser);
         mav.addObject("riderForename", rider.getForename());
         mav.addObject("riderSurname", rider.getSurname());
-        mav.addObject("riderEmail", rider.getUsername());
+        mav.addObject("riderEmail", rider.getEmail());
         addReservationPricingToModel(mav, listingId, fromDateTime, untilDateTime, reservationTotal);
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         return mav;
@@ -85,7 +85,7 @@ public class ReservationFormController {
 
     @PostMapping
     public ModelAndView formSubmit(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @Valid @ModelAttribute("reservationForm") final ReservationForm form,
             final BindingResult errors,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
@@ -104,10 +104,10 @@ public class ReservationFormController {
         if (errors.hasErrors()) {
             final ModelAndView mav = new ModelAndView("reservationForm");
             mav.addObject("availabilityId", availabilityId);
-            final var riderErr = WebAuthUtils.requireCurrentUser(authentication);
+            final User riderErr = WebAuthUtils.requireUser(currentUser);
             mav.addObject("riderForename", riderErr.getForename());
             mav.addObject("riderSurname", riderErr.getSurname());
-            mav.addObject("riderEmail", riderErr.getUsername());
+            mav.addObject("riderEmail", riderErr.getEmail());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             return mav;
@@ -117,10 +117,10 @@ public class ReservationFormController {
             final ModelAndView mav = new ModelAndView("reservationForm");
             mav.addObject("reservationError", localeMessages.msg(MessageKeys.RESERVATION_FORM_CAR_NAME_REQUIRED));
             mav.addObject("availabilityId", availabilityId);
-            final var riderCar = WebAuthUtils.requireCurrentUser(authentication);
+            final User riderCar = WebAuthUtils.requireUser(currentUser);
             mav.addObject("riderForename", riderCar.getForename());
             mav.addObject("riderSurname", riderCar.getSurname());
-            mav.addObject("riderEmail", riderCar.getUsername());
+            mav.addObject("riderEmail", riderCar.getEmail());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             return mav;
@@ -128,7 +128,7 @@ public class ReservationFormController {
 
         final Reservation reservation;
         try {
-            final long riderId = WebAuthUtils.requireCurrentUser(authentication).getUserId();
+            final long riderId = WebAuthUtils.requireUser(currentUser).getId();
 
             LOGGER.atInfo().log("Submitting reservation for riderId={}, listingId={}, availabilityId={}, " +
                             "fromDateTime={}, untilDateTime={}",
@@ -144,21 +144,21 @@ public class ReservationFormController {
             final ModelAndView mav = new ModelAndView("reservationForm");
             mav.addObject("reservationError", localeMessages.msg(e));
             mav.addObject("availabilityId", availabilityId);
-            final var riderEx = WebAuthUtils.requireCurrentUser(authentication);
+            final User riderEx = WebAuthUtils.requireUser(currentUser);
             mav.addObject("riderForename", riderEx.getForename());
             mav.addObject("riderSurname", riderEx.getSurname());
-            mav.addObject("riderEmail", riderEx.getUsername());
+            mav.addObject("riderEmail", riderEx.getEmail());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             return mav;
         }
 
-        final var riderDone = WebAuthUtils.requireCurrentUser(authentication);
+        final User riderDone = WebAuthUtils.requireUser(currentUser);
         final ModelAndView mav = new ModelAndView("reservationConfirmation");
         mav.addObject("carName", form.getCarName());
         mav.addObject("name", riderDone.getForename());
         mav.addObject("surname", riderDone.getSurname());
-        mav.addObject("email", riderDone.getUsername());
+        mav.addObject("email", riderDone.getEmail());
         mav.addObject("fromDateTime", form.getFromDateTime());
         mav.addObject("untilDateTime", form.getUntilDateTime());
         mav.addObject("deliveryLocation", listingOpt.get().getStartPoint());

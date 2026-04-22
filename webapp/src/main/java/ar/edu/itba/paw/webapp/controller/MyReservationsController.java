@@ -4,16 +4,16 @@ import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.ReservationCard;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
-import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,22 +45,22 @@ public class MyReservationsController {
 
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam(defaultValue = "0") int riderPage,
             @RequestParam(defaultValue = "0") int ownerPage) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         riderPage = Math.max(0, riderPage);
         ownerPage = Math.max(0, ownerPage);
 
         // Rider reservations (reservations made BY the user)
-        final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(details.getUserId(), riderPage, PAGE_SIZE);
+        final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(me.getId(), riderPage, PAGE_SIZE);
         final Locale locale = LocaleContextHolder.getLocale();
         final List<ReservationCardView> riderReservations = riderResultPage.getContent().stream()
                 .map(card -> toReservationCardView(card, locale))
                 .collect(Collectors.toList());
 
         // Owner reservations (reservations made ON the user's cars)
-        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(details.getUserId(), ownerPage, PAGE_SIZE);
+        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(me.getId(), ownerPage, PAGE_SIZE);
         final List<ReservationCardView> ownerReservations = ownerResultPage.getContent().stream()
                 .map(card -> toReservationCardView(card, locale))
                 .collect(Collectors.toList());
@@ -76,13 +76,13 @@ public class MyReservationsController {
 
     @GetMapping("/my-reservations/{reservationId}")
     public ModelAndView reservationDetail(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @PathVariable("reservationId") final long reservationId,
             @RequestParam(defaultValue = "rider") final String role) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<Reservation> reservationOpt = "owner".equals(role)
-                ? reservationService.getOwnerReservationById(details.getUserId(), reservationId)
-                : reservationService.getRiderReservationById(details.getUserId(), reservationId);
+                ? reservationService.getOwnerReservationById(me.getId(), reservationId)
+                : reservationService.getRiderReservationById(me.getId(), reservationId);
         
         if (reservationOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
@@ -141,13 +141,13 @@ public class MyReservationsController {
 
     @PostMapping("/my-reservations/{reservationId}/cancel")
     public ModelAndView cancelReservation(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @PathVariable("reservationId") final long reservationId,
             @RequestParam(defaultValue = "rider") final String role) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<Reservation> reservationOpt = "owner".equals(role)
-                ? reservationService.getOwnerReservationById(details.getUserId(), reservationId)
-                : reservationService.getRiderReservationById(details.getUserId(), reservationId);
+                ? reservationService.getOwnerReservationById(me.getId(), reservationId)
+                : reservationService.getRiderReservationById(me.getId(), reservationId);
         
         if (reservationOpt.isPresent()) {
             reservationService.cancelReservation(reservationId);

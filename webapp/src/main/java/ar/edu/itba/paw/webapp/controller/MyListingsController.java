@@ -4,13 +4,12 @@ import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -48,12 +47,12 @@ public class MyListingsController {
 
     @GetMapping
     public ModelAndView myListings(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam(defaultValue = "0") int page) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
 
-        final Page<ListingCard> resultPage = listingService.getOwnerListingCards(details.getUserId(), page, PAGE_SIZE);
+        final Page<ListingCard> resultPage = listingService.getOwnerListingCards(me.getId(), page, PAGE_SIZE);
         final List<VehicleCardView> listings = resultPage.getContent().stream()
                 .map(card -> {
                     final String statusKey = listingService.getListingById(card.getListingId())
@@ -78,11 +77,11 @@ public class MyListingsController {
 
     @GetMapping("/{listingId}")
     public ModelAndView listingDetail(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @PathVariable("listingId") final long listingId) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
-        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != details.getUserId()) {
+        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
             return new ModelAndView(new RedirectView("/my-listings", true));
         }
 
@@ -91,13 +90,13 @@ public class MyListingsController {
 
     @PostMapping("/{listingId}/edit")
     public ModelAndView editListing(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @PathVariable("listingId") final long listingId,
             @Valid @ModelAttribute("editForm") final ListingEditForm editForm,
             final BindingResult errors) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
-        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != details.getUserId()) {
+        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
             return new ModelAndView(new RedirectView("/my-listings", true));
         }
         if (errors.hasErrors()) {
@@ -105,7 +104,7 @@ public class MyListingsController {
         }
 
         listingService.updateOwnerListing(
-                details.getUserId(),
+                me.getId(),
                 listingId,
                 editForm.getPricePerDay(),
                 editForm.getStartPoint(),
@@ -118,10 +117,10 @@ public class MyListingsController {
 
     @PostMapping("/{listingId}/toggle")
     public ModelAndView toggleListing(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @PathVariable("listingId") final long listingId) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
-        listingService.toggleListingStatus(details.getUserId(), listingId);
+        final User me = WebAuthUtils.requireUser(currentUser);
+        listingService.toggleListingStatus(me.getId(), listingId);
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 

@@ -9,8 +9,6 @@ import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.stereotype.Controller;
@@ -74,9 +72,9 @@ public class RegistrationController {
     @GetMapping("/register")
     public String registerForm(
             final HttpServletRequest request,
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final Model model) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/register");
         }
         final RegistrationAccountForm form = new RegistrationAccountForm();
@@ -103,11 +101,11 @@ public class RegistrationController {
     @PostMapping("/register")
     public String registerSubmit(
             final HttpServletRequest request,
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @Valid @ModelAttribute("registrationAccountForm") final RegistrationAccountForm registrationAccountForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/register");
         }
         if (bindingResult.hasErrors()) {
@@ -138,12 +136,12 @@ public class RegistrationController {
 
     @GetMapping("/verify-email")
     public String verifyForm(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam(value = "email", required = false) final String email,
             @RequestParam(value = "fromLogin", required = false) final String fromLogin,
             final HttpServletRequest request,
             final Model model) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
         final boolean fromLoginFlow = StringUtils.hasText(fromLogin)
@@ -169,10 +167,10 @@ public class RegistrationController {
     @PostMapping("/verify-email/resend")
     public String verifyResend(
             final HttpServletRequest request,
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam("email") final String email,
             final RedirectAttributes redirectAttributes) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
         if (!StringUtils.hasText(email)) {
@@ -235,9 +233,4 @@ public class RegistrationController {
         return "redirect:/";
     }
 
-    private static boolean isSignedIn(final Authentication authentication) {
-        return authentication != null
-                && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken);
-    }
 }

@@ -95,4 +95,18 @@ public final class WebAuthUtils {
     public static RydenUserDetails requireCurrentUser(final Authentication authentication) {
         return currentUserDetails(authentication).orElseThrow(() -> new IllegalStateException("Expected authenticated user"));
     }
+
+    /**
+     * Domain user from {@code LoggedUserAdvice} ({@code currentUser}); same contract as {@link #requireCurrentUser(Authentication)}.
+     */
+    public static User requireUser(final User currentUser) {
+        if (currentUser == null) {
+            throw new IllegalStateException("Expected authenticated user");
+        }
+        return currentUser;
+    }
+
+    public static boolean isSignedIn(final User currentUser) {
+        return currentUser != null;
+    }
 }

@@ -27,6 +27,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserValidationPolicy;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
@@ -85,59 +86,60 @@ public class ProfileController {
     }
 
     @ModelAttribute
-    public void addUserBasics(final Authentication authentication, final Model model) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof RydenUserDetails)) {
+    public void addUserBasics(
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            final Model model) {
+        if (currentUser == null) {
             return;
         }
-        final RydenUserDetails details = (RydenUserDetails) authentication.getPrincipal();
-        model.addAttribute("userEmail", details.getUsername());
-        model.addAttribute("userForename", details.getForename());
-        model.addAttribute("userSurname", details.getSurname());
-        userService.getUserById(details.getUserId()).ifPresent(u -> u.getProfilePictureId()
+        model.addAttribute("userEmail", currentUser.getEmail());
+        model.addAttribute("userForename", currentUser.getForename());
+        model.addAttribute("userSurname", currentUser.getSurname());
+        userService.getUserById(currentUser.getId()).ifPresent(u -> u.getProfilePictureId()
                 .ifPresent(id -> model.addAttribute("profilePictureImageId", id)));
     }
 
     @GetMapping
     public String profileGet(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @ModelAttribute("profileForm") final ProfileUpdateForm profileForm) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
-        populateFormFromUser(details.getUserId(), profileForm);
+        final User me = WebAuthUtils.requireUser(currentUser);
+        populateFormFromUser(me.getId(), profileForm);
         return "profile";
     }
 
     @PostMapping
     public String profilePost(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @Valid @ModelAttribute("profileForm") final ProfileUpdateForm profileForm,
             final BindingResult bindingResult,
             final HttpServletRequest request,
             final HttpServletResponse response,
             final RedirectAttributes redirectAttributes) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         final LocalDate birthParsed = parseAndValidateBirthDate(profileForm.getBirthDate(), bindingResult);
         if (bindingResult.hasErrors()) {
             return "profile";
         }
         try {
-            userService.updateDisplayName(details.getUserId(), profileForm.getForename(), profileForm.getSurname());
-            userService.updatePhoneNumber(details.getUserId(), profileForm.getPhoneNumber());
-            userService.updateBirthDate(details.getUserId(), birthParsed);
+            userService.updateDisplayName(me.getId(), profileForm.getForename(), profileForm.getSurname());
+            userService.updatePhoneNumber(me.getId(), profileForm.getPhoneNumber());
+            userService.updateBirthDate(me.getId(), birthParsed);
         } catch (final RydenException e) {
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile";
         }
-        refreshPrincipalDisplayName(authentication, profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
+        refreshPrincipalDisplayName(profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
         redirectAttributes.addFlashAttribute("profileSaved", Boolean.TRUE);
         return "redirect:/profile";
     }
 
     @PostMapping("/picture")
     public String uploadProfilePicture(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam("profilePicture") final MultipartFile file,
             final RedirectAttributes redirectAttributes) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         if (file == null || file.isEmpty()) {
             redirectAttributes.addFlashAttribute("profilePictureErrorCode", "profile.picture.required");
             return "redirect:/profile";
@@ -155,7 +157,7 @@ public class ProfileController {
         }
         try {
             userService.updateProfilePicture(
-                    details.getUserId(),
+                    me.getId(),
                     file.getOriginalFilename(),
                     file.getContentType(),
                     file.getBytes());
@@ -172,11 +174,11 @@ public class ProfileController {
 
     @PostMapping("/picture/delete")
     public String deleteProfilePicture(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final RedirectAttributes redirectAttributes) {
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         try {
-            userService.clearProfilePicture(details.getUserId());
+            userService.clearProfilePicture(me.getId());
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("profilePictureErrorMessage", localeMessages.msg(e));
             return "redirect:/profile";
@@ -186,26 +188,27 @@ public class ProfileController {
     }
 
     @GetMapping("/password")
-    public String passwordFormGet(final Authentication authentication, final Model model) {
-        WebAuthUtils.requireCurrentUser(authentication);
+    public String passwordFormGet(
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            final Model model) {
+        WebAuthUtils.requireUser(currentUser);
         model.addAttribute("profilePasswordForm", new ProfilePasswordChangeForm());
         return "profile-password";
     }
 
     @PostMapping("/password")
     public String passwordFormPost(
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @Valid @ModelAttribute("profilePasswordForm") final ProfilePasswordChangeForm profilePasswordForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
-        WebAuthUtils.requireCurrentUser(authentication);
+        final User me = WebAuthUtils.requireUser(currentUser);
         if (bindingResult.hasErrors()) {
             return "profile-password";
         }
-        final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
         try {
             userService.changePassword(
-                    details.getUserId(),
+                    me.getId(),
                     profilePasswordForm.getCurrentPassword(),
                     profilePasswordForm.getPassword(),
                     profilePasswordForm.getPasswordConfirm());
@@ -227,12 +230,12 @@ public class ProfileController {
     }
 
     private void refreshPrincipalDisplayName(
-            final Authentication authentication,
             final String forename,
             final String surname,
             final HttpServletRequest request,
             final HttpServletResponse response) {
-        if (!(authentication.getPrincipal() instanceof RydenUserDetails)) {
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof RydenUserDetails)) {
             return;
         }
         final RydenUserDetails old = (RydenUserDetails) authentication.getPrincipal();

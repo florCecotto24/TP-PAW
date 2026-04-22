@@ -6,8 +6,6 @@ import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -20,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.UserValidationPolicy;
 import ar.edu.itba.paw.services.PasswordResetService;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
@@ -51,8 +50,10 @@ public class ForgotPasswordController {
     }
 
     @GetMapping
-    public String forgotForm(final HttpServletRequest request, final Authentication authentication) {
-        if (isSignedIn(authentication)) {
+    public String forgotForm(
+            final HttpServletRequest request,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         return "forgot-password";
@@ -61,11 +62,11 @@ public class ForgotPasswordController {
     @PostMapping
     public String forgotSubmit(
             final HttpServletRequest request,
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam("email") final String email,
             final HttpSession session,
             final RedirectAttributes redirectAttributes) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         if (!StringUtils.hasText(email)) {
@@ -91,11 +92,11 @@ public class ForgotPasswordController {
     @GetMapping("/reset")
     public String resetForm(
             final HttpServletRequest request,
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpSession session,
             final Model model,
             final RedirectAttributes redirectAttributes) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         if (session.getAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL) == null) {
@@ -109,12 +110,12 @@ public class ForgotPasswordController {
     @PostMapping("/reset")
     public String resetSubmit(
             final HttpServletRequest request,
-            final Authentication authentication,
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpSession session,
             @Valid @ModelAttribute("forgotPasswordResetForm") final ForgotPasswordResetForm form,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
-        if (isSignedIn(authentication)) {
+        if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         final Object rawEmail = session.getAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL);
@@ -137,9 +138,4 @@ public class ForgotPasswordController {
         return "redirect:/login";
     }
 
-    private static boolean isSignedIn(final Authentication authentication) {
-        return authentication != null
-                && authentication.isAuthenticated()
-                && !(authentication instanceof AnonymousAuthenticationToken);
-    }
 }
