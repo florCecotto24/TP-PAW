@@ -16,7 +16,7 @@
 <main class="container pt-5 pb-4">
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
     <c:url var="editListingUrl" value="/my-listings/${listing.id}/edit"/>
-    <c:url var="deleteListingUrl" value="/my-listings/${listing.id}/delete"/>
+    <c:url var="toggleListingUrl" value="/my-listings/${listing.id}/toggle"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
             homeHref="${pageContext.request.contextPath}/my-listings"
@@ -178,11 +178,20 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <form method="post" action="<c:out value='${deleteListingUrl}'/>">
+                        <form method="post" action="<c:out value='${toggleListingUrl}'/>">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <button type="submit" class="btn btn-outline-danger w-100">
-                                <spring:message code="myListingDetail.actions.delete"/>
-                            </button>
+                            <c:choose>
+                                <c:when test="${statusKey == 'ACTIVE'}">
+                                    <button type="submit" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:#e4960b;" aria-label="<spring:message code='myListingDetail.actions.pause'/>">
+                                        <spring:message code="myListingDetail.actions.pause"/>
+                                    </button>
+                                </c:when>
+                                <c:when test="${statusKey == 'PAUSED'}">
+                                    <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myListingDetail.actions.activate'/>">
+                                        <spring:message code="myListingDetail.actions.activate"/>
+                                    </button>
+                                </c:when>
+                            </c:choose>
                         </form>
                     </div>
 

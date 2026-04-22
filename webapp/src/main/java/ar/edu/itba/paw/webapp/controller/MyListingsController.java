@@ -105,8 +105,8 @@ public class MyListingsController {
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 
-    @PostMapping("/{listingId}/delete")
-    public ModelAndView deleteListing(
+    @PostMapping("/{listingId}/toggle")
+    public ModelAndView toggleListing(
             final Authentication authentication,
             @PathVariable("listingId") final long listingId) {
         final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);

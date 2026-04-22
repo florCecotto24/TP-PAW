@@ -241,12 +241,15 @@ public class ListingJdbcDao implements ListingDao {
 
     @Override
     public boolean toggleListingStatus(final long ownerId, final long listingId) {
-        final int deleted = jdbcTemplate.update(
-                "DELETE FROM listings l WHERE l.id = ? AND EXISTS ("
-                        + "SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = ?)",
+        final int updated = jdbcTemplate.update(
+                "UPDATE listings l SET status = CASE WHEN l.status = 'active' THEN 'paused' "
+                        + "WHEN l.status = 'paused' THEN 'active' ELSE l.status END, updated_at = ? "
+                        + "WHERE l.id = ? AND EXISTS (SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = ?) "
+                        + "AND l.status IN ('active','paused')",
+                JdbcDateTimeUtils.nowTimestamp(),
                 listingId,
                 ownerId);
-        return deleted > 0;
+        return updated > 0;
     }
 
     @Override
