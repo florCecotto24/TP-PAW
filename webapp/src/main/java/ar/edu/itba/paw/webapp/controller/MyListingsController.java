@@ -10,6 +10,7 @@ import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -20,7 +21,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 import java.util.ArrayList;
@@ -48,11 +51,23 @@ public class MyListingsController {
     @GetMapping
     public ModelAndView myListings(
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
-            @RequestParam(defaultValue = "0") int page) {
+            @RequestParam(defaultValue = "0") int page,
+            final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
 
         final Page<ListingCard> resultPage = listingService.getOwnerListingCards(me.getId(), page, PAGE_SIZE);
+
+        final int lastPage = resultPage.getTotalPages() - 1;
+        if (page > lastPage) {
+            final RedirectView redirectView = new RedirectView(
+                    UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
+                            .replaceQueryParam("page", lastPage)
+                            .build()
+                            .toUriString());
+            redirectView.setExposeModelAttributes(false);
+            return new ModelAndView(redirectView);
+        }
         final List<VehicleCardView> listings = resultPage.getContent().stream()
                 .map(card -> {
                     final String statusKey = listingService.getListingById(card.getListingId())

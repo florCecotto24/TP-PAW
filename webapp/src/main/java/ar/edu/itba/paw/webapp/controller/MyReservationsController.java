@@ -12,6 +12,7 @@ import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import javax.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -50,7 +54,8 @@ public class MyReservationsController {
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam(defaultValue = TAB_RIDER) final String tab,
             @RequestParam(defaultValue = "0") int riderPage,
-            @RequestParam(defaultValue = "0") int ownerPage) {
+            @RequestParam(defaultValue = "0") int ownerPage,
+            final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final String selectedTab = normalizeReservationsTab(tab);
         riderPage = Math.max(0, riderPage);
@@ -68,6 +73,22 @@ public class MyReservationsController {
         final List<ReservationCardView> ownerReservations = ownerResultPage.getContent().stream()
                 .map(card -> toReservationCardView(card, locale))
                 .collect(Collectors.toList());
+
+        final int lastRiderPage = riderResultPage.getTotalPages() - 1;
+        final int lastOwnerPage = ownerResultPage.getTotalPages() - 1;
+        if (riderPage > lastRiderPage || ownerPage > lastOwnerPage) {
+            final UriComponentsBuilder uriBuilder = UriComponentsBuilder
+                    .fromHttpRequest(new ServletServerHttpRequest(request));
+            if (riderPage > lastRiderPage) {
+                uriBuilder.replaceQueryParam("riderPage", lastRiderPage);
+            }
+            if (ownerPage > lastOwnerPage) {
+                uriBuilder.replaceQueryParam("ownerPage", lastOwnerPage);
+            }
+            final RedirectView redirectView = new RedirectView(uriBuilder.build().toUriString());
+            redirectView.setExposeModelAttributes(false);
+            return new ModelAndView(redirectView);
+        }
 
         final ModelAndView mav = new ModelAndView("myReservations");
         mav.addObject("riderReservations", riderReservations);
