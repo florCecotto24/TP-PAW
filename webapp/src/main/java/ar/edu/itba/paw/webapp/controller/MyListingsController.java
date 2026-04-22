@@ -110,7 +110,7 @@ public class MyListingsController {
             final Authentication authentication,
             @PathVariable("listingId") final long listingId) {
         final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
-        listingService.deleteOwnerListing(details.getUserId(), listingId);
+        listingService.toggleListingStatus(details.getUserId(), listingId);
         return new ModelAndView(new RedirectView("/my-listings", true));
     }
 

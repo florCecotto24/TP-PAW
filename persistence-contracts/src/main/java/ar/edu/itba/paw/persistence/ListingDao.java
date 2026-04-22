@@ -37,7 +37,7 @@ public interface ListingDao {
             LocalTime checkInTime,
             LocalTime checkOutTime);
 
-    boolean deleteOwnerListing(long ownerId, long listingId);
+    boolean toggleListingStatus(long ownerId, long listingId);
 
     List<Listing> getAllListings();
 

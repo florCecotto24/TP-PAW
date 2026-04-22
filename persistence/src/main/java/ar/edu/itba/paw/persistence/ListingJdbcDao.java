@@ -240,7 +240,7 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public boolean deleteOwnerListing(final long ownerId, final long listingId) {
+    public boolean toggleListingStatus(final long ownerId, final long listingId) {
         final int deleted = jdbcTemplate.update(
                 "DELETE FROM listings l WHERE l.id = ? AND EXISTS ("
                         + "SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = ?)",

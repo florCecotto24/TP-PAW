@@ -63,7 +63,7 @@ public interface ListingService {
             LocalTime checkOutTime,
             List<AvailabilityPeriod> availabilityPeriods);
 
-    boolean deleteOwnerListing(long ownerId, long listingId);
+    boolean toggleListingStatus(long ownerId, long listingId);
 
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 

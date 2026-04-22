@@ -241,12 +241,12 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional
-    public boolean deleteOwnerListing(final long ownerId, final long listingId) {
+    public boolean toggleListingStatus(final long ownerId, final long listingId) {
         final List<Reservation> reservations = reservationDao.getListingActiveReservations(listingId);
 
         final Optional<Listing> listingOpt = listingDao.getListingById(listingId);
         final Optional<User> ownerOpt = userService.getUserById(ownerId);
-        final boolean deleted = listingDao.deleteOwnerListing(ownerId, listingId);
+        final boolean deleted = listingDao.toggleListingStatus(ownerId, listingId);
         if (!deleted || listingOpt.isEmpty() || ownerOpt.isEmpty()) {
             return deleted;
         }
