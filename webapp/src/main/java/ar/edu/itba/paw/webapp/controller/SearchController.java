@@ -6,13 +6,17 @@ import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -41,7 +45,8 @@ public class SearchController {
             @RequestParam(required = false) final String until,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String sort,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser) {
+            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            final HttpServletRequest request) {
         final ModelAndView mav = new ModelAndView("search");
 
         page = Math.max(0, page);
@@ -51,6 +56,18 @@ public class SearchController {
         final var criteria = listingService.buildSearchCriteria(
                 query, category, transmission, powertrain, price, from, until, page, sort, viewer);
         final Page<ListingCard> resultPage = listingService.searchListingCards(criteria);
+
+        final int lastPage = resultPage.getTotalPages() - 1;
+        if (page > lastPage) {
+            final String redirectUrl = UriComponentsBuilder
+                    .fromHttpRequest(new ServletServerHttpRequest(request))
+                    .replaceQueryParam("page", lastPage)
+                    .build()
+                    .toUriString();
+            final RedirectView redirectView = new RedirectView(redirectUrl);
+            redirectView.setExposeModelAttributes(false);
+            return new ModelAndView(redirectView);
+        }
         final List<VehicleCardView> results = resultPage.getContent().stream()
                 .map(SearchController::toVehicleCardView)
                 .collect(Collectors.toList());
