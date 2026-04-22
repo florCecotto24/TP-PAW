@@ -59,4 +59,3 @@ public class ReservationForm {
         this.carName = carName;
     }
 }
-

@@ -10,10 +10,10 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.webapp.form.PublishCarForm;
+import ar.edu.itba.paw.webapp.form.ListingTimeWindow;
 
 @Component
-public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, PublishCarForm> {
+public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, ListingTimeWindow> {
 
     private final MessageSource messageSource;
 
@@ -23,7 +23,7 @@ public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckO
     }
 
     @Override
-    public boolean isValid(final PublishCarForm form, final ConstraintValidatorContext context) {
+    public boolean isValid(final ListingTimeWindow form, final ConstraintValidatorContext context) {
         if (form == null) {
             return true;
         }

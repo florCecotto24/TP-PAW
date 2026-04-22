@@ -16,8 +16,10 @@ import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
 
-public class ListingEditForm {
+@CheckOutAfterCheckIn
+public class ListingEditForm implements ListingTimeWindow {
 
     @NotNull(message = "{validation.pricePerDay.notNull}")
     @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}")
@@ -25,6 +27,7 @@ public class ListingEditForm {
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "{validation.startPoint.notBlank}")
+    @Size(max = 250, message = "{validation.startPoint.size}")
     private String startPoint;
 
     @Size(max = 200, message = "{validation.description.size}")
@@ -113,6 +116,7 @@ public class ListingEditForm {
         this.description = description;
     }
 
+    @Override
     public LocalTime getCheckInTime() {
         return checkInTime;
     }
@@ -121,6 +125,7 @@ public class ListingEditForm {
         this.checkInTime = checkInTime;
     }
 
+    @Override
     public LocalTime getCheckOutTime() {
         return checkOutTime;
     }

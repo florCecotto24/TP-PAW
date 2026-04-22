@@ -90,6 +90,7 @@ public class ListingServiceImpl implements ListingService {
         if (availabilityPeriods == null || availabilityPeriods.isEmpty()) {
             throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_REQUIRED);
         }
+        validateListingCheckOutAfterCheckIn(checkInTime, checkOutTime);
         for (final AvailabilityPeriod period : availabilityPeriods) {
             if (!period.isValidOrder()) {
                 throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
@@ -166,6 +167,15 @@ public class ListingServiceImpl implements ListingService {
         return new CarPublicationResult(publisher, car, listing);
     }
 
+    private static void validateListingCheckOutAfterCheckIn(final LocalTime checkInTime, final LocalTime checkOutTime) {
+        if (checkInTime == null || checkOutTime == null) {
+            return;
+        }
+        if (!checkOutTime.isAfter(checkInTime)) {
+            throw new ListingValidationException(MessageKeys.LISTING_CHECKOUT_NOT_AFTER_CHECKIN);
+        }
+    }
+
     private static void validateAvailabilityIncludesNoDatesBeforeToday(final List<AvailabilityPeriod> periods) {
         final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         for (final AvailabilityPeriod period : periods) {
@@ -220,6 +230,15 @@ public class ListingServiceImpl implements ListingService {
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
             final List<AvailabilityPeriod> availabilityPeriods) {
+        validateListingCheckOutAfterCheckIn(checkInTime, checkOutTime);
+        if (availabilityPeriods != null && !availabilityPeriods.isEmpty()) {
+            for (final AvailabilityPeriod period : availabilityPeriods) {
+                if (!period.isValidOrder()) {
+                    throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
+                }
+            }
+            validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
+        }
         final String safeStartPoint = startPoint == null ? "" : startPoint.trim();
         final String safeDescription = description == null ? "" : description.trim();
         boolean updated = listingDao.updateOwnerListing(

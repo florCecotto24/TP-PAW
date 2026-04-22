@@ -22,7 +22,7 @@ import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
 import ar.edu.itba.paw.webapp.validation.NoPunctuation;
 
 @CheckOutAfterCheckIn
-public class PublishCarForm {
+public class PublishCarForm implements ListingTimeWindow {
 
     @NotBlank(message = "{validation.brand.notBlank}")
     @Size(message = "{validation.brand.size}", min = 2, max = 50)
@@ -206,6 +206,7 @@ public class PublishCarForm {
         this.description = description;
     }
 
+    @Override
     public LocalTime getCheckInTime() {
         return checkInTime;
     }
@@ -214,6 +215,7 @@ public class PublishCarForm {
         this.checkInTime = checkInTime;
     }
 
+    @Override
     public LocalTime getCheckOutTime() {
         return checkOutTime;
     }
