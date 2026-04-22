@@ -61,7 +61,21 @@
                         <c:forEach var="car" items="${results}">
                             <c:url var="listingDetailUrl" value="/my-listings/${car.listingId}"/>
                             <a href="<c:out value='${listingDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
-                                <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface">
+                                <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
+                                    <c:if test="${not empty car.statusKey}">
+                                        <c:choose>
+                                            <c:when test="${car.statusKey == 'ACTIVE'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#198754; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.listing.status.ACTIVE"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'PAUSED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#e4960b; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.listing.status.PAUSED"/>
+                                                </span>
+                                            </c:when>
+                                        </c:choose>
+                                    </c:if>
                                     <div class="row g-0 align-items-stretch">
                                         <div class="col-12 col-md-3 reservation-card__media-wrap">
                                             <c:choose>

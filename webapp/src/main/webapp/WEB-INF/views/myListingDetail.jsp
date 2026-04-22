@@ -55,7 +55,7 @@
                                 <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
                                 <span class="badge text-bg-light border"><c:out value="${carTransmissionLabel}"/></span>
                                 <span class="badge text-bg-light border"><c:out value="${carPowertrainLabel}"/></span>
-                                <span class="badge text-bg-primary"><c:out value="${listingStatusLabel}"/></span>
+                                
                             </div>
                             <p class="mb-0 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
@@ -182,7 +182,7 @@
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                             <c:choose>
                                 <c:when test="${statusKey == 'ACTIVE'}">
-                                    <button type="submit" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:#e4960b;" aria-label="<spring:message code='myListingDetail.actions.pause'/>">
+                                    <button type="submit" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" aria-label="<spring:message code='myListingDetail.actions.pause'/>">
                                         <spring:message code="myListingDetail.actions.pause"/>
                                     </button>
                                 </c:when>

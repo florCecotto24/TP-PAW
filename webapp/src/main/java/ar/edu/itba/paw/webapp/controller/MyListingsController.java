@@ -55,7 +55,18 @@ public class MyListingsController {
 
         final Page<ListingCard> resultPage = listingService.getOwnerListingCards(details.getUserId(), page, PAGE_SIZE);
         final List<VehicleCardView> listings = resultPage.getContent().stream()
-                .map(MyListingsController::toVehicleCardView)
+                .map(card -> {
+                    final String statusKey = listingService.getListingById(card.getListingId())
+                            .map(l -> l.getStatus().name())
+                            .orElse(null);
+                    return new VehicleCardView(
+                            card.getListingId(),
+                            card.getBrand(),
+                            card.getModel(),
+                            card.getDayPrice(),
+                            card.getImageId(),
+                            statusKey);
+                })
                 .collect(Collectors.toList());
 
         final ModelAndView mav = new ModelAndView("myListings");
@@ -111,7 +122,7 @@ public class MyListingsController {
             @PathVariable("listingId") final long listingId) {
         final RydenUserDetails details = WebAuthUtils.requireCurrentUser(authentication);
         listingService.toggleListingStatus(details.getUserId(), listingId);
-        return new ModelAndView(new RedirectView("/my-listings", true));
+        return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 
     private ModelAndView buildDetailModelAndView(final ListingDetail detail, final ListingEditForm editForm) {

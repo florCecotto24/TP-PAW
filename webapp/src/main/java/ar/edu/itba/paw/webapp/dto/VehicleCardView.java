@@ -8,6 +8,7 @@ public class VehicleCardView {
     private final String model;
     private final BigDecimal price;
     private final long imageId;
+    private final String statusKey;
 
     public VehicleCardView(
             final long listingId,
@@ -15,11 +16,22 @@ public class VehicleCardView {
             final String model,
             final BigDecimal price,
             final long imageId) {
+        this(listingId, brand, model, price, imageId, null);
+    }
+
+    public VehicleCardView(
+            final long listingId,
+            final String brand,
+            final String model,
+            final BigDecimal price,
+            final long imageId,
+            final String statusKey) {
         this.listingId = listingId;
         this.brand = brand;
         this.model = model;
         this.price = price;
         this.imageId = imageId;
+        this.statusKey = statusKey;
     }
 
     public long getListingId() {
@@ -40,6 +52,10 @@ public class VehicleCardView {
 
     public long getImageId() {
         return imageId;
+    }
+
+    public String getStatusKey() {
+        return statusKey;
     }
 }
 
