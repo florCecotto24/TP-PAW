@@ -27,19 +27,19 @@
 
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link ${empty param.tab or param.tab eq 'rider' ? 'active' : ''}" id="rider-tab" data-bs-toggle="tab" data-bs-target="#rider-pane" type="button" role="tab" aria-controls="rider-pane" aria-selected="${empty param.tab or param.tab eq 'rider' ? 'true' : 'false'}">
+            <button class="nav-link ${selectedReservationsTab eq 'rider' ? 'active' : ''}" id="rider-tab" data-bs-toggle="tab" data-bs-target="#rider-pane" type="button" role="tab" aria-controls="rider-pane" aria-selected="${selectedReservationsTab eq 'rider' ? 'true' : 'false'}">
                 <spring:message code="myReservations.section.myReservations"/>
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link ${param.tab eq 'owner' ? 'active' : ''}" id="owner-tab" data-bs-toggle="tab" data-bs-target="#owner-pane" type="button" role="tab" aria-controls="owner-pane" aria-selected="${param.tab eq 'owner' ? 'true' : 'false'}">
+            <button class="nav-link ${selectedReservationsTab eq 'owner' ? 'active' : ''}" id="owner-tab" data-bs-toggle="tab" data-bs-target="#owner-pane" type="button" role="tab" aria-controls="owner-pane" aria-selected="${selectedReservationsTab eq 'owner' ? 'true' : 'false'}">
                 <spring:message code="myReservations.section.ownerReservations"/>
             </button>
         </li>
     </ul>
 
     <div class="tab-content">
-        <div class="tab-pane fade ${empty param.tab or param.tab eq 'rider' ? 'show active' : ''}" id="rider-pane" role="tabpanel" aria-labelledby="rider-tab">
+        <div class="tab-pane fade ${selectedReservationsTab eq 'rider' ? 'show active' : ''}" id="rider-pane" role="tabpanel" aria-labelledby="rider-tab">
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h3 class="h6 mb-0">
                     <c:choose>
@@ -138,7 +138,7 @@
             </c:choose>
         </div>
 
-        <div class="tab-pane fade ${param.tab eq 'owner' ? 'show active' : ''}" id="owner-pane" role="tabpanel" aria-labelledby="owner-tab">
+        <div class="tab-pane fade ${selectedReservationsTab eq 'owner' ? 'show active' : ''}" id="owner-pane" role="tabpanel" aria-labelledby="owner-tab">
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h3 class="h6 mb-0">
                     <c:choose>

@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 public class MyReservationsController {
 
     private static final int PAGE_SIZE = 8;
+    private static final String TAB_RIDER = "rider";
+    private static final String TAB_OWNER = "owner";
 
     private final ReservationService reservationService;
     private final ListingService listingService;
@@ -46,9 +48,11 @@ public class MyReservationsController {
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @RequestParam(defaultValue = TAB_RIDER) final String tab,
             @RequestParam(defaultValue = "0") int riderPage,
             @RequestParam(defaultValue = "0") int ownerPage) {
         final User me = WebAuthUtils.requireUser(currentUser);
+        final String selectedTab = normalizeReservationsTab(tab);
         riderPage = Math.max(0, riderPage);
         ownerPage = Math.max(0, ownerPage);
 
@@ -70,8 +74,16 @@ public class MyReservationsController {
         mav.addObject("riderReservationsPage", riderResultPage);
         mav.addObject("ownerReservations", ownerReservations);
         mav.addObject("ownerReservationsPage", ownerResultPage);
+        mav.addObject("selectedReservationsTab", selectedTab);
         mav.addObject("activeTab", "my-reservations");
         return mav;
+    }
+
+    private static String normalizeReservationsTab(final String tab) {
+        if (TAB_OWNER.equals(tab)) {
+            return TAB_OWNER;
+        }
+        return TAB_RIDER;
     }
 
     @GetMapping("/my-reservations/{reservationId}")
