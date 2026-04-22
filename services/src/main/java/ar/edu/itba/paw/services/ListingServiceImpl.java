@@ -16,7 +16,6 @@ import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationConfirmationPayload;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.models.WallDateTimeParsing;
 import ar.edu.itba.paw.persistence.CarDao;
@@ -38,7 +37,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -46,7 +44,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import org.springframework.context.i18n.LocaleContextHolder;
 
 @Service
 public class ListingServiceImpl implements ListingService {
@@ -306,8 +303,6 @@ public class ListingServiceImpl implements ListingService {
     @Override
     @Transactional
     public boolean toggleListingStatus(final long ownerId, final long listingId) {
-        final List<Reservation> reservations = reservationDao.getListingActiveReservations(listingId);
-
         final Optional<Listing> listingOpt = listingDao.getListingById(listingId);
         final Optional<User> ownerOpt = userService.getUserById(ownerId);
         final boolean deleted = listingDao.toggleListingStatus(ownerId, listingId);
@@ -315,60 +310,10 @@ public class ListingServiceImpl implements ListingService {
             return deleted;
         }
 
-        final Listing listing = listingOpt.get();
-        final User owner = ownerOpt.get();
-        final String ownerFullName = owner.getForename() + " " + owner.getSurname();
-        final Locale mailLocale = resolveMailMessageLocale();
-        final List<ReservationConfirmationPayload> reservationsToCancel = new ArrayList<>();
-        for (final Reservation reservation : reservations) {
-            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
-            if (riderOpt.isEmpty()) {
-                continue;
-            }
-            final User rider = riderOpt.get();
-            reservationsToCancel.add(new ReservationConfirmationPayload(
-                    rider.getEmail(),
-                    rider.getForename() + " " + rider.getSurname(),
-                    reservation.getId(),
-                    listingId,
-                    listing.getTitle(),
-                    reservation.getStartDate(),
-                    reservation.getEndDate(),
-                    listing.getStartPoint(),
-                    ownerFullName,
-                    owner.getEmail(),
-                    reservation.getTotalPrice().toString(),
-                    mailLocale));
-        }
-
-        if (reservationsToCancel.isEmpty()) {
-            final OffsetDateTime now = OffsetDateTime.now();
-            reservationsToCancel.add(new ReservationConfirmationPayload(
-                    owner.getEmail(),
-                    ownerFullName,
-                    0L,
-                    listingId,
-                    listing.getTitle(),
-                    now,
-                    now.plusDays(1),
-                    listing.getStartPoint(),
-                    ownerFullName,
-                    owner.getEmail(),
-                    listing.getDayPrice().toString(),
-                    mailLocale));
-        }
-
-        emailService.sendListingDeletionEmail(reservationsToCancel);
         return true;
     }
 
-    private static Locale resolveMailMessageLocale() {
-        final Locale locale = LocaleContextHolder.getLocale();
-        if (locale != null && "es".equalsIgnoreCase(locale.getLanguage())) {
-            return Locale.forLanguageTag("es");
-        }
-        return Locale.ENGLISH;
-    }
+
 
     @Override
     @Transactional(readOnly = true)
