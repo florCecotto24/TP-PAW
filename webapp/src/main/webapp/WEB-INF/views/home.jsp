@@ -19,6 +19,7 @@
                     <div class="hero-text text-center text-white mb-4">
                         <h1 class="fw-bold"><spring:message code="home.hero.title"/></h1>
                         <p class="lead"><spring:message code="home.hero.subtitle"/></p>
+                        <p class="small mb-0 opacity-90"><spring:message code="home.hero.argentinaReservationsNote"/></p>
                     </div>
                 </div>
             </div>

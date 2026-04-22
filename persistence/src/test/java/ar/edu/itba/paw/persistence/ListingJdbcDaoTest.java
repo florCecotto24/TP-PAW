@@ -1,17 +1,5 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Reservation;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,6 +7,19 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+
+import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.HomeListingCards;
+import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingCard;
+import ar.edu.itba.paw.models.ListingDetail;
+import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Reservation;
 
 public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
 
@@ -193,9 +194,12 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertCar(11L, 1L, "P2", "VW", "Golf", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
         insertListing(100L, 10L, "L1", Listing.Status.ACTIVE, new BigDecimal("60.00"), base);
         insertListing(101L, 11L, "L2", Listing.Status.ACTIVE, new BigDecimal("40.00"), base.plusDays(1));
+        final LocalDate wall = LocalDate.parse("2026-06-01");
+        insertListingAvailability(300L, 100L, wall, wall.plusDays(30), base, base);
+        insertListingAvailability(301L, 101L, wall, wall.plusDays(30), base, base);
 
         // Exercise
-        final HomeListingCards home = listingDao.getHomeListingCards(1);
+        final HomeListingCards home = listingDao.getHomeListingCards(1, wall, null);
 
         // Assert
         Assertions.assertEquals(1, home.cheapest().size());
@@ -215,9 +219,11 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertListing(100L, 10L, "Base", Listing.Status.ACTIVE, new BigDecimal("60.00"), base);
         insertListing(101L, 11L, "Similar", Listing.Status.ACTIVE, new BigDecimal("40.00"), base.plusDays(1));
         insertListing(102L, 12L, "Different", Listing.Status.ACTIVE, new BigDecimal("40.00"), base.plusDays(2));
+        final LocalDate wall = LocalDate.parse("2026-06-01");
+        insertListingAvailability(302L, 101L, wall, wall.plusDays(30), base, base);
 
         // Exercise
-        final List<ListingCard> similar = listingDao.findSimilarListingCards(100L, 5);
+        final List<ListingCard> similar = listingDao.findSimilarListingCards(100L, 5, wall, null);
 
         // Assert
         Assertions.assertEquals(1, similar.size());

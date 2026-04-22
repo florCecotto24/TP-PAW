@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -253,6 +254,44 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
+    public boolean updateListingStatus(
+            final long listingId,
+            final Listing.Status newStatus,
+            final Listing.Status... allowedFrom) {
+        if (allowedFrom.length == 0) {
+            return false;
+        }
+        final String placeholders = String.join(",", Collections.nCopies(allowedFrom.length, "?"));
+        final List<Object> args = new ArrayList<>();
+        args.add(newStatus.name().toLowerCase());
+        args.add(JdbcDateTimeUtils.nowTimestamp());
+        args.add(listingId);
+        for (final Listing.Status s : allowedFrom) {
+            args.add(s.name().toLowerCase());
+        }
+        final int updated = jdbcTemplate.update(
+                "UPDATE listings SET status = ?, updated_at = ? WHERE id = ? AND status IN (" + placeholders + ")",
+                args.toArray());
+        return updated > 0;
+    }
+
+    @Override
+    public List<Long> findListingIdsWithStatuses(final Listing.Status... statuses) {
+        if (statuses.length == 0) {
+            return List.of();
+        }
+        final String placeholders = String.join(",", Collections.nCopies(statuses.length, "?"));
+        final Object[] args = new Object[statuses.length];
+        for (int i = 0; i < statuses.length; i++) {
+            args[i] = statuses[i].name().toLowerCase();
+        }
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM listings WHERE status IN (" + placeholders + ") ORDER BY id",
+                Long.class,
+                args);
+    }
+
+    @Override
     public List<Listing> getAllListings() {
         return jdbcTemplate.query("SELECT * FROM listings ORDER BY created_at DESC", LISTING_ROW_MAPPER);
     }
@@ -293,30 +332,50 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize) {
-        final long total = countActiveListings();
+    public Page<ListingCard> getCheapestListingCards(
+            final int page,
+            final int pageSize,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        final long total = countBrowseEligibleActiveListings(browseWallDate, excludeOwnerUserId);
         final int offset = page * pageSize;
-        final List<ListingCard> content = jdbcTemplate.query(
-                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
-                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
-                        + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                        + "WHERE l.status = 'active' ORDER BY l.day_price ASC LIMIT ? OFFSET ?",
-                LISTING_CARD_ROW_MAPPER, pageSize, offset);
+        final MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("limit", pageSize)
+                .addValue("offset", offset);
+        appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
+        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "FROM listings l JOIN cars c ON c.id = l.car_id "
+                + "WHERE l.status = 'active' "
+                + publicBrowseAvailabilitySql(browseWallDate)
+                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
+                + "ORDER BY l.day_price ASC LIMIT :limit OFFSET :offset";
+        final List<ListingCard> content = namedParameterJdbcTemplate.query(sql, params, LISTING_CARD_ROW_MAPPER);
         return new Page<>(content, page, pageSize, total);
     }
 
     @Override
-    public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize) {
-        final long total = countActiveListings();
+    public Page<ListingCard> getMostRecentListingCards(
+            final int page,
+            final int pageSize,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        final long total = countBrowseEligibleActiveListings(browseWallDate, excludeOwnerUserId);
         final int offset = page * pageSize;
-        final List<ListingCard> content = jdbcTemplate.query(
-                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
-                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
-                        + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                        + "WHERE l.status = 'active' ORDER BY l.created_at DESC LIMIT ? OFFSET ?",
-                LISTING_CARD_ROW_MAPPER, pageSize, offset);
+        final MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("limit", pageSize)
+                .addValue("offset", offset);
+        appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
+        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "FROM listings l JOIN cars c ON c.id = l.car_id "
+                + "WHERE l.status = 'active' "
+                + publicBrowseAvailabilitySql(browseWallDate)
+                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
+                + "ORDER BY l.created_at DESC LIMIT :limit OFFSET :offset";
+        final List<ListingCard> content = namedParameterJdbcTemplate.query(sql, params, LISTING_CARD_ROW_MAPPER);
         return new Page<>(content, page, pageSize, total);
     }
 
@@ -363,23 +422,72 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public HomeListingCards getHomeListingCards(final int limit) {
+    public long countBrowseEligibleActiveListings(final LocalDate browseWallDate, final Long excludeOwnerUserId) {
+        if (browseWallDate == null && excludeOwnerUserId == null) {
+            return countActiveListings();
+        }
+        final MapSqlParameterSource params = new MapSqlParameterSource();
+        appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
+        final String sql = "SELECT COUNT(DISTINCT l.id) FROM listings l INNER JOIN cars c ON c.id = l.car_id "
+                + "WHERE l.status = 'active' "
+                + publicBrowseAvailabilitySql(browseWallDate)
+                + publicBrowseExcludeOwnerSql(excludeOwnerUserId);
+        final Long count = namedParameterJdbcTemplate.queryForObject(sql, params, Long.class);
+        return count != null ? count : 0L;
+    }
+
+    private static void appendPublicBrowseFilters(
+            final MapSqlParameterSource params,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        if (browseWallDate != null) {
+            params.addValue("browseWallDate", JdbcDateTimeUtils.toSqlDate(browseWallDate));
+        }
+        if (excludeOwnerUserId != null) {
+            params.addValue("excludeOwnerUserId", excludeOwnerUserId);
+        }
+    }
+
+    private static String publicBrowseAvailabilitySql(final LocalDate browseWallDate) {
+        if (browseWallDate == null) {
+            return "";
+        }
+        return "AND EXISTS (SELECT 1 FROM listing_availability la_pub WHERE la_pub.listing_id = l.id "
+                + "AND la_pub.end_date >= :browseWallDate) ";
+    }
+
+    private static String publicBrowseExcludeOwnerSql(final Long excludeOwnerUserId) {
+        if (excludeOwnerUserId == null) {
+            return "";
+        }
+        return "AND c.owner_id <> :excludeOwnerUserId ";
+    }
+
+    @Override
+    public HomeListingCards getHomeListingCards(
+            final int limit,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        final MapSqlParameterSource homeParams = new MapSqlParameterSource()
+                .addValue("cheapestSection", HOME_SECTION_CHEAPEST)
+                .addValue("recentSection", HOME_SECTION_RECENT)
+                .addValue("homeLimit", limit);
+        appendPublicBrowseFilters(homeParams, browseWallDate, excludeOwnerUserId);
         final String sql = "(SELECT :cheapestSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
+                + publicBrowseAvailabilitySql(browseWallDate)
+                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
                 + "ORDER BY l.day_price ASC LIMIT :homeLimit) "
                 + "UNION ALL "
                 + "(SELECT :recentSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
+                + publicBrowseAvailabilitySql(browseWallDate)
+                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
                 + "ORDER BY l.created_at DESC LIMIT :homeLimit)";
-
-        final MapSqlParameterSource homeParams = new MapSqlParameterSource()
-                .addValue("cheapestSection", HOME_SECTION_CHEAPEST)
-                .addValue("recentSection", HOME_SECTION_RECENT)
-                .addValue("homeLimit", limit);
 
         return namedParameterJdbcTemplate.query(
                 sql,
@@ -406,7 +514,15 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public List<ListingCard> findSimilarListingCards(final long listingId, final int limit) {
+    public List<ListingCard> findSimilarListingCards(
+            final long listingId,
+            final int limit,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        final MapSqlParameterSource similarParams = new MapSqlParameterSource()
+                .addValue("listingId", listingId)
+                .addValue("similarLimit", limit);
+        appendPublicBrowseFilters(similarParams, browseWallDate, excludeOwnerUserId);
         final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
@@ -419,12 +535,10 @@ public class ListingJdbcDao implements ListingDao {
                 + "AND c.type = ca.type "
                 + "AND c.powertrain = ca.powertrain "
                 + "AND c.transmission = ca.transmission "
+                + publicBrowseAvailabilitySql(browseWallDate)
+                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
                 + "ORDER BY l.created_at DESC "
                 + "LIMIT :similarLimit";
-
-        final MapSqlParameterSource similarParams = new MapSqlParameterSource()
-                .addValue("listingId", listingId)
-                .addValue("similarLimit", limit);
 
         return namedParameterJdbcTemplate.query(sql, similarParams, LISTING_CARD_ROW_MAPPER);
     }
@@ -500,6 +614,9 @@ public class ListingJdbcDao implements ListingDao {
             params.addValue("resWindowEnd", Timestamp.from(untilExclusive));
             params.addValue("resWindowStart", Timestamp.from(fromInstant));
         }
+        appendPublicBrowseFilters(params, criteria.getBrowseWallDate(), criteria.getExcludeOwnerUserId());
+        sql.append(publicBrowseAvailabilitySql(criteria.getBrowseWallDate()));
+        sql.append(publicBrowseExcludeOwnerSql(criteria.getExcludeOwnerUserId()));
     }
 
     private <T> List<T> filterByAvailabilityCoverage(

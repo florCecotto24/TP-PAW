@@ -55,7 +55,20 @@
                                 <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
                                 <span class="badge text-bg-light border"><c:out value="${carTransmissionLabel}"/></span>
                                 <span class="badge text-bg-light border"><c:out value="${carPowertrainLabel}"/></span>
-                                
+                                <c:choose>
+                                    <c:when test="${statusKey == 'ACTIVE'}">
+                                        <span class="badge text-bg-success"><c:out value="${listingStatusLabel}"/></span>
+                                    </c:when>
+                                    <c:when test="${statusKey == 'PAUSED'}">
+                                        <span class="badge text-bg-warning text-dark"><c:out value="${listingStatusLabel}"/></span>
+                                    </c:when>
+                                    <c:when test="${statusKey == 'FINISHED'}">
+                                        <span class="badge text-bg-secondary"><c:out value="${listingStatusLabel}"/></span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="badge text-bg-light border"><c:out value="${listingStatusLabel}"/></span>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
                             <p class="mb-0 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
@@ -190,6 +203,11 @@
                                     <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myListingDetail.actions.activate'/>">
                                         <spring:message code="myListingDetail.actions.activate"/>
                                     </button>
+                                </c:when>
+                                <c:when test="${statusKey == 'FINISHED'}">
+                                    <p class="text-secondary small mb-0">
+                                        <spring:message code="myListingDetail.status.finishedHint"/>
+                                    </p>
                                 </c:when>
                             </c:choose>
                         </form>

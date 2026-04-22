@@ -74,6 +74,11 @@
                                                     <spring:message code="enum.listing.status.PAUSED"/>
                                                 </span>
                                             </c:when>
+                                            <c:when test="${car.statusKey == 'FINISHED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.listing.status.FINISHED"/>
+                                                </span>
+                                            </c:when>
                                         </c:choose>
                                     </c:if>
                                     <div class="row g-0 align-items-stretch">

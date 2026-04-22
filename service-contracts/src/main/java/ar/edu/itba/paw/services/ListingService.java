@@ -17,6 +17,7 @@ import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.User;
 
 public interface ListingService {
 
@@ -65,6 +66,16 @@ public interface ListingService {
 
     boolean toggleListingStatus(long ownerId, long listingId);
 
+    /**
+     * If the listing is active or paused and has no bookable wall day from today onward, sets status to finished.
+     */
+    void refreshListingFinishedIfExhausted(long listingId);
+
+    /**
+     * Marks every active or paused listing without future bookable days as finished (batch; for scheduled sweeps).
+     */
+    void refreshExhaustedListingsToFinished();
+
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 
     List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(long listingId);
@@ -83,19 +94,19 @@ public interface ListingService {
 
     List<Listing> getMostRecentListings(int limit);
 
-    Page<ListingCard> getCheapestListingCards(int page, int pageSize);
+    Page<ListingCard> getCheapestListingCards(int page, int pageSize, User viewer);
 
-    Page<ListingCard> getMostRecentListingCards(int page, int pageSize);
+    Page<ListingCard> getMostRecentListingCards(int page, int pageSize, User viewer);
 
     Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize);
 
     boolean hasListingsByOwner(long ownerId);
 
-    HomeListingCards getHomeListingCards(int limit);
+    HomeListingCards getHomeListingCards(int limit, User viewer);
 
     Page<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
-    List<ListingCard> findSimilarListingCards(long listingId, int limit);
+    List<ListingCard> findSimilarListingCards(long listingId, int limit, User viewer);
 
     ListingSearchCriteria buildSearchCriteria(
             String query,
@@ -106,5 +117,6 @@ public interface ListingService {
             String from,
             String until,
             int page,
-            String sort);
+            String sort,
+            User viewer);
 }

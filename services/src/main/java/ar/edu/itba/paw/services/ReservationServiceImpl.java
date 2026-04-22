@@ -75,6 +75,7 @@ public class ReservationServiceImpl implements ReservationService {
         }
         final Reservation reservation =
                 reservationDao.createReservation(riderId, listingId, startDate, endDate, status, new BigDecimal(reservationTotal));
+        listingService.refreshListingFinishedIfExhausted(listingId);
         enqueueReservationConfirmationEmail(riderId, listingId, reservation, deliveryLocation);
         return reservation;
     }

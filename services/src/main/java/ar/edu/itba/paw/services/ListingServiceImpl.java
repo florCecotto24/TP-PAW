@@ -35,9 +35,13 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -255,7 +259,48 @@ public class ListingServiceImpl implements ListingService {
                 listingAvailabilityDao.create(listingId, p.getStartInclusive(), p.getEndInclusive());
             }
         }
+        if (updated) {
+            refreshListingFinishedIfExhausted(listingId);
+        }
         return updated;
+    }
+
+    @Override
+    @Transactional
+    public void refreshListingFinishedIfExhausted(final long listingId) {
+        final Optional<Listing> opt = listingDao.getListingById(listingId);
+        if (opt.isEmpty()) {
+            return;
+        }
+        final Listing.Status status = opt.get().getStatus();
+        if (status != Listing.Status.ACTIVE && status != Listing.Status.PAUSED) {
+            return;
+        }
+        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final Set<Long> bookable = listingIdsWithAtLeastOneBookableWallDay(List.of(listingId), wall);
+        if (!bookable.contains(listingId)) {
+            listingDao.updateListingStatus(listingId, Listing.Status.FINISHED, Listing.Status.ACTIVE, Listing.Status.PAUSED);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void refreshExhaustedListingsToFinished() {
+        final List<Long> ids = listingDao.findListingIdsWithStatuses(Listing.Status.ACTIVE, Listing.Status.PAUSED);
+        if (ids.isEmpty()) {
+            return;
+        }
+        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final int batch = 200;
+        for (int i = 0; i < ids.size(); i += batch) {
+            final List<Long> slice = ids.subList(i, Math.min(i + batch, ids.size()));
+            final Set<Long> bookable = listingIdsWithAtLeastOneBookableWallDay(slice, wall);
+            for (final long id : slice) {
+                if (!bookable.contains(id)) {
+                    listingDao.updateListingStatus(id, Listing.Status.FINISHED, Listing.Status.ACTIVE, Listing.Status.PAUSED);
+                }
+            }
+        }
     }
 
     @Override
@@ -420,7 +465,16 @@ public class ListingServiceImpl implements ListingService {
     @Override
     @Transactional(readOnly = true)
     public List<Listing> searchListings(final ListingSearchCriteria criteria) {
-        return listingDao.searchListings(criteria);
+        final List<Listing> found = listingDao.searchListings(criteria);
+        if (criteria.getBrowseWallDate() == null) {
+            return found;
+        }
+        final Set<Long> bookableIds = listingIdsWithAtLeastOneBookableWallDay(
+                found.stream().map(Listing::getId).collect(Collectors.toList()),
+                criteria.getBrowseWallDate());
+        return found.stream()
+                .filter(l -> bookableIds.contains(l.getId()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     @Override
@@ -437,14 +491,20 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize) {
-        return listingDao.getCheapestListingCards(page, pageSize);
+    public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize, final User viewer) {
+        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final Page<ListingCard> raw = listingDao.getCheapestListingCards(page, pageSize, wall, browseExcludeOwnerId(viewer));
+        final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), wall);
+        return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize) {
-        return listingDao.getMostRecentListingCards(page, pageSize);
+    public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize, final User viewer) {
+        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final Page<ListingCard> raw = listingDao.getMostRecentListingCards(page, pageSize, wall, browseExcludeOwnerId(viewer));
+        final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), wall);
+        return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
     }
 
     @Override
@@ -463,17 +523,24 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public HomeListingCards getHomeListingCards(final int limit) {
+    public HomeListingCards getHomeListingCards(final int limit, final User viewer) {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);
         }
-        return listingDao.getHomeListingCards(limit);
+        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final HomeListingCards raw = listingDao.getHomeListingCards(limit, wall, browseExcludeOwnerId(viewer));
+        return new HomeListingCards(
+                retainBookableListingCards(raw.cheapest(), wall),
+                retainBookableListingCards(raw.mostRecent(), wall));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
-        final List<ListingCard> all = listingDao.searchListingCards(criteria);
+        List<ListingCard> all = listingDao.searchListingCards(criteria);
+        if (criteria.getBrowseWallDate() != null) {
+            all = retainBookableListingCards(all, criteria.getBrowseWallDate());
+        }
         final long total = all.size();
         final int offset = criteria.getPage() * criteria.getPageSize();
         final List<ListingCard> slice = all.subList(
@@ -484,11 +551,15 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ListingCard> findSimilarListingCards(final long listingId, final int limit) {
+    public List<ListingCard> findSimilarListingCards(final long listingId, final int limit, final User viewer) {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);
         }
-        return listingDao.findSimilarListingCards(listingId, limit);
+        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final int scan = Math.max(limit * 8, 32);
+        final List<ListingCard> raw = listingDao.findSimilarListingCards(listingId, scan, wall, browseExcludeOwnerId(viewer));
+        final List<ListingCard> filtered = retainBookableListingCards(raw, wall);
+        return filtered.stream().limit(limit).collect(Collectors.toList());
     }
 
     private static final int PAGE_SIZE = 8;
@@ -503,7 +574,8 @@ public class ListingServiceImpl implements ListingService {
             final String from,
             final String until,
             final int page,
-            final String sort) {
+            final String sort,
+            final User viewer) {
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
         final List<String> mergedCarTypes = collectCarTypeParams(category);
@@ -535,10 +607,63 @@ public class ListingServiceImpl implements ListingService {
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy  = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
+        final LocalDate browseWallDate = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         return new ListingSearchCriteria(
                 query, transmissions, powertrains, mergedCarTypes, bands,
                 rangeStart, rangeEndExclusive,
-                page, PAGE_SIZE, sortBy, sortDir);
+                page, PAGE_SIZE, sortBy, sortDir,
+                browseWallDate, browseExcludeOwnerId(viewer));
+    }
+
+    private static Long browseExcludeOwnerId(final User viewer) {
+        return viewer != null ? viewer.getId() : null;
+    }
+
+    private Set<Long> listingIdsWithAtLeastOneBookableWallDay(final List<Long> listingIds, final LocalDate fromWall) {
+        if (listingIds.isEmpty()) {
+            return Set.of();
+        }
+        final List<ListingAvailability> overlapping =
+                listingAvailabilityDao.findByListingIdsEndingOnOrAfter(listingIds, fromWall);
+        final List<Reservation> blocking = reservationDao.findBlockingByListingIds(listingIds);
+        final Map<Long, TreeSet<LocalDate>> daysByListing = new HashMap<>();
+        for (final ListingAvailability la : overlapping) {
+            final LocalDate start = la.getStartInclusive().isBefore(fromWall) ? fromWall : la.getStartInclusive();
+            for (LocalDate d = start; !d.isAfter(la.getEndInclusive()); d = d.plusDays(1)) {
+                daysByListing.computeIfAbsent(la.getListingId(), k -> new TreeSet<>()).add(d);
+            }
+        }
+        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
+        for (final Reservation r : blocking) {
+            final TreeSet<LocalDate> days = daysByListing.get(r.getListingId());
+            if (days == null || days.isEmpty()) {
+                continue;
+            }
+            LocalDate d = r.getStartDate().toInstant().atZone(wall).toLocalDate();
+            final LocalDate until = r.getEndDate().toInstant().atZone(wall).toLocalDate();
+            while (!d.isAfter(until)) {
+                days.remove(d);
+                d = d.plusDays(1);
+            }
+        }
+        final Set<Long> out = new HashSet<>();
+        for (final Map.Entry<Long, TreeSet<LocalDate>> e : daysByListing.entrySet()) {
+            if (!e.getValue().isEmpty()) {
+                out.add(e.getKey());
+            }
+        }
+        return out;
+    }
+
+    private List<ListingCard> retainBookableListingCards(final List<ListingCard> cards, final LocalDate fromWall) {
+        if (cards.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> ids = cards.stream().map(ListingCard::getListingId).distinct().collect(Collectors.toList());
+        final Set<Long> ok = listingIdsWithAtLeastOneBookableWallDay(ids, fromWall);
+        return cards.stream()
+                .filter(c -> ok.contains(c.getListingId()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {

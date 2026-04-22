@@ -29,7 +29,6 @@
 
     <h2 class="h6 fw-semibold mb-2"><spring:message code="detailReservationPanel.pickupReturn"/></h2>
     <p class="form-text small mb-2">
-        <span class="text-muted"><spring:message code="detailReservationPanel.scheduledRegion"/></span><br/>
         <strong><spring:message code="detailReservationPanel.pickupAt"/></strong>
         <c:out value="${not empty pickupTime ? pickupTime : '—'}"/>
         <span class="text-muted mx-1">·</span>

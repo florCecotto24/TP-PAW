@@ -10,6 +10,9 @@ import org.springframework.stereotype.Repository;
 import javax.sql.DataSource;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +65,23 @@ public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
                 "SELECT * FROM listing_availability WHERE listing_id = ? ORDER BY start_date ASC",
                 ROW_MAPPER,
                 listingId);
+    }
+
+    @Override
+    public List<ListingAvailability> findByListingIdsEndingOnOrAfter(final Collection<Long> listingIds, final LocalDate minEndDate) {
+        if (listingIds == null || listingIds.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> ids = new ArrayList<>(listingIds);
+        final String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        final String sql = "SELECT * FROM listing_availability WHERE listing_id IN (" + placeholders + ") "
+                + "AND end_date >= ? ORDER BY listing_id ASC, start_date ASC";
+        final Object[] args = new Object[ids.size() + 1];
+        for (int i = 0; i < ids.size(); i++) {
+            args[i] = ids.get(i);
+        }
+        args[ids.size()] = JdbcDateTimeUtils.toSqlDate(minEndDate);
+        return jdbcTemplate.query(sql, ROW_MAPPER, args);
     }
 
     @Override

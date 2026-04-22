@@ -2,9 +2,12 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -29,14 +32,19 @@ public class HomeController {
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public ModelAndView home(
             @RequestParam(defaultValue = "0") int cheapestPage,
-            @RequestParam(defaultValue = "0") int recentPage) {
+            @RequestParam(defaultValue = "0") int recentPage,
+            final Authentication authentication) {
         final ModelAndView mav = new ModelAndView("home");
 
         cheapestPage = Math.max(0, cheapestPage);
         recentPage   = Math.max(0, recentPage);
 
-        final Page<ListingCard> cheapestRaw = listingService.getCheapestListingCards(cheapestPage, CAROUSEL_PAGE_SIZE);
-        final Page<ListingCard> recentRaw   = listingService.getMostRecentListingCards(recentPage, CAROUSEL_PAGE_SIZE);
+        final User viewer = WebAuthUtils.viewerUser(authentication).orElse(null);
+
+        final Page<ListingCard> cheapestRaw =
+                listingService.getCheapestListingCards(cheapestPage, CAROUSEL_PAGE_SIZE, viewer);
+        final Page<ListingCard> recentRaw =
+                listingService.getMostRecentListingCards(recentPage, CAROUSEL_PAGE_SIZE, viewer);
 
         final Page<VehicleCardView> cheapestCarsPage = mapPage(cheapestRaw);
         final Page<VehicleCardView> recentCarsPage   = mapPage(recentRaw);

@@ -2,12 +2,14 @@ package ar.edu.itba.paw.webapp.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
+import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 
 public final class WebAuthUtils {
@@ -75,13 +77,22 @@ public final class WebAuthUtils {
         return 80;
     }
 
-    public static RydenUserDetails requireCurrentUser(final Authentication authentication) {
+    public static Optional<User> viewerUser(final Authentication authentication) {
+        return currentUserDetails(authentication).map(
+                d -> new User(d.getUserId(), d.getUsername(), d.getForename(), d.getSurname()));
+    }
+
+    public static Optional<RydenUserDetails> currentUserDetails(final Authentication authentication) {
         if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken
                 || !(authentication.getPrincipal() instanceof RydenUserDetails)) {
-            throw new IllegalStateException("Expected authenticated user");
+            return Optional.empty();
         }
-        return (RydenUserDetails) authentication.getPrincipal();
+        return Optional.of((RydenUserDetails) authentication.getPrincipal());
+    }
+
+    public static RydenUserDetails requireCurrentUser(final Authentication authentication) {
+        return currentUserDetails(authentication).orElseThrow(() -> new IllegalStateException("Expected authenticated user"));
     }
 }

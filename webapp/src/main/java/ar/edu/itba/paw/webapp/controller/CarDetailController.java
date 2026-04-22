@@ -10,8 +10,10 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,7 +38,9 @@ public class CarDetailController {
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
-    public ModelAndView carDetail(@RequestParam(name = "listingId") final long listingId) {
+    public ModelAndView carDetail(
+            @RequestParam(name = "listingId") final long listingId,
+            final Authentication authentication) {
         final Optional<ListingDetail> detailOpt = listingService.getListingDetailById(listingId);
         if (detailOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/search", true));
@@ -51,8 +55,9 @@ public class CarDetailController {
                 .map(cp -> "/image/" + cp.getImageId())
                 .collect(Collectors.toList());
 
+        final User viewer = WebAuthUtils.viewerUser(authentication).orElse(null);
         final List<VehicleCardView> similarListings = listingService
-                .findSimilarListingCards(listingId, SIMILAR_LISTINGS_LIMIT)
+                .findSimilarListingCards(listingId, SIMILAR_LISTINGS_LIMIT, viewer)
                 .stream()
                 .map(CarDetailController::listingCardToVehicleCardView)
                 .collect(Collectors.toList());

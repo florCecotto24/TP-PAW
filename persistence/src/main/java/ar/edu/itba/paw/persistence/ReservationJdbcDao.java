@@ -13,6 +13,9 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,6 +89,24 @@ public class ReservationJdbcDao implements ReservationDao {
                 listingId,
                 ACTIVE_OVERLAP_STATUSES[0],
                 ACTIVE_OVERLAP_STATUSES[1]);
+    }
+
+    @Override
+    public List<Reservation> findBlockingByListingIds(final Collection<Long> listingIds) {
+        if (listingIds == null || listingIds.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> ids = new ArrayList<>(listingIds);
+        final String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        final String sql = "SELECT * FROM reservations WHERE listing_id IN (" + placeholders + ") "
+                + "AND LOWER(status) IN (?, ?) ORDER BY listing_id ASC, start_date ASC";
+        final Object[] args = new Object[ids.size() + 2];
+        for (int i = 0; i < ids.size(); i++) {
+            args[i] = ids.get(i);
+        }
+        args[ids.size()] = ACTIVE_OVERLAP_STATUSES[0];
+        args[ids.size() + 1] = ACTIVE_OVERLAP_STATUSES[1];
+        return jdbcTemplate.query(sql, RESERVATION_ROW_MAPPER, args);
     }
 
     @Override

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,6 +15,8 @@ public interface ReservationDao {
     boolean hasActiveOverlap(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
 
     List<Reservation> findBlockingByListingId(long listingId);
+
+    List<Reservation> findBlockingByListingIds(Collection<Long> listingIds);
 
     Reservation createReservation(
             long riderId,
