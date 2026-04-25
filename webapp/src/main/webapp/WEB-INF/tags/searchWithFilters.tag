@@ -97,7 +97,7 @@
 
                 <c:if test="${resolvedShowClear and not empty clearFiltersHref}">
                     <spring:message code="search.empty.reset" var="clearFiltersLabel"/>
-                    <a href="<c:out value='${clearFiltersHref}'/>" class="btn btn-primary btn-action btn-action-md flex-shrink-0 align-self-center">
+                    <a href="<c:out value='${clearFiltersHref}'/>" class="btn btn-outline-primary btn-action btn-action-md flex-shrink-0 align-self-center">
                         <c:out value="${clearFiltersLabel}"/>
                     </a>
                 </c:if>
