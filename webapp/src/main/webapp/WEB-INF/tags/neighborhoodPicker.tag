@@ -80,14 +80,14 @@
                  data-nb-any="<c:out value='${anyLabel}'/>"
                  <c:if test="${nbAllowMultiple and not empty nbMultiFmt}">data-nb-multi-fmt="<c:out value='${nbMultiFmt}'/>"</c:if>>
                 <button type="button"
-                        class="<c:choose><c:when test='${nbSearchBar}'>form-control form-control-sm border-0 shadow-none dropdown-toggle neighborhood-picker__toggle neighborhood-picker__toggle--search-bar d-flex align-items-center gap-2 w-100 text-start</c:when><c:otherwise>btn btn-light border dropdown-toggle neighborhood-picker__toggle d-inline-flex align-items-center gap-1 w-100 text-start</c:otherwise></c:choose>"
+                        class="<c:choose><c:when test='${nbSearchBar}'>form-control form-control-sm border-0 shadow-none dropdown-toggle neighborhood-picker__toggle neighborhood-picker__toggle--search-bar d-flex align-items-center gap-2 w-100 text-start</c:when><c:otherwise>form-select dropdown-toggle neighborhood-picker__toggle neighborhood-picker__toggle--form-select text-start</c:otherwise></c:choose>"
                         id="<c:out value='${nbDdBtnId}'/>"
                         data-bs-toggle="dropdown"
                         data-bs-auto-close="outside"
                         aria-expanded="false"
                         aria-haspopup="true"
                         aria-label="<c:out value='${toggleAriaLabel}'/>">
-                    <span class="<c:choose><c:when test='${nbSearchBar}'>text-truncate min-w-0</c:when><c:otherwise>explore-filter-dropdown__label text-truncate</c:otherwise></c:choose>" id="<c:out value='${nbDdTextId}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
+                    <span class="<c:choose><c:when test='${nbSearchBar}'>text-truncate min-w-0</c:when><c:otherwise>text-truncate</c:otherwise></c:choose>" id="<c:out value='${nbDdTextId}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
                     <c:if test="${nbAllowMultiple}">
                         <span id="nb_dd_badge_<c:out value='${pickerId}'/>"
                               class="badge text-bg-primary rounded-pill flex-shrink-0 <c:if test='${nbMultiCount eq 0}'>d-none</c:if>"
@@ -95,11 +95,9 @@
                     </c:if>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow explore-filter-dropdown__panel p-0 w-100 neighborhood-picker__menu"
-                     style="min-width: 15rem; max-width: min(100vw - 2rem, 22rem);"
+                     style="min-width: 0;"
                      aria-labelledby="<c:out value='${nbDdBtnId}'/>">
-                    <h6 class="dropdown-header mb-0 px-3 pt-2 pb-1"><c:out value="${selectFieldLabel}"/></h6>
-                    <hr class="dropdown-divider my-0">
-                    <div class="px-3 py-2">
+                    <div class="px-3 pt-2 pb-1">
                         <label class="visually-hidden" for="<c:out value='${nbFilterId}'/>"><c:out value="${searchPlaceholder}"/></label>
                         <input type="search" class="form-control form-control-sm" id="<c:out value='${nbFilterId}'/>"
                                autocomplete="off" placeholder="<c:out value='${searchPlaceholder}'/>"
@@ -164,21 +162,19 @@
                  class="dropdown explore-filter-dropdown neighborhood-picker__dropdown w-100"
                  data-nb-any="<c:out value='${anyLabel}'/>">
                 <button type="button"
-                        class="btn btn-light border dropdown-toggle neighborhood-picker__toggle d-inline-flex align-items-center gap-1 w-100 text-start"
+                        class="form-select dropdown-toggle neighborhood-picker__toggle neighborhood-picker__toggle--form-select text-start"
                         id="<c:out value='${nbDdBtnId}'/>"
                         data-bs-toggle="dropdown"
                         data-bs-auto-close="outside"
                         aria-expanded="false"
                         aria-haspopup="true"
                         aria-label="<c:out value='${toggleAriaLabel}'/>">
-                    <span class="explore-filter-dropdown__label text-truncate small" id="<c:out value='${nbDdTextId}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
+                    <span class="text-truncate" id="<c:out value='${nbDdTextId}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow explore-filter-dropdown__panel p-0 w-100 neighborhood-picker__menu"
-                     style="min-width: 15rem; max-width: min(100vw - 2rem, 22rem);"
+                     style="min-width: 0;"
                      aria-labelledby="<c:out value='${nbDdBtnId}'/>">
-                    <h6 class="dropdown-header mb-0 px-3 pt-2 pb-1"><c:out value="${selectFieldLabel}"/></h6>
-                    <hr class="dropdown-divider my-0">
-                    <div class="px-3 py-2">
+                    <div class="px-3 pt-2 pb-1">
                         <label class="visually-hidden" for="<c:out value='${nbFilterId}'/>"><c:out value="${searchPlaceholder}"/></label>
                         <input type="search" class="form-control form-control-sm" id="<c:out value='${nbFilterId}'/>"
                                autocomplete="off" placeholder="<c:out value='${searchPlaceholder}'/>"
@@ -452,8 +448,15 @@
                     if (nbFlt) {
                         nbFlt.addEventListener('input', applyNeighborhoodRowFilter);
                     }
+                    var nbDdBtn = document.getElementById('nb_dd_btn_' + pickerId);
                     nbList.querySelectorAll('.js-neighborhood-pick').forEach(function (rb) {
-                        rb.addEventListener('change', syncSingleListUi);
+                        rb.addEventListener('change', function () {
+                            syncSingleListUi();
+                            if (nbDdBtn && window.bootstrap && bootstrap.Dropdown) {
+                                var inst = bootstrap.Dropdown.getInstance(nbDdBtn);
+                                if (inst) { inst.hide(); }
+                            }
+                        });
                     });
                     if (nbDdWrap && nbFlt) {
                         nbDdWrap.addEventListener('shown.bs.dropdown', function () {
