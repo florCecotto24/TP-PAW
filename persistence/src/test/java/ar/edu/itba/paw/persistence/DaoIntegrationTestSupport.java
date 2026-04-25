@@ -104,7 +104,7 @@ public abstract class DaoIntegrationTestSupport {
             final BigDecimal dayPrice,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt,
-            final String startPoint,
+            final String startPointStreet,
             final String description) {
         insertListing(
                 id,
@@ -114,7 +114,7 @@ public abstract class DaoIntegrationTestSupport {
                 dayPrice,
                 createdAt,
                 updatedAt,
-                startPoint,
+                startPointStreet,
                 description,
                 LocalTime.of(10, 0),
                 LocalTime.of(18, 0));
@@ -128,12 +128,14 @@ public abstract class DaoIntegrationTestSupport {
             final BigDecimal dayPrice,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt,
-            final String startPoint,
+            final String startPointStreet,
             final String description,
             final LocalTime checkInTime,
             final LocalTime checkOutTime) {
         jdbcTemplate.update(
-                "INSERT INTO listings(id, title, car_id, created_at, updated_at, status, day_price, start_point, description, check_in_time, check_out_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO listings(id, title, car_id, created_at, updated_at, status, day_price, start_point_street, "
+                        + "start_point_number, description, check_in_time, check_out_time, neighborhood_id) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 id,
                 title,
                 carId,
@@ -141,10 +143,12 @@ public abstract class DaoIntegrationTestSupport {
                 Timestamp.from(updatedAt.toInstant()),
                 status.name().toLowerCase(),
                 dayPrice,
-                startPoint,
+                startPointStreet,
+                "",
                 description,
                 java.sql.Time.valueOf(checkInTime),
-                java.sql.Time.valueOf(checkOutTime));
+                java.sql.Time.valueOf(checkOutTime),
+                22L);
     }
 
     protected void insertListingAvailability(

@@ -11,7 +11,6 @@ import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.context.EnvironmentAware;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -28,7 +27,6 @@ import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.DatabasePopulator;
 import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -39,14 +37,17 @@ import org.springframework.validation.beanvalidation.SpringConstraintValidatorFa
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ViewResolver;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
 
 @EnableWebMvc
 @EnableAsync
@@ -63,17 +64,14 @@ import ar.edu.itba.paw.models.UserValidationPolicy;
         "ar.edu.itba.paw.webapp.util",
         "ar.edu.itba.paw.webapp.security",
         "ar.edu.itba.paw.webapp.validation",
+        "ar.edu.itba.paw.webapp.interceptor",
         "ar.edu.itba.paw.services",
         "ar.edu.itba.paw.persistence"
 })
-public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
+public class WebConfig implements WebMvcConfigurer {
 
-    private Environment environment;
-
-    @Override
-    public void setEnvironment(@NonNull final Environment environment) {
-        this.environment = environment;
-    }
+    @Autowired
+    private LatestLocaleSaveInterceptor latestLocaleSaveInterceptor;
 
     @Bean
     public MessageSource messageSource() {
@@ -85,10 +83,10 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
     }
 
     @Bean
-    public UserValidationPolicy userValidationPolicy() {
-        final int min = this.environment.getProperty("app.validation.registration-password-min-length", Integer.class, 8);
-        final int max = this.environment.getProperty("app.validation.profile-phone-max-length", Integer.class, 20);
-        final String pattern = this.environment.getProperty("app.validation.profile-phone-pattern", "^[0-9+]+$");
+    public UserValidationPolicy userValidationPolicy(final Environment environment) {
+        final int min = environment.getProperty("app.validation.registration-password-min-length", Integer.class, 8);
+        final int max = environment.getProperty("app.validation.profile-phone-max-length", Integer.class, 20);
+        final String pattern = environment.getProperty("app.validation.profile-phone-pattern", "^[0-9+]+$");
         if (min < 1) {
             throw new IllegalArgumentException("app.validation.registration-password-min-length must be >= 1, got " + min);
         }
@@ -142,17 +140,32 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("mail-async-");
+        /*
+         * JavaMail (MimeMessage / MimeMessageHelper) loads javax.activation.* from the context class loader.
+         * Jetty + @Async can leave worker threads with a TCCL that does not see WEB-INF/lib, causing
+         * ClassNotFoundException: javax.activation.DataSource even when com.sun.activation:javax.activation is packaged.
+         */
+        final ClassLoader webAppClassLoader = WebConfig.class.getClassLoader();
+        executor.setTaskDecorator(runnable -> () -> {
+            final ClassLoader previous = Thread.currentThread().getContextClassLoader();
+            Thread.currentThread().setContextClassLoader(webAppClassLoader);
+            try {
+                runnable.run();
+            } finally {
+                Thread.currentThread().setContextClassLoader(previous);
+            }
+        });
         executor.initialize();
         return executor;
     }
 
     @Bean
-    public DataSource dataSource() {
+    public DataSource dataSource(final Environment environment) {
         final SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
         dataSource.setDriverClass(org.postgresql.Driver.class);
-        dataSource.setUrl(requiredProperty("spring.datasource.url"));
-        dataSource.setUsername(requiredProperty("spring.datasource.username"));
-        dataSource.setPassword(requiredProperty("spring.datasource.password"));
+        dataSource.setUrl(requiredProperty(environment, "spring.datasource.url"));
+        dataSource.setUsername(requiredProperty(environment, "spring.datasource.username"));
+        dataSource.setPassword(requiredProperty(environment, "spring.datasource.password"));
 
         final ResourceDatabasePopulator schemaBootstrap = new ResourceDatabasePopulator();
         schemaBootstrap.addScript(new ClassPathResource("schema.sql"));
@@ -196,7 +209,7 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
      * With {@code MultipartFilter} declared in {@code web.xml} before Spring Security.
      */
     @Bean
-    public CommonsMultipartResolver multipartResolver() {
+    public CommonsMultipartResolver multipartResolver(final Environment environment) {
         final long maxRequest = Long.parseLong(
                 environment.getProperty("app.upload.max-multipart-request-bytes", "188743680").trim());
         final CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
@@ -211,8 +224,13 @@ public class WebConfig implements WebMvcConfigurer, EnvironmentAware {
         configurer.enable();
     }
 
-    private String requiredProperty(final String key) {
-        final String value = this.environment.getProperty(key);
+    @Override
+    public void addInterceptors(final InterceptorRegistry registry) {
+        registry.addInterceptor(latestLocaleSaveInterceptor).addPathPatterns("/**");
+    }
+
+    private static String requiredProperty(final Environment environment, final String key) {
+        final String value = environment.getProperty(key);
         if (value == null || value.isBlank()) {
             throw new IllegalStateException("Missing or empty datasource configuration property: " + key);
         }

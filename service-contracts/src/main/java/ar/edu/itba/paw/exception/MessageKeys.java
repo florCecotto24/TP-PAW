@@ -15,6 +15,12 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_DATES_INVALID_FORMAT = "reservation.rider.datesInvalidFormat";
     public static final String RESERVATION_RIDER_END_NOT_AFTER_START = "reservation.rider.endNotAfterStart";
     public static final String RESERVATION_RIDER_DATES_NOT_FROM_TODAY = "reservation.rider.datesNotFromToday";
+    public static final String RESERVATION_RIDER_PICKUP_MIN_24H = "reservation.rider.pickupMin24h";
+    public static final String RESERVATION_PAYMENT_RECEIPT_INVALID = "reservation.paymentReceipt.invalid";
+    public static final String RESERVATION_PAYMENT_RECEIPT_TOO_LARGE = "reservation.paymentReceipt.tooLarge";
+    public static final String RESERVATION_PAYMENT_RECEIPT_NOT_FOUND = "reservation.paymentReceipt.notFound";
+    public static final String RESERVATION_PAYMENT_APPROVAL_INVALID = "reservation.paymentApproval.invalid";
+    public static final String RESERVATION_CANCEL_NOT_ALLOWED = "reservation.cancel.notAllowed";
     public static final String RESERVATION_RIDER_OUTSIDE_AVAILABILITY = "reservation.rider.outsideAvailability";
     public static final String RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING =
             "reservation.rider.cannotReserveOwnListing";
@@ -44,7 +50,9 @@ public final class MessageKeys {
     public static final String LISTING_CHECKOUT_NOT_AFTER_CHECKIN = "listing.times.checkOutNotAfterCheckIn";
     public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";
     public static final String LISTING_LIMIT_POSITIVE = "listing.limit.positive";
-
+    public static final String LISTING_PICKUP_LOCATION_REQUIRED = "listing.pickupLocation.required";
+    public static final String LISTING_PICKUP_STREET_NUMBER_DIGITS_ONLY = "listing.pickupStreetNumber.digitsOnly";
+    public static final String LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS = "listing.pickupStreetNumber.maxDigits";
     /* image */
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";

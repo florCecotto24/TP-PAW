@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 public class Listing {
 
@@ -17,10 +18,12 @@ public class Listing {
     private final OffsetDateTime updatedAt;
     private final Status status;
     private final BigDecimal dayPrice;
-    private final String startPoint;
+    private final String startPointStreet;
+    private final String startPointNumber;
     private final String description;
     private final LocalTime checkInTime;
     private final LocalTime checkOutTime;
+    private final Long neighborhoodId;
 
     public Listing(
             final long id,
@@ -30,10 +33,28 @@ public class Listing {
             final OffsetDateTime updatedAt,
             final Status status,
             final BigDecimal dayPrice,
-            final String startPoint,
+            final String startPointStreet,
             final String description,
             final LocalTime checkInTime,
             final LocalTime checkOutTime) {
+        this(id, title, carId, createdAt, updatedAt, status, dayPrice, startPointStreet, null, description, checkInTime, checkOutTime,
+                null);
+    }
+
+    public Listing(
+            final long id,
+            final String title,
+            final long carId,
+            final OffsetDateTime createdAt,
+            final OffsetDateTime updatedAt,
+            final Status status,
+            final BigDecimal dayPrice,
+            final String startPointStreet,
+            final String startPointNumber,
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime,
+            final Long neighborhoodId) {
         this.id = id;
         this.title = title;
         this.carId = carId;
@@ -41,10 +62,12 @@ public class Listing {
         this.updatedAt = updatedAt;
         this.status = status;
         this.dayPrice = dayPrice;
-        this.startPoint = startPoint;
+        this.startPointStreet = startPointStreet;
+        this.startPointNumber = startPointNumber;
         this.description = description;
         this.checkInTime = checkInTime;
         this.checkOutTime = checkOutTime;
+        this.neighborhoodId = neighborhoodId;
     }
 
     public long getId() {
@@ -75,8 +98,12 @@ public class Listing {
         return dayPrice;
     }
 
-    public String getStartPoint() {
-        return startPoint;
+    public String getStartPointStreet() {
+        return startPointStreet;
+    }
+
+    public Optional<String> getStartPointNumber() {
+        return Optional.ofNullable(startPointNumber).filter(s -> !s.isBlank());
     }
 
     public String getDescription() {
@@ -91,6 +118,26 @@ public class Listing {
         return checkOutTime;
     }
 
+    public Optional<Long> getNeighborhoodId() {
+        return Optional.ofNullable(neighborhoodId);
+    }
+
+    /** Calle + altura (trim), para mail o vista con datos completos. */
+    public Optional<String> getFullPickupStreetLine() {
+        final String s = startPointStreet == null ? "" : startPointStreet.trim();
+        final String n = startPointNumber == null ? "" : startPointNumber.trim();
+        if (s.isEmpty() && n.isEmpty()) {
+            return Optional.empty();
+        }
+        if (n.isEmpty()) {
+            return Optional.of(s);
+        }
+        if (s.isEmpty()) {
+            return Optional.of(n);
+        }
+        return Optional.of(s + " " + n);
+    }
+
     @Override
     public String toString() {
         return "Listing{" +
@@ -101,7 +148,7 @@ public class Listing {
                 ", updatedAt=" + updatedAt +
                 ", status=" + status +
                 ", dayPrice=" + dayPrice +
-                ", startPoint='" + startPoint + '\'' +
+                ", startPointStreet='" + startPointStreet + '\'' +
                 ", description='" + description + '\'' +
                 ", checkInTime=" + checkInTime +
                 ", checkOutTime=" + checkOutTime +

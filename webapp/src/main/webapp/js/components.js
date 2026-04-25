@@ -855,6 +855,7 @@
      * @param {object} [opts.combineWallTimes] if set, date-only range; hiddens get yyyy-MM-ddTHH:mm using these wall times
      * @param {Array<{from: Date, to: Date}>} [opts.enable] Flatpickr inclusive ranges; use local start/end-of-day, not noon
      * @param {boolean} [opts.disableAllDates] if true, no day is selectable
+     * @param {number} [opts.showMonths] calendars side-by-side (default 2 for cross-month ranges)
      * @returns {{ fp: object, setBounds: Function, clear: Function, destroy: Function } | null}
      */
     function initRange(opts) {
@@ -873,8 +874,13 @@
         var enableTime = combine ? false : !!opts.enableTime;
         var dateFormat = opts.dateFormat || (enableTime ? 'Y-m-d H:i' : 'Y-m-d');
         var fmtOut = enableTime ? formatIsoLocalDateTime : formatIsoLocalDate;
+        var showMonths = 2;
+        if (typeof opts.showMonths === 'number' && opts.showMonths >= 1 && opts.showMonths <= 6) {
+            showMonths = Math.floor(opts.showMonths);
+        }
         var fpConfig = {
             mode: 'range',
+            showMonths: showMonths,
             enableTime: enableTime,
             time_24hr: true,
             dateFormat: dateFormat,
@@ -945,11 +951,7 @@
 })();
 
 (function () {
-    var fromPicker = document.getElementById('search_from_picker');
-    var untilPicker = document.getElementById('search_until_picker');
-    var fromHidden = document.getElementById('search_from_hidden');
-    var untilHidden = document.getElementById('search_until_hidden');
-    if (!fromPicker || !untilPicker || !fromHidden || !untilHidden || typeof flatpickr === 'undefined') {
+    if (typeof flatpickr === 'undefined') {
         return;
     }
     function parseYmdToLocalNoon(ymd) {
@@ -977,8 +979,17 @@
             }
         });
     }
-    initOne(fromPicker, fromHidden);
-    initOne(untilPicker, untilHidden);
+    document.querySelectorAll('[id^="search_from_picker_"]').forEach(function (fromPicker) {
+        var suffix = fromPicker.id.replace(/^search_from_picker_/, '');
+        var untilPicker = document.getElementById('search_until_picker_' + suffix);
+        var fromHidden = document.getElementById('search_from_hidden_' + suffix);
+        var untilHidden = document.getElementById('search_until_hidden_' + suffix);
+        if (!untilPicker || !fromHidden || !untilHidden) {
+            return;
+        }
+        initOne(fromPicker, fromHidden);
+        initOne(untilPicker, untilHidden);
+    });
 })();
 
 /* Perfil: fecha de nacimiento (Flatpickr single, Y-m-d, coherente con búsqueda/reservas) */
@@ -1012,11 +1023,72 @@
     var root = document.getElementById('publish_availability_rows');
     var tpl = document.getElementById('publish_avail_row_template');
     var addBtn = document.getElementById('publish_avail_add');
+    var section = document.getElementById('publishAvailabilitySection');
     if (!root || !tpl || !addBtn || !window.RydenFlatpickrRange) {
         return;
     }
 
     var MAX_ROWS = 10;
+
+    function readPublishMinAvailYmd() {
+        if (!section) {
+            return '';
+        }
+        return (section.getAttribute('data-publish-min-avail-ymd') || '').trim();
+    }
+
+    function minDateForPublish() {
+        var ymd = readPublishMinAvailYmd();
+        if (ymd) {
+            var d = RydenFlatpickrRange.localWallDayStartFromYmd(ymd);
+            if (d) {
+                return d;
+            }
+        }
+        return 'today';
+    }
+
+    function setSectionMinYmd(ymd) {
+        if (section && ymd) {
+            section.setAttribute('data-publish-min-avail-ymd', ymd);
+        }
+    }
+
+    function refreshAllPublishRowsMinDateFromServer() {
+        var urlBase = window.rydenPublishAvailMinFromUrl;
+        if (!urlBase) {
+            return;
+        }
+        var timeEl = document.getElementById('checkInTime');
+        var t = timeEl && timeEl.value ? String(timeEl.value) : '10:00';
+        if (t.length >= 5) {
+            t = t.substring(0, 5);
+        }
+        var sep = urlBase.indexOf('?') >= 0 ? '&' : '?';
+        fetch(urlBase + sep + 'checkIn=' + encodeURIComponent(t), { credentials: 'same-origin' })
+            .then(function (r) {
+                if (!r.ok) {
+                    return null;
+                }
+                return r.json();
+            })
+            .then(function (data) {
+                if (!data || !data.minFrom) {
+                    return;
+                }
+                setSectionMinYmd(data.minFrom);
+                var minD = RydenFlatpickrRange.localWallDayStartFromYmd(data.minFrom);
+                if (!minD) {
+                    return;
+                }
+                root.querySelectorAll('[data-publish-avail-row]').forEach(function (rrow) {
+                    if (rrow._rydenAvailFp && rrow._rydenAvailFp.fp) {
+                        rrow._rydenAvailFp.fp.set('minDate', minD);
+                    }
+                });
+            })
+            .catch(function () { /* ignore */ });
+    }
 
     function reindexRows() {
         var rows = root.querySelectorAll('[data-publish-avail-row]');
@@ -1053,6 +1125,7 @@
             untilHidden: untilH,
             enableTime: false,
             dateFormat: 'Y-m-d',
+            minDate: minDateForPublish(),
             defaultDate: defaults.length ? defaults : undefined
         });
         row._rydenAvailFp = c;
@@ -1066,6 +1139,12 @@
     }
 
     root.querySelectorAll('[data-publish-avail-row]').forEach(initRow);
+
+    var checkInEl = document.getElementById('checkInTime');
+    if (checkInEl) {
+        checkInEl.addEventListener('change', refreshAllPublishRowsMinDateFromServer);
+        checkInEl.addEventListener('input', refreshAllPublishRowsMinDateFromServer);
+    }
 
     addBtn.addEventListener('click', function () {
         var n = root.querySelectorAll('[data-publish-avail-row]').length;
@@ -1151,5 +1230,59 @@
             });
         });
     });
+})();
+
+/* Evita que la rueda del mouse cambie el valor de inputs type="number" al scrollear la página. */
+(function () {
+    function bindNoWheelStep(el) {
+        if (el.getAttribute("data-ryden-no-wheel") === "1") {
+            return;
+        }
+        el.setAttribute("data-ryden-no-wheel", "1");
+        el.addEventListener(
+            "wheel",
+            function (e) {
+                e.preventDefault();
+            },
+            { passive: false }
+        );
+    }
+
+    function init() {
+        document.querySelectorAll("input.js-no-number-wheel-step[type='number']").forEach(bindNoWheelStep);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+
+/* Evita que la rueda del mouse cambie el valor de inputs type="number" al scrollear la página. */
+(function () {
+    function bindNoWheelStep(el) {
+        if (el.getAttribute("data-ryden-no-wheel") === "1") {
+            return;
+        }
+        el.setAttribute("data-ryden-no-wheel", "1");
+        el.addEventListener(
+            "wheel",
+            function (e) {
+                e.preventDefault();
+            },
+            { passive: false }
+        );
+    }
+
+    function init() {
+        document.querySelectorAll("input.js-no-number-wheel-step[type='number']").forEach(bindNoWheelStep);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
 })();
 

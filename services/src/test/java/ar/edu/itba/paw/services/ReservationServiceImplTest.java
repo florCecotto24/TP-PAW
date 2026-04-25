@@ -3,9 +3,11 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,6 +32,7 @@ public class ReservationServiceImplTest {
     private static final OffsetDateTime CREATED_AT = OffsetDateTime.parse("2026-05-01T12:00:00Z");
     private static final OffsetDateTime UPDATED_AT = OffsetDateTime.parse("2026-05-01T12:00:00Z");
     private static final BigDecimal TOTAL_PRICE = new BigDecimal("200");
+    private static final OffsetDateTime PAYMENT_DEADLINE = OffsetDateTime.parse("2026-05-10T12:00:00Z");
 
     @Mock
     private ReservationDao reservationDao;
@@ -40,8 +43,26 @@ public class ReservationServiceImplTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private StoredFileService storedFileService;
+
+    @Mock
+    private ImageService imageService;
+
+    @Mock
+    private ReservationTimingPolicy reservationTimingPolicy;
+
     @InjectMocks
     private ReservationServiceImpl reservationService;
+
+    @BeforeEach
+    void stubReservationTimingPolicy() {
+        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
+        Mockito.lenient().when(reservationTimingPolicy.getPaymentProofDeadlineHours()).thenReturn(12);
+    }
 
 
 
@@ -59,12 +80,24 @@ public class ReservationServiceImplTest {
                 .thenReturn(Optional.of(new User(99L, "owner@example.com", "O", "Owner")));
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(listingService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
+                .thenReturn("Rider handover");
+        Mockito.when(listingService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
+        Mockito.doNothing().when(listingService).refreshListingFinishedIfExhausted(listingId);
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(new User(riderId, "r@e.com", "R", "Rider")));
+        Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(Locale.ENGLISH);
         Mockito.when(reservationDao.createReservation(
-                riderId, listingId, START, END, Reservation.Status.ACCEPTED, TOTAL_PRICE)).thenReturn(created);
+                Mockito.eq(riderId),
+                Mockito.eq(listingId),
+                Mockito.eq(START),
+                Mockito.eq(END),
+                Mockito.eq(Reservation.Status.ACCEPTED),
+                Mockito.any(BigDecimal.class),
+                Mockito.eq(PAYMENT_DEADLINE))).thenReturn(created);
 
         // 2. Execute
         final Reservation result = reservationService.createReservation(
-                riderId, listingId, START, END, Reservation.Status.ACCEPTED);
+                riderId, listingId, START, END, Reservation.Status.ACCEPTED, PAYMENT_DEADLINE);
 
         // 3. Assert
         Assertions.assertEquals(10L, result.getId());
@@ -82,7 +115,7 @@ public class ReservationServiceImplTest {
 
         // 2. Execute
         final ReservationConflictException thrown = Assertions.assertThrows(ReservationConflictException.class,
-                () -> reservationService.createReservation(1L, 2L, START, END, Reservation.Status.ACCEPTED));
+                () -> reservationService.createReservation(1L, 2L, START, END, Reservation.Status.ACCEPTED, null));
 
         // 3. Assert
         Assertions.assertEquals(MessageKeys.RESERVATION_CONFLICT_OVERLAP, thrown.getMessageCode());
@@ -98,11 +131,17 @@ public class ReservationServiceImplTest {
 
         final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
                 () -> reservationService.createReservation(
-                        riderId, listingId, START, END, Reservation.Status.ACCEPTED));
+                        riderId, listingId, START, END, Reservation.Status.ACCEPTED, null));
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
         Mockito.verify(reservationDao, Mockito.never()).createReservation(
-                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+                Mockito.anyLong(),
+                Mockito.anyLong(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any());
     }
 
     @Test
@@ -164,12 +203,16 @@ public class ReservationServiceImplTest {
         final User createdRider = new User(riderId, riderEmail, riderName, riderSurname);
         final User listingOwner = new User(ownerId, ownerEmail, ownerName, ownerSurname);
 
-        Mockito.when(listing.getStartPoint()).thenReturn("Start point");
         Mockito.when(listing.getTitle()).thenReturn("Test vehicle");
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(listingService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
+                .thenReturn("Rider handover");
+        Mockito.when(listingService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
+        Mockito.doNothing().when(listingService).refreshListingFinishedIfExhausted(Mockito.anyLong());
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(createdRider));
+        Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(Locale.ENGLISH);
 
         Mockito.when(listingService.reservationIntervalFitsListingAvailability(
                 Mockito.eq(listingId),
@@ -189,20 +232,22 @@ public class ReservationServiceImplTest {
                 Mockito.eq(listingId),
                 Mockito.any(OffsetDateTime.class),
                 Mockito.any(OffsetDateTime.class),
-                Mockito.eq(Reservation.Status.ACCEPTED),
-                        Mockito.any(BigDecimal.class)))
+                Mockito.eq(Reservation.Status.PENDING),
+                Mockito.any(BigDecimal.class),
+                Mockito.any(OffsetDateTime.class)))
                 .thenAnswer(inv -> new Reservation(
                         reservationId,
                         createdRider.getId(),
                         listingId,
                         inv.getArgument(2),
                         inv.getArgument(3),
-                        Reservation.Status.ACCEPTED,
+                        Reservation.Status.PENDING,
                         CREATED_AT,
                         UPDATED_AT,
-                        TOTAL_PRICE));
+                        inv.getArgument(5)));
 
-        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
+        /* Takes at least ~48 h in the wall calendar: it complies with the 24 h clock rule even if the test runs at night. */
+        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(2);
         final String fromWall = fromDay.atTime(10, 0).toString();
         final String untilWall = fromDay.plusDays(4).atTime(18, 0).toString();
 
@@ -218,7 +263,7 @@ public class ReservationServiceImplTest {
         Assertions.assertEquals(reservationId, result.getId());
         Assertions.assertEquals(riderId, result.getRiderId());
         Assertions.assertEquals(listingId, result.getListingId());
-        Assertions.assertEquals(Reservation.Status.ACCEPTED, result.getStatus());
+        Assertions.assertEquals(Reservation.Status.PENDING, result.getStatus());
     }
 
     @Test
@@ -267,7 +312,7 @@ public class ReservationServiceImplTest {
                 Mockito.any(OffsetDateTime.class),
                 Mockito.any(OffsetDateTime.class))).thenReturn(false);
 
-        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
+        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(2);
         final String fromWall = fromDay.atTime(10, 0).toString();
         final String untilWall = fromDay.plusDays(2).atTime(18, 0).toString();
 
@@ -281,7 +326,13 @@ public class ReservationServiceImplTest {
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
         Mockito.verify(reservationDao, Mockito.never()).createReservation(
-                Mockito.anyLong(), Mockito.anyLong(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+                Mockito.anyLong(),
+                Mockito.anyLong(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
+                Mockito.any());
     }
 
     @Test

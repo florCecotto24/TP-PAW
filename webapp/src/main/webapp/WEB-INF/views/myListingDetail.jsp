@@ -1,13 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="myListingDetail.pageTitle" arguments="${listing.id}"/></title>
+    <title><spring:message code="myListingDetail.pageTitle" arguments="${listing.title}"/></title>
     <%@include file="header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
@@ -20,7 +19,7 @@
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
             homeHref="${pageContext.request.contextPath}/my-listings"
-            currentLabel="${listing.id}"/>
+            currentLabel="${listing.title}"/>
 
     <section class="reservation-management-header mb-4">
         <h1 class="h3 fw-bold mb-2"><spring:message code="myListingDetail.heading"/></h1>
@@ -81,21 +80,53 @@
             <article class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
-                    <form:form method="post"
+                    <spring:message code="validation.neighborhood.invalid" var="editNbInvalidMsg" htmlEscape="true"/>
+                    <form:form id="editListingFormEl" method="post"
                                action="${editListingUrl}"
                                modelAttribute="editForm"
-                               class="row g-3">
+                               class="row g-3"
+                               htmlEscape="true"
+                               data-ryden-nb-invalid="<c:out value='${editNbInvalidMsg}'/>">
                         <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
 
                         <div class="col-sm-6">
                             <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" cssClass="form-control js-no-number-wheel-step" cssErrorClass="form-control is-invalid js-no-number-wheel-step"/>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
-                        <div class="col-sm-6">
-                            <label for="startPoint" class="form-label required-label"><spring:message code="publishCar.form.startPoint"/></label>
-                            <form:input path="startPoint" id="startPoint" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                            <form:errors path="startPoint" cssClass="text-danger d-block"/>
+                        <spring:message code="publishCar.form.neighborhood.placeholder" var="editNbPh"/>
+                        <spring:message code="publishCar.form.neighborhood" var="editNbFieldLabel"/>
+                        <spring:message code="publishCar.form.neighborhood.search" var="editNbSearchPh"/>
+                        <div class="col-md-12">
+                            <ryden:neighborhoodPicker
+                                    pickerId="editListing"
+                                    mode="get"
+                                    allowMultiple="false"
+                                    springPath="neighborhoodId"
+                                    selectedNeighborhoodId="${editForm.neighborhoodId}"
+                                    neighborhoodList="${allNeighborhoods}"
+                                    anyLabel="${editNbPh}"
+                                    searchPlaceholder="${editNbSearchPh}"
+                                    selectFieldLabel="${editNbFieldLabel}"
+                                    toggleAriaLabel="${editNbFieldLabel}"
+                                    outerLabel="${editNbFieldLabel}"
+                                    outerLabelRequired="true"
+                                    required="true"
+                                    formId="editListingFormEl"/>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="start_point_street_edit" class="form-label required-label"><spring:message code="publishCar.form.pickupStreet"/></label>
+                            <form:input path="startPointStreet" id="start_point_street_edit" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <form:errors path="startPointStreet" cssClass="text-danger d-block"/>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="start_point_number_edit" class="form-label required-label"><spring:message code="publishCar.form.pickupStreetNumber"/></label>
+                            <form:input path="startPointNumber" id="start_point_number_edit" maxlength="10" inputmode="numeric" autocomplete="off"
+                                        data-ryden-digits-only="true" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <form:errors path="startPointNumber" cssClass="text-danger d-block"/>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <p class="small text-muted mb-0"><spring:message code="publishCar.form.samePickupReturnHint"/></p>
                         </div>
                         <div class="col-sm-6">
                             <label for="checkInTime" class="form-label required-label"><spring:message code="publishCar.form.checkInTime"/></label>
@@ -187,7 +218,6 @@
         </div>
     </div>
 </main>
-
 <%@include file="footer.jsp"%>
 </body>
 </html>

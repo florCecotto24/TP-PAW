@@ -1,6 +1,10 @@
 package ar.edu.itba.paw.webapp.util;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -30,6 +34,36 @@ public final class BookableWallRangesJson {
         }
         out.add(cur);
         return out;
+    }
+
+    /**
+     * Recorta el inicio de cada segmento para que el primer día seleccionable como retiro cumpla la misma regla
+     * que {@code ReservationServiceImpl}: instante de retiro &gt; {@code minPickupExclusive}.
+     *
+     * @param pickupWallTime hora de retiro publicada (muro); si es null se usa 10:00 como en el formulario
+     */
+    public static List<LocalDateSegment> clipSegmentsToMinPickupInstant(
+            final List<LocalDateSegment> merged,
+            final LocalTime pickupWallTime,
+            final ZoneId wallZone,
+            final Instant minPickupExclusive) {
+        if (merged.isEmpty()) {
+            return List.of();
+        }
+        final LocalTime pickup = pickupWallTime != null ? pickupWallTime : LocalTime.of(10, 0);
+        final List<LocalDateSegment> clipped = new ArrayList<>();
+        for (final LocalDateSegment seg : merged) {
+            LocalDate d = seg.startInclusive();
+            while (!d.isAfter(seg.endInclusive())) {
+                final Instant pickupInstant = ZonedDateTime.of(d, pickup, wallZone).toInstant();
+                if (pickupInstant.isAfter(minPickupExclusive)) {
+                    clipped.add(new LocalDateSegment(d, seg.endInclusive()));
+                    break;
+                }
+                d = d.plusDays(1);
+            }
+        }
+        return mergeAdjacentSegments(clipped);
     }
 
     public static String toJsonArray(final List<LocalDateSegment> segments) {

@@ -2,11 +2,12 @@ package ar.edu.itba.paw.models;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 public class Reservation {
 
     public enum Status {
-        ACCEPTED, STARTED, CANCELLED, FINISHED
+        PENDING, ACCEPTED, STARTED, CANCELLED, FINISHED
     }
 
     private final long id;
@@ -18,6 +19,9 @@ public class Reservation {
     private final OffsetDateTime createdAt;
     private final OffsetDateTime updatedAt;
     private final BigDecimal totalPrice;
+    private final Long paymentReceiptFileId;
+    private final boolean paymentApproved;
+    private final OffsetDateTime paymentProofDeadlineAt;
 
     public Reservation(
             final long id,
@@ -29,6 +33,23 @@ public class Reservation {
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt,
             final BigDecimal totalPrice) {
+        this(id, riderId, listingId, startDate, endDate, status, createdAt, updatedAt, totalPrice,
+                null, false, null);
+    }
+
+    public Reservation(
+            final long id,
+            final long riderId,
+            final long listingId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate,
+            final Status status,
+            final OffsetDateTime createdAt,
+            final OffsetDateTime updatedAt,
+            final BigDecimal totalPrice,
+            final Long paymentReceiptFileId,
+            final boolean paymentApproved,
+            final OffsetDateTime paymentProofDeadlineAt) {
         this.id = id;
         this.riderId = riderId;
         this.listingId = listingId;
@@ -38,6 +59,9 @@ public class Reservation {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.totalPrice = totalPrice;
+        this.paymentReceiptFileId = paymentReceiptFileId;
+        this.paymentApproved = paymentApproved;
+        this.paymentProofDeadlineAt = paymentProofDeadlineAt;
     }
 
     public long getId() {
@@ -74,6 +98,18 @@ public class Reservation {
 
     public BigDecimal getTotalPrice() {
         return totalPrice;
+    }
+
+    public Optional<Long> getPaymentReceiptFileId() {
+        return Optional.ofNullable(paymentReceiptFileId);
+    }
+
+    public boolean isPaymentApproved() {
+        return paymentApproved;
+    }
+
+    public Optional<OffsetDateTime> getPaymentProofDeadlineAt() {
+        return Optional.ofNullable(paymentProofDeadlineAt);
     }
 
     @Override

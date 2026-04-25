@@ -2,6 +2,8 @@ package ar.edu.itba.paw.models;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public final class ListingSearchCriteria {
@@ -21,6 +23,7 @@ public final class ListingSearchCriteria {
     private final LocalDate browseWallDate;
     /** When set, SQL excludes listings owned by this user id (public rider browse). */
     private final Long excludeOwnerUserId;
+    private final List<Long> neighborhoodIds;
 
     public ListingSearchCriteria(
             final String query,
@@ -31,7 +34,7 @@ public final class ListingSearchCriteria {
             final Instant availabilityRangeStart,
             final Instant availabilityRangeEndExclusive) {
         this(query, transmissions, powertrains, carTypes, priceBands,
-                availabilityRangeStart, availabilityRangeEndExclusive, 0, 8, "date", "desc", null, null);
+                availabilityRangeStart, availabilityRangeEndExclusive, 0, 8, "date", "desc", null, null, List.of());
     }
 
     public ListingSearchCriteria(
@@ -47,7 +50,8 @@ public final class ListingSearchCriteria {
             final String sortBy,
             final String sortDirection) {
         this(query, transmissions, powertrains, carTypes, priceBands,
-                availabilityRangeStart, availabilityRangeEndExclusive, page, pageSize, sortBy, sortDirection, null, null);
+                availabilityRangeStart, availabilityRangeEndExclusive, page, pageSize, sortBy, sortDirection, null, null,
+                List.of());
     }
 
     public ListingSearchCriteria(
@@ -64,6 +68,26 @@ public final class ListingSearchCriteria {
             final String sortDirection,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
+        this(query, transmissions, powertrains, carTypes, priceBands,
+                availabilityRangeStart, availabilityRangeEndExclusive, page, pageSize, sortBy, sortDirection,
+                browseWallDate, excludeOwnerUserId, List.of());
+    }
+
+    public ListingSearchCriteria(
+            final String query,
+            final List<String> transmissions,
+            final List<String> powertrains,
+            final List<String> carTypes,
+            final List<String> priceBands,
+            final Instant availabilityRangeStart,
+            final Instant availabilityRangeEndExclusive,
+            final int page,
+            final int pageSize,
+            final String sortBy,
+            final String sortDirection,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId,
+            final List<Long> neighborhoodIds) {
         this.query = query != null && !query.isBlank() ? query.trim() : null;
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
         this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);
@@ -77,6 +101,20 @@ public final class ListingSearchCriteria {
         this.sortDirection = "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
         this.browseWallDate = browseWallDate;
         this.excludeOwnerUserId = excludeOwnerUserId;
+        this.neighborhoodIds = normalizeIdList(neighborhoodIds);
+    }
+
+    private static List<Long> normalizeIdList(final List<Long> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        final LinkedHashSet<Long> set = new LinkedHashSet<>();
+        for (final Long id : raw) {
+            if (id != null && id > 0L) {
+                set.add(id);
+            }
+        }
+        return List.copyOf(new ArrayList<>(set));
     }
 
     public String getQuery() {
@@ -135,5 +173,9 @@ public final class ListingSearchCriteria {
 
     public Long getExcludeOwnerUserId() {
         return excludeOwnerUserId;
+    }
+
+    public List<Long> getNeighborhoodIds() {
+        return neighborhoodIds;
     }
 }

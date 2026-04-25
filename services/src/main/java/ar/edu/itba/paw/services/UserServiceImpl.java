@@ -223,4 +223,36 @@ public class UserServiceImpl implements UserService {
         final String trimmed = phoneRaw.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
+
+    @Override
+    @Transactional
+    public void updateLatestLocale(final long userId, final String localeTag) {
+        if (localeTag == null || localeTag.isBlank()) {
+            return;
+        }
+        String t = localeTag.trim();
+        if (t.length() > 32) {
+            t = t.substring(0, 32);
+        }
+        userDao.updateLatestLocale(userId, t);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Locale resolveMailLocale(final long userId) {
+        return getUserById(userId)
+                .flatMap(User::getLatestLocaleTag)
+                .map(tag -> {
+                    final Locale l = Locale.forLanguageTag(tag.replace('_', '-'));
+                    final String lang = l.getLanguage();
+                    if (lang == null || lang.isEmpty()) {
+                        return Locale.ENGLISH;
+                    }
+                    if ("es".equalsIgnoreCase(lang)) {
+                        return Locale.forLanguageTag("es");
+                    }
+                    return Locale.ENGLISH;
+                })
+                .orElse(Locale.ENGLISH);
+    }
 }

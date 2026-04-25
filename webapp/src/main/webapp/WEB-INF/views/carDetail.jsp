@@ -16,7 +16,7 @@
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
             <h1 class="h2 fw-bold mb-0"><c:out value="${listing.title}"/></h1>
-            <ryden:detailListingMeta location="${listing.startPoint}"/>
+            <ryden:detailListingMeta location="${listingPublicLocation}"/>
         </div>
     </div>
 
@@ -45,7 +45,11 @@
             </c:if>
             <section>
                 <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.specification"/></h2>
-                <div class="row row-cols-2 row-cols-md-4 g-3">
+                <div class="row row-cols-2 row-cols-md-3 g-3">
+                    <div class="col">
+                        <spring:message code="enum.car.type.${car.type.name()}" var="carTypeLabel"/>
+                        <ryden:specCard icon="car-front" label="${carTypeLabel}"/>
+                    </div>
                     <div class="col">
                         <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                         <ryden:specCard icon="gear-wide-connected" label="${carTransmissionLabel}"/>
@@ -64,7 +68,7 @@
                 <ryden:detailReservationPanel
                         listingId="${listing.id}"
                         dailyPrice="${listing.dayPrice}"
-                        deliveryLocation="${listing.startPoint}"
+                        deliveryLocation="${listingPublicLocation}"
                         fromDateTimeValue="${reservationFromDefault}"
                         untilDateTimeValue="${reservationUntilDefault}"
                         bookableWallRangesJson="${bookableWallRangesJson}"

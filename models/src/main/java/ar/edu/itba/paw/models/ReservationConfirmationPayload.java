@@ -13,11 +13,15 @@ public final class ReservationConfirmationPayload {
     private final String vehicleLabel;
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
-    private final String deliveryLocation;
+    /** Delivery + pickup for the email to the rider (without door number until payment proof). */
+    private final String riderHandoverLocation;
+    /** Full data for the email to the owner. */
+    private final String ownerHandoverLocation;
     private final String ownerFullName;
     private final String ownerEmail;
     private final String reservationTotal;
-    private final Locale messageLocale;
+    private final Locale riderMailLocale;
+    private final Locale ownerMailLocale;
 
     public ReservationConfirmationPayload(
             final String recipientEmail,
@@ -27,11 +31,13 @@ public final class ReservationConfirmationPayload {
             final String vehicleLabel,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
-            final String deliveryLocation,
+            final String riderHandoverLocation,
+            final String ownerHandoverLocation,
             final String ownerFullName,
             final String ownerEmail,
             final String reservationTotal,
-            final Locale messageLocale) {
+            final Locale riderMailLocale,
+            final Locale ownerMailLocale) {
         this.recipientEmail = Objects.requireNonNull(recipientEmail, "recipientEmail");
         this.riderFullName = Objects.requireNonNull(riderFullName, "riderFullName");
         this.reservationId = reservationId;
@@ -39,11 +45,13 @@ public final class ReservationConfirmationPayload {
         this.vehicleLabel = Objects.requireNonNull(vehicleLabel, "vehicleLabel");
         this.startDate = Objects.requireNonNull(startDate, "startDate");
         this.endDate = Objects.requireNonNull(endDate, "endDate");
-        this.deliveryLocation = deliveryLocation;
+        this.riderHandoverLocation = riderHandoverLocation;
+        this.ownerHandoverLocation = ownerHandoverLocation;
         this.ownerFullName = ownerFullName;
         this.ownerEmail = ownerEmail;
         this.reservationTotal = reservationTotal;
-        this.messageLocale = Objects.requireNonNull(messageLocale, "messageLocale");
+        this.riderMailLocale = Objects.requireNonNull(riderMailLocale, "riderMailLocale");
+        this.ownerMailLocale = Objects.requireNonNull(ownerMailLocale, "ownerMailLocale");
     }
 
     public String getRecipientEmail() {
@@ -74,8 +82,12 @@ public final class ReservationConfirmationPayload {
         return endDate;
     }
 
-    public String getDeliveryLocation() {
-        return deliveryLocation;
+    public String getRiderHandoverLocation() {
+        return riderHandoverLocation;
+    }
+
+    public String getOwnerHandoverLocation() {
+        return ownerHandoverLocation;
     }
 
     public String getOwnerFullName() {
@@ -86,11 +98,23 @@ public final class ReservationConfirmationPayload {
         return ownerEmail;
     }
 
-    public Locale getMessageLocale() {
-        return messageLocale;
+    public Locale getRiderMailLocale() {
+        return riderMailLocale;
+    }
+
+    public Locale getOwnerMailLocale() {
+        return ownerMailLocale;
     }
 
     public String getReservationTotal() {
         return reservationTotal;
+    }
+
+    public Locale getMessageLocale() {
+        return riderMailLocale;
+    }
+
+    public String getDeliveryLocation() {
+        return riderHandoverLocation;
     }
 }

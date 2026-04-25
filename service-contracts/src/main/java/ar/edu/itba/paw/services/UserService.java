@@ -59,4 +59,10 @@ public interface UserService {
          * Si el usuario ya tiene contraseña, no hace nada (idempotente).
      */
     void assignRandomPasswordAndEmailForLegacyUser(long userId, String email, Locale locale);
+
+    /** Persists the user's preferred UI/mail locale tag (BCP 47, truncated to 32 chars). */
+    void updateLatestLocale(long userId, String localeTag);
+
+    /** Locale for async mail copy for this user; defaults to English when unknown. */
+    Locale resolveMailLocale(long userId);
 }

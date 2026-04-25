@@ -83,7 +83,7 @@ public class EmailServiceImplTest {
         final String vehicleLabel = "brandTest modelTest";
         final OffsetDateTime startDate = OffsetDateTime.parse("2026-05-01T10:00:00Z");
         final OffsetDateTime endDate = OffsetDateTime.parse("2026-05-03T18:00:00Z");
-        final String startPoint = "startPointTest";
+        final String riderHandoverLocation = "pickupStreetTest";
         final String ownerName = "Owner Name";
         final String ownerEmail = "owner@test.com";
         final String subject = "Subject brandTest modelTest";
@@ -96,10 +96,12 @@ public class EmailServiceImplTest {
                 vehicleLabel,
                 startDate,
                 endDate,
-                startPoint,
+                riderHandoverLocation,
+                riderHandoverLocation + " (owner full)",
                 ownerName,
                 ownerEmail,
                 reservationTotal,
+                locale,
                 locale);
 
         Mockito.when(environment.getProperty("mail.app.public.base.url", "http://localhost:8080"))

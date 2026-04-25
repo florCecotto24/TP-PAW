@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.models.Image;
 import ar.edu.itba.paw.persistence.ImageDao;
@@ -16,16 +17,21 @@ import ar.edu.itba.paw.persistence.ImageDao;
 @ExtendWith(MockitoExtension.class)
 public class ImageServiceImplTest {
 
-    private static final String LIMIT_ONE_MIB = String.valueOf(1024L * 1024L);
+    private static final long LIMIT_ONE_MIB = 1024L * 1024L;
 
     @Mock
     private ImageDao imageDao;
+
+    @Mock
+    private Environment environment;
 
     private ImageServiceImpl imageService;
 
     @BeforeEach
     public void setUp() {
-        imageService = new ImageServiceImpl(imageDao, LIMIT_ONE_MIB);
+        Mockito.when(environment.getProperty("app.upload.max-image-bytes", Long.class, 20971520L))
+                .thenReturn(LIMIT_ONE_MIB);
+        imageService = new ImageServiceImpl(imageDao, environment);
     }
 
     @Test

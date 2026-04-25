@@ -6,13 +6,17 @@ import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +32,7 @@ import javax.validation.Valid;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import ar.edu.itba.paw.models.WallDateTimeDisplayFormat;
@@ -38,23 +43,40 @@ import org.springframework.context.i18n.LocaleContextHolder;
 public class MyListingsController {
 
     private static final int PAGE_SIZE = 8;
+    private static final Set<String> OWNER_LISTING_STATUS_WHITELIST = Set.of("active", "paused", "finished");
 
     private final ListingService listingService;
+    private final LocationService locationService;
+    private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
 
     @Autowired
-    public MyListingsController(final ListingService listingService) {
+    public MyListingsController(
+            final ListingService listingService,
+            final LocationService locationService,
+            final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator) {
         this.listingService = listingService;
+        this.locationService = locationService;
+        this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
+    }
+
+    @InitBinder("editForm")
+    public void initEditFormBinder(final WebDataBinder binder) {
+        binder.addValidators(listingNeighborhoodFormValidator);
     }
 
     @GetMapping
     public ModelAndView myListings(
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) final String listingStatus,
+            @RequestParam(required = false) final String q,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
 
-        final Page<ListingCard> resultPage = listingService.getOwnerListingCards(me.getId(), page, PAGE_SIZE);
+        final String listingStatusFilter = normalizeOwnerListingStatusParam(listingStatus);
+        final Page<ListingCard> resultPage =
+                listingService.getOwnerListingCards(me.getId(), page, PAGE_SIZE, listingStatusFilter, q);
 
         final int lastPage = resultPage.getTotalPages() - 1;
         if (page > lastPage) {
@@ -85,7 +107,16 @@ public class MyListingsController {
         mav.addObject("results", listings);
         mav.addObject("myListingsPage", resultPage);
         mav.addObject("activeTab", "my-listings");
+        mav.addObject("ownerListingStatusFilter", listingStatusFilter != null ? listingStatusFilter : "");
         return mav;
+    }
+
+    private static String normalizeOwnerListingStatusParam(final String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        final String t = raw.trim().toLowerCase();
+        return OWNER_LISTING_STATUS_WHITELIST.contains(t) ? t : null;
     }
 
     @GetMapping("/{listingId}")
@@ -120,11 +151,13 @@ public class MyListingsController {
                 me.getId(),
                 listingId,
                 editForm.getPricePerDay(),
-                editForm.getStartPoint(),
+                editForm.getStartPointStreet(),
+                editForm.getStartPointNumber(),
                 editForm.getDescription(),
                 editForm.getCheckInTime(),
                 editForm.getCheckOutTime(),
-                null);
+                null,
+                editForm.getNeighborhoodId());
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 
@@ -142,8 +175,11 @@ public class MyListingsController {
         if (editForm.getPricePerDay() == null) {
             editForm.setPricePerDay(listing.getDayPrice());
         }
-        if (editForm.getStartPoint() == null) {
-            editForm.setStartPoint(listing.getStartPoint());
+        if (editForm.getStartPointStreet() == null) {
+            editForm.setStartPointStreet(listing.getStartPointStreet());
+        }
+        if (editForm.getStartPointNumber() == null) {
+            editForm.setStartPointNumber(listing.getStartPointNumber().orElse(null));
         }
         if (editForm.getDescription() == null) {
             editForm.setDescription(listing.getDescription());
@@ -154,9 +190,13 @@ public class MyListingsController {
         if (editForm.getCheckOutTime() == null) {
             editForm.setCheckOutTime(listing.getCheckOutTime());
         }
+        if (editForm.getNeighborhoodId() == null) {
+            editForm.setNeighborhoodId(listing.getNeighborhoodId().orElse(null));
+        }
 
         final long carImageId = detail.getPictures().isEmpty() ? 0L : detail.getPictures().get(0).getImageId();
         final ModelAndView mav = new ModelAndView("myListingDetail");
+        mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
         mav.addObject("listing", listing);
         mav.addObject("listingCreatedAtDisplay", WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(listing.getCreatedAt(), LocaleContextHolder.getLocale()));
         mav.addObject("car", detail.getCar());

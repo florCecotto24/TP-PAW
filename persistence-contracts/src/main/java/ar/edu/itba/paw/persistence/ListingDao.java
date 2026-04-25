@@ -10,7 +10,9 @@ import ar.edu.itba.paw.models.Page;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ListingDao {
@@ -20,12 +22,19 @@ public interface ListingDao {
             String title,
             Listing.Status status,
             BigDecimal dayPrice,
-            String startPoint,
+            String startPointStreet,
+            String startPointNumber,
             String description,
             LocalTime checkInTime,
-            LocalTime checkOutTime);
+            LocalTime checkOutTime,
+            Long neighborhoodId);
 
     Optional<Listing> getListingById(long id);
+
+    /**
+     * {@code check_in_time} por listado (para reglas de anticipación del retiro en búsqueda / browse).
+     */
+    Map<Long, LocalTime> findCheckInTimeByListingIds(Collection<Long> listingIds);
 
     Optional<ListingDetail> getListingDetailById(long id);
 
@@ -33,10 +42,12 @@ public interface ListingDao {
             long ownerId,
             long listingId,
             BigDecimal dayPrice,
-            String startPoint,
+            String startPointStreet,
+            String startPointNumber,
             String description,
             LocalTime checkInTime,
-            LocalTime checkOutTime);
+            LocalTime checkOutTime,
+            Long neighborhoodId);
 
     boolean toggleListingStatus(long ownerId, long listingId);
 
@@ -61,7 +72,7 @@ public interface ListingDao {
 
     Page<ListingCard> getMostRecentListingCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
 
-    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize);
+    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize, String statusFilter, String textQuery);
 
     boolean hasListingsByOwner(long ownerId);
 

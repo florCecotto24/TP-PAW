@@ -13,12 +13,15 @@
 <%@ attribute name="transmissionFilterOptions" required="true" type="java.util.Map" %>
 <%@ attribute name="powertrainFilterOptions" required="true" type="java.util.Map" %>
 <%@ attribute name="priceFilterOptions" required="true" type="java.util.Map" %>
+<%@ attribute name="clearFiltersHref" required="false" type="java.lang.String" %>
+<%@ attribute name="showClearFilters" required="false" type="java.lang.Boolean" %>
 
 <c:set var="resolvedFormId" value="${empty formId ? 'exploreSearchForm' : formId}"/>
 <c:set var="resolvedFormClass" value="${empty formClass ? 'search-menu w-100' : formClass}"/>
 <c:set var="resolvedActionPath" value="${empty actionPath ? '/search' : actionPath}"/>
 <c:set var="resolvedShowFilters" value="${showFilters ne false}"/>
 <c:set var="resolvedAutoSubmit" value="${autoSubmitOnFilterChange eq true}"/>
+<c:set var="resolvedShowClear" value="${showClearFilters eq true}"/>
 
 <c:set var="fromRaw" value="${param.from}"/>
 <c:set var="untilRaw" value="${param.until}"/>
@@ -32,43 +35,75 @@
 </c:if>
 
 <c:url var="resolvedActionUrl" value="${resolvedActionPath}"/>
+<spring:message code="search.filter.neighborhood.search" var="neighborhoodSearchPh"/>
+<spring:message code="search.filter.neighborhood.any" var="neighborhoodAnyLabel"/>
+<spring:message code="search.filter.neighborhood" var="neighborhoodLabel"/>
+<spring:message code="search.validation.neighborhood.invalid" var="searchNbInvalidMsg" htmlEscape="true"/>
 
-<form id="<c:out value='${resolvedFormId}'/>" class="<c:out value='${resolvedFormClass}'/>" method="get" action="${resolvedActionUrl}">
+<form id="<c:out value='${resolvedFormId}'/>" class="<c:out value='${resolvedFormClass}'/>" method="get" action="${resolvedActionUrl}"
+      data-form-suffix="<c:out value='${resolvedFormId}'/>"
+      data-ryden-search-nb-invalid="<c:out value='${searchNbInvalidMsg}'/>">
     <div class="container">
         <div class="bg-white rounded-4 px-3 py-2 shadow-sm">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="d-flex align-items-end gap-2 flex-wrap">
                 <div class="form-floating flex-grow-1" style="min-width: 12rem;">
                     <spring:message code="searchBar.query.ariaLabel" var="queryAriaLabel"/>
                     <spring:message code="searchBar.query.label" var="queryLabel"/>
-                    <input type="text" class="form-control border-0 shadow-none" aria-label="<c:out value='${queryAriaLabel}'/>" id="search_query"
+                    <input type="text" class="form-control border-0 shadow-none" aria-label="<c:out value='${queryAriaLabel}'/>" id="search_query_<c:out value='${resolvedFormId}'/>"
                            name="query" value="<c:out value='${param.query}'/>" placeholder=" ">
-                    <label for="search_query"><c:out value="${queryLabel}"/></label>
+                    <label for="search_query_<c:out value='${resolvedFormId}'/>"><c:out value="${queryLabel}"/></label>
                 </div>
+
+                <c:if test="${resolvedShowFilters}">
+                    <div class="vr flex-shrink-0 d-none d-md-block"></div>
+                    <div class="flex-grow-1" style="min-width: 10rem; max-width: 16rem;">
+                        <ryden:neighborhoodPicker
+                                pickerId="${resolvedFormId}"
+                                neighborhoodList="${searchAllNeighborhoods}"
+                                anyLabel="${neighborhoodAnyLabel}"
+                                searchPlaceholder="${neighborhoodSearchPh}"
+                                selectFieldLabel="${neighborhoodLabel}"
+                                toggleAriaLabel="${neighborhoodLabel}"
+                                mode="get"
+                                allowMultiple="true"
+                                selectedNeighborhoodIds="${searchSanitizedNeighborhoodIds}"
+                                formId="${resolvedFormId}"
+                                searchBarInline="true"
+                                wrapExtraClass="w-100"/>
+                    </div>
+                </c:if>
 
                 <div class="vr flex-shrink-0 d-none d-md-block"></div>
 
                 <div class="d-flex flex-wrap gap-2 flex-grow-1 align-items-end" style="min-width: 14rem;">
                     <div class="flex-grow-1" style="min-width: 7rem;">
-                        <label class="form-label small text-secondary mb-1" for="search_from_picker"><spring:message code="searchBar.from"/></label>
+                        <label class="form-label small text-secondary mb-1" for="search_from_picker_<c:out value='${resolvedFormId}'/>"><spring:message code="searchBar.from"/></label>
                         <spring:message code="searchBar.date.placeholder" var="datePlaceholder"/>
                         <spring:message code="searchBar.from.ariaLabel" var="fromAriaLabel"/>
-                        <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_from_picker"
+                        <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_from_picker_<c:out value='${resolvedFormId}'/>"
                                readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${fromAriaLabel}'/>"/>
-                        <input type="hidden" name="from" id="search_from_hidden" value="<c:out value='${fromDateOnly}'/>"/>
+                        <input type="hidden" name="from" id="search_from_hidden_<c:out value='${resolvedFormId}'/>" value="<c:out value='${fromDateOnly}'/>"/>
                     </div>
                     <div class="flex-grow-1" style="min-width: 7rem;">
-                        <label class="form-label small text-secondary mb-1" for="search_until_picker"><spring:message code="searchBar.until"/></label>
+                        <label class="form-label small text-secondary mb-1" for="search_until_picker_<c:out value='${resolvedFormId}'/>"><spring:message code="searchBar.until"/></label>
                         <spring:message code="searchBar.until.ariaLabel" var="untilAriaLabel"/>
-                        <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_until_picker"
+                        <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_until_picker_<c:out value='${resolvedFormId}'/>"
                                readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${untilAriaLabel}'/>"/>
-                        <input type="hidden" name="until" id="search_until_hidden" value="<c:out value='${untilDateOnly}'/>"/>
+                        <input type="hidden" name="until" id="search_until_hidden_<c:out value='${resolvedFormId}'/>" value="<c:out value='${untilDateOnly}'/>"/>
                     </div>
                 </div>
 
                 <div class="vr flex-shrink-0 d-none d-md-block"></div>
 
+                <c:if test="${resolvedShowClear and not empty clearFiltersHref}">
+                    <spring:message code="search.empty.reset" var="clearFiltersLabel"/>
+                    <a href="<c:out value='${clearFiltersHref}'/>" class="btn btn-primary btn-action btn-action-md flex-shrink-0 align-self-center">
+                        <c:out value="${clearFiltersLabel}"/>
+                    </a>
+                </c:if>
+
                 <spring:message code="searchBar.submit.ariaLabel" var="submitAriaLabel"/>
-                <button type="submit" class="btn btn-primary rounded-3 ms-md-3 p-2 flex-shrink-0" aria-label="<c:out value='${submitAriaLabel}'/>">
+                <button type="submit" class="btn btn-primary rounded-3 ms-md-3 p-2 flex-shrink-0 align-self-center" aria-label="<c:out value='${submitAriaLabel}'/>">
                     <i class="bi bi-search fs-5 search-btn" aria-hidden="true"></i>
                 </button>
             </div>
@@ -121,7 +156,6 @@
         (function () {
             var form = document.getElementById('<c:out value="${resolvedFormId}"/>');
             if (!form) return;
-
             function updateBadge(dropdown) {
                 var count = dropdown.querySelectorAll('.js-explore-filter:checked').length;
                 var badge = dropdown.querySelector('[data-filter-count="true"]');
@@ -145,4 +179,3 @@
         })();
     </script>
 </c:if>
-

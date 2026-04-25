@@ -247,7 +247,7 @@ public class EmailServiceImpl implements EmailService {
             final String subject = emailMessageSource.getMessage(
                     "mail.reservationConfirmation.subject",
                     new Object[]{payload.getVehicleLabel()},
-                    payload.getMessageLocale());
+                    payload.getOwnerMailLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);
         });
     }
@@ -338,7 +338,7 @@ public class EmailServiceImpl implements EmailService {
         }
 
         try {
-            final Locale ownerLocale = ownerPayload.getMessageLocale();
+            final Locale ownerLocale = ownerPayload.getOwnerMailLocale();
             final Context ownerCtx = new Context(ownerLocale);
             ownerCtx.setVariable("vehicleLabel", ownerPayload.getVehicleLabel());
             ownerCtx.setVariable("ownerFullName", ownerPayload.getOwnerFullName());
@@ -362,7 +362,7 @@ public class EmailServiceImpl implements EmailService {
             final String subject = emailMessageSource.getMessage(
                     "mail.listingDeleted.subject",
                     new Object[]{payload.getVehicleLabel()},
-                    payload.getMessageLocale());
+                    payload.getOwnerMailLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);
         });
     }
@@ -391,7 +391,7 @@ public class EmailServiceImpl implements EmailService {
             final String subject = emailMessageSource.getMessage(
                     "mail.reservationCancelled.subject",
                     new Object[]{payload.getVehicleLabel()},
-                    payload.getMessageLocale());
+                    payload.getOwnerMailLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);
         });
     }

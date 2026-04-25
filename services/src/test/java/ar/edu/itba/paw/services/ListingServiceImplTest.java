@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,7 @@ import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.ListingAvailability;
 import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
+import ar.edu.itba.paw.models.Neighborhood;
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
@@ -61,8 +63,22 @@ public class ListingServiceImplTest {
     @Mock
     private CarPictureService carPictureService;
 
+    @Mock
+    private LocationService locationService;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private ReservationTimingPolicy reservationTimingPolicy;
+
     @InjectMocks
     private ListingServiceImpl listingService;
+
+    @BeforeEach
+    void stubReservationTimingPolicy() {
+        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
+    }
 
     @Test
     public void testGetListingByIdWhenListingExists() {
@@ -73,7 +89,7 @@ public class ListingServiceImplTest {
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-02T12:00:00Z");
         final BigDecimal dayPrice = new BigDecimal("50.00");
         final String title = "Test title";
-        final String startPoint = "Start";
+        final String startPointStreet = "Start";
         final String description = "Desc";
         final LocalTime checkIn = LocalTime.of(9, 0);
         final LocalTime checkOut = LocalTime.of(18, 0);
@@ -85,7 +101,7 @@ public class ListingServiceImplTest {
                 updatedAt,
                 Listing.Status.ACTIVE,
                 dayPrice,
-                startPoint,
+                startPointStreet,
                 description,
                 checkIn,
                 checkOut);
@@ -333,8 +349,8 @@ public class ListingServiceImplTest {
         final OffsetDateTime updatedAt2 = OffsetDateTime.parse("2026-06-04T12:00:00Z");
         final String title1 = "A";
         final String title2 = "B";
-        final String startPoint1 = "s";
-        final String startPoint2 = "s2";
+        final String startStreet1 = "s";
+        final String startStreet2 = "s2";
         final String description1 = "d";
         final String description2 = "d2";
         final LocalTime checkIn1 = LocalTime.of(9, 0);
@@ -351,7 +367,7 @@ public class ListingServiceImplTest {
                 updatedAt1,
                 Listing.Status.ACTIVE,
                 dayPrice1,
-                startPoint1,
+                startStreet1,
                 description1,
                 checkIn1,
                 checkOut1);
@@ -363,7 +379,7 @@ public class ListingServiceImplTest {
                 updatedAt2,
                 Listing.Status.PAUSED,
                 dayPrice2,
-                startPoint2,
+                startStreet2,
                 description2,checkIn2,
                 checkOut2);
         final List<Listing> list = List.of(first, second);
@@ -396,9 +412,9 @@ public class ListingServiceImplTest {
         final int pageSize = 8;
         final List<ListingCard> cards = List.of(new ListingCard(100L, "Ford", "Focus", new BigDecimal("100.00"), 0L));
         final Page<ListingCard> ownerPage = new Page<>(cards, page, pageSize, 1);
-        Mockito.when(listingDao.getOwnerListingCards(ownerId, page, pageSize)).thenReturn(ownerPage);
+        Mockito.when(listingDao.getOwnerListingCards(ownerId, page, pageSize, null, null)).thenReturn(ownerPage);
 
-        final Page<ListingCard> result = listingService.getOwnerListingCards(ownerId, page, pageSize);
+        final Page<ListingCard> result = listingService.getOwnerListingCards(ownerId, page, pageSize, null, null);
 
         Assertions.assertEquals(ownerPage, result);
     }
@@ -428,7 +444,8 @@ public class ListingServiceImplTest {
         final Car.Transmission transmission = Car.Transmission.MANUAL;
         final BigDecimal pricePerDay = new BigDecimal("100");
         final String expectedTitle = brand + " " + model;
-        final String startPoint = "testStartPoint";
+        final String startPointStreet = "testStartPoint";
+        final String startPointNumber = "2000";
         final String description = "testDescription";
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-02T12:00:00Z");
@@ -440,6 +457,7 @@ public class ListingServiceImplTest {
         final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
         final String imageName = "imageNameTest";
         final String imageType = "contentTypeTest";
+        final long neighborhoodId = 1L;
 
         final Image image = new Image(imageId, imageName, imageType, imageData);
         final Car car = new Car(carId, ownerId, plate, brand, model, type, powertrain, transmission);
@@ -451,14 +469,19 @@ public class ListingServiceImplTest {
                 updatedAt,
                 status,
                 pricePerDay,
-                startPoint,
+                startPointStreet,
+                startPointNumber,
                 description,
                 checkInTime,
-                checkOutTime);
+                checkOutTime,
+                neighborhoodId);
         final User user = new User(ownerId, "owner@test.com", "ownerName", "ownerSurname");
         final CarPicture carPicture = new CarPicture(carPictureId, carId, imageId, 1, createdAt, updatedAt);
         final List<AvailabilityPeriod> periods = List.of(new AvailabilityPeriod(startDate, endDate));
         final List<ImageUpload> uploads = List.of(new ImageUpload(imageName, imageType, imageData));
+
+        Mockito.when(locationService.findNeighborhoodById(neighborhoodId))
+                .thenReturn(Optional.of(new Neighborhood(neighborhoodId, "Palermo")));
 
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(user));
         Mockito.when(carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission)).thenReturn(car);
@@ -468,10 +491,12 @@ public class ListingServiceImplTest {
                 expectedTitle,
                 Listing.Status.ACTIVE,
                 pricePerDay,
-                startPoint,
+                startPointStreet,
+                startPointNumber,
                 description,
                 checkInTime,
-                checkOutTime)).thenReturn(listing);
+                checkOutTime,
+                neighborhoodId)).thenReturn(listing);
         Mockito.when(listingAvailabilityDao.create(listingId, startDate, endDate))
                 .thenReturn(new ListingAvailability(10L, listingId, startDate, endDate, createdAt, updatedAt));
         Mockito.when(imageService.createImage(imageName, imageType, imageData)).thenReturn(image);
@@ -486,12 +511,14 @@ public class ListingServiceImplTest {
                 powertrain,
                 transmission,
                 pricePerDay,
-                startPoint,
+                startPointStreet,
+                startPointNumber,
                 description,
                 checkInTime,
                 checkOutTime,
                 periods,
-                uploads);
+                uploads,
+                neighborhoodId);
 
         Assertions.assertNotNull(result);
         Assertions.assertEquals(user, result.getPublisher());

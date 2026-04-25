@@ -31,4 +31,6 @@ public interface UserDao {
     void updatePasswordHash(long userId, String passwordHash);
 
     Optional<User> getListingOwner(final long listingId);
+
+    void updateLatestLocale(long userId, String localeTag);
 }

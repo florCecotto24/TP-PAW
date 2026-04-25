@@ -20,11 +20,15 @@
                     <h1 class="h4 fw-bold mb-2"><spring:message code="reservationForm.heading"/></h1>
                     <spring:message code="reservationForm.description.before"/> <strong><c:out value="${reservationForm.carName}"/></strong><spring:message code="reservationForm.description.after"/>
 
+                    <p class="text-secondary small mt-3 mb-3">
+                        <spring:message code="reservationForm.paymentProofNotice" arguments="${paymentProofUploadDeadlineHours}"/>
+                    </p>
+
                     <c:if test="${not empty reservationError}">
                         <div class="alert alert-danger" role="alert"><c:out value="${reservationError}"/></div>
                     </c:if>
 
-                    <div class="border rounded-3 p-3 bg-light-subtle mb-4">
+                    <div class="border rounded-3 p-3 bg-light-subtle mb-4 mt-1">
                         <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.summary.title"/></h2>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.car"/></strong> <c:out value="${reservationForm.carName}"/></p>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.pickupReturn"/></strong>

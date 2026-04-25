@@ -1,6 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,21 +22,27 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.RiderPickupLeadTime;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.PublishCarPictureSessionStash;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
 import ar.edu.itba.paw.webapp.validation.MultipartImageValidation;
 
 @Controller
@@ -46,6 +56,9 @@ public class PublishCarFormController {
     private final PublishCarPictureSessionStash pictureStash;
     private final CarEnumOptions carEnumOptions;
     private final LocalValidatorFactoryBean publishCarFormValidator;
+    private final LocationService locationService;
+    private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
+    private final ReservationService reservationService;
 
     @Autowired
     public PublishCarFormController(
@@ -55,7 +68,10 @@ public class PublishCarFormController {
             final MultipartImageValidation multipartImageValidation,
             final PublishCarPictureSessionStash pictureStash,
             final CarEnumOptions carEnumOptions,
-            final LocalValidatorFactoryBean localValidatorFactoryBean) {
+            final LocalValidatorFactoryBean localValidatorFactoryBean,
+            final LocationService locationService,
+            final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
+            final ReservationService reservationService) {
         this.listingService = listingService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
@@ -63,6 +79,9 @@ public class PublishCarFormController {
         this.pictureStash = pictureStash;
         this.carEnumOptions = carEnumOptions;
         this.publishCarFormValidator = localValidatorFactoryBean;
+        this.locationService = locationService;
+        this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
+        this.reservationService = reservationService;
     }
 
     @ModelAttribute("carTypeOptions")
@@ -95,9 +114,24 @@ public class PublishCarFormController {
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpSession session) {
         pictureStash.clear(session);
-        final ModelAndView mav = publishCarFormView(currentUser, session);
-        mav.addObject("publishCarForm", new PublishCarForm());
+        final PublishCarForm form = new PublishCarForm();
+        final ModelAndView mav = publishCarFormView(currentUser, session, form);
+        mav.addObject("publishCarForm", form);
         return mav;
+    }
+
+    /**
+     * First day of availability valid for the indicated check-in time (24 h rule for reservations).
+     */
+    @GetMapping(value = "/availability-min-from", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Map<String, String> availabilityMinFrom(
+            @RequestParam(name = "checkIn", required = false) final String checkInRaw) {
+        final LocalTime lt = parseCheckInParam(checkInRaw);
+        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
+        final LocalDate minFrom = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                lt, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
+        return Map.of("minFrom", minFrom.toString());
     }
 
     @GetMapping("/retained-picture/{token}")
@@ -143,29 +177,31 @@ public class PublishCarFormController {
             final BindingResult errors) {
         pictureStash.trySyncFromForm(form, session, errors);
         if (errors.hasErrors()) {
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
 
         publishCarFormValidator.validate(form, errors);
+        listingNeighborhoodFormValidator.validate(form, errors);
+        validatePublishAvailabilityRiderLead(form, errors);
         if (errors.hasErrors()) {
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
 
         pictureStash.validatePicturePresence(form, session, errors);
         if (errors.hasErrors()) {
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
 
         final int fromForm = PublishCarPictureSessionStash.countNonEmptyMultipart(form.getPictures());
         if (fromForm > 0) {
             if (!multipartImageValidation.validateFilesAreImages(form.getPictures(), errors, "pictures")) {
                 pictureStash.trySyncFromForm(form, session, errors);
-                return publishCarFormView(currentUser, session);
+                return publishCarFormView(currentUser, session, form);
             }
             if (!multipartImageValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
                 pictureStash.trySyncFromForm(form, session, errors);
-                return publishCarFormView(currentUser, session);
+                return publishCarFormView(currentUser, session, form);
             }
         }
 
@@ -177,16 +213,16 @@ public class PublishCarFormController {
                     MessageKeys.PUBLISH_IMAGES_READ,
                     localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
 
         if (!multipartImageValidation.validateImageUploadsAreImages(uploads, errors, "pictures")) {
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
         if (!multipartImageValidation.validateImageUploadsWithinMaxSize(uploads, errors)) {
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
 
         try {
@@ -201,12 +237,14 @@ public class PublishCarFormController {
                     form.getPowertrain(),
                     form.getTransmission(),
                     form.getPricePerDay(),
-                    form.getStartPoint(),
+                    form.getStartPointStreet(),
+                    form.getStartPointNumber(),
                     form.getDescription(),
                     form.getCheckInTime(),
                     form.getCheckOutTime(),
                     periods,
-                    uploads);
+                    uploads,
+                    form.getNeighborhoodId());
 
             pictureStash.clear(session);
 
@@ -221,11 +259,46 @@ public class PublishCarFormController {
                     MessageKeys.PUBLISH_FAILED,
                     localeMessages.msg(MessageKeys.PUBLISH_FAILED, detail));
             pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(currentUser, session);
+            return publishCarFormView(currentUser, session, form);
         }
     }
 
-    private ModelAndView publishCarFormView(final User currentUser, final HttpSession session) {
+    private static LocalTime parseCheckInParam(final String checkInRaw) {
+        if (checkInRaw == null || checkInRaw.isBlank()) {
+            return LocalTime.of(10, 0);
+        }
+        try {
+            return LocalTime.parse(checkInRaw.trim());
+        } catch (final DateTimeParseException e) {
+            return LocalTime.of(10, 0);
+        }
+    }
+
+    private void validatePublishAvailabilityRiderLead(final PublishCarForm form, final BindingResult errors) {
+        final LocalTime pickup = form.getCheckInTime() != null ? form.getCheckInTime() : LocalTime.of(10, 0);
+        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
+        final LocalDate minStart = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                pickup, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
+        final List<PublishCarForm.AvailabilityRow> rows = form.getAvailabilityRows();
+        for (int i = 0; i < rows.size(); i++) {
+            final LocalDate from = rows.get(i).getFrom();
+            if (from != null && from.isBefore(minStart)) {
+                errors.rejectValue(
+                        "availabilityRows[" + i + "].from",
+                        "validation.availabilityRow.from.riderLeadTime",
+                        new Object[] { minStart, pickupLeadHours },
+                        localeMessages.msg(
+                                "validation.availabilityRow.from.riderLeadTime",
+                                minStart,
+                                pickupLeadHours));
+            }
+        }
+    }
+
+    private ModelAndView publishCarFormView(
+            final User currentUser,
+            final HttpSession session,
+            final PublishCarForm publishFormForMinAvail) {
         final ModelAndView mav = new ModelAndView("publishCarForm");
         mav.addObject("activeTab", "publish-car");
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -234,6 +307,15 @@ public class PublishCarFormController {
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
+        mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
+        final LocalTime pickup = publishFormForMinAvail.getCheckInTime() != null
+                ? publishFormForMinAvail.getCheckInTime()
+                : LocalTime.of(10, 0);
+        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
+        final LocalDate publishMinAvailabilityFrom = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                pickup, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
+        mav.addObject("publishMinAvailabilityFrom", publishMinAvailabilityFrom.toString());
+        mav.addObject("pickupLeadHours", pickupLeadHours);
         return mav;
     }
 

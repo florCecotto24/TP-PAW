@@ -44,12 +44,14 @@
     <dependency>
       <groupId>ar.edu.itba.paw</groupId>
       <artifactId>service-contracts</artifactId>
-      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>ar.edu.itba.paw</groupId>
+      <artifactId>persistence-contracts</artifactId>
     </dependency>
     <dependency>
       <groupId>ar.edu.itba.paw</groupId>
       <artifactId>services</artifactId>
-      <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -60,14 +62,13 @@
     <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>jstl</artifactId>
-      <version>1.2</version>
     </dependency>
     <dependency>
       <groupId>javax.validation</groupId>
       <artifactId>validation-api</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.hibernate</groupId>
+      <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
     </dependency>
     <dependency>
@@ -81,6 +82,10 @@
     <dependency>
       <groupId>com.sun.mail</groupId>
       <artifactId>javax.mail</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.activation</groupId>
+      <artifactId>javax.activation</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
@@ -114,39 +119,6 @@
 
   <build>
     <finalName>webapp</finalName>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
-      <plugins>
-        <plugin>
-          <artifactId>maven-clean-plugin</artifactId>
-          <version>3.4.0</version>
-        </plugin>
-        <!-- see http://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_war_packaging -->
-        <plugin>
-          <artifactId>maven-resources-plugin</artifactId>
-          <version>3.3.1</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.13.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.3.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-war-plugin</artifactId>
-          <version>3.4.0</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-install-plugin</artifactId>
-          <version>3.1.2</version>
-        </plugin>
-        <plugin>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.2</version>
-        </plugin>
-      </plugins>
-    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.flywaydb</groupId>
@@ -155,12 +127,6 @@
       <plugin>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-maven-plugin</artifactId>
-        <version>${jetty.maven.version}</version>
-        <configuration>
-          <scanIntervalSeconds>10</scanIntervalSeconds>
-          <port>8080</port>
-          <useTestScope>true</useTestScope>
-        </configuration>
       </plugin>
     </plugins>
   </build>

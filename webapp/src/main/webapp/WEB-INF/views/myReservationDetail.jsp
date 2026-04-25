@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="myReservationDetail.pageTitle" arguments="${reservation.id}"/></title>
+    <title><spring:message code="myReservationDetail.pageTitle" arguments="${listing.title}"/></title>
     <%@include file="header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
@@ -17,7 +17,17 @@
     <ryden:breadcrumbTrail
             homeLabel="${myReservationsLabel}"
             homeHref="${pageContext.request.contextPath}/my-reservations"
-            currentLabel="${reservation.id}"/>
+            currentLabel="${listing.title}"/>
+
+    <c:if test="${not empty cancelReservationError}">
+        <div class="alert alert-danger" role="alert"><c:out value="${cancelReservationError}"/></div>
+    </c:if>
+    <c:if test="${not empty paymentReceiptError}">
+        <div class="alert alert-danger" role="alert"><c:out value="${paymentReceiptError}"/></div>
+    </c:if>
+    <c:if test="${not empty paymentApprovalMessage}">
+        <div class="alert alert-success" role="alert"><c:out value="${paymentApprovalMessage}"/></div>
+    </c:if>
 
     <section class="reservation-management-header mb-4">
                         <h1 class="h3 fw-bold mb-2"><spring:message code="myReservationDetail.heading"/></h1>
@@ -26,6 +36,102 @@
 
     <div class="row g-4 align-items-start">
         <div class="col-lg-8">
+            <c:if test="${statusKey eq 'pending' and reservationRole eq 'rider'}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 border-warning">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.payment.title"/></h2>
+                        <p class="text-secondary mb-3"><spring:message code="myReservationDetail.payment.intro"/></p>
+                        <c:if test="${not empty paymentProofDeadlineDisplay}">
+                            <p class="mb-3"><span class="fw-semibold"><spring:message code="myReservationDetail.payment.deadline"/></span>
+                                <c:out value="${paymentProofDeadlineDisplay}"/></p>
+                        </c:if>
+                        <spring:message code="validation.paymentReceipt.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="paymentReceiptTooLargeMsg"/>
+                        <spring:message code="myReservationDetail.payment.invalidFile" var="paymentInvalidFileMsg"/>
+                        <spring:message code="reservationConfirmation.paymentReceipt.chooseHint" var="paymentReceiptChooseHint"/>
+                        <spring:message code="reservationConfirmation.paymentReceipt.uploadAria" var="paymentReceiptUploadAria"/>
+                        <form id="paymentReceiptForm" method="post" enctype="multipart/form-data"
+                              action="${pageContext.request.contextPath}/my-reservations/${reservation.id}/payment-receipt"
+                              class="ryden-payment-receipt__form">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <div class="d-flex align-items-stretch gap-2">
+                                <label class="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
+                                    <span id="paymentReceiptFileText" class="text-truncate text-muted pe-1"><c:out value="${paymentReceiptChooseHint}"/></span>
+                                    <input type="file" class="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
+                                           id="paymentReceipt" name="paymentReceipt" required
+                                           accept="image/*,application/pdf"
+                                           aria-label="<c:out value='${paymentReceiptChooseHint}'/>"
+                                           title="<c:out value='${paymentReceiptChooseHint}'/>"
+                                           data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
+                                           data-upload-receipt-too-large="<c:out value='${paymentReceiptTooLargeMsg}'/>"
+                                           data-invalid-file-msg="<c:out value='${paymentInvalidFileMsg}'/>"/>
+                                </label>
+                                <button type="submit" class="btn btn-sm btn-primary flex-shrink-0 d-inline-flex align-items-center justify-content-center px-2"
+                                        aria-label="<c:out value='${paymentReceiptUploadAria}'/>"
+                                        title="<c:out value='${paymentReceiptUploadAria}'/>">
+                                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div id="paymentReceiptClientErr" class="text-danger small d-none mt-2" role="alert"></div>
+                        </form>
+                        <p class="small text-muted mt-2 mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxImageMegabytes}"/></p>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${reservationRole eq 'rider' and hasPaymentReceipt}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h2 class="h6 fw-semibold mb-1"><spring:message code="myReservationDetail.payment.viewReceipt"/></h2>
+                            <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxImageMegabytes}"/></p>
+                        </div>
+                        <c:url var="paymentReceiptDownloadUrl" value="/my-reservations/${reservation.id}/payment-receipt/download"/>
+                        <a class="btn btn-outline-primary" href="<c:out value='${paymentReceiptDownloadUrl}'/>">
+                            <spring:message code="myReservationDetail.payment.viewReceipt"/>
+                        </a>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${reservationRole eq 'owner' and hasPaymentReceipt and statusKey eq 'accepted'}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.payment.ownerIntro"/></p>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            <c:url var="ownerReceiptDownloadUrl" value="/my-reservations/${reservation.id}/payment-receipt/download"/>
+                            <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptDownloadUrl}'/>">
+                                <spring:message code="myReservationDetail.payment.viewReceipt"/>
+                            </a>
+                            <c:if test="${paymentReceiptApproved}">
+                                <span class="badge text-bg-success"><spring:message code="myReservationDetail.payment.reviewedBadge"/></span>
+                            </c:if>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <c:url var="approvalUrl" value="/my-reservations/${reservation.id}/payment-receipt/approval"/>
+                            <c:if test="${not paymentReceiptApproved}">
+                                <form method="post" action="<c:out value='${approvalUrl}'/>" class="d-inline">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <input type="hidden" name="approved" value="true"/>
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <spring:message code="myReservationDetail.payment.markReviewed"/>
+                                    </button>
+                                </form>
+                            </c:if>
+                            <c:if test="${paymentReceiptApproved}">
+                                <form method="post" action="<c:out value='${approvalUrl}'/>" class="d-inline">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <input type="hidden" name="approved" value="false"/>
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <spring:message code="myReservationDetail.payment.clearReview"/>
+                                    </button>
+                                </form>
+                            </c:if>
+                        </div>
+                    </div>
+                </article>
+            </c:if>
+
             <article class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.carSummary.title"/></h2>
@@ -69,9 +175,9 @@
                             <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.return"/></p>
                             <p class="mb-0 fw-medium"><c:out value="${returnDateTime}"/></p>
                         </div>
-                        <div class="col-sm-6">
-                            <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.pickupLocation"/></p>
-                            <p class="mb-0 fw-medium"><c:out value="${listing.startPoint}"/></p>
+                        <div class="col-12">
+                            <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.pickupReturnLocation"/></p>
+                            <p class="mb-0 fw-medium"><c:out value="${reservationPickupLocationDisplay}"/></p>
                         </div>
                         <div class="col-sm-6">
                             <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.details.status"/></p>
@@ -94,7 +200,7 @@
                         <!-- <button type="button" class="btn btn-primary" disabled>
                             <spring:message code="myReservationDetail.actions.modify"/>
                         </button> -->
-                        <c:set var="canCancel" value="${reservation.status.name() eq 'ACCEPTED'}"/>
+                        <c:set var="canCancel" value="${reservation.status.name() eq 'ACCEPTED' or (reservation.status.name() eq 'PENDING' and not hasPaymentReceipt)}"/>
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
                         <c:choose>
                             <c:when test="${canCancel}">
@@ -107,19 +213,24 @@
                                 </form:form>
                             </c:when>
                             <c:otherwise>
-                                <div class="alert alert-info mb-0" role="alert">
-                                    <c:choose>
-                                        <c:when test="${statusKey eq 'cancelled'}">
-                                            <p class="mb-0"><spring:message code="myReservationDetail.alert.cancelled"/></p>
-                                        </c:when>
-                                        <c:when test="${statusKey eq 'started'}">
-                                            <p class="mb-0"><spring:message code="myReservationDetail.alert.inProgress"/></p>
-                                        </c:when>
-                                        <c:when test="${statusKey eq 'finished'}">
-                                            <p class="mb-0"><spring:message code="myReservationDetail.alert.finished"/></p>
-                                        </c:when>
-                                    </c:choose>
-                                </div>
+                                <c:if test="${not (statusKey eq 'pending' and reservationRole eq 'rider')}">
+                                    <div class="alert alert-info mb-0" role="alert">
+                                        <c:choose>
+                                            <c:when test="${statusKey eq 'pending' and reservationRole eq 'owner'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.pendingPaymentOwner"/></p>
+                                            </c:when>
+                                            <c:when test="${statusKey eq 'cancelled'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.cancelled"/></p>
+                                            </c:when>
+                                            <c:when test="${statusKey eq 'started'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.inProgress"/></p>
+                                            </c:when>
+                                            <c:when test="${statusKey eq 'finished'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.finished"/></p>
+                                            </c:when>
+                                        </c:choose>
+                                    </div>
+                                </c:if>
                             </c:otherwise>
                         </c:choose>
                         <!-- <c:if test="${not empty owner.email}">
@@ -142,6 +253,61 @@
         </div>
     </div>
 </main>
+<script>
+    (function () {
+        var form = document.getElementById('paymentReceiptForm');
+        var input = document.getElementById('paymentReceipt');
+        var err = document.getElementById('paymentReceiptClientErr');
+        var fileText = document.getElementById('paymentReceiptFileText');
+        if (!form || !input) return;
+        var defaultHint = fileText ? (fileText.textContent || '').trim() : '';
+        function maxBytes() {
+            var raw = input.getAttribute('data-upload-max-image-bytes');
+            var n = raw ? parseInt(raw, 10) : NaN;
+            return isNaN(n) ? 0 : n;
+        }
+        function showErr(msg) {
+            if (!err) return;
+            err.textContent = msg || '';
+            err.classList.toggle('d-none', !msg);
+        }
+        function validateFile(file) {
+            if (!file) return '';
+            var t = (file.type || '').toLowerCase();
+            var okType = t.indexOf('image/') === 0 || t === 'application/pdf';
+            if (!okType) {
+                return input.getAttribute('data-invalid-file-msg') || '';
+            }
+            var mb = maxBytes();
+            if (mb > 0 && file.size > mb) {
+                return input.getAttribute('data-upload-receipt-too-large') || '';
+            }
+            return '';
+        }
+        if (input && fileText) {
+            input.addEventListener('change', function () {
+                showErr('');
+                var f = input.files && input.files[0];
+                if (f) {
+                    fileText.textContent = f.name;
+                    fileText.classList.remove('text-muted');
+                } else {
+                    fileText.textContent = defaultHint;
+                    fileText.classList.add('text-muted');
+                }
+            });
+        }
+        form.addEventListener('submit', function (e) {
+            showErr('');
+            var f = input.files && input.files[0];
+            var msg = validateFile(f);
+            if (msg) {
+                e.preventDefault();
+                showErr(msg);
+            }
+        });
+    })();
+</script>
 
 <%@include file="footer.jsp"%>
 </body>

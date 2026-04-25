@@ -1,0 +1,41 @@
+package ar.edu.itba.paw.webapp.validation;
+
+import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.webapp.form.ListingEditForm;
+import ar.edu.itba.paw.webapp.form.PublishCarForm;
+import org.springframework.stereotype.Component;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
+
+@Component
+public class ListingNeighborhoodFormValidator implements Validator {
+
+    private final LocationService locationService;
+
+    public ListingNeighborhoodFormValidator(final LocationService locationService) {
+        this.locationService = locationService;
+    }
+
+    @Override
+    public boolean supports(final Class<?> clazz) {
+        return PublishCarForm.class.isAssignableFrom(clazz) || ListingEditForm.class.isAssignableFrom(clazz);
+    }
+
+    @Override
+    public void validate(final Object target, final Errors errors) {
+        final Long neighborhoodId;
+        if (target instanceof PublishCarForm) {
+            neighborhoodId = ((PublishCarForm) target).getNeighborhoodId();
+        } else if (target instanceof ListingEditForm) {
+            neighborhoodId = ((ListingEditForm) target).getNeighborhoodId();
+        } else {
+            return;
+        }
+        if (neighborhoodId == null) {
+            return;
+        }
+        if (locationService.findNeighborhoodById(neighborhoodId).isEmpty()) {
+            errors.rejectValue("neighborhoodId", "validation.neighborhood.invalid");
+        }
+    }
+}

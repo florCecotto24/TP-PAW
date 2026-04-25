@@ -1,41 +1,18 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.dto.CarPublicationResult;
-import ar.edu.itba.paw.dto.ImageUpload;
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.listing.ListingValidationException;
-import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.WallDateTimeParsing;
-import ar.edu.itba.paw.persistence.CarDao;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
-import ar.edu.itba.paw.persistence.ListingDao;
-import ar.edu.itba.paw.persistence.ReservationDao;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,6 +20,35 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import ar.edu.itba.paw.dto.CarPublicationResult;
+import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
+import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.HomeListingCards;
+import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.ListingCard;
+import ar.edu.itba.paw.models.ListingDetail;
+import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Neighborhood;
+import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.WallDateTimeParsing;
+import ar.edu.itba.paw.persistence.CarDao;
+import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
+import ar.edu.itba.paw.persistence.ListingDao;
+import ar.edu.itba.paw.services.util.NeighborhoodNameMatcher;
+import ar.edu.itba.paw.persistence.ReservationDao;
 
 
 @Service
@@ -56,6 +62,8 @@ public class ListingServiceImpl implements ListingService {
     private final ImageService imageService;
     private final CarPictureService carPictureService;
     private final EmailService emailService;
+    private final LocationService locationService;
+    private final ReservationTimingPolicy reservationTimingPolicy;
 
     @Autowired
     public ListingServiceImpl(
@@ -66,7 +74,9 @@ public class ListingServiceImpl implements ListingService {
             final UserService userService,
             final ImageService imageService,
             final CarPictureService carPictureService,
-            final EmailService emailService) {
+            final EmailService emailService,
+            final LocationService locationService,
+            final ReservationTimingPolicy reservationTimingPolicy) {
         this.listingDao = listingDao;
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.carDao = carDao;
@@ -75,6 +85,8 @@ public class ListingServiceImpl implements ListingService {
         this.imageService = imageService;
         this.carPictureService = carPictureService;
         this.emailService = emailService;
+        this.locationService = locationService;
+        this.reservationTimingPolicy = reservationTimingPolicy;
     }
 
     @Override
@@ -83,11 +95,13 @@ public class ListingServiceImpl implements ListingService {
             final long carId,
             final Listing.Status status,
             final BigDecimal dayPrice,
-            final String startPoint,
+            final String startPointStreet,
+            final String startPointNumber,
             final String description,
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
-            final List<AvailabilityPeriod> availabilityPeriods) {
+            final List<AvailabilityPeriod> availabilityPeriods,
+            final Long neighborhoodId) {
         if (availabilityPeriods == null || availabilityPeriods.isEmpty()) {
             throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_REQUIRED);
         }
@@ -103,7 +117,8 @@ public class ListingServiceImpl implements ListingService {
         final String title = car.getBrand() + " " + car.getModel();
 
         final Listing listing = listingDao.createListing(
-                carId, title, status, dayPrice, startPoint, description, checkInTime, checkOutTime);
+                carId, title, status, dayPrice, startPointStreet, startPointNumber, description, checkInTime, checkOutTime,
+                neighborhoodId);
         for (final AvailabilityPeriod period : mergeAdjacentAvailabilityPeriods(availabilityPeriods)) {
             listingAvailabilityDao.create(
                     listing.getId(),
@@ -124,12 +139,15 @@ public class ListingServiceImpl implements ListingService {
             final Car.Powertrain powertrain,
             final Car.Transmission transmission,
             final BigDecimal pricePerDay,
-            final String startPoint,
+            final String startPointStreet,
+            final String startPointNumber,
             final String description,
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
             final List<AvailabilityPeriod> periods,
-            final List<ImageUpload> images) {
+            final List<ImageUpload> images,
+            final Long neighborhoodId) {
+        validatePickupAddress(neighborhoodId, startPointStreet, startPointNumber);
         final User publisher = userService.getUserById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final Car car = carDao.createCar(
@@ -144,11 +162,13 @@ public class ListingServiceImpl implements ListingService {
                 car.getId(),
                 Listing.Status.ACTIVE,
                 pricePerDay,
-                startPoint,
+                startPointStreet,
+                startPointNumber,
                 description,
                 checkInTime,
                 checkOutTime,
-                periods);
+                periods,
+                neighborhoodId);
 
         int displayOrder = 1;
         if (images != null) {
@@ -166,6 +186,25 @@ public class ListingServiceImpl implements ListingService {
         }
 
         return new CarPublicationResult(publisher, car, listing);
+    }
+
+    private void validatePickupAddress(
+            final Long neighborhoodId,
+            final String pickupStreet,
+            final String pickupStreetNumber) {
+        if (neighborhoodId == null || pickupStreet == null || pickupStreet.isBlank()
+                || pickupStreetNumber == null || pickupStreetNumber.isBlank()) {
+            throw new ListingValidationException(MessageKeys.LISTING_PICKUP_LOCATION_REQUIRED);
+        }
+        final String trimmedNumber = pickupStreetNumber.trim();
+        if (!trimmedNumber.matches("^[0-9]+$")) {
+            throw new ListingValidationException(MessageKeys.LISTING_PICKUP_STREET_NUMBER_DIGITS_ONLY);
+        }
+        if (trimmedNumber.length() > 10) {
+            throw new ListingValidationException(MessageKeys.LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS);
+        }
+        locationService.findNeighborhoodById(neighborhoodId)
+                .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_PICKUP_LOCATION_REQUIRED));
     }
 
     private static void validateListingCheckOutAfterCheckIn(final LocalTime checkInTime, final LocalTime checkOutTime) {
@@ -226,11 +265,13 @@ public class ListingServiceImpl implements ListingService {
             final long ownerId,
             final long listingId,
             final BigDecimal dayPrice,
-            final String startPoint,
+            final String startPointStreet,
+            final String startPointNumber,
             final String description,
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
-            final List<AvailabilityPeriod> availabilityPeriods) {
+            final List<AvailabilityPeriod> availabilityPeriods,
+            final Long neighborhoodId) {
         validateListingCheckOutAfterCheckIn(checkInTime, checkOutTime);
         if (availabilityPeriods != null && !availabilityPeriods.isEmpty()) {
             for (final AvailabilityPeriod period : availabilityPeriods) {
@@ -240,16 +281,33 @@ public class ListingServiceImpl implements ListingService {
             }
             validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
         }
-        final String safeStartPoint = startPoint == null ? "" : startPoint.trim();
+        final String safeStartStreet = startPointStreet == null ? "" : startPointStreet.trim();
         final String safeDescription = description == null ? "" : description.trim();
+        final Optional<Listing> existingOpt = listingDao.getListingById(listingId);
+        final Long effNeighborhoodId = neighborhoodId != null ? neighborhoodId : existingOpt.flatMap(Listing::getNeighborhoodId).orElse(null);
+        final String pickupStreet = !safeStartStreet.isBlank()
+                ? safeStartStreet
+                : existingOpt.map(Listing::getStartPointStreet).map(String::trim).orElse("");
+        final String pickupNum = (startPointNumber != null && !startPointNumber.isBlank())
+                ? startPointNumber.trim()
+                : existingOpt.flatMap(Listing::getStartPointNumber).map(String::trim).orElse("");
+        final boolean anyAddress = effNeighborhoodId != null || !pickupStreet.isBlank() || !pickupNum.isBlank();
+        if (anyAddress) {
+            if (effNeighborhoodId == null || pickupStreet.isBlank() || pickupNum.isBlank()) {
+                throw new ListingValidationException(MessageKeys.LISTING_PICKUP_LOCATION_REQUIRED);
+            }
+            validatePickupAddress(effNeighborhoodId, pickupStreet, pickupNum);
+        }
         boolean updated = listingDao.updateOwnerListing(
                 ownerId,
                 listingId,
                 dayPrice,
-                safeStartPoint,
+                pickupStreet,
+                pickupNum,
                 safeDescription,
                 checkInTime,
-                checkOutTime);
+                checkOutTime,
+                effNeighborhoodId);
         if (updated && availabilityPeriods != null) {
             listingAvailabilityDao.deleteByListingId(listingId);
             for (final AvailabilityPeriod p : availabilityPeriods) {
@@ -437,7 +495,7 @@ public class ListingServiceImpl implements ListingService {
     @Override
     @Transactional(readOnly = true)
     public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize, final User viewer) {
-        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate wall = publicBrowseMinBookableWallDate();
         final Page<ListingCard> raw = listingDao.getCheapestListingCards(page, pageSize, wall, browseExcludeOwnerId(viewer));
         final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), wall);
         return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
@@ -446,7 +504,7 @@ public class ListingServiceImpl implements ListingService {
     @Override
     @Transactional(readOnly = true)
     public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize, final User viewer) {
-        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate wall = publicBrowseMinBookableWallDate();
         final Page<ListingCard> raw = listingDao.getMostRecentListingCards(page, pageSize, wall, browseExcludeOwnerId(viewer));
         final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), wall);
         return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
@@ -454,10 +512,15 @@ public class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> getOwnerListingCards(final long ownerId, final int page, final int pageSize) {
+    public Page<ListingCard> getOwnerListingCards(
+            final long ownerId,
+            final int page,
+            final int pageSize,
+            final String listingStatus,
+            final String textQuery) {
         final int safePage = Math.max(0, page);
         final int safePageSize = pageSize > 0 ? pageSize : PAGE_SIZE;
-        return listingDao.getOwnerListingCards(ownerId, safePage, safePageSize);
+        return listingDao.getOwnerListingCards(ownerId, safePage, safePageSize, listingStatus, textQuery);
     }
 
     @Override
@@ -472,7 +535,7 @@ public class ListingServiceImpl implements ListingService {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);
         }
-        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate wall = publicBrowseMinBookableWallDate();
         final HomeListingCards raw = listingDao.getHomeListingCards(limit, wall, browseExcludeOwnerId(viewer));
         return new HomeListingCards(
                 retainBookableListingCards(raw.cheapest(), wall),
@@ -500,7 +563,7 @@ public class ListingServiceImpl implements ListingService {
         if (limit <= 0) {
             throw new ListingValidationException(MessageKeys.LISTING_LIMIT_POSITIVE);
         }
-        final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate wall = publicBrowseMinBookableWallDate();
         final int scan = Math.max(limit * 8, 32);
         final List<ListingCard> raw = listingDao.findSimilarListingCards(listingId, scan, wall, browseExcludeOwnerId(viewer));
         final List<ListingCard> filtered = retainBookableListingCards(raw, wall);
@@ -520,7 +583,8 @@ public class ListingServiceImpl implements ListingService {
             final String until,
             final int page,
             final String sort,
-            final User viewer) {
+            final User viewer,
+            final List<Long> neighborhoodIds) {
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
         final List<String> mergedCarTypes = collectCarTypeParams(category);
@@ -552,16 +616,48 @@ public class ListingServiceImpl implements ListingService {
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy  = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
-        final LocalDate browseWallDate = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate browseWallDate = publicBrowseMinBookableWallDate();
+        final List<Long> mergedNeighborhoodIds = mergeNeighborhoodIdsForSearch(query, neighborhoodIds);
         return new ListingSearchCriteria(
                 query, transmissions, powertrains, mergedCarTypes, bands,
                 rangeStart, rangeEndExclusive,
                 page, PAGE_SIZE, sortBy, sortDir,
-                browseWallDate, browseExcludeOwnerId(viewer));
+                browseWallDate, browseExcludeOwnerId(viewer),
+                mergedNeighborhoodIds);
+    }
+
+    private List<Long> mergeNeighborhoodIdsForSearch(final String query, final List<Long> explicitNeighborhoodIds) {
+        final LinkedHashSet<Long> merged = new LinkedHashSet<>();
+        if (explicitNeighborhoodIds != null) {
+            for (final Long id : explicitNeighborhoodIds) {
+                if (id != null && id > 0L && locationService.findNeighborhoodById(id).isPresent()) {
+                    merged.add(id);
+                }
+            }
+        }
+        final String q = query != null ? query.trim() : "";
+        if (!q.isEmpty()) {
+            merged.addAll(NeighborhoodNameMatcher.idsMatchingFuzzyTokens(
+                    q,
+                    locationService.findAllNeighborhoods(),
+                    2,
+                    3));
+        }
+        return List.copyOf(merged);
     }
 
     private static Long browseExcludeOwnerId(final User viewer) {
         return viewer != null ? viewer.getId() : null;
+    }
+
+    /**
+     * First wall-calendar day that can still intersect rider-visible availability given
+     * {@code app.reservation.pickup-lead-hours} (same horizon as {@code ReservationServiceImpl}).
+     */
+    private LocalDate publicBrowseMinBookableWallDate() {
+        return LocalDate.ofInstant(
+                Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS),
+                AvailabilityPeriod.WALL_ZONE);
     }
 
     private Set<Long> listingIdsWithAtLeastOneBookableWallDay(final List<Long> listingIds, final LocalDate fromWall) {
@@ -590,6 +686,15 @@ public class ListingServiceImpl implements ListingService {
                 days.remove(d);
                 d = d.plusDays(1);
             }
+        }
+        final Instant minPickupExclusive =
+                Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS);
+        final Map<Long, LocalTime> checkInByListing = listingDao.findCheckInTimeByListingIds(listingIds);
+        final ZoneId wallZone = AvailabilityPeriod.WALL_ZONE;
+        for (final Map.Entry<Long, TreeSet<LocalDate>> e : daysByListing.entrySet()) {
+            final LocalTime checkIn = checkInByListing.getOrDefault(e.getKey(), LocalTime.of(10, 0));
+            e.getValue().removeIf(day ->
+                    !ZonedDateTime.of(day, checkIn, wallZone).toInstant().isAfter(minPickupExclusive));
         }
         final Set<Long> out = new HashSet<>();
         for (final Map.Entry<Long, TreeSet<LocalDate>> e : daysByListing.entrySet()) {
@@ -671,5 +776,107 @@ public class ListingServiceImpl implements ListingService {
             }
         }
         return out;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatPublicDeliveryLocation(final Listing listing) {
+        return formatPublicPickupLocation(listing);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatFullDeliveryLocation(final Listing listing) {
+        return formatFullPickupLocation(listing);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatPublicPickupLocation(final Listing listing) {
+        final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
+        if (listing.getNeighborhoodId().isEmpty()) {
+            return street;
+        }
+        final String neighborhoodName = locationService.findNeighborhoodById(listing.getNeighborhoodId().get())
+                .map(Neighborhood::getName)
+                .orElse("");
+        if (neighborhoodName.isBlank()) {
+            return street;
+        }
+        if (street.isBlank()) {
+            return neighborhoodName.trim();
+        }
+        return street + ", " + neighborhoodName.trim();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatFullPickupLocation(final Listing listing) {
+        final String base = formatPublicPickupLocation(listing);
+        final Optional<String> numberOpt = listing.getStartPointNumber();
+        if (numberOpt.isEmpty() || numberOpt.get().isBlank()) {
+            return base;
+        }
+        final String n = numberOpt.get().trim();
+        if (base.isBlank()) {
+            return n;
+        }
+        return base + " " + n;
+    }
+
+    private static boolean riderSeesSensitiveAddressNumbers(final Reservation reservation) {
+        return reservation.getPaymentReceiptFileId().isPresent() || reservation.isPaymentApproved();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatDeliveryForReservationView(
+            final Listing listing,
+            final Reservation reservation,
+            final boolean viewerIsOwner) {
+        if (viewerIsOwner || riderSeesSensitiveAddressNumbers(reservation)) {
+            return formatFullDeliveryLocation(listing);
+        }
+        return formatPublicDeliveryLocation(listing);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatPickupForReservationView(
+            final Listing listing,
+            final Reservation reservation,
+            final boolean viewerIsOwner) {
+        if (viewerIsOwner || riderSeesSensitiveAddressNumbers(reservation)) {
+            return formatFullPickupLocation(listing);
+        }
+        return formatPublicPickupLocation(listing);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatRiderReservationHandoverSummary(final Listing listing, final Reservation reservation) {
+        final String p = formatPickupForReservationView(listing, reservation, false);
+        final String d = formatDeliveryForReservationView(listing, reservation, false);
+        if (p.isBlank()) {
+            return d;
+        }
+        if (d.isBlank() || p.trim().equals(d.trim())) {
+            return p;
+        }
+        return p + " · " + d;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String formatOwnerReservationHandoverSummary(final Listing listing) {
+        final String p = formatFullPickupLocation(listing);
+        final String d = formatFullDeliveryLocation(listing);
+        if (p.isBlank()) {
+            return d;
+        }
+        if (d.isBlank() || p.trim().equals(d.trim())) {
+            return p;
+        }
+        return p + " · " + d;
     }
 }

@@ -53,7 +53,7 @@ class ModelsToStringTest {
         final String result = listing.toString();
         // Assert
         final String expected = "Listing{id=3, title='Trip', carId=9, createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, "
-                + "status=ACTIVE, dayPrice=150.00, startPoint='Belgrano', description='Description', "
+                + "status=ACTIVE, dayPrice=150.00, startPointStreet='Belgrano', description='Description', "
                 + "checkInTime=10:00, checkOutTime=18:00}";
         Assertions.assertEquals(expected, result);
     }

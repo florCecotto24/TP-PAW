@@ -5,6 +5,7 @@ import ar.edu.itba.paw.exception.reservation.ReservationException;
 import ar.edu.itba.paw.models.Listing;
 import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
@@ -36,6 +37,7 @@ public class ReservationFormController {
 
     private final ListingService listingService;
     private final ReservationService reservationService;
+    private final ImageService imageService;
     private final LocaleMessages localeMessages;
     private final WallDateTimeUiFormatter wallDateTimeUiFormatter;
 
@@ -43,10 +45,12 @@ public class ReservationFormController {
     public ReservationFormController(
             final ListingService listingService,
             final ReservationService reservationService,
+            final ImageService imageService,
             final LocaleMessages localeMessages,
             final WallDateTimeUiFormatter wallDateTimeUiFormatter) {
         this.listingService = listingService;
         this.reservationService = reservationService;
+        this.imageService = imageService;
         this.localeMessages = localeMessages;
         this.wallDateTimeUiFormatter = wallDateTimeUiFormatter;
     }
@@ -68,7 +72,11 @@ public class ReservationFormController {
         final Listing listing = listingOpt.get();
         form.setListingId(listingId);
         form.setCarName(carName != null && !carName.isBlank() ? carName : listing.getTitle());
-        form.setDeliveryLocation(listing.getStartPoint());
+        String loc = listingService.formatPublicPickupLocation(listing);
+        if (loc == null || loc.isBlank()) {
+            loc = listing.getStartPointStreet();
+        }
+        form.setDeliveryLocation(loc);
         form.setFromDateTime(fromDateTime);
         form.setUntilDateTime(untilDateTime);
 
@@ -80,6 +88,7 @@ public class ReservationFormController {
         mav.addObject("riderEmail", rider.getEmail());
         addReservationPricingToModel(mav, listingId, fromDateTime, untilDateTime, reservationTotal);
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
+        addReservationPolicyHours(mav);
         return mav;
     }
 
@@ -110,6 +119,7 @@ public class ReservationFormController {
             mav.addObject("riderEmail", riderErr.getEmail());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
+            addReservationPolicyHours(mav);
             return mav;
         }
 
@@ -123,6 +133,7 @@ public class ReservationFormController {
             mav.addObject("riderEmail", riderCar.getEmail());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
+            addReservationPolicyHours(mav);
             return mav;
         }
 
@@ -150,6 +161,7 @@ public class ReservationFormController {
             mav.addObject("riderEmail", riderEx.getEmail());
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
+            addReservationPolicyHours(mav);
             return mav;
         }
 
@@ -161,12 +173,20 @@ public class ReservationFormController {
         mav.addObject("email", riderDone.getEmail());
         mav.addObject("fromDateTime", form.getFromDateTime());
         mav.addObject("untilDateTime", form.getUntilDateTime());
-        mav.addObject("deliveryLocation", listingOpt.get().getStartPoint());
+        final String confirmLoc = listingService.formatRiderReservationHandoverSummary(listingOpt.get(), reservation);
+        mav.addObject("deliveryLocation", confirmLoc == null || confirmLoc.isBlank() ? "" : confirmLoc);
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
+        addReservationPolicyHours(mav);
+        mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());
+        mav.addObject("uploadMaxImageMegabytes", imageService.getMaxImageMegabytesRoundedUp());
         return mav;
+    }
+
+    private void addReservationPolicyHours(final ModelAndView mav) {
+        mav.addObject("paymentProofUploadDeadlineHours", reservationService.getConfiguredPaymentProofDeadlineHours());
     }
 
     private void addReservationPricingToModel(

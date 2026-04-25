@@ -12,12 +12,15 @@
     <body class="has-fixed-navbar">
         <ryden:navbar/>
         <div>
+            <c:url var="searchFiltersClearHref" value="/search"/>
             <ryden:searchWithFilters
                     formId="exploreSearchForm"
                     formClass="search-menu sticky-top w-100"
                     actionPath="/search"
                     showFilters="true"
-                    autoSubmitOnFilterChange="true"
+                    autoSubmitOnFilterChange="false"
+                    clearFiltersHref="${searchFiltersClearHref}"
+                    showClearFilters="${hasActiveSearchFilters}"
                     categoryFilterOptions="${categoryFilterOptions}"
                     transmissionFilterOptions="${transmissionFilterOptions}"
                     powertrainFilterOptions="${powertrainFilterOptions}"
@@ -27,25 +30,28 @@
                 <%-- Build baseUrl preserving all filter params except page and sort --%>
                 <c:url var="searchBaseUrl" value="/search">
                     <c:if test="${not empty param.query}">
-                        <c:param name="query" value="${param.query}"/>
+                        <c:param name="query"><c:out value="${param.query}"/></c:param>
                     </c:if>
                     <c:if test="${not empty param.from}">
-                        <c:param name="from" value="${param.from}"/>
+                        <c:param name="from"><c:out value="${param.from}"/></c:param>
                     </c:if>
                     <c:if test="${not empty param.until}">
-                        <c:param name="until" value="${param.until}"/>
+                        <c:param name="until"><c:out value="${param.until}"/></c:param>
                     </c:if>
+                    <c:forEach items="${searchSanitizedNeighborhoodIds}" var="nid">
+                        <c:param name="neighborhoodId"><c:out value="${nid}"/></c:param>
+                    </c:forEach>
                     <c:forEach var="cat" items="${paramValues.category}">
-                        <c:param name="category" value="${cat}"/>
+                        <c:param name="category"><c:out value="${cat}"/></c:param>
                     </c:forEach>
                     <c:forEach var="tr" items="${paramValues.transmission}">
-                        <c:param name="transmission" value="${tr}"/>
+                        <c:param name="transmission"><c:out value="${tr}"/></c:param>
                     </c:forEach>
                     <c:forEach var="pw" items="${paramValues.powertrain}">
-                        <c:param name="powertrain" value="${pw}"/>
+                        <c:param name="powertrain"><c:out value="${pw}"/></c:param>
                     </c:forEach>
                     <c:forEach var="pr" items="${paramValues.price}">
-                        <c:param name="price" value="${pr}"/>
+                        <c:param name="price"><c:out value="${pr}"/></c:param>
                     </c:forEach>
                 </c:url>
 
@@ -66,8 +72,6 @@
                     </c:if>
                 </div>
 
-                <c:set var="hasActiveSearchFilters"
-                       value="${not empty param.query or not empty param.from or not empty param.until or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
                 <c:url var="resetSearchUrl" value="/search"/>
                 <c:url var="publishCarUrl" value="/publish-car"/>
 
@@ -80,7 +84,7 @@
                             <c:choose>
                                 <c:when test="${hasActiveSearchFilters}">
                                     <h2 class="h4 fw-semibold mb-2"><spring:message code="search.empty.title"/></h2>
-                                    <p class="text-secondary mb-0 search-empty-state__text">
+                                    <p class="text-secondary mb-2 search-empty-state__text">
                                         <spring:message code="search.empty.description"/>
                                     </p>
                                     <div class="search-empty-state__actions">
@@ -97,7 +101,7 @@
                                     <p class="text-secondary mb-0 search-empty-state__text">
                                         <spring:message code="search.empty.noListings.description"/>
                                     </p>
-                                    <div class="search-empty-state__actions">
+                                    <div class="search-empty-state__actions mt-4">
                                         <a href="${publishCarUrl}" class="btn btn-primary btn-action btn-action-md">
                                             <spring:message code="home.cta.button"/>
                                         </a>
@@ -120,13 +124,16 @@
                                             </c:otherwise>
                                         </c:choose>
 
+                                        <c:url var="searchCarDetailHref" value="/car-detail">
+                                            <c:param name="listingId"><c:out value="${car.listingId}"/></c:param>
+                                        </c:url>
                                         <ryden:carCard
                                                 model="${car.model}"
                                                 brand="${car.brand}"
                                                 price="${car.price}"
                                                 image="${imageUrl}"
                                                 pricePeriod="day"
-                                                href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
+                                                href="${searchCarDetailHref}"/>
                                     </div>
                                 </c:forEach>
                             </div>

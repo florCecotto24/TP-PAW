@@ -16,6 +16,37 @@
                 <p class="text-secondary mb-0"><spring:message code="myListings.subheading"/></p>
             </section>
 
+            <c:url var="myListingsBaseUrl" value="/my-listings">
+                <c:if test="${not empty param.q}">
+                    <c:param name="q"><c:out value="${param.q}"/></c:param>
+                </c:if>
+                <c:if test="${not empty ownerListingStatusFilter}">
+                    <c:param name="listingStatus"><c:out value="${ownerListingStatusFilter}"/></c:param>
+                </c:if>
+            </c:url>
+            <spring:message code="validation.dropdown.invalid" var="myListingsDropdownInvalid" htmlEscape="true"/>
+            <form id="myListingsFilterForm" class="row g-2 align-items-end mb-4" method="get" action="${pageContext.request.contextPath}/my-listings"
+                  data-ryden-dropdown-invalid="<c:out value='${myListingsDropdownInvalid}'/>">
+                <div class="col-md-5 col-lg-4">
+                    <label class="form-label small text-secondary mb-1" for="myListings_q"><spring:message code="myListings.filter.query"/></label>
+                    <input type="search" class="form-control" id="myListings_q" name="q" value="<c:out value='${param.q}'/>"
+                           placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                </div>
+                <div class="col-md-4 col-lg-3">
+                    <label class="form-label small text-secondary mb-1" for="myListings_status"><spring:message code="myListings.filter.status"/></label>
+                    <select class="form-select" id="myListings_status" name="listingStatus">
+                        <option value="" ${empty ownerListingStatusFilter ? 'selected="selected"' : ''}><spring:message code="myListings.filter.status.any"/></option>
+                        <option value="active" ${ownerListingStatusFilter eq 'active' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.ACTIVE"/></option>
+                        <option value="paused" ${ownerListingStatusFilter eq 'paused' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.PAUSED"/></option>
+                        <option value="finished" ${ownerListingStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.FINISHED"/></option>
+                    </select>
+                </div>
+                <div class="col-auto d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                    <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                </div>
+            </form>
+
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h2 class="h5 mb-0">
                     <c:choose>
@@ -30,7 +61,6 @@
                 </h2>
             </div>
 
-            <c:url var="myListingsBaseUrl" value="/my-listings"/>
             <c:url var="publishCarUrl" value="/publish-car"/>
 
             <c:choose>
@@ -121,6 +151,25 @@
                 </c:otherwise>
             </c:choose>
         </div>
+        <script>
+            (function () {
+                var form = document.getElementById('myListingsFilterForm');
+                var sel = document.getElementById('myListings_status');
+                if (!form || !sel) return;
+                var allowed = ['', 'active', 'paused', 'finished'];
+                var msg = form.getAttribute('data-ryden-dropdown-invalid') || '';
+                form.addEventListener('submit', function (ev) {
+                    var v = (sel.value || '').trim().toLowerCase();
+                    if (allowed.indexOf(v) < 0) {
+                        ev.preventDefault();
+                        sel.setCustomValidity(msg);
+                        sel.reportValidity();
+                        return;
+                    }
+                    sel.setCustomValidity('');
+                });
+            })();
+        </script>
         <%@include file="footer.jsp"%>
     </body>
 </html>

@@ -21,12 +21,15 @@
 
                     <h4 class="mb-4"><spring:message code="publishCar.form.title"/></h4>
                     <spring:message code="publishCar.form.pictures.clientRequired" var="publishPicturesClientRequired" htmlEscape="true"/>
+                    <spring:message code="validation.neighborhood.invalid" var="publishNbInvalidMsg" htmlEscape="true"/>
                     <form:form id="publishCarFormEl"
                                action="${pageContext.request.contextPath}/publish-car"
                                method="POST"
                                modelAttribute="publishCarForm"
                                enctype="multipart/form-data"
-                               data-publish-retained-count="<c:out value='${retainedPicturesCount}'/>">
+                               htmlEscape="true"
+                               data-publish-retained-count="<c:out value='${retainedPicturesCount}'/>"
+                               data-ryden-nb-invalid="<c:out value='${publishNbInvalidMsg}'/>">
 
                         <form:errors element="div" cssClass="alert alert-danger"/>
 
@@ -58,7 +61,7 @@
                         <spring:message code="publishCar.form.type.placeholder" var="typePlaceholder"/>
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.type"/></label>
-                            <form:select cssClass="form-select" path="type">
+                            <form:select cssClass="form-select ryden-car-spec-select" path="type" htmlEscape="true" required="required">
                                 <form:option value="" label="${typePlaceholder}" />
                                 <form:options items="${carTypeOptions}"/>
                             </form:select>
@@ -68,7 +71,7 @@
                         <spring:message code="publishCar.form.powertrain.placeholder" var="powertrainPlaceholder"/>
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.powertrain"/></label>
-                            <form:select cssClass="form-select" path="powertrain">
+                            <form:select cssClass="form-select ryden-car-spec-select" path="powertrain" htmlEscape="true" required="required">
                                 <form:option value="" label="${powertrainPlaceholder}"/>
                                 <form:options items="${powertrainOptions}"/>
                             </form:select>
@@ -78,7 +81,7 @@
                         <spring:message code="publishCar.form.transmission.placeholder" var="transmissionPlaceholder"/>
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.transmission"/></label>
-                            <form:select cssClass="form-select" path="transmission">
+                            <form:select cssClass="form-select ryden-car-spec-select" path="transmission" htmlEscape="true" required="required">
                                 <form:option value="" label="${transmissionPlaceholder}"/>
                                 <form:options items="${transmissionOptions}"/>
                             </form:select>
@@ -87,15 +90,44 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" cssClass="form-control" cssErrorClass="form-control is-invalid" type="number" step="0.01"/>
+                            <form:input path="pricePerDay" cssClass="form-control js-no-number-wheel-step" cssErrorClass="form-control is-invalid js-no-number-wheel-step" type="number" step="0.01"/>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
 
+                        <spring:message code="publishCar.form.neighborhood.placeholder" var="publishNbPh"/>
+                        <spring:message code="publishCar.form.neighborhood" var="publishNbFieldLabel"/>
+                        <spring:message code="publishCar.form.neighborhood.search" var="publishNbSearchPh"/>
                         <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.startPoint"/></label>
-                            <form:input path="startPoint" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                            <form:errors path="startPoint" cssClass="text-danger d-block"/>
+                            <ryden:neighborhoodPicker
+                                    pickerId="publish"
+                                    mode="get"
+                                    allowMultiple="false"
+                                    springPath="neighborhoodId"
+                                    selectedNeighborhoodId="${publishCarForm.neighborhoodId}"
+                                    neighborhoodList="${allNeighborhoods}"
+                                    anyLabel="${publishNbPh}"
+                                    searchPlaceholder="${publishNbSearchPh}"
+                                    selectFieldLabel="${publishNbFieldLabel}"
+                                    toggleAriaLabel="${publishNbFieldLabel}"
+                                    outerLabel="${publishNbFieldLabel}"
+                                    outerLabelRequired="true"
+                                    required="true"
+                                    formId="publishCarFormEl"/>
                         </div>
+                        <div class="row g-3 mb-1">
+                            <div class="col-md-8">
+                                <label class="form-label required-label" for="publish_start_point_street"><spring:message code="publishCar.form.pickupStreet"/></label>
+                                <form:input path="startPointStreet" id="publish_start_point_street" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                                <form:errors path="startPointStreet" cssClass="text-danger d-block"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label required-label" for="publish_start_point_number"><spring:message code="publishCar.form.pickupStreetNumber"/></label>
+                                <form:input path="startPointNumber" id="publish_start_point_number" maxlength="10" inputmode="numeric" autocomplete="off"
+                                            data-ryden-digits-only="true" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                                <form:errors path="startPointNumber" cssClass="text-danger d-block"/>
+                            </div>
+                        </div>
+                        <p class="small text-muted mb-3"><spring:message code="publishCar.form.samePickupReturnHint"/></p>
 
                         <div class="mb-3">
                             <label class="form-label"><spring:message code="publishCar.form.description"/></label>
@@ -119,9 +151,10 @@
                         <spring:message code="publishCar.form.period" var="periodLabel"/>
                         <spring:message code="publishCar.form.remove" var="removeLabel"/>
                         <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
-                        <div class="mb-4" id="publishAvailabilitySection">
+                        <div class="mb-4" id="publishAvailabilitySection"
+                             data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>">
                             <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
-                            <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.hint"/></p>
+                            <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.hint" arguments="${pickupLeadHours}"/></p>
                             <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
                             <div id="publish_availability_rows">
                                 <c:forEach items="${publishCarForm.availabilityRows}" var="row" varStatus="st">
@@ -208,6 +241,7 @@
         </div>
     </div>
 </main>
+<script>window.rydenPublishAvailMinFromUrl = '<c:url value="/publish-car/availability-min-from"/>';</script>
 <%@include file="footer.jsp" %>
 </body>
 </html>

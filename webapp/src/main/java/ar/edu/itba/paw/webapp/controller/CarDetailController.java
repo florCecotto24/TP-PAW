@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
@@ -19,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,10 +34,12 @@ public class CarDetailController {
     private static final int SIMILAR_LISTINGS_LIMIT = 4;
 
     private final ListingService listingService;
+    private final ReservationService reservationService;
 
     @Autowired
-    public CarDetailController(final ListingService listingService) {
+    public CarDetailController(final ListingService listingService, final ReservationService reservationService) {
         this.listingService = listingService;
+        this.reservationService = reservationService;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -66,12 +72,20 @@ public class CarDetailController {
         for (final AvailabilityPeriod p : bookable) {
             rawSegments.add(new LocalDateSegment(p.getStartInclusive(), p.getEndInclusive()));
         }
-        final List<LocalDateSegment> bookableSegments = BookableWallRangesJson.mergeAdjacentSegments(rawSegments);
+        List<LocalDateSegment> bookableSegments = BookableWallRangesJson.mergeAdjacentSegments(rawSegments);
+        final LocalTime pickupWall = Optional.ofNullable(listing.getCheckInTime()).orElse(LocalTime.of(10, 0));
+        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
+        final Instant minPickupExclusive = Instant.now().plus(pickupLeadHours, ChronoUnit.HOURS);
+        bookableSegments = BookableWallRangesJson.clipSegmentsToMinPickupInstant(
+                bookableSegments, pickupWall, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
 
+        final String listingPublicLocation = listingService.formatPublicPickupLocation(listing);
+
         final ModelAndView mav = new ModelAndView("carDetail");
         mav.addObject("listing", listing);
+        mav.addObject("listingPublicLocation", listingPublicLocation);
         mav.addObject("car", car);
         mav.addObject("owner", owner);
         mav.addObject("carGalleryImagePaths", carGalleryImagePaths);

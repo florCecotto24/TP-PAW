@@ -20,10 +20,24 @@
     <c:url var="reserveCarUrl" value="/search"/>
     <c:url var="myReservationsRiderPaginationBaseUrl" value="/my-reservations">
         <c:param name="tab" value="rider"/>
+        <c:if test="${not empty riderStatusFilter}">
+            <c:param name="riderStatus" value="${riderStatusFilter}"/>
+        </c:if>
+        <c:if test="${not empty ownerStatusFilter}">
+            <c:param name="ownerStatus" value="${ownerStatusFilter}"/>
+        </c:if>
     </c:url>
     <c:url var="myReservationsOwnerPaginationBaseUrl" value="/my-reservations">
         <c:param name="tab" value="owner"/>
+        <c:if test="${not empty riderStatusFilter}">
+            <c:param name="riderStatus" value="${riderStatusFilter}"/>
+        </c:if>
+        <c:if test="${not empty ownerStatusFilter}">
+            <c:param name="ownerStatus" value="${ownerStatusFilter}"/>
+        </c:if>
     </c:url>
+
+    <spring:message code="validation.dropdown.invalid" var="myReservationsDropdownInvalid" htmlEscape="true"/>
 
     <ul class="nav nav-tabs mb-4" role="tablist">
         <li class="nav-item" role="presentation">
@@ -40,6 +54,28 @@
 
     <div class="tab-content">
         <div class="tab-pane fade ${selectedReservationsTab eq 'rider' ? 'show active' : ''}" id="rider-pane" role="tabpanel" aria-labelledby="rider-tab">
+            <form id="myReservationsRiderFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations"
+                  data-ryden-dropdown-invalid="<c:out value='${myReservationsDropdownInvalid}'/>">
+                <input type="hidden" name="tab" value="rider"/>
+                <c:if test="${not empty ownerStatusFilter}">
+                    <input type="hidden" name="ownerStatus" value="<c:out value='${ownerStatusFilter}'/>"/>
+                </c:if>
+                <div class="col-md-5 col-lg-4">
+                    <label class="form-label small text-secondary mb-1" for="rider_res_status"><spring:message code="myReservations.filter.status"/></label>
+                    <select class="form-select" id="rider_res_status" name="riderStatus">
+                        <option value="" ${empty riderStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
+                        <option value="pending" ${riderStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
+                        <option value="accepted" ${riderStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
+                        <option value="started" ${riderStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
+                        <option value="cancelled" ${riderStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
+                        <option value="finished" ${riderStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
+                    </select>
+                </div>
+                <div class="col-auto d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                    <a href="${pageContext.request.contextPath}/my-reservations?tab=rider" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                </div>
+            </form>
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h3 class="h6 mb-0">
                     <c:choose>
@@ -78,7 +114,7 @@
                             <a href="<c:out value='${reservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                                 <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
                                     <span class="position-absolute top-0 end-0 m-2 z-1">
-                                        <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : reservation.statusKey eq 'cancelled' ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : 'bg-secondary'}">
+                                        <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : reservation.statusKey eq 'cancelled' ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
                                             <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
                                         </span>
                                     </span>
@@ -139,6 +175,28 @@
         </div>
 
         <div class="tab-pane fade ${selectedReservationsTab eq 'owner' ? 'show active' : ''}" id="owner-pane" role="tabpanel" aria-labelledby="owner-tab">
+            <form id="myReservationsOwnerFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations"
+                  data-ryden-dropdown-invalid="<c:out value='${myReservationsDropdownInvalid}'/>">
+                <input type="hidden" name="tab" value="owner"/>
+                <c:if test="${not empty riderStatusFilter}">
+                    <input type="hidden" name="riderStatus" value="<c:out value='${riderStatusFilter}'/>"/>
+                </c:if>
+                <div class="col-md-5 col-lg-4">
+                    <label class="form-label small text-secondary mb-1" for="owner_res_status"><spring:message code="myReservations.filter.status"/></label>
+                    <select class="form-select" id="owner_res_status" name="ownerStatus">
+                        <option value="" ${empty ownerStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
+                        <option value="pending" ${ownerStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
+                        <option value="accepted" ${ownerStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
+                        <option value="started" ${ownerStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
+                        <option value="cancelled" ${ownerStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
+                        <option value="finished" ${ownerStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
+                    </select>
+                </div>
+                <div class="col-auto d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                    <a href="${pageContext.request.contextPath}/my-reservations?tab=owner" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                </div>
+            </form>
             <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <h3 class="h6 mb-0">
                     <c:choose>
@@ -174,7 +232,7 @@
                             <a href="<c:out value='${reservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                                 <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
                                     <span class="position-absolute top-0 end-0 m-2 z-1">
-                                        <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : reservation.statusKey eq 'cancelled' ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : 'bg-secondary'}">
+                                        <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : reservation.statusKey eq 'cancelled' ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
                                             <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
                                         </span>
                                     </span>
@@ -235,6 +293,30 @@
         </div>
     </div>
 </main>
+
+<script>
+    (function () {
+        var allowed = ['', 'pending', 'accepted', 'started', 'cancelled', 'finished'];
+        function wire(formId, selId) {
+            var form = document.getElementById(formId);
+            var sel = document.getElementById(selId);
+            if (!form || !sel) return;
+            var msg = form.getAttribute('data-ryden-dropdown-invalid') || '';
+            form.addEventListener('submit', function (ev) {
+                var v = (sel.value || '').trim().toLowerCase();
+                if (allowed.indexOf(v) < 0) {
+                    ev.preventDefault();
+                    sel.setCustomValidity(msg);
+                    sel.reportValidity();
+                    return;
+                }
+                sel.setCustomValidity('');
+            });
+        }
+        wire('myReservationsRiderFilterForm', 'rider_res_status');
+        wire('myReservationsOwnerFilterForm', 'owner_res_status');
+    })();
+</script>
 
 <%@include file="footer.jsp"%>
 </body>

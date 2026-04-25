@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.User;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -28,10 +29,12 @@ public class SearchController {
     private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
 
     private final ListingService listingService;
+    private final LocationService locationService;
 
     @Autowired
-    public SearchController(final ListingService listingService) {
+    public SearchController(final ListingService listingService, final LocationService locationService) {
         this.listingService = listingService;
+        this.locationService = locationService;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -45,6 +48,7 @@ public class SearchController {
             @RequestParam(required = false) final String until,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String sort,
+            @RequestParam(required = false) final List<String> neighborhoodId,
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
             final HttpServletRequest request) {
         final ModelAndView mav = new ModelAndView("search");
@@ -53,8 +57,9 @@ public class SearchController {
 
         final User viewer = currentUser;
 
+        final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
         final var criteria = listingService.buildSearchCriteria(
-                query, category, transmission, powertrain, price, from, until, page, sort, viewer);
+                query, category, transmission, powertrain, price, from, until, page, sort, viewer, neighborhoodIds);
         final Page<ListingCard> resultPage = listingService.searchListingCards(criteria);
 
         final int lastPage = resultPage.getTotalPages() - 1;
@@ -77,8 +82,33 @@ public class SearchController {
         mav.addObject("searchPage", resultPage);
         mav.addObject("currentSort", safeSort);
         mav.addObject("activeTab", "search");
+        mav.addObject("hasActiveSearchFilters", hasActiveSearchFilters(request, neighborhoodIds));
 
         return mav;
+    }
+
+    private static boolean hasActiveSearchFilters(final HttpServletRequest request, final List<Long> neighborhoodIds) {
+        if (nonBlank(request.getParameter("query"))) {
+            return true;
+        }
+        if (nonBlank(request.getParameter("from")) || nonBlank(request.getParameter("until"))) {
+            return true;
+        }
+        if (neighborhoodIds != null && !neighborhoodIds.isEmpty()) {
+            return true;
+        }
+        return hasAnyValues(request.getParameterValues("category"))
+                || hasAnyValues(request.getParameterValues("transmission"))
+                || hasAnyValues(request.getParameterValues("powertrain"))
+                || hasAnyValues(request.getParameterValues("price"));
+    }
+
+    private static boolean nonBlank(final String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private static boolean hasAnyValues(final String[] values) {
+        return values != null && values.length > 0;
     }
 
     private static VehicleCardView toVehicleCardView(final ListingCard card) {

@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,23 +21,14 @@ public class ImageServiceImpl implements ImageService {
     private final long maxImageBytes;
 
     @Autowired
-    public ImageServiceImpl(
-            final ImageDao imageDao,
-            @Value("${app.upload.max-image-bytes:20971520}") final String maxImageBytesProperty) {
+    public ImageServiceImpl(final ImageDao imageDao, final Environment environment) {
         this.imageDao = imageDao;
-        this.maxImageBytes = parseMaxBytes(maxImageBytesProperty);
-    }
-
-    private static long parseMaxBytes(final String raw) {
-        try {
-            final long v = Long.parseLong(raw.trim());
-            if (v <= 0) {
-                throw new IllegalArgumentException("app.upload.max-image-bytes must be positive");
-            }
-            return v;
-        } catch (final NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid app.upload.max-image-bytes: " + raw, e);
+        /* Environment avoids @Value to be unresolved if the bean is created too early (e.g. during initMessageSource). */
+        final long v = environment.getProperty("app.upload.max-image-bytes", Long.class, 20971520L);
+        if (v <= 0) {
+            throw new IllegalArgumentException("app.upload.max-image-bytes must be positive, got " + v);
         }
+        this.maxImageBytes = v;
     }
 
     @Override

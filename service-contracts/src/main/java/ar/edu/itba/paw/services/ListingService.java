@@ -17,6 +17,7 @@ import ar.edu.itba.paw.models.ListingCard;
 import ar.edu.itba.paw.models.ListingDetail;
 import ar.edu.itba.paw.models.ListingSearchCriteria;
 import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.Reservation;
 import ar.edu.itba.paw.models.User;
 
 public interface ListingService {
@@ -25,11 +26,13 @@ public interface ListingService {
             long carId,
             Listing.Status status,
             BigDecimal dayPrice,
-            String startPoint,
+            String startPointStreet,
+            String startPointNumber,
             String description,
             LocalTime checkInTime,
             LocalTime checkOutTime,
-            List<AvailabilityPeriod> availabilityPeriods);
+            List<AvailabilityPeriod> availabilityPeriods,
+            Long neighborhoodId);
 
     /**
      * Publica un auto con aviso, disponibilidad e imágenes (flujo de publicación completo).
@@ -43,12 +46,14 @@ public interface ListingService {
             Car.Powertrain powertrain,
             Car.Transmission transmission,
             BigDecimal pricePerDay,
-            String startPoint,
+            String startPointStreet,
+            String startPointNumber,
             String description,
             LocalTime checkInTime,
             LocalTime checkOutTime,
             List<AvailabilityPeriod> periods,
-            List<ImageUpload> images);
+            List<ImageUpload> images,
+            Long neighborhoodId);
 
     Optional<Listing> getListingById(long id);
 
@@ -58,13 +63,52 @@ public interface ListingService {
             long ownerId,
             long listingId,
             BigDecimal dayPrice,
-            String startPoint,
+            String startPointStreet,
+            String startPointNumber,
             String description,
             LocalTime checkInTime,
             LocalTime checkOutTime,
-            List<AvailabilityPeriod> availabilityPeriods);
+            List<AvailabilityPeriod> availabilityPeriods,
+            Long neighborhoodId);
 
     boolean toggleListingStatus(long ownerId, long listingId);
+
+        /**
+         * Misma dirección que el retiro (calle + barrio sin altura), para vistas públicas.
+         */
+    String formatPublicDeliveryLocation(Listing listing);
+
+    /**
+     * Street + neighborhood of pickup (without number), for public views.
+     */
+    String formatPublicPickupLocation(Listing listing);
+
+    /**
+     * Same as {@link #formatFullPickupLocation(Listing)} (pickup and return in the same address).
+     */
+    String formatFullDeliveryLocation(Listing listing);
+
+    String formatFullPickupLocation(Listing listing);
+
+    /**
+     * Same as {@link #formatFullPickupLocation(Listing)} (pickup and return in the same address).
+     */
+    String formatDeliveryForReservationView(Listing listing, Reservation reservation, boolean viewerIsOwner);
+
+    /**
+     * Pickup (and return); door number according to role and payment proof.
+     */
+    String formatPickupForReservationView(Listing listing, Reservation reservation, boolean viewerIsOwner);
+
+    /**
+     * Text for emails to the rider (without door number until payment proof).
+     */
+    String formatRiderReservationHandoverSummary(Listing listing, Reservation reservation);
+
+    /**
+     * Unique text for emails to the owner (full data).
+     */
+    String formatOwnerReservationHandoverSummary(Listing listing);
 
     /**
      * If the listing is active or paused and has no bookable wall day from today onward, sets status to finished.
@@ -98,7 +142,7 @@ public interface ListingService {
 
     Page<ListingCard> getMostRecentListingCards(int page, int pageSize, User viewer);
 
-    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize);
+    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize, String listingStatus, String textQuery);
 
     boolean hasListingsByOwner(long ownerId);
 
@@ -118,5 +162,6 @@ public interface ListingService {
             String until,
             int page,
             String sort,
-            User viewer);
+            User viewer,
+            List<Long> neighborhoodIds);
 }

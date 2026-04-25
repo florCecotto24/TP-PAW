@@ -1,0 +1,38 @@
+package ar.edu.itba.paw.services;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+
+/**
+ * Business time windows for reservations, read from {@code application.properties}.
+ */
+@Component
+public final class ReservationTimingPolicy {
+
+    private final int pickupLeadHours;
+    private final int paymentProofDeadlineHours;
+
+    @Autowired
+    public ReservationTimingPolicy(final Environment environment) {
+        this.pickupLeadHours = readPositiveInt(environment, "app.reservation.pickup-lead-hours", 24);
+        this.paymentProofDeadlineHours =
+                readPositiveInt(environment, "app.reservation.payment-proof-deadline-hours", 12);
+    }
+
+    private static int readPositiveInt(final Environment env, final String key, final int defaultValue) {
+        final Integer v = env.getProperty(key, Integer.class);
+        if (v == null || v < 1) {
+            return defaultValue;
+        }
+        return v;
+    }
+
+    public int getPickupLeadHours() {
+        return pickupLeadHours;
+    }
+
+    public int getPaymentProofDeadlineHours() {
+        return paymentProofDeadlineHours;
+    }
+}

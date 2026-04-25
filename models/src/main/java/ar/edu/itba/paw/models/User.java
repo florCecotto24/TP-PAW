@@ -13,13 +13,15 @@ public class User {
     private final String phoneNumber;
     private final LocalDate birthDate;
     private final Long profilePictureId;
+    /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
+    private final String latestLocaleTag;
 
     public User(final long id, final String email, final String forename, final String surname) {
-        this(id, email, forename, surname, null, null, null, null, null);
+        this(id, email, forename, surname, null, null, null, null, null, null);
     }
 
     public User(final long id, final String email, final String forename, final String surname, final String passwordHash) {
-        this(id, email, forename, surname, passwordHash, null, null, null, null);
+        this(id, email, forename, surname, passwordHash, null, null, null, null, null);
     }
 
     public User(
@@ -31,7 +33,7 @@ public class User {
             final Boolean emailValidated,
             final String phoneNumber,
             final LocalDate birthDate) {
-        this(id, email, forename, surname, passwordHash, emailValidated, phoneNumber, birthDate, null);
+        this(id, email, forename, surname, passwordHash, emailValidated, phoneNumber, birthDate, null, null);
     }
 
     public User(
@@ -44,6 +46,20 @@ public class User {
             final String phoneNumber,
             final LocalDate birthDate,
             final Long profilePictureId) {
+        this(id, email, forename, surname, passwordHash, emailValidated, phoneNumber, birthDate, profilePictureId, null);
+    }
+
+    public User(
+            final long id,
+            final String email,
+            final String forename,
+            final String surname,
+            final String passwordHash,
+            final Boolean emailValidated,
+            final String phoneNumber,
+            final LocalDate birthDate,
+            final Long profilePictureId,
+            final String latestLocaleTag) {
         this.id = id;
         this.email = email;
         this.forename = forename;
@@ -53,6 +69,7 @@ public class User {
         this.phoneNumber = phoneNumber;
         this.birthDate = birthDate;
         this.profilePictureId = profilePictureId;
+        this.latestLocaleTag = latestLocaleTag;
     }
 
     public long getId() {
@@ -89,6 +106,10 @@ public class User {
 
     public Optional<Long> getProfilePictureId() {
         return Optional.ofNullable(profilePictureId);
+    }
+
+    public Optional<String> getLatestLocaleTag() {
+        return Optional.ofNullable(latestLocaleTag).filter(s -> !s.isBlank());
     }
 
     @Override
