@@ -964,18 +964,86 @@
         }
         return new Date(parseInt(d[0], 10), parseInt(d[1], 10) - 1, parseInt(d[2], 10), 12, 0, 0);
     }
-    function initOne(anchor, hidden) {
-        var def = parseYmdToLocalNoon(hidden.value);
-        flatpickr(anchor, {
+    function initPair(fromAnchor, fromHidden, untilAnchor, untilHidden) {
+        var fromDef = parseYmdToLocalNoon(fromHidden.value);
+        var untilDef = parseYmdToLocalNoon(untilHidden.value);
+
+        function dayTs(d) {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        }
+        function clearHoverClasses() {
+            untilFp.calendarContainer.querySelectorAll('.inRange, .endRange').forEach(function (el) {
+                el.classList.remove('inRange', 'endRange');
+            });
+        }
+
+        var untilFp = flatpickr(untilAnchor, {
             mode: 'single',
             enableTime: false,
             dateFormat: 'Y-m-d',
-            minDate: 'today',
-            defaultDate: def || undefined,
+            showMonths: 2,
+            minDate: fromDef || 'today',
+            defaultDate: untilDef || undefined,
+            onDayCreate: function (dObj, dStr, fp, dayElem) {
+                if (!fromHidden.value || !dayElem.dateObj) { return; }
+                var fromDate = parseYmdToLocalNoon(fromHidden.value);
+                if (!fromDate) { return; }
+                if (dayTs(dayElem.dateObj) === dayTs(fromDate)) {
+                    dayElem.classList.add('startRange');
+                }
+            },
             onChange: function (selectedDates) {
-                hidden.value = selectedDates.length && window.RydenFlatpickrRange
+                untilHidden.value = selectedDates.length && window.RydenFlatpickrRange
                     ? RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0])
                     : '';
+            }
+        });
+
+        untilFp.calendarContainer.addEventListener('mouseover', function (e) {
+            var day = e.target.closest('.flatpickr-day');
+            if (!day || !day.dateObj || !fromHidden.value) { return; }
+            var fromDate = parseYmdToLocalNoon(fromHidden.value);
+            if (!fromDate) { return; }
+            var fromTs = dayTs(fromDate);
+            var hovTs = dayTs(day.dateObj);
+            clearHoverClasses();
+            if (hovTs <= fromTs) { return; }
+            untilFp.calendarContainer.querySelectorAll('.flatpickr-day').forEach(function (dayEl) {
+                if (!dayEl.dateObj) { return; }
+                var dTs = dayTs(dayEl.dateObj);
+                if (dTs > fromTs && dTs < hovTs) {
+                    dayEl.classList.add('inRange');
+                }
+                if (dTs === hovTs) {
+                    dayEl.classList.add('endRange');
+                }
+            });
+        });
+
+        untilFp.calendarContainer.addEventListener('mouseleave', function () {
+            clearHoverClasses();
+        });
+
+        flatpickr(fromAnchor, {
+            mode: 'single',
+            enableTime: false,
+            dateFormat: 'Y-m-d',
+            showMonths: 2,
+            minDate: 'today',
+            defaultDate: fromDef || undefined,
+            onChange: function (selectedDates, dateStr, instance) {
+                fromHidden.value = selectedDates.length && window.RydenFlatpickrRange
+                    ? RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0])
+                    : '';
+                if (selectedDates.length) {
+                    instance.close();
+                    untilFp.set('minDate', selectedDates[0]);
+                    if (untilFp.selectedDates.length && untilFp.selectedDates[0] < selectedDates[0]) {
+                        untilFp.clear();
+                        untilHidden.value = '';
+                    }
+                    untilFp.open();
+                }
             }
         });
     }
@@ -987,9 +1055,15 @@
         if (!untilPicker || !fromHidden || !untilHidden) {
             return;
         }
-        initOne(fromPicker, fromHidden);
-        initOne(untilPicker, untilHidden);
+        initPair(fromPicker, fromHidden, untilPicker, untilHidden);
     });
+    var fp0 = document.getElementById('search_from_picker');
+    var up0 = document.getElementById('search_until_picker');
+    var fh0 = document.getElementById('search_from_hidden');
+    var uh0 = document.getElementById('search_until_hidden');
+    if (fp0 && up0 && fh0 && uh0) {
+        initPair(fp0, fh0, up0, uh0);
+    }
 })();
 
 /* Perfil: fecha de nacimiento (Flatpickr single, Y-m-d, coherente con búsqueda/reservas) */

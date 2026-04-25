@@ -3,7 +3,8 @@
     "allow": [
       "Bash(xargs grep *)",
       "Read(///wsl.localhost/Ubuntu-22.04/home/**)",
-      "Read(//c/Users/Dalila/**)"
+      "Read(//c/Users/Dalila/**)",
+      "Read(///wsl.localhost/Ubuntu-22.04//**)"
     ]
   }
 }
