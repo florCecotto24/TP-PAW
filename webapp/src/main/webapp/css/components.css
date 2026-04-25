@@ -3,6 +3,16 @@ body {
     font-family: 'Noto Sans', sans-serif !important;
 }
 
+.js-no-number-wheel-step::-webkit-outer-spin-button,
+.js-no-number-wheel-step::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.js-no-number-wheel-step {
+    -moz-appearance: textfield;
+}
+
 /* Custom Input Styles */
 .custom-label {
     font-weight: 500;
@@ -721,6 +731,33 @@ select.form-select.ryden-car-spec-select option {
 /* Align with .form-select / .form-control (Bootstrap --bs-border-radius), not rounded-4 of the search bar */
 .neighborhood-picker .neighborhood-picker__toggle {
     border-radius: var(--bs-border-radius);
+}
+
+/* Neighborhood picker styled as form-select: hide the Bootstrap dropdown caret (form-select provides its own arrow) */
+.neighborhood-picker .neighborhood-picker__toggle--form-select.dropdown-toggle::after {
+    display: none;
+}
+
+.neighborhood-picker__toggle--form-select {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* Hide radio circles in single-select (form) context; keep checkboxes visible in multi-select */
+.neighborhood-picker:not(.neighborhood-picker--search-bar) input[type="radio"].js-neighborhood-pick {
+    display: none;
+}
+
+.neighborhood-picker:not(.neighborhood-picker--search-bar) .neighborhood-picker__row label {
+    cursor: pointer;
+}
+
+/* Blue hover on neighborhood rows (matches native select highlight) */
+.neighborhood-picker__menu .dropdown-item:hover,
+.neighborhood-picker__menu .dropdown-item:focus {
+    background-color: var(--bs-primary);
+    color: #fff;
 }
 
 /* Neighborhoods in the search bar: same visual criteria as From/To (form-control-sm, without chip btn-light) */

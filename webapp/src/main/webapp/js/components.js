@@ -1090,6 +1090,11 @@
             .catch(function () { /* ignore */ });
     }
 
+    function syncAddBtn() {
+        var n = root.querySelectorAll('[data-publish-avail-row]').length;
+        addBtn.classList.toggle('d-none', n >= MAX_ROWS);
+    }
+
     function reindexRows() {
         var rows = root.querySelectorAll('[data-publish-avail-row]');
         rows.forEach(function (row, i) {
@@ -1158,6 +1163,7 @@
         root.appendChild(row);
         reindexRows();
         initRow(row);
+        syncAddBtn();
     });
 
     root.addEventListener('click', function (e) {
@@ -1178,6 +1184,7 @@
                 anchor.value = '';
             }
             initRow(row);
+            syncAddBtn();
             return;
         }
         destroyRowFp(row);
@@ -1187,7 +1194,10 @@
             destroyRowFp(r);
         });
         root.querySelectorAll('[data-publish-avail-row]').forEach(initRow);
+        syncAddBtn();
     });
+
+    syncAddBtn();
 })();
 
 /* Mostrar / ocultar contraseña (botón .ryden-password-toggle dentro de .input-group) */
