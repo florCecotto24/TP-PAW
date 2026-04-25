@@ -7,7 +7,11 @@ CREATE TABLE IF NOT EXISTS users(
     email_validated BOOLEAN,
     phone_number VARCHAR(20),
     birth_date DATE,
-    profile_picture_id INTEGER
+    profile_picture_id INTEGER,
+    latest_locale VARCHAR(32),
+    cbu VARCHAR(22),
+    rating_as_rider NUMERIC(4, 2),
+    rating_as_owner NUMERIC(4, 2)
 );
 
 CREATE TABLE IF NOT EXISTS cars (
@@ -23,6 +27,67 @@ CREATE TABLE IF NOT EXISTS cars (
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS neighborhoods (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(160) NOT NULL UNIQUE
+);
+
+INSERT INTO neighborhoods (id, name) VALUES
+    (1, 'Agronomía'),
+    (2, 'Almagro'),
+    (3, 'Balvanera'),
+    (4, 'Barracas'),
+    (5, 'Belgrano'),
+    (6, 'Boedo'),
+    (7, 'Caballito'),
+    (8, 'Chacarita'),
+    (9, 'Coghlan'),
+    (10, 'Colegiales'),
+    (11, 'Constitución'),
+    (12, 'Flores'),
+    (13, 'Floresta'),
+    (14, 'La Boca'),
+    (15, 'La Paternal'),
+    (16, 'Liniers'),
+    (17, 'Mataderos'),
+    (18, 'Monte Castro'),
+    (19, 'Montserrat'),
+    (20, 'Nueva Pompeya'),
+    (21, 'Núñez'),
+    (22, 'Palermo'),
+    (23, 'Parque Avellaneda'),
+    (24, 'Parque Chacabuco'),
+    (25, 'Parque Chas'),
+    (26, 'Parque Patricios'),
+    (27, 'Puerto Madero'),
+    (28, 'Recoleta'),
+    (29, 'Retiro'),
+    (30, 'Saavedra'),
+    (31, 'San Cristóbal'),
+    (32, 'San Nicolás'),
+    (33, 'San Telmo'),
+    (34, 'Vélez Sarsfield'),
+    (35, 'Versalles'),
+    (36, 'Villa Crespo'),
+    (37, 'Villa del Parque'),
+    (38, 'Villa Devoto'),
+    (39, 'Villa General Mitre'),
+    (40, 'Villa Lugano'),
+    (41, 'Villa Luro'),
+    (42, 'Villa Ortúzar'),
+    (43, 'Villa Pueyrredón'),
+    (44, 'Villa Real'),
+    (45, 'Villa Riachuelo'),
+    (46, 'Villa Santa Rita'),
+    (47, 'Villa Soldati'),
+    (48, 'Villa Urquiza')
+ON CONFLICT (id) DO NOTHING;
+
+SELECT setval(
+    pg_get_serial_sequence('neighborhoods', 'id'),
+    COALESCE((SELECT MAX(id) FROM neighborhoods), 1)
+);
+
 CREATE TABLE IF NOT EXISTS listings (
     id SERIAL PRIMARY KEY,
     title VARCHAR(105) NOT NULL,
@@ -32,11 +97,14 @@ CREATE TABLE IF NOT EXISTS listings (
     status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'paused', 'finished')),
     day_price DECIMAL(10, 2) NOT NULL,
     start_point_street TEXT NOT NULL,
+    start_point_number VARCHAR(10) NOT NULL DEFAULT '',
     description VARCHAR(200) NOT NULL,
     check_in_time TIME NOT NULL,
     check_out_time TIME NOT NULL,
+    neighborhood_id INTEGER,
 
-    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
+    FOREIGN KEY (neighborhood_id) REFERENCES neighborhoods(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS listing_availability(
@@ -47,21 +115,6 @@ CREATE TABLE IF NOT EXISTS listing_availability(
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
 
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS reservations (
-    id SERIAL PRIMARY KEY,
-    rider_id INTEGER NOT NULL,
-    listing_id INTEGER NOT NULL,
-    start_date TIMESTAMPTZ NOT NULL,
-    end_date TIMESTAMPTZ NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('accepted', 'started', 'cancelled', 'finished')),
-    total_price DECIMAL(10, 2) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-
-    FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );
 
@@ -85,7 +138,47 @@ CREATE TABLE IF NOT EXISTS car_pictures (
     FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS stored_files (
+    id SERIAL PRIMARY KEY,
+    uploader_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    content_type VARCHAR(100) NOT NULL,
+    byte_array BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS reservations (
+    id SERIAL PRIMARY KEY,
+    rider_id INTEGER NOT NULL,
+    listing_id INTEGER NOT NULL,
+    start_date TIMESTAMPTZ NOT NULL,
+    end_date TIMESTAMPTZ NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'accepted', 'started', 'cancelled', 'finished')),
+    total_price DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    payment_receipt_file_id INTEGER REFERENCES stored_files(id),
+    payment_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_proof_deadline_at TIMESTAMPTZ,
+
+    FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+    reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    made_by_rider BOOLEAN NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    PRIMARY KEY (reservation_id, made_by_rider)
+);
+
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_locale VARCHAR(32);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cbu VARCHAR(22);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_rider NUMERIC(4, 2);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_owner NUMERIC(4, 2);
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_profile_picture_id;
 ALTER TABLE users ADD CONSTRAINT fk_users_profile_picture_id FOREIGN KEY (profile_picture_id) REFERENCES images(id) ON DELETE SET NULL;
 

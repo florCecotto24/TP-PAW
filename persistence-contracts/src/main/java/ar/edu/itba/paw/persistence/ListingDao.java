@@ -1,12 +1,5 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Page;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,6 +7,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import ar.edu.itba.paw.models.HomeListingCards;
+import ar.edu.itba.paw.models.Listing;
+import ar.edu.itba.paw.models.ListingCard;
+import ar.edu.itba.paw.models.ListingDetail;
+import ar.edu.itba.paw.models.ListingSearchCriteria;
+import ar.edu.itba.paw.models.Page;
 
 public interface ListingDao {
 
