@@ -22,6 +22,7 @@ public class Reservation {
     private final Long paymentReceiptFileId;
     private final boolean paymentApproved;
     private final OffsetDateTime paymentProofDeadlineAt;
+    private final boolean carReturned;
 
     public Reservation(
             final long id,
@@ -34,7 +35,7 @@ public class Reservation {
             final OffsetDateTime updatedAt,
             final BigDecimal totalPrice) {
         this(id, riderId, listingId, startDate, endDate, status, createdAt, updatedAt, totalPrice,
-                null, false, null);
+                null, false, null, false);
     }
 
     public Reservation(
@@ -50,6 +51,24 @@ public class Reservation {
             final Long paymentReceiptFileId,
             final boolean paymentApproved,
             final OffsetDateTime paymentProofDeadlineAt) {
+        this(id, riderId, listingId, startDate, endDate, status, createdAt, updatedAt, totalPrice,
+                paymentReceiptFileId, paymentApproved, paymentProofDeadlineAt, false);
+    }
+
+    public Reservation(
+            final long id,
+            final long riderId,
+            final long listingId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate,
+            final Status status,
+            final OffsetDateTime createdAt,
+            final OffsetDateTime updatedAt,
+            final BigDecimal totalPrice,
+            final Long paymentReceiptFileId,
+            final boolean paymentApproved,
+            final OffsetDateTime paymentProofDeadlineAt,
+            final boolean carReturned) {
         this.id = id;
         this.riderId = riderId;
         this.listingId = listingId;
@@ -62,6 +81,7 @@ public class Reservation {
         this.paymentReceiptFileId = paymentReceiptFileId;
         this.paymentApproved = paymentApproved;
         this.paymentProofDeadlineAt = paymentProofDeadlineAt;
+        this.carReturned = carReturned;
     }
 
     public long getId() {
@@ -112,6 +132,10 @@ public class Reservation {
         return Optional.ofNullable(paymentProofDeadlineAt);
     }
 
+    public boolean isCarReturned() {
+        return carReturned;
+    }
+
     @Override
     public String toString() {
         return "Reservation{" +
@@ -124,6 +148,7 @@ public class Reservation {
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 ", totalPrice=" + totalPrice +
+                ", carReturned=" + carReturned +
                 '}';
     }
 }

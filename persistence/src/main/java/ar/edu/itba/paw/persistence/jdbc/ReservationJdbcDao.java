@@ -45,7 +45,8 @@ public class ReservationJdbcDao implements ReservationDao {
                 rs.getBigDecimal("total_price"),
                 paymentReceiptId,
                 rs.getBoolean("payment_approved"),
-                JdbcDateTimeUtils.readOffsetDateTime(rs, "payment_proof_deadline_at"));
+                JdbcDateTimeUtils.readOffsetDateTime(rs, "payment_proof_deadline_at"),
+                rs.getBoolean("car_returned"));
     }
 
     private static final RowMapper<Reservation> RESERVATION_ROW_MAPPER = (rs, rowNum) -> {
@@ -151,6 +152,7 @@ public class ReservationJdbcDao implements ReservationDao {
         values.put("updated_at", now);
         values.put("payment_proof_deadline_at", JdbcDateTimeUtils.toTimestamp(paymentProofDeadlineAt));
         values.put("payment_approved", Boolean.FALSE);
+        values.put("car_returned", Boolean.FALSE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
         return new Reservation(
@@ -165,7 +167,8 @@ public class ReservationJdbcDao implements ReservationDao {
                 totalPrice,
                 null,
                 false,
-                paymentProofDeadlineAt);
+                paymentProofDeadlineAt,
+                false);
     }
 
     @Override

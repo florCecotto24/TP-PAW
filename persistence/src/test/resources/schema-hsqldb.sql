@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     payment_receipt_file_id BIGINT,
     payment_approved BOOLEAN NOT NULL DEFAULT FALSE,
     payment_proof_deadline_at TIMESTAMP WITH TIME ZONE,
+    car_returned BOOLEAN NOT NULL DEFAULT FALSE,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE,
