@@ -12,6 +12,8 @@
 <ryden:navbar/>
 
 <main class="container py-5">
+  <spring:message code="publishCar.confirmation.title" var="publishConfirmLabel"/>
+  <ryden:breadcrumbTrail currentLabel="${publishConfirmLabel}"/>
   <div class="row justify-content-center">
     <div class="col-md-9 col-lg-7">
       <div class="card border-0 shadow-sm rounded-4">

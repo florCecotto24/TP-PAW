@@ -12,6 +12,9 @@
 <ryden:navbar/>
 
 <main class="container pt-5 pb-4">
+    <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
+    <spring:message code="reservationCancelled.pageTitle" var="reservationCancelledLabel"/>
+    <ryden:breadcrumbTrail homeLabel="${myReservationsLabel}" homeHref="${pageContext.request.contextPath}/my-reservations" currentLabel="${reservationCancelledLabel}"/>
     <div class="row justify-content-center">
         <div class="col-lg-6">
             <div class="text-center py-5">

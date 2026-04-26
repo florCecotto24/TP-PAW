@@ -11,7 +11,16 @@
 <ryden:navbar/>
 
 <main class="car-detail-page container pb-4">
-    <ryden:breadcrumbTrail currentLabel="${listing.title}"/>
+    <c:choose>
+        <c:when test="${param.from eq 'search'}">
+            <spring:message code="navbar.explore" var="exploreLabel"/>
+            <c:url var="exploreHref" value="/search"/>
+            <ryden:breadcrumbTrail midLabel="${exploreLabel}" midHref="${exploreHref}" currentLabel="${listing.title}"/>
+        </c:when>
+        <c:otherwise>
+            <ryden:breadcrumbTrail currentLabel="${listing.title}"/>
+        </c:otherwise>
+    </c:choose>
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">

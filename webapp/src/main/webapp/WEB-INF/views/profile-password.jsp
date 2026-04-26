@@ -13,6 +13,9 @@
 <body>
 <ryden:navbar/>
 <div class="container mt-5 pt-4" style="max-width: 520px;">
+    <spring:message code="profile.heading" var="profileLabel"/>
+    <spring:message code="profile.password.heading" var="profilePwLabel"/>
+    <ryden:breadcrumbTrail homeLabel="${profileLabel}" homeHref="${pageContext.request.contextPath}/profile" currentLabel="${profilePwLabel}"/>
     <h1 class="h3 mb-3"><spring:message code="profile.password.heading"/></h1>
     <p class="text-muted mb-4"><spring:message code="profile.password.intro"/></p>
 

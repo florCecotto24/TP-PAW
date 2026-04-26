@@ -32,7 +32,7 @@
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.carSummary.title"/></h2>
                     <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
-                        <div class="reservation-detail-car-media rounded-3 overflow-hidden border">
+                        <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
                             <c:choose>
                                 <c:when test="${carImageId > 0}">
                                     <c:url var="carImageUrl" value="/image/${carImageId}"/>
@@ -45,39 +45,40 @@
                                 </c:otherwise>
                             </c:choose>
                         </div>
-                        <div>
+                        <div class="flex-grow-1">
                             <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
                             <p class="text-secondary mb-2"><c:out value="${listing.title}"/></p>
                             <div class="d-flex flex-wrap gap-2 mb-2">
                                 <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                 <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
-                                <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
                                 <span class="badge text-bg-light border"><c:out value="${carTransmissionLabel}"/></span>
                                 <span class="badge text-bg-light border"><c:out value="${carPowertrainLabel}"/></span>
-                                <c:choose>
-                                    <c:when test="${statusKey == 'ACTIVE'}">
-                                        <span class="badge text-bg-success"><c:out value="${listingStatusLabel}"/></span>
-                                    </c:when>
-                                    <c:when test="${statusKey == 'PAUSED'}">
-                                        <span class="badge text-bg-warning text-dark"><c:out value="${listingStatusLabel}"/></span>
-                                    </c:when>
-                                    <c:when test="${statusKey == 'FINISHED'}">
-                                        <span class="badge text-bg-secondary"><c:out value="${listingStatusLabel}"/></span>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <span class="badge text-bg-light border"><c:out value="${listingStatusLabel}"/></span>
-                                    </c:otherwise>
-                                </c:choose>
                             </div>
-                            <p class="mb-0 text-secondary small">
+                            <p class="mb-2 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
                             </p>
+                            <div class="d-flex align-items-center gap-2 mt-3 pt-2 border-top">
+                                <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
+                                    <spring:message code="myListingDetail.pricePerDay"/>
+                                </span>
+                                <span class="h4 fw-bold text-primary mb-0">$<c:out value="${listing.dayPrice}"/></span>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="mt-3 pt-2 d-flex justify-content-end">
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                id="toggleEditBtn"
+                                onclick="toggleEditForm()">
+                            <i class="bi bi-pencil me-1" aria-hidden="true"></i>
+                            <spring:message code="myListingDetail.actions.editListing"/>
+                        </button>
                     </div>
                 </div>
             </article>
 
-            <article class="card border-0 shadow-sm rounded-4 mb-4">
+            <article class="card border-0 shadow-sm rounded-4 mb-4 d-none" id="editListingSection">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
                     <spring:message code="validation.neighborhood.invalid" var="editNbInvalidMsg" htmlEscape="true"/>
@@ -144,8 +145,10 @@
                             <form:errors path="description" cssClass="text-danger d-block"/>
                         </div>
 
-
-                        <div class="col-12">
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="cancelEdit()">
+                                <spring:message code="common.cancel"/>
+                            </button>
                             <button type="submit" class="btn btn-primary">
                                 <spring:message code="myListingDetail.actions.modify"/>
                             </button>
@@ -178,12 +181,35 @@
         <div class="col-lg-4">
             <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky">
                 <div class="card-body p-4">
-                    <div class="reservation-price-compact mb-3">
-                        <span class="reservation-card__meta-label mb-0"><spring:message code="myListingDetail.pricePerDay"/></span>
-                        <span class="h2 fw-bold text-primary mb-0">$<c:out value="${listing.dayPrice}"/></span>
+                    <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
+                            <spring:message code="myListingDetail.status.label"/>
+                        </span>
+                        <c:choose>
+                            <c:when test="${statusKey == 'ACTIVE'}">
+                                <span class="badge text-bg-success fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                            </c:when>
+                            <c:when test="${statusKey == 'PAUSED'}">
+                                <span class="badge text-bg-warning text-dark fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                            </c:when>
+                            <c:when test="${statusKey == 'FINISHED'}">
+                                <span class="badge text-bg-secondary fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="badge text-bg-light border fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
 
-                    <div class="d-grid gap-2">
+                    <div class="d-flex flex-column gap-3 px-2">
+                        <c:url var="listingUrl" value="/car-detail">
+                            <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
+                        </c:url>
+                        <a href="<c:out value='${listingUrl}'/>" class="btn btn-light border w-100">
+                            <spring:message code="myListingDetail.actions.viewListing"/>
+                        </a>
+
                         <form method="post" action="<c:out value='${toggleListingUrl}'/>">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                             <c:choose>
@@ -205,21 +231,36 @@
                             </c:choose>
                         </form>
                     </div>
-
-                    <hr class="my-4">
-                    <c:url var="listingUrl" value="/car-detail">
-                        <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
-                    </c:url>
-                    <a href="<c:out value='${listingUrl}'/>" class="btn btn-light border w-100">
-                        <spring:message code="myListingDetail.actions.viewListing"/>
-                    </a>
                 </div>
             </article>
         </div>
     </div>
 </main>
 <%@include file="footer.jsp"%>
+
+<script>
+    function toggleEditForm() {
+        var section = document.getElementById('editListingSection');
+        var btn = document.getElementById('toggleEditBtn');
+        section.classList.remove('d-none');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        btn.disabled = true;
+    }
+
+    function cancelEdit() {
+        var section = document.getElementById('editListingSection');
+        var btn = document.getElementById('toggleEditBtn');
+        section.classList.add('d-none');
+        btn.disabled = false;
+    }
+
+    (function() {
+        var section = document.getElementById('editListingSection');
+        if (section && section.querySelector('.text-danger')) {
+            section.classList.remove('d-none');
+            document.getElementById('toggleEditBtn').disabled = true;
+        }
+    })();
+</script>
 </body>
 </html>
-
-

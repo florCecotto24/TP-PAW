@@ -12,6 +12,9 @@
 <ryden:navbar/>
 
 <main class="container py-5 reservation-confirmation">
+    <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
+    <spring:message code="reservationConfirmation.title" var="reservationConfirmLabel"/>
+    <ryden:breadcrumbTrail homeLabel="${myReservationsLabel}" homeHref="${pageContext.request.contextPath}/my-reservations" currentLabel="${reservationConfirmLabel}"/>
     <div class="row justify-content-center">
         <div class="col-md-9 col-lg-7">
             <div class="card border-0 shadow-sm rounded-4">

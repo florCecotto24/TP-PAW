@@ -207,13 +207,32 @@
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
                         <c:choose>
                             <c:when test="${canCancel}">
-                                <form:form method="post" action="${cancelUrl}" cssClass="d-grid">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <input type="hidden" name="role" value="<c:out value='${reservationRole}'/>"/>
-                                    <button type="submit" class="btn btn-outline-danger">
-                                        <spring:message code="myReservationDetail.actions.cancel"/>
-                                    </button>
-                                </form:form>
+                                <spring:message code="myReservationDetail.actions.cancel" var="cancelBtnLabel"/>
+                                <spring:message code="myReservationDetail.cancelModal.title" var="cancelModalTitle"/>
+                                <spring:message code="myReservationDetail.cancelModal.message" var="cancelModalMessage"/>
+                                <spring:message code="myReservationDetail.cancelModal.confirm" var="cancelModalConfirm"/>
+                                <spring:message code="myReservationDetail.cancelModal.back" var="cancelModalBack"/>
+                                <button type="button" class="btn btn-outline-danger" data-modal-open="cancelReservationModal">
+                                    <c:out value="${cancelBtnLabel}"/>
+                                </button>
+                                <ryden:modal
+                                    id="cancelReservationModal"
+                                    title="${cancelModalTitle}"
+                                    message="${cancelModalMessage}"
+                                    variant="danger">
+                                    <form:form method="post" action="${cancelUrl}">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                                        <input type="hidden" name="role" value="${reservationRole}"/>
+                                        <div class="d-flex justify-content-end gap-2 mt-3">
+                                            <button type="button" class="btn btn-secondary" data-modal-close="cancelReservationModal">
+                                                <c:out value="${cancelModalBack}"/>
+                                            </button>
+                                            <button type="submit" class="btn btn-danger">
+                                                <c:out value="${cancelModalConfirm}"/>
+                                            </button>
+                                        </div>
+                                    </form:form>
+                                </ryden:modal>
                             </c:when>
                             <c:otherwise>
                                 <c:if test="${not (statusKey eq 'pending' and reservationRole eq 'rider')}">

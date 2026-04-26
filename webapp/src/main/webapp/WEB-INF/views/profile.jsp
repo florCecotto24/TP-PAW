@@ -14,6 +14,8 @@
 <body>
 <ryden:navbar/>
 <div class="container profile-container">
+    <spring:message code="profile.heading" var="profileLabel"/>
+    <ryden:breadcrumbTrail currentLabel="${profileLabel}"/>
     <div class="profile-header">
         <h1 class="profile-header__title"><spring:message code="profile.heading"/></h1>
         <div class="profile-header__actions">

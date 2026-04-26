@@ -50,6 +50,7 @@ public class HomeController {
 
         mav.addObject("cheapestCarsPage", cheapestCarsPage);
         mav.addObject("recentCarsPage", recentCarsPage);
+        mav.addObject("activeTab", "home");
 
         return mav;
     }

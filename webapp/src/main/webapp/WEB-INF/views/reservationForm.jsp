@@ -13,6 +13,11 @@
 <ryden:navbar/>
 
 <main class="container py-5">
+    <spring:message code="reservationForm.title" var="reservationFormLabel"/>
+    <c:url var="carDetailBreadcrumbUrl" value="/car-detail">
+        <c:param name="listingId" value="${reservationForm.listingId}"/>
+    </c:url>
+    <ryden:breadcrumbTrail midLabel="${reservationForm.carName}" midHref="${carDetailBreadcrumbUrl}" currentLabel="${reservationFormLabel}"/>
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
             <div class="card border-0 shadow-sm rounded-4">

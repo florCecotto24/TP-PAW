@@ -4,6 +4,8 @@
 <%@ attribute name="currentLabel" required="true" type="java.lang.String" %>
 <%@ attribute name="homeLabel" required="false" type="java.lang.String" %>
 <%@ attribute name="homeHref" required="false" type="java.lang.String" %>
+<%@ attribute name="midLabel" required="false" type="java.lang.String" %>
+<%@ attribute name="midHref" required="false" type="java.lang.String" %>
 
 <c:if test="${empty homeLabel}">
     <spring:message code="breadcrumbTrail.defaultHomeLabel" var="defaultHomeLabel"/>
@@ -19,6 +21,16 @@
         <li class="breadcrumb-item">
             <a href="<c:out value='${homeHref}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${homeLabel}"/></a>
         </li>
+        <c:if test="${not empty midLabel}">
+            <li class="breadcrumb-item">
+                <c:choose>
+                    <c:when test="${not empty midHref}">
+                        <a href="<c:out value='${midHref}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${midLabel}"/></a>
+                    </c:when>
+                    <c:otherwise><c:out value="${midLabel}"/></c:otherwise>
+                </c:choose>
+            </li>
+        </c:if>
         <li class="breadcrumb-item active text-muted" aria-current="page"><c:out value="${currentLabel}"/></li>
     </ol>
 </nav>
