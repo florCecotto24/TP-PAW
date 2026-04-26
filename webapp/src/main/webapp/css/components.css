@@ -1147,6 +1147,139 @@ select.form-select.ryden-car-spec-select option {
     }
 }
 
+/* Avatar pencil edit button */
+.profile-card__avatar-edit-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-primary);
+    font-size: 0.7rem;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+    transition: background-color 0.15s ease, color 0.15s ease;
+    z-index: 1;
+}
+
+.profile-card__avatar-edit-btn:hover,
+.profile-card__avatar-edit-btn:focus-visible {
+    background: var(--color-primary);
+    color: white;
+    outline: none;
+}
+
+/* Avatar dropdown menu */
+.profile-avatar-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 160px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    z-index: 20;
+    overflow: hidden;
+    display: none;
+}
+
+.profile-avatar-menu.is-open {
+    display: block;
+}
+
+.profile-avatar-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.12s ease;
+}
+
+.profile-avatar-menu__item:hover {
+    background: rgba(59, 123, 224, 0.07);
+}
+
+.profile-avatar-menu__item--danger {
+    color: #dc3545;
+}
+
+.profile-avatar-menu__item--danger:hover {
+    background: rgba(220, 53, 69, 0.07);
+}
+
+/* Section header: title + inline action button */
+.profile-card__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.profile-card__section-header .profile-section-title {
+    margin-bottom: 0;
+}
+
+/* View-mode field display (no inputs) */
+.profile-field-view {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.profile-field-value {
+    font-size: 0.95rem;
+    color: var(--color-text);
+    min-height: 1.5rem;
+    line-height: 1.5;
+}
+
+/* Form action buttons row (bottom-right of editing section) */
+.profile-card__form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+/* Flatpickr birth date calendar: "Borrar selección" footer */
+.flatpickr-profile-clear-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.4rem 0.75rem 0.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.flatpickr-profile-clear-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.12s ease;
+}
+
+.flatpickr-profile-clear-btn:hover {
+    background: rgba(59, 123, 224, 0.08);
+}
+
 /* Neighborhood: a single scroll in the panel (list / select) */
 .neighborhood-picker__scroll {
     max-height: min(42vh, 14rem);

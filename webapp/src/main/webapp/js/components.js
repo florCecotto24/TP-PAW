@@ -1088,6 +1088,21 @@
             birthEl.value = selectedDates.length && window.RydenFlatpickrRange
                 ? RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0])
                 : "";
+        },
+        onReady: function (selectedDates, dateStr, fp) {
+            var clearLabel = birthEl.getAttribute("data-clear-label") || "Borrar selección";
+            var footer = document.createElement("div");
+            footer.className = "flatpickr-profile-clear-footer";
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "flatpickr-profile-clear-btn";
+            btn.textContent = clearLabel;
+            btn.addEventListener("click", function () {
+                fp.clear();
+                birthEl.value = "";
+            });
+            footer.appendChild(btn);
+            fp.calendarContainer.appendChild(footer);
         }
     });
 })();

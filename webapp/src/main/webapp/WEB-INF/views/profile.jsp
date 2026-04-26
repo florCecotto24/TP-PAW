@@ -18,19 +18,6 @@
     <ryden:breadcrumbTrail currentLabel="${profileLabel}"/>
     <div class="profile-header">
         <h1 class="profile-header__title"><spring:message code="profile.heading"/></h1>
-        <div class="profile-header__actions">
-            <button id="editProfileBtn" type="button" class="btn btn-primary" style="display: none;">
-                <spring:message code="profile.edit"/>
-            </button>
-            <div id="editingActions" style="display: none;">
-                <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary">
-                    <spring:message code="common.cancel"/>
-                </button>
-                <button type="submit" form="profileForm" class="btn btn-primary">
-                    <spring:message code="profile.save"/>
-                </button>
-            </div>
-        </div>
     </div>
 
     <c:if test="${profileSaved}">
@@ -82,6 +69,22 @@
                         <span><c:out value="${initials}"/></span>
                     </div>
                 </c:if>
+                <button type="button" class="profile-card__avatar-edit-btn" id="avatarEditBtn"
+                        aria-label="<spring:message code='profile.picture.editPhoto'/>">
+                    <i class="bi bi-pencil-fill" aria-hidden="true"></i>
+                </button>
+                <div class="profile-avatar-menu" id="avatarMenu" aria-hidden="true">
+                    <button type="button" class="profile-avatar-menu__item" id="avatarMenuUpload">
+                        <i class="bi bi-upload" aria-hidden="true"></i>
+                        <spring:message code="profile.picture.submit"/>
+                    </button>
+                    <c:if test="${not empty profilePictureImageId}">
+                        <button type="button" class="profile-avatar-menu__item profile-avatar-menu__item--danger" id="avatarMenuDelete">
+                            <i class="bi bi-trash" aria-hidden="true"></i>
+                            <spring:message code="profile.picture.delete"/>
+                        </button>
+                    </c:if>
+                </div>
             </div>
             <div class="profile-card__info">
                 <h2 class="profile-card__name"><c:out value="${userForename} ${userSurname}"/></h2>
@@ -89,51 +92,47 @@
             </div>
         </div>
 
-
-        <div class="profile-card__section" id="profilePictureSection" style="display: none;">
-            <div id="profilePictureClientError" class="alert alert-danger d-none" role="alert"></div>
-            <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="profileImageTooLargeMsg" htmlEscape="true"/>
-            <spring:message code="validation.pictures.mustBeImage" var="profileMustBeImageMsg" htmlEscape="true"/>
-            <form id="profilePictureForm" method="post" action="<c:url value='/profile/picture'/>" enctype="multipart/form-data">
+        <div id="profilePictureClientError" class="alert alert-danger d-none" role="alert"></div>
+        <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="profileImageTooLargeMsg" htmlEscape="true"/>
+        <spring:message code="validation.pictures.mustBeImage" var="profileMustBeImageMsg" htmlEscape="true"/>
+        <form id="profilePictureForm" method="post" action="<c:url value='/profile/picture'/>" enctype="multipart/form-data" style="display:none;">
+            <%@ include file="includes/csrfHidden.jspf" %>
+            <input type="file" id="profilePictureInput" name="profilePicture" accept="image/*"
+                   data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
+                   data-upload-image-too-large="<c:out value='${profileImageTooLargeMsg}'/>"
+                   data-upload-not-image-msg="<c:out value='${profileMustBeImageMsg}'/>"/>
+        </form>
+        <c:if test="${not empty profilePictureImageId}">
+            <form id="profilePictureDeleteForm" method="post" action="<c:url value='/profile/picture/delete'/>" style="display:none;">
                 <%@ include file="includes/csrfHidden.jspf" %>
-                <div class="mb-3">
-                    <label for="profilePictureInput" class="form-label"><spring:message code="profile.picture.label"/></label>
-                    <input type="file" class="form-control" id="profilePictureInput" name="profilePicture" accept="image/*"
-                           data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
-                           data-upload-image-too-large="<c:out value='${profileImageTooLargeMsg}'/>"
-                           data-upload-not-image-msg="<c:out value='${profileMustBeImageMsg}'/>"/>
-                    <div class="form-text"><spring:message code="profile.picture.hint" arguments="${uploadMaxImageMegabytes}"/></div>
-                </div>
-                <button type="submit" class="btn btn-outline-primary"><spring:message code="profile.picture.submit"/></button>
             </form>
-            <c:if test="${not empty profilePictureImageId}">
-                <form method="post" action="<c:url value='/profile/picture/delete'/>" class="d-inline">
-                    <%@ include file="includes/csrfHidden.jspf" %>
-                    <button type="submit" class="btn btn-outline-danger"><spring:message code="profile.picture.delete"/></button>
-                </form>
-            </c:if>
-        </div>
+        </c:if>
     </div>
 
     <div class="profile-card profile-card--section" id="profileViewSection">
-        <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
+        <div class="profile-card__section-header">
+            <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
+            <button id="editProfileBtn" type="button" class="btn btn-outline-primary btn-sm">
+                <spring:message code="profile.edit"/>
+            </button>
+        </div>
         <hr class="profile-card__divider">
         <div class="profile-fields-grid">
-            <div class="mb-3">
-                <label class="form-label"><spring:message code="profile.forename"/></label>
-                <input type="text" class="form-control" value="<c:out value='${profileForm.forename}'/>" readonly/>
+            <div class="profile-field-view">
+                <span class="profile-section-label"><spring:message code="profile.forename"/></span>
+                <span class="profile-field-value"><c:out value="${profileForm.forename}"/></span>
             </div>
-            <div class="mb-3">
-                <label class="form-label"><spring:message code="profile.surname"/></label>
-                <input type="text" class="form-control" value="<c:out value='${profileForm.surname}'/>" readonly/>
+            <div class="profile-field-view">
+                <span class="profile-section-label"><spring:message code="profile.surname"/></span>
+                <span class="profile-field-value"><c:out value="${profileForm.surname}"/></span>
             </div>
-            <div class="mb-3">
-                <label class="form-label"><spring:message code="profile.phone"/></label>
-                <input type="text" class="form-control" value="<c:out value='${profileForm.phoneNumber}'/>" readonly/>
+            <div class="profile-field-view">
+                <span class="profile-section-label"><spring:message code="profile.phone"/></span>
+                <span class="profile-field-value"><c:out value="${profileForm.phoneNumber}"/></span>
             </div>
-            <div class="mb-3">
-                <label class="form-label"><spring:message code="profile.birthDate"/></label>
-                <input type="text" class="form-control" value="<c:out value='${profileForm.birthDate}'/>" readonly/>
+            <div class="profile-field-view">
+                <span class="profile-section-label"><spring:message code="profile.birthDate"/></span>
+                <span class="profile-field-value"><c:out value="${profileForm.birthDate}"/></span>
             </div>
         </div>
     </div>
@@ -142,6 +141,7 @@
         <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
         <hr class="profile-card__divider">
         <spring:message code="profile.phone.placeholder" var="profilePhonePlaceholder" htmlEscape="true"/>
+        <spring:message code="profile.birthDate.clearSelection" var="profileBirthDateClearLabel" htmlEscape="false"/>
         <form:form modelAttribute="profileForm" method="post" cssClass="needs-validation" novalidate="novalidate"
                    action="${pageContext.request.contextPath}/profile" id="profileForm">
             <%@ include file="includes/csrfHidden.jspf" %>
@@ -168,14 +168,22 @@
                 </div>
                 <div class="mb-3">
                     <label for="profileBirthDateInput" class="form-label"><spring:message code="profile.birthDate"/></label>
-                    <%-- Texto + Flatpickr (mismo stack que búsqueda / reservas); valor ISO yyyy-MM-dd para el servidor --%>
+                    <%-- Flatpickr single date; valor ISO yyyy-MM-dd para el servidor --%>
                     <form:input path="birthDate" id="profileBirthDateInput" cssClass="form-control" autocomplete="bday"
-                                readonly="true" data-max-ymd="${profileBirthDateMax}"/>
+                                readonly="true" data-max-ymd="${profileBirthDateMax}"
+                                data-clear-label="${profileBirthDateClearLabel}"/>
                     <form:errors path="birthDate" cssClass="text-danger small d-block" element="div"/>
-                    <div class="form-text"><spring:message code="profile.birthDate.hint"/></div>
                 </div>
             </div>
         </form:form>
+        <div class="profile-card__form-actions">
+            <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary">
+                <spring:message code="common.cancel"/>
+            </button>
+            <button type="submit" form="profileForm" class="btn btn-primary">
+                <spring:message code="profile.save"/>
+            </button>
+        </div>
     </div>
 
     <div class="profile-card profile-card--section">
@@ -188,33 +196,69 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const editProfileBtn = document.getElementById('editProfileBtn');
-    const cancelEditBtn = document.getElementById('cancelEditBtn');
-    const editingActions = document.getElementById('editingActions');
-    const profileViewSection = document.getElementById('profileViewSection');
-    const profileEditingSection = document.getElementById('profileEditingSection');
-    const profilePictureSection = document.getElementById('profilePictureSection');
-
-    // Mostrar modo lectura por defecto
-    editProfileBtn.style.display = 'inline-block';
+    var editProfileBtn = document.getElementById('editProfileBtn');
+    var cancelEditBtn = document.getElementById('cancelEditBtn');
+    var profileViewSection = document.getElementById('profileViewSection');
+    var profileEditingSection = document.getElementById('profileEditingSection');
+    var avatarEditBtn = document.getElementById('avatarEditBtn');
+    var avatarMenu = document.getElementById('avatarMenu');
+    var avatarMenuUpload = document.getElementById('avatarMenuUpload');
+    var avatarMenuDelete = document.getElementById('avatarMenuDelete');
+    var profilePictureInput = document.getElementById('profilePictureInput');
+    var profilePictureForm = document.getElementById('profilePictureForm');
+    var profilePictureDeleteForm = document.getElementById('profilePictureDeleteForm');
 
     editProfileBtn.addEventListener('click', function() {
-        // Entrar en modo edición
-        editProfileBtn.style.display = 'none';
-        editingActions.style.display = 'flex';
         profileViewSection.style.display = 'none';
         profileEditingSection.style.display = 'block';
-        profilePictureSection.style.display = 'block';
     });
 
     cancelEditBtn.addEventListener('click', function() {
-        // Volver a modo lectura
-        editProfileBtn.style.display = 'inline-block';
-        editingActions.style.display = 'none';
         profileViewSection.style.display = 'block';
         profileEditingSection.style.display = 'none';
-        profilePictureSection.style.display = 'none';
     });
+
+    if (avatarEditBtn && avatarMenu) {
+        avatarEditBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = avatarMenu.classList.contains('is-open');
+            avatarMenu.classList.toggle('is-open', !isOpen);
+            avatarMenu.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', function() {
+            avatarMenu.classList.remove('is-open');
+            avatarMenu.setAttribute('aria-hidden', 'true');
+        });
+
+        if (avatarMenuUpload && profilePictureInput && profilePictureForm) {
+            avatarMenuUpload.addEventListener('click', function(e) {
+                e.stopPropagation();
+                avatarMenu.classList.remove('is-open');
+                avatarMenu.setAttribute('aria-hidden', 'true');
+                profilePictureInput.click();
+            });
+
+            profilePictureInput.addEventListener('change', function() {
+                setTimeout(function() {
+                    var errEl = document.getElementById('profilePictureClientError');
+                    var hasError = errEl && !errEl.classList.contains('d-none');
+                    if (!hasError && profilePictureInput.files && profilePictureInput.files.length > 0) {
+                        profilePictureForm.submit();
+                    }
+                }, 0);
+            });
+        }
+
+        if (avatarMenuDelete && profilePictureDeleteForm) {
+            avatarMenuDelete.addEventListener('click', function(e) {
+                e.stopPropagation();
+                avatarMenu.classList.remove('is-open');
+                avatarMenu.setAttribute('aria-hidden', 'true');
+                profilePictureDeleteForm.submit();
+            });
+        }
+    }
 });
 </script>
 
