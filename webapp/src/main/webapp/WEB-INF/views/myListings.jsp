@@ -11,10 +11,14 @@
     <body class="has-fixed-navbar">
         <ryden:navbar/>
         <div class="container pt-5 pb-4">
+            <spring:message code="myListings.heading" var="myListingsLabel"/>
+            <ryden:breadcrumbTrail currentLabel="${myListingsLabel}"/>
             <section class="reservation-management-header mt-4 pt-5 mb-4">
                 <h1 class="h3 fw-bold mb-2"><spring:message code="myListings.heading"/></h1>
                 <p class="text-secondary mb-0"><spring:message code="myListings.subheading"/></p>
             </section>
+
+            <c:set var="hasActiveFilters" value="${not empty param.q or not empty param.listingStatus}"/>
 
             <c:url var="myListingsBaseUrl" value="/my-listings">
                 <c:if test="${not empty param.q}">
@@ -24,64 +28,55 @@
                     <c:param name="listingStatus"><c:out value="${ownerListingStatusFilter}"/></c:param>
                 </c:if>
             </c:url>
-            <spring:message code="validation.dropdown.invalid" var="myListingsDropdownInvalid" htmlEscape="true"/>
-            <form id="myListingsFilterForm" class="row g-2 align-items-end mb-4" method="get" action="${pageContext.request.contextPath}/my-listings"
-                  data-ryden-dropdown-invalid="<c:out value='${myListingsDropdownInvalid}'/>">
-                <div class="col-md-5 col-lg-4">
-                    <label class="form-label small text-secondary mb-1" for="myListings_q"><spring:message code="myListings.filter.query"/></label>
-                    <input type="search" class="form-control" id="myListings_q" name="q" value="<c:out value='${param.q}'/>"
-                           placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
-                </div>
-                <div class="col-md-4 col-lg-3">
-                    <label class="form-label small text-secondary mb-1" for="myListings_status"><spring:message code="myListings.filter.status"/></label>
-                    <select class="form-select" id="myListings_status" name="listingStatus">
-                        <option value="" ${empty ownerListingStatusFilter ? 'selected="selected"' : ''}><spring:message code="myListings.filter.status.any"/></option>
-                        <option value="active" ${ownerListingStatusFilter eq 'active' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.ACTIVE"/></option>
-                        <option value="paused" ${ownerListingStatusFilter eq 'paused' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.PAUSED"/></option>
-                        <option value="finished" ${ownerListingStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.FINISHED"/></option>
-                    </select>
-                </div>
-                <div class="col-auto d-flex flex-wrap gap-2">
-                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                    <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
-                </div>
-            </form>
 
-            <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <h2 class="h5 mb-0">
-                    <c:choose>
-                        <c:when test="${myListingsPage.totalItems > 0}">
-                            <spring:message code="myListings.resultsRange"
-                                            arguments="${myListingsPage.firstItemNumber},${myListingsPage.lastItemNumber},${myListingsPage.totalItems}"/>
-                        </c:when>
-                        <c:otherwise>
-                            <spring:message code="myListings.resultsCount" arguments="0"/>
-                        </c:otherwise>
-                    </c:choose>
-                </h2>
-            </div>
+            <c:if test="${not empty results or hasActiveFilters}">
+                <spring:message code="validation.dropdown.invalid" var="myListingsDropdownInvalid" htmlEscape="true"/>
+                <form id="myListingsFilterForm" class="row g-2 align-items-end mb-4" method="get" action="${pageContext.request.contextPath}/my-listings"
+                      data-ryden-dropdown-invalid="<c:out value='${myListingsDropdownInvalid}'/>">
+                    <div class="col-md-5 col-lg-4">
+                        <label class="form-label small text-secondary mb-1" for="myListings_q"><spring:message code="myListings.filter.query"/></label>
+                        <input type="search" class="form-control" id="myListings_q" name="q" value="<c:out value='${param.q}'/>"
+                               placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                    </div>
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label small text-secondary mb-1" for="myListings_status"><spring:message code="myListings.filter.status"/></label>
+                        <select class="form-select" id="myListings_status" name="listingStatus">
+                            <option value="" ${empty ownerListingStatusFilter ? 'selected="selected"' : ''}><spring:message code="myListings.filter.status.any"/></option>
+                            <option value="active" ${ownerListingStatusFilter eq 'active' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.ACTIVE"/></option>
+                            <option value="paused" ${ownerListingStatusFilter eq 'paused' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.PAUSED"/></option>
+                            <option value="finished" ${ownerListingStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.FINISHED"/></option>
+                        </select>
+                    </div>
+                    <div class="col-auto d-flex flex-wrap gap-2">
+                        <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                        <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                    </div>
+                </form>
 
-            <c:url var="publishCarUrl" value="/publish-car"/>
+                <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <h2 class="h5 mb-0">
+                        <c:choose>
+                            <c:when test="${myListingsPage.totalItems > 0}">
+                                <spring:message code="myListings.resultsRange"
+                                                arguments="${myListingsPage.firstItemNumber},${myListingsPage.lastItemNumber},${myListingsPage.totalItems}"/>
+                            </c:when>
+                            <c:otherwise>
+                                <spring:message code="myListings.resultsCount" arguments="0"/>
+                            </c:otherwise>
+                        </c:choose>
+                    </h2>
+                </div>
+            </c:if>
 
             <c:choose>
                 <c:when test="${empty results}">
-                    <spring:message var="myListings.emptyTitle" code="myListings.empty.title"/>
-                    <spring:message var="myListings.emptyDescription" code="myListings.empty.description"/>
-                    <spring:message var="homeCtaButton" code="home.cta.button"/>
-
                     <div class="search-empty-state text-center">
-                        <div class="search-empty-state__icon" aria-hidden="true">
-                            <i class="bi bi-car-front"></i>
-                        </div>
                         <h2 class="h4 fw-semibold mb-2">
-                            <spring:message code="myListings.empty.title"/>
+                            <spring:message code="myListings.noResults.title"/>
                         </h2>
-                        <p class="text-secondary mb-0 search-empty-state__text">
-                            <spring:message code="myListings.empty.description"/>
-                        </p>
                         <div class="search-empty-state__actions mt-4">
-                            <a href="<c:out value='${publishCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
-                                <spring:message code="home.cta.button"/>
+                            <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary">
+                                <spring:message code="search.filters.clear"/>
                             </a>
                         </div>
                     </div>

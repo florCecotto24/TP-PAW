@@ -12,6 +12,8 @@
 <ryden:navbar/>
 
 <main class="container pt-5 pb-4">
+    <spring:message code="myReservations.heading" var="myReservationsLabel"/>
+    <ryden:breadcrumbTrail currentLabel="${myReservationsLabel}"/>
     <section class="reservation-management-header mt-4 pt-5 mb-4">
         <h1 class="h3 fw-bold mb-2"><spring:message code="myReservations.heading"/></h1>
         <p class="text-secondary mb-0"><spring:message code="myReservations.subheading"/></p>

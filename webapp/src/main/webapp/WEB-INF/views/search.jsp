@@ -126,6 +126,7 @@
 
                                         <c:url var="searchCarDetailHref" value="/car-detail">
                                             <c:param name="listingId"><c:out value="${car.listingId}"/></c:param>
+                                            <c:param name="from" value="search"/>
                                         </c:url>
                                         <ryden:carCard
                                                 model="${car.model}"
