@@ -58,10 +58,13 @@
                                            data-upload-receipt-too-large="<c:out value='${paymentReceiptTooLargeMsg}'/>"
                                            data-invalid-file-msg="<c:out value='${paymentInvalidFileMsg}'/>"/>
                                 </label>
-                                <button type="submit" class="btn btn-sm btn-primary flex-shrink-0 d-inline-flex align-items-center justify-content-center px-2"
+                                <button type="submit" id="paymentReceiptSubmit"
+                                        class="btn btn-sm btn-primary flex-shrink-0 d-inline-flex align-items-center justify-content-center gap-1 px-2"
                                         aria-label="<c:out value='${paymentReceiptUploadAria}'/>"
-                                        title="<c:out value='${paymentReceiptUploadAria}'/>">
+                                        title="<c:out value='${paymentReceiptUploadAria}'/>"
+                                        disabled>
                                     <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                                    <spring:message code="myReservationDetail.payment.submit"/>
                                 </button>
                             </div>
                             <div id="paymentReceiptClientErr" class="text-danger small d-none mt-2" role="alert"></div>
@@ -94,6 +97,7 @@
         var input = document.getElementById('paymentReceipt');
         var err = document.getElementById('paymentReceiptClientErr');
         var fileText = document.getElementById('paymentReceiptFileText');
+        var submitBtn = document.getElementById('paymentReceiptSubmit');
         if (!form || !input || !fileText) return;
         var defaultHint = (fileText.textContent || '').trim();
         function maxBytes() {
@@ -125,9 +129,11 @@
             if (f) {
                 fileText.textContent = f.name;
                 fileText.classList.remove('text-muted');
+                if (submitBtn) { submitBtn.disabled = false; }
             } else {
                 fileText.textContent = defaultHint;
                 fileText.classList.add('text-muted');
+                if (submitBtn) { submitBtn.disabled = true; }
             }
         });
         form.addEventListener('submit', function (e) {

@@ -812,16 +812,27 @@ public class ListingServiceImpl implements ListingService {
     @Override
     @Transactional(readOnly = true)
     public String formatFullPickupLocation(final Listing listing) {
-        final String base = formatPublicPickupLocation(listing);
+        final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
         final Optional<String> numberOpt = listing.getStartPointNumber();
-        if (numberOpt.isEmpty() || numberOpt.get().isBlank()) {
-            return base;
+        final String streetWithNumber;
+        if (numberOpt.isPresent() && !numberOpt.get().isBlank()) {
+            streetWithNumber = street.isBlank() ? numberOpt.get().trim() : street + " " + numberOpt.get().trim();
+        } else {
+            streetWithNumber = street;
         }
-        final String n = numberOpt.get().trim();
-        if (base.isBlank()) {
-            return n;
+        if (listing.getNeighborhoodId().isEmpty()) {
+            return streetWithNumber;
         }
-        return base + " " + n;
+        final String neighborhoodName = locationService.findNeighborhoodById(listing.getNeighborhoodId().get())
+                .map(Neighborhood::getName)
+                .orElse("");
+        if (neighborhoodName.isBlank()) {
+            return streetWithNumber;
+        }
+        if (streetWithNumber.isBlank()) {
+            return neighborhoodName.trim();
+        }
+        return streetWithNumber + ", " + neighborhoodName.trim();
     }
 
     private static boolean riderSeesSensitiveAddressNumbers(final Reservation reservation) {
