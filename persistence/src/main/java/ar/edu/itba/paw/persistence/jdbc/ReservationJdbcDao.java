@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -333,5 +334,141 @@ public class ReservationJdbcDao implements ReservationDao {
                         + "ORDER BY start_date ASC",
                 RESERVATION_ROW_MAPPER,
                 listingId);
+    }
+
+    @Override
+    public Page<ReservationCard> getListingReservationCards(
+            final long ownerId,
+            final long listingId,
+            final int page,
+            final int pageSize,
+            final String statusFilter) {
+        final List<Object> countArgs = new ArrayList<>();
+        countArgs.add(ownerId);
+        countArgs.add(listingId);
+        final StringBuilder countSql = new StringBuilder(
+                "SELECT COUNT(*) FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? ");
+        appendReservationStatusFilter(countSql, countArgs, statusFilter, "r.status");
+        final Long total = jdbcTemplate.queryForObject(countSql.toString(), Long.class, countArgs.toArray());
+        final int offset = page * pageSize;
+        final List<Object> listArgs = new ArrayList<>();
+        listArgs.add(ownerId);
+        listArgs.add(listingId);
+        final StringBuilder listSql = new StringBuilder(
+                "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
+                        + "c.brand, c.model, l.day_price, "
+                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                        + "FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? ");
+        appendReservationStatusFilter(listSql, listArgs, statusFilter, "r.status");
+        listSql.append("ORDER BY r.created_at DESC LIMIT ? OFFSET ?");
+        listArgs.add(pageSize);
+        listArgs.add(offset);
+        final List<ReservationCard> content = jdbcTemplate.query(
+                listSql.toString(),
+                RESERVATION_CARD_ROW_MAPPER,
+                listArgs.toArray());
+        return new Page<>(content, page, pageSize, total != null ? total : 0L);
+    }
+
+    @Override
+    public BigDecimal sumListingRevenueByStatuses(
+            final long ownerId,
+            final long listingId,
+            final Collection<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        final List<String> statusList = new ArrayList<>(statuses);
+        final String placeholders = String.join(",", Collections.nCopies(statusList.size(), "?"));
+        final List<Object> args = new ArrayList<>();
+        args.add(ownerId);
+        args.add(listingId);
+        statusList.forEach(args::add);
+        final BigDecimal result = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(r.total_price), 0) FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? "
+                        + "AND LOWER(r.status) IN (" + placeholders + ")",
+                BigDecimal.class,
+                args.toArray());
+        return result != null ? result : BigDecimal.ZERO;
+    }
+
+    @Override
+    public long countListingReservationsCreatedBetween(
+            final long ownerId,
+            final long listingId,
+            final OffsetDateTime from,
+            final OffsetDateTime until) {
+        final Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? "
+                        + "AND r.created_at >= ? AND r.created_at < ?",
+                Long.class,
+                ownerId,
+                listingId,
+                JdbcDateTimeUtils.toTimestamp(from),
+                JdbcDateTimeUtils.toTimestamp(until));
+        return count != null ? count : 0L;
+    }
+
+    @Override
+    public Optional<OffsetDateTime> findListingNextActiveReservationDate(
+            final long ownerId,
+            final long listingId,
+            final OffsetDateTime after) {
+        return jdbcTemplate.query(
+                "SELECT r.start_date FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? "
+                        + "AND LOWER(r.status) IN ('accepted', 'started') "
+                        + "AND r.start_date > ? "
+                        + "ORDER BY r.start_date ASC LIMIT 1",
+                (rs, rn) -> JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"),
+                ownerId,
+                listingId,
+                JdbcDateTimeUtils.toTimestamp(after))
+                .stream().findFirst();
+    }
+
+    @Override
+    public List<Reservation> findListingFinishedReservations(final long ownerId, final long listingId) {
+        return jdbcTemplate.query(
+                "SELECT r.* FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? "
+                        + "AND LOWER(r.status) = 'finished'",
+                RESERVATION_ROW_MAPPER,
+                ownerId,
+                listingId);
+    }
+
+    @Override
+    public Map<String, Long> countListingReservationsByStatus(final long ownerId, final long listingId) {
+        final List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT LOWER(r.status) AS status, COUNT(*) AS cnt "
+                        + "FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = ? AND r.listing_id = ? "
+                        + "GROUP BY LOWER(r.status)",
+                ownerId, listingId);
+        final Map<String, Long> result = new LinkedHashMap<>();
+        for (final Map<String, Object> row : rows) {
+            result.put((String) row.get("status"), ((Number) row.get("cnt")).longValue());
+        }
+        return result;
     }
 }

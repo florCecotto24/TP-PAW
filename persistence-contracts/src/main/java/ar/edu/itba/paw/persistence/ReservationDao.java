@@ -4,7 +4,10 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+
+
 
 import ar.edu.itba.paw.models.Page;
 import ar.edu.itba.paw.models.Reservation;
@@ -46,4 +49,16 @@ public interface ReservationDao {
     int updateReservationStatus(long reservationId, String status);
 
     List<Reservation> getListingActiveReservations(long listingId);
+
+    Page<ReservationCard> getListingReservationCards(long ownerId, long listingId, int page, int pageSize, String statusFilter);
+
+    Map<String, Long> countListingReservationsByStatus(long ownerId, long listingId);
+
+    BigDecimal sumListingRevenueByStatuses(long ownerId, long listingId, Collection<String> statuses);
+
+    long countListingReservationsCreatedBetween(long ownerId, long listingId, OffsetDateTime from, OffsetDateTime until);
+
+    Optional<OffsetDateTime> findListingNextActiveReservationDate(long ownerId, long listingId, OffsetDateTime after);
+
+    List<Reservation> findListingFinishedReservations(long ownerId, long listingId);
 }

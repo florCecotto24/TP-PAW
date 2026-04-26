@@ -4,10 +4,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -519,5 +522,61 @@ public class ReservationServiceImpl implements ReservationService {
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReservationCard> getListingReservationCards(
+            final long ownerId,
+            final long listingId,
+            final int page,
+            final int pageSize,
+            final String statusFilter) {
+        return reservationDao.getListingReservationCards(ownerId, listingId, page, pageSize, statusFilter);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> countListingReservationsByStatus(final long ownerId, final long listingId) {
+        return reservationDao.countListingReservationsByStatus(ownerId, listingId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getListingTotalEarnings(final long ownerId, final long listingId) {
+        return reservationDao.sumListingRevenueByStatuses(
+                ownerId, listingId, Arrays.asList("accepted", "started", "finished"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getListingPendingEarnings(final long ownerId, final long listingId) {
+        return reservationDao.sumListingRevenueByStatuses(
+                ownerId, listingId, Arrays.asList("accepted", "started"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getListingTotalDaysRented(final long ownerId, final long listingId) {
+        return reservationDao.findListingFinishedReservations(ownerId, listingId)
+                .stream()
+                .mapToLong(r -> calculateBillableDays(r.getStartDate(), r.getEndDate()))
+                .sum();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getListingReservationsThisMonth(final long ownerId, final long listingId) {
+        final YearMonth current = YearMonth.now(ZoneOffset.UTC);
+        final OffsetDateTime monthStart = current.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        final OffsetDateTime nextMonthStart = current.plusMonths(1).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        return reservationDao.countListingReservationsCreatedBetween(ownerId, listingId, monthStart, nextMonthStart);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OffsetDateTime> getListingNextReservationDate(final long ownerId, final long listingId) {
+        return reservationDao.findListingNextActiveReservationDate(
+                ownerId, listingId, OffsetDateTime.now(ZoneOffset.UTC));
     }
 }
