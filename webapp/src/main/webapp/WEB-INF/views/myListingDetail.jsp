@@ -30,7 +30,16 @@
         <div class="col-lg-8">
             <article class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4">
-                    <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.carSummary.title"/></h2>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingDetail.carSummary.title"/></h2>
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm"
+                                id="toggleEditBtn"
+                                onclick="toggleEditForm()">
+                            <i class="bi bi-pencil me-1" aria-hidden="true"></i>
+                            <spring:message code="myListingDetail.actions.editListing"/>
+                        </button>
+                    </div>
                     <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
                         <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
                             <c:choose>
@@ -66,15 +75,6 @@
                         </div>
                     </div>
 
-                    <div class="mt-3 pt-2 d-flex justify-content-end">
-                        <button type="button"
-                                class="btn btn-outline-primary"
-                                id="toggleEditBtn"
-                                onclick="toggleEditForm()">
-                            <i class="bi bi-pencil me-1" aria-hidden="true"></i>
-                            <spring:message code="myListingDetail.actions.editListing"/>
-                        </button>
-                    </div>
                 </div>
             </article>
 
@@ -235,6 +235,119 @@
             </article>
         </div>
     </div>
+
+    <c:url var="listingReservationsUrl" value="/my-listings/${listing.id}/reservations"/>
+    <article class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingReservations.dashboard.title"/></h2>
+                <c:if test="${reservationTotal > 0}">
+                    <a href="<c:out value='${listingReservationsUrl}'/>" class="btn btn-outline-primary btn-sm">
+                        <spring:message code="myListingReservations.dashboard.viewAll"/>
+                    </a>
+                </c:if>
+            </div>
+
+            <%-- Fila 1: stats de estado --%>
+            <div class="row g-2 mb-4">
+                <div class="col-6 col-sm-4 col-lg-2">
+                    <div class="p-3 rounded-3 text-center bg-body-tertiary border">
+                        <div class="fw-bold fs-4 mb-0"><c:out value="${reservationTotal}"/></div>
+                        <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.total"/></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-lg-2">
+                    <div class="p-3 rounded-3 text-center" style="background:rgba(255,193,7,.12);">
+                        <div class="fw-bold fs-4 mb-0 text-warning-emphasis"><c:out value="${reservationStatusCounts['pending'] != null ? reservationStatusCounts['pending'] : 0}"/></div>
+                        <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.pending"/></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-lg-2">
+                    <div class="p-3 rounded-3 text-center" style="background:rgba(25,135,84,.1);">
+                        <div class="fw-bold fs-4 mb-0 text-success"><c:out value="${reservationStatusCounts['accepted'] != null ? reservationStatusCounts['accepted'] : 0}"/></div>
+                        <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.accepted"/></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-lg-2">
+                    <div class="p-3 rounded-3 text-center" style="background:rgba(13,202,240,.1);">
+                        <div class="fw-bold fs-4 mb-0 text-info"><c:out value="${reservationStatusCounts['started'] != null ? reservationStatusCounts['started'] : 0}"/></div>
+                        <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.started"/></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-lg-2">
+                    <div class="p-3 rounded-3 text-center" style="background:rgba(220,53,69,.1);">
+                        <div class="fw-bold fs-4 mb-0 text-danger"><c:out value="${reservationStatusCounts['cancelled'] != null ? reservationStatusCounts['cancelled'] : 0}"/></div>
+                        <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.cancelled"/></div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-lg-2">
+                    <div class="p-3 rounded-3 text-center" style="background:rgba(108,117,125,.1);">
+                        <div class="fw-bold fs-4 mb-0 text-secondary"><c:out value="${reservationStatusCounts['finished'] != null ? reservationStatusCounts['finished'] : 0}"/></div>
+                        <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.finished"/></div>
+                    </div>
+                </div>
+            </div>
+
+            <%-- Fila 2: stats financieras y de actividad --%>
+            <div class="row g-3 pt-2 border-top">
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                            <spring:message code="myListingReservations.dashboard.earnings.total"/>
+                        </span>
+                        <span class="fw-bold fs-5 text-primary">$<c:out value="${listingTotalEarnings}"/></span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                            <spring:message code="myListingReservations.dashboard.earnings.pending"/>
+                        </span>
+                        <span class="fw-bold fs-5 text-warning-emphasis">$<c:out value="${listingPendingEarnings}"/></span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                            <spring:message code="myListingReservations.dashboard.daysRented"/>
+                        </span>
+                        <span class="fw-bold fs-5"><c:out value="${listingTotalDaysRented}"/></span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                            <spring:message code="myListingReservations.dashboard.thisMonth"/>
+                        </span>
+                        <span class="fw-bold fs-5"><c:out value="${listingReservationsThisMonth}"/></span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                            <spring:message code="myListingReservations.dashboard.cancellationRate"/>
+                        </span>
+                        <span class="fw-bold fs-5"><c:out value="${listingCancellationRate}"/></span>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="d-flex flex-column gap-1">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                            <spring:message code="myListingReservations.dashboard.nextReservation"/>
+                        </span>
+                        <c:choose>
+                            <c:when test="${not empty listingNextReservationDisplay}">
+                                <span class="fw-bold fs-5 text-success"><c:out value="${listingNextReservationDisplay}"/></span>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="text-secondary fst-italic small mt-1"><spring:message code="myListingReservations.dashboard.nextReservation.none"/></span>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </article>
 </main>
 <%@include file="footer.jsp"%>
 

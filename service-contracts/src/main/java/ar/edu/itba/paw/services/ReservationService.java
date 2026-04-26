@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.Page;
@@ -84,4 +85,18 @@ public interface ReservationService {
 
     /** Hours to upload payment proof after creating a pending reservation ({@code app.reservation.payment-proof-deadline-hours}). */
     int getConfiguredPaymentProofDeadlineHours();
+
+    Page<ReservationCard> getListingReservationCards(long ownerId, long listingId, int page, int pageSize, String statusFilter);
+
+    Map<String, Long> countListingReservationsByStatus(long ownerId, long listingId);
+
+    BigDecimal getListingTotalEarnings(long ownerId, long listingId);
+
+    BigDecimal getListingPendingEarnings(long ownerId, long listingId);
+
+    long getListingTotalDaysRented(long ownerId, long listingId);
+
+    long getListingReservationsThisMonth(long ownerId, long listingId);
+
+    Optional<OffsetDateTime> getListingNextReservationDate(long ownerId, long listingId);
 }

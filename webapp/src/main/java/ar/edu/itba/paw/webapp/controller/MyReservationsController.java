@@ -49,8 +49,6 @@ import java.util.stream.Collectors;
 public class MyReservationsController {
 
     private static final int PAGE_SIZE = 8;
-    private static final String TAB_RIDER = "rider";
-    private static final String TAB_OWNER = "owner";
     private static final Set<String> RESERVATION_STATUS_WHITELIST =
             Set.of("pending", "accepted", "started", "cancelled", "finished");
 
@@ -74,20 +72,13 @@ public class MyReservationsController {
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
             @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
-            @RequestParam(defaultValue = TAB_RIDER) final String tab,
             @RequestParam(defaultValue = "0") int riderPage,
-            @RequestParam(defaultValue = "0") int ownerPage,
             @RequestParam(required = false) final String riderStatus,
-            @RequestParam(required = false) final String ownerStatus,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final String selectedTab = normalizeReservationsTab(tab);
         riderPage = Math.max(0, riderPage);
-        ownerPage = Math.max(0, ownerPage);
         final String riderStatusFilter = normalizeReservationStatusParam(riderStatus);
-        final String ownerStatusFilter = normalizeReservationStatusParam(ownerStatus);
 
-        // Rider reservations (reservations made BY the user)
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(
                 me.getId(), riderPage, PAGE_SIZE, riderStatusFilter);
         final Locale locale = LocaleContextHolder.getLocale();
@@ -95,25 +86,13 @@ public class MyReservationsController {
                 .map(card -> toReservationCardView(card, locale))
                 .collect(Collectors.toList());
 
-        // Owner reservations (reservations made ON the user's cars)
-        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(
-                me.getId(), ownerPage, PAGE_SIZE, ownerStatusFilter);
-        final List<ReservationCardView> ownerReservations = ownerResultPage.getContent().stream()
-                .map(card -> toReservationCardView(card, locale))
-                .collect(Collectors.toList());
-
         final int lastRiderPage = riderResultPage.getTotalPages() - 1;
-        final int lastOwnerPage = ownerResultPage.getTotalPages() - 1;
-        if (riderPage > lastRiderPage || ownerPage > lastOwnerPage) {
-            final UriComponentsBuilder uriBuilder = UriComponentsBuilder
-                    .fromHttpRequest(new ServletServerHttpRequest(request));
-            if (riderPage > lastRiderPage) {
-                uriBuilder.replaceQueryParam("riderPage", lastRiderPage);
-            }
-            if (ownerPage > lastOwnerPage) {
-                uriBuilder.replaceQueryParam("ownerPage", lastOwnerPage);
-            }
-            final RedirectView redirectView = new RedirectView(uriBuilder.build().toUriString());
+        if (riderPage > lastRiderPage) {
+            final RedirectView redirectView = new RedirectView(
+                    UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
+                            .replaceQueryParam("riderPage", lastRiderPage)
+                            .build()
+                            .toUriString());
             redirectView.setExposeModelAttributes(false);
             return new ModelAndView(redirectView);
         }
@@ -121,12 +100,8 @@ public class MyReservationsController {
         final ModelAndView mav = new ModelAndView("myReservations");
         mav.addObject("riderReservations", riderReservations);
         mav.addObject("riderReservationsPage", riderResultPage);
-        mav.addObject("ownerReservations", ownerReservations);
-        mav.addObject("ownerReservationsPage", ownerResultPage);
-        mav.addObject("selectedReservationsTab", selectedTab);
         mav.addObject("activeTab", "my-reservations");
         mav.addObject("riderStatusFilter", riderStatusFilter);
-        mav.addObject("ownerStatusFilter", ownerStatusFilter);
         return mav;
     }
 
@@ -136,13 +111,6 @@ public class MyReservationsController {
         }
         final String t = raw.trim().toLowerCase();
         return RESERVATION_STATUS_WHITELIST.contains(t) ? t : null;
-    }
-
-    private static String normalizeReservationsTab(final String tab) {
-        if (TAB_OWNER.equals(tab)) {
-            return TAB_OWNER;
-        }
-        return TAB_RIDER;
     }
 
     @GetMapping("/my-reservations/{reservationId}")
