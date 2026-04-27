@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -29,13 +30,14 @@ import org.springframework.web.servlet.ModelAndView;
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.RiderPickupLeadTime;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
@@ -43,7 +45,7 @@ import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.PublishCarPictureSessionStash;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
-import ar.edu.itba.paw.webapp.validation.MultipartImageValidation;
+import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 @Controller
 @RequestMapping("/publish-car")
@@ -111,7 +113,7 @@ public class PublishCarFormController {
 
     @GetMapping
     public ModelAndView index(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpSession session) {
         pictureStash.clear(session);
         final PublishCarForm form = new PublishCarForm();
@@ -136,7 +138,7 @@ public class PublishCarFormController {
 
     @GetMapping("/retained-picture/{token}")
     public ResponseEntity<byte[]> retainedPicture(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpSession session,
             @PathVariable final String token) {
         WebAuthUtils.requireUser(currentUser);
@@ -159,7 +161,7 @@ public class PublishCarFormController {
 
     @PostMapping("/retained-picture/{token}/remove")
     public ResponseEntity<Void> removeRetainedPicture(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpSession session,
             @PathVariable final String token) {
         WebAuthUtils.requireUser(currentUser);
@@ -171,7 +173,7 @@ public class PublishCarFormController {
 
     @PostMapping
     public ModelAndView publish(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpSession session,
             @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
@@ -183,6 +185,7 @@ public class PublishCarFormController {
         publishCarFormValidator.validate(form, errors);
         listingNeighborhoodFormValidator.validate(form, errors);
         validatePublishAvailabilityRiderLead(form, errors);
+        validatePublishAvailabilityTotalDays(form, errors);
         if (errors.hasErrors()) {
             return publishCarFormView(currentUser, session, form);
         }
@@ -295,6 +298,29 @@ public class PublishCarFormController {
         }
     }
 
+    private void validatePublishAvailabilityTotalDays(final PublishCarForm form, final BindingResult errors) {
+        final int maxDays = listingService.getConfiguredMaxAvailabilityTotalDays();
+        long totalInclusive = 0L;
+        final List<PublishCarForm.AvailabilityRow> rows = form.getAvailabilityRows();
+        for (int i = 0; i < rows.size(); i++) {
+            final LocalDate from = rows.get(i).getFrom();
+            final LocalDate until = rows.get(i).getUntil();
+            if (from == null || until == null) {
+                continue;
+            }
+            if (until.isBefore(from)) {
+                continue;
+            }
+            totalInclusive += ChronoUnit.DAYS.between(from, until) + 1;
+        }
+        if (totalInclusive > maxDays) {
+            errors.reject(
+                    "validation.availabilityRows.totalMaxDays",
+                    new Object[] { maxDays },
+                    localeMessages.msg("validation.availabilityRows.totalMaxDays", maxDays));
+        }
+    }
+
     private ModelAndView publishCarFormView(
             final User currentUser,
             final HttpSession session,
@@ -316,6 +342,7 @@ public class PublishCarFormController {
                 pickup, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
         mav.addObject("publishMinAvailabilityFrom", publishMinAvailabilityFrom.toString());
         mav.addObject("pickupLeadHours", pickupLeadHours);
+        mav.addObject("maxAvailabilityTotalDays", listingService.getConfiguredMaxAvailabilityTotalDays());
         return mav;
     }
 

@@ -17,10 +17,10 @@ import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.multipart.MultipartFile;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
-import ar.edu.itba.paw.webapp.validation.NoPunctuation;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 
 @CheckOutAfterCheckIn
 public class PublishCarForm implements ListingTimeWindow {

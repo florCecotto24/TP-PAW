@@ -28,6 +28,18 @@
     <c:if test="${not empty paymentApprovalMessage}">
         <div class="alert alert-success" role="alert"><c:out value="${paymentApprovalMessage}"/></div>
     </c:if>
+    <c:if test="${not empty carReturnedMessage}">
+        <div class="alert alert-success" role="alert"><c:out value="${carReturnedMessage}"/></div>
+    </c:if>
+    <c:if test="${not empty carReturnedError}">
+        <div class="alert alert-danger" role="alert"><c:out value="${carReturnedError}"/></div>
+    </c:if>
+    <c:if test="${not empty reviewMessage}">
+        <div class="alert alert-success" role="alert"><c:out value="${reviewMessage}"/></div>
+    </c:if>
+    <c:if test="${not empty reviewError}">
+        <div class="alert alert-danger" role="alert"><c:out value="${reviewError}"/></div>
+    </c:if>
 
     <section class="reservation-management-header mb-4">
                         <h1 class="h3 fw-bold mb-2"><spring:message code="myReservationDetail.heading"/></h1>
@@ -45,7 +57,7 @@
                             <p class="mb-3"><span class="fw-semibold"><spring:message code="myReservationDetail.payment.deadline"/></span>
                                 <c:out value="${paymentProofDeadlineDisplay}"/></p>
                         </c:if>
-                        <spring:message code="validation.paymentReceipt.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="paymentReceiptTooLargeMsg"/>
+                        <spring:message code="validation.paymentReceipt.fileTooLarge" arguments="${uploadMaxPaymentReceiptMegabytes}" var="paymentReceiptTooLargeMsg"/>
                         <spring:message code="myReservationDetail.payment.invalidFile" var="paymentInvalidFileMsg"/>
                         <spring:message code="reservationConfirmation.paymentReceipt.chooseHint" var="paymentReceiptChooseHint"/>
                         <spring:message code="reservationConfirmation.paymentReceipt.uploadAria" var="paymentReceiptUploadAria"/>
@@ -61,7 +73,7 @@
                                            accept="image/*,application/pdf"
                                            aria-label="<c:out value='${paymentReceiptChooseHint}'/>"
                                            title="<c:out value='${paymentReceiptChooseHint}'/>"
-                                           data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
+                                           data-upload-max-image-bytes="<c:out value='${uploadMaxPaymentReceiptBytes}'/>"
                                            data-upload-receipt-too-large="<c:out value='${paymentReceiptTooLargeMsg}'/>"
                                            data-invalid-file-msg="<c:out value='${paymentInvalidFileMsg}'/>"/>
                                 </label>
@@ -76,7 +88,7 @@
                             </div>
                             <div id="paymentReceiptClientErr" class="text-danger small d-none mt-2" role="alert"></div>
                         </form>
-                        <p class="small text-muted mt-2 mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxImageMegabytes}"/></p>
+                        <p class="small text-muted mt-2 mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxPaymentReceiptMegabytes}"/></p>
                     </div>
                 </article>
             </c:if>
@@ -86,7 +98,7 @@
                     <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
                             <h2 class="h6 fw-semibold mb-1"><spring:message code="myReservationDetail.payment.viewReceipt"/></h2>
-                            <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxImageMegabytes}"/></p>
+                            <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxPaymentReceiptMegabytes}"/></p>
                         </div>
                         <c:url var="paymentReceiptDownloadUrl" value="/my-reservations/${reservation.id}/payment-receipt/download"/>
                         <a class="btn btn-outline-primary" href="<c:out value='${paymentReceiptDownloadUrl}'/>" target="_blank" rel="noopener noreferrer">
@@ -131,6 +143,62 @@
                                 </form>
                             </c:if>
                         </div>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${canOwnerMarkCarReturned}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.carReturned.title"/></h2>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.carReturned.intro"/></p>
+                        <c:url var="carReturnedUrl" value="/my-reservations/${reservation.id}/car-returned"/>
+                        <form method="post" action="<c:out value='${carReturnedUrl}'/>">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <button type="submit" class="btn btn-primary"><spring:message code="myReservationDetail.carReturned.submit"/></button>
+                        </form>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${canOwnerReviewRider}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewOwner.title"/></h2>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewOwner.intro"/></p>
+                        <c:url var="ownerReviewUrl" value="/my-reservations/${reservation.id}/owner-review-rider"/>
+                        <form method="post" action="<c:out value='${ownerReviewUrl}'/>" class="vstack gap-2">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <label class="form-label small" for="ownerReviewRating"><spring:message code="myReservationDetail.review.rating"/></label>
+                            <select name="rating" id="ownerReviewRating" class="form-select form-select-sm">
+                                <option value=""><spring:message code="myReservationDetail.review.rating.placeholder"/></option>
+                                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                            </select>
+                            <label class="form-label small" for="ownerReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
+                            <textarea name="comment" id="ownerReviewComment" class="form-control" rows="3" maxlength="<c:out value='${reviewCommentMaxLength}'/>"></textarea>
+                            <button type="submit" class="btn btn-primary btn-sm"><spring:message code="myReservationDetail.review.submit"/></button>
+                        </form>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${canRiderReviewOwner}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4" id="rider-review-owner">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewRider.title"/></h2>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewRider.intro"/></p>
+                        <c:url var="riderReviewUrl" value="/my-reservations/${reservation.id}/rider-review-owner"/>
+                        <form method="post" action="<c:out value='${riderReviewUrl}'/>" class="vstack gap-2">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <label class="form-label small" for="riderReviewRating"><spring:message code="myReservationDetail.review.rating"/></label>
+                            <select name="rating" id="riderReviewRating" class="form-select form-select-sm">
+                                <option value=""><spring:message code="myReservationDetail.review.rating.placeholder"/></option>
+                                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                            </select>
+                            <label class="form-label small" for="riderReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
+                            <textarea name="comment" id="riderReviewComment" class="form-control" rows="3" maxlength="<c:out value='${reviewCommentMaxLength}'/>"></textarea>
+                            <button type="submit" class="btn btn-primary btn-sm"><spring:message code="myReservationDetail.review.submit"/></button>
+                        </form>
                     </div>
                 </article>
             </c:if>
@@ -203,7 +271,7 @@
                         <!-- <button type="button" class="btn btn-primary" disabled>
                             <spring:message code="myReservationDetail.actions.modify"/>
                         </button> -->
-                        <c:set var="canCancel" value="${reservation.status.name() eq 'ACCEPTED' or (reservation.status.name() eq 'PENDING' and not hasPaymentReceipt)}"/>
+                        <c:set var="canCancel" value="${reservation.status.name() eq 'PENDING' and not hasPaymentReceipt}"/>
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
                         <c:choose>
                             <c:when test="${canCancel}">

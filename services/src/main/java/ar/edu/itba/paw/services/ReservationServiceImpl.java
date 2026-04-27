@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.util.Locale;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
@@ -22,15 +23,21 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationCard;
-import ar.edu.itba.paw.models.ReservationConfirmationPayload;
-import ar.edu.itba.paw.models.StoredFile;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
+import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
@@ -44,6 +51,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final StoredFileService storedFileService;
     private final ImageService imageService;
     private final ReservationTimingPolicy reservationTimingPolicy;
+    private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
 
     @Autowired
     public ReservationServiceImpl(
@@ -53,7 +61,8 @@ public class ReservationServiceImpl implements ReservationService {
             final EmailService emailService,
             final StoredFileService storedFileService,
             final ImageService imageService,
-            final ReservationTimingPolicy reservationTimingPolicy) {
+            final ReservationTimingPolicy reservationTimingPolicy,
+            final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy) {
         this.reservationDao = reservationDao;
         this.listingService = listingService;
         this.userService = userService;
@@ -61,6 +70,7 @@ public class ReservationServiceImpl implements ReservationService {
         this.storedFileService = storedFileService;
         this.imageService = imageService;
         this.reservationTimingPolicy = reservationTimingPolicy;
+        this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
     }
 
     @Override
@@ -74,6 +84,16 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    public int getConfiguredReturnReminderHoursBeforeCheckout() {
+        return reservationTimingPolicy.getReturnReminderHoursBeforeCheckout();
+    }
+
+    @Override
+    public int getConfiguredMaxReservationBillableDays() {
+        return reservationTimingPolicy.getMaxBillableDaysPerReservation();
+    }
+
+    @Override
     @Transactional
     public Reservation createReservation(
             final long riderId,
@@ -82,6 +102,12 @@ public class ReservationServiceImpl implements ReservationService {
             final OffsetDateTime endDate,
             final Reservation.Status status,
             final OffsetDateTime paymentProofDeadlineAt) {
+        final long billableDays = calculateBillableDays(startDate, endDate);
+        if (billableDays > reservationTimingPolicy.getMaxBillableDaysPerReservation()) {
+            throw new RiderReservationException(
+                    MessageKeys.RESERVATION_RIDER_MAX_BILLABLE_DAYS,
+                    reservationTimingPolicy.getMaxBillableDaysPerReservation());
+        }
         if (reservationDao.hasActiveOverlap(listingId, startDate, endDate)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
@@ -355,6 +381,9 @@ public class ReservationServiceImpl implements ReservationService {
             return Optional.empty();
         }
         final Reservation r = opt.get();
+        if (r.getPaymentReceiptFileId().isPresent()) {
+            return Optional.empty();
+        }
         final boolean isRider = r.getRiderId() == userId;
         final boolean isOwner = userService.getListingOwner(r.getListingId())
                 .map(o -> o.getId() == userId)
@@ -363,13 +392,7 @@ public class ReservationServiceImpl implements ReservationService {
             return Optional.empty();
         }
         return switch (r.getStatus()) {
-            case PENDING -> {
-                if (r.getPaymentReceiptFileId().isPresent()) {
-                    yield Optional.empty();
-                }
-                yield performCancellationAndNotify(reservationId);
-            }
-            case ACCEPTED -> performCancellationAndNotify(reservationId);
+            case PENDING, ACCEPTED -> performCancellationAndNotify(reservationId);
             default -> Optional.empty();
         };
     }
@@ -461,9 +484,9 @@ public class ReservationServiceImpl implements ReservationService {
         if (len == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
         }
-        if (len > imageService.getMaxImageBytes()) {
+        if (len > paymentReceiptUploadPolicy.getMaxBytes()) {
             throw new RiderReservationException(
-                    MessageKeys.RESERVATION_PAYMENT_RECEIPT_TOO_LARGE, imageService.getMaxImageMegabytesRoundedUp());
+                    MessageKeys.RESERVATION_PAYMENT_RECEIPT_TOO_LARGE, paymentReceiptUploadPolicy.getMaxMegabytesRoundedUp());
         }
         final Reservation r = getRiderReservationById(riderId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
@@ -476,6 +499,37 @@ public class ReservationServiceImpl implements ReservationService {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
         }
         listingService.refreshListingFinishedIfExhausted(r.getListingId());
+        notifyOwnerPaymentProofUploaded(reservationId, riderId, r);
+    }
+
+    private void notifyOwnerPaymentProofUploaded(final long reservationId, final long riderId, final Reservation reservation) {
+        try {
+            final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+            final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            if (listingOpt.isEmpty() || ownerOpt.isEmpty() || riderOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservationId).log("Skipping owner payment-proof email: missing listing or owner or rider (reservation id={})");
+                return;
+            }
+            final Listing listing = listingOpt.get();
+            final User owner = ownerOpt.get();
+            final User rider = riderOpt.get();
+            final String ownerFullName = owner.getForename() + " " + owner.getSurname();
+            final String riderFullName = rider.getForename() + " " + rider.getSurname();
+            final OwnerPaymentProofReceivedEmailPayload mailPayload = new OwnerPaymentProofReceivedEmailPayload(
+                    userService.resolveMailLocale(owner.getId()),
+                    owner.getEmail(),
+                    ownerFullName,
+                    riderFullName,
+                    listing.getTitle(),
+                    reservationId,
+                    reservation.getStartDate(),
+                    reservation.getEndDate());
+            LOGGER.atInfo().addArgument(owner.getEmail()).addArgument(reservationId).log("Queueing owner payment-proof email to {} (reservation id={})");
+            emailService.sendOwnerPaymentProofReceivedEmail(mailPayload);
+        } catch (final Exception e) {
+            LOGGER.atError().log("Could not enqueue owner payment-proof email for reservation id=" + reservationId, e);
+        }
     }
 
     @Override
@@ -578,5 +632,146 @@ public class ReservationServiceImpl implements ReservationService {
     public Optional<OffsetDateTime> getListingNextReservationDate(final long ownerId, final long listingId) {
         return reservationDao.findListingNextActiveReservationDate(
                 ownerId, listingId, OffsetDateTime.now(ZoneOffset.UTC));
+    }
+
+    @Override
+    @Transactional
+    public void markCarReturnedByOwner(final long ownerUserId, final long reservationId) {
+        final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED));
+        if (r.getStatus() != Reservation.Status.ACCEPTED
+                && r.getStatus() != Reservation.Status.STARTED
+                && r.getStatus() != Reservation.Status.FINISHED) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+        }
+        if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+        }
+        if (r.isCarReturned()) {
+            return;
+        }
+        final int updated = reservationDao.markCarReturned(reservationId, ownerUserId);
+        if (updated == 0) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void dispatchReturnReminderEmails() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final int hours = reservationTimingPolicy.getReturnReminderHoursBeforeCheckout();
+        for (final Reservation reservation : reservationDao.findReservationsForReturnReminderEmail(now, hours)) {
+            final Optional<RiderCarReturnEmailPayload> payload = buildRiderCarReturnEmailPayload(reservation);
+            if (payload.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping return reminder: missing data (reservation id={})");
+                continue;
+            }
+            if (reservationDao.claimReturnReminderEmailSent(reservation.getId()) == 0) {
+                continue;
+            }
+            try {
+                emailService.sendRiderReturnReminderEmail(payload.get());
+            } catch (final Exception e) {
+                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue return reminder email (reservation id={})");
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void dispatchReturnCheckoutEmails() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        for (final Reservation reservation : reservationDao.findReservationsForReturnCheckoutEmail(now)) {
+            final Optional<RiderCarReturnEmailPayload> payload = buildRiderCarReturnEmailPayload(reservation);
+            if (payload.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping return checkout mail: missing data (reservation id={})");
+                continue;
+            }
+            if (reservationDao.claimReturnCheckoutEmailSent(reservation.getId()) == 0) {
+                continue;
+            }
+            try {
+                emailService.sendRiderReturnCheckoutEmail(payload.get());
+            } catch (final Exception e) {
+                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue return checkout email (reservation id={})");
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void dispatchRiderReviewInviteEmails() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        for (final Reservation reservation : reservationDao.findReservationsForRiderReviewInviteEmail(now)) {
+            final Optional<RiderReviewInviteEmailPayload> payload = buildRiderReviewInviteEmailPayload(reservation);
+            if (payload.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping rider review invite: missing data (reservation id={})");
+                continue;
+            }
+            if (reservationDao.claimRiderReviewInviteEmailSent(reservation.getId()) == 0) {
+                continue;
+            }
+            try {
+                emailService.sendRiderReviewInviteEmail(payload.get());
+            } catch (final Exception e) {
+                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue rider review invite email (reservation id={})");
+            }
+        }
+    }
+
+    private Optional<RiderCarReturnEmailPayload> buildRiderCarReturnEmailPayload(final Reservation reservation) {
+        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+        final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
+        if (riderOpt.isEmpty() || listingOpt.isEmpty() || ownerOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User rider = riderOpt.get();
+        final Listing listing = listingOpt.get();
+        final User owner = ownerOpt.get();
+        final Locale locale = userService.resolveMailLocale(rider.getId());
+        final String checkout = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
+        final String returnLine = listingService.formatPickupForReservationView(listing, reservation, false);
+        final String path = "/my-reservations/" + reservation.getId();
+        return Optional.of(new RiderCarReturnEmailPayload(
+                locale,
+                rider.getEmail(),
+                trimName(rider.getForename(), rider.getSurname()),
+                listing.getTitle(),
+                owner.getEmail(),
+                checkout,
+                returnLine,
+                path));
+    }
+
+    private Optional<RiderReviewInviteEmailPayload> buildRiderReviewInviteEmailPayload(final Reservation reservation) {
+        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+        if (riderOpt.isEmpty() || listingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User rider = riderOpt.get();
+        final Listing listing = listingOpt.get();
+        final Locale locale = userService.resolveMailLocale(rider.getId());
+        final String path = "/my-reservations/" + reservation.getId() + "#rider-review-owner";
+        return Optional.of(new RiderReviewInviteEmailPayload(
+                locale,
+                rider.getEmail(),
+                trimName(rider.getForename(), rider.getSurname()),
+                listing.getTitle(),
+                path));
+    }
+
+    private static String trimName(final String forename, final String surname) {
+        final String f = forename == null ? "" : forename.trim();
+        final String s = surname == null ? "" : surname.trim();
+        if (f.isEmpty()) {
+            return s;
+        }
+        if (s.isEmpty()) {
+            return f;
+        }
+        return f + " " + s;
     }
 }

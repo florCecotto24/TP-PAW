@@ -14,13 +14,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.domain.Reservation;
 
 public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
 

@@ -79,7 +79,6 @@ mvn test
 
 - **Dependency injection**: Constructor injection with Spring `@Autowired` (as used in existing services/config).
 - **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, `ValidationWebConfig`) plus `web.xml` for servlet bootstrap.
-- **Persistence**: Plain SQL with `JdbcTemplate`; schema initialized via `DataSourceInitializer` (schema-bootstrap) and `schema.sql` (under `persistence/src/main/resources`), then Flyway migrations applied from `db/migration/` (e.g., `V2__*.sql`, `V3__*.sql`).
 - **Security**: Configured in `WebAuthConfig` with Spring Security 5.7.14. Uses `@EnableWebSecurity`, `SecurityFilterChain`, custom `RydenAuthenticationProvider` and `RydenUserDetailsService`. Remember-me support, session-based auth, CSRF protection.
 - **Validation**: `ValidationWebConfig` implements `WebMvcConfigurer` to inject `LocalValidatorFactoryBean` as the MVC validator. Bean validation and Spring form validation combined.
 

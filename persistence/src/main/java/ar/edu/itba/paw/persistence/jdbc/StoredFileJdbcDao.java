@@ -15,7 +15,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
-import ar.edu.itba.paw.models.StoredFile;
+import ar.edu.itba.paw.models.domain.StoredFile;
 
 @Repository
 public class StoredFileJdbcDao implements StoredFileDao {

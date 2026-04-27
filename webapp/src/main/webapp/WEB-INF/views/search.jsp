@@ -134,6 +134,7 @@
                                                 price="${car.price}"
                                                 image="${imageUrl}"
                                                 pricePeriod="day"
+                                                ratingAvg="${car.ratingAvg}"
                                                 href="${searchCarDetailHref}"/>
                                     </div>
                                 </c:forEach>

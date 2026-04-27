@@ -11,13 +11,12 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
 
-import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.ImageDao;
+import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
 @ExtendWith(MockitoExtension.class)
 public class ImageServiceImplTest {
-
-    private static final long LIMIT_ONE_MIB = 1024L * 1024L;
 
     @Mock
     private ImageDao imageDao;
@@ -29,8 +28,9 @@ public class ImageServiceImplTest {
 
     @BeforeEach
     public void setUp() {
-        Mockito.when(environment.getProperty("app.upload.max-image-bytes", Long.class, 20971520L))
-                .thenReturn(LIMIT_ONE_MIB);
+        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_BYTES_PER_BINARY_MB, Integer.class))
+                .thenReturn(null);
+        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class)).thenReturn(1L);
         imageService = new ImageServiceImpl(imageDao, environment);
     }
 

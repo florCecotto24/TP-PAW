@@ -1286,6 +1286,43 @@
         syncAddBtn();
     });
 
+    var publishForm = document.getElementById('publishCarFormEl');
+    if (publishForm) {
+        publishForm.addEventListener('submit', function (e) {
+            if (!section) {
+                return;
+            }
+            var maxStr = section.getAttribute('data-max-availability-total-days');
+            var maxD = parseInt(maxStr, 10);
+            if (!isFinite(maxD) || maxD < 1) {
+                return;
+            }
+            var msgTmpl = section.getAttribute('data-max-availability-total-exceeded');
+            var rows = root.querySelectorAll('[data-publish-avail-row]');
+            var totalDays = 0;
+            for (var i = 0; i < rows.length; i++) {
+                var fr = rows[i].querySelector('.ryden-avail-from');
+                var u = rows[i].querySelector('.ryden-avail-until');
+                if (!fr || !u || !fr.value || !u.value) {
+                    continue;
+                }
+                var a = RydenFlatpickrRange.localNoonFromYmd(fr.value);
+                var b = RydenFlatpickrRange.localNoonFromYmd(u.value);
+                if (!a || !b) {
+                    continue;
+                }
+                totalDays += Math.floor((b - a) / 86400000) + 1;
+            }
+            if (totalDays > maxD) {
+                e.preventDefault();
+                if (msgTmpl && window.alert) {
+                    window.alert(msgTmpl);
+                }
+                return false;
+            }
+        });
+    }
+
     syncAddBtn();
 })();
 

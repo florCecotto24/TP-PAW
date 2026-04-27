@@ -10,8 +10,33 @@
         var untilHidden = document.getElementById('detail_until_hidden');
         var form = document.getElementById('detailReservationForm');
         var dateAlert = document.getElementById('detail_date_alert');
+        var maxBillableAlert = document.getElementById('detail_max_billable_alert');
         if (!daterangeInput || !fromHidden || !untilHidden || !form || !window.RydenFlatpickrRange) {
             return;
+        }
+
+        function wallYmdFromHidden(iso) {
+            if (!iso || typeof iso !== 'string' || iso.length < 10) {
+                return null;
+            }
+            return iso.substring(0, 10);
+        }
+
+        function billableDaysInclusive(fromIso, untilIso) {
+            var a = wallYmdFromHidden(fromIso);
+            var b = wallYmdFromHidden(untilIso);
+            if (!a || !b) {
+                return 0;
+            }
+            var p = a.split('-');
+            var q = b.split('-');
+            if (p.length !== 3 || q.length !== 3) {
+                return 0;
+            }
+            var d0 = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+            var d1 = new Date(parseInt(q[0], 10), parseInt(q[1], 10) - 1, parseInt(q[2], 10));
+            var diff = Math.round((d1 - d0) / 86400000);
+            return Math.max(1, diff + 1);
         }
 
         function hasCompleteRange() {
@@ -26,6 +51,28 @@
                 dateAlert.setAttribute('hidden', 'hidden');
             } else {
                 dateAlert.removeAttribute('hidden');
+            }
+        }
+
+        function syncMaxBillableAlert() {
+            if (!maxBillableAlert) {
+                return;
+            }
+            var maxStr = form.getAttribute('data-max-billable-days');
+            var maxD = parseInt(maxStr, 10);
+            if (!isFinite(maxD) || maxD < 1) {
+                maxBillableAlert.setAttribute('hidden', 'hidden');
+                return;
+            }
+            if (!hasCompleteRange()) {
+                maxBillableAlert.setAttribute('hidden', 'hidden');
+                return;
+            }
+            var n = billableDaysInclusive(fromHidden.value, untilHidden.value);
+            if (n > maxD) {
+                maxBillableAlert.removeAttribute('hidden');
+            } else {
+                maxBillableAlert.setAttribute('hidden', 'hidden');
             }
         }
 
@@ -96,14 +143,44 @@
             return;
         }
 
-        daterangeInput.addEventListener('change', syncDateAlert);
-        daterangeInput.addEventListener('input', syncDateAlert);
+        fromHidden.addEventListener('change', function () {
+            syncDateAlert();
+            syncMaxBillableAlert();
+        });
+        untilHidden.addEventListener('change', function () {
+            syncDateAlert();
+            syncMaxBillableAlert();
+        });
+        syncMaxBillableAlert();
+
+        daterangeInput.addEventListener('change', function () {
+            syncDateAlert();
+            syncMaxBillableAlert();
+        });
+        daterangeInput.addEventListener('input', function () {
+            syncDateAlert();
+            syncMaxBillableAlert();
+        });
 
         form.addEventListener('submit', function (e) {
             syncDateAlert();
+            syncMaxBillableAlert();
             if (!hasCompleteRange()) {
                 e.preventDefault();
                 return false;
+            }
+            var maxStr = form.getAttribute('data-max-billable-days');
+            var maxD = parseInt(maxStr, 10);
+            if (isFinite(maxD) && maxD >= 1) {
+                var n = billableDaysInclusive(fromHidden.value, untilHidden.value);
+                if (n > maxD) {
+                    e.preventDefault();
+                    var msg = form.getAttribute('data-max-billable-exceeded-msg');
+                    if (msg && window.alert) {
+                        window.alert(msg);
+                    }
+                    return false;
+                }
             }
         });
     }

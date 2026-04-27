@@ -10,16 +10,22 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.webapp.form.ListingTimeWindow;
+import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
 @Component
 public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, ListingTimeWindow> {
 
     private final MessageSource messageSource;
+    private final ListingCheckInOutPolicy listingCheckInOutPolicy;
 
     @Autowired
-    public CheckOutAfterCheckInValidator(final MessageSource messageSource) {
+    public CheckOutAfterCheckInValidator(
+            final MessageSource messageSource,
+            final ListingCheckInOutPolicy listingCheckInOutPolicy) {
         this.messageSource = messageSource;
+        this.listingCheckInOutPolicy = listingCheckInOutPolicy;
     }
 
     @Override
@@ -30,15 +36,27 @@ public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckO
         if (form.getCheckInTime() == null || form.getCheckOutTime() == null) {
             return true;
         }
-        if (form.getCheckOutTime().isAfter(form.getCheckInTime())) {
-            return true;
+        if (!form.getCheckOutTime().isAfter(form.getCheckInTime())) {
+            final Locale locale = LocaleContextHolder.getLocale();
+            final String msg = messageSource.getMessage("validation.checkOutTime.afterCheckIn", null, locale);
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(msg)
+                    .addPropertyNode("checkOutTime")
+                    .addConstraintViolation();
+            return false;
         }
-        final Locale locale = LocaleContextHolder.getLocale();
-        final String msg = messageSource.getMessage("validation.checkOutTime.afterCheckIn", null, locale);
-        context.disableDefaultConstraintViolation();
-        context.buildConstraintViolationWithTemplate(msg)
-                .addPropertyNode("checkOutTime")
-                .addConstraintViolation();
-        return false;
+        if (!listingCheckInOutPolicy.hasMinimumGap(form.getCheckInTime(), form.getCheckOutTime())) {
+            final Locale locale = LocaleContextHolder.getLocale();
+            final String msg = messageSource.getMessage(
+                    "validation.checkOutTime.minGapHours",
+                    new Object[] {listingCheckInOutPolicy.getMinHoursBetweenCheckInAndCheckOut()},
+                    locale);
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(msg)
+                    .addPropertyNode("checkOutTime")
+                    .addConstraintViolation();
+            return false;
+        }
+        return true;
     }
 }

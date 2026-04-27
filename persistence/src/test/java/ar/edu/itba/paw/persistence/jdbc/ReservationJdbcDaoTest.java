@@ -1,11 +1,11 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationCard;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.ReservationCard;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

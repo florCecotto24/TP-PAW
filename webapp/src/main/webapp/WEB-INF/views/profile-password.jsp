@@ -42,7 +42,7 @@
         <div class="mb-3">
             <label for="password" class="form-label"><spring:message code="profile.password.new"/></label>
             <div class="input-group">
-                <form:password path="password" id="password" cssClass="form-control" autocomplete="new-password"/>
+                <form:password path="password" id="password" cssClass="form-control" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}"/>
                 <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">
@@ -50,11 +50,12 @@
                 </button>
             </div>
             <form:errors path="password" cssClass="text-danger small d-block" element="div"/>
+            <div class="form-text"><spring:message code="registerPassword.hint" arguments="${registrationPasswordMinLength},${registrationPasswordMaxLength}"/></div>
         </div>
         <div class="mb-4">
             <label for="passwordConfirm" class="form-label"><spring:message code="profile.password.newConfirm"/></label>
             <div class="input-group">
-                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control" autocomplete="new-password"/>
+                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}"/>
                 <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">

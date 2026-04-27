@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${htmlLang}">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -24,7 +24,7 @@
         Reservation confirmed
     </p>
     <p style="font-size:14px; color:#4b5563; line-height:1.6; margin-bottom:0;"
-       th:text="#{mail.reservationConfirmation.greeting(${riderFullName})}">
+       th:text="#{mail.common.greeting(${riderFullName})}">
         Hello,
     </p>
 
@@ -100,12 +100,6 @@
             View listing
         </a>
     </div>
-
-    <!-- FALLBACK LINK -->
-    <p style="font-size:12px; color:#9ca3af; line-height:1.8; margin-bottom:20px;">
-        <span th:text="#{mail.reservationConfirmation.fallbackLink}">Link help</span><br/>
-        <span th:text="${ctaUrlRider}" style="word-break:break-all; color:#4338ca;">https://</span>
-    </p>
 
     <!-- FOOTER -->
     <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>

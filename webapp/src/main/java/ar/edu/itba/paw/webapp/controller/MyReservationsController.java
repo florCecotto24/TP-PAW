@@ -1,18 +1,21 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationCard;
-import ar.edu.itba.paw.models.StoredFile;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
@@ -40,6 +43,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -56,22 +61,28 @@ public class MyReservationsController {
     private final ListingService listingService;
     private final ImageService imageService;
     private final LocaleMessages localeMessages;
+    private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
+    private final ReviewService reviewService;
 
     @Autowired
     public MyReservationsController(
             final ReservationService reservationService,
             final ListingService listingService,
             final ImageService imageService,
-            final LocaleMessages localeMessages) {
+            final LocaleMessages localeMessages,
+            final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
+            final ReviewService reviewService) {
         this.reservationService = reservationService;
         this.listingService = listingService;
         this.imageService = imageService;
         this.localeMessages = localeMessages;
+        this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
+        this.reviewService = reviewService;
     }
 
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int riderPage,
             @RequestParam(required = false) final String riderStatus,
             final HttpServletRequest request) {
@@ -115,7 +126,7 @@ public class MyReservationsController {
 
     @GetMapping("/my-reservations/{reservationId}")
     public ModelAndView reservationDetail(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
             @RequestParam(defaultValue = "rider") final String role) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -161,6 +172,17 @@ public class MyReservationsController {
         mav.addObject("reservationRole", role);
         mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());
         mav.addObject("uploadMaxImageMegabytes", imageService.getMaxImageMegabytesRoundedUp());
+        mav.addObject("uploadMaxPaymentReceiptBytes", paymentReceiptUploadPolicy.getMaxBytes());
+        mav.addObject("uploadMaxPaymentReceiptMegabytes", paymentReceiptUploadPolicy.getMaxMegabytesRoundedUp());
+        mav.addObject("reviewCommentMaxLength", reviewService.getReviewCommentMaxLength());
+        final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
+        final boolean periodEnded = nowUtc.isAfter(reservation.getEndDate());
+        mav.addObject("reservationPeriodEnded", periodEnded);
+        mav.addObject("canOwnerMarkCarReturned", viewerIsOwner && periodEnded && !reservation.isCarReturned());
+        final boolean hasOwnerReview = reviewService.hasOwnerReview(reservation.getId());
+        final boolean hasRiderReview = reviewService.hasRiderReview(reservation.getId());
+        mav.addObject("canOwnerReviewRider", viewerIsOwner && reservation.isCarReturned() && !hasOwnerReview);
+        mav.addObject("canRiderReviewOwner", !viewerIsOwner && periodEnded && !hasRiderReview);
         reservation.getPaymentProofDeadlineAt()
                 .ifPresent(deadline -> mav.addObject(
                         "paymentProofDeadlineDisplay",
@@ -172,7 +194,7 @@ public class MyReservationsController {
 
     @GetMapping("/my-reservations/{reservationId}/payment-receipt/download")
     public ResponseEntity<byte[]> downloadPaymentReceipt(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<StoredFile> fileOpt = reservationService.findPaymentReceiptForParticipant(me.getId(), reservationId);
@@ -197,7 +219,7 @@ public class MyReservationsController {
 
     @PostMapping("/my-reservations/{reservationId}/payment-receipt/approval")
     public ModelAndView setPaymentReceiptApproval(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
             @RequestParam("approved") final boolean approved,
             final RedirectAttributes redirectAttributes) {
@@ -225,7 +247,7 @@ public class MyReservationsController {
 
     @PostMapping("/my-reservations/{reservationId}/payment-receipt")
     public ModelAndView uploadPaymentReceipt(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
             @RequestParam("paymentReceipt") final MultipartFile file,
             final RedirectAttributes redirectAttributes) {
@@ -270,9 +292,64 @@ public class MyReservationsController {
         return amount.stripTrailingZeros().toPlainString();
     }
 
+    @PostMapping("/my-reservations/{reservationId}/car-returned")
+    public ModelAndView markCarReturned(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        try {
+            reservationService.markCarReturnedByOwner(me.getId(), reservationId);
+            redirectAttributes.addFlashAttribute("carReturnedMessage", localeMessages.msg("myReservationDetail.carReturned.success"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("carReturnedError", localeMessages.msg(e));
+        }
+        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=owner", true);
+        rv.setExposeModelAttributes(false);
+        return new ModelAndView(rv);
+    }
+
+    @PostMapping("/my-reservations/{reservationId}/owner-review-rider")
+    public ModelAndView submitOwnerReviewOfRider(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam(name = "rating", required = false) final Integer rating,
+            @RequestParam(name = "comment", required = false) final String comment,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        try {
+            reviewService.submitOwnerReviewOfRider(me.getId(), reservationId, rating, comment);
+            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(e));
+        }
+        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=owner", true);
+        rv.setExposeModelAttributes(false);
+        return new ModelAndView(rv);
+    }
+
+    @PostMapping("/my-reservations/{reservationId}/rider-review-owner")
+    public ModelAndView submitRiderReviewOfOwner(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam(name = "rating", required = false) final Integer rating,
+            @RequestParam(name = "comment", required = false) final String comment,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        try {
+            reviewService.submitRiderReviewOfOwner(me.getId(), reservationId, rating, comment);
+            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(e));
+        }
+        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=rider", true);
+        rv.setExposeModelAttributes(false);
+        return new ModelAndView(rv);
+    }
+
     @PostMapping("/my-reservations/{reservationId}/cancel")
     public ModelAndView cancelReservation(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
             @RequestParam(defaultValue = "rider") final String role,
             final RedirectAttributes redirectAttributes) {

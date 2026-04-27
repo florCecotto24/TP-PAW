@@ -23,10 +23,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.EmailVerificationService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.security.RegistrationSessionAttributes;
 import ar.edu.itba.paw.webapp.security.SessionLoginService;
@@ -64,6 +65,21 @@ public class RegistrationController {
         return userValidationPolicy.getRegistrationPasswordMinLength();
     }
 
+    @ModelAttribute("registrationPasswordMaxLength")
+    public int registrationPasswordMaxLength() {
+        return userValidationPolicy.getRegistrationPasswordMaxLength();
+    }
+
+    @ModelAttribute("registrationDisplayNamePartMaxLength")
+    public int registrationDisplayNamePartMaxLength() {
+        return userValidationPolicy.getDisplayNamePartMaxLength();
+    }
+
+    @ModelAttribute("registrationEmailMaxLength")
+    public int registrationEmailMaxLength() {
+        return userValidationPolicy.getRegistrationEmailMaxLength();
+    }
+
     @GetMapping("/register/password")
     public String legacyRegisterPasswordPath() {
         return "redirect:/register";
@@ -72,7 +88,7 @@ public class RegistrationController {
     @GetMapping("/register")
     public String registerForm(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final Model model) {
         if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/register");
@@ -101,7 +117,7 @@ public class RegistrationController {
     @PostMapping("/register")
     public String registerSubmit(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @Valid @ModelAttribute("registrationAccountForm") final RegistrationAccountForm registrationAccountForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
@@ -136,7 +152,7 @@ public class RegistrationController {
 
     @GetMapping("/verify-email")
     public String verifyForm(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam(value = "email", required = false) final String email,
             @RequestParam(value = "fromLogin", required = false) final String fromLogin,
             final HttpServletRequest request,
@@ -167,7 +183,7 @@ public class RegistrationController {
     @PostMapping("/verify-email/resend")
     public String verifyResend(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam("email") final String email,
             final RedirectAttributes redirectAttributes) {
         if (WebAuthUtils.isSignedIn(currentUser)) {

@@ -7,7 +7,6 @@ import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,11 +17,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @ExtendWith(MockitoExtension.class)
 public class ReservationServiceImplTest {
@@ -55,36 +56,53 @@ public class ReservationServiceImplTest {
     @Mock
     private ReservationTimingPolicy reservationTimingPolicy;
 
+    @Mock
+    private PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
+
     @InjectMocks
     private ReservationServiceImpl reservationService;
 
-    @BeforeEach
-    void stubReservationTimingPolicy() {
-        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
-        Mockito.lenient().when(reservationTimingPolicy.getPaymentProofDeadlineHours()).thenReturn(12);
+    /** For {@link ReservationServiceImpl#createReservation} (max billable days only). */
+    private void stubReservationTimingForReservationFlow() {
+        Mockito.when(reservationTimingPolicy.getMaxBillableDaysPerReservation()).thenReturn(365);
     }
 
-
+    /** For {@link ReservationServiceImpl#submitRiderReservation} (pickup lead, payment deadline, max days). */
+    private void stubReservationTimingForSubmitRiderFlow() {
+        Mockito.when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
+        Mockito.when(reservationTimingPolicy.getPaymentProofDeadlineHours()).thenReturn(12);
+        Mockito.when(reservationTimingPolicy.getMaxBillableDaysPerReservation()).thenReturn(365);
+    }
 
     @Test
     public void testCreateReservationWhenNoOverlapReturnsCreatedReservation() {
+        stubReservationTimingForReservationFlow();
         // 1. Arrange
         final long riderId = 1L;
         final long listingId = 2L;
         final Listing listing = Mockito.mock(Listing.class);
-        final Reservation created = new Reservation(
-                10L, riderId, listingId, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT, TOTAL_PRICE);
+        final Reservation created = Reservation.builder()
+                .id(10L)
+                .riderId(riderId)
+                .listingId(listingId)
+                .startDate(START)
+                .endDate(END)
+                .status(Reservation.Status.ACCEPTED)
+                .createdAt(CREATED_AT)
+                .updatedAt(UPDATED_AT)
+                .totalPrice(TOTAL_PRICE)
+                .build();
 
         Mockito.when(reservationDao.hasActiveOverlap(listingId, START, END)).thenReturn(false);
         Mockito.when(userService.getListingOwner(listingId))
-                .thenReturn(Optional.of(new User(99L, "owner@example.com", "O", "Owner")));
+                .thenReturn(Optional.of(User.identities(99L, "owner@example.com", "O", "Owner")));
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
         Mockito.when(listingService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
         Mockito.when(listingService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
         Mockito.doNothing().when(listingService).refreshListingFinishedIfExhausted(listingId);
-        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(new User(riderId, "r@e.com", "R", "Rider")));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(User.identities(riderId, "r@e.com", "R", "Rider")));
         Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(Locale.ENGLISH);
         Mockito.when(reservationDao.createReservation(
                 Mockito.eq(riderId),
@@ -110,6 +128,7 @@ public class ReservationServiceImplTest {
 
     @Test
     public void testCreateReservationWhenOverlapThrowsReservationConflictException() {
+        stubReservationTimingForReservationFlow();
         // 1. Arrange
         Mockito.when(reservationDao.hasActiveOverlap(2L, START, END)).thenReturn(true);
 
@@ -123,11 +142,12 @@ public class ReservationServiceImplTest {
 
     @Test
     public void testCreateReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
+        stubReservationTimingForReservationFlow();
         final long riderId = 1L;
         final long listingId = 2L;
         Mockito.when(reservationDao.hasActiveOverlap(listingId, START, END)).thenReturn(false);
         Mockito.when(userService.getListingOwner(listingId))
-                .thenReturn(Optional.of(new User(riderId, "same@example.com", "S", "Same")));
+                .thenReturn(Optional.of(User.identities(riderId, "same@example.com", "S", "Same")));
 
         final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
                 () -> reservationService.createReservation(
@@ -186,6 +206,7 @@ public class ReservationServiceImplTest {
 
     @Test
     public void testSubmitRiderReservationWhenValidReturnsReservation() {
+        stubReservationTimingForSubmitRiderFlow();
         // 1. Arrange
         final long listingId = 2L;
         final long riderId = 42L;
@@ -200,8 +221,8 @@ public class ReservationServiceImplTest {
         final String ownerSurname = "OwnerSurname";
 
         final Listing listing = Mockito.mock(Listing.class);
-        final User createdRider = new User(riderId, riderEmail, riderName, riderSurname);
-        final User listingOwner = new User(ownerId, ownerEmail, ownerName, ownerSurname);
+        final User createdRider = User.identities(riderId, riderEmail, riderName, riderSurname);
+        final User listingOwner = User.identities(ownerId, ownerEmail, ownerName, ownerSurname);
 
         Mockito.when(listing.getTitle()).thenReturn("Test vehicle");
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
@@ -235,16 +256,18 @@ public class ReservationServiceImplTest {
                 Mockito.eq(Reservation.Status.PENDING),
                 Mockito.any(BigDecimal.class),
                 Mockito.any(OffsetDateTime.class)))
-                .thenAnswer(inv -> new Reservation(
-                        reservationId,
-                        createdRider.getId(),
-                        listingId,
-                        inv.getArgument(2),
-                        inv.getArgument(3),
-                        Reservation.Status.PENDING,
-                        CREATED_AT,
-                        UPDATED_AT,
-                        inv.getArgument(5)));
+                .thenAnswer(inv -> Reservation.builder()
+                        .id(reservationId)
+                        .riderId(createdRider.getId())
+                        .listingId(listingId)
+                        .startDate(inv.getArgument(2, OffsetDateTime.class))
+                        .endDate(inv.getArgument(3, OffsetDateTime.class))
+                        .status(Reservation.Status.PENDING)
+                        .createdAt(CREATED_AT)
+                        .updatedAt(UPDATED_AT)
+                        .totalPrice(inv.getArgument(5, BigDecimal.class))
+                        .paymentProofDeadlineAt(inv.getArgument(6, OffsetDateTime.class))
+                        .build());
 
         /* Takes at least ~48 h in the wall calendar: it complies with the 24 h clock rule even if the test runs at night. */
         final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(2);
@@ -273,7 +296,7 @@ public class ReservationServiceImplTest {
         final long riderId = 1L;
         final Listing listing = Mockito.mock(Listing.class);
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
-        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(new User(riderId, "r@example.com", "R", "Rider")));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(User.identities(riderId, "r@example.com", "R", "Rider")));
 
         final LocalDate yesterday = LocalDate.now(AvailabilityPeriod.WALL_ZONE).minusDays(1);
         final String fromWall = yesterday.atTime(10, 0).toString();
@@ -293,11 +316,12 @@ public class ReservationServiceImplTest {
 
     @Test
     public void submitRiderReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
+        stubReservationTimingForSubmitRiderFlow();
         final long listingId = 2L;
         final long sameUserId = 5L;
         final String email = "owner@test.com";
         final Listing listing = Mockito.mock(Listing.class);
-        final User ownerAndRider = new User(sameUserId, email, "Owner", "User");
+        final User ownerAndRider = User.identities(sameUserId, email, "Owner", "User");
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
         Mockito.when(listingService.reservationIntervalFitsListingAvailability(
@@ -338,8 +362,17 @@ public class ReservationServiceImplTest {
     @Test
     public void testGetReservationByIdWhenReservationExists() {
         // 1. Arrange
-        final Reservation reservation = new Reservation(
-                1L, 1L, 1L, START, END, Reservation.Status.ACCEPTED, CREATED_AT, UPDATED_AT, TOTAL_PRICE);
+        final Reservation reservation = Reservation.builder()
+                .id(1L)
+                .riderId(1L)
+                .listingId(1L)
+                .startDate(START)
+                .endDate(END)
+                .status(Reservation.Status.ACCEPTED)
+                .createdAt(CREATED_AT)
+                .updatedAt(UPDATED_AT)
+                .totalPrice(TOTAL_PRICE)
+                .build();
         Mockito.when(reservationDao.getReservationById(1L)).thenReturn(Optional.of(reservation));
 
         // 2. Execute

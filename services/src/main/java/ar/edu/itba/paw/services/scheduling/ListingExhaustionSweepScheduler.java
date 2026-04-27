@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
  * Turns into finished the listings that are active or paused and have no bookable wall day from today onward

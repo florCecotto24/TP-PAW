@@ -1,20 +1,21 @@
 package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Size;
 
-import ar.edu.itba.paw.webapp.validation.NoPunctuation;
-import ar.edu.itba.paw.webapp.validation.PhoneNumber;
+import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
+import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
+import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
+import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
 public class ProfileUpdateForm {
 
     @NotBlank(message = "{profile.forename.required}")
-    @Size(max = 50, message = "{profile.forename.size}")
+    @UserValidationMaxLength(kind = Kind.DISPLAY_NAME_PART, messageKey = "validation.profile.forename.maxLength")
     @NoPunctuation
     private String forename = "";
 
     @NotBlank(message = "{profile.surname.required}")
-    @Size(max = 50, message = "{profile.surname.size}")
+    @UserValidationMaxLength(kind = Kind.DISPLAY_NAME_PART, messageKey = "validation.profile.surname.maxLength")
     @NoPunctuation
     private String surname = "";
 

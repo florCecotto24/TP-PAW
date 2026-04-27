@@ -1,23 +1,42 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
-<%@ attribute name="avatarUrl" required="true" type="java.lang.String" %>
-<%@ attribute name="userName" required="true" type="java.lang.String" %>
-<%@ attribute name="fullStars" required="true" type="java.lang.Integer" %>
-<%@ attribute name="halfStar" required="false" type="java.lang.Boolean" %>
-<%@ attribute name="quoteText" required="true" type="java.lang.String" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
-<c:if test="${halfStar eq null}">
-    <c:set var="halfStar" value="${false}" />
-</c:if>
+<%@ attribute name="forename" required="true" type="java.lang.String" %>
+<%@ attribute name="surname" required="true" type="java.lang.String" %>
+<%@ attribute name="dateLabel" required="true" type="java.lang.String" %>
+<%@ attribute name="rating" required="true" type="java.lang.Integer" %>
+<%@ attribute name="comment" required="false" type="java.lang.String" %>
 
-<div class="reviewCard border rounded-4 p-3 bg-white h-100 shadow-sm">
-    <div class="d-flex align-items-start gap-3 mb-3">
-        <img src="<c:out value='${avatarUrl}'/>" alt="" width="48" height="48" class="rounded-circle object-fit-cover flex-shrink-0 reviewCard__avatar">
-        <div class="min-w-0 flex-grow-1">
-            <p class="fw-bold mb-2 mb-md-1"><c:out value="${userName}"/></p>
-            <ryden:reviewStarsRow fullStars="${fullStars}" halfStar="${halfStar}" />
+<article class="card border-0 shadow-sm rounded-4 h-100 listing-review-card">
+    <div class="card-body p-4 d-flex flex-column gap-2">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+            <div>
+                <p class="fw-semibold mb-0">
+                    <c:out value="${forename}"/> <c:out value="${surname}"/>
+                </p>
+                <p class="text-secondary small mb-0"><c:out value="${dateLabel}"/></p>
+            </div>
+            <div class="d-inline-flex align-items-center gap-1 text-secondary" aria-label="Rating">
+                <c:forEach begin="1" end="5" var="star">
+                    <c:choose>
+                        <c:when test="${star <= rating}">
+                            <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                        </c:when>
+                        <c:otherwise>
+                            <i class="bi bi-star text-secondary-subtle" aria-hidden="true"></i>
+                        </c:otherwise>
+                    </c:choose>
+                </c:forEach>
+            </div>
         </div>
+        <c:choose>
+            <c:when test="${not empty comment}">
+                <p class="mb-0 small"><c:out value="${comment}"/></p>
+            </c:when>
+            <c:otherwise>
+                <p class="mb-0 small text-secondary"><spring:message code="reviewCard.noComment"/></p>
+            </c:otherwise>
+        </c:choose>
     </div>
-    <p class="reviewCard__quote fst-italic text-secondary mb-0 small">&ldquo;<c:out value="${quoteText}"/>&rdquo;</p>
-</div>
+</article>

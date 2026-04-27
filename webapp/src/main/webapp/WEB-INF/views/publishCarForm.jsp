@@ -151,10 +151,14 @@
                         <spring:message code="publishCar.form.period" var="periodLabel"/>
                         <spring:message code="publishCar.form.remove" var="removeLabel"/>
                         <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
+                        <spring:message code="validation.availabilityRows.totalMaxDays" arguments="${maxAvailabilityTotalDays}" var="maxAvailTotalErrMsg" htmlEscape="true"/>
                         <div class="mb-4" id="publishAvailabilitySection"
-                             data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>">
+                             data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>"
+                             data-max-availability-total-days="<c:out value='${maxAvailabilityTotalDays}'/>"
+                             data-max-availability-total-exceeded="<c:out value='${maxAvailTotalErrMsg}'/>">
                             <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
                             <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.hint" arguments="${pickupLeadHours}"/></p>
+                            <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.totalMaxHint" arguments="${maxAvailabilityTotalDays}"/></p>
                             <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
                             <div id="publish_availability_rows">
                                 <c:forEach items="${publishCarForm.availabilityRows}" var="row" varStatus="st">

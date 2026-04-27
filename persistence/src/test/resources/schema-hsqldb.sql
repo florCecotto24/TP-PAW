@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS listings (
     check_in_time TIME NOT NULL,
     check_out_time TIME NOT NULL,
     neighborhood_id BIGINT,
+    rating_avg DECIMAL(4, 2),
 
     FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
     FOREIGN KEY (neighborhood_id) REFERENCES neighborhoods(id) ON DELETE SET NULL
@@ -85,10 +86,23 @@ CREATE TABLE IF NOT EXISTS reservations (
     payment_approved BOOLEAN NOT NULL DEFAULT FALSE,
     payment_proof_deadline_at TIMESTAMP WITH TIME ZONE,
     car_returned BOOLEAN NOT NULL DEFAULT FALSE,
+    return_reminder_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    return_checkout_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    rider_review_invite_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE,
     FOREIGN KEY (payment_receipt_file_id) REFERENCES stored_files(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+    reservation_id BIGINT NOT NULL,
+    made_by_rider BOOLEAN NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    rating INTEGER NOT NULL,
+    comment VARCHAR(500),
+    PRIMARY KEY (reservation_id, made_by_rider),
+    FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS images (
@@ -126,6 +140,13 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
     code VARCHAR(6) NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id BIGINT NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

@@ -1,15 +1,16 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.ReservationCard;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -78,7 +79,7 @@ public class MyListingsController {
 
     @GetMapping
     public ModelAndView myListings(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "0") int ownerPage,
             @RequestParam(required = false) final String listingStatus,
@@ -118,7 +119,8 @@ public class MyListingsController {
                             card.getModel(),
                             card.getDayPrice(),
                             card.getImageId(),
-                            statusKey);
+                            statusKey,
+                            card.getRatingAvg().orElse(null));
                 })
                 .collect(Collectors.toList());
 
@@ -193,7 +195,7 @@ public class MyListingsController {
 
     @GetMapping("/{listingId}")
     public ModelAndView listingDetail(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("listingId") final long listingId) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
@@ -206,7 +208,7 @@ public class MyListingsController {
 
     @PostMapping("/{listingId}/edit")
     public ModelAndView editListing(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("listingId") final long listingId,
             @Valid @ModelAttribute("editForm") final ListingEditForm editForm,
             final BindingResult errors) {
@@ -235,7 +237,7 @@ public class MyListingsController {
 
     @PostMapping("/{listingId}/toggle")
     public ModelAndView toggleListing(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("listingId") final long listingId) {
         final User me = WebAuthUtils.requireUser(currentUser);
         listingService.toggleListingStatus(me.getId(), listingId);
@@ -244,7 +246,7 @@ public class MyListingsController {
 
     @GetMapping("/{listingId}/reservations")
     public ModelAndView listingReservations(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @PathVariable("listingId") final long listingId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String reservationStatus,

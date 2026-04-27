@@ -1,5 +1,6 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <%@ attribute name="model" required="true" %>
@@ -8,6 +9,7 @@
 <%@ attribute name="image" required="false" %>
 <%@ attribute name="pricePeriod" required="false" %>
 <%@ attribute name="href" required="false" %>
+<%@ attribute name="ratingAvg" required="false" type="java.lang.Number" %>
 
 <c:if test="${empty pricePeriod}">
     <c:set var="pricePeriod" value="hour" />
@@ -40,6 +42,12 @@
         <div class="carcard-info-text text">
             <h4 class="carcard-brand"><c:out value="${brand}"/></h4>
             <p class="carcard-model"><c:out value="${model}"/></p>
+            <c:if test="${not empty ratingAvg}">
+                <p class="carcard-rating small text-secondary mb-0 mt-1">
+                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                    <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                </p>
+            </c:if>
         </div>
         <div class="carcard-price text">
             <p class="carcard-price-amount">$<c:out value="${price}"/></p>

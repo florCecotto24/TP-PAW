@@ -9,24 +9,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
-import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.ImageDao;
+import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
 @Service
 public class ImageServiceImpl implements ImageService {
 
-    private static final long MIB = 1024L * 1024L;
-
     private final ImageDao imageDao;
     private final long maxImageBytes;
+    private final long bytesPerBinaryMegabyte;
 
     @Autowired
     public ImageServiceImpl(final ImageDao imageDao, final Environment environment) {
         this.imageDao = imageDao;
         /* Environment avoids @Value to be unresolved if the bean is created too early (e.g. during initMessageSource). */
-        final long v = environment.getProperty("app.upload.max-image-bytes", Long.class, 20971520L);
+        this.bytesPerBinaryMegabyte = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
+        final long v = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
+                environment, UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, 20L);
         if (v <= 0) {
-            throw new IllegalArgumentException("app.upload.max-image-bytes must be positive, got " + v);
+            throw new IllegalArgumentException(
+                    UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB + " resolved to non-positive bytes: " + v);
         }
         this.maxImageBytes = v;
     }
@@ -38,7 +41,7 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     public long getMaxImageMegabytesRoundedUp() {
-        return (maxImageBytes + MIB - 1) / MIB;
+        return (maxImageBytes + bytesPerBinaryMegabyte - 1) / bytesPerBinaryMegabyte;
     }
 
     @Override

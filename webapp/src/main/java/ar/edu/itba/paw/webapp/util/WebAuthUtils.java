@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 
 public final class WebAuthUtils {
@@ -79,7 +79,7 @@ public final class WebAuthUtils {
 
     public static Optional<User> viewerUser(final Authentication authentication) {
         return currentUserDetails(authentication).map(
-                d -> new User(d.getUserId(), d.getUsername(), d.getForename(), d.getSurname()));
+                d -> User.identities(d.getUserId(), d.getUsername(), d.getForename(), d.getSurname()));
     }
 
     public static Optional<RydenUserDetails> currentUserDetails(final Authentication authentication) {
@@ -97,7 +97,7 @@ public final class WebAuthUtils {
     }
 
     /**
-     * Domain user from {@code LoggedUserAdvice} ({@code currentUser}); same contract as {@link #requireCurrentUser(Authentication)}.
+     * Domain user injected with {@link ar.edu.itba.paw.webapp.support.CurrentUser} (and exposed in the model by {@link ar.edu.itba.paw.webapp.advice.LoggedUserAdvice} when signed in); same contract as {@link #requireCurrentUser(Authentication)}.
      */
     public static User requireUser(final User currentUser) {
         if (currentUser == null) {

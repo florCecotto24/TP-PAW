@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Page;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.dto.Page;
 
 public interface ListingDao {
 

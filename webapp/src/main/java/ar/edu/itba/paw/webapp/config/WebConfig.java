@@ -1,12 +1,11 @@
 package ar.edu.itba.paw.webapp.config;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executor;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-
 import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
@@ -14,10 +13,12 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
@@ -42,12 +43,17 @@ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerCo
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
+import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 
 @EnableWebMvc
 @EnableAsync
@@ -61,6 +67,7 @@ import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
 })
 @ComponentScan({
         "ar.edu.itba.paw.webapp.controller",
+        "ar.edu.itba.paw.webapp.advice",
         "ar.edu.itba.paw.webapp.util",
         "ar.edu.itba.paw.webapp.security",
         "ar.edu.itba.paw.webapp.validation",
@@ -83,23 +90,18 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public UserValidationPolicy userValidationPolicy(final Environment environment) {
-        final int min = environment.getProperty("app.validation.registration-password-min-length", Integer.class, 8);
-        final int max = environment.getProperty("app.validation.profile-phone-max-length", Integer.class, 20);
-        final String pattern = environment.getProperty("app.validation.profile-phone-pattern", "^[0-9+]+$");
-        if (min < 1) {
-            throw new IllegalArgumentException("app.validation.registration-password-min-length must be >= 1, got " + min);
-        }
-        if (max < 1) {
-            throw new IllegalArgumentException("app.validation.profile-phone-max-length must be >= 1, got " + max);
-        }
-        final Pattern compiled;
-        try {
-            compiled = Pattern.compile(pattern);
-        } catch (final PatternSyntaxException e) {
-            throw new IllegalArgumentException("app.validation.profile-phone-pattern is not a valid regex: " + pattern, e);
-        }
-        return new UserValidationPolicy(min, max, compiled);
+    public AppValidationProperties appValidationProperties(final Environment environment) {
+        return AppValidationProperties.fromEnvironment(environment);
+    }
+
+    @Bean
+    public UserValidationPolicy userValidationPolicy(final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toUserValidationPolicy();
+    }
+
+    @Bean
+    public ReviewValidationPolicy reviewValidationPolicy(final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toReviewValidationPolicy();
     }
 
     @Bean
@@ -227,6 +229,31 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
         registry.addInterceptor(latestLocaleSaveInterceptor).addPathPatterns("/**");
+    }
+
+    /**
+     * {@link WebMvcConfigurer#addArgumentResolvers} appends after built-in resolvers;
+     * {@link org.springframework.web.method.annotation.ModelAttributeMethodProcessor}
+     * would otherwise claim {@code User} parameters before {@link ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver}.
+     * Registration runs on {@link ContextRefreshedEvent} so {@link RequestMappingHandlerAdapter} is not touched during
+     * {@code WebConfig} creation (that would re-enter MVC bootstrap and cycle with {@code messageSource} / {@code localValidatorFactoryBean}).
+     */
+    @Bean
+    public ApplicationListener<ContextRefreshedEvent> prependCurrentUserArgumentResolver() {
+        return event -> {
+            if (event.getApplicationContext().getParent() != null) {
+                return;
+            }
+            final RequestMappingHandlerAdapter adapter =
+                    event.getApplicationContext().getBean(RequestMappingHandlerAdapter.class);
+            final List<HandlerMethodArgumentResolver> resolvers =
+                    new ArrayList<>(adapter.getArgumentResolvers());
+            if (resolvers.stream().anyMatch(r -> r instanceof CurrentUserArgumentResolver)) {
+                return;
+            }
+            resolvers.add(0, new CurrentUserArgumentResolver());
+            adapter.setArgumentResolvers(resolvers);
+        };
     }
 
     private static String requiredProperty(final Environment environment, final String key) {

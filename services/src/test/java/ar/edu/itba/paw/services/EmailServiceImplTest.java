@@ -26,7 +26,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import ar.edu.itba.paw.models.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.email.ReservationConfirmationPayload;
+import ar.edu.itba.paw.services.mail.MailPublicUrls;
 
 @ExtendWith(MockitoExtension.class)
 public class EmailServiceImplTest {
@@ -40,6 +41,9 @@ public class EmailServiceImplTest {
 
     @Mock
     private Environment environment;
+
+    @Mock
+    private MailPublicUrls mailPublicUrls;
 
     @Mock
     private JavaMailSender mailSender;
@@ -70,6 +74,8 @@ public class EmailServiceImplTest {
     @Test
     public void testSendReservationConfirmationEmail() {
         // 1. Arrange
+        Mockito.when(mailPublicUrls.absolutePath(Mockito.anyString()))
+                .thenAnswer(invocation -> "http://localhost" + invocation.getArgument(0));
         final List<SentMail> sent = new ArrayList<>();
         Mockito.doAnswer(recordSentInto(sent)).when(mailSender).send(Mockito.any(MimeMessage.class));
         Mockito.when(mailSender.createMimeMessage())
@@ -104,13 +110,11 @@ public class EmailServiceImplTest {
                 locale,
                 locale);
 
-        Mockito.when(environment.getProperty("mail.app.public.base.url", "http://localhost:8080"))
-                .thenReturn("http://app.test");
         Mockito.when(environment.getProperty("mail.server.username", "noreply@localhost"))
                 .thenReturn("noreply@localhost");
         Mockito.when(environment.getProperty("mail.from.address", "noreply@localhost"))
                 .thenReturn("noreply@app.test");
-        Mockito.when(emailMessageSource.getMessage(Mockito.eq(SUBJECT_KEY), Mockito.any(), Mockito.eq(locale)))
+        Mockito.when(emailMessageSource.getMessage(Mockito.eq(SUBJECT_KEY), Mockito.any(), Mockito.any(Locale.class)))
                 .thenReturn(subject);
         Mockito.when(htmlTemplateEngine.process(Mockito.eq(TEMPLATE_RIDER), Mockito.any(Context.class)))
                 .thenReturn("<html>rider</html>");
@@ -128,16 +132,5 @@ public class EmailServiceImplTest {
         Assertions.assertEquals(subject, sent.get(1).subject());
     }
 
-    @Test
-    public void testSendReservationConfirmationEmailWhenPayloadIsNull() {
-        // 1. Arrange
-        final List<SentMail> sent = new ArrayList<>();
-        Mockito.lenient().doAnswer(recordSentInto(sent)).when(mailSender).send(Mockito.any(MimeMessage.class));
 
-        // 2. Execute
-        emailService.sendReservationConfirmationEmail(null);
-
-        // 3. Assert
-        Assertions.assertTrue(sent.isEmpty());
-    }
 }

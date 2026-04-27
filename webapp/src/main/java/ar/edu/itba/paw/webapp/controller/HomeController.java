@@ -1,9 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -32,7 +33,7 @@ public class HomeController {
     public ModelAndView home(
             @RequestParam(defaultValue = "0") int cheapestPage,
             @RequestParam(defaultValue = "0") int recentPage,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser) {
+            @CurrentUser final User currentUser) {
         final ModelAndView mav = new ModelAndView("home");
 
         cheapestPage = Math.max(0, cheapestPage);
@@ -68,6 +69,8 @@ public class HomeController {
                 card.getBrand(),
                 card.getModel(),
                 card.getDayPrice(),
-                card.getImageId());
+                card.getImageId(),
+                null,
+                card.getRatingAvg().orElse(null));
     }
 }

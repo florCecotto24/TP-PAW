@@ -11,7 +11,7 @@ import javax.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
-import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
 @CheckOutAfterCheckIn
 public class ListingEditForm implements ListingTimeWindow {

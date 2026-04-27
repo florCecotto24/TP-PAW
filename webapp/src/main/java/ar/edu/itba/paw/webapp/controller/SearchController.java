@@ -1,10 +1,11 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -49,7 +50,7 @@ public class SearchController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String sort,
             @RequestParam(required = false) final List<String> neighborhoodId,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpServletRequest request) {
         final ModelAndView mav = new ModelAndView("search");
 
@@ -117,6 +118,8 @@ public class SearchController {
                 card.getBrand(),
                 card.getModel(),
                 card.getDayPrice(),
-                card.getImageId());
+                card.getImageId(),
+                null,
+                card.getRatingAvg().orElse(null));
     }
 }

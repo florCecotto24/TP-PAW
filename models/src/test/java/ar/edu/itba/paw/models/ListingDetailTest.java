@@ -10,27 +10,43 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+
 class ListingDetailTest {
 
     @Test
     void constructorCreatesDefensiveUnmodifiableCopiesOfLists() {
         // Arrange
-        final Listing listing = new Listing(
-                1L,
-                "Weekend car",
-                2L,
-                OffsetDateTime.parse("2026-04-05T10:00:00Z"),
-                OffsetDateTime.parse("2026-04-05T11:00:00Z"),
-                Listing.Status.ACTIVE,
-                new BigDecimal("99.99"),
-                "Palermo",
-                "Great city car",
-                LocalTime.of(10, 0),
-                LocalTime.of(18, 0));
+        final Listing listing = Listing.builder()
+                .id(1L)
+                .title("Weekend car")
+                .carId(2L)
+                .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
+                .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
+                .status(Listing.Status.ACTIVE)
+                .dayPrice(new BigDecimal("99.99"))
+                .startPointStreet("Palermo")
+                .description("Great city car")
+                .checkInTime(LocalTime.of(10, 0))
+                .checkOutTime(LocalTime.of(18, 0))
+                .build();
 
-        final Car car = new Car(2L, 3L, "AA123BB", "Toyota", "Yaris", Car.Type.HATCHBACK,
-                Car.Powertrain.HYBRID, Car.Transmission.AUTOMATIC);
-        final User owner = new User(3L, "owner@example.com", "Owner", "Surname");
+        final Car car = Car.builder()
+                .id(2L)
+                .ownerId(3L)
+                .plate("AA123BB")
+                .brand("Toyota")
+                .model("Yaris")
+                .type(Car.Type.HATCHBACK)
+                .powertrain(Car.Powertrain.HYBRID)
+                .transmission(Car.Transmission.AUTOMATIC)
+                .build();
+        final User owner = User.identities(3L, "owner@example.com", "Owner", "Surname");
 
         final List<CarPicture> pictures = new ArrayList<>(List.of(
                 new CarPicture(10L, 2L, 100L, 0,

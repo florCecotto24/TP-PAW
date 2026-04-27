@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.ListingAvailability;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 
 import java.time.LocalDate;
 import java.util.Collection;

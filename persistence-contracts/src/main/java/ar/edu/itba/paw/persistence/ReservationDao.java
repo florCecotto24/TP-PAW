@@ -9,9 +9,9 @@ import java.util.Optional;
 
 
 
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.ReservationCard;
 
 public interface ReservationDao {
 
@@ -61,4 +61,21 @@ public interface ReservationDao {
     Optional<OffsetDateTime> findListingNextActiveReservationDate(long ownerId, long listingId, OffsetDateTime after);
 
     List<Reservation> findListingFinishedReservations(long ownerId, long listingId);
+
+    int markCarReturned(long reservationId, long ownerUserId);
+
+    List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);
+
+    List<Reservation> findReservationsForReturnCheckoutEmail(OffsetDateTime now);
+
+    List<Reservation> findReservationsForRiderReviewInviteEmail(OffsetDateTime now);
+
+    /** Sets {@code return_reminder_email_sent} if still false; returns rows updated (0 or 1). */
+    int claimReturnReminderEmailSent(long reservationId);
+
+    /** Sets {@code return_checkout_email_sent} if still false; returns rows updated (0 or 1). */
+    int claimReturnCheckoutEmailSent(long reservationId);
+
+    /** Sets {@code rider_review_invite_email_sent} if still false; returns rows updated (0 or 1). */
+    int claimRiderReviewInviteEmailSent(long reservationId);
 }

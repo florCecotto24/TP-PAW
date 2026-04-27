@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,8 +18,9 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
-import ar.edu.itba.paw.models.EmailNormalizer;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.security.UserRole;
 
 @Repository
 public class UserJdbcDao implements UserDao {
@@ -43,17 +45,18 @@ public class UserJdbcDao implements UserDao {
     private static User mapUser(final ResultSet rs, final boolean includePasswordHash) throws SQLException {
         final java.sql.Date birth = rs.getDate("birth_date");
         final String passwordHash = includePasswordHash ? rs.getString("password_hash") : null;
-        return new User(
-                rs.getLong("id"),
-                rs.getString("email"),
-                rs.getString("forename"),
-                rs.getString("surname"),
-                passwordHash,
-                rs.getObject("email_validated", Boolean.class),
-                rs.getString("phone_number"),
-                birth != null ? birth.toLocalDate() : null,
-                readNullableLongId(rs, "profile_picture_id"),
-                rs.getString("latest_locale"));
+        return User.builder()
+                .id(rs.getLong("id"))
+                .email(rs.getString("email"))
+                .forename(rs.getString("forename"))
+                .surname(rs.getString("surname"))
+                .passwordHash(passwordHash)
+                .emailValidated(rs.getObject("email_validated", Boolean.class))
+                .phoneNumber(rs.getString("phone_number"))
+                .birthDate(birth != null ? birth.toLocalDate() : null)
+                .profilePictureId(readNullableLongId(rs, "profile_picture_id"))
+                .latestLocaleTag(rs.getString("latest_locale"))
+                .build();
     }
 
     private static final RowMapper<User> USER_ROW_MAPPER = (rs, rowNum) -> mapUser(rs, false);
@@ -82,7 +85,15 @@ public class UserJdbcDao implements UserDao {
         values.put("password_hash", passwordHash);
         values.put("email_validated", Boolean.FALSE);
         final Number userId = jdbcInsert.executeAndReturnKey(values);
-        return new User(userId.longValue(), normalizedEmail, forename, surname, passwordHash, Boolean.FALSE, null, null, null, null);
+        insertUserRole(userId.longValue(), UserRole.USER);
+        return User.builder()
+                .id(userId.longValue())
+                .email(normalizedEmail)
+                .forename(forename)
+                .surname(surname)
+                .passwordHash(passwordHash)
+                .emailValidated(Boolean.FALSE)
+                .build();
     }
 
     @Override
@@ -157,5 +168,21 @@ public class UserJdbcDao implements UserDao {
     @Override
     public void updateLatestLocale(final long userId, final String localeTag) {
         jdbcTemplate.update("UPDATE users SET latest_locale = ? WHERE id = ?", localeTag, userId);
+    }
+
+    @Override
+    public List<String> findRoleNamesForUser(final long userId) {
+        return jdbcTemplate.query(
+                "SELECT role FROM user_roles WHERE user_id = ? ORDER BY role",
+                (rs, rn) -> rs.getString("role"),
+                userId);
+    }
+
+    @Override
+    public void insertUserRole(final long userId, final UserRole role) {
+        jdbcTemplate.update(
+                "INSERT INTO user_roles (user_id, role) VALUES (?, ?)",
+                userId,
+                role.persistenceName());
     }
 }

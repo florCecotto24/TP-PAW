@@ -11,7 +11,8 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 
 @Component
 public class PhoneNumberValidator implements ConstraintValidator<PhoneNumber, String> {

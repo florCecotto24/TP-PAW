@@ -8,6 +8,8 @@ import java.util.Locale;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
+
 public class WallDateTimeDisplayFormatTest {
 
     @Test

@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS listings (
     check_in_time TIME NOT NULL,
     check_out_time TIME NOT NULL,
     neighborhood_id INTEGER,
+    rating_avg NUMERIC(4, 2),
 
     FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
     FOREIGN KEY (neighborhood_id) REFERENCES neighborhoods(id) ON DELETE SET NULL
@@ -161,6 +162,9 @@ CREATE TABLE IF NOT EXISTS reservations (
     payment_approved BOOLEAN NOT NULL DEFAULT FALSE,
     payment_proof_deadline_at TIMESTAMPTZ,
     car_returned BOOLEAN NOT NULL DEFAULT FALSE,
+    return_reminder_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    return_checkout_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    rider_review_invite_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
@@ -202,3 +206,9 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes (user_id);
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role)
+);

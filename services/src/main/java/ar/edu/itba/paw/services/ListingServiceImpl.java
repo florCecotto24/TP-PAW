@@ -30,26 +30,28 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Neighborhood;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.WallDateTimeParsing;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.util.WallDateTimeParsing;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.services.util.NeighborhoodNameMatcher;
 import ar.edu.itba.paw.persistence.ReservationDao;
-
+import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
+import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @Service
 public class ListingServiceImpl implements ListingService {
@@ -64,6 +66,8 @@ public class ListingServiceImpl implements ListingService {
     private final EmailService emailService;
     private final LocationService locationService;
     private final ReservationTimingPolicy reservationTimingPolicy;
+    private final ListingCheckInOutPolicy listingCheckInOutPolicy;
+    private final ListingAvailabilityPolicy listingAvailabilityPolicy;
 
     @Autowired
     public ListingServiceImpl(
@@ -76,7 +80,9 @@ public class ListingServiceImpl implements ListingService {
             final CarPictureService carPictureService,
             final EmailService emailService,
             final LocationService locationService,
-            final ReservationTimingPolicy reservationTimingPolicy) {
+            final ReservationTimingPolicy reservationTimingPolicy,
+            final ListingCheckInOutPolicy listingCheckInOutPolicy,
+            final ListingAvailabilityPolicy listingAvailabilityPolicy) {
         this.listingDao = listingDao;
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.carDao = carDao;
@@ -87,6 +93,8 @@ public class ListingServiceImpl implements ListingService {
         this.emailService = emailService;
         this.locationService = locationService;
         this.reservationTimingPolicy = reservationTimingPolicy;
+        this.listingCheckInOutPolicy = listingCheckInOutPolicy;
+        this.listingAvailabilityPolicy = listingAvailabilityPolicy;
     }
 
     @Override
@@ -111,6 +119,7 @@ public class ListingServiceImpl implements ListingService {
                 throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
             }
         }
+        listingAvailabilityPolicy.validateAvailabilityPeriodsTotalDays(availabilityPeriods);
         validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_CAR_NOT_FOUND, carId));
@@ -207,12 +216,17 @@ public class ListingServiceImpl implements ListingService {
                 .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_PICKUP_LOCATION_REQUIRED));
     }
 
-    private static void validateListingCheckOutAfterCheckIn(final LocalTime checkInTime, final LocalTime checkOutTime) {
+    private void validateListingCheckOutAfterCheckIn(final LocalTime checkInTime, final LocalTime checkOutTime) {
         if (checkInTime == null || checkOutTime == null) {
             return;
         }
         if (!checkOutTime.isAfter(checkInTime)) {
             throw new ListingValidationException(MessageKeys.LISTING_CHECKOUT_NOT_AFTER_CHECKIN);
+        }
+        if (!listingCheckInOutPolicy.hasMinimumGap(checkInTime, checkOutTime)) {
+            throw new ListingValidationException(
+                    MessageKeys.LISTING_CHECKINOUT_MIN_GAP,
+                    listingCheckInOutPolicy.getMinHoursBetweenCheckInAndCheckOut());
         }
     }
 
@@ -279,6 +293,7 @@ public class ListingServiceImpl implements ListingService {
                     throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
                 }
             }
+            listingAvailabilityPolicy.validateAvailabilityPeriodsTotalDays(availabilityPeriods);
             validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
         }
         final String safeStartStreet = startPointStreet == null ? "" : startPointStreet.trim();
@@ -889,5 +904,11 @@ public class ListingServiceImpl implements ListingService {
             return p;
         }
         return p + " · " + d;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int getConfiguredMaxAvailabilityTotalDays() {
+        return listingAvailabilityPolicy.getMaxAvailabilityTotalDays();
     }
 }

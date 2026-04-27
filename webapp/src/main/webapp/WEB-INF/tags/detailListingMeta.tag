@@ -7,10 +7,12 @@
 <%@ attribute name="location" required="true" type="java.lang.String" %>
 
 <div class="d-flex flex-wrap align-items-center gap-3 detail-listing-meta mt-2">
-    <c:if test="${not empty rating and not empty reviewCount}">
+    <c:if test="${not empty reviewCount}">
         <span class="d-inline-flex align-items-center gap-1 text-secondary">
-            <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-            <span class="text-dark fw-semibold"><c:out value="${rating}"/></span>
+            <c:if test="${not empty rating}">
+                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                <span class="text-dark fw-semibold"><c:out value="${rating}"/></span>
+            </c:if>
             <spring:message code="detailListingMeta.reviewsCount" arguments="${reviewCount}" var="reviewsCntText"/>
             <span class="text-muted"><c:out value="${reviewsCntText}"/></span>
         </span>

@@ -2,6 +2,9 @@ package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotNull;
 
+import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
+
+@ReservationWithinMaxBillableDays
 public class ReservationForm {
 
     @NotNull

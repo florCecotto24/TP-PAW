@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -25,17 +26,17 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.CarPicture;
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
@@ -56,27 +57,38 @@ public class ListingJdbcDao implements ListingDao {
         return rs.wasNull() ? null : v;
     }
 
-    private static final RowMapper<Listing> LISTING_ROW_MAPPER = (rs, rowNum) -> new Listing(
-            rs.getLong("id"),
-            rs.getString("title"),
-            rs.getLong("car_id"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
-            JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"),
-            Listing.Status.valueOf(rs.getString("status").toUpperCase()),
-            rs.getBigDecimal("day_price"),
-            rs.getString("start_point_street"),
-            rs.getString("start_point_number"),
-            rs.getString("description"),
-            JdbcDateTimeUtils.readLocalTime(rs, "check_in_time"),
-            JdbcDateTimeUtils.readLocalTime(rs, "check_out_time"),
-            readNullableLongCol(rs, "neighborhood_id"));
+    private static BigDecimal readNullableRatingAvg(final java.sql.ResultSet rs, final String column) throws java.sql.SQLException {
+        final BigDecimal v = rs.getBigDecimal(column);
+        if (rs.wasNull() || v == null) {
+            return null;
+        }
+        return v.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static final RowMapper<Listing> LISTING_ROW_MAPPER = (rs, rowNum) -> Listing.builder()
+            .id(rs.getLong("id"))
+            .title(rs.getString("title"))
+            .carId(rs.getLong("car_id"))
+            .createdAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"))
+            .updatedAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"))
+            .status(Listing.Status.valueOf(rs.getString("status").toUpperCase()))
+            .dayPrice(rs.getBigDecimal("day_price"))
+            .startPointStreet(rs.getString("start_point_street"))
+            .startPointNumber(rs.getString("start_point_number"))
+            .description(rs.getString("description"))
+            .checkInTime(JdbcDateTimeUtils.readLocalTime(rs, "check_in_time"))
+            .checkOutTime(JdbcDateTimeUtils.readLocalTime(rs, "check_out_time"))
+            .neighborhoodId(readNullableLongCol(rs, "neighborhood_id"))
+            .ratingAvg(readNullableRatingAvg(rs, "rating_avg"))
+            .build();
 
     private static final RowMapper<ListingCard> LISTING_CARD_ROW_MAPPER = (rs, rowNum) -> new ListingCard(
             rs.getLong("listing_id"),
             rs.getString("brand"),
             rs.getString("model"),
             rs.getBigDecimal("day_price"),
-            rs.getLong("image_id")
+            rs.getLong("image_id"),
+            readNullableRatingAvg(rs, "rating_avg")
     );
 
     private static final ResultSetExtractor<Optional<ListingDetail>> LISTING_DETAIL_EXTRACTOR = rs -> {
@@ -88,30 +100,33 @@ public class ListingJdbcDao implements ListingDao {
 
         while (rs.next()) {
             if (listing == null) {
-                listing = new Listing(
-                        rs.getLong("listing_id"),
-                        rs.getString("title"),
-                        rs.getLong("car_id"),
-                        JdbcDateTimeUtils.readOffsetDateTime(rs, "listing_created_at"),
-                        JdbcDateTimeUtils.readOffsetDateTime(rs, "listing_updated_at"),
-                        Listing.Status.valueOf(rs.getString("status").toUpperCase()),
-                        rs.getBigDecimal("day_price"),
-                        rs.getString("start_point_street"),
-                        rs.getString("start_point_number"),
-                        rs.getString("description"),
-                        JdbcDateTimeUtils.readLocalTime(rs, "check_in_time"),
-                        JdbcDateTimeUtils.readLocalTime(rs, "check_out_time"),
-                        readNullableLongCol(rs, "neighborhood_id"));
-                car = new Car(
-                        rs.getLong("car_id"),
-                        rs.getLong("owner_id"),
-                        rs.getString("plate"),
-                        rs.getString("brand"),
-                        rs.getString("model"),
-                        Car.Type.valueOf(rs.getString("type")),
-                        Car.Powertrain.valueOf(rs.getString("powertrain")),
-                        Car.Transmission.valueOf(rs.getString("transmission")));
-                owner = new User(
+                listing = Listing.builder()
+                        .id(rs.getLong("listing_id"))
+                        .title(rs.getString("title"))
+                        .carId(rs.getLong("car_id"))
+                        .createdAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "listing_created_at"))
+                        .updatedAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "listing_updated_at"))
+                        .status(Listing.Status.valueOf(rs.getString("status").toUpperCase()))
+                        .dayPrice(rs.getBigDecimal("day_price"))
+                        .startPointStreet(rs.getString("start_point_street"))
+                        .startPointNumber(rs.getString("start_point_number"))
+                        .description(rs.getString("description"))
+                        .checkInTime(JdbcDateTimeUtils.readLocalTime(rs, "check_in_time"))
+                        .checkOutTime(JdbcDateTimeUtils.readLocalTime(rs, "check_out_time"))
+                        .neighborhoodId(readNullableLongCol(rs, "neighborhood_id"))
+                        .ratingAvg(readNullableRatingAvg(rs, "rating_avg"))
+                        .build();
+                car = Car.builder()
+                        .id(rs.getLong("car_id"))
+                        .ownerId(rs.getLong("owner_id"))
+                        .plate(rs.getString("plate"))
+                        .brand(rs.getString("brand"))
+                        .model(rs.getString("model"))
+                        .type(Car.Type.valueOf(rs.getString("type")))
+                        .powertrain(Car.Powertrain.valueOf(rs.getString("powertrain")))
+                        .transmission(Car.Transmission.valueOf(rs.getString("transmission")))
+                        .build();
+                owner = User.identities(
                         rs.getLong("owner_user_id"),
                         rs.getString("owner_email"),
                         rs.getString("owner_forename"),
@@ -209,20 +224,22 @@ public class ListingJdbcDao implements ListingDao {
         values.put("neighborhood_id", neighborhoodId);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new Listing(
-                id.longValue(),
-                title,
-                carId,
-                JdbcDateTimeUtils.toOffsetDateTime(now),
-                JdbcDateTimeUtils.toOffsetDateTime(now),
-                status,
-                dayPrice,
-                startPointStreet,
-                startPointNumber,
-                description,
-                checkInTime,
-                checkOutTime,
-                neighborhoodId);
+        return Listing.builder()
+                .id(id.longValue())
+                .title(title)
+                .carId(carId)
+                .createdAt(JdbcDateTimeUtils.toOffsetDateTime(now))
+                .updatedAt(JdbcDateTimeUtils.toOffsetDateTime(now))
+                .status(status)
+                .dayPrice(dayPrice)
+                .startPointStreet(startPointStreet)
+                .startPointNumber(startPointNumber)
+                .description(description)
+                .checkInTime(checkInTime)
+                .checkOutTime(checkOutTime)
+                .neighborhoodId(neighborhoodId)
+                .ratingAvg(null)
+                .build();
     }
 
     @Override
@@ -257,7 +274,7 @@ public class ListingJdbcDao implements ListingDao {
         return jdbcTemplate.query(
                 "SELECT l.id AS listing_id, l.title, l.created_at AS listing_created_at, "
                         + "l.updated_at AS listing_updated_at, l.status, l.day_price, l.start_point_street, l.start_point_number, l.description, "
-                        + "l.check_in_time, l.check_out_time, l.neighborhood_id, "
+                        + "l.check_in_time, l.check_out_time, l.neighborhood_id, l.rating_avg, "
                         + "c.id AS car_id, c.owner_id, c.plate, c.brand, c.model, c.type, c.transmission, c.powertrain, "
                         + "u.id AS owner_user_id, u.email AS owner_email, u.forename AS owner_forename, u.surname AS owner_surname, "
                         + "cp.id AS car_picture_id, cp.image_id, cp.display_order, "
@@ -373,7 +390,7 @@ public class ListingJdbcDao implements ListingDao {
     @Override
     public List<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
         final StringBuilder sql = new StringBuilder(
-                "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, "
+                "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
@@ -406,7 +423,7 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("limit", pageSize)
                 .addValue("offset", offset);
         appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
-        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id "
@@ -430,7 +447,7 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("limit", pageSize)
                 .addValue("offset", offset);
         appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
-        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id "
@@ -459,7 +476,7 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("limit", pageSize)
                 .addValue("offset", offset);
         final StringBuilder listSql = new StringBuilder(
-                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l JOIN cars c ON c.id = l.car_id "
@@ -560,7 +577,7 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("recentSection", HOME_SECTION_RECENT)
                 .addValue("homeLimit", limit);
         appendPublicBrowseFilters(homeParams, browseWallDate, excludeOwnerUserId);
-        final String sql = "(SELECT :cheapestSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
+        final String sql = "(SELECT :cheapestSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
@@ -568,7 +585,7 @@ public class ListingJdbcDao implements ListingDao {
                 + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
                 + "ORDER BY l.day_price ASC LIMIT :homeLimit) "
                 + "UNION ALL "
-                + "(SELECT :recentSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
+                + "(SELECT :recentSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
@@ -588,7 +605,8 @@ public class ListingJdbcDao implements ListingDao {
                                 rs.getString("brand"),
                                 rs.getString("model"),
                                 rs.getBigDecimal("day_price"),
-                                rs.getLong("image_id"));
+                                rs.getLong("image_id"),
+                                readNullableRatingAvg(rs, "rating_avg"));
                         final String section = rs.getString("home_section");
                         if (HOME_SECTION_CHEAPEST.equals(section)) {
                             cheapest.add(card);
@@ -610,7 +628,7 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("listingId", listingId)
                 .addValue("similarLimit", limit);
         appendPublicBrowseFilters(similarParams, browseWallDate, excludeOwnerUserId);
-        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, "
+        final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                 + "FROM listings l "

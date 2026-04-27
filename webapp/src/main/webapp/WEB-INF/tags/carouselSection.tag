@@ -45,7 +45,7 @@
                         </c:choose>
 
                         <ryden:carCard model="${car.model}" brand="${car.brand}" price="${car.price}"
-                                     image="${imageUrl}" pricePeriod="day"
+                                     image="${imageUrl}" pricePeriod="day" ratingAvg="${car.ratingAvg}"
                                      href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
                     </div>
 

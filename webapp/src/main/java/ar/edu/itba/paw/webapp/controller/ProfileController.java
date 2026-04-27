@@ -26,16 +26,17 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.ProfileUpdateForm;
 import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
-import ar.edu.itba.paw.webapp.validation.MultipartImageValidation;
+import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
@@ -70,6 +71,21 @@ public class ProfileController {
         return userValidationPolicy.getProfilePhoneMaxLength();
     }
 
+    @ModelAttribute("profileDisplayNamePartMaxLength")
+    public int profileDisplayNamePartMaxLength() {
+        return userValidationPolicy.getDisplayNamePartMaxLength();
+    }
+
+    @ModelAttribute("registrationPasswordMinLength")
+    public int registrationPasswordMinLength() {
+        return userValidationPolicy.getRegistrationPasswordMinLength();
+    }
+
+    @ModelAttribute("registrationPasswordMaxLength")
+    public int registrationPasswordMaxLength() {
+        return userValidationPolicy.getRegistrationPasswordMaxLength();
+    }
+
     @ModelAttribute("uploadMaxImageBytes")
     public long uploadMaxImageBytes() {
         return imageService.getMaxImageBytes();
@@ -87,7 +103,7 @@ public class ProfileController {
 
     @ModelAttribute
     public void addUserBasics(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final Model model) {
         if (currentUser == null) {
             return;
@@ -101,7 +117,7 @@ public class ProfileController {
 
     @GetMapping
     public String profileGet(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @ModelAttribute("profileForm") final ProfileUpdateForm profileForm) {
         final User me = WebAuthUtils.requireUser(currentUser);
         populateFormFromUser(me.getId(), profileForm);
@@ -110,7 +126,7 @@ public class ProfileController {
 
     @PostMapping
     public String profilePost(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @Valid @ModelAttribute("profileForm") final ProfileUpdateForm profileForm,
             final BindingResult bindingResult,
             final HttpServletRequest request,
@@ -136,7 +152,7 @@ public class ProfileController {
 
     @PostMapping("/picture")
     public String uploadProfilePicture(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam("profilePicture") final MultipartFile file,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -174,7 +190,7 @@ public class ProfileController {
 
     @PostMapping("/picture/delete")
     public String deleteProfilePicture(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         try {
@@ -189,7 +205,7 @@ public class ProfileController {
 
     @GetMapping("/password")
     public String passwordFormGet(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final Model model) {
         WebAuthUtils.requireUser(currentUser);
         model.addAttribute("profilePasswordForm", new ProfilePasswordChangeForm());
@@ -198,7 +214,7 @@ public class ProfileController {
 
     @PostMapping("/password")
     public String passwordFormPost(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @Valid @ModelAttribute("profilePasswordForm") final ProfilePasswordChangeForm profilePasswordForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {

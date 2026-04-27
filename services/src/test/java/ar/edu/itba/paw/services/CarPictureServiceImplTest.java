@@ -16,8 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
-import ar.edu.itba.paw.models.CarPicture;
-import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.CarPictureDao;
 
 @ExtendWith(MockitoExtension.class)

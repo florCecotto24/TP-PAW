@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.security;
 
-import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,11 +10,11 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.UserService;
 
 @Component
@@ -24,7 +24,9 @@ public class RydenAuthenticationProvider implements AuthenticationProvider {
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public RydenAuthenticationProvider(final UserService userService, final PasswordEncoder passwordEncoder) {
+    public RydenAuthenticationProvider(
+            final UserService userService,
+            final PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -52,13 +54,15 @@ public class RydenAuthenticationProvider implements AuthenticationProvider {
             throw new EmailNotValidatedException(user.getEmail());
         }
 
+        final List<GrantedAuthority> authorities =
+                UserRoleAuthorities.fromDbRoleNames(userService.findRoleNamesForUser(user.getId()));
         final RydenUserDetails principal = new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),
                 user.getForename(),
                 user.getSurname(),
                 hash,
-                Collections.singletonList(new SimpleGrantedAuthority(RydenUserDetailsService.ROLE_USER_AUTHORITY)));
+                authorities);
 
         return new UsernamePasswordAuthenticationToken(principal, rawPassword, principal.getAuthorities());
     }

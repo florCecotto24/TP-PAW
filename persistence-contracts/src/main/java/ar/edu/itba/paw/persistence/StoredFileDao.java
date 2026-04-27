@@ -2,7 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.StoredFile;
+import ar.edu.itba.paw.models.domain.StoredFile;
 
 public interface StoredFileDao {
 

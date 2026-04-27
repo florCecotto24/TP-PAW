@@ -13,9 +13,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.Reservation;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Reservation;
 
 @SpringJUnitConfig
 @ContextConfiguration(classes = TestPersistenceConfig.class)

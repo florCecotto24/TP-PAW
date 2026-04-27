@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationCard;
-import ar.edu.itba.paw.models.StoredFile;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.domain.StoredFile;
 
 public interface ReservationService {
 
@@ -99,4 +99,21 @@ public interface ReservationService {
     long getListingReservationsThisMonth(long ownerId, long listingId);
 
     Optional<OffsetDateTime> getListingNextReservationDate(long ownerId, long listingId);
+
+    void markCarReturnedByOwner(long ownerUserId, long reservationId);
+
+    /** Hours before {@code end_date} to email the rider to return the vehicle ({@code app.reservation.return-reminder-hours-before-checkout}). */
+    int getConfiguredReturnReminderHoursBeforeCheckout();
+
+    /** Max inclusive billable days for one reservation ({@code app.reservation.max-billable-days}). */
+    int getConfiguredMaxReservationBillableDays();
+
+    /** Scheduled job: reminder email to return the car (within configured hours before checkout). */
+    void dispatchReturnReminderEmails();
+
+    /** Scheduled job: email at checkout if the car was not marked returned. */
+    void dispatchReturnCheckoutEmails();
+
+    /** Scheduled job: invite the rider to leave an optional review after the rental period. */
+    void dispatchRiderReviewInviteEmails();
 }

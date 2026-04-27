@@ -150,12 +150,12 @@
             <div class="profile-fields-grid">
                 <div class="mb-3">
                     <label for="forename" class="form-label"><spring:message code="profile.forename"/></label>
-                    <form:input path="forename" id="forename" cssClass="form-control" maxlength="50" autocomplete="given-name" data-ryden-no-punctuation="true"/>
+                    <form:input path="forename" id="forename" cssClass="form-control" maxlength="${profileDisplayNamePartMaxLength}" autocomplete="given-name" data-ryden-no-punctuation="true"/>
                     <form:errors path="forename" cssClass="text-danger small d-block" element="div"/>
                 </div>
                 <div class="mb-3">
                     <label for="surname" class="form-label"><spring:message code="profile.surname"/></label>
-                    <form:input path="surname" id="surname" cssClass="form-control" maxlength="50" autocomplete="family-name" data-ryden-no-punctuation="true"/>
+                    <form:input path="surname" id="surname" cssClass="form-control" maxlength="${profileDisplayNamePartMaxLength}" autocomplete="family-name" data-ryden-no-punctuation="true"/>
                     <form:errors path="surname" cssClass="text-danger small d-block" element="div"/>
                 </div>
                 <div class="mb-3">
@@ -164,7 +164,7 @@
                                 autocomplete="tel" inputmode="tel" pattern="[0-9+]*" data-ryden-phone="true"
                                 placeholder="${profilePhonePlaceholder}"/>
                     <form:errors path="phoneNumber" cssClass="text-danger small d-block" element="div"/>
-                    <div class="form-text"><spring:message code="profile.phone.hint"/></div>
+                    <div class="form-text"><spring:message code="profile.phone.hint" arguments="${profilePhoneMaxLength}"/></div>
                 </div>
                 <div class="mb-3">
                     <label for="profileBirthDateInput" class="form-label"><spring:message code="profile.birthDate"/></label>

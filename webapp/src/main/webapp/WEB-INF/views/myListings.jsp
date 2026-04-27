@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -142,6 +143,12 @@
                                                     <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
                                                         <div>
                                                             <h3 class="h5 fw-semibold mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
+                                                            <c:if test="${not empty car.ratingAvg}">
+                                                                <p class="small text-secondary mb-0">
+                                                                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                                                    <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                                                                </p>
+                                                            </c:if>
                                                         </div>
                                                         <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                                             <div class="reservation-price-compact">

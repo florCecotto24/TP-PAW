@@ -14,11 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.ReservationConfirmationPayload;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.email.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
 
 @Component

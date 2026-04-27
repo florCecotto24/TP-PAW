@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.dto;
 
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.User;
 
 public final class CarPublicationResult {
 

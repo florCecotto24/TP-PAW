@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
-import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.domain.Image;
 import java.util.Optional;
 
 public interface ImageDao {

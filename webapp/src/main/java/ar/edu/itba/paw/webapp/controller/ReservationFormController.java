@@ -2,12 +2,13 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationException;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
@@ -57,7 +58,7 @@ public class ReservationFormController {
 
     @GetMapping("/new")
     public ModelAndView index(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam(name = "listingId") final long listingId,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "carName", required = false) final String carName,
@@ -94,7 +95,7 @@ public class ReservationFormController {
 
     @PostMapping
     public ModelAndView formSubmit(
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @Valid @ModelAttribute("reservationForm") final ReservationForm form,
             final BindingResult errors,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
@@ -187,6 +188,7 @@ public class ReservationFormController {
 
     private void addReservationPolicyHours(final ModelAndView mav) {
         mav.addObject("paymentProofUploadDeadlineHours", reservationService.getConfiguredPaymentProofDeadlineHours());
+        mav.addObject("maxReservationBillableDays", reservationService.getConfiguredMaxReservationBillableDays());
     }
 
     private void addReservationPricingToModel(

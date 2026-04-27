@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @Service

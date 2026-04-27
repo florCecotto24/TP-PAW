@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,22 +21,25 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.dto.CarPublicationResult;
 import ar.edu.itba.paw.dto.ImageUpload;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.CarPicture;
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.Neighborhood;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
+import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @ExtendWith(MockitoExtension.class)
 public class ListingServiceImplTest {
@@ -72,12 +74,18 @@ public class ListingServiceImplTest {
     @Mock
     private ReservationTimingPolicy reservationTimingPolicy;
 
+    @Mock
+    private ListingCheckInOutPolicy listingCheckInOutPolicy;
+
+    @Mock
+    private ListingAvailabilityPolicy listingAvailabilityPolicy;
+
     @InjectMocks
     private ListingServiceImpl listingService;
 
-    @BeforeEach
-    void stubReservationTimingPolicy() {
-        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
+    private void stubPublishListingPolicies() {
+        Mockito.when(listingCheckInOutPolicy.hasMinimumGap(Mockito.any(), Mockito.any())).thenReturn(true);
+        Mockito.doNothing().when(listingAvailabilityPolicy).validateAvailabilityPeriodsTotalDays(Mockito.anyList());
     }
 
     @Test
@@ -93,18 +101,19 @@ public class ListingServiceImplTest {
         final String description = "Desc";
         final LocalTime checkIn = LocalTime.of(9, 0);
         final LocalTime checkOut = LocalTime.of(18, 0);
-        final Listing listing = new Listing(
-                listingId,
-                title,
-                carId,
-                createdAt,
-                updatedAt,
-                Listing.Status.ACTIVE,
-                dayPrice,
-                startPointStreet,
-                description,
-                checkIn,
-                checkOut);
+        final Listing listing = Listing.builder()
+                .id(listingId)
+                .title(title)
+                .carId(carId)
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
+                .status(Listing.Status.ACTIVE)
+                .dayPrice(dayPrice)
+                .startPointStreet(startPointStreet)
+                .description(description)
+                .checkInTime(checkIn)
+                .checkOutTime(checkOut)
+                .build();
         Mockito.when(listingDao.getListingById(listingId)).thenReturn(Optional.of(listing));
 
         // 2. Execute
@@ -136,20 +145,30 @@ public class ListingServiceImplTest {
         final long ownerId = 7L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-02T12:00:00Z");
-        final Listing listing = new Listing(
-                listingId,
-                "Detail title",
-                carId,
-                createdAt,
-                updatedAt,
-                Listing.Status.ACTIVE,
-                new BigDecimal("40.00"),
-                "SP",
-                "D",
-                LocalTime.of(8, 0),
-                LocalTime.of(17, 0));
-        final Car car = new Car(carId, ownerId, "ABC", "Brand", "Model", Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        final User owner = new User(ownerId, "owner@test.com", "O", "User");
+        final Listing listing = Listing.builder()
+                .id(listingId)
+                .title("Detail title")
+                .carId(carId)
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
+                .status(Listing.Status.ACTIVE)
+                .dayPrice(new BigDecimal("40.00"))
+                .startPointStreet("SP")
+                .description("D")
+                .checkInTime(LocalTime.of(8, 0))
+                .checkOutTime(LocalTime.of(17, 0))
+                .build();
+        final Car car = Car.builder()
+                .id(carId)
+                .ownerId(ownerId)
+                .plate("ABC")
+                .brand("Brand")
+                .model("Model")
+                .type(Car.Type.SEDAN)
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .build();
+        final User owner = User.identities(ownerId, "owner@test.com", "O", "User");
         final ListingDetail detail = new ListingDetail(listing, car, owner, List.of(), List.of());
         Mockito.when(listingDao.getListingDetailById(listingId)).thenReturn(Optional.of(detail));
 
@@ -231,16 +250,17 @@ public class ListingServiceImplTest {
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
         final ListingAvailability la = new ListingAvailability(availabilityId, listingId, availStart, availEnd, createdAt, updatedAt);
         Mockito.when(listingAvailabilityDao.findByListingId(listingId)).thenReturn(List.of(la));
-        final Reservation blocking = new Reservation(
-                reservationId,
-                riderId,
-                listingId,
-                LocalDateTime.of(2026, 1, 2, 10, 0).atZone(wall).toOffsetDateTime(),
-                LocalDateTime.of(2026, 1, 2, 20, 0).atZone(wall).toOffsetDateTime(),
-                Reservation.Status.ACCEPTED,
-                createdAt,
-                updatedAt,
-                new BigDecimal("100.00"));
+        final Reservation blocking = Reservation.builder()
+                .id(reservationId)
+                .riderId(riderId)
+                .listingId(listingId)
+                .startDate(LocalDateTime.of(2026, 1, 2, 10, 0).atZone(wall).toOffsetDateTime())
+                .endDate(LocalDateTime.of(2026, 1, 2, 20, 0).atZone(wall).toOffsetDateTime())
+                .status(Reservation.Status.ACCEPTED)
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
+                .totalPrice(new BigDecimal("100.00"))
+                .build();
         Mockito.when(reservationDao.findBlockingByListingId(listingId)).thenReturn(List.of(blocking));
 
         // 2. Execute
@@ -359,29 +379,32 @@ public class ListingServiceImplTest {
         final LocalTime checkOut2 = LocalTime.of(19, 0);
         final BigDecimal dayPrice1 = new BigDecimal("10");
         final BigDecimal dayPrice2 = new BigDecimal("20");
-        final Listing first = new Listing(
-                firstId,
-                title1,
-                carId1,
-                createdAt1,
-                updatedAt1,
-                Listing.Status.ACTIVE,
-                dayPrice1,
-                startStreet1,
-                description1,
-                checkIn1,
-                checkOut1);
-        final Listing second = new Listing(
-                secondId,
-                title2,
-                carId2,
-                createdAt2,
-                updatedAt2,
-                Listing.Status.PAUSED,
-                dayPrice2,
-                startStreet2,
-                description2,checkIn2,
-                checkOut2);
+        final Listing first = Listing.builder()
+                .id(firstId)
+                .title(title1)
+                .carId(carId1)
+                .createdAt(createdAt1)
+                .updatedAt(updatedAt1)
+                .status(Listing.Status.ACTIVE)
+                .dayPrice(dayPrice1)
+                .startPointStreet(startStreet1)
+                .description(description1)
+                .checkInTime(checkIn1)
+                .checkOutTime(checkOut1)
+                .build();
+        final Listing second = Listing.builder()
+                .id(secondId)
+                .title(title2)
+                .carId(carId2)
+                .createdAt(createdAt2)
+                .updatedAt(updatedAt2)
+                .status(Listing.Status.PAUSED)
+                .dayPrice(dayPrice2)
+                .startPointStreet(startStreet2)
+                .description(description2)
+                .checkInTime(checkIn2)
+                .checkOutTime(checkOut2)
+                .build();
         final List<Listing> list = List.of(first, second);
         Mockito.when(listingDao.getAllListings()).thenReturn(list);
 
@@ -431,6 +454,7 @@ public class ListingServiceImplTest {
 
     @Test
     public void testPublishCreatesCarListingAndPictures() {
+        stubPublishListingPolicies();
         final long carId = 1L;
         final long ownerId = 2L;
         final long listingId = 3L;
@@ -460,22 +484,32 @@ public class ListingServiceImplTest {
         final long neighborhoodId = 1L;
 
         final Image image = new Image(imageId, imageName, imageType, imageData);
-        final Car car = new Car(carId, ownerId, plate, brand, model, type, powertrain, transmission);
-        final Listing listing = new Listing(
-                listingId,
-                expectedTitle,
-                carId,
-                createdAt,
-                updatedAt,
-                status,
-                pricePerDay,
-                startPointStreet,
-                startPointNumber,
-                description,
-                checkInTime,
-                checkOutTime,
-                neighborhoodId);
-        final User user = new User(ownerId, "owner@test.com", "ownerName", "ownerSurname");
+        final Car car = Car.builder()
+                .id(carId)
+                .ownerId(ownerId)
+                .plate(plate)
+                .brand(brand)
+                .model(model)
+                .type(type)
+                .powertrain(powertrain)
+                .transmission(transmission)
+                .build();
+        final Listing listing = Listing.builder()
+                .id(listingId)
+                .title(expectedTitle)
+                .carId(carId)
+                .createdAt(createdAt)
+                .updatedAt(updatedAt)
+                .status(status)
+                .dayPrice(pricePerDay)
+                .startPointStreet(startPointStreet)
+                .startPointNumber(startPointNumber)
+                .description(description)
+                .checkInTime(checkInTime)
+                .checkOutTime(checkOutTime)
+                .neighborhoodId(neighborhoodId)
+                .build();
+        final User user = User.identities(ownerId, "owner@test.com", "ownerName", "ownerSurname");
         final CarPicture carPicture = new CarPicture(carPictureId, carId, imageId, 1, createdAt, updatedAt);
         final List<AvailabilityPeriod> periods = List.of(new AvailabilityPeriod(startDate, endDate));
         final List<ImageUpload> uploads = List.of(new ImageUpload(imageName, imageType, imageData));

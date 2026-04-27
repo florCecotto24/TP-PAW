@@ -1,9 +1,11 @@
 package ar.edu.itba.paw.persistence;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.security.UserRole;
 
 public interface UserDao {
     User createUser(String email, String forename, String surname, String passwordHash);
@@ -33,4 +35,8 @@ public interface UserDao {
     Optional<User> getListingOwner(final long listingId);
 
     void updateLatestLocale(long userId, String localeTag);
+
+    List<String> findRoleNamesForUser(long userId);
+
+    void insertUserRole(long userId, UserRole role);
 }

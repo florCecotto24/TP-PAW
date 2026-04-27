@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.domain.Image;
 
 public class ImageJdbcDaoTest extends DaoIntegrationTestSupport {
 

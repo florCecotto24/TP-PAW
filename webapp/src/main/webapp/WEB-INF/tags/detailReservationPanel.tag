@@ -10,14 +10,18 @@
 <%@ attribute name="bookableWallRangesJson" required="true" type="java.lang.String" %>
 <%@ attribute name="pickupTime" required="false" type="java.lang.String" %>
 <%@ attribute name="returnTime" required="false" type="java.lang.String" %>
+<%@ attribute name="maxBillableDays" required="true" type="java.lang.Integer" %>
 
 <c:url var="newReservationUrl" value="/reservation/new" />
+<spring:message code="validation.reservationForm.maxBillableDays" arguments="${maxBillableDays}" var="maxBillableExceededMsg" htmlEscape="true"/>
 
 <div class="detail-reservation-panel border rounded-4 p-4 bg-white shadow-sm">
     <form action="<c:out value='${newReservationUrl}'/>" method="get" id="detailReservationForm"
           data-bookable-ranges='<c:out value="${bookableWallRangesJson}" escapeXml="false"/>'
           data-pickup-time="<c:out value='${pickupTime}'/>"
-          data-return-time="<c:out value='${returnTime}'/>">
+          data-return-time="<c:out value='${returnTime}'/>"
+          data-max-billable-days="<c:out value='${maxBillableDays}'/>"
+          data-max-billable-exceeded-msg="<c:out value='${maxBillableExceededMsg}'/>">
     <input type="hidden" name="listingId" value="<c:out value='${listingId}'/>" />
     <input type="hidden" name="carName" value="<c:out value='${carName}'/>" />
     <input type="hidden" name="reservationTotal" id="detail_reservation_total_hint" value="" />
@@ -57,6 +61,8 @@
 
     <div class="mb-3">
         <label class="form-label small mb-2" for="detail_daterange"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
+        <spring:message code="detailReservationPanel.maxBillableDays.hint" arguments="${maxBillableDays}" var="maxBillableHintLine"/>
+        <p class="form-text small text-muted mb-2"><c:out value="${maxBillableHintLine}"/></p>
         <spring:message code="detailReservationPanel.dates.placeholder" var="datesPlaceholder"/>
         <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
         <input
@@ -72,6 +78,10 @@
 
     <div class="alert alert-danger mb-3" id="detail_date_alert" role="alert" hidden>
         <spring:message code="detailReservationPanel.dateAlert"/>
+    </div>
+
+    <div class="alert alert-danger mb-3" id="detail_max_billable_alert" role="alert" hidden>
+        <c:out value="${maxBillableExceededMsg}"/>
     </div>
 
     <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">

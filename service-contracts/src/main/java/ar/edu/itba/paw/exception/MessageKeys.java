@@ -21,7 +21,15 @@ public final class MessageKeys {
     public static final String RESERVATION_PAYMENT_RECEIPT_NOT_FOUND = "reservation.paymentReceipt.notFound";
     public static final String RESERVATION_PAYMENT_APPROVAL_INVALID = "reservation.paymentApproval.invalid";
     public static final String RESERVATION_CANCEL_NOT_ALLOWED = "reservation.cancel.notAllowed";
+    public static final String RESERVATION_MARK_RETURNED_NOT_ALLOWED = "reservation.carReturned.notAllowed";
+
+    public static final String REVIEW_NOT_ALLOWED = "review.notAllowed";
+    public static final String REVIEW_ALREADY_SUBMITTED = "review.alreadySubmitted";
+    public static final String REVIEW_RATING_INVALID = "review.rating.invalid";
+    public static final String REVIEW_RATING_REQUIRED_WHEN_COMMENT = "review.rating.requiredWhenComment";
+    public static final String REVIEW_COMMENT_TOO_LONG = "review.comment.tooLong";
     public static final String RESERVATION_RIDER_OUTSIDE_AVAILABILITY = "reservation.rider.outsideAvailability";
+    public static final String RESERVATION_RIDER_MAX_BILLABLE_DAYS = "reservation.rider.maxBillableDays";
     public static final String RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING =
             "reservation.rider.cannotReserveOwnListing";
     public static final String RESERVATION_TOTAL_PRICE_INVALID = "reservation.totalPrice.invalid";
@@ -42,12 +50,20 @@ public final class MessageKeys {
     public static final String USER_PASSWORD_CURRENT_INCORRECT = "user.password.currentIncorrect";
     public static final String USER_REGISTRATION_PASSWORD_MISMATCH = "user.registration.passwordMismatch";
     public static final String USER_REGISTRATION_PASSWORD_TOO_SHORT = "user.registration.passwordTooShort";
+    public static final String USER_REGISTRATION_PASSWORD_TOO_LONG = "user.registration.passwordTooLong";
+    public static final String USER_REGISTRATION_FORENAME_TOO_LONG = "user.registration.forenameTooLong";
+    public static final String USER_REGISTRATION_SURNAME_TOO_LONG = "user.registration.surnameTooLong";
+    public static final String USER_REGISTRATION_EMAIL_TOO_LONG = "user.registration.emailTooLong";
+    public static final String USER_PROFILE_FORENAME_TOO_LONG = "user.profile.forenameTooLong";
+    public static final String USER_PROFILE_SURNAME_TOO_LONG = "user.profile.surnameTooLong";
 
     /* listing */
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";
     public static final String LISTING_AVAILABILITY_INCLUDES_PAST_DATES = "listing.availability.includesPastDates";
+    public static final String LISTING_AVAILABILITY_MAX_TOTAL_DAYS = "listing.availability.maxTotalDays";
     public static final String LISTING_CHECKOUT_NOT_AFTER_CHECKIN = "listing.times.checkOutNotAfterCheckIn";
+    public static final String LISTING_CHECKINOUT_MIN_GAP = "listing.times.minGapHours";
     public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";
     public static final String LISTING_LIMIT_POSITIVE = "listing.limit.positive";
     public static final String LISTING_PICKUP_LOCATION_REQUIRED = "listing.pickupLocation.required";

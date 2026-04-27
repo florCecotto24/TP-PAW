@@ -3,7 +3,7 @@ package ar.edu.itba.paw.webapp.form;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 
-import ar.edu.itba.paw.webapp.validation.RegistrationPasswordRules;
+import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @RegistrationPasswordRules
 public class ForgotPasswordResetForm implements RegistrationPasswordConfirmFields {

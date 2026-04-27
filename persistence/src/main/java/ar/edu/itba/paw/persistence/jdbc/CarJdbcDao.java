@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.CarDao;
-import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.domain.Car;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -17,16 +17,16 @@ import java.util.Optional;
 @Repository
 public class CarJdbcDao implements CarDao{
 
-    private final static RowMapper<Car> CAR_ROW_MAPPER = (rs, rowNum) -> new Car(
-            rs.getLong("id"),
-            rs.getLong("owner_id"),
-            rs.getString("plate"),
-            rs.getString("brand"),
-            rs.getString("model"),
-            Car.Type.valueOf(rs.getString("type")),
-            Car.Powertrain.valueOf(rs.getString("powertrain")),
-            Car.Transmission.valueOf(rs.getString("transmission"))
-    );
+    private final static RowMapper<Car> CAR_ROW_MAPPER = (rs, rowNum) -> Car.builder()
+            .id(rs.getLong("id"))
+            .ownerId(rs.getLong("owner_id"))
+            .plate(rs.getString("plate"))
+            .brand(rs.getString("brand"))
+            .model(rs.getString("model"))
+            .type(Car.Type.valueOf(rs.getString("type")))
+            .powertrain(Car.Powertrain.valueOf(rs.getString("powertrain")))
+            .transmission(Car.Transmission.valueOf(rs.getString("transmission")))
+            .build();
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
@@ -52,7 +52,16 @@ public class CarJdbcDao implements CarDao{
         values.put("transmission", transmission.name());
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new Car(id.longValue(), ownerId, plate, brand, model, type, powertrain, transmission);
+        return Car.builder()
+                .id(id.longValue())
+                .ownerId(ownerId)
+                .plate(plate)
+                .brand(brand)
+                .model(model)
+                .type(type)
+                .powertrain(powertrain)
+                .transmission(transmission)
+                .build();
     }
 
     @Override

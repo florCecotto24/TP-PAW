@@ -5,6 +5,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +21,16 @@ class ModelsToStringTest {
     @Test
     void carToStringIncludesAllFields() {
         // Arrange
-        final Car car = new Car(1L, 2L, "AA123BB", "Toyota", "Yaris", Car.Type.HATCHBACK,
-                Car.Powertrain.HYBRID, Car.Transmission.AUTOMATIC);
+        final Car car = Car.builder()
+                .id(1L)
+                .ownerId(2L)
+                .plate("AA123BB")
+                .brand("Toyota")
+                .model("Yaris")
+                .type(Car.Type.HATCHBACK)
+                .powertrain(Car.Powertrain.HYBRID)
+                .transmission(Car.Transmission.AUTOMATIC)
+                .build();
         // Exercise
         final String result = car.toString();
         // Assert
@@ -26,7 +42,7 @@ class ModelsToStringTest {
     @Test
     void userToStringIncludesAllFields() {
         // Arrange
-        final User user = new User(1L, "user@example.com", "Ada", "Lovelace");
+        final User user = User.identities(1L, "user@example.com", "Ada", "Lovelace");
         // Exercise
         final String result = user.toString();
         // Assert
@@ -37,40 +53,42 @@ class ModelsToStringTest {
     @Test
     void listingToStringIncludesAllFields() {
         // Arrange
-        final Listing listing = new Listing(
-                3L,
-                "Trip",
-                9L,
-                OffsetDateTime.parse("2026-04-05T10:00:00Z"),
-                OffsetDateTime.parse("2026-04-05T11:00:00Z"),
-                Listing.Status.ACTIVE,
-                new BigDecimal("150.00"),
-                "Belgrano",
-                "Description",
-                LocalTime.of(10, 0),
-                LocalTime.of(18, 0));
+        final Listing listing = Listing.builder()
+                .id(3L)
+                .title("Trip")
+                .carId(9L)
+                .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
+                .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
+                .status(Listing.Status.ACTIVE)
+                .dayPrice(new BigDecimal("150.00"))
+                .startPointStreet("Belgrano")
+                .description("Description")
+                .checkInTime(LocalTime.of(10, 0))
+                .checkOutTime(LocalTime.of(18, 0))
+                .build();
         // Exercise
         final String result = listing.toString();
         // Assert
         final String expected = "Listing{id=3, title='Trip', carId=9, createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, "
                 + "status=ACTIVE, dayPrice=150.00, startPointStreet='Belgrano', description='Description', "
-                + "checkInTime=10:00, checkOutTime=18:00}";
+                + "checkInTime=10:00, checkOutTime=18:00, ratingAvg=null}";
         Assertions.assertEquals(expected, result);
     }
 
     @Test
     void reservationToStringIncludesAllFields() {
         // Arrange
-        final Reservation reservation = new Reservation(
-                5L,
-                7L,
-                11L,
-                OffsetDateTime.parse("2026-04-10T08:00:00Z"),
-                OffsetDateTime.parse("2026-04-12T08:00:00Z"),
-                Reservation.Status.ACCEPTED,
-                OffsetDateTime.parse("2026-04-01T09:00:00Z"),
-                OffsetDateTime.parse("2026-04-01T10:00:00Z"),
-                new BigDecimal("300.00"));
+        final Reservation reservation = Reservation.builder()
+                .id(5L)
+                .riderId(7L)
+                .listingId(11L)
+                .startDate(OffsetDateTime.parse("2026-04-10T08:00:00Z"))
+                .endDate(OffsetDateTime.parse("2026-04-12T08:00:00Z"))
+                .status(Reservation.Status.ACCEPTED)
+                .createdAt(OffsetDateTime.parse("2026-04-01T09:00:00Z"))
+                .updatedAt(OffsetDateTime.parse("2026-04-01T10:00:00Z"))
+                .totalPrice(new BigDecimal("300.00"))
+                .build();
         // Exercise
         final String result = reservation.toString();
         // Assert

@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
 
-import ar.edu.itba.paw.webapp.validation.RegistrationPasswordRules;
+import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @RegistrationPasswordRules
 public class ProfilePasswordChangeForm implements RegistrationPasswordConfirmFields {

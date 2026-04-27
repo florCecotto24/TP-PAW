@@ -9,6 +9,7 @@ public class VehicleCardView {
     private final BigDecimal price;
     private final long imageId;
     private final String statusKey;
+    private final BigDecimal ratingAvg;
 
     public VehicleCardView(
             final long listingId,
@@ -16,7 +17,7 @@ public class VehicleCardView {
             final String model,
             final BigDecimal price,
             final long imageId) {
-        this(listingId, brand, model, price, imageId, null);
+        this(listingId, brand, model, price, imageId, null, null);
     }
 
     public VehicleCardView(
@@ -26,12 +27,24 @@ public class VehicleCardView {
             final BigDecimal price,
             final long imageId,
             final String statusKey) {
+        this(listingId, brand, model, price, imageId, statusKey, null);
+    }
+
+    public VehicleCardView(
+            final long listingId,
+            final String brand,
+            final String model,
+            final BigDecimal price,
+            final long imageId,
+            final String statusKey,
+            final BigDecimal ratingAvg) {
         this.listingId = listingId;
         this.brand = brand;
         this.model = model;
         this.price = price;
         this.imageId = imageId;
         this.statusKey = statusKey;
+        this.ratingAvg = ratingAvg;
     }
 
     public long getListingId() {
@@ -56,6 +69,10 @@ public class VehicleCardView {
 
     public String getStatusKey() {
         return statusKey;
+    }
+
+    public BigDecimal getRatingAvg() {
+        return ratingAvg;
     }
 }
 

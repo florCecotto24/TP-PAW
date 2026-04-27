@@ -13,10 +13,8 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
-import ar.edu.itba.paw.models.EmailNormalizer;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
-import ar.edu.itba.paw.persistence.UserDao;
 
 @Service
 public class EmailVerificationServiceImpl implements EmailVerificationService {
@@ -25,17 +23,17 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final EmailVerificationCodeDao emailVerificationCodeDao;
-    private final UserDao userDao;
     private final EmailService emailService;
+    private final UserService userService;
 
     @Autowired
     public EmailVerificationServiceImpl(
             final EmailVerificationCodeDao emailVerificationCodeDao,
-            final UserDao userDao,
-            final EmailService emailService) {
+            final EmailService emailService,
+            final UserService userService) {
         this.emailVerificationCodeDao = emailVerificationCodeDao;
-        this.userDao = userDao;
         this.emailService = emailService;
+        this.userService = userService;
     }
 
     @Override
@@ -71,21 +69,21 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         final String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         final Instant now = Instant.now();
         emailVerificationCodeDao.insert(userId, code, now.plus(CODE_TTL), now);
-        final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
+        final Locale fallback = locale != null ? locale : Locale.ENGLISH;
+        final Locale mailLocale = userService.resolveMailLocaleOrElse(userId, fallback);
         emailService.sendEmailVerificationCode(email, code, mailLocale);
     }
 
     @Override
     @Transactional
     public long verifyEmailAndConsumeCode(final String email, final String code) {
-        final String normalized = EmailNormalizer.normalize(email);
-        final User user = userDao.findByEmail(normalized)
+        final User user = userService.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final boolean ok = emailVerificationCodeDao.deleteIfValid(user.getId(), code, Instant.now());
         if (!ok) {
             throw new VerificationCodeInvalidException(MessageKeys.USER_VERIFICATION_CODE_INVALID);
         }
-        userDao.updateEmailValidated(user.getId(), true);
+        userService.markEmailVerified(user.getId());
         return user.getId();
     }
 }

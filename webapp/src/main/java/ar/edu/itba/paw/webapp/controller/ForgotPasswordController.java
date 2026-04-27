@@ -18,9 +18,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.PasswordResetService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
 import ar.edu.itba.paw.webapp.security.ForgotPasswordSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
@@ -49,10 +50,15 @@ public class ForgotPasswordController {
         return userValidationPolicy.getRegistrationPasswordMinLength();
     }
 
+    @ModelAttribute("registrationPasswordMaxLength")
+    public int registrationPasswordMaxLength() {
+        return userValidationPolicy.getRegistrationPasswordMaxLength();
+    }
+
     @GetMapping
     public String forgotForm(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser) {
+            @CurrentUser final User currentUser) {
         if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
@@ -62,7 +68,7 @@ public class ForgotPasswordController {
     @PostMapping
     public String forgotSubmit(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             @RequestParam("email") final String email,
             final HttpSession session,
             final RedirectAttributes redirectAttributes) {
@@ -92,7 +98,7 @@ public class ForgotPasswordController {
     @GetMapping("/reset")
     public String resetForm(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpSession session,
             final Model model,
             final RedirectAttributes redirectAttributes) {
@@ -110,7 +116,7 @@ public class ForgotPasswordController {
     @PostMapping("/reset")
     public String resetSubmit(
             final HttpServletRequest request,
-            @ModelAttribute(name = LoggedUserAdvice.CURRENT_USER_MODEL_KEY, binding = false) final User currentUser,
+            @CurrentUser final User currentUser,
             final HttpSession session,
             @Valid @ModelAttribute("forgotPasswordResetForm") final ForgotPasswordResetForm form,
             final BindingResult bindingResult,

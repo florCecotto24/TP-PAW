@@ -1,10 +1,11 @@
 package ar.edu.itba.paw.services;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
 
 public interface UserService {
 
@@ -17,10 +18,18 @@ public interface UserService {
 
     Optional<User> findByEmail(String email);
 
+    /** Sets {@code email_validated} to true. */
+    void markEmailVerified(long userId);
+
     Optional<User> getUserById(final long id);
 
     /** Loads {@link User#getPasswordHash()} for Spring Security; empty if unknown email or no password set. */
     Optional<User> findByEmailForAuthentication(final String email);
+
+    /**
+     * Role keys as stored in {@code user_roles.role} (same as {@link ar.edu.itba.paw.models.security.UserRole#name()}).
+     */
+    List<String> findRoleNamesForUser(long userId);
 
     Optional<User> getListingOwner(final long listingId);
 
@@ -35,7 +44,7 @@ public interface UserService {
     void updatePhoneNumber(long userId, String phoneRaw);
 
     /**
-     * {@code birthDate} may be {@code null} to clear. Must not be after today in {@link ar.edu.itba.paw.models.AvailabilityPeriod#WALL_ZONE}.
+     * {@code birthDate} may be {@code null} to clear. Must not be after today in {@link ar.edu.itba.paw.models.domain.AvailabilityPeriod#WALL_ZONE}.
      */
     void updateBirthDate(long userId, LocalDate birthDate);
 
@@ -65,4 +74,10 @@ public interface UserService {
 
     /** Locale for async mail copy for this user; defaults to English when unknown. */
     Locale resolveMailLocale(long userId);
+
+    /**
+     * Locale for mail when the user has a persisted {@link User#getLatestLocaleTag()}; otherwise {@code fallback}
+     * (or English if {@code fallback} is null).
+     */
+    Locale resolveMailLocaleOrElse(long userId, Locale fallback);
 }

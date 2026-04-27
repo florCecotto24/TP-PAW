@@ -16,9 +16,9 @@ import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
-import ar.edu.itba.paw.models.EmailNormalizer;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
 import ar.edu.itba.paw.persistence.UserDao;
 
@@ -33,6 +33,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UserValidationPolicy validationPolicy;
+    private final UserService userService;
 
     @Autowired
     public PasswordResetServiceImpl(
@@ -40,12 +41,14 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             final UserDao userDao,
             final EmailService emailService,
             final PasswordEncoder passwordEncoder,
-            final UserValidationPolicy validationPolicy) {
+            final UserValidationPolicy validationPolicy,
+            final UserService userService) {
         this.passwordResetCodeDao = passwordResetCodeDao;
         this.userDao = userDao;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.validationPolicy = validationPolicy;
+        this.userService = userService;
     }
 
     @Override
@@ -64,7 +67,8 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         passwordResetCodeDao.deleteForUser(user.getId());
         final String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         passwordResetCodeDao.insert(user.getId(), code, now.plus(CODE_TTL), now);
-        final Locale mailLocale = locale != null ? locale : Locale.ENGLISH;
+        final Locale fallback = locale != null ? locale : Locale.ENGLISH;
+        final Locale mailLocale = userService.resolveMailLocaleOrElse(user.getId(), fallback);
         emailService.sendPasswordResetCode(user.getEmail(), code, mailLocale);
         return true;
     }
@@ -86,6 +90,11 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             throw new RegistrationPasswordException(
                     MessageKeys.USER_REGISTRATION_PASSWORD_TOO_SHORT,
                     validationPolicy.getRegistrationPasswordMinLength());
+        }
+        if (newPassword.length() > validationPolicy.getRegistrationPasswordMaxLength()) {
+            throw new RegistrationPasswordException(
+                    MessageKeys.USER_REGISTRATION_PASSWORD_TOO_LONG,
+                    validationPolicy.getRegistrationPasswordMaxLength());
         }
         final boolean ok = passwordResetCodeDao.deleteIfValid(user.getId(), code, Instant.now());
         if (!ok) {

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
 
 public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
 
@@ -100,9 +100,9 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
         // Arrange
         insertUser(1L, "owner@mail.com", "Owner", "One");
         insertUser(2L, "other@mail.com", "Other", "Two");
-        insertCar(10L, 1L, "P1", "Ford", "Fiesta", ar.edu.itba.paw.models.Car.Type.HATCHBACK,
-                ar.edu.itba.paw.models.Car.Powertrain.GASOLINE, ar.edu.itba.paw.models.Car.Transmission.MANUAL);
-        insertListing(100L, 10L, "My listing", ar.edu.itba.paw.models.Listing.Status.ACTIVE,
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", ar.edu.itba.paw.models.domain.Car.Type.HATCHBACK,
+                ar.edu.itba.paw.models.domain.Car.Powertrain.GASOLINE, ar.edu.itba.paw.models.domain.Car.Transmission.MANUAL);
+        insertListing(100L, 10L, "My listing", ar.edu.itba.paw.models.domain.Listing.Status.ACTIVE,
                 new BigDecimal("12.00"), OffsetDateTime.parse("2026-04-01T10:00:00Z"));
 
         // Exercise

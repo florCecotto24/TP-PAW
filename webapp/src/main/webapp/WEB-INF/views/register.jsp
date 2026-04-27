@@ -30,23 +30,23 @@
 
         <div class="mb-3">
             <label for="forename" class="form-label"><spring:message code="register.forename"/></label>
-            <form:input path="forename" id="forename" cssClass="form-control mb-1" maxlength="50" autocomplete="given-name" data-ryden-no-punctuation="true"/>
+            <form:input path="forename" id="forename" cssClass="form-control mb-1" maxlength="${registrationDisplayNamePartMaxLength}" autocomplete="given-name" data-ryden-no-punctuation="true"/>
             <form:errors path="forename" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">
             <label for="surname" class="form-label"><spring:message code="register.surname"/></label>
-            <form:input path="surname" id="surname" cssClass="form-control mb-1" maxlength="50" autocomplete="family-name" data-ryden-no-punctuation="true"/>
+            <form:input path="surname" id="surname" cssClass="form-control mb-1" maxlength="${registrationDisplayNamePartMaxLength}" autocomplete="family-name" data-ryden-no-punctuation="true"/>
             <form:errors path="surname" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">
             <label for="email" class="form-label"><spring:message code="register.email"/></label>
-            <form:input path="email" id="email" type="email" cssClass="form-control" maxlength="50" required="required"/>
+            <form:input path="email" id="email" type="email" cssClass="form-control" maxlength="${registrationEmailMaxLength}" required="required"/>
             <form:errors path="email" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">
             <label for="password" class="form-label"><spring:message code="register.password"/></label>
             <div class="input-group">
-                <form:password path="password" id="password" cssClass="form-control" autocomplete="new-password" required="required"/>
+                <form:password path="password" id="password" cssClass="form-control" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}" required="required"/>
                 <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">
@@ -54,12 +54,12 @@
                 </button>
             </div>
             <form:errors path="password" cssClass="text-danger small d-block" element="div"/>
-            <div class="form-text"><spring:message code="registerPassword.hint" arguments="${registrationPasswordMinLength}"/></div>
+            <div class="form-text"><spring:message code="registerPassword.hint" arguments="${registrationPasswordMinLength},${registrationPasswordMaxLength}"/></div>
         </div>
         <div class="mb-4">
             <label for="passwordConfirm" class="form-label"><spring:message code="register.passwordConfirm"/></label>
             <div class="input-group">
-                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control" autocomplete="new-password" required="required"/>
+                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}" required="required"/>
                 <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">

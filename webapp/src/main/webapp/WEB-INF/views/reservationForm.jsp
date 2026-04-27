@@ -25,7 +25,7 @@
                     <h1 class="h4 fw-bold mb-2"><spring:message code="reservationForm.heading"/></h1>
                     <spring:message code="reservationForm.description.before"/> <strong><c:out value="${reservationForm.carName}"/></strong><spring:message code="reservationForm.description.after"/>
 
-                    <p class="text-secondary small mt-3 mb-3">
+                    <p class="text-secondary small mt-3 mb-1">
                         <spring:message code="reservationForm.paymentProofNotice" arguments="${paymentProofUploadDeadlineHours}"/>
                     </p>
 
@@ -54,6 +54,7 @@
                     </div>
 
                     <form:form action="${pageContext.request.contextPath}/reservation" method="post" modelAttribute="reservationForm" cssClass="d-flex flex-column gap-2">
+                        <form:errors path="fromDateTime" cssClass="text-danger d-block mb-2"/>
                         <form:hidden path="listingId"/>
                         <c:if test="${not empty availabilityId}">
                             <input type="hidden" name="availabilityId" value="<c:out value='${availabilityId}'/>"/>

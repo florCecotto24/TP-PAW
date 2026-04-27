@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.Image;
+import ar.edu.itba.paw.models.domain.Image;
 
 public interface ImageService {
     Image createImage(final String name, final String contentType, final byte[] data);

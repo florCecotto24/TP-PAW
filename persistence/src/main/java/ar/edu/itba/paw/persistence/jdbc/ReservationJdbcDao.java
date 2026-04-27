@@ -2,9 +2,9 @@ package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.ReservationCard;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.ReservationCard;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -34,20 +34,21 @@ public class ReservationJdbcDao implements ReservationDao {
     private static Reservation mapReservation(final ResultSet rs, final int rowNum) throws SQLException {
         final long pr = rs.getLong("payment_receipt_file_id");
         final Long paymentReceiptId = rs.wasNull() ? null : pr;
-        return new Reservation(
-                rs.getLong("id"),
-                rs.getLong("rider_id"),
-                rs.getLong("listing_id"),
-                JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"),
-                JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"),
-                Reservation.Status.valueOf(rs.getString("status").toUpperCase()),
-                JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"),
-                JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"),
-                rs.getBigDecimal("total_price"),
-                paymentReceiptId,
-                rs.getBoolean("payment_approved"),
-                JdbcDateTimeUtils.readOffsetDateTime(rs, "payment_proof_deadline_at"),
-                rs.getBoolean("car_returned"));
+        return Reservation.builder()
+                .id(rs.getLong("id"))
+                .riderId(rs.getLong("rider_id"))
+                .listingId(rs.getLong("listing_id"))
+                .startDate(JdbcDateTimeUtils.readOffsetDateTime(rs, "start_date"))
+                .endDate(JdbcDateTimeUtils.readOffsetDateTime(rs, "end_date"))
+                .status(Reservation.Status.valueOf(rs.getString("status").toUpperCase()))
+                .createdAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at"))
+                .updatedAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "updated_at"))
+                .totalPrice(rs.getBigDecimal("total_price"))
+                .paymentReceiptFileId(paymentReceiptId)
+                .paymentApproved(rs.getBoolean("payment_approved"))
+                .paymentProofDeadlineAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "payment_proof_deadline_at"))
+                .carReturned(rs.getBoolean("car_returned"))
+                .build();
     }
 
     private static final RowMapper<Reservation> RESERVATION_ROW_MAPPER = (rs, rowNum) -> {
@@ -154,22 +155,26 @@ public class ReservationJdbcDao implements ReservationDao {
         values.put("payment_proof_deadline_at", JdbcDateTimeUtils.toTimestamp(paymentProofDeadlineAt));
         values.put("payment_approved", Boolean.FALSE);
         values.put("car_returned", Boolean.FALSE);
+        values.put("return_reminder_email_sent", Boolean.FALSE);
+        values.put("return_checkout_email_sent", Boolean.FALSE);
+        values.put("rider_review_invite_email_sent", Boolean.FALSE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
-        return new Reservation(
-                id.longValue(),
-                riderId,
-                listingId,
-                startDate,
-                endDate,
-                status,
-                JdbcDateTimeUtils.toOffsetDateTime(now),
-                JdbcDateTimeUtils.toOffsetDateTime(now),
-                totalPrice,
-                null,
-                false,
-                paymentProofDeadlineAt,
-                false);
+        return Reservation.builder()
+                .id(id.longValue())
+                .riderId(riderId)
+                .listingId(listingId)
+                .startDate(startDate)
+                .endDate(endDate)
+                .status(status)
+                .createdAt(JdbcDateTimeUtils.toOffsetDateTime(now))
+                .updatedAt(JdbcDateTimeUtils.toOffsetDateTime(now))
+                .totalPrice(totalPrice)
+                .paymentReceiptFileId(null)
+                .paymentApproved(false)
+                .paymentProofDeadlineAt(paymentProofDeadlineAt)
+                .carReturned(false)
+                .build();
     }
 
     @Override
@@ -473,5 +478,80 @@ public class ReservationJdbcDao implements ReservationDao {
             result.put((String) row.get("status"), ((Number) row.get("cnt")).longValue());
         }
         return result;
+    }
+
+    @Override
+    public int markCarReturned(final long reservationId, final long ownerUserId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET car_returned = TRUE, updated_at = ? WHERE id = ? AND listing_id IN ("
+                        + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?)",
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId,
+                ownerUserId);
+    }
+
+    @Override
+    public List<Reservation> findReservationsForReturnReminderEmail(final OffsetDateTime now, final int hoursBeforeCheckout) {
+        final OffsetDateTime windowEnd = now.plusHours(hoursBeforeCheckout);
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations r "
+                        + "WHERE LOWER(r.status) IN ('accepted','started') "
+                        + "AND r.return_reminder_email_sent = FALSE "
+                        + "AND r.end_date > ? "
+                        + "AND r.end_date <= ?",
+                RESERVATION_ROW_MAPPER,
+                JdbcDateTimeUtils.toTimestamp(now),
+                JdbcDateTimeUtils.toTimestamp(windowEnd));
+    }
+
+    @Override
+    public List<Reservation> findReservationsForReturnCheckoutEmail(final OffsetDateTime now) {
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations r "
+                        + "WHERE LOWER(r.status) IN ('accepted','started') "
+                        + "AND r.return_checkout_email_sent = FALSE "
+                        + "AND r.car_returned = FALSE "
+                        + "AND r.end_date <= ?",
+                RESERVATION_ROW_MAPPER,
+                JdbcDateTimeUtils.toTimestamp(now));
+    }
+
+    @Override
+    public List<Reservation> findReservationsForRiderReviewInviteEmail(final OffsetDateTime now) {
+        return jdbcTemplate.query(
+                "SELECT r.* FROM reservations r "
+                        + "WHERE LOWER(r.status) IN ('accepted','started','finished') "
+                        + "AND r.rider_review_invite_email_sent = FALSE "
+                        + "AND r.end_date < ? "
+                        + "AND NOT EXISTS (SELECT 1 FROM reviews rv WHERE rv.reservation_id = r.id AND rv.made_by_rider = TRUE)",
+                RESERVATION_ROW_MAPPER,
+                JdbcDateTimeUtils.toTimestamp(now));
+    }
+
+    @Override
+    public int claimReturnReminderEmailSent(final long reservationId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET return_reminder_email_sent = TRUE, updated_at = ? "
+                        + "WHERE id = ? AND return_reminder_email_sent = FALSE",
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
+    }
+
+    @Override
+    public int claimReturnCheckoutEmailSent(final long reservationId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET return_checkout_email_sent = TRUE, updated_at = ? "
+                        + "WHERE id = ? AND return_checkout_email_sent = FALSE",
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
+    }
+
+    @Override
+    public int claimRiderReviewInviteEmailSent(final long reservationId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET rider_review_invite_email_sent = TRUE, updated_at = ? "
+                        + "WHERE id = ? AND rider_review_invite_email_sent = FALSE",
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
     }
 }

@@ -2,7 +2,6 @@ package ar.edu.itba.paw.services;
 
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,10 +19,10 @@ import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.UserDao;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,13 +50,13 @@ public class UserServiceImplTest {
                 imageService,
                 emailService,
                 passwordEncoder,
-                new UserValidationPolicy(8, 20, Pattern.compile("^[0-9+]+$")));
+                UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, "^[0-9+]+$"));
     }
 
     @Test
     public void testGetUserByIdWhenUserExists() {
         // 1. Arrange
-        final User user = new User(1L, "test@test.com", "TestName", "TestSurname");
+        final User user = User.identities(1L, "test@test.com", "TestName", "TestSurname");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
         // 2. Execute
@@ -87,7 +86,14 @@ public class UserServiceImplTest {
     @Test
     public void testRegisterUserWhenUserDoesNotExist() {
         // 1. Arrange
-        final User user = new User(1L, "test@test.com", "TestName", "TestSurname", "ENC", false, null, null, null);
+        final User user = User.builder()
+                .id(1L)
+                .email("test@test.com")
+                .forename("TestName")
+                .surname("TestSurname")
+                .passwordHash("ENC")
+                .emailValidated(false)
+                .build();
         Mockito.when(userDao.findByEmail("test@test.com")).thenReturn(Optional.empty());
         Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("ENC");
         Mockito.when(userDao.createUser(Mockito.eq("test@test.com"), Mockito.eq("TestName"), Mockito.eq("TestSurname"), Mockito.eq("ENC")))
@@ -108,7 +114,7 @@ public class UserServiceImplTest {
     @Test
     public void testRegisterUserWhenUserAlreadyExists() {
         // 1. Arrange
-        final User existing = new User(1L, "test@test.com", "TestName", "TestSurname");
+        final User existing = User.identities(1L, "test@test.com", "TestName", "TestSurname");
         Mockito.when(userDao.findByEmail("test@test.com")).thenReturn(Optional.of(existing));
 
         // 2. Execute and 3. Assert
@@ -121,7 +127,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdateDisplayNameWhenUserExistsDoesNotThrow() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
         // 2. Execute and 3. Assert
@@ -141,7 +147,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdatePhoneNumberWhenValidDoesNotThrow() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
         // 2. Execute and 3. Assert
@@ -151,7 +157,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdateBirthDateDoesNotThrow() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final LocalDate birth = LocalDate.of(2000, 1, 2);
 
@@ -162,7 +168,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdateBirthDateTodayDoesNotThrow() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
 
@@ -173,7 +179,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdateBirthDateFutureThrows() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final LocalDate future = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
 
@@ -187,7 +193,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdatePhoneNumberWhenBlankDoesNotThrow() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
         // 2. Execute and 3. Assert
@@ -197,7 +203,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdatePhoneNumberInvalidPhoneThrows() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B");
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
 
         // 2. Execute and 3. Assert
@@ -209,7 +215,13 @@ public class UserServiceImplTest {
     @Test
     public void testUpdateProfilePictureWhenUserExistsDoesNotThrow() {
         // 1. Arrange
-        final User user = new User(1L, "u@mail.com", "A", "B", null, null, null, null, 9L);
+        final User user = User.builder()
+                .id(1L)
+                .email("u@mail.com")
+                .forename("A")
+                .surname("B")
+                .profilePictureId(9L)
+                .build();
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final Image created = new Image(20L, "p.png", "image/png", new byte[] {1, 2});
         Mockito.when(imageService.createImage(Mockito.eq("p.png"), Mockito.eq("image/png"), Mockito.any()))

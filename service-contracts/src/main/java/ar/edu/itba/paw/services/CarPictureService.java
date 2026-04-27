@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.services;
 
-import ar.edu.itba.paw.models.CarPicture;
+import ar.edu.itba.paw.models.domain.CarPicture;
 
 import java.util.List;
 import java.util.Optional;

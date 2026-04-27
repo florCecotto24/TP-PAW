@@ -25,7 +25,10 @@
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
             <h1 class="h2 fw-bold mb-0"><c:out value="${listing.title}"/></h1>
-            <ryden:detailListingMeta location="${listingPublicLocation}"/>
+            <ryden:detailListingMeta
+                    location="${listingPublicLocation}"
+                    rating="${listingRatingLabel}"
+                    reviewCount="${listingReviewCountLabel}"/>
         </div>
     </div>
 
@@ -70,6 +73,61 @@
                 </div>
             </section>
 
+            <section class="mt-4 pt-4 border-top border-secondary-subtle" id="listing-reviews">
+                <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.reviews.title"/></h2>
+                <c:choose>
+                    <c:when test="${empty listingReviewPage.content}">
+                        <p class="text-secondary mb-0"><spring:message code="carDetail.reviews.empty"/></p>
+                    </c:when>
+                    <c:otherwise>
+                        <div id="listingReviewsCarousel" class="carousel slide" data-bs-ride="false">
+                            <div class="carousel-inner">
+                                <c:forEach var="row" items="${listingReviewPage.content}" varStatus="st">
+                                    <div class="carousel-item<c:if test='${st.first}'> active</c:if>">
+                                        <div class="px-1 pb-2">
+                                            <ryden:reviewCard
+                                                    forename="${row.reviewerForename}"
+                                                    surname="${row.reviewerSurname}"
+                                                    dateLabel="${row.dateText}"
+                                                    rating="${row.rating}"
+                                                    comment="${row.comment}"/>
+                                        </div>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                            <c:if test="${listingReviewPage.totalPages > 1}">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
+                                    <c:url var="reviewsPrevUrl" value="/car-detail">
+                                        <c:param name="listingId" value="${listing.id}"/>
+                                        <c:param name="reviewPage" value="${listingReviewPage.currentPage - 1}"/>
+                                        <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
+                                    </c:url>
+                                    <c:url var="reviewsNextUrl" value="/car-detail">
+                                        <c:param name="listingId" value="${listing.id}"/>
+                                        <c:param name="reviewPage" value="${listingReviewPage.currentPage + 1}"/>
+                                        <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
+                                    </c:url>
+                                    <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasPrevious ? '' : ' disabled'}"
+                                       href="${listingReviewPage.hasPrevious ? reviewsPrevUrl : '#'}"
+                                       aria-disabled="${listingReviewPage.hasPrevious ? 'false' : 'true'}">
+                                        <spring:message code="carDetail.reviews.prev"/>
+                                    </a>
+                                    <span class="text-secondary small">
+                                        <spring:message code="carDetail.reviews.pageIndicator"
+                                                        arguments="${listingReviewPage.currentPage + 1},${listingReviewPage.totalPages}"/>
+                                    </span>
+                                    <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasNext ? '' : ' disabled'}"
+                                       href="${listingReviewPage.hasNext ? reviewsNextUrl : '#'}"
+                                       aria-disabled="${listingReviewPage.hasNext ? 'false' : 'true'}">
+                                        <spring:message code="carDetail.reviews.next"/>
+                                    </a>
+                                </div>
+                            </c:if>
+                        </div>
+                    </c:otherwise>
+                </c:choose>
+            </section>
+
         </div>
 
         <div class="col-lg-4 order-2">
@@ -83,7 +141,8 @@
                         bookableWallRangesJson="${bookableWallRangesJson}"
                         carName="${listing.title}"
                         pickupTime="${listing.checkInTime}"
-                        returnTime="${listing.checkOutTime}"/>
+                        returnTime="${listing.checkOutTime}"
+                        maxBillableDays="${maxReservationBillableDays}"/>
             </div>
         </div>
     </div>
@@ -114,6 +173,7 @@
                                     price="${similar.price}"
                                     image="${similarImageUrl}"
                                     pricePeriod="day"
+                                    ratingAvg="${similar.ratingAvg}"
                                     href="${similarCarDetailUrl}"/>
                         </div>
                     </c:forEach>

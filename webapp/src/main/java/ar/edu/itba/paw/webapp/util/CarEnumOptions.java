@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.util;
 
-import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.domain.Car;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;

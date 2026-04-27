@@ -11,8 +11,9 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.RegistrationPasswordConfirmFields;
+import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @Component
 public class RegistrationPasswordRulesValidator implements ConstraintValidator<RegistrationPasswordRules, RegistrationPasswordConfirmFields> {
@@ -43,6 +44,14 @@ public class RegistrationPasswordRulesValidator implements ConstraintValidator<R
             final String msg = messageSource.getMessage(
                     "validation.registration.password.minLength",
                     new Object[] { policy.getRegistrationPasswordMinLength() },
+                    locale);
+            context.buildConstraintViolationWithTemplate(msg).addPropertyNode("password").addConstraintViolation();
+            ok = false;
+        }
+        if (p.length() > policy.getRegistrationPasswordMaxLength()) {
+            final String msg = messageSource.getMessage(
+                    "validation.registration.password.maxLength",
+                    new Object[] { policy.getRegistrationPasswordMaxLength() },
                     locale);
             context.buildConstraintViolationWithTemplate(msg).addPropertyNode("password").addConstraintViolation();
             ok = false;

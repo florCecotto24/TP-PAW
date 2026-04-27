@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.CarService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;

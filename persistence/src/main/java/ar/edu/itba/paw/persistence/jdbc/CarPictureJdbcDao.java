@@ -2,7 +2,7 @@ package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.CarPictureDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
-import ar.edu.itba.paw.models.CarPicture;
+import ar.edu.itba.paw.models.domain.CarPicture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;

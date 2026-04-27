@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -16,13 +17,14 @@ import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.IncorrectCurrentPasswordException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
+import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.EmailNormalizer;
-import ar.edu.itba.paw.models.Image;
-import ar.edu.itba.paw.models.User;
-import ar.edu.itba.paw.models.UserValidationPolicy;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.UserDao;
 
 @Service
@@ -65,6 +67,7 @@ public class UserServiceImpl implements UserService {
         if (userDao.findByEmail(normalizedEmail).isPresent()) {
             throw new EmailAlreadyExistsException(MessageKeys.USER_EMAIL_ALREADY_EXISTS);
         }
+        assertRegistrationFieldLengths(normalizedEmail, forename, surname);
         assertNewPasswordPair(password, passwordConfirm);
         return userDao.createUser(
                 normalizedEmail,
@@ -77,6 +80,13 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(final String email) {
         return userDao.findByEmail(EmailNormalizer.normalize(email));
+    }
+
+    @Override
+    @Transactional
+    public void markEmailVerified(final long userId) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        userDao.updateEmailValidated(userId, true);
     }
 
     @Override
@@ -93,6 +103,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<String> findRoleNamesForUser(final long userId) {
+        return userDao.findRoleNamesForUser(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<User> getListingOwner(final long listingId) {
         return userDao.getListingOwner(listingId);
     }
@@ -101,6 +117,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void updateDisplayName(final long userId, final String forename, final String surname) {
         userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        assertDisplayNamePartLengths(forename, surname, true);
         userDao.updateUserName(userId, forename.trim(), surname.trim());
     }
 
@@ -112,7 +129,9 @@ public class UserServiceImpl implements UserService {
         if (phone != null) {
             if (phone.length() > validationPolicy.getProfilePhoneMaxLength()
                     || !validationPolicy.getProfilePhonePattern().matcher(phone).matches()) {
-                throw new InvalidProfilePhoneException(MessageKeys.USER_PROFILE_PHONE_INVALID);
+                throw new InvalidProfilePhoneException(
+                        MessageKeys.USER_PROFILE_PHONE_INVALID,
+                        validationPolicy.getProfilePhoneMaxLength());
             }
         }
         userDao.updatePhoneNumber(userId, phone);
@@ -194,7 +213,33 @@ public class UserServiceImpl implements UserService {
         final String plain = randomMigrationPlainPassword();
         userDao.updatePasswordHash(userId, passwordEncoder.encode(plain));
         userDao.updateEmailValidated(userId, true);
-        emailService.sendMigratedUserPassword(withHash.getEmail(), plain, locale);
+        final Locale mailLocale = resolveMailLocaleOrElse(userId, locale != null ? locale : Locale.ENGLISH);
+        emailService.sendMigratedUserPassword(withHash.getEmail(), plain, mailLocale);
+    }
+
+    private void assertRegistrationFieldLengths(final String normalizedEmail, final String forename, final String surname) {
+        if (normalizedEmail.length() > validationPolicy.getRegistrationEmailMaxLength()) {
+            throw new InvalidUserFieldLengthException(
+                    MessageKeys.USER_REGISTRATION_EMAIL_TOO_LONG,
+                    validationPolicy.getRegistrationEmailMaxLength());
+        }
+        assertDisplayNamePartLengths(forename, surname, false);
+    }
+
+    private void assertDisplayNamePartLengths(final String forename, final String surname, final boolean profileContext) {
+        final int max = validationPolicy.getDisplayNamePartMaxLength();
+        final String f = forename == null ? "" : forename.trim();
+        final String s = surname == null ? "" : surname.trim();
+        if (f.length() > max) {
+            throw new InvalidUserFieldLengthException(
+                    profileContext ? MessageKeys.USER_PROFILE_FORENAME_TOO_LONG : MessageKeys.USER_REGISTRATION_FORENAME_TOO_LONG,
+                    max);
+        }
+        if (s.length() > max) {
+            throw new InvalidUserFieldLengthException(
+                    profileContext ? MessageKeys.USER_PROFILE_SURNAME_TOO_LONG : MessageKeys.USER_REGISTRATION_SURNAME_TOO_LONG,
+                    max);
+        }
     }
 
     private void assertNewPasswordPair(final String password, final String passwordConfirm) {
@@ -205,6 +250,11 @@ public class UserServiceImpl implements UserService {
             throw new RegistrationPasswordException(
                     MessageKeys.USER_REGISTRATION_PASSWORD_TOO_SHORT,
                     validationPolicy.getRegistrationPasswordMinLength());
+        }
+        if (password.length() > validationPolicy.getRegistrationPasswordMaxLength()) {
+            throw new RegistrationPasswordException(
+                    MessageKeys.USER_REGISTRATION_PASSWORD_TOO_LONG,
+                    validationPolicy.getRegistrationPasswordMaxLength());
         }
     }
 
@@ -240,19 +290,29 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Locale resolveMailLocale(final long userId) {
+        return resolveMailLocaleOrElse(userId, Locale.ENGLISH);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Locale resolveMailLocaleOrElse(final long userId, final Locale fallback) {
+        final Locale fb = fallback != null ? fallback : Locale.ENGLISH;
         return getUserById(userId)
                 .flatMap(User::getLatestLocaleTag)
-                .map(tag -> {
-                    final Locale l = Locale.forLanguageTag(tag.replace('_', '-'));
-                    final String lang = l.getLanguage();
-                    if (lang == null || lang.isEmpty()) {
-                        return Locale.ENGLISH;
-                    }
-                    if ("es".equalsIgnoreCase(lang)) {
-                        return Locale.forLanguageTag("es");
-                    }
-                    return Locale.ENGLISH;
-                })
-                .orElse(Locale.ENGLISH);
+                .filter(tag -> tag != null && !tag.isBlank())
+                .map(UserServiceImpl::mailLocaleFromLatestTag)
+                .orElse(fb);
+    }
+
+    private static Locale mailLocaleFromLatestTag(final String tag) {
+        final Locale l = Locale.forLanguageTag(tag.replace('_', '-'));
+        final String lang = l.getLanguage();
+        if (lang == null || lang.isEmpty()) {
+            return Locale.ENGLISH;
+        }
+        if ("es".equalsIgnoreCase(lang)) {
+            return Locale.forLanguageTag("es");
+        }
+        return Locale.ENGLISH;
     }
 }

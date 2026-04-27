@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${htmlLang}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="#{mail.riderReturnReminder.emailTitle}">Return reminder</title>
+</head>
+<body style="margin:0; padding:0; background-color:#eef2ff;
+             font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+             color:#1e1b4b;">
+
+<div style="max-width:620px; margin:40px auto; padding:0 20px 40px;">
+
+    <div style="padding:36px 0 28px;">
+        <span style="font-size:22px; font-weight:800; color:#1e1b4b;"><img src="cid:logo"
+                                                                           alt="Ryden"
+                                                                           style="height:32px; width:auto; vertical-align:middle;"/> Ryden</span>
+    </div>
+
+    <p style="font-size:16px; font-weight:700; color:#3730a3; margin-bottom:6px;"
+       th:text="#{mail.riderReturnReminder.emailTitle}">
+        Return reminder
+    </p>
+    <p style="font-size:14px; color:#4b5563; line-height:1.6; margin-bottom:0;"
+       th:text="#{mail.common.greeting(${riderFullName})}">
+        Hello,
+    </p>
+
+    <p style="font-size:14px; color:#374151; line-height:1.6; margin-bottom:20px;"
+       th:text="#{mail.riderReturnReminder.intro}">
+        Intro
+    </p>
+
+    <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
+
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
+                padding:20px; margin-bottom:24px;">
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;
+                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
+            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.vehicle}">Vehicle</span>
+            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%;" th:text="${vehicleLabel}">—</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;
+                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
+            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.ownerEmail}">Owner</span>
+            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%; word-break:break-all;" th:text="${ownerEmail}">—</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;
+                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
+            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.checkout}">Checkout</span>
+            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%;" th:text="${checkoutFormatted}">—</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;
+                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
+            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.location}">Location</span>
+            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%; white-space:pre-wrap;" th:text="${returnLocationLine}">—</span>
+        </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+        <a th:href="${ctaUrl}"
+           style="display:inline-block; padding:12px 24px; background-color:#4338ca;
+                color:#ffffff; text-decoration:none; border-radius:8px;
+                font-size:14px; font-weight:600;"
+           th:text="#{mail.riderReturnReminder.viewReservation}">
+            View reservation
+        </a>
+    </div>
+
+    <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
+    <p style="font-size:12px; color:#9ca3af; line-height:1.8;"
+       th:text="#{mail.common.footer}">
+        Footer
+    </p>
+
+    <p style="font-size:18px; color:#9ca3af; letter-spacing:2px; margin-top:16px;">···</p>
+
+</div>
+</body>
+</html>

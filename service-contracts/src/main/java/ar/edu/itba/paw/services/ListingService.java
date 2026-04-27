@@ -8,17 +8,17 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.dto.CarPublicationResult;
 import ar.edu.itba.paw.dto.ImageUpload;
-import ar.edu.itba.paw.models.AvailabilityPeriod;
-import ar.edu.itba.paw.models.Car;
-import ar.edu.itba.paw.models.HomeListingCards;
-import ar.edu.itba.paw.models.Listing;
-import ar.edu.itba.paw.models.ListingAvailability;
-import ar.edu.itba.paw.models.ListingCard;
-import ar.edu.itba.paw.models.ListingDetail;
-import ar.edu.itba.paw.models.ListingSearchCriteria;
-import ar.edu.itba.paw.models.Page;
-import ar.edu.itba.paw.models.Reservation;
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 
 public interface ListingService {
 
@@ -164,4 +164,10 @@ public interface ListingService {
             String sort,
             User viewer,
             List<Long> neighborhoodIds);
+
+    /**
+     * Max total inclusive days across all availability periods for a listing
+     * ({@code app.listing.max-availability-total-days}).
+     */
+    int getConfiguredMaxAvailabilityTotalDays();
 }

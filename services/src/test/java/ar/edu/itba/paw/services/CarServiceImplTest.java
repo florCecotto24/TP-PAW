@@ -13,7 +13,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ar.edu.itba.paw.models.Car;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,7 +37,16 @@ public class CarServiceImplTest {
         final Car.Type type = Car.Type.HATCHBACK;
         final Car.Powertrain powertrain = Car.Powertrain.GASOLINE;
         final Car.Transmission transmission = Car.Transmission.MANUAL;
-        final Car car = new Car(carId, ownerId, plate, brand, model, type, powertrain, transmission);
+        final Car car = Car.builder()
+                .id(carId)
+                .ownerId(ownerId)
+                .plate(plate)
+                .brand(brand)
+                .model(model)
+                .type(type)
+                .powertrain(powertrain)
+                .transmission(transmission)
+                .build();
         Mockito.when(carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission)).thenReturn(car);
 
         // 2. Execute
@@ -67,7 +76,16 @@ public class CarServiceImplTest {
         final Car.Type type = Car.Type.SEDAN;
         final Car.Powertrain powertrain = Car.Powertrain.DIESEL;
         final Car.Transmission transmission = Car.Transmission.AUTOMATIC;
-        final Car car = new Car(carId, ownerId, plate, brand, model, type, powertrain, transmission);
+        final Car car = Car.builder()
+                .id(carId)
+                .ownerId(ownerId)
+                .plate(plate)
+                .brand(brand)
+                .model(model)
+                .type(type)
+                .powertrain(powertrain)
+                .transmission(transmission)
+                .build();
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(car));
 
         // 2. Execute
@@ -94,8 +112,26 @@ public class CarServiceImplTest {
     @Test
     public void testGetCheapestCarsWhenThereAreCars(){
         // 1. Arrange
-        final Car car1 = new Car(10L, 1L, "plateTestOne", "brandTestOne", "modelTestOne", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        final Car car2 = new Car(11L, 2L, "plateTestTwo", "brandTestTwo", "modelTestTwo", Car.Type.SUV, Car.Powertrain.HYBRID, Car.Transmission.AUTOMATIC);
+        final Car car1 = Car.builder()
+                .id(10L)
+                .ownerId(1L)
+                .plate("plateTestOne")
+                .brand("brandTestOne")
+                .model("modelTestOne")
+                .type(Car.Type.HATCHBACK)
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .build();
+        final Car car2 = Car.builder()
+                .id(11L)
+                .ownerId(2L)
+                .plate("plateTestTwo")
+                .brand("brandTestTwo")
+                .model("modelTestTwo")
+                .type(Car.Type.SUV)
+                .powertrain(Car.Powertrain.HYBRID)
+                .transmission(Car.Transmission.AUTOMATIC)
+                .build();
         final List<Car> cheapest = new ArrayList<>();
         cheapest.add(car1);
         cheapest.add(car2);
@@ -124,8 +160,26 @@ public class CarServiceImplTest {
     @Test
     public void testGetMostRecentCarsWhenThereAreCars(){
         // 1. Arrange
-        final Car car1 = new Car(20L, 3L, "plateTestOne", "brandTestOne", "modelTestOne", Car.Type.COUPE, Car.Powertrain.ELECTRIC, Car.Transmission.AUTOMATIC);
-        final Car car2 = new Car(21L, 4L, "plateTestTwo", "brandTestTwo", "modelTestTwo", Car.Type.WAGON, Car.Powertrain.DIESEL, Car.Transmission.MANUAL);
+        final Car car1 = Car.builder()
+                .id(20L)
+                .ownerId(3L)
+                .plate("plateTestOne")
+                .brand("brandTestOne")
+                .model("modelTestOne")
+                .type(Car.Type.COUPE)
+                .powertrain(Car.Powertrain.ELECTRIC)
+                .transmission(Car.Transmission.AUTOMATIC)
+                .build();
+        final Car car2 = Car.builder()
+                .id(21L)
+                .ownerId(4L)
+                .plate("plateTestTwo")
+                .brand("brandTestTwo")
+                .model("modelTestTwo")
+                .type(Car.Type.WAGON)
+                .powertrain(Car.Powertrain.DIESEL)
+                .transmission(Car.Transmission.MANUAL)
+                .build();
         final List<Car> recent = new ArrayList<>();
         recent.add(car1);
         recent.add(car2);

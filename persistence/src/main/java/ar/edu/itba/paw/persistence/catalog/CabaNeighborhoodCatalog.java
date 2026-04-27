@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.Neighborhood;
+import ar.edu.itba.paw.models.domain.Neighborhood;
 
 /**
  * Neighborhood catalog in memory: a single {@code SELECT} when creating the bean (Spring context startup).

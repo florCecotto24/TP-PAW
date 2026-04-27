@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${htmlLang}">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -58,7 +58,7 @@
 
     <!-- FALLBACK LINK -->
     <p style="font-size:12px; color:#9ca3af; line-height:1.8; margin-bottom:20px;">
-        <span th:text="#{mail.emailVerification.fallbackLink}">Link help</span><br/>
+        <span th:text="#{mail.common.fallbackAuthLinkCopy}">Link help</span><br/>
         <span th:text="${verifyUrl}" style="word-break:break-all; color:#4338ca;">https://</span>
     </p>
 

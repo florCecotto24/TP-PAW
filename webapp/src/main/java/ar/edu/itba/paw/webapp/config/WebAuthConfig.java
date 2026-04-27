@@ -28,6 +28,7 @@ import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.RydenAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.RydenUserDetailsService;
@@ -101,7 +102,7 @@ public class WebAuthConfig {
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
                         .antMatchers("/logout").authenticated()
-                        .antMatchers("/profile", "/profile/**").hasRole("USER")
+                        .antMatchers("/profile", "/profile/**").hasRole(UserRole.USER.name())
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.sendRedirect(request.getContextPath() + "/");

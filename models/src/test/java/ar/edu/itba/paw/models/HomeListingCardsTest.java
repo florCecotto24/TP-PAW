@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.dto.ListingCard;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -19,8 +22,8 @@ class HomeListingCardsTest {
         Assertions.assertEquals(first, second);
         Assertions.assertEquals(first.hashCode(), second.hashCode());
         Assertions.assertEquals(
-                "HomeListingCards[cheapest=[ar.edu.itba.paw.models.ListingCard@" + Integer.toHexString(card.hashCode())
-                        + "], mostRecent=[ar.edu.itba.paw.models.ListingCard@" + Integer.toHexString(card.hashCode())
+                "HomeListingCards[cheapest=[ar.edu.itba.paw.models.dto.ListingCard@" + Integer.toHexString(card.hashCode())
+                        + "], mostRecent=[ar.edu.itba.paw.models.dto.ListingCard@" + Integer.toHexString(card.hashCode())
                         + "]]",
                 first.toString());
     }

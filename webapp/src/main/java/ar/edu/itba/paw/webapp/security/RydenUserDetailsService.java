@@ -1,18 +1,16 @@
 package ar.edu.itba.paw.webapp.security;
 
-import java.util.Collections;
+import java.util.List;
 
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import ar.edu.itba.paw.models.User;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.UserService;
 
 public class RydenUserDetailsService implements UserDetailsService {
-
-    static final String ROLE_USER_AUTHORITY = "ROLE_USER";
 
     private final UserService userService;
 
@@ -30,12 +28,14 @@ public class RydenUserDetailsService implements UserDetailsService {
         final String hash = user.getPasswordHash()
                 .filter(h -> !h.isBlank())
                 .orElseThrow(() -> new UsernameNotFoundException("User has no password"));
+        final List<String> roleNames = userService.findRoleNamesForUser(user.getId());
+        final List<GrantedAuthority> authorities = UserRoleAuthorities.fromDbRoleNames(roleNames);
         return new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),
                 user.getForename(),
                 user.getSurname(),
                 hash,
-                Collections.singletonList(new SimpleGrantedAuthority(ROLE_USER_AUTHORITY)));
+                authorities);
     }
 }
