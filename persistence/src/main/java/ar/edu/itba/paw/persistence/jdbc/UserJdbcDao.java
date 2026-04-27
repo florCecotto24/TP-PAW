@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
 import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.security.UserRole;
 
@@ -26,7 +27,7 @@ import ar.edu.itba.paw.models.security.UserRole;
 public class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =
-            "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, latest_locale";
+            "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, latest_locale, member_since";
 
     private static Long readNullableLongId(final ResultSet rs, final String column) throws SQLException {
         final Object v = rs.getObject(column);
@@ -44,6 +45,7 @@ public class UserJdbcDao implements UserDao {
 
     private static User mapUser(final ResultSet rs, final boolean includePasswordHash) throws SQLException {
         final java.sql.Date birth = rs.getDate("birth_date");
+        final java.sql.Date memberSince = rs.getDate("member_since");
         final String passwordHash = includePasswordHash ? rs.getString("password_hash") : null;
         return User.builder()
                 .id(rs.getLong("id"))
@@ -57,6 +59,7 @@ public class UserJdbcDao implements UserDao {
                 .about(rs.getString("about"))
                 .profilePictureId(readNullableLongId(rs, "profile_picture_id"))
                 .latestLocaleTag(rs.getString("latest_locale"))
+                .memberSince(memberSince != null ? memberSince.toLocalDate() : null)
                 .build();
     }
 
@@ -72,19 +75,21 @@ public class UserJdbcDao implements UserDao {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)
                 .withTableName("users")
-                .usingColumns("email", "forename", "surname", "password_hash", "email_validated")
+                .usingColumns("email", "forename", "surname", "password_hash", "email_validated", "member_since")
                 .usingGeneratedKeyColumns("id");
     }
 
     @Override
     public User createUser(final String email, final String forename, final String surname, final String passwordHash) {
         final String normalizedEmail = EmailNormalizer.normalize(email);
+        final LocalDate memberSince = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         final Map<String, Object> values = new HashMap<>();
         values.put("email", normalizedEmail);
         values.put("forename", forename);
         values.put("surname", surname);
         values.put("password_hash", passwordHash);
         values.put("email_validated", Boolean.FALSE);
+        values.put("member_since", Date.valueOf(memberSince));
         final Number userId = jdbcInsert.executeAndReturnKey(values);
         insertUserRole(userId.longValue(), UserRole.USER);
         return User.builder()
@@ -94,6 +99,7 @@ public class UserJdbcDao implements UserDao {
                 .surname(surname)
                 .passwordHash(passwordHash)
                 .emailValidated(Boolean.FALSE)
+                .memberSince(memberSince)
                 .build();
     }
 
@@ -163,7 +169,7 @@ public class UserJdbcDao implements UserDao {
     public Optional<User> getListingOwner(final long listingId) {
         return jdbcTemplate.query(
                 "SELECT u.id, u.email, u.forename, u.surname, u.email_validated, u.phone_number, u.birth_date, "
-                        + "u.about, u.profile_picture_id, u.latest_locale FROM users u "
+                        + "u.about, u.profile_picture_id, u.latest_locale, u.member_since FROM users u "
                         + "JOIN cars c ON c.owner_id = u.id "
                         + "JOIN listings l ON l.car_id = c.id "
                         + "WHERE l.id = ?",

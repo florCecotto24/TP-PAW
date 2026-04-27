@@ -88,6 +88,12 @@
             </div>
             <div class="profile-card__info">
                 <h2 class="profile-card__name"><c:out value="${userForename} ${userSurname}"/></h2>
+                <c:if test="${not empty profileMemberSinceDisplay}">
+                    <p class="profile-card__member-since">
+                        <span class="profile-card__member-since-label"><spring:message code="profile.memberSince"/></span>
+                        <span class="profile-card__member-since-value"><c:out value="${profileMemberSinceDisplay}"/></span>
+                    </p>
+                </c:if>
                 <p class="profile-card__email"><c:out value="${userEmail}"/></p>
             </div>
         </div>

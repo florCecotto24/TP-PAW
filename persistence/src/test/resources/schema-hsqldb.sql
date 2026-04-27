@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users(
     birth_date DATE,
     about VARCHAR(500),
     profile_picture_id BIGINT,
-    latest_locale VARCHAR(32)
+    latest_locale VARCHAR(32),
+    member_since DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS cars (

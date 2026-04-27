@@ -21,6 +21,8 @@ public class User {
     private final Long profilePictureId;
     /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
     private final String latestLocaleTag;
+    /** Join date (wall calendar); used to show "member since" (month + year) in the UI. */
+    private final LocalDate memberSince;
 
     private User(final Builder b) {
         this.id = b.id;
@@ -34,6 +36,7 @@ public class User {
         this.about = b.about;
         this.profilePictureId = b.profilePictureId;
         this.latestLocaleTag = b.latestLocaleTag;
+        this.memberSince = b.memberSince;
     }
 
     /** Minimal user row (no password hash, no optional profile fields). */
@@ -57,6 +60,7 @@ public class User {
         private String about;
         private Long profilePictureId;
         private String latestLocaleTag;
+        private LocalDate memberSince;
 
         public Builder id(final long id) {
             this.id = id;
@@ -113,6 +117,11 @@ public class User {
             return this;
         }
 
+        public Builder memberSince(final LocalDate memberSince) {
+            this.memberSince = memberSince;
+            return this;
+        }
+
         public User build() {
             Objects.requireNonNull(email, "email");
             Objects.requireNonNull(forename, "forename");
@@ -163,6 +172,10 @@ public class User {
 
     public Optional<String> getLatestLocaleTag() {
         return Optional.ofNullable(latestLocaleTag).filter(s -> !s.isBlank());
+    }
+
+    public Optional<LocalDate> getMemberSince() {
+        return Optional.ofNullable(memberSince);
     }
 
     @Override

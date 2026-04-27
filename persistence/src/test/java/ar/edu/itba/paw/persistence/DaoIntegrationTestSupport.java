@@ -48,10 +48,11 @@ public abstract class DaoIntegrationTestSupport {
             final String surname,
             final String passwordHash) {
         final Boolean emailValidated = passwordHash != null && !passwordHash.isBlank();
+        final java.sql.Date memberSince = java.sql.Date.valueOf(java.time.LocalDate.of(2026, 4, 1));
         jdbcTemplate.update(
-                "INSERT INTO users(id, email, forename, surname, password_hash, email_validated, phone_number, birth_date, profile_picture_id) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                id, email, forename, surname, passwordHash, emailValidated, null, null, null);
+                "INSERT INTO users(id, email, forename, surname, password_hash, email_validated, phone_number, birth_date, profile_picture_id, member_since) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                id, email, forename, surname, passwordHash, emailValidated, null, null, null, memberSince);
     }
 
     protected void insertCar(

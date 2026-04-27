@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.User;
 
 public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
@@ -32,6 +33,9 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals("test@mail.com", found.get().getEmail());
         Assertions.assertEquals(Optional.of(false), created.getEmailValidated());
         Assertions.assertEquals(Optional.of(false), found.get().getEmailValidated());
+        final LocalDate todayWall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        Assertions.assertEquals(Optional.of(todayWall), created.getMemberSince());
+        Assertions.assertEquals(Optional.of(todayWall), found.get().getMemberSince());
     }
 
     @Test

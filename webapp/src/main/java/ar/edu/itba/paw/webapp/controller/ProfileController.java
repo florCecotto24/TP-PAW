@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 import javax.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -116,8 +118,14 @@ public class ProfileController {
         model.addAttribute("userEmail", currentUser.getEmail());
         model.addAttribute("userForename", currentUser.getForename());
         model.addAttribute("userSurname", currentUser.getSurname());
-        userService.getUserById(currentUser.getId()).ifPresent(u -> u.getProfilePictureId()
-                .ifPresent(id -> model.addAttribute("profilePictureImageId", id)));
+        userService.getUserById(currentUser.getId()).ifPresent(u -> {
+            u.getProfilePictureId().ifPresent(id -> model.addAttribute("profilePictureImageId", id));
+            u.getMemberSince().ifPresent(ms -> {
+                final String display = ms.format(
+                        DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(LocaleContextHolder.getLocale()));
+                model.addAttribute("profileMemberSinceDisplay", display);
+            });
+        });
     }
 
     @GetMapping

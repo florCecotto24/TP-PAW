@@ -1051,6 +1051,25 @@ select.form-select.ryden-car-spec-select option {
     color: var(--color-text);
 }
 
+.profile-card__member-since {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.5rem;
+}
+
+.profile-card__member-since-label {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.profile-card__member-since-value {
+    color: var(--color-text-muted);
+}
+
 .profile-card__email {
     margin: 0 0 0.75rem 0;
     font-size: 0.95rem;

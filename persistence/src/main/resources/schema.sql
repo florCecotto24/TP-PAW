@@ -186,6 +186,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_locale VARCHAR(32);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cbu VARCHAR(22);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_rider NUMERIC(4, 2);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_owner NUMERIC(4, 2);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS member_since DATE;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_profile_picture_id;
 ALTER TABLE users ADD CONSTRAINT fk_users_profile_picture_id FOREIGN KEY (profile_picture_id) REFERENCES images(id) ON DELETE SET NULL;
 
