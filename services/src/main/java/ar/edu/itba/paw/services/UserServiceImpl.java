@@ -336,4 +336,14 @@ public class UserServiceImpl implements UserService {
         }
         return Locale.ENGLISH;
     }
+
+    @Override
+    @Transactional
+    public void updateCbu(final long userId, final String cbu) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (cbu == null){
+            throw new IllegalArgumentException("CBU cannot be null");
+        }
+        userDao.updateCbu(userId, cbu);
+    }
 }

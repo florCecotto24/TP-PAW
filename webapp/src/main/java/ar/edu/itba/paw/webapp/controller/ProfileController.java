@@ -155,6 +155,7 @@ public class ProfileController {
             userService.updatePhoneNumber(me.getId(), profileForm.getPhoneNumber());
             userService.updateBirthDate(me.getId(), birthParsed);
             userService.updateAbout(me.getId(), profileForm.getAbout());
+            userService.updateCbu(me.getId(), profileForm.getCbu());
         } catch (final RydenException e) {
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile";
@@ -258,6 +259,7 @@ public class ProfileController {
             u.getPhoneNumber().ifPresent(form::setPhoneNumber);
             u.getBirthDate().ifPresent(bd -> form.setBirthDate(bd.toString()));
             u.getAbout().ifPresent(form::setAbout);
+            u.getCbu().ifPresent(form::setCbu);
         });
     }
 

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
@@ -29,11 +30,15 @@ public class ProfileUpdateForm {
     @PhoneNumber(groups = ValidationGroups.OnProfileUpdate.class)
     private String phoneNumber = "";
     private String birthDate = "";
+
     @UserValidationMaxLength(
             kind = Kind.PROFILE_ABOUT,
             messageKey = "validation.profile.about.maxLength",
             groups = ValidationGroups.OnProfileUpdate.class)
     private String about = "";
+
+    @Pattern(regexp = "\\d{22}|\\d{0}", message = "{profile.cbu.size}")
+    private String cbu;
 
     public String getForename() {
         return forename;
@@ -73,5 +78,13 @@ public class ProfileUpdateForm {
 
     public void setAbout(final String about) {
         this.about = about != null ? about : "";
+    }
+
+    public String getCbu() {
+        return cbu;
+    }
+
+    public void setCbu(final String cbu) {
+        this.cbu = cbu != null ? cbu : "";
     }
 }

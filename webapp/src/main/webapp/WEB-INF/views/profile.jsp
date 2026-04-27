@@ -57,6 +57,9 @@
         </div>
     </c:if>
 
+    <c:set var="profileBindingResult" value="${requestScope['org.springframework.validation.BindingResult.profileForm']}"/>
+    <c:set var="hasProfileErrors" value="${profileBindingResult != null and profileBindingResult.errorCount > 0}"/>
+
     <div class="profile-card">
         <div class="profile-card__header">
             <div class="profile-card__avatar">
@@ -115,7 +118,7 @@
         </c:if>
     </div>
 
-    <div class="profile-card profile-card--section" id="profileViewSection">
+    <div class="profile-card profile-card--section" id="profileViewSection" style="${hasProfileErrors ? 'display:none;' : ''}">
         <div class="profile-card__section-header">
             <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
             <button id="editProfileBtn" type="button" class="btn btn-outline-primary btn-sm">
@@ -141,6 +144,10 @@
                 <span class="profile-field-value"><c:out value="${profileForm.birthDate}"/></span>
             </div>
             <div class="profile-field-view">
+                <span class="profile-section-label"><spring:message code="profile.cbu"/></span>
+                <span class="profile-field-value"><c:out value="${profileForm.cbu}"/></span>
+            </div>
+            <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.about"/></span>
                 <span class="profile-field-value">
                     <c:choose>
@@ -154,10 +161,11 @@
         </div>
     </div>
 
-    <div class="profile-card profile-card--section" id="profileEditingSection" style="display: none;">
+    <div class="profile-card profile-card--section" id="profileEditingSection" style="${hasProfileErrors ? 'display:block;' : 'display:none;'}">
         <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
         <hr class="profile-card__divider">
         <spring:message code="profile.phone.placeholder" var="profilePhonePlaceholder" htmlEscape="true"/>
+        <spring:message code="profile.cbu.placeholder" var="profileCbuPlaceholder" htmlEscape="true"/>
         <spring:message code="profile.birthDate.clearSelection" var="profileBirthDateClearLabel" htmlEscape="false"/>
         <form:form modelAttribute="profileForm" method="post" cssClass="needs-validation" novalidate="novalidate"
                    action="${pageContext.request.contextPath}/profile" id="profileForm">
@@ -192,20 +200,32 @@
                     <form:errors path="birthDate" cssClass="text-danger small d-block" element="div"/>
                 </div>
                 <div class="mb-3">
+                    <label for="cbu" class="form-label"><spring:message code="profile.cbu"/></label>
+                    <form:input path="cbu" id="cbu" cssClass="form-control"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="22"
+                                pattern="[0-9]{22}"
+                                data-ryden-digits-only="true"
+                                placeholder="${profileCbuPlaceholder}"/>
+                    <form:errors path="cbu" cssClass="text-danger small d-block" element="div"/>
+                    <div class="form-text"><spring:message code="profile.cbu.hint"/></div>
+                </div>
+                <div class="mb-3">
                     <label for="about" class="form-label"><spring:message code="profile.about"/></label>
                     <form:textarea path="about" id="about" cssClass="form-control" rows="4" maxlength="${profileAboutMaxLength}"/>
                     <form:errors path="about" cssClass="text-danger small d-block" element="div"/>
                 </div>
             </div>
+            <div class="profile-card__form-actions">
+                <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary">
+                    <spring:message code="common.cancel"/>
+                </button>
+                <button type="submit" form="profileForm" class="btn btn-primary">
+                    <spring:message code="profile.save"/>
+                </button>
+            </div>
         </form:form>
-        <div class="profile-card__form-actions">
-            <button type="button" id="cancelEditBtn" class="btn btn-outline-secondary">
-                <spring:message code="common.cancel"/>
-            </button>
-            <button type="submit" form="profileForm" class="btn btn-primary">
-                <spring:message code="profile.save"/>
-            </button>
-        </div>
     </div>
 
     <div class="profile-card profile-card--section">
@@ -218,6 +238,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    var hasProfileErrors = ${hasProfileErrors ? 'true' : 'false'};
     var editProfileBtn = document.getElementById('editProfileBtn');
     var cancelEditBtn = document.getElementById('cancelEditBtn');
     var profileViewSection = document.getElementById('profileViewSection');
@@ -230,14 +251,19 @@ document.addEventListener('DOMContentLoaded', function() {
     var profilePictureForm = document.getElementById('profilePictureForm');
     var profilePictureDeleteForm = document.getElementById('profilePictureDeleteForm');
 
+    function setProfileEditMode(isEditing) {
+        profileViewSection.style.display = isEditing ? 'none' : 'block';
+        profileEditingSection.style.display = isEditing ? 'block' : 'none';
+    }
+
+    setProfileEditMode(hasProfileErrors);
+
     editProfileBtn.addEventListener('click', function() {
-        profileViewSection.style.display = 'none';
-        profileEditingSection.style.display = 'block';
+        setProfileEditMode(true);
     });
 
     cancelEditBtn.addEventListener('click', function() {
-        profileViewSection.style.display = 'block';
-        profileEditingSection.style.display = 'none';
+        setProfileEditMode(false);
     });
 
     if (avatarEditBtn && avatarMenu) {

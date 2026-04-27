@@ -130,7 +130,9 @@ public class ListingJdbcDao implements ListingDao {
                         rs.getLong("owner_user_id"),
                         rs.getString("owner_email"),
                         rs.getString("owner_forename"),
-                        rs.getString("owner_surname"));
+                        rs.getString("owner_surname"),
+                        null, null, null, null, null, null,
+                        rs.getString("owner_cbu"));
             }
 
             final long cpId = rs.getLong("car_picture_id");
@@ -276,7 +278,8 @@ public class ListingJdbcDao implements ListingDao {
                         + "l.updated_at AS listing_updated_at, l.status, l.day_price, l.start_point_street, l.start_point_number, l.description, "
                         + "l.check_in_time, l.check_out_time, l.neighborhood_id, l.rating_avg, "
                         + "c.id AS car_id, c.owner_id, c.plate, c.brand, c.model, c.type, c.transmission, c.powertrain, "
-                        + "u.id AS owner_user_id, u.email AS owner_email, u.forename AS owner_forename, u.surname AS owner_surname, "
+                        + "u.id AS owner_user_id, u.email AS owner_email, u.forename AS owner_forename, u.surname AS "
+                        + "owner_surname, u.cbu AS owner_cbu, "
                         + "cp.id AS car_picture_id, cp.image_id, cp.display_order, "
                         + "cp.created_at AS cp_created_at, cp.updated_at AS cp_updated_at, "
                         + "la.id AS availability_id, la.start_date, la.end_date, "

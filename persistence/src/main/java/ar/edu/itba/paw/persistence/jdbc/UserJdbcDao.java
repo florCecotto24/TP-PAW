@@ -27,7 +27,8 @@ import ar.edu.itba.paw.models.security.UserRole;
 public class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =
-            "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, latest_locale, member_since";
+            "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, " +
+                    "latest_locale, member_since, cbu";
 
     private static Long readNullableLongId(final ResultSet rs, final String column) throws SQLException {
         final Object v = rs.getObject(column);
@@ -60,6 +61,7 @@ public class UserJdbcDao implements UserDao {
                 .profilePictureId(readNullableLongId(rs, "profile_picture_id"))
                 .latestLocaleTag(rs.getString("latest_locale"))
                 .memberSince(memberSince != null ? memberSince.toLocalDate() : null)
+                .cbu(rs.getString("cbu"))
                 .build();
     }
 
@@ -169,7 +171,8 @@ public class UserJdbcDao implements UserDao {
     public Optional<User> getListingOwner(final long listingId) {
         return jdbcTemplate.query(
                 "SELECT u.id, u.email, u.forename, u.surname, u.email_validated, u.phone_number, u.birth_date, "
-                        + "u.about, u.profile_picture_id, u.latest_locale, u.member_since FROM users u "
+                        + "u.about, u.profile_picture_id, u.latest_locale,u.cbu FROM users u, "
+                        + "u.member_since FROM users u "
                         + "JOIN cars c ON c.owner_id = u.id "
                         + "JOIN listings l ON l.car_id = c.id "
                         + "WHERE l.id = ?",
@@ -196,5 +199,10 @@ public class UserJdbcDao implements UserDao {
                 "INSERT INTO user_roles (user_id, role) VALUES (?, ?)",
                 userId,
                 role.persistenceName());
+    }
+
+    @Override
+    public void updateCbu(final long userId, final String cbu) {
+        jdbcTemplate.update("UPDATE users SET cbu = ? WHERE id = ?", cbu, userId);
     }
 }

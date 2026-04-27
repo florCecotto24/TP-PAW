@@ -174,6 +174,7 @@ public class MyReservationsController {
         mav.addObject("reservationPickupLocationDisplay", reservationPickupLocationDisplay);
         mav.addObject("car", listingDetail.getCar());
         mav.addObject("owner", listingDetail.getOwner());
+        mav.addObject("cbu", listingDetail.getOwner().getCbu().orElse(""));
         mav.addObject("pickupDateTime", pickupDisplay);
         mav.addObject("returnDateTime", returnDisplay);
         mav.addObject("statusKey", reservation.getStatus().name().toLowerCase());

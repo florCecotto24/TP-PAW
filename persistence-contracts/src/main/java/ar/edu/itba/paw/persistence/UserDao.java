@@ -41,4 +41,6 @@ public interface UserDao {
     List<String> findRoleNamesForUser(long userId);
 
     void insertUserRole(long userId, UserRole role);
+
+    void updateCbu(final long userId, final String cbu);
 }
