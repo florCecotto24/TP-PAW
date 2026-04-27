@@ -5,8 +5,6 @@ import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.web.savedrequest.RequestCache;
@@ -19,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
@@ -29,6 +28,7 @@ import ar.edu.itba.paw.services.EmailVerificationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.RegistrationAccountForm;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.security.RegistrationSessionAttributes;
 import ar.edu.itba.paw.webapp.security.SessionLoginService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
@@ -118,7 +118,8 @@ public class RegistrationController {
     public String registerSubmit(
             final HttpServletRequest request,
             @CurrentUser final User currentUser,
-            @Valid @ModelAttribute("registrationAccountForm") final RegistrationAccountForm registrationAccountForm,
+            @Validated(ValidationGroups.OnRegistration.class) @ModelAttribute("registrationAccountForm")
+            final RegistrationAccountForm registrationAccountForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (WebAuthUtils.isSignedIn(currentUser)) {

@@ -11,36 +11,37 @@ import javax.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
-@CheckOutAfterCheckIn
+@CheckOutAfterCheckIn(groups = ValidationGroups.OnListingEdit.class)
 public class ListingEditForm implements ListingTimeWindow {
 
-    @NotNull(message = "{validation.pricePerDay.notNull}")
-    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}")
-    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}")
+    @NotNull(message = "{validation.pricePerDay.notNull}", groups = ValidationGroups.OnListingEdit.class)
+    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}", groups = ValidationGroups.OnListingEdit.class)
+    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}", groups = ValidationGroups.OnListingEdit.class)
     private BigDecimal pricePerDay;
 
-    @NotBlank(message = "{validation.startPointStreet.notBlank}")
-    @Size(max = 250, message = "{validation.startPointStreet.size}")
+    @NotBlank(message = "{validation.startPointStreet.notBlank}", groups = ValidationGroups.OnListingEdit.class)
+    @Size(max = 250, message = "{validation.startPointStreet.size}", groups = ValidationGroups.OnListingEdit.class)
     private String startPointStreet;
 
-    @NotBlank(message = "{validation.startPointNumber.notBlank}")
-    @Size(max = 10, message = "{validation.startPointNumber.size}")
-    @Pattern(regexp = "^[0-9]+$", message = "{validation.startPointNumber.digitsOnly}")
+    @NotBlank(message = "{validation.startPointNumber.notBlank}", groups = ValidationGroups.OnListingEdit.class)
+    @Size(max = 10, message = "{validation.startPointNumber.size}", groups = ValidationGroups.OnListingEdit.class)
+    @Pattern(regexp = "^[0-9]+$", message = "{validation.startPointNumber.digitsOnly}", groups = ValidationGroups.OnListingEdit.class)
     private String startPointNumber;
 
-    @NotNull(message = "{validation.neighborhood.notNull}")
+    @NotNull(message = "{validation.neighborhood.notNull}", groups = ValidationGroups.OnListingEdit.class)
     private Long neighborhoodId;
 
-    @Size(max = 200, message = "{validation.description.size}")
+    @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnListingEdit.class)
     private String description;
 
-    @NotNull(message = "{validation.checkInTime.notNull}")
+    @NotNull(message = "{validation.checkInTime.notNull}", groups = ValidationGroups.OnListingEdit.class)
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkInTime;
 
-    @NotNull(message = "{validation.checkOutTime.notNull}")
+    @NotNull(message = "{validation.checkOutTime.notNull}", groups = ValidationGroups.OnListingEdit.class)
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
 

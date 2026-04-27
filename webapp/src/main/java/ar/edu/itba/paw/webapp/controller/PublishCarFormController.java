@@ -17,7 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,6 +45,7 @@ import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.PublishCarPictureSessionStash;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 @Controller
@@ -57,7 +58,6 @@ public class PublishCarFormController {
     private final MultipartImageValidation multipartImageValidation;
     private final PublishCarPictureSessionStash pictureStash;
     private final CarEnumOptions carEnumOptions;
-    private final LocalValidatorFactoryBean publishCarFormValidator;
     private final LocationService locationService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
     private final ReservationService reservationService;
@@ -70,7 +70,6 @@ public class PublishCarFormController {
             final MultipartImageValidation multipartImageValidation,
             final PublishCarPictureSessionStash pictureStash,
             final CarEnumOptions carEnumOptions,
-            final LocalValidatorFactoryBean localValidatorFactoryBean,
             final LocationService locationService,
             final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
             final ReservationService reservationService) {
@@ -80,7 +79,6 @@ public class PublishCarFormController {
         this.multipartImageValidation = multipartImageValidation;
         this.pictureStash = pictureStash;
         this.carEnumOptions = carEnumOptions;
-        this.publishCarFormValidator = localValidatorFactoryBean;
         this.locationService = locationService;
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
         this.reservationService = reservationService;
@@ -175,14 +173,13 @@ public class PublishCarFormController {
     public ModelAndView publish(
             @CurrentUser final User currentUser,
             final HttpSession session,
-            @ModelAttribute("publishCarForm") final PublishCarForm form,
+            @Validated(ValidationGroups.OnPublishCar.class) @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
         pictureStash.trySyncFromForm(form, session, errors);
         if (errors.hasErrors()) {
             return publishCarFormView(currentUser, session, form);
         }
 
-        publishCarFormValidator.validate(form, errors);
         listingNeighborhoodFormValidator.validate(form, errors);
         validatePublishAvailabilityRiderLead(form, errors);
         validatePublishAvailabilityTotalDays(form, errors);

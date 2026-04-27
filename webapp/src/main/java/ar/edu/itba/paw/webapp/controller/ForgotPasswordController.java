@@ -2,14 +2,13 @@ package ar.edu.itba.paw.webapp.controller;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +22,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.PasswordResetService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.security.ForgotPasswordSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
@@ -118,7 +118,8 @@ public class ForgotPasswordController {
             final HttpServletRequest request,
             @CurrentUser final User currentUser,
             final HttpSession session,
-            @Valid @ModelAttribute("forgotPasswordResetForm") final ForgotPasswordResetForm form,
+            @Validated(ValidationGroups.OnForgotPasswordReset.class) @ModelAttribute("forgotPasswordResetForm")
+            final ForgotPasswordResetForm form,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (WebAuthUtils.isSignedIn(currentUser)) {

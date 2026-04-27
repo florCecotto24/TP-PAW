@@ -2,18 +2,19 @@ package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
 
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
-@RegistrationPasswordRules
+@RegistrationPasswordRules(groups = ValidationGroups.OnProfilePassword.class)
 public class ProfilePasswordChangeForm implements RegistrationPasswordConfirmFields {
 
-    @NotBlank(message = "{profile.password.current.required}")
+    @NotBlank(message = "{profile.password.current.required}", groups = ValidationGroups.OnProfilePassword.class)
     private String currentPassword = "";
 
-    @NotBlank(message = "{validation.registration.password.required}")
+    @NotBlank(message = "{validation.registration.password.required}", groups = ValidationGroups.OnProfilePassword.class)
     private String password = "";
 
-    @NotBlank(message = "{validation.registration.passwordConfirm.required}")
+    @NotBlank(message = "{validation.registration.passwordConfirm.required}", groups = ValidationGroups.OnProfilePassword.class)
     private String passwordConfirm = "";
 
     public String getCurrentPassword() {

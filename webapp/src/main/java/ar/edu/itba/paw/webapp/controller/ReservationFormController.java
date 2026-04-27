@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,8 +27,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
-import javax.validation.Valid;
 import java.util.Optional;
+
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
 @Controller
 @RequestMapping("/reservation")
@@ -96,7 +98,7 @@ public class ReservationFormController {
     @PostMapping
     public ModelAndView formSubmit(
             @CurrentUser final User currentUser,
-            @Valid @ModelAttribute("reservationForm") final ReservationForm form,
+            @Validated(ValidationGroups.OnReservationSubmit.class) @ModelAttribute("reservationForm") final ReservationForm form,
             final BindingResult errors,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {

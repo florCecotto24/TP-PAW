@@ -19,70 +19,71 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 
-@CheckOutAfterCheckIn
+@CheckOutAfterCheckIn(groups = ValidationGroups.OnPublishCar.class)
 public class PublishCarForm implements ListingTimeWindow {
 
-    @NotBlank(message = "{validation.brand.notBlank}")
-    @Size(message = "{validation.brand.size}", min = 2, max = 50)
+    @NotBlank(message = "{validation.brand.notBlank}", groups = ValidationGroups.OnPublishCar.class)
+    @Size(message = "{validation.brand.size}", min = 2, max = 50, groups = ValidationGroups.OnPublishCar.class)
     private String brand;
 
-    @NotBlank(message = "{validation.model.notBlank}")
+    @NotBlank(message = "{validation.model.notBlank}", groups = ValidationGroups.OnPublishCar.class)
     private String model;
 
-    @Size(min = 6, max = 10, message = "{validation.plate.size}")
-    @NotBlank(message = "{validation.plate.notBlank}")
+    @Size(min = 6, max = 10, message = "{validation.plate.size}", groups = ValidationGroups.OnPublishCar.class)
+    @NotBlank(message = "{validation.plate.notBlank}", groups = ValidationGroups.OnPublishCar.class)
     // Acá podríamos poner las validaciones de las patentes argentinas (dividir entre nuevas y viejas)
-    @NoPunctuation
+    @NoPunctuation(groups = ValidationGroups.OnPublishCar.class)
     private String plate;
 
-    @NotNull(message = "{validation.type.notNull}")
+    @NotNull(message = "{validation.type.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Car.Type type;
 
-    @NotNull(message = "{validation.powertrain.notNull}")
+    @NotNull(message = "{validation.powertrain.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Car.Powertrain powertrain;
 
-    @NotNull(message = "{validation.transmission.notNull}")
+    @NotNull(message = "{validation.transmission.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Car.Transmission transmission;
 
-    @NotNull(message = "{validation.pricePerDay.notNull}")
-    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}")
-    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}")
+    @NotNull(message = "{validation.pricePerDay.notNull}", groups = ValidationGroups.OnPublishCar.class)
+    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}", groups = ValidationGroups.OnPublishCar.class)
+    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}", groups = ValidationGroups.OnPublishCar.class)
     private BigDecimal pricePerDay;
 
-    @Size(max = 250, message = "{validation.startPointStreet.size}")
-    @NotBlank(message = "{validation.startPointStreet.notBlank}")
+    @Size(max = 250, message = "{validation.startPointStreet.size}", groups = ValidationGroups.OnPublishCar.class)
+    @NotBlank(message = "{validation.startPointStreet.notBlank}", groups = ValidationGroups.OnPublishCar.class)
     private String startPointStreet;
 
-    @NotBlank(message = "{validation.startPointNumber.notBlank}")
-    @Size(max = 10, message = "{validation.startPointNumber.size}")
-    @Pattern(regexp = "^[0-9]+$", message = "{validation.startPointNumber.digitsOnly}")
+    @NotBlank(message = "{validation.startPointNumber.notBlank}", groups = ValidationGroups.OnPublishCar.class)
+    @Size(max = 10, message = "{validation.startPointNumber.size}", groups = ValidationGroups.OnPublishCar.class)
+    @Pattern(regexp = "^[0-9]+$", message = "{validation.startPointNumber.digitsOnly}", groups = ValidationGroups.OnPublishCar.class)
     private String startPointNumber;
 
-    @NotNull(message = "{validation.neighborhood.notNull}")
+    @NotNull(message = "{validation.neighborhood.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Long neighborhoodId;
 
-    @Size(max = 200, message = "{validation.description.size}")
+    @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnPublishCar.class)
     private String description;
 
-    @NotNull(message = "{validation.checkInTime.notNull}")
+    @NotNull(message = "{validation.checkInTime.notNull}", groups = ValidationGroups.OnPublishCar.class)
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkInTime;
 
-    @NotNull(message = "{validation.checkOutTime.notNull}")
+    @NotNull(message = "{validation.checkOutTime.notNull}", groups = ValidationGroups.OnPublishCar.class)
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
 
     /**
      * Can be empty in a retry: the pictures may be in session (see {@code PublishCarFormController}).
      */
-    @Size(max = 8, message = "{validation.pictures.size}")
+    @Size(max = 8, message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
 
-    @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}")
-    @Size(max = 10, message = "{validation.availabilityRows.size}")
+    @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}", groups = ValidationGroups.OnPublishCar.class)
+    @Size(max = 10, message = "{validation.availabilityRows.size}", groups = ValidationGroups.OnPublishCar.class)
     private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public PublishCarForm() {
@@ -102,11 +103,11 @@ public class PublishCarForm implements ListingTimeWindow {
     }
 
     public static class AvailabilityRow {
-        @NotNull(message = "{validation.availabilityRow.from.notNull}")
+        @NotNull(message = "{validation.availabilityRow.from.notNull}", groups = ValidationGroups.OnPublishCar.class)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate from;
 
-        @NotNull(message = "{validation.availabilityRow.until.notNull}")
+        @NotNull(message = "{validation.availabilityRow.until.notNull}", groups = ValidationGroups.OnPublishCar.class)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
 

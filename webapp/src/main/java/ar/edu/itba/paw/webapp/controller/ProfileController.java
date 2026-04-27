@@ -7,8 +7,6 @@ import java.time.format.DateTimeParseException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +17,7 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +39,7 @@ import ar.edu.itba.paw.webapp.security.RydenUserDetails;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
 @Controller
 @RequestMapping("/profile")
@@ -140,7 +140,7 @@ public class ProfileController {
     @PostMapping
     public String profilePost(
             @CurrentUser final User currentUser,
-            @Valid @ModelAttribute("profileForm") final ProfileUpdateForm profileForm,
+            @Validated(ValidationGroups.OnProfileUpdate.class) @ModelAttribute("profileForm") final ProfileUpdateForm profileForm,
             final BindingResult bindingResult,
             final HttpServletRequest request,
             final HttpServletResponse response,
@@ -229,7 +229,8 @@ public class ProfileController {
     @PostMapping("/password")
     public String passwordFormPost(
             @CurrentUser final User currentUser,
-            @Valid @ModelAttribute("profilePasswordForm") final ProfilePasswordChangeForm profilePasswordForm,
+            @Validated(ValidationGroups.OnProfilePassword.class) @ModelAttribute("profilePasswordForm")
+            final ProfilePasswordChangeForm profilePasswordForm,
             final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);

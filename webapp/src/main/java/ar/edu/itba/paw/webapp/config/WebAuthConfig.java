@@ -25,11 +25,14 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.security.ListingWebAuthorization;
+import ar.edu.itba.paw.webapp.security.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.RydenAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.RydenUserDetailsService;
 
@@ -84,7 +87,9 @@ public class WebAuthConfig {
             final AuthenticationFailureHandler authenticationFailureHandler,
             final SecurityContextRepository securityContextRepository,
             final RequestCache requestCache,
-            final LogoutHandler contextPathAuthCookieClearingLogoutHandler) throws Exception {
+            final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
+            final ListingWebAuthorization listingWebAuthorization,
+            final ReservationWebAuthorization reservationWebAuthorization) throws Exception {
         http
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
@@ -97,8 +102,26 @@ public class WebAuthConfig {
                         .antMatchers("/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
                         .antMatchers("/publish-car", "/publish-car/**").authenticated()
-                        .antMatchers("/my-listings", "/my-listings/**").authenticated()
-                        .antMatchers("/my-reservations", "/my-reservations/**").authenticated()
+                        .antMatchers("/my-listings").authenticated()
+                        .antMatchers("/my-listings/**")
+                                .access(listingWebAuthorization.ownerAccess())
+                        .antMatchers("/my-reservations").authenticated()
+                        .antMatchers("/my-reservations/*/payment-receipt/approval")
+                                .access(reservationWebAuthorization.ownerAccess())
+                        .antMatchers("/my-reservations/*/payment-receipt/download")
+                                .access(reservationWebAuthorization.participantAccess())
+                        .antMatchers(HttpMethod.POST, "/my-reservations/*/payment-receipt")
+                                .access(reservationWebAuthorization.riderAccess())
+                        .antMatchers("/my-reservations/*/car-returned")
+                                .access(reservationWebAuthorization.ownerAccess())
+                        .antMatchers("/my-reservations/*/owner-review-rider")
+                                .access(reservationWebAuthorization.ownerAccess())
+                        .antMatchers("/my-reservations/*/rider-review-owner")
+                                .access(reservationWebAuthorization.riderAccess())
+                        .antMatchers("/my-reservations/*/cancel")
+                                .access(reservationWebAuthorization.participantAccess())
+                        .antMatchers("/my-reservations/*")
+                                .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
                         .antMatchers("/logout").authenticated()

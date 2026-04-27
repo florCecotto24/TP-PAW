@@ -16,11 +16,13 @@ import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -34,7 +36,6 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.Valid;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -210,7 +211,7 @@ public class MyListingsController {
     public ModelAndView editListing(
             @CurrentUser final User currentUser,
             @PathVariable("listingId") final long listingId,
-            @Valid @ModelAttribute("editForm") final ListingEditForm editForm,
+            @Validated(ValidationGroups.OnListingEdit.class) @ModelAttribute("editForm") final ListingEditForm editForm,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
 
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
@@ -9,20 +10,29 @@ import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind
 
 public class ProfileUpdateForm {
 
-    @NotBlank(message = "{profile.forename.required}")
-    @UserValidationMaxLength(kind = Kind.DISPLAY_NAME_PART, messageKey = "validation.profile.forename.maxLength")
-    @NoPunctuation
+    @NotBlank(message = "{profile.forename.required}", groups = ValidationGroups.OnProfileUpdate.class)
+    @UserValidationMaxLength(
+            kind = Kind.DISPLAY_NAME_PART,
+            messageKey = "validation.profile.forename.maxLength",
+            groups = ValidationGroups.OnProfileUpdate.class)
+    @NoPunctuation(groups = ValidationGroups.OnProfileUpdate.class)
     private String forename = "";
 
-    @NotBlank(message = "{profile.surname.required}")
-    @UserValidationMaxLength(kind = Kind.DISPLAY_NAME_PART, messageKey = "validation.profile.surname.maxLength")
-    @NoPunctuation
+    @NotBlank(message = "{profile.surname.required}", groups = ValidationGroups.OnProfileUpdate.class)
+    @UserValidationMaxLength(
+            kind = Kind.DISPLAY_NAME_PART,
+            messageKey = "validation.profile.surname.maxLength",
+            groups = ValidationGroups.OnProfileUpdate.class)
+    @NoPunctuation(groups = ValidationGroups.OnProfileUpdate.class)
     private String surname = "";
 
-    @PhoneNumber
+    @PhoneNumber(groups = ValidationGroups.OnProfileUpdate.class)
     private String phoneNumber = "";
     private String birthDate = "";
-    @UserValidationMaxLength(kind = Kind.PROFILE_ABOUT, messageKey = "validation.profile.about.maxLength")
+    @UserValidationMaxLength(
+            kind = Kind.PROFILE_ABOUT,
+            messageKey = "validation.profile.about.maxLength",
+            groups = ValidationGroups.OnProfileUpdate.class)
     private String about = "";
 
     public String getForename() {

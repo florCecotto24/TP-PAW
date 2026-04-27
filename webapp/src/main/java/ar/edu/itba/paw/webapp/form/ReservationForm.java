@@ -2,24 +2,25 @@ package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotNull;
 
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
-@ReservationWithinMaxBillableDays
+@ReservationWithinMaxBillableDays(groups = ValidationGroups.OnReservationSubmit.class)
 public class ReservationForm {
 
-    @NotNull
+    @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private Long listingId;
 
-    @NotNull
+    @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String fromDateTime;
 
-    @NotNull
+    @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String untilDateTime;
 
-    @NotNull
+    @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String deliveryLocation;
 
-    @NotNull
+    @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String carName;
 
     public Long getListingId() {
