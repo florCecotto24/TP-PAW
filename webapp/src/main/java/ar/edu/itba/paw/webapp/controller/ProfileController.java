@@ -71,6 +71,11 @@ public class ProfileController {
         return userValidationPolicy.getProfilePhoneMaxLength();
     }
 
+    @ModelAttribute("profileAboutMaxLength")
+    public int profileAboutMaxLength() {
+        return userValidationPolicy.getProfileAboutMaxLength();
+    }
+
     @ModelAttribute("profileDisplayNamePartMaxLength")
     public int profileDisplayNamePartMaxLength() {
         return userValidationPolicy.getDisplayNamePartMaxLength();
@@ -141,6 +146,7 @@ public class ProfileController {
             userService.updateDisplayName(me.getId(), profileForm.getForename(), profileForm.getSurname());
             userService.updatePhoneNumber(me.getId(), profileForm.getPhoneNumber());
             userService.updateBirthDate(me.getId(), birthParsed);
+            userService.updateAbout(me.getId(), profileForm.getAbout());
         } catch (final RydenException e) {
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile";
@@ -242,6 +248,7 @@ public class ProfileController {
             form.setSurname(u.getSurname());
             u.getPhoneNumber().ifPresent(form::setPhoneNumber);
             u.getBirthDate().ifPresent(bd -> form.setBirthDate(bd.toString()));
+            u.getAbout().ifPresent(form::setAbout);
         });
     }
 

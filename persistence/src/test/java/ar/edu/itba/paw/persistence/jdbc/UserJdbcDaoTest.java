@@ -96,6 +96,21 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
+    public void testUpdateOptionalAboutSetsAndClears() {
+        final User created = userDao.createUser("about@mail.com", "Test", "User");
+
+        userDao.updateAbout(created.getId(), "Host and rider.");
+        Optional<User> loaded = userDao.getUserById(created.getId());
+        Assertions.assertTrue(loaded.isPresent());
+        Assertions.assertEquals("Host and rider.", loaded.get().getAbout().orElseThrow());
+
+        userDao.updateAbout(created.getId(), null);
+        loaded = userDao.getUserById(created.getId());
+        Assertions.assertTrue(loaded.isPresent());
+        Assertions.assertTrue(loaded.get().getAbout().isEmpty());
+    }
+
+    @Test
     public void testGetListingOwnerByListingId() {
         // Arrange
         insertUser(1L, "owner@mail.com", "Owner", "One");

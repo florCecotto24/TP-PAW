@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users(
     email_validated BOOLEAN,
     phone_number VARCHAR(20),
     birth_date DATE,
+    about TEXT,
     profile_picture_id INTEGER,
     latest_locale VARCHAR(32),
     cbu VARCHAR(22),
@@ -180,6 +181,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS about TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS latest_locale VARCHAR(32);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cbu VARCHAR(22);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_rider NUMERIC(4, 2);

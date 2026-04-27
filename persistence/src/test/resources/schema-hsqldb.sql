@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users(
     email_validated BOOLEAN,
     phone_number VARCHAR(20),
     birth_date DATE,
+    about VARCHAR(500),
     profile_picture_id BIGINT,
     latest_locale VARCHAR(32)
 );

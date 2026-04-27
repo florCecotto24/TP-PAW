@@ -17,6 +17,7 @@ public class User {
     private final Boolean emailValidated;
     private final String phoneNumber;
     private final LocalDate birthDate;
+    private final String about;
     private final Long profilePictureId;
     /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
     private final String latestLocaleTag;
@@ -30,6 +31,7 @@ public class User {
         this.emailValidated = b.emailValidated;
         this.phoneNumber = b.phoneNumber;
         this.birthDate = b.birthDate;
+        this.about = b.about;
         this.profilePictureId = b.profilePictureId;
         this.latestLocaleTag = b.latestLocaleTag;
     }
@@ -52,6 +54,7 @@ public class User {
         private Boolean emailValidated;
         private String phoneNumber;
         private LocalDate birthDate;
+        private String about;
         private Long profilePictureId;
         private String latestLocaleTag;
 
@@ -92,6 +95,11 @@ public class User {
 
         public Builder birthDate(final LocalDate birthDate) {
             this.birthDate = birthDate;
+            return this;
+        }
+
+        public Builder about(final String about) {
+            this.about = about;
             return this;
         }
 
@@ -143,6 +151,10 @@ public class User {
 
     public Optional<LocalDate> getBirthDate() {
         return Optional.ofNullable(birthDate);
+    }
+
+    public Optional<String> getAbout() {
+        return Optional.ofNullable(about);
     }
 
     public Optional<Long> getProfilePictureId() {

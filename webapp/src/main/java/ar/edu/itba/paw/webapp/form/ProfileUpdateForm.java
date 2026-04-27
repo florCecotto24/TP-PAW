@@ -22,6 +22,8 @@ public class ProfileUpdateForm {
     @PhoneNumber
     private String phoneNumber = "";
     private String birthDate = "";
+    @UserValidationMaxLength(kind = Kind.PROFILE_ABOUT, messageKey = "validation.profile.about.maxLength")
+    private String about = "";
 
     public String getForename() {
         return forename;
@@ -53,5 +55,13 @@ public class ProfileUpdateForm {
 
     public void setBirthDate(final String birthDate) {
         this.birthDate = birthDate != null ? birthDate : "";
+    }
+
+    public String getAbout() {
+        return about;
+    }
+
+    public void setAbout(final String about) {
+        this.about = about != null ? about : "";
     }
 }

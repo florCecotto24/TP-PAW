@@ -56,6 +56,7 @@ public final class MessageKeys {
     public static final String USER_REGISTRATION_EMAIL_TOO_LONG = "user.registration.emailTooLong";
     public static final String USER_PROFILE_FORENAME_TOO_LONG = "user.profile.forenameTooLong";
     public static final String USER_PROFILE_SURNAME_TOO_LONG = "user.profile.surnameTooLong";
+    public static final String USER_PROFILE_ABOUT_TOO_LONG = "user.profile.aboutTooLong";
 
     /* listing */
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";

@@ -49,6 +49,11 @@ public interface UserService {
     void updateBirthDate(long userId, LocalDate birthDate);
 
     /**
+     * About text shown in profile. Blank input is stored as {@code null}.
+     */
+    void updateAbout(long userId, String aboutRaw);
+
+    /**
      * Stores a new profile picture and removes the previous image row when present.
      * @throws ar.edu.itba.paw.exception.image.ImageValidationException when payload exceeds configured max size
      */

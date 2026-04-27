@@ -152,6 +152,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public void updateAbout(final long userId, final String aboutRaw) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        final String about = normalizeOptionalAbout(aboutRaw);
+        if (about != null && about.length() > validationPolicy.getProfileAboutMaxLength()) {
+            throw new InvalidUserFieldLengthException(
+                    MessageKeys.USER_PROFILE_ABOUT_TOO_LONG,
+                    validationPolicy.getProfileAboutMaxLength());
+        }
+        userDao.updateAbout(userId, about);
+    }
+
+    @Override
+    @Transactional
     public void updateProfilePicture(
             final long userId,
             final String originalFilename,
@@ -271,6 +284,14 @@ public class UserServiceImpl implements UserService {
             return null;
         }
         final String trimmed = phoneRaw.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeOptionalAbout(final String aboutRaw) {
+        if (!StringUtils.hasText(aboutRaw)) {
+            return null;
+        }
+        final String trimmed = aboutRaw.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 

@@ -18,6 +18,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
+import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Image;
@@ -50,7 +51,7 @@ public class UserServiceImplTest {
                 imageService,
                 emailService,
                 passwordEncoder,
-                UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, "^[0-9+]+$"));
+                UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"));
     }
 
     @Test
@@ -210,6 +211,24 @@ public class UserServiceImplTest {
         final InvalidProfilePhoneException thrown = Assertions.assertThrows(InvalidProfilePhoneException.class,
                 () -> userService.updatePhoneNumber(1L, "12a34"));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_PHONE_INVALID, thrown.getMessageCode());
+    }
+
+    @Test
+    public void testUpdateAboutWhenValidDoesNotThrow() {
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
+        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
+        Assertions.assertDoesNotThrow(() -> userService.updateAbout(1L, "  About me text  "));
+    }
+
+    @Test
+    public void testUpdateAboutWhenTooLongThrows() {
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
+        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
+        final String tooLong = "a".repeat(501);
+
+        final InvalidUserFieldLengthException thrown = Assertions.assertThrows(InvalidUserFieldLengthException.class,
+                () -> userService.updateAbout(1L, tooLong));
+        Assertions.assertEquals(MessageKeys.USER_PROFILE_ABOUT_TOO_LONG, thrown.getMessageCode());
     }
 
     @Test

@@ -31,6 +31,7 @@ public @interface UserValidationMaxLength {
 
     enum Kind {
         DISPLAY_NAME_PART,
-        REGISTRATION_EMAIL
+        REGISTRATION_EMAIL,
+        PROFILE_ABOUT
     }
 }

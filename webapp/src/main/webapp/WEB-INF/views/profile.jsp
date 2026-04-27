@@ -134,6 +134,17 @@
                 <span class="profile-section-label"><spring:message code="profile.birthDate"/></span>
                 <span class="profile-field-value"><c:out value="${profileForm.birthDate}"/></span>
             </div>
+            <div class="profile-field-view">
+                <span class="profile-section-label"><spring:message code="profile.about"/></span>
+                <span class="profile-field-value">
+                    <c:choose>
+                        <c:when test="${not empty profileForm.about}">
+                            <c:out value="${profileForm.about}"/>
+                        </c:when>
+                        <c:otherwise><spring:message code="common.notSpecified"/></c:otherwise>
+                    </c:choose>
+                </span>
+            </div>
         </div>
     </div>
 
@@ -173,6 +184,11 @@
                                 readonly="true" data-max-ymd="${profileBirthDateMax}"
                                 data-clear-label="${profileBirthDateClearLabel}"/>
                     <form:errors path="birthDate" cssClass="text-danger small d-block" element="div"/>
+                </div>
+                <div class="mb-3">
+                    <label for="about" class="form-label"><spring:message code="profile.about"/></label>
+                    <form:textarea path="about" id="about" cssClass="form-control" rows="4" maxlength="${profileAboutMaxLength}"/>
+                    <form:errors path="about" cssClass="text-danger small d-block" element="div"/>
                 </div>
             </div>
         </form:form>

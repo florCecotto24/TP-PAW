@@ -26,6 +26,8 @@ public interface UserDao {
 
     void updateBirthDate(long userId, LocalDate birthDate);
 
+    void updateAbout(long userId, String about);
+
     void updateProfilePictureId(long userId, Long profilePictureImageId);
 
     void updateEmailValidated(long userId, boolean validated);

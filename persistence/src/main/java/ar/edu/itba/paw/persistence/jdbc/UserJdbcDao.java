@@ -26,7 +26,7 @@ import ar.edu.itba.paw.models.security.UserRole;
 public class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =
-            "id, email, forename, surname, email_validated, phone_number, birth_date, profile_picture_id, latest_locale";
+            "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, latest_locale";
 
     private static Long readNullableLongId(final ResultSet rs, final String column) throws SQLException {
         final Object v = rs.getObject(column);
@@ -54,6 +54,7 @@ public class UserJdbcDao implements UserDao {
                 .emailValidated(rs.getObject("email_validated", Boolean.class))
                 .phoneNumber(rs.getString("phone_number"))
                 .birthDate(birth != null ? birth.toLocalDate() : null)
+                .about(rs.getString("about"))
                 .profilePictureId(readNullableLongId(rs, "profile_picture_id"))
                 .latestLocaleTag(rs.getString("latest_locale"))
                 .build();
@@ -139,6 +140,11 @@ public class UserJdbcDao implements UserDao {
     }
 
     @Override
+    public void updateAbout(final long userId, final String about) {
+        jdbcTemplate.update("UPDATE users SET about = ? WHERE id = ?", about, userId);
+    }
+
+    @Override
     public void updateProfilePictureId(final long userId, final Long profilePictureImageId) {
         jdbcTemplate.update("UPDATE users SET profile_picture_id = ? WHERE id = ?", profilePictureImageId, userId);
     }
@@ -157,7 +163,7 @@ public class UserJdbcDao implements UserDao {
     public Optional<User> getListingOwner(final long listingId) {
         return jdbcTemplate.query(
                 "SELECT u.id, u.email, u.forename, u.surname, u.email_validated, u.phone_number, u.birth_date, "
-                        + "u.profile_picture_id, u.latest_locale FROM users u "
+                        + "u.about, u.profile_picture_id, u.latest_locale FROM users u "
                         + "JOIN cars c ON c.owner_id = u.id "
                         + "JOIN listings l ON l.car_id = c.id "
                         + "WHERE l.id = ?",

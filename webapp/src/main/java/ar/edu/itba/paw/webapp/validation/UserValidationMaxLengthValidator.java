@@ -44,6 +44,7 @@ public class UserValidationMaxLengthValidator implements ConstraintValidator<Use
         final int max = switch (kind) {
             case DISPLAY_NAME_PART -> policy.getDisplayNamePartMaxLength();
             case REGISTRATION_EMAIL -> policy.getRegistrationEmailMaxLength();
+            case PROFILE_ABOUT -> policy.getProfileAboutMaxLength();
         };
         final String trimmed = value.trim();
         if (trimmed.length() <= max) {
