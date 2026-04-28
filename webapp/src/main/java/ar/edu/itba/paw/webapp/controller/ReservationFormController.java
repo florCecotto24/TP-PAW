@@ -9,6 +9,7 @@ import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
@@ -43,6 +44,7 @@ public class ReservationFormController {
     private final ImageService imageService;
     private final LocaleMessages localeMessages;
     private final WallDateTimeUiFormatter wallDateTimeUiFormatter;
+    private final UserService userService;
 
     @Autowired
     public ReservationFormController(
@@ -50,12 +52,13 @@ public class ReservationFormController {
             final ReservationService reservationService,
             final ImageService imageService,
             final LocaleMessages localeMessages,
-            final WallDateTimeUiFormatter wallDateTimeUiFormatter) {
+            final WallDateTimeUiFormatter wallDateTimeUiFormatter, UserService userService) {
         this.listingService = listingService;
         this.reservationService = reservationService;
         this.imageService = imageService;
         this.localeMessages = localeMessages;
         this.wallDateTimeUiFormatter = wallDateTimeUiFormatter;
+        this.userService = userService;
     }
 
     @GetMapping("/new")
@@ -181,7 +184,9 @@ public class ReservationFormController {
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
-        addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+        mav.addObject("reservationTotal", reservation.getTotalPrice());
+        User owner = userService.getListingOwner(listingId).orElseThrow(() -> new RuntimeException("Listing owner not found for listingId " + listingId));
+        mav.addObject("ownerCbu", userService.getUserCbu(owner.getId()));
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         addReservationPolicyHours(mav);
         mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());

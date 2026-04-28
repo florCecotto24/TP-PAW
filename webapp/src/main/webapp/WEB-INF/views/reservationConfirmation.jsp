@@ -54,6 +54,23 @@
                         <spring:message code="myReservationDetail.payment.invalidFile" var="paymentInvalidFileMsg"/>
                         <spring:message code="reservationConfirmation.paymentReceipt.chooseHint" var="paymentReceiptChooseHint"/>
                         <spring:message code="reservationConfirmation.paymentReceipt.uploadAria" var="paymentReceiptUploadAria"/>
+
+                        <article class="card border-0 shadow-sm rounded-4 mb-4">
+                            <div class="card-body p-4">
+                                <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.paymentInfo.title"/></h2>
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.paymentInfo.totalPrice"/></p>
+                                        <p class="mb-0 fw-medium text-primary h5">$<c:out value="${reservationTotal}"/></p>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.paymentInfo.ownerCbu"/></p>
+                                        <p class="mb-0 fw-medium"><c:out value="${ownerCbu}"/></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
                         <form id="paymentReceiptForm" method="post" enctype="multipart/form-data"
                               action="${pageContext.request.contextPath}/my-reservations/${reservationId}/payment-receipt"
                               class="ryden-payment-receipt__form">

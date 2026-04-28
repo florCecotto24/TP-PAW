@@ -87,4 +87,6 @@ public interface UserService {
     Locale resolveMailLocaleOrElse(long userId, Locale fallback);
 
     void updateCbu(long userId, String cbu);
+
+    String getUserCbu(long userId);
 }

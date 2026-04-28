@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import ar.edu.itba.paw.exception.user.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -253,6 +254,17 @@ public class UserServiceImpl implements UserService {
                     profileContext ? MessageKeys.USER_PROFILE_SURNAME_TOO_LONG : MessageKeys.USER_REGISTRATION_SURNAME_TOO_LONG,
                     max);
         }
+    }
+
+    @Override
+    public String getUserCbu(long userId){
+        Optional<String> cbu = userDao.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND))
+                .getCbu();
+        if (cbu.isEmpty() || cbu.get().isBlank()) {
+            throw new CBUNotFoundException(userId);
+        }
+        return cbu.get();
     }
 
     private void assertNewPasswordPair(final String password, final String passwordConfirm) {
