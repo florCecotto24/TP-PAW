@@ -15,6 +15,7 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
@@ -63,6 +64,7 @@ public class MyReservationsController {
     private final LocaleMessages localeMessages;
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
+    private final UserService userService;
 
     @Autowired
     public MyReservationsController(
@@ -71,13 +73,15 @@ public class MyReservationsController {
             final ImageService imageService,
             final LocaleMessages localeMessages,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
-            final ReviewService reviewService) {
+            final ReviewService reviewService,
+            final UserService userService) {
         this.reservationService = reservationService;
         this.listingService = listingService;
         this.imageService = imageService;
         this.localeMessages = localeMessages;
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
+        this.userService = userService;
     }
 
     @GetMapping("/my-reservations")
@@ -189,6 +193,54 @@ public class MyReservationsController {
                         WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(deadline, locale)));
         mav.addObject("hasPaymentReceipt", reservation.getPaymentReceiptFileId().isPresent());
         mav.addObject("paymentReceiptApproved", reservation.isPaymentApproved());
+        return mav;
+    }
+
+    @GetMapping("/my-reservations/{reservationId}/counterparty-profile")
+    public ModelAndView counterpartyProfile(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam final String role) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        if (!"owner".equals(role) && !"rider".equals(role)) {
+            return new ModelAndView(new RedirectView("/my-reservations/" + reservationId, true));
+        }
+        final Optional<Reservation> reservationOpt = "owner".equals(role)
+                ? reservationService.getOwnerReservationById(me.getId(), reservationId)
+                : reservationService.getRiderReservationById(me.getId(), reservationId);
+        if (reservationOpt.isEmpty()) {
+            final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=" + role, true);
+            rv.setExposeModelAttributes(false);
+            return new ModelAndView(rv);
+        }
+
+        final Reservation reservation = reservationOpt.get();
+        final Optional<User> counterpartyOpt = "owner".equals(role)
+                ? userService.getUserById(reservation.getRiderId())
+                : userService.getListingOwner(reservation.getListingId());
+        if (counterpartyOpt.isEmpty()) {
+            final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=" + role, true);
+            rv.setExposeModelAttributes(false);
+            return new ModelAndView(rv);
+        }
+
+        final User counterparty = counterpartyOpt.get();
+        final Locale locale = LocaleContextHolder.getLocale();
+        final ModelAndView mav = new ModelAndView("counterpartyProfile");
+        mav.addObject("activeTab", "my-reservations");
+        mav.addObject("reservationId", reservationId);
+        mav.addObject("viewerRole", role);
+        mav.addObject("counterpartyForename", counterparty.getForename());
+        mav.addObject("counterpartySurname", counterparty.getSurname());
+        mav.addObject("counterpartyAbout", counterparty.getAbout().orElse("").trim());
+        mav.addObject("counterpartyProfileImageId", counterparty.getProfilePictureId().orElse(null));
+        counterparty.getMemberSince().ifPresent(ms -> mav.addObject(
+                "counterpartyMemberSinceDisplay",
+                ms.format(java.time.format.DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale))));
+        final boolean counterpartyIsOwner = "rider".equals(role);
+        mav.addObject("counterpartyBadgeLabel", counterpartyIsOwner ? "Verified Owner" : "Verified Rider");
+        mav.addObject("counterpartyType", counterpartyIsOwner ? "owner" : "rider");
+        mav.addObject("reservationDetailUrl", "/my-reservations/" + reservationId + "?role=" + role);
         return mav;
     }
 

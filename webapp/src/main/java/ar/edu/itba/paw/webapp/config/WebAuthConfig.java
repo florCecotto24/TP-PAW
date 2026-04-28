@@ -120,6 +120,8 @@ public class WebAuthConfig {
                                 .access(reservationWebAuthorization.riderAccess())
                         .antMatchers("/my-reservations/*/cancel")
                                 .access(reservationWebAuthorization.participantAccess())
+                        .antMatchers("/my-reservations/*/counterparty-profile")
+                                .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/my-reservations/*")
                                 .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/reservation", "/reservation/**").authenticated()

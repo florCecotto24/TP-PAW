@@ -332,6 +332,21 @@
                     </div>
 
                     <hr class="my-4">
+                    <c:url var="counterpartyProfileUrl" value="/my-reservations/${reservation.id}/counterparty-profile">
+                        <c:param name="role"><c:out value="${reservationRole}"/></c:param>
+                    </c:url>
+                    <c:choose>
+                        <c:when test="${reservationRole eq 'owner'}">
+                            <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mb-2">
+                                Rider Profile
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mb-2">
+                                Owner Profile
+                            </a>
+                        </c:otherwise>
+                    </c:choose>
                     <c:url var="listingUrl" value="/car-detail">
                         <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
                     </c:url>
