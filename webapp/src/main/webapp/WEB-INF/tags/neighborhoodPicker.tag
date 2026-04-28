@@ -26,10 +26,17 @@
 <%@ attribute name="wrapExtraClass" required="false" type="java.lang.String" %>
 <%@ attribute name="formId" required="false" type="java.lang.String" %>
 <%@ attribute name="searchBarInline" required="false" type="java.lang.Boolean" %>
+<%@ attribute name="nbRequiredMessage" required="false" type="java.lang.String" %>
+<%-- Modo get + selección única + springPath: incluir en la página del form:form un <form:hidden path="..." id="nb_hid_${pickerId}"/> (no dentro de este tag). --%>
 
 <c:set var="resolvedSelectName" value="${empty selectName ? 'neighborhoodId' : selectName}"/>
 <c:set var="nbSearchBar" value="${searchBarInline eq true}"/>
 <c:set var="nbAllowMultiple" value="${mode eq 'get' and (allowMultiple ne false)}"/>
+<c:set var="nbSpringBoundSingle" value="${mode eq 'get' and not nbAllowMultiple and not empty springPath}"/>
+<c:set var="nbRadioGroupName" value="${resolvedSelectName}"/>
+<c:if test="${nbSpringBoundSingle}">
+    <c:set var="nbRadioGroupName" value="nb_ui_${pickerId}"/>
+</c:if>
 <c:set var="nbDdBtnId" value="nb_dd_btn_${pickerId}"/>
 <c:set var="nbDdTextId" value="nb_dd_text_${pickerId}"/>
 <c:set var="nbDdWrapId" value="nb_dd_wrap_${pickerId}"/>
@@ -39,7 +46,7 @@
 <c:set var="nbListId" value="nb_list_${pickerId}"/>
 <c:set var="nbChosenName" value=""/>
 <c:forEach items="${neighborhoodList}" var="nb">
-    <c:if test="${selectedNeighborhoodId != null && selectedNeighborhoodId == nb.id}">
+    <c:if test="${selectedNeighborhoodId != null && selectedNeighborhoodId eq nb.id}">
         <c:set var="nbChosenName" value="${nb.name}"/>
     </c:if>
 </c:forEach>
@@ -66,7 +73,7 @@
     <spring:message code="search.filter.neighborhood.multiCount" var="nbMultiFmt" htmlEscape="true"/>
 </c:if>
 
-<div class="neighborhood-picker ${wrapExtraClass}<c:if test='${nbSearchBar}'> neighborhood-picker--search-bar</c:if>">
+<div class="neighborhood-picker ${wrapExtraClass}<c:if test='${nbSearchBar}'> neighborhood-picker--search-bar</c:if>"<c:if test="${not empty nbRequiredMessage}"> data-ryden-nb-required="<c:out value='${nbRequiredMessage}'/>"</c:if>>
     <c:if test="${not empty outerLabel and not nbSearchBar}">
         <label class="form-label<c:if test="${outerLabelRequired eq true}"> required-label</c:if> mb-1" for="<c:out value='${nbDdBtnId}'/>"><c:out value="${outerLabel}"/></label>
     </c:if>
@@ -111,12 +118,12 @@
                                         <c:set var="nbChecked" value="false"/>
                                         <c:if test="${not empty selectedNeighborhoodIds}">
                                             <c:forEach items="${selectedNeighborhoodIds}" var="sid">
-                                                <c:if test="${sid == nb.id}"><c:set var="nbChecked" value="true"/></c:if>
+                                                <c:if test="${sid eq nb.id}"><c:set var="nbChecked" value="true"/></c:if>
                                             </c:forEach>
                                         </c:if>
                                     </c:when>
                                     <c:otherwise>
-                                        <c:set var="nbChecked" value="${selectedNeighborhoodId != null && selectedNeighborhoodId == nb.id}"/>
+                                        <c:set var="nbChecked" value="${selectedNeighborhoodId != null && selectedNeighborhoodId eq nb.id}"/>
                                     </c:otherwise>
                                 </c:choose>
                                 <li class="neighborhood-picker__row mb-0"
@@ -140,12 +147,12 @@
                                                    for="nb_rb_<c:out value='${pickerId}'/>_<c:out value='${nb.id}'/>">
                                                 <input type="radio"
                                                        class="form-check-input flex-shrink-0 js-neighborhood-pick mt-0"
-                                                       name="<c:out value='${resolvedSelectName}'/>"
+                                                       name="<c:out value='${nbRadioGroupName}'/>"
                                                        value="<c:out value='${nb.id}'/>"
                                                        id="nb_rb_<c:out value='${pickerId}'/>_<c:out value='${nb.id}'/>"
                                                        data-picker-id="<c:out value='${pickerId}'/>"
                                                        <c:if test="${nbChecked}">checked="checked"</c:if>
-                                                       <c:if test="${required eq true and nbSt.first}">required="required"</c:if> />
+                                                       <c:if test="${required eq true and nbSt.first and not nbSpringBoundSingle}">required="required"</c:if> />
                                                 <span class="small js-nb-row-name"><c:out value="${nb.name}"/></span>
                                             </label>
                                         </c:otherwise>
@@ -156,6 +163,9 @@
                     </div>
                 </div>
             </div>
+            <c:if test="${nbSpringBoundSingle}">
+                <div id="nb_err_<c:out value='${pickerId}'/>" class="small text-danger mt-1 d-none" role="alert"></div>
+            </c:if>
         </c:when>
         <c:otherwise>
             <div id="<c:out value='${nbDdWrapId}'/>"
@@ -383,6 +393,7 @@
                         nbDdText.textContent = multiFmt ? multiFmt.replace(/\{0\}/g, String(cnt)) : String(cnt);
                     }
                 }
+                var nbHid = document.getElementById('nb_hid_' + pickerId);
                 function syncSingleListUi() {
                     if (!nbList || !nbDdText) {
                         return;
@@ -390,11 +401,17 @@
                     var picked = nbList.querySelector('.js-neighborhood-pick:checked');
                     if (!picked) {
                         nbDdText.textContent = anyLabel;
+                        if (nbHid) {
+                            nbHid.value = '';
+                        }
                         return;
                     }
                     var rowLabel = picked.closest('label');
                     var span = rowLabel ? rowLabel.querySelector('.js-nb-row-name') : null;
                     nbDdText.textContent = span ? String(span.textContent || '').trim() : anyLabel;
+                    if (nbHid) {
+                        nbHid.value = picked.value;
+                    }
                 }
                 allNb = readNbRows();
                 if (listUi && multiple) {
@@ -452,6 +469,14 @@
                     nbList.querySelectorAll('.js-neighborhood-pick').forEach(function (rb) {
                         rb.addEventListener('change', function () {
                             syncSingleListUi();
+                            var errElCh = document.getElementById('nb_err_' + pickerId);
+                            if (nbDdBtn) {
+                                nbDdBtn.classList.remove('is-invalid');
+                            }
+                            if (errElCh) {
+                                errElCh.classList.add('d-none');
+                                errElCh.textContent = '';
+                            }
                             if (nbDdBtn && window.bootstrap && bootstrap.Dropdown) {
                                 var inst = bootstrap.Dropdown.getInstance(nbDdBtn);
                                 if (inst) { inst.hide(); }
@@ -465,20 +490,67 @@
                     }
                     if (nbDdWrap) {
                         nbDdWrap.addEventListener('hidden.bs.dropdown', function () {
-                            syncSingleListUi();
+                            /* Tras el cierre, el 'change' del radio puede aún no haber corrido; sincronizar en el siguiente frame evita
+                             * borrar el hidden con el radio ya marcado. */
+                            if (window.requestAnimationFrame) {
+                                window.requestAnimationFrame(function () {
+                                    syncSingleListUi();
+                                });
+                            } else {
+                                syncSingleListUi();
+                            }
                         });
                     }
                     applyNeighborhoodRowFilter();
+                    if (nbHid && nbHid.value) {
+                        nbList.querySelectorAll('.js-neighborhood-pick').forEach(function (rb) {
+                            rb.checked = String(rb.value) === String(nbHid.value);
+                        });
+                    }
                     syncSingleListUi();
                     if (formId) {
                         var formElSingle = document.getElementById(formId);
                         if (formElSingle && formElSingle.getAttribute('data-ryden-nb-submit-bound') !== '1') {
                             formElSingle.setAttribute('data-ryden-nb-submit-bound', '1');
                             formElSingle.addEventListener('submit', function (ev) {
-                                var picked = nbList.querySelector('.js-neighborhood-pick:checked');
-                                var v = picked ? String(picked.value || '') : '';
+                                var pickedSubmit = nbList.querySelector('.js-neighborhood-pick:checked');
+                                if (pickedSubmit && nbHid) {
+                                    nbHid.value = pickedSubmit.value;
+                                } else {
+                                    syncSingleListUi();
+                                    pickedSubmit = nbList.querySelector('.js-neighborhood-pick:checked');
+                                    if (pickedSubmit && nbHid) {
+                                        nbHid.value = pickedSubmit.value;
+                                    }
+                                }
+                                var v = (pickedSubmit && String(pickedSubmit.value || '').trim()) || (nbHid ? String(nbHid.value || '').trim() : '');
                                 if (!v) {
+                                    ev.preventDefault();
+                                    var pickerRoot = nbDdWrap ? nbDdWrap.closest('.neighborhood-picker') : null;
+                                    var reqSingle = (pickerRoot && pickerRoot.getAttribute('data-ryden-nb-required'))
+                                        || formElSingle.getAttribute('data-ryden-nb-required') || '';
+                                    var errEl = document.getElementById('nb_err_' + pickerId);
+                                    if (errEl) {
+                                        errEl.textContent = reqSingle || '';
+                                        errEl.classList.toggle('d-none', !reqSingle);
+                                    }
+                                    if (nbDdBtn) {
+                                        nbDdBtn.classList.add('is-invalid');
+                                        nbDdBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        try {
+                                            if (window.bootstrap && bootstrap.Dropdown) {
+                                                bootstrap.Dropdown.getOrCreateInstance(nbDdBtn).show();
+                                            }
+                                        } catch (e1) { /* ignore */ }
+                                    }
                                     return;
+                                }
+                                if (nbDdBtn) {
+                                    nbDdBtn.classList.remove('is-invalid');
+                                }
+                                var errElOk = document.getElementById('nb_err_' + pickerId);
+                                if (errElOk) {
+                                    errElOk.classList.add('d-none');
                                 }
                                 var okSingle = allNb.some(function (n) { return n.id === v; });
                                 if (!okSingle) {

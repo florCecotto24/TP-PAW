@@ -744,12 +744,22 @@ select.form-select.ryden-car-spec-select option {
     line-height: 1.5;
 }
 
-/* Hide radio circles in single-select (form) context; keep checkboxes visible in multi-select */
+/* Ocultar el círculo del radio sin display:none: si el input no participa en el layout, el clic en la
+   etiqueta no activa el control en varios navegadores (el select nativo del resto del formulario sí funciona). */
 .neighborhood-picker:not(.neighborhood-picker--search-bar) input[type="radio"].js-neighborhood-pick {
-    display: none;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
 }
 
 .neighborhood-picker:not(.neighborhood-picker--search-bar) .neighborhood-picker__row label {
+    position: relative;
     cursor: pointer;
 }
 

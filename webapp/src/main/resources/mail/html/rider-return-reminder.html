@@ -36,32 +36,38 @@
     <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
                 padding:20px; margin-bottom:24px;">
 
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;
-                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.vehicle}">Vehicle</span>
-            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%;" th:text="${vehicleLabel}">—</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;
-                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.ownerEmail}">Owner</span>
-            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%; word-break:break-all;" th:text="${ownerEmail}">—</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;
-                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.checkout}">Checkout</span>
-            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%;" th:text="${checkoutFormatted}">—</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;
-                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-            <span style="color:#6b7280;" th:text="#{mail.riderReturnReminder.location}">Location</span>
-            <span style="font-weight:600; color:#1e1b4b; text-align:right; max-width:65%; white-space:pre-wrap;" th:text="${returnLocationLine}">—</span>
-        </div>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+               style="font-size:13px; border-collapse:collapse;">
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; width:42%; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.riderReturnReminder.vehicle}">Vehicle</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${vehicleLabel}">—</td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.riderReturnReminder.ownerEmail}">Owner</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-all; border-top:1px solid #f3f4f6;">
+                    <a th:href="|mailto:${ownerEmail}|" th:text="${ownerEmail}" style="color:#4338ca;">email</a>
+                </td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.riderReturnReminder.checkout}">Checkout</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${checkoutFormatted}">—</td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.riderReturnReminder.location}">Location</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6; white-space:pre-wrap;"
+                    th:text="${returnLocationLine}">—</td>
+            </tr>
+        </table>
     </div>
 
     <div style="margin-bottom:20px;">
+        <div style="margin-bottom:10px;">
         <a th:href="${ctaUrl}"
            style="display:inline-block; padding:12px 24px; background-color:#4338ca;
                 color:#ffffff; text-decoration:none; border-radius:8px;
@@ -69,6 +75,11 @@
            th:text="#{mail.riderReturnReminder.viewReservation}">
             View reservation
         </a>
+        </div>
+        <p style="font-size:12px; color:#4b5563; line-height:1.6; margin:0;">
+            <span th:text="#{mail.common.fallbackAuthLinkCopy}">If the button does not work</span><br/>
+            <a th:href="${ctaUrl}" th:text="${ctaUrl}" style="word-break:break-all; color:#4338ca;">https://</a>
+        </p>
     </div>
 
     <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>

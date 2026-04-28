@@ -10,15 +10,15 @@ import ar.edu.itba.paw.dto.CarPublicationResult;
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.dto.ListingCard;
-import ar.edu.itba.paw.models.dto.ListingDetail;
-import ar.edu.itba.paw.models.util.ListingSearchCriteria;
-import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 
 public interface ListingService {
 

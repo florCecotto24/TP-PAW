@@ -37,7 +37,7 @@ public class EmailServiceImplTest {
 
     private static final String TEMPLATE_RIDER = "html/reservation-confirmation-rider";
     private static final String TEMPLATE_OWNER = "html/reservation-confirmation-owner";
-    private static final String SUBJECT_KEY = "mail.reservationConfirmation.subject";
+    private static final String SUBJECT_KEY = "mail.reservationRequestSent.subject";
 
     @Mock
     private Environment environment;

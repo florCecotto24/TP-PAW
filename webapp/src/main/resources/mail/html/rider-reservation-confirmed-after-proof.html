@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="#{mail.listingDeleted.emailTitle}">Listing Deleted</title>
+    <title th:text="#{mail.reservationConfirmedAfterProof.emailTitle}">Reservation confirmed</title>
 </head>
 <body style="margin:0; padding:0; background-color:#eef2ff;
              font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -11,39 +11,33 @@
 
 <div style="max-width:620px; margin:40px auto; padding:0 20px 40px;">
 
-    <!-- LOGO -->
     <div style="padding:36px 0 28px;">
-        <span style="font-size:22px; font-weight:800; color:#1e1b4b;">
-            <img src="cid:logo" alt="Ryden"
-                 style="height:32px; width:auto; vertical-align:middle;"/> Ryden
-        </span>
+        <span style="font-size:22px; font-weight:800; color:#1e1b4b;"><img src="cid:logo"
+                                                                           alt="Ryden"
+                                                                           style="height:32px; width:auto; vertical-align:middle;"/> Ryden</span>
     </div>
 
-    <!-- TITLE -->
     <p style="font-size:16px; font-weight:700; color:#3730a3; margin-bottom:6px;"
-       th:text="#{mail.listingDeleted.emailTitle}">
-        Listing deleted
+       th:text="#{mail.reservationConfirmedAfterProof.emailTitle}">
+        Reservation confirmed
     </p>
     <p style="font-size:14px; color:#4b5563; line-height:1.6; margin-bottom:0;"
-       th:text="#{mail.common.greeting(${ownerFullName})}">
+       th:text="#{mail.common.greeting(${riderFullName})}">
         Hello,
     </p>
 
-    <!-- INTRO -->
     <p style="font-size:14px; color:#374151; line-height:1.6; margin-bottom:20px;"
-       th:text="#{mail.listingDeleted.intro(${vehicleLabel})}">
+       th:text="#{mail.reservationConfirmedAfterProof.introRider}">
         Intro
     </p>
 
-    <!-- DIVIDER -->
     <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
 
-    <!-- RESERVATION DETAILS CARD -->
     <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
                 padding:20px; margin-bottom:24px;">
 
         <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:16px;">
-            <span th:text="#{mail.listingDeleted.listingDetails}">Listing details</span>
+            <span th:text="#{mail.reservationConfirmation.reservationDetails}">Reservation #</span>
         </p>
 
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
@@ -56,33 +50,49 @@
             </tr>
             <tr>
                 <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
-                    th:text="#{mail.listingDeleted.pricePerDay}">Price per Day</td>
+                    th:text="#{mail.reservationConfirmation.pickup}">Pickup</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${startDateFormatted}">—</td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.reservationConfirmation.returnLabel}">Return</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${endDateFormatted}">—</td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.reservationConfirmation.totalPrice}">Total</td>
                 <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; border-top:1px solid #f3f4f6;">
-                    $<span th:text="${pricePerDay}">—</span>
+                    $<span th:text="${reservationTotal}">—</span>
                 </td>
+            </tr>
+            <tr th:if="${hasDeliveryLocation}">
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.reservationConfirmation.deliveryLocation}">Location</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6; white-space:pre-wrap;"
+                    th:text="${deliveryLocation}">—</td>
             </tr>
         </table>
 
     </div>
 
-    <!-- CTA BUTTON -->
     <div style="margin-bottom:20px;">
         <div style="margin-bottom:10px;">
-        <a th:href="${ctaUrl}"
+        <a th:href="${ctaUrlRider}"
            style="display:inline-block; padding:12px 24px; background-color:#4338ca;
-                  color:#ffffff; text-decoration:none; border-radius:8px;
-                  font-size:14px; font-weight:600;"
-           th:text="#{mail.listingDeleted.viewListing}">
-            View listing
+                color:#ffffff; text-decoration:none; border-radius:8px;
+                font-size:14px; font-weight:600;"
+           th:text="#{mail.reservationConfirmation.viewReservation}">
+            View reservation
         </a>
         </div>
         <p style="font-size:12px; color:#4b5563; line-height:1.6; margin:0;">
             <span th:text="#{mail.common.fallbackAuthLinkCopy}">If the button does not work</span><br/>
-            <a th:href="${ctaUrl}" th:text="${ctaUrl}" style="word-break:break-all; color:#4338ca;">https://</a>
+            <a th:href="${ctaUrlRider}" th:text="${ctaUrlRider}" style="word-break:break-all; color:#4338ca;">https://</a>
         </p>
     </div>
 
-    <!-- FOOTER -->
     <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
     <p style="font-size:12px; color:#9ca3af; line-height:1.8;"
        th:text="#{mail.common.footer}">

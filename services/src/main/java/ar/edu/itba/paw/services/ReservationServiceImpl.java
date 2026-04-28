@@ -499,7 +499,47 @@ public class ReservationServiceImpl implements ReservationService {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
         }
         listingService.refreshListingFinishedIfExhausted(r.getListingId());
-        notifyOwnerPaymentProofUploaded(reservationId, riderId, r);
+        final Reservation afterAttach = getRiderReservationById(riderId, reservationId).orElse(r);
+        notifyOwnerPaymentProofUploaded(reservationId, riderId, afterAttach);
+        enqueueRiderReservationConfirmedAfterPaymentProof(riderId, afterAttach);
+    }
+
+    private void enqueueRiderReservationConfirmedAfterPaymentProof(final long riderId, final Reservation reservation) {
+        try {
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+            final Optional<User> listingOwnerOpt = userService.getListingOwner(reservation.getListingId());
+            if (riderOpt.isEmpty() || listingOpt.isEmpty() || listingOwnerOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log(
+                        "Skipping rider confirmed-after-proof email: missing rider, listing, or owner (reservation id={})");
+                return;
+            }
+            final User rider = riderOpt.get();
+            final Listing listing = listingOpt.get();
+            final User listingOwner = listingOwnerOpt.get();
+            final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
+            final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
+            final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
+                    rider.getEmail(),
+                    rider.getForename() + " " + rider.getSurname(),
+                    reservation.getId(),
+                    listing.getId(),
+                    listing.getTitle(),
+                    reservation.getStartDate(),
+                    reservation.getEndDate(),
+                    riderLoc,
+                    ownerLoc,
+                    listingOwner.getForename() + " " + listingOwner.getSurname(),
+                    listingOwner.getEmail(),
+                    reservation.getTotalPrice().toString(),
+                    userService.resolveMailLocale(rider.getId()),
+                    userService.resolveMailLocale(listingOwner.getId()));
+            LOGGER.atInfo().log("Queueing rider reservation confirmed-after-proof email to " + rider.getEmail()
+                    + " for reservation id=" + reservation.getId());
+            emailService.sendRiderReservationConfirmedAfterPaymentProof(payload);
+        } catch (final Exception e) {
+            LOGGER.atError().log("Could not enqueue rider confirmed-after-proof email for reservation id=" + reservation.getId(), e);
+        }
     }
 
     private void notifyOwnerPaymentProofUploaded(final long reservationId, final long riderId, final Reservation reservation) {

@@ -46,60 +46,58 @@
       <span th:text="#{mail.reservationConfirmation.reservationDetails}">Reservation #</span>
     </p>
 
-    <!-- Vehicle -->
-    <div style="display:flex; justify-content:space-between; align-items:center;
-                    padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-      <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.vehicle}">Vehicle</span>
-      &nbsp;
-      <span style="font-weight:600; color:#1e1b4b;" th:text="${vehicleLabel}">—</span>
-    </div>
-
-    <!-- Pickup -->
-    <div style="display:flex; justify-content:space-between; align-items:center;
-                    padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-      <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.pickup}">Pickup</span>
-      &nbsp;
-      <span style="font-weight:600; color:#1e1b4b;" th:text="${startDateFormatted}">—</span>
-    </div>
-
-    <!-- Return -->
-    <div style="display:flex; justify-content:space-between; align-items:center;
-                    padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-      <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.returnLabel}">Return</span>
-      &nbsp;
-      <span style="font-weight:600; color:#1e1b4b;" th:text="${endDateFormatted}">—</span>
-    </div>
-
-    <!-- Total Price -->
-    <div style="display:flex; justify-content:space-between; align-items:center;
-                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-      <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.totalPrice}">ReservationTotal</span>
-      &nbsp;
-      <span style="font-weight:600; color:#1e1b4b;">
-        $<span th:text="${reservationTotal}">—</span>
-      </span>
-    </div>
-
-    <!-- Delivery Location (conditional) -->
-    <div th:if="${hasDeliveryLocation}"
-         style="display:flex; justify-content:space-between; align-items:center;
-                    padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
-      <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.deliveryLocation}">Location</span>
-      &nbsp;
-      <span style="font-weight:600; color:#1e1b4b;" th:text="${deliveryLocation}">—</span>
-    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+           style="font-size:13px; border-collapse:collapse;">
+      <tr>
+        <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; width:42%; border-top:1px solid #f3f4f6;"
+            th:text="#{mail.reservationConfirmation.vehicle}">Vehicle</td>
+        <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+            th:text="${vehicleLabel}">—</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+            th:text="#{mail.reservationConfirmation.pickup}">Pickup</td>
+        <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+            th:text="${startDateFormatted}">—</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+            th:text="#{mail.reservationConfirmation.returnLabel}">Return</td>
+        <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+            th:text="${endDateFormatted}">—</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+            th:text="#{mail.reservationConfirmation.totalPrice}">Total</td>
+        <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; border-top:1px solid #f3f4f6;">
+          $<span th:text="${reservationTotal}">—</span>
+        </td>
+      </tr>
+      <tr th:if="${hasDeliveryLocation}">
+        <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+            th:text="#{mail.reservationConfirmation.deliveryLocation}">Location</td>
+        <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6; white-space:pre-wrap;"
+            th:text="${deliveryLocation}">—</td>
+      </tr>
+    </table>
 
   </div>
 
   <!-- CTA BUTTON -->
   <div style="margin-bottom:20px;">
+    <div style="margin-bottom:10px;">
     <a th:href="${ctaUrl}"
        style="display:inline-block; padding:12px 24px; background-color:#4338ca;
                   color:#ffffff; text-decoration:none; border-radius:8px;
                   font-size:14px; font-weight:600;"
-       th:text="#{mail.reservationConfirmation.viewListing}">
-      View listing
+       th:text="#{mail.reservationConfirmation.viewReservation}">
+      View reservation
     </a>
+    </div>
+    <p style="font-size:12px; color:#4b5563; line-height:1.6; margin:0;">
+      <span th:text="#{mail.common.fallbackAuthLinkCopy}">If the button does not work</span><br/>
+      <a th:href="${ctaUrl}" th:text="${ctaUrl}" style="word-break:break-all; color:#4338ca;">https://</a>
+    </p>
   </div>
 
   <!-- FOOTER -->

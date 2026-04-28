@@ -82,13 +82,16 @@
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
                     <spring:message code="validation.neighborhood.invalid" var="editNbInvalidMsg" htmlEscape="true"/>
+                    <spring:message code="validation.neighborhood.notNull" var="editNbRequiredMsg" htmlEscape="true"/>
                     <form:form id="editListingFormEl" method="post"
                                action="${editListingUrl}"
                                modelAttribute="editForm"
                                class="row g-3"
                                htmlEscape="true"
-                               data-ryden-nb-invalid="<c:out value='${editNbInvalidMsg}'/>">
+                               data-ryden-nb-invalid="<c:out value='${editNbInvalidMsg}'/>"
+                               data-ryden-nb-required="<c:out value='${editNbRequiredMsg}'/>">
                         <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                        <form:hidden path="neighborhoodId" id="nb_hid_editListing"/>
 
                         <div class="col-sm-6">
                             <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
@@ -113,6 +116,7 @@
                                     outerLabel="${editNbFieldLabel}"
                                     outerLabelRequired="true"
                                     required="true"
+                                    nbRequiredMessage="${editNbRequiredMsg}"
                                     formId="editListingFormEl"/>
                         </div>
                         <div class="col-md-8">

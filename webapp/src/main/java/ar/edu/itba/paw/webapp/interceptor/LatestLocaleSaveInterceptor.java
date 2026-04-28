@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.support.RequestContextUtils;
 
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.RydenUserDetails;
@@ -40,7 +41,7 @@ public class LatestLocaleSaveInterceptor implements HandlerInterceptor {
             return;
         }
         final RydenUserDetails principal = (RydenUserDetails) auth.getPrincipal();
-        final Locale locale = request.getLocale();
+        final Locale locale = RequestContextUtils.getLocale(request);
         if (locale == null) {
             return;
         }

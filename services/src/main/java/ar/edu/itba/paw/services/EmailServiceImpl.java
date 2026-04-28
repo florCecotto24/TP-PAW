@@ -50,6 +50,7 @@ public class EmailServiceImpl implements EmailService {
 
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
+    private static final String RIDER_RESERVATION_CONFIRMED_AFTER_PROOF_TEMPLATE = "html/rider-reservation-confirmed-after-proof";
     private static final String RESERVATION_CANCELLATION_USER_TEMPLATE = "html/reservation-cancellation-rider";
     private static final String RESERVATION_CANCELLATION_OWNER_TEMPLATE = "html/reservation-cancellation-owner";
     private static final String EMAIL_VERIFICATION_TEMPLATE = "html/email-verification-code";
@@ -150,6 +151,31 @@ public class EmailServiceImpl implements EmailService {
                     + " (reservation id=" + payload.getReservationId() + ")");
         } catch (final Exception e) {
             LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to send reservation confirmation email (reservation id={})");
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendRiderReservationConfirmedAfterPaymentProof(final ReservationConfirmationPayload payload) {
+        if (payload == null) {
+            LOGGER.atError().log("sendRiderReservationConfirmedAfterPaymentProof called with null payload");
+            return;
+        }
+        final Context ctx = buildReservationConfirmationMailContext(payload, payload.getMessageLocale());
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(RIDER_RESERVATION_CONFIRMED_AFTER_PROOF_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.reservationConfirmedAfterProof.subject",
+                        new Object[] { payload.getVehicleLabel() },
+                        payload.getMessageLocale());
+                sendEmail(payload.getRecipientEmail(), subject, htmlContent);
+            });
+            LOGGER.atInfo().log("Rider reservation confirmed-after-proof email sent to " + payload.getRecipientEmail()
+                    + " (reservation id=" + payload.getReservationId() + ")");
+        } catch (final Exception e) {
+            LOGGER.atError().addArgument(payload.getReservationId()).log(
+                    "Failed to send rider confirmed-after-proof email (reservation id={})");
         }
     }
 
@@ -257,8 +283,8 @@ public class EmailServiceImpl implements EmailService {
             final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_USER_TEMPLATE, ctx);
 
             final String subject = emailMessageSource.getMessage(
-                    "mail.reservationConfirmation.subject",
-                    new Object[]{payload.getVehicleLabel()},
+                    "mail.reservationRequestSent.subject",
+                    new Object[] { payload.getVehicleLabel() },
                     payload.getMessageLocale());
             sendEmail(payload.getRecipientEmail(), subject, htmlContent);
         });
@@ -271,8 +297,8 @@ public class EmailServiceImpl implements EmailService {
             final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CONFIRMATION_OWNER_TEMPLATE, ctx);
 
             final String subject = emailMessageSource.getMessage(
-                    "mail.reservationConfirmation.subject",
-                    new Object[]{payload.getVehicleLabel()},
+                    "mail.reservationRequestSent.subject",
+                    new Object[] { payload.getVehicleLabel() },
                     payload.getOwnerMailLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);
         });

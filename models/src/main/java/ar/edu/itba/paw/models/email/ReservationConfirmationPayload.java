@@ -13,7 +13,10 @@ public final class ReservationConfirmationPayload {
     private final String vehicleLabel;
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
-    /** Delivery + pickup for the email to the rider (without door number until payment proof). */
+    /**
+     * Pickup/return summary for the rider email. Before payment proof: public address (no street number).
+     * After proof (second email): full address including number, see {@code ListingService#formatRiderReservationHandoverSummary}.
+     */
     private final String riderHandoverLocation;
     /** Full data for the email to the owner. */
     private final String ownerHandoverLocation;

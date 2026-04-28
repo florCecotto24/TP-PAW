@@ -22,6 +22,7 @@
                     <h4 class="mb-4"><spring:message code="publishCar.form.title"/></h4>
                     <spring:message code="publishCar.form.pictures.clientRequired" var="publishPicturesClientRequired" htmlEscape="true"/>
                     <spring:message code="validation.neighborhood.invalid" var="publishNbInvalidMsg" htmlEscape="true"/>
+                    <spring:message code="validation.neighborhood.notNull" var="publishNbRequiredMsg" htmlEscape="true"/>
                     <form:form id="publishCarFormEl"
                                action="${pageContext.request.contextPath}/publish-car"
                                method="POST"
@@ -29,7 +30,8 @@
                                enctype="multipart/form-data"
                                htmlEscape="true"
                                data-publish-retained-count="<c:out value='${retainedPicturesCount}'/>"
-                               data-ryden-nb-invalid="<c:out value='${publishNbInvalidMsg}'/>">
+                               data-ryden-nb-invalid="<c:out value='${publishNbInvalidMsg}'/>"
+                               data-ryden-nb-required="<c:out value='${publishNbRequiredMsg}'/>">
 
                         <form:errors element="div" cssClass="alert alert-danger"/>
 
@@ -97,6 +99,7 @@
                         <spring:message code="publishCar.form.neighborhood.placeholder" var="publishNbPh"/>
                         <spring:message code="publishCar.form.neighborhood" var="publishNbFieldLabel"/>
                         <spring:message code="publishCar.form.neighborhood.search" var="publishNbSearchPh"/>
+                        <form:hidden path="neighborhoodId" id="nb_hid_publish"/>
                         <div class="mb-3">
                             <ryden:neighborhoodPicker
                                     pickerId="publish"
@@ -112,6 +115,7 @@
                                     outerLabel="${publishNbFieldLabel}"
                                     outerLabelRequired="true"
                                     required="true"
+                                    nbRequiredMessage="${publishNbRequiredMsg}"
                                     formId="publishCarFormEl"/>
                         </div>
                         <div class="row g-3 mb-1">

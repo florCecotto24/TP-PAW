@@ -39,6 +39,15 @@
                         </div>
                     </div>
 
+                    <c:if test="${not empty reservationTotal}">
+                        <div class="border rounded-3 p-3 p-md-4 bg-body-tertiary text-center mb-4 mx-auto" style="max-width: 32rem;">
+                            <p class="mb-0">
+                                <span class="d-block text-secondary small mb-1"><spring:message code="reservationForm.summary.total"/></span>
+                                <span class="h5 fw-semibold text-primary">$<c:out value="${reservationTotal}"/></span>
+                            </p>
+                        </div>
+                    </c:if>
+
                     <section class="reservation-confirmation__payment border rounded-3 p-3 p-md-4 bg-light-subtle mx-auto mb-4">
                         <h2 class="h6 fw-semibold mb-3 text-center"><spring:message code="myReservationDetail.payment.title"/></h2>
                         <spring:message code="validation.paymentReceipt.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="paymentReceiptTooLargeMsg"/>

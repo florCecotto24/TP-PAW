@@ -5,7 +5,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Builds absolute URLs for mail CTAs. Configure {@code mail.app.public.base.url} per environment
+ * Builds absolute URLs for mail CTAs. Configure {@code mail.app.base.url} per environment
  * (e.g. {@code application-local.properties} for local, server URL when deployed); must include context path if any.
  */
 @Component
@@ -19,7 +19,7 @@ public final class MailPublicUrls {
     }
 
     public String absolutePath(final String pathFromContextRoot) {
-        final String base = environment.getProperty("mail.app.public.base.url", "http://localhost:8080").replaceAll("/+$", "");
+        final String base = environment.getProperty("mail.app.base.url", "http://localhost:8080/webapp").replaceAll("/+$", "");
         if (pathFromContextRoot == null || pathFromContextRoot.isBlank()) {
             return base;
         }

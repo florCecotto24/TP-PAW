@@ -587,6 +587,9 @@
             if (submitBtn.disabled) {
                 return;
             }
+            if (e.defaultPrevented) {
+                return;
+            }
             if (input) {
                 var retainedAttr = 0;
                 if (form && form.getAttribute) {
@@ -608,17 +611,24 @@
                     return;
                 }
             }
-            submitBtn.disabled = true;
-            submitBtn.classList.add("disabled");
-            var def = submitBtn.querySelector(".publish-submit-default");
-            var load = submitBtn.querySelector(".publish-submit-loading");
-            if (def) {
-                def.classList.add("d-none");
-            }
-            if (load) {
-                load.classList.remove("d-none");
-            }
-            submitBtn.setAttribute("aria-busy", "true");
+            /* Tras este listener puede ejecutarse otro (barrio, disponibilidad) que haga preventDefault.
+             * El estado "cargando" solo aplica si el envío no fue cancelado por ningún handler síncrono. */
+            setTimeout(function () {
+                if (e.defaultPrevented) {
+                    return;
+                }
+                submitBtn.disabled = true;
+                submitBtn.classList.add("disabled");
+                var def = submitBtn.querySelector(".publish-submit-default");
+                var load = submitBtn.querySelector(".publish-submit-loading");
+                if (def) {
+                    def.classList.add("d-none");
+                }
+                if (load) {
+                    load.classList.remove("d-none");
+                }
+                submitBtn.setAttribute("aria-busy", "true");
+            }, 0);
         });
     }
 })();
@@ -1289,6 +1299,9 @@
     var publishForm = document.getElementById('publishCarFormEl');
     if (publishForm) {
         publishForm.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) {
+                return;
+            }
             if (!section) {
                 return;
             }

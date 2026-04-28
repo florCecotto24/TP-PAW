@@ -10,6 +10,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.webapp.form.ListingTimeWindow;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
@@ -48,7 +49,7 @@ public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckO
         if (!listingCheckInOutPolicy.hasMinimumGap(form.getCheckInTime(), form.getCheckOutTime())) {
             final Locale locale = LocaleContextHolder.getLocale();
             final String msg = messageSource.getMessage(
-                    "validation.checkOutTime.minGapHours",
+                    MessageKeys.LISTING_CHECKINOUT_MIN_GAP,
                     new Object[] {listingCheckInOutPolicy.getMinHoursBetweenCheckInAndCheckOut()},
                     locale);
             context.disableDefaultConstraintViolation();

@@ -12,6 +12,9 @@ public interface EmailService {
 
     void sendReservationConfirmationEmail(ReservationConfirmationPayload payload);
 
+    /** Rider only: after payment proof upload; includes full pickup address (street number). */
+    void sendRiderReservationConfirmedAfterPaymentProof(ReservationConfirmationPayload payload);
+
     void sendReservationCancellationEmail(ReservationConfirmationPayload payload);
 
     void sendEmailVerificationCode(String to, String code, Locale locale);

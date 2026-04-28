@@ -181,6 +181,7 @@ public class ReservationFormController {
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
+        addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         addReservationPolicyHours(mav);
         mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());
