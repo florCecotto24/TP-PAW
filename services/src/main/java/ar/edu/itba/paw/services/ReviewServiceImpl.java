@@ -2,6 +2,8 @@ package ar.edu.itba.paw.services;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.math.BigDecimal;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,6 +13,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.persistence.ReservationDao;
@@ -64,6 +67,21 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public boolean hasRiderReview(final long reservationId) {
         return reviewDao.existsReview(reservationId, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
+        return reviewDao.findAverageRatingForCounterparty(counterpartyUserId, counterpartyIsOwner);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReviewItemDto> getRecentCommentReviewsForCounterparty(
+            final long counterpartyUserId,
+            final boolean counterpartyIsOwner,
+            final int limit) {
+        return reviewDao.findRecentCommentReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner, limit);
     }
 
     @Override

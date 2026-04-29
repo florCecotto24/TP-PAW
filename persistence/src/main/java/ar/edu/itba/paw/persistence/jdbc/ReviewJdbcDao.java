@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.jdbc;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 import javax.sql.DataSource;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.persistence.ReviewDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
@@ -117,6 +119,58 @@ public class ReviewJdbcDao implements ReviewDao {
                 Long.class,
                 listingId);
         return n != null ? n : 0L;
+    }
+
+    @Override
+    public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
+        return jdbcTemplate.queryForObject(
+                "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+                        + "INNER JOIN reservations res ON res.id = r.reservation_id "
+                        + "INNER JOIN listings l ON l.id = res.listing_id "
+                        + "INNER JOIN cars c ON c.id = l.car_id "
+                        + "WHERE ((? = TRUE AND r.made_by_rider = TRUE AND c.owner_id = ?) "
+                        + "OR (? = FALSE AND r.made_by_rider = FALSE AND res.rider_id = ?))",
+                BigDecimal.class,
+                counterpartyIsOwner,
+                counterpartyUserId,
+                counterpartyIsOwner,
+                counterpartyUserId);
+    }
+
+    @Override
+    public List<ReviewItemDto> findRecentCommentReviewsForCounterparty(
+            final long counterpartyUserId,
+            final boolean counterpartyIsOwner,
+            final int limit) {
+        return jdbcTemplate.query(
+                "SELECT r.rating, r.comment, r.created_at, "
+                        + "CASE WHEN r.made_by_rider THEN ru.id ELSE ou.id END AS reviewer_user_id, "
+                        + "CASE WHEN r.made_by_rider THEN ru.forename ELSE ou.forename END AS reviewer_forename, "
+                        + "CASE WHEN r.made_by_rider THEN ru.surname ELSE ou.surname END AS reviewer_surname, "
+                        + "CASE WHEN r.made_by_rider THEN ru.profile_picture_id ELSE ou.profile_picture_id END AS reviewer_profile_picture_id "
+                        + "FROM reviews r "
+                        + "INNER JOIN reservations res ON res.id = r.reservation_id "
+                        + "INNER JOIN listings l ON l.id = res.listing_id "
+                        + "INNER JOIN cars c ON c.id = l.car_id "
+                        + "INNER JOIN users ru ON ru.id = res.rider_id "
+                        + "INNER JOIN users ou ON ou.id = c.owner_id "
+                        + "WHERE ((? = TRUE AND r.made_by_rider = TRUE AND c.owner_id = ?) "
+                        + "OR (? = FALSE AND r.made_by_rider = FALSE AND res.rider_id = ?)) "
+                        + "AND NULLIF(TRIM(r.comment), '') IS NOT NULL "
+                        + "ORDER BY r.created_at DESC "
+                        + "LIMIT ?",
+                (rs, rowNum) -> new ReviewItemDto(
+                        rs.getLong("reviewer_user_id"),
+                        rs.getString("reviewer_forename") + " " + rs.getString("reviewer_surname"),
+                        (Long) rs.getObject("reviewer_profile_picture_id"),
+                        rs.getInt("rating"),
+                        JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at").toLocalDate(),
+                        rs.getString("comment")),
+                counterpartyIsOwner,
+                counterpartyUserId,
+                counterpartyIsOwner,
+                counterpartyUserId,
+                limit);
     }
 
     @Override

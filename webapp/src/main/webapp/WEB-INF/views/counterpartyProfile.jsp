@@ -16,35 +16,18 @@
 
 <main class="counterparty-profile-page">
     <div class="counterparty-profile-container">
-        <c:set var="avgRating" value="4.8"/>
-        <c:set var="reviewCount" value="24"/>
         <div class="row g-4">
-            <div class="col-12 col-lg-8">
+            <div class="col-12">
                 <ryden:counterpartyProfileHeader
                         forename="${counterpartyForename}"
                         surname="${counterpartySurname}"
                         about="${counterpartyAbout}"
                         memberSinceDisplay="${counterpartyMemberSinceDisplay}"
                         profileImageId="${counterpartyProfileImageId}"
-                        badgeLabel="${counterpartyBadgeLabel}"
-                        ratingValue="${avgRating}"
-                        reviewCount="${reviewCount}"/>
-
-                <ryden:counterpartyProfileStats/>
+                        averageRating="${counterpartyAverageRating}"/>
 
                 <ryden:counterpartyProfileReviews
-                        ratingValue="${avgRating}"
-                        reviewCount="${reviewCount}"/>
-            </div>
-            <div class="col-12 col-lg-4">
-                <c:choose>
-                    <c:when test="${counterpartyType eq 'rider'}">
-                        <ryden:counterpartyContextRider reservationDetailUrl="${reservationDetailUrl}"/>
-                    </c:when>
-                    <c:otherwise>
-                        <ryden:counterpartyContextOwner viewAllListingsUrl="${pageContext.request.contextPath}/search"/>
-                    </c:otherwise>
-                </c:choose>
+                        comments="${recentReviewComments}"/>
             </div>
         </div>
     </div>
@@ -53,4 +36,3 @@
 <%@include file="footer.jsp" %>
 </body>
 </html>
-

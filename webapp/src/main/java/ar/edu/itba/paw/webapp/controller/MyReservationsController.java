@@ -3,6 +3,8 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
+import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.domain.StoredFile;
@@ -46,6 +48,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -55,6 +58,7 @@ import java.util.stream.Collectors;
 public class MyReservationsController {
 
     private static final int PAGE_SIZE = 8;
+    private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
     private static final Set<String> RESERVATION_STATUS_WHITELIST =
             Set.of("pending", "accepted", "started", "cancelled", "finished");
 
@@ -225,22 +229,40 @@ public class MyReservationsController {
         }
 
         final User counterparty = counterpartyOpt.get();
+        final boolean counterpartyIsOwner = "rider".equals(role);
         final Locale locale = LocaleContextHolder.getLocale();
+        final DateTimeFormatter memberSinceFormatter = DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale);
+        final BigDecimal averageRating = reviewService.getAverageRatingForCounterparty(counterparty.getId(), counterpartyIsOwner);
+        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
+                counterparty.getId(),
+                counterpartyIsOwner,
+                COUNTERPARTY_RECENT_REVIEWS_LIMIT);
+        final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
+                counterparty.getForename() + " " + counterparty.getSurname(),
+                counterparty.getForename(),
+                counterparty.getSurname(),
+                null,
+                averageRating,
+                0L,
+                counterparty.getAbout().map(String::trim).orElse(null),
+                counterparty.getMemberSince().orElse(null),
+                counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
+                counterparty.getProfilePictureId().orElse(null));
+
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
         mav.addObject("activeTab", "my-reservations");
-        mav.addObject("reservationId", reservationId);
-        mav.addObject("viewerRole", role);
-        mav.addObject("counterpartyForename", counterparty.getForename());
-        mav.addObject("counterpartySurname", counterparty.getSurname());
-        mav.addObject("counterpartyAbout", counterparty.getAbout().orElse("").trim());
-        mav.addObject("counterpartyProfileImageId", counterparty.getProfilePictureId().orElse(null));
-        counterparty.getMemberSince().ifPresent(ms -> mav.addObject(
-                "counterpartyMemberSinceDisplay",
-                ms.format(java.time.format.DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale))));
-        final boolean counterpartyIsOwner = "rider".equals(role);
-        mav.addObject("counterpartyBadgeLabel", counterpartyIsOwner ? "Verified Owner" : "Verified Rider");
-        mav.addObject("counterpartyType", counterpartyIsOwner ? "owner" : "rider");
-        mav.addObject("reservationDetailUrl", "/my-reservations/" + reservationId + "?role=" + role);
+        mav.addObject("counterpartyForename", headerDto.getForename());
+        mav.addObject("counterpartySurname", headerDto.getSurname());
+        mav.addObject("counterpartyAbout", headerDto.getAbout().orElse(""));
+        mav.addObject("counterpartyProfileImageId", headerDto.getProfileImageId().orElse(null));
+        mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
+        mav.addObject("counterpartyAverageRating", headerDto.getAverageRating());
+        mav.addObject(
+                "recentReviewComments",
+                recentReviewItems.stream()
+                        .map(item -> item.getComment().orElse("").trim())
+                        .filter(comment -> !comment.isEmpty())
+                        .collect(Collectors.toList()));
         return mav;
     }
 
