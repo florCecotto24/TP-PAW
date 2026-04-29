@@ -340,12 +340,12 @@
                     <c:choose>
                         <c:when test="${reservationRole eq 'owner'}">
                             <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mb-2">
-                                Rider Profile
+                                <spring:message code="myReservationDetail.actions.riderProfile"/>
                             </a>
                         </c:when>
                         <c:otherwise>
                             <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mb-2">
-                                Owner Profile
+                                <spring:message code="myReservationDetail.actions.ownerProfile"/>
                             </a>
                         </c:otherwise>
                     </c:choose>

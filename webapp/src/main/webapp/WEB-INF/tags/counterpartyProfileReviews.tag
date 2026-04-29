@@ -7,7 +7,7 @@
 <section class="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4">
     <div class="card-body p-4">
         <div class="mb-3">
-            <h2 class="h5 fw-semibold mb-1">Recent reviews</h2>
+            <h2 class="h5 fw-semibold mb-1"><spring:message code="counterpartyProfile.reviews.recentHeading"/></h2>
         </div>
 
         <c:choose>

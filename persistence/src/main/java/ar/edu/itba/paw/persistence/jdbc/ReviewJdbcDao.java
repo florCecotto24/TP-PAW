@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.math.BigDecimal;
@@ -28,6 +30,23 @@ public class ReviewJdbcDao implements ReviewDao {
             rs.getString("comment"));
 
     private final JdbcTemplate jdbcTemplate;
+
+    /**
+     * PostgreSQL JDBC may return INTEGER for id columns in expressions; unwrap without unsafe casts.
+     */
+    private static Long nullableLong(final ResultSet rs, final String columnLabel) throws SQLException {
+        final Object v = rs.getObject(columnLabel);
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Long) {
+            return (Long) v;
+        }
+        if (v instanceof Number) {
+            return ((Number) v).longValue();
+        }
+        throw new SQLException("Column " + columnLabel + ": expected numeric id, got " + v.getClass().getName());
+    }
 
     @Autowired
     public ReviewJdbcDao(final DataSource dataSource) {
@@ -162,7 +181,7 @@ public class ReviewJdbcDao implements ReviewDao {
                 (rs, rowNum) -> new ReviewItemDto(
                         rs.getLong("reviewer_user_id"),
                         rs.getString("reviewer_forename") + " " + rs.getString("reviewer_surname"),
-                        (Long) rs.getObject("reviewer_profile_picture_id"),
+                        nullableLong(rs, "reviewer_profile_picture_id"),
                         rs.getInt("rating"),
                         JdbcDateTimeUtils.readOffsetDateTime(rs, "created_at").toLocalDate(),
                         rs.getString("comment")),

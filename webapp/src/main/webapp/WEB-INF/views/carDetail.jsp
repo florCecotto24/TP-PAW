@@ -44,9 +44,10 @@
                 <c:choose>
                     <c:when test="${ownerProfileImageId != null}">
                         <c:url var="ownerProfileImageUrl" value="/image/${ownerProfileImageId}"/>
+                        <spring:message code="carDetail.owner.profileImageAlt" var="ownerProfileImageAlt"/>
                         <img
                                 src="${ownerProfileImageUrl}"
-                                alt="Owner profile image"
+                                alt="${ownerProfileImageAlt}"
                                 class="rounded-circle border"
                                 style="width:40px; height:40px; object-fit:cover;"/>
                     </c:when>
@@ -58,7 +59,8 @@
                     </c:otherwise>
                 </c:choose>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="fw-semibold" aria-label="Owner name">
+                    <spring:message code="carDetail.owner.nameAriaLabel" var="ownerNameAriaLabel"/>
+                    <span class="fw-semibold" aria-label="${ownerNameAriaLabel}">
                         <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
                     </span>
                     <c:url var="ownerProfileUrl" value="/counterparty-profile">

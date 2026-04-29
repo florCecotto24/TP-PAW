@@ -37,7 +37,7 @@
                             <span class="counterparty-rating-value">
                                 <fmt:formatNumber value="${averageRating}" minFractionDigits="1" maxFractionDigits="2"/>
                             </span>
-                            <div class="d-inline-flex align-items-center gap-1" aria-label="Rating">
+                            <div class="d-inline-flex align-items-center gap-1" aria-label="<spring:message code='counterpartyProfile.rating.ariaLabel'/>">
                                 <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                                 <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                                 <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
@@ -58,13 +58,13 @@
                             <c:out value="${about}"/>
                         </c:when>
                         <c:otherwise>
-                            No description provided yet.
+                            <spring:message code="counterpartyProfile.about.empty"/>
                         </c:otherwise>
                     </c:choose>
                 </p>
                 <c:if test="${not empty memberSinceDisplay}">
                     <p class="counterparty-member-since mb-0">
-                        <span class="text-secondary">Member since</span>
+                        <span class="text-secondary"><spring:message code="profile.memberSince"/></span>
                         <span class="fw-semibold"><c:out value="${memberSinceDisplay}"/></span>
                     </p>
                 </c:if>
