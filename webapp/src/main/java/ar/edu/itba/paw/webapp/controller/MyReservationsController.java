@@ -156,8 +156,18 @@ public class MyReservationsController {
         }
 
         final ListingDetail listingDetail = listingDetailOpt.get();
-        final Listing listing = listingDetail.getListing();
         final boolean viewerIsOwner = "owner".equals(role);
+        final Optional<User> counterpartyOpt =
+                viewerIsOwner
+                        ? userService.getUserById(reservation.getRiderId())
+                        : Optional.of(listingDetail.getOwner());
+        if (counterpartyOpt.isEmpty()) {
+            return new ModelAndView(new RedirectView("/my-reservations", true));
+        }
+        /* Listing detail embeds a minimal owner row (no profile picture / phone); reload full user. */
+        final User counterparty =
+                userService.getUserById(counterpartyOpt.get().getId()).orElse(counterpartyOpt.get());
+        final Listing listing = listingDetail.getListing();
         final String reservationPickupLocationDisplay = listingService.formatPickupForReservationView(
                 listing,
                 reservation,
@@ -174,6 +184,9 @@ public class MyReservationsController {
         mav.addObject("reservationPickupLocationDisplay", reservationPickupLocationDisplay);
         mav.addObject("car", listingDetail.getCar());
         mav.addObject("owner", listingDetail.getOwner());
+        mav.addObject("counterparty", counterparty);
+        mav.addObject("counterpartyProfileImageId", counterparty.getProfilePictureId().orElse(null));
+        mav.addObject("counterpartyPhoneDisplay", counterparty.getPhoneNumber().orElse(""));
         mav.addObject("cbu", listingDetail.getOwner().getCbu().orElse(""));
         mav.addObject("pickupDateTime", pickupDisplay);
         mav.addObject("returnDateTime", returnDisplay);

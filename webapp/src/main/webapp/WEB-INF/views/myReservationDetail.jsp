@@ -337,18 +337,73 @@
                     <c:url var="counterpartyProfileUrl" value="/my-reservations/${reservation.id}/counterparty-profile">
                         <c:param name="role"><c:out value="${reservationRole}"/></c:param>
                     </c:url>
-                    <c:choose>
-                        <c:when test="${reservationRole eq 'owner'}">
-                            <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mb-2">
-                                <spring:message code="myReservationDetail.actions.riderProfile"/>
+                    <section class="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card" aria-labelledby="counterparty-summary-heading">
+                        <div class="card-body p-4">
+                            <h2 id="counterparty-summary-heading" class="h6 fw-semibold mb-3">
+                                <c:choose>
+                                    <c:when test="${reservationRole eq 'rider'}">
+                                        <spring:message code="myReservationDetail.counterparty.ownerTitle"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <spring:message code="myReservationDetail.counterparty.riderTitle"/>
+                                    </c:otherwise>
+                                </c:choose>
+                            </h2>
+                            <div class="counterparty-summary-card__identity d-flex align-items-center gap-2 mb-3">
+                                <c:choose>
+                                    <c:when test="${counterpartyProfileImageId != null}">
+                                        <c:url var="counterpartySummaryImageUrl" value="/image/${counterpartyProfileImageId}"/>
+                                        <spring:message code="myReservationDetail.counterparty.profileImageAlt" var="counterpartySummaryImageAlt"/>
+                                        <img src="${counterpartySummaryImageUrl}"
+                                             alt="${counterpartySummaryImageAlt}"
+                                             class="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary flex-shrink-0 counterparty-summary-card__avatar counterparty-summary-card__avatar--placeholder"
+                                              aria-hidden="true">
+                                            <i class="bi bi-person-fill"></i>
+                                        </span>
+                                    </c:otherwise>
+                                </c:choose>
+                                <p class="fw-semibold mb-0 text-break flex-grow-1 min-w-0">
+                                    <c:out value="${counterparty.forename}"/> <c:out value="${counterparty.surname}"/>
+                                </p>
+                            </div>
+                            <div class="vstack gap-3 small">
+                                <div>
+                                    <div class="reservation-card__meta-label mb-1">
+                                        <spring:message code="profile.email"/>
+                                    </div>
+                                    <div class="counterparty-summary-card__email-wrap">
+                                        <a href="mailto:<c:out value='${counterparty.email}'/>"
+                                           class="counterparty-summary-card__email-link link-primary text-decoration-underline">
+                                            <c:out value="${counterparty.email}"/>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="reservation-card__meta-label mb-1">
+                                        <spring:message code="profile.phone"/>
+                                    </div>
+                                    <div class="text-break">
+                                        <c:choose>
+                                            <c:when test="${not empty counterpartyPhoneDisplay}">
+                                                <a href="tel:<c:out value='${counterpartyPhoneDisplay}'/>" class="link-body text-decoration-underline">
+                                                    <c:out value="${counterpartyPhoneDisplay}"/>
+                                                </a>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="text-secondary"><spring:message code="myReservationDetail.counterparty.fieldNotProvided"/></span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mt-3">
+                                <spring:message code="myReservationDetail.counterparty.viewFullProfile"/>
                             </a>
-                        </c:when>
-                        <c:otherwise>
-                            <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mb-2">
-                                <spring:message code="myReservationDetail.actions.ownerProfile"/>
-                            </a>
-                        </c:otherwise>
-                    </c:choose>
+                        </div>
+                    </section>
                     <c:url var="listingUrl" value="/car-detail">
                         <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
                     </c:url>

@@ -1337,3 +1337,35 @@ select.form-select.ryden-car-spec-select option {
     pointer-events: none;
 }
 
+.counterparty-summary-card {
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.counterparty-summary-card__identity {
+    min-width: 0;
+}
+
+.counterparty-summary-card__avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+}
+
+.counterparty-summary-card__avatar--placeholder {
+    background: #f1f5f9;
+}
+
+.counterparty-summary-card__avatar--placeholder .bi {
+    font-size: 1.1rem;
+}
+
+.counterparty-summary-card__email-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.counterparty-summary-card__email-link {
+    white-space: nowrap;
+}
+
