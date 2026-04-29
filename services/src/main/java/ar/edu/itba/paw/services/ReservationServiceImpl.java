@@ -546,7 +546,8 @@ public class ReservationServiceImpl implements ReservationService {
                     listingOwner.getEmail(),
                     reservation.getTotalPrice().toString(),
                     userService.resolveMailLocale(rider.getId()),
-                    userService.resolveMailLocale(listingOwner.getId()));
+                    userService.resolveMailLocale(listingOwner.getId()),
+                    null);
             LOGGER.atInfo().log("Queueing rider reservation confirmed-after-proof email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());
             emailService.sendRiderReservationConfirmedAfterPaymentProof(payload);

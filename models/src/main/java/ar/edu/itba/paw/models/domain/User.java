@@ -23,6 +23,7 @@ public class User {
     private final String latestLocaleTag;
     /** Join date (wall calendar); used to show "member since" (month + year) in the UI. */
     private final LocalDate memberSince;
+    private final String cbu;
 
     private User(final Builder b) {
         this.id = b.id;
@@ -37,6 +38,7 @@ public class User {
         this.profilePictureId = b.profilePictureId;
         this.latestLocaleTag = b.latestLocaleTag;
         this.memberSince = b.memberSince;
+        this.cbu = b.cbu;
     }
 
     /** Minimal user row (no password hash, no optional profile fields). */
@@ -61,6 +63,7 @@ public class User {
         private Long profilePictureId;
         private String latestLocaleTag;
         private LocalDate memberSince;
+        private String cbu;
 
         public Builder id(final long id) {
             this.id = id;
@@ -122,6 +125,11 @@ public class User {
             return this;
         }
 
+        public Builder cbu(final String cbu) {
+            this.cbu = cbu;
+            return this;
+        }
+
         public User build() {
             Objects.requireNonNull(email, "email");
             Objects.requireNonNull(forename, "forename");
@@ -176,6 +184,10 @@ public class User {
 
     public Optional<LocalDate> getMemberSince() {
         return Optional.ofNullable(memberSince);
+    }
+
+    public Optional<String> getCbu() {
+        return Optional.ofNullable(cbu);
     }
 
     @Override

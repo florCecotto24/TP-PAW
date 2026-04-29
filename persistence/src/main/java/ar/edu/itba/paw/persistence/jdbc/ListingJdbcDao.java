@@ -126,13 +126,13 @@ public class ListingJdbcDao implements ListingDao {
                         .powertrain(Car.Powertrain.valueOf(rs.getString("powertrain")))
                         .transmission(Car.Transmission.valueOf(rs.getString("transmission")))
                         .build();
-                owner = User.identities(
-                        rs.getLong("owner_user_id"),
-                        rs.getString("owner_email"),
-                        rs.getString("owner_forename"),
-                        rs.getString("owner_surname"),
-                        null, null, null, null, null, null,
-                        rs.getString("owner_cbu"));
+                owner = User.builder()
+                        .id(rs.getLong("owner_user_id"))
+                        .email(rs.getString("owner_email"))
+                        .forename(rs.getString("owner_forename"))
+                        .surname(rs.getString("owner_surname"))
+                        .cbu(rs.getString("owner_cbu"))
+                        .build();
             }
 
             final long cpId = rs.getLong("car_picture_id");

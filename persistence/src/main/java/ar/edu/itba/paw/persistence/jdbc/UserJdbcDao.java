@@ -28,7 +28,7 @@ public class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =
             "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, " +
-                    "latest_locale, member_since, cbu";
+                    "latest_locale, cbu, member_since";
 
     private static Long readNullableLongId(final ResultSet rs, final String column) throws SQLException {
         final Object v = rs.getObject(column);
@@ -171,7 +171,7 @@ public class UserJdbcDao implements UserDao {
     public Optional<User> getListingOwner(final long listingId) {
         return jdbcTemplate.query(
                 "SELECT u.id, u.email, u.forename, u.surname, u.email_validated, u.phone_number, u.birth_date, "
-                        + "u.about, u.profile_picture_id, u.latest_locale,u.cbu FROM users u, "
+                        + "u.about, u.profile_picture_id, u.latest_locale, u.cbu, "
                         + "u.member_since FROM users u "
                         + "JOIN cars c ON c.owner_id = u.id "
                         + "JOIN listings l ON l.car_id = c.id "

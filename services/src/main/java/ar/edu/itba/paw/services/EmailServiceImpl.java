@@ -90,6 +90,7 @@ public class EmailServiceImpl implements EmailService {
         ctx.setVariable("hasDeliveryLocation", hasDelivery);
         ctx.setVariable("deliveryLocation", hasDelivery ? delivery : "");
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        ctx.setVariable("ownerCbu", payload.getOwnerCbu());
         return ctx;
     }
 
