@@ -162,7 +162,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public DataSource dataSource(final Environment environment) {
+    public static DataSource dataSource(final Environment environment) {
         final SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
         dataSource.setDriverClass(org.postgresql.Driver.class);
         dataSource.setUrl(requiredProperty(environment, "spring.datasource.url"));

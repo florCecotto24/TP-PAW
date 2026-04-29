@@ -1,14 +1,19 @@
 package ar.edu.itba.paw.webapp.config;
 
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.security.ListingWebAuthorization;
+import ar.edu.itba.paw.webapp.security.ProfileWebAuthorization;
+import ar.edu.itba.paw.webapp.security.ReservationWebAuthorization;
+import ar.edu.itba.paw.webapp.security.RydenAuthenticationProvider;
+import ar.edu.itba.paw.webapp.security.RydenUserDetailsService;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.RememberMeAuthenticationProvider;
@@ -25,16 +30,8 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
-
-import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.ListingWebAuthorization;
-import ar.edu.itba.paw.webapp.security.ReservationWebAuthorization;
-import ar.edu.itba.paw.webapp.security.RydenAuthenticationProvider;
-import ar.edu.itba.paw.webapp.security.RydenUserDetailsService;
 
 @Configuration
 @EnableWebSecurity
@@ -89,7 +86,8 @@ public class WebAuthConfig {
             final RequestCache requestCache,
             final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
             final ListingWebAuthorization listingWebAuthorization,
-            final ReservationWebAuthorization reservationWebAuthorization) throws Exception {
+            final ReservationWebAuthorization reservationWebAuthorization,
+            final ProfileWebAuthorization profileWebAuthorization) throws Exception {
         http
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
@@ -104,30 +102,34 @@ public class WebAuthConfig {
                         .antMatchers("/publish-car", "/publish-car/**").authenticated()
                         .antMatchers("/my-listings").authenticated()
                         .antMatchers("/my-listings/**")
-                                .access(listingWebAuthorization.ownerAccess())
+                        .access(listingWebAuthorization.ownerAccess())
                         .antMatchers("/my-reservations").authenticated()
                         .antMatchers("/my-reservations/*/payment-receipt/approval")
-                                .access(reservationWebAuthorization.ownerAccess())
+                        .access(reservationWebAuthorization.ownerAccess())
                         .antMatchers("/my-reservations/*/payment-receipt/download")
-                                .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantAccess())
                         .antMatchers(HttpMethod.POST, "/my-reservations/*/payment-receipt")
-                                .access(reservationWebAuthorization.riderAccess())
+                        .access(reservationWebAuthorization.riderAccess())
                         .antMatchers("/my-reservations/*/car-returned")
-                                .access(reservationWebAuthorization.ownerAccess())
+                        .access(reservationWebAuthorization.ownerAccess())
                         .antMatchers("/my-reservations/*/owner-review-rider")
-                                .access(reservationWebAuthorization.ownerAccess())
+                        .access(reservationWebAuthorization.ownerAccess())
                         .antMatchers("/my-reservations/*/rider-review-owner")
-                                .access(reservationWebAuthorization.riderAccess())
+                        .access(reservationWebAuthorization.riderAccess())
                         .antMatchers("/my-reservations/*/cancel")
-                                .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/my-reservations/*/counterparty-profile")
-                                .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/my-reservations/*")
-                                .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
                         .antMatchers("/logout").authenticated()
-                        .antMatchers("/profile", "/profile/**").hasRole(UserRole.USER.name())
+
+                        .antMatchers("/profile/*/edit", "/profile/*/upload-profile-picture")
+                        .access(profileWebAuthorization.ownerAccess())
+                        .antMatchers("/profile/*")
+                        .authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.sendRedirect(request.getContextPath() + "/");
