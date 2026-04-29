@@ -24,7 +24,10 @@
                         about="${counterpartyAbout}"
                         memberSinceDisplay="${counterpartyMemberSinceDisplay}"
                         profileImageId="${counterpartyProfileImageId}"
-                        averageRating="${counterpartyAverageRating}"/>
+                        averageRating="${counterpartyAverageRating}"
+                        licenseValidated="${counterpartyLicenseValidated}"
+                        insuranceValidated="${counterpartyInsuranceValidated}"
+                        identityValidated="${counterpartyIdentityValidated}"/>
 
                 <ryden:counterpartyProfileReviews
                         comments="${recentReviewComments}"/>

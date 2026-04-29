@@ -10,6 +10,9 @@
 <%@ attribute name="memberSinceDisplay" required="false" type="java.lang.String" %>
 <%@ attribute name="profileImageId" required="false" type="java.lang.Long" %>
 <%@ attribute name="averageRating" required="false" type="java.math.BigDecimal" %>
+<%@ attribute name="licenseValidated" required="false" type="java.lang.Boolean" %>
+<%@ attribute name="insuranceValidated" required="false" type="java.lang.Boolean" %>
+<%@ attribute name="identityValidated" required="false" type="java.lang.Boolean" %>
 <c:set var="initials" value="${fn:substring(forename, 0, 1)}${fn:substring(surname, 0, 1)}"/>
 
 <section class="card border-0 shadow-sm rounded-4 counterparty-section-card counterparty-header-card">
@@ -70,6 +73,55 @@
                 </c:if>
             </div>
         </div>
+    </div>
+</section>
+
+<section class="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-semibold mb-3">
+            <spring:message code="profile.documents.sectionTitle"/>
+        </h2>
+        <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+                <c:choose>
+                    <c:when test="${licenseValidated}">
+                        <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                        <span class="visually-hidden"><spring:message code="profile.documents.status.validated"/></span>
+                    </c:when>
+                    <c:otherwise>
+                        <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                        <span class="visually-hidden"><spring:message code="profile.documents.status.notValidated"/></span>
+                    </c:otherwise>
+                </c:choose>
+                <span class="fw-semibold ms-1"><spring:message code="profile.documents.license"/></span>
+            </li>
+            <li class="mb-2">
+                <c:choose>
+                    <c:when test="${insuranceValidated}">
+                        <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                        <span class="visually-hidden"><spring:message code="profile.documents.status.validated"/></span>
+                    </c:when>
+                    <c:otherwise>
+                        <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                        <span class="visually-hidden"><spring:message code="profile.documents.status.notValidated"/></span>
+                    </c:otherwise>
+                </c:choose>
+                <span class="fw-semibold ms-1"><spring:message code="profile.documents.insurance"/></span>
+            </li>
+            <li>
+                <c:choose>
+                    <c:when test="${identityValidated}">
+                        <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                        <span class="visually-hidden"><spring:message code="profile.documents.status.validated"/></span>
+                    </c:when>
+                    <c:otherwise>
+                        <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                        <span class="visually-hidden"><spring:message code="profile.documents.status.notValidated"/></span>
+                    </c:otherwise>
+                </c:choose>
+                <span class="fw-semibold ms-1"><spring:message code="profile.documents.identity"/></span>
+            </li>
+        </ul>
     </div>
 </section>
 

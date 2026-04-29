@@ -78,6 +78,9 @@ public class MyReservationsControllerTest {
 
         assertEquals("counterpartyProfile", mav.getViewName());
         assertTrue((Boolean) mav.getModel().get("showCounterpartyActiveListings"));
+        assertFalse((Boolean) mav.getModel().get("counterpartyLicenseValidated"));
+        assertFalse((Boolean) mav.getModel().get("counterpartyInsuranceValidated"));
+        assertFalse((Boolean) mav.getModel().get("counterpartyIdentityValidated"));
         @SuppressWarnings("unchecked")
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertEquals(1, cards.size());
@@ -120,6 +123,9 @@ public class MyReservationsControllerTest {
 
         assertEquals("counterpartyProfile", mav.getViewName());
         assertFalse((Boolean) mav.getModel().get("showCounterpartyActiveListings"));
+        assertFalse((Boolean) mav.getModel().get("counterpartyLicenseValidated"));
+        assertFalse((Boolean) mav.getModel().get("counterpartyInsuranceValidated"));
+        assertFalse((Boolean) mav.getModel().get("counterpartyIdentityValidated"));
         @SuppressWarnings("unchecked")
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertTrue(cards.isEmpty());

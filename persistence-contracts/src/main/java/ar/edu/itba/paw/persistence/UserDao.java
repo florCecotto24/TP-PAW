@@ -30,6 +30,15 @@ public interface UserDao {
 
     void updateProfilePictureId(long userId, Long profilePictureImageId);
 
+    void updateLicenseDocument(long userId, long fileId, boolean validated);
+    void clearLicenseDocument(long userId);
+
+    void updateInsuranceDocument(long userId, long fileId, boolean validated);
+    void clearInsuranceDocument(long userId);
+
+    void updateIdentityDocument(long userId, long fileId, boolean validated);
+    void clearIdentityDocument(long userId);
+
     void updateEmailValidated(long userId, boolean validated);
 
     void updatePasswordHash(long userId, String passwordHash);

@@ -24,6 +24,12 @@ public class User {
     /** Join date (wall calendar); used to show "member since" (month + year) in the UI. */
     private final LocalDate memberSince;
     private final String cbu;
+    private final Long licenseFileId;
+    private final Boolean licenseValidated;
+    private final Long insuranceFileId;
+    private final Boolean insuranceValidated;
+    private final Long identityFileId;
+    private final Boolean identityValidated;
 
     private User(final Builder b) {
         this.id = b.id;
@@ -39,6 +45,12 @@ public class User {
         this.latestLocaleTag = b.latestLocaleTag;
         this.memberSince = b.memberSince;
         this.cbu = b.cbu;
+        this.licenseFileId = b.licenseFileId;
+        this.licenseValidated = b.licenseValidated;
+        this.insuranceFileId = b.insuranceFileId;
+        this.insuranceValidated = b.insuranceValidated;
+        this.identityFileId = b.identityFileId;
+        this.identityValidated = b.identityValidated;
     }
 
     /** Minimal user row (no password hash, no optional profile fields). */
@@ -64,6 +76,12 @@ public class User {
         private String latestLocaleTag;
         private LocalDate memberSince;
         private String cbu;
+        private Long licenseFileId;
+        private Boolean licenseValidated;
+        private Long insuranceFileId;
+        private Boolean insuranceValidated;
+        private Long identityFileId;
+        private Boolean identityValidated;
 
         public Builder id(final long id) {
             this.id = id;
@@ -130,6 +148,36 @@ public class User {
             return this;
         }
 
+        public Builder licenseFileId(final Long licenseFileId) {
+            this.licenseFileId = licenseFileId;
+            return this;
+        }
+
+        public Builder licenseValidated(final Boolean licenseValidated) {
+            this.licenseValidated = licenseValidated;
+            return this;
+        }
+
+        public Builder insuranceFileId(final Long insuranceFileId) {
+            this.insuranceFileId = insuranceFileId;
+            return this;
+        }
+
+        public Builder insuranceValidated(final Boolean insuranceValidated) {
+            this.insuranceValidated = insuranceValidated;
+            return this;
+        }
+
+        public Builder identityFileId(final Long identityFileId) {
+            this.identityFileId = identityFileId;
+            return this;
+        }
+
+        public Builder identityValidated(final Boolean identityValidated) {
+            this.identityValidated = identityValidated;
+            return this;
+        }
+
         public User build() {
             Objects.requireNonNull(email, "email");
             Objects.requireNonNull(forename, "forename");
@@ -188,6 +236,30 @@ public class User {
 
     public Optional<String> getCbu() {
         return Optional.ofNullable(cbu);
+    }
+
+    public Optional<Long> getLicenseFileId() {
+        return Optional.ofNullable(licenseFileId);
+    }
+
+    public boolean isLicenseValidated() {
+        return Boolean.TRUE.equals(licenseValidated);
+    }
+
+    public Optional<Long> getInsuranceFileId() {
+        return Optional.ofNullable(insuranceFileId);
+    }
+
+    public boolean isInsuranceValidated() {
+        return Boolean.TRUE.equals(insuranceValidated);
+    }
+
+    public Optional<Long> getIdentityFileId() {
+        return Optional.ofNullable(identityFileId);
+    }
+
+    public boolean isIdentityValidated() {
+        return Boolean.TRUE.equals(identityValidated);
     }
 
     @Override

@@ -10,6 +10,12 @@ CREATE TABLE IF NOT EXISTS users(
     about TEXT,
     profile_picture_id INTEGER,
     latest_locale VARCHAR(32),
+    license_file_id INTEGER,
+    license_validated BOOLEAN NOT NULL DEFAULT FALSE,
+    insurance_file_id INTEGER,
+    insurance_validated BOOLEAN NOT NULL DEFAULT FALSE,
+    identity_file_id INTEGER,
+    identity_validated BOOLEAN NOT NULL DEFAULT FALSE,
     cbu VARCHAR(22),
     rating_as_rider NUMERIC(4, 2),
     rating_as_owner NUMERIC(4, 2)
@@ -187,8 +193,20 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS cbu VARCHAR(22);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_rider NUMERIC(4, 2);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS rating_as_owner NUMERIC(4, 2);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS member_since DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS license_file_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS license_validated BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS insurance_file_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS insurance_validated BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_file_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS identity_validated BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_profile_picture_id;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_license_file_id;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_insurance_file_id;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_identity_file_id;
 ALTER TABLE users ADD CONSTRAINT fk_users_profile_picture_id FOREIGN KEY (profile_picture_id) REFERENCES images(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_users_license_file_id FOREIGN KEY (license_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_users_insurance_file_id FOREIGN KEY (insurance_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_users_identity_file_id FOREIGN KEY (identity_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS email_verification_codes (
     id SERIAL PRIMARY KEY,

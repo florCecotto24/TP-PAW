@@ -29,8 +29,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.StoredFileService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
@@ -50,6 +53,8 @@ public class ProfileController {
     private final ImageService imageService;
     private final MultipartImageValidation multipartImageValidation;
     private final UserValidationPolicy userValidationPolicy;
+    private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
+    private final StoredFileService storedFileService;
     private final SecurityContextRepository securityContextRepository;
 
     @Autowired
@@ -59,12 +64,16 @@ public class ProfileController {
             final ImageService imageService,
             final MultipartImageValidation multipartImageValidation,
             final UserValidationPolicy userValidationPolicy,
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
+            final StoredFileService storedFileService,
             final SecurityContextRepository securityContextRepository) {
         this.userService = userService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
         this.multipartImageValidation = multipartImageValidation;
         this.userValidationPolicy = userValidationPolicy;
+        this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
+        this.storedFileService = storedFileService;
         this.securityContextRepository = securityContextRepository;
     }
 
@@ -108,6 +117,16 @@ public class ProfileController {
         return LocalDate.now(AvailabilityPeriod.WALL_ZONE).toString();
     }
 
+    @ModelAttribute("uploadMaxProfileDocumentBytes")
+    public int uploadMaxProfileDocumentBytes() {
+        return profileDocumentUploadPolicy.getMaxBytes();
+    }
+
+    @ModelAttribute("uploadMaxProfileDocumentMegabytes")
+    public int uploadMaxProfileDocumentMegabytes() {
+        return profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
+    }
+
     @ModelAttribute
     public void addUserBasics(
             @CurrentUser final User currentUser,
@@ -125,6 +144,18 @@ public class ProfileController {
                         DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(LocaleContextHolder.getLocale()));
                 model.addAttribute("profileMemberSinceDisplay", display);
             });
+            model.addAttribute("licenseValidated", u.isLicenseValidated());
+            model.addAttribute("insuranceValidated", u.isInsuranceValidated());
+            model.addAttribute("identityValidated", u.isIdentityValidated());
+            u.getLicenseFileId()
+                    .flatMap(storedFileService::findById)
+                    .ifPresent(sf -> model.addAttribute("licenseFileName", sf.getFileName()));
+            u.getInsuranceFileId()
+                    .flatMap(storedFileService::findById)
+                    .ifPresent(sf -> model.addAttribute("insuranceFileName", sf.getFileName()));
+            u.getIdentityFileId()
+                    .flatMap(storedFileService::findById)
+                    .ifPresent(sf -> model.addAttribute("identityFileName", sf.getFileName()));
         });
     }
 
@@ -218,6 +249,85 @@ public class ProfileController {
         return "redirect:/profile";
     }
 
+    @PostMapping("/document")
+    public String uploadProfileDocument(
+            @CurrentUser final User currentUser,
+            @RequestParam("documentType") final String documentTypeRaw,
+            @RequestParam("documentFile") final MultipartFile file,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
+        if (documentType == null || file == null || file.isEmpty()) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
+            return "redirect:/profile";
+        }
+        try {
+            userService.uploadValidatedProfileDocument(
+                    me.getId(),
+                    documentType,
+                    file.getOriginalFilename(),
+                    file.getContentType(),
+                    file.getBytes());
+            redirectAttributes.addFlashAttribute("profileDocumentSaved", Boolean.TRUE);
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg(e));
+        } catch (final IOException e) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.readFailed"));
+        }
+        return "redirect:/profile";
+    }
+
+    @PostMapping("/documents")
+    public String uploadProfileDocuments(
+            @CurrentUser final User currentUser,
+            @RequestParam(name = "licenseFile", required = false) final MultipartFile licenseFile,
+            @RequestParam(name = "insuranceFile", required = false) final MultipartFile insuranceFile,
+            @RequestParam(name = "identityFile", required = false) final MultipartFile identityFile,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        if (isMissingOrEmpty(licenseFile) && isMissingOrEmpty(insuranceFile) && isMissingOrEmpty(identityFile)) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
+            return "redirect:/profile";
+        }
+        try {
+            if (!isMissingOrEmpty(licenseFile)) {
+                uploadSingleProfileDocument(me.getId(), UserDocumentType.LICENSE, licenseFile);
+            }
+            if (!isMissingOrEmpty(insuranceFile)) {
+                uploadSingleProfileDocument(me.getId(), UserDocumentType.INSURANCE, insuranceFile);
+            }
+            if (!isMissingOrEmpty(identityFile)) {
+                uploadSingleProfileDocument(me.getId(), UserDocumentType.IDENTITY, identityFile);
+            }
+            redirectAttributes.addFlashAttribute("profileDocumentSaved", Boolean.TRUE);
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg(e));
+        } catch (final IOException e) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.readFailed"));
+        }
+        return "redirect:/profile";
+    }
+
+    @PostMapping("/document/delete")
+    public String deleteProfileDocument(
+            @CurrentUser final User currentUser,
+            @RequestParam("documentType") final String documentTypeRaw,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
+        if (documentType == null) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
+            return "redirect:/profile";
+        }
+        try {
+            userService.clearProfileDocument(me.getId(), documentType);
+            redirectAttributes.addFlashAttribute("profileDocumentDeleted", Boolean.TRUE);
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg(e));
+        }
+        return "redirect:/profile";
+    }
+
     @GetMapping("/password")
     public String passwordFormGet(
             @CurrentUser final User currentUser,
@@ -308,5 +418,32 @@ public class ProfileController {
             return null;
         }
         return parsed;
+    }
+
+    private static UserDocumentType parseDocumentType(final String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            return UserDocumentType.valueOf(raw.trim().toUpperCase());
+        } catch (final IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private void uploadSingleProfileDocument(
+            final long userId,
+            final UserDocumentType documentType,
+            final MultipartFile file) throws IOException {
+        userService.uploadValidatedProfileDocument(
+                userId,
+                documentType,
+                file.getOriginalFilename(),
+                file.getContentType(),
+                file.getBytes());
+    }
+
+    private static boolean isMissingOrEmpty(final MultipartFile file) {
+        return file == null || file.isEmpty();
     }
 }

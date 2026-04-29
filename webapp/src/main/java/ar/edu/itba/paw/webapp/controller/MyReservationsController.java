@@ -275,6 +275,15 @@ public class MyReservationsController {
         mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
         mav.addObject("counterpartyAverageRating", headerDto.getAverageRating());
         mav.addObject(
+                "counterpartyLicenseValidated",
+                counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent());
+        mav.addObject(
+                "counterpartyInsuranceValidated",
+                counterparty.isInsuranceValidated() || counterparty.getInsuranceFileId().isPresent());
+        mav.addObject(
+                "counterpartyIdentityValidated",
+                counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent());
+        mav.addObject(
                 "recentReviewComments",
                 recentReviewItems.stream()
                         .map(item -> item.getComment().orElse("").trim())

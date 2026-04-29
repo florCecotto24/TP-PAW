@@ -40,9 +40,24 @@
             <spring:message code="profile.password.savedBanner"/>
         </div>
     </c:if>
+    <c:if test="${profileDocumentSaved}">
+        <div class="alert alert-success" role="alert">
+            <spring:message code="profile.document.saved"/>
+        </div>
+    </c:if>
+    <c:if test="${profileDocumentDeleted}">
+        <div class="alert alert-success" role="alert">
+            <spring:message code="profile.document.deleted"/>
+        </div>
+    </c:if>
     <c:if test="${not empty profilePictureErrorMessage}">
         <div class="alert alert-danger" role="alert">
             <c:out value="${profilePictureErrorMessage}"/>
+        </div>
+    </c:if>
+    <c:if test="${not empty profileDocumentError}">
+        <div class="alert alert-danger" role="alert">
+            <c:out value="${profileDocumentError}"/>
         </div>
     </c:if>
     <c:if test="${not empty profilePictureErrorCode}">
@@ -226,6 +241,125 @@
                 </button>
             </div>
         </form:form>
+    </div>
+
+    <div class="profile-card profile-card--section">
+        <h2 class="profile-section-title"><spring:message code="profile.documents.sectionTitle"/></h2>
+        <hr class="profile-card__divider">
+        <p class="text-muted small mb-3">
+            <spring:message code="profile.documents.allowedTypesAndSize" arguments="${uploadMaxProfileDocumentMegabytes}"/>
+        </p>
+        <form method="post" action="<c:url value='/profile/documents'/>" enctype="multipart/form-data">
+            <%@ include file="includes/csrfHidden.jspf" %>
+            <div class="profile-fields-grid">
+                <div class="mb-3">
+                    <label for="licenseFileInput" class="form-label"><spring:message code="profile.documents.license"/></label>
+                    <p class="small mb-2">
+                        <c:choose>
+                            <c:when test="${licenseValidated}">
+                                <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                            </c:when>
+                            <c:otherwise>
+                                <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                            </c:otherwise>
+                        </c:choose>
+                        <span class="ms-1">
+                            <c:choose>
+                                <c:when test="${licenseValidated}">
+                                    <spring:message code="profile.documents.status.validated"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <spring:message code="profile.documents.status.notValidated"/>
+                                </c:otherwise>
+                            </c:choose>
+                        </span>
+                    </p>
+                    <c:if test="${not empty licenseFileName}">
+                        <p class="small text-muted mb-2"><c:out value="${licenseFileName}"/></p>
+                        <button type="submit"
+                                class="btn btn-outline-danger btn-sm mb-2"
+                                formaction="<c:url value='/profile/document/delete'/>"
+                                formmethod="post"
+                                name="documentType"
+                                value="LICENSE">
+                            <spring:message code="profile.documents.remove"/>
+                        </button>
+                    </c:if>
+                    <input id="licenseFileInput" class="form-control form-control-sm" type="file" name="licenseFile" accept="image/*,application/pdf"/>
+                </div>
+                <div class="mb-3">
+                    <label for="insuranceFileInput" class="form-label"><spring:message code="profile.documents.insurance"/></label>
+                    <p class="small mb-2">
+                        <c:choose>
+                            <c:when test="${insuranceValidated}">
+                                <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                            </c:when>
+                            <c:otherwise>
+                                <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                            </c:otherwise>
+                        </c:choose>
+                        <span class="ms-1">
+                            <c:choose>
+                                <c:when test="${insuranceValidated}">
+                                    <spring:message code="profile.documents.status.validated"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <spring:message code="profile.documents.status.notValidated"/>
+                                </c:otherwise>
+                            </c:choose>
+                        </span>
+                    </p>
+                    <c:if test="${not empty insuranceFileName}">
+                        <p class="small text-muted mb-2"><c:out value="${insuranceFileName}"/></p>
+                        <button type="submit"
+                                class="btn btn-outline-danger btn-sm mb-2"
+                                formaction="<c:url value='/profile/document/delete'/>"
+                                formmethod="post"
+                                name="documentType"
+                                value="INSURANCE">
+                            <spring:message code="profile.documents.remove"/>
+                        </button>
+                    </c:if>
+                    <input id="insuranceFileInput" class="form-control form-control-sm" type="file" name="insuranceFile" accept="image/*,application/pdf"/>
+                </div>
+                <div class="mb-3">
+                    <label for="identityFileInput" class="form-label"><spring:message code="profile.documents.identity"/></label>
+                    <p class="small mb-2">
+                        <c:choose>
+                            <c:when test="${identityValidated}">
+                                <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+                            </c:when>
+                            <c:otherwise>
+                                <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+                            </c:otherwise>
+                        </c:choose>
+                        <span class="ms-1">
+                            <c:choose>
+                                <c:when test="${identityValidated}">
+                                    <spring:message code="profile.documents.status.validated"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <spring:message code="profile.documents.status.notValidated"/>
+                                </c:otherwise>
+                            </c:choose>
+                        </span>
+                    </p>
+                    <c:if test="${not empty identityFileName}">
+                        <p class="small text-muted mb-2"><c:out value="${identityFileName}"/></p>
+                        <button type="submit"
+                                class="btn btn-outline-danger btn-sm mb-2"
+                                formaction="<c:url value='/profile/document/delete'/>"
+                                formmethod="post"
+                                name="documentType"
+                                value="IDENTITY">
+                            <spring:message code="profile.documents.remove"/>
+                        </button>
+                    </c:if>
+                    <input id="identityFileInput" class="form-control form-control-sm" type="file" name="identityFile" accept="image/*,application/pdf"/>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-outline-primary btn-sm"><spring:message code="profile.documents.upload"/></button>
+        </form>
     </div>
 
     <div class="profile-card profile-card--section">

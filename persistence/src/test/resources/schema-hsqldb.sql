@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS users(
     about VARCHAR(500),
     profile_picture_id BIGINT,
     latest_locale VARCHAR(32),
+    cbu VARCHAR(22),
+    license_file_id BIGINT,
+    license_validated BOOLEAN NOT NULL DEFAULT FALSE,
+    insurance_file_id BIGINT,
+    insurance_validated BOOLEAN NOT NULL DEFAULT FALSE,
+    identity_file_id BIGINT,
+    identity_validated BOOLEAN NOT NULL DEFAULT FALSE,
     member_since DATE NOT NULL
 );
 
@@ -164,4 +171,8 @@ INSERT INTO neighborhoods (id, name) VALUES
     (40, 'Villa Lugano'), (41, 'Villa Luro'), (42, 'Villa Ortúzar'), (43, 'Villa Pueyrredón'),
     (44, 'Villa Real'), (45, 'Villa Riachuelo'), (46, 'Villa Santa Rita'), (47, 'Villa Soldati'),
     (48, 'Villa Urquiza');
+
+ALTER TABLE users ADD CONSTRAINT fk_users_license_file_id FOREIGN KEY (license_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_users_insurance_file_id FOREIGN KEY (insurance_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_users_identity_file_id FOREIGN KEY (identity_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
 

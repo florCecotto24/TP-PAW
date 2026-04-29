@@ -58,6 +58,8 @@ public final class MessageKeys {
     public static final String USER_PROFILE_FORENAME_TOO_LONG = "user.profile.forenameTooLong";
     public static final String USER_PROFILE_SURNAME_TOO_LONG = "user.profile.surnameTooLong";
     public static final String USER_PROFILE_ABOUT_TOO_LONG = "user.profile.aboutTooLong";
+    public static final String USER_PROFILE_DOCUMENT_INVALID = "user.profile.document.invalid";
+    public static final String USER_PROFILE_DOCUMENT_TOO_LARGE = "user.profile.document.tooLarge";
 
     /* listing */
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";

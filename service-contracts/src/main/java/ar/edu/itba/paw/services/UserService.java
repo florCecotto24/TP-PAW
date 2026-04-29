@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.UserDocumentType;
 
 public interface UserService {
 
@@ -61,6 +62,9 @@ public interface UserService {
 
     /** Removes the profile picture and deletes the associated image row if it exists. */
     void clearProfilePicture(long userId);
+
+    void uploadValidatedProfileDocument(long userId, UserDocumentType documentType, String originalFilename, String contentType, byte[] data);
+    void clearProfileDocument(long userId, UserDocumentType documentType);
 
     /**
      * Changes the password of the authenticated user validating the current one.

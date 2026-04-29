@@ -17,6 +17,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.IncorrectCurrentPasswordException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
+import ar.edu.itba.paw.exception.user.InvalidProfileDocumentException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
@@ -24,7 +25,10 @@ import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.UserDao;
 
@@ -38,21 +42,27 @@ public class UserServiceImpl implements UserService {
 
     private final UserDao userDao;
     private final ImageService imageService;
+    private final StoredFileService storedFileService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final UserValidationPolicy validationPolicy;
 
     @Autowired
     public UserServiceImpl(
             final UserDao userDao,
             final ImageService imageService,
+            final StoredFileService storedFileService,
             final EmailService emailService,
             final PasswordEncoder passwordEncoder,
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final UserValidationPolicy validationPolicy) {
         this.userDao = userDao;
         this.imageService = imageService;
+        this.storedFileService = storedFileService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.validationPolicy = validationPolicy;
     }
 
@@ -190,6 +200,67 @@ public class UserServiceImpl implements UserService {
         userDao.updateProfilePictureId(userId, null);
         if (previousId != null) {
             imageService.deleteImage(previousId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void uploadValidatedProfileDocument(
+            final long userId,
+            final UserDocumentType documentType,
+            final String originalFilename,
+            final String contentType,
+            final byte[] data) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (documentType == null
+                || originalFilename == null || originalFilename.isBlank()
+                || !StoredFile.isAllowedPaymentReceiptContentType(contentType)) {
+            throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+        }
+        final int length = data == null ? 0 : data.length;
+        if (length <= 0) {
+            throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+        }
+        if (length > profileDocumentUploadPolicy.getMaxBytes()) {
+            throw new InvalidProfileDocumentException(
+                    MessageKeys.USER_PROFILE_DOCUMENT_TOO_LARGE,
+                    profileDocumentUploadPolicy.getMaxMegabytesRoundedUp());
+        }
+        final StoredFile stored = storedFileService.create(userId, originalFilename, contentType, data);
+        switch (documentType) {
+            case LICENSE:
+                userDao.updateLicenseDocument(userId, stored.getId(), true);
+                return;
+            case INSURANCE:
+                userDao.updateInsuranceDocument(userId, stored.getId(), true);
+                return;
+            case IDENTITY:
+                userDao.updateIdentityDocument(userId, stored.getId(), true);
+                return;
+            default:
+                throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void clearProfileDocument(final long userId, final UserDocumentType documentType) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (documentType == null) {
+            throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
+        }
+        switch (documentType) {
+            case LICENSE:
+                userDao.clearLicenseDocument(userId);
+                return;
+            case INSURANCE:
+                userDao.clearInsuranceDocument(userId);
+                return;
+            case IDENTITY:
+                userDao.clearIdentityDocument(userId);
+                return;
+            default:
+                throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
         }
     }
 

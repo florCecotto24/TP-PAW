@@ -12,17 +12,22 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
+import ar.edu.itba.paw.exception.user.InvalidProfileDocumentException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.UserDao;
 
@@ -40,17 +45,27 @@ public class UserServiceImplTest {
     private EmailService emailService;
 
     @Mock
+    private StoredFileService storedFileService;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private UserServiceImpl userService;
+    private ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
 
     @BeforeEach
     public void setUp() {
+        final Environment environment = Mockito.mock(Environment.class);
+        Mockito.when(environment.getProperty("app.upload.bytes-per-binary-megabyte", Integer.class)).thenReturn(1048576);
+        Mockito.when(environment.getProperty("app.upload.max-profile-document-megabytes", Long.class)).thenReturn(5L);
+        profileDocumentUploadPolicy = new ProfileDocumentUploadPolicy(environment);
         userService = new UserServiceImpl(
                 userDao,
                 imageService,
+                storedFileService,
                 emailService,
                 passwordEncoder,
+                profileDocumentUploadPolicy,
                 UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"));
     }
 
@@ -269,5 +284,29 @@ public class UserServiceImplTest {
         // 2. Execute and 3. Assert
         Assertions.assertThrows(UserNotFoundException.class,
                 () -> userService.updateBirthDate(99L, LocalDate.of(2000, 1, 1)));
+    }
+
+    @Test
+    public void testUploadValidatedProfileDocumentStoresLicenseAndMarksValidated() {
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
+        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
+        Mockito.when(storedFileService.create(1L, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}))
+                .thenReturn(new StoredFile(10L, 1L, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}, null));
+
+        Assertions.assertDoesNotThrow(() -> userService.uploadValidatedProfileDocument(
+                1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}));
+        Mockito.verify(userDao).updateLicenseDocument(1L, 10L, true);
+    }
+
+    @Test
+    public void testUploadValidatedProfileDocumentRejectsInvalidType() {
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
+        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
+
+        final InvalidProfileDocumentException thrown = Assertions.assertThrows(
+                InvalidProfileDocumentException.class,
+                () -> userService.uploadValidatedProfileDocument(
+                        1L, UserDocumentType.IDENTITY, "dni.txt", "text/plain", new byte[] {1, 2}));
+        Assertions.assertEquals(MessageKeys.USER_PROFILE_DOCUMENT_INVALID, thrown.getMessageCode());
     }
 }
