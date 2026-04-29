@@ -19,7 +19,9 @@
                 </ul>
             </c:when>
             <c:otherwise>
-                <p class="mb-0 text-secondary small"><spring:message code="reviewCard.noComment"/></p>
+                <p class="mb-0 text-secondary small">
+                    <spring:message code="counterpartyProfile.reviews.empty"/>
+                </p>
             </c:otherwise>
         </c:choose>
     </div>

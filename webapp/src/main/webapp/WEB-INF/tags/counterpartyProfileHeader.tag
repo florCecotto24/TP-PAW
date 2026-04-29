@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <%@ attribute name="forename" required="true" type="java.lang.String" %>
 <%@ attribute name="surname" required="true" type="java.lang.String" %>
@@ -36,18 +37,20 @@
                             <span class="counterparty-rating-value">
                                 <fmt:formatNumber value="${averageRating}" minFractionDigits="1" maxFractionDigits="2"/>
                             </span>
+                            <div class="d-inline-flex align-items-center gap-1" aria-label="Rating">
+                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                            </div>
                         </c:when>
                         <c:otherwise>
-                            <span class="counterparty-rating-value">-</span>
+                            <span class="counterparty-rating-value">
+                                <spring:message code="counterpartyProfile.reviews.emptyShort"/>
+                            </span>
                         </c:otherwise>
                     </c:choose>
-                    <div class="d-inline-flex align-items-center gap-1" aria-label="Rating">
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                    </div>
                 </div>
                 <p class="counterparty-about mt-3 mb-2">
                     <c:choose>
