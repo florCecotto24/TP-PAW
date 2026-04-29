@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="myReservationDetail.pageTitle" arguments="${listing.title}"/></title>
-    <%@ include file="/WEB-INF/views/header.jsp" %>
+    <%@include file="header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
 <ryden:navbar/>
@@ -470,7 +470,7 @@
     })();
 </script>
 
-<%@ include file="/WEB-INF/views/footer.jsp" %>
+<%@include file="footer.jsp"%>
 </body>
 </html>
 
