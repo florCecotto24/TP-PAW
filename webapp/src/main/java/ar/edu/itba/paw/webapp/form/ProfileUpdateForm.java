@@ -37,7 +37,7 @@ public class ProfileUpdateForm {
             groups = ValidationGroups.OnProfileUpdate.class)
     private String about = "";
 
-    @Pattern(regexp = "\\d{22}|\\d{0}", message = "{profile.cbu.size}")
+    @Pattern(regexp = "\\d{22}", message = "{profile.cbu.size}")
     private String cbu;
 
     public String getForename() {

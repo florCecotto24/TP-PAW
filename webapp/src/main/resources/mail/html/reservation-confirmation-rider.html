@@ -82,6 +82,20 @@
 
     </div>
 
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
+                padding:20px; margin-bottom:24px;">
+        <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:16px;">
+            <span th:text="#{mail.reservationConfirmation.transferDetails}">Transfer details #</span>
+        </p>
+
+        <!-- cbu -->
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
+            <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.ownerCbu}">ownerCbu</span>
+            &nbsp;
+            <span style="font-weight:600; color:#1e1b4b;" th:text=" ${ownerCbu}">—</span>
+        </div>
+    </div>
     <!-- CTA BUTTON -->
     <div style="margin-bottom:20px;">
         <div style="margin-bottom:10px;">

@@ -91,7 +91,8 @@ public class ReservationReminderScheduler {
                         listingOwner.getEmail(),
                         reservation.getTotalPrice().toString(),
                         userService.resolveMailLocale(rider.getId()),
-                        userService.resolveMailLocale(listingOwner.getId()));
+                        userService.resolveMailLocale(listingOwner.getId()),
+                        null);
                 LOGGER.atInfo().log("Queueing reservation reminder email to " + rider.getEmail()
                         + " for reservation id=" + reservation.getId());
                 emailService.sendReservationReminderEmail(payload);

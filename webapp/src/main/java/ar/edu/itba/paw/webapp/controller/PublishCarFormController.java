@@ -37,6 +37,7 @@ import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -61,6 +62,7 @@ public class PublishCarFormController {
     private final LocationService locationService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
     private final ReservationService reservationService;
+    private final UserService userService;
 
     @Autowired
     public PublishCarFormController(
@@ -72,7 +74,8 @@ public class PublishCarFormController {
             final CarEnumOptions carEnumOptions,
             final LocationService locationService,
             final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
-            final ReservationService reservationService) {
+            final ReservationService reservationService,
+            final UserService userService) {
         this.listingService = listingService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
@@ -82,6 +85,7 @@ public class PublishCarFormController {
         this.locationService = locationService;
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
         this.reservationService = reservationService;
+        this.userService = userService;
     }
 
     @ModelAttribute("carTypeOptions")
@@ -114,8 +118,16 @@ public class PublishCarFormController {
             @CurrentUser final User currentUser,
             final HttpSession session) {
         pictureStash.clear(session);
+        // Obtener usuario fresco de la BD para verificar CBU actualizado
+        final User freshUser = userService.getUserById(currentUser.getId())
+                .orElse(currentUser);
+        if(freshUser.getCbu().isEmpty()){
+            ModelAndView mav = new ModelAndView("missingCbu");
+            mav.addObject("profileUrl", "/profile");
+            return mav;
+        }
         final PublishCarForm form = new PublishCarForm();
-        final ModelAndView mav = publishCarFormView(currentUser, session, form);
+        final ModelAndView mav = publishCarFormView(freshUser, session, form);
         mav.addObject("publishCarForm", form);
         return mav;
     }

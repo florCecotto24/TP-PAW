@@ -37,6 +37,7 @@ public final class MessageKeys {
             "reservation.rider.availabilityPeriodRequired";
     public static final String RESERVATION_FORM_CAR_NAME_REQUIRED = "reservation.form.carNameRequired";
     public static final String RESERVATION_RIDER_USER_NOT_FOUND = "reservation.rider.userNotFound";
+    public static final String RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE = "reservation.rider.ownerPaymentDetailsUnavailable";
 
     /* user */
     public static final String USER_EMAIL_ALREADY_EXISTS = "user.email.alreadyExists";

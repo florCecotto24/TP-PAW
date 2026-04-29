@@ -112,8 +112,18 @@ public class ReservationServiceImpl implements ReservationService {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
         final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
-        if (listingOwnerOpt.isPresent() && listingOwnerOpt.get().getId() == riderId) {
+        if (listingOwnerOpt.isEmpty()) {
+            throw new RiderReservationException(MessageKeys.USER_ACCOUNT_NOT_FOUND);
+        }
+        long ownerId = listingOwnerOpt.get().getId();
+        if (ownerId == riderId) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
+        }
+        String cbu;
+        try{
+            cbu = userService.getUserCbu(ownerId);
+        } catch (Exception e) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE);
         }
         final String reservationTotal = calculateTotal(listingId, startDate, endDate).map(this::formatMoney)
                 .orElse(null);
@@ -135,7 +145,7 @@ public class ReservationServiceImpl implements ReservationService {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .orElse(null);
-        enqueueReservationConfirmationEmail(riderId, listingId, reservation, riderLoc, ownerLoc);
+        enqueueReservationConfirmationEmail(riderId, listingId, reservation, riderLoc, ownerLoc, cbu);
         return reservation;
     }
 
@@ -144,7 +154,8 @@ public class ReservationServiceImpl implements ReservationService {
             final long listingId,
             final Reservation reservation,
             final String riderHandoverLocation,
-            final String ownerHandoverLocation) {
+            final String ownerHandoverLocation,
+            final String cbu) {
         try {
             final Optional<User> riderOpt = userService.getUserById(riderId);
             final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
@@ -187,7 +198,8 @@ public class ReservationServiceImpl implements ReservationService {
                     listingOwner.getEmail(),
                     reservation.getTotalPrice().toString(),
                     userService.resolveMailLocale(rider.getId()),
-                    userService.resolveMailLocale(listingOwner.getId()));
+                    userService.resolveMailLocale(listingOwner.getId()),
+                    cbu);
             LOGGER.atInfo().log("Queueing reservation confirmation email to " + rider.getEmail()
                     + " for reservation id=" + reservation.getId());
             emailService.sendReservationConfirmationEmail(payload);
@@ -449,7 +461,8 @@ public class ReservationServiceImpl implements ReservationService {
                     listingOwner.getEmail(),
                     reservation.getTotalPrice().toString(),
                     userService.resolveMailLocale(rider.getId()),
-                    userService.resolveMailLocale(listingOwner.getId()));
+                    userService.resolveMailLocale(listingOwner.getId()),
+                    null);
             LOGGER.atInfo().log("Queueing reservation cancellation email to " + rider.getEmail()
                     + " for reservation id=" + reservationId);
             emailService.sendReservationCancellationEmail(payload);

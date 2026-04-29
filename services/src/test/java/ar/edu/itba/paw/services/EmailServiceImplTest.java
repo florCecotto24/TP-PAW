@@ -94,6 +94,7 @@ public class EmailServiceImplTest {
         final String ownerEmail = "owner@test.com";
         final String subject = "Subject brandTest modelTest";
         final String reservationTotal = "100.00";
+        final String ownerCbu = "1234567890123456789012";
         final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
                 riderEmail,
                 riderName,
@@ -108,7 +109,8 @@ public class EmailServiceImplTest {
                 ownerEmail,
                 reservationTotal,
                 locale,
-                locale);
+                locale,
+                ownerCbu);
 
         Mockito.when(environment.getProperty("mail.server.username", "noreply@localhost"))
                 .thenReturn("noreply@localhost");
