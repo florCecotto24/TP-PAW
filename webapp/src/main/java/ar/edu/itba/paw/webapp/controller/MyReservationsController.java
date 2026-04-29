@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
@@ -20,6 +21,7 @@ import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +61,7 @@ public class MyReservationsController {
 
     private static final int PAGE_SIZE = 8;
     private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
+    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
     private static final Set<String> RESERVATION_STATUS_WHITELIST =
             Set.of("pending", "accepted", "started", "cancelled", "finished");
 
@@ -248,6 +251,19 @@ public class MyReservationsController {
                 counterparty.getMemberSince().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
+        final List<VehicleCardView> counterpartyActiveListings = counterpartyIsOwner
+                ? listingService.getOwnerListingCards(
+                                counterparty.getId(),
+                                0,
+                                COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE,
+                                "active",
+                                null)
+                        .getContent()
+                        .stream()
+                        .filter(card -> card.getListingId() != reservation.getListingId())
+                        .map(MyReservationsController::toVehicleCardView)
+                        .collect(Collectors.toList())
+                : List.of();
 
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
         mav.addObject("activeTab", "my-reservations");
@@ -263,7 +279,20 @@ public class MyReservationsController {
                         .map(item -> item.getComment().orElse("").trim())
                         .filter(comment -> !comment.isEmpty())
                         .collect(Collectors.toList()));
+        mav.addObject("showCounterpartyActiveListings", counterpartyIsOwner);
+        mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
         return mav;
+    }
+
+    private static VehicleCardView toVehicleCardView(final ListingCard card) {
+        return new VehicleCardView(
+                card.getListingId(),
+                card.getBrand(),
+                card.getModel(),
+                card.getDayPrice(),
+                card.getImageId(),
+                null,
+                card.getRatingAvg().orElse(null));
     }
 
     @GetMapping("/my-reservations/{reservationId}/payment-receipt/download")

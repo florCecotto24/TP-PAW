@@ -63,6 +63,7 @@
                     </span>
                     <c:url var="ownerProfileUrl" value="/counterparty-profile">
                         <c:param name="userId" value="${owner.id}"/>
+                        <c:param name="listingId" value="${listing.id}"/>
                     </c:url>
                     <a class="btn btn-outline-secondary btn-sm" href="${ownerProfileUrl}">
                         <spring:message code="carDetail.owner.viewProfile"/>

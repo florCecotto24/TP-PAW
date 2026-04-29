@@ -50,6 +50,7 @@ public class CarDetailController {
     private static final int SIMILAR_LISTINGS_LIMIT = 4;
     private static final int LISTING_REVIEWS_PAGE_SIZE = 5;
     private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
+    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
 
     private final ListingService listingService;
     private final ReservationService reservationService;
@@ -162,7 +163,9 @@ public class CarDetailController {
     }
 
     @GetMapping("/counterparty-profile")
-    public ModelAndView ownerProfile(@RequestParam("userId") final long userId) {
+    public ModelAndView ownerProfile(
+            @RequestParam("userId") final long userId,
+            @RequestParam(name = "listingId", required = false) final Long currentListingId) {
         final Optional<User> counterpartyOpt = userService.getUserById(userId);
         if (counterpartyOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/search", true));
@@ -187,6 +190,17 @@ public class CarDetailController {
                 counterparty.getMemberSince().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
+        final List<VehicleCardView> counterpartyActiveListings = listingService.getOwnerListingCards(
+                        counterparty.getId(),
+                        0,
+                        COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE,
+                        "active",
+                        null)
+                .getContent()
+                .stream()
+                .filter(card -> currentListingId == null || card.getListingId() != currentListingId)
+                .map(CarDetailController::listingCardToVehicleCardView)
+                .collect(Collectors.toList());
 
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
         mav.addObject("activeTab", "explore");
@@ -202,6 +216,8 @@ public class CarDetailController {
                         .map(item -> item.getComment().orElse("").trim())
                         .filter(comment -> !comment.isEmpty())
                         .collect(Collectors.toList()));
+        mav.addObject("showCounterpartyActiveListings", true);
+        mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
         return mav;
     }
 
