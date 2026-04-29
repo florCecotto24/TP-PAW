@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.persistence.catalog;
 
-import ar.edu.itba.paw.persistence.LocationDao;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -16,6 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.persistence.LocationDao;
 
 /**
  * Neighborhood catalog in memory: a single {@code SELECT} when creating the bean (Spring context startup).
@@ -23,7 +23,7 @@ import ar.edu.itba.paw.models.domain.Neighborhood;
  */
 @Component
 @Primary
-public class CabaNeighborhoodCatalog implements LocationDao {
+public final class CabaNeighborhoodCatalog implements LocationDao {
 
     private static final String LOAD_SQL = "SELECT id, name FROM neighborhoods ORDER BY id";
 

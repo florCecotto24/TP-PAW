@@ -1,8 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.services.ImageService;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Optional;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -10,16 +9,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.Optional;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.services.ImageService;
 
-// No sé si lo tenemos que manejar con un controller...
+/** Serves image bytes for {@code /image/{id}}. */
 @Controller
 @RequestMapping("/image")
-public class ImageController {
+public final class ImageController {
     
     private final ImageService imageService;
     
-    @Autowired
     public ImageController(final ImageService imageService) {
         this.imageService = imageService;
     }

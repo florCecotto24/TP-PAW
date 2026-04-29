@@ -8,7 +8,7 @@ import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
 @Component
-public class ListingNeighborhoodFormValidator implements Validator {
+public final class ListingNeighborhoodFormValidator implements Validator {
 
     private final LocationService locationService;
 

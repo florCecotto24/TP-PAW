@@ -7,7 +7,6 @@ import java.util.Locale;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -18,13 +17,12 @@ import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
 @Component
-public class ReservationWithinMaxBillableDaysValidator
+public final class ReservationWithinMaxBillableDaysValidator
         implements ConstraintValidator<ReservationWithinMaxBillableDays, ReservationForm> {
 
     private final MessageSource messageSource;
     private final ReservationService reservationService;
 
-    @Autowired
     public ReservationWithinMaxBillableDaysValidator(
             final MessageSource messageSource,
             final ReservationService reservationService) {

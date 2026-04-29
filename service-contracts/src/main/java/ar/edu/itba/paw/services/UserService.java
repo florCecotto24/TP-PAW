@@ -73,8 +73,8 @@ public interface UserService {
     void changePassword(long userId, String currentPassword, String newPassword, String newPasswordConfirm);
 
     /**
-         * Usuario legacy sin {@code password_hash}: genera una contraseña aleatoria, la persiste hasheada y la envía por correo en texto plano.
-         * Si el usuario ya tiene contraseña, no hace nada (idempotente).
+     * Legacy user without {@code password_hash}: generate a random password, persist the hash, and email the plain text once.
+     * If the user already has a password, no-op (idempotent).
      */
     void assignRandomPasswordAndEmailForLegacyUser(long userId, String email, Locale locale);
 
@@ -93,4 +93,24 @@ public interface UserService {
     void updateCbu(long userId, String cbu);
 
     String getUserCbu(long userId);
+
+    /**
+     * Registration: creates the user and runs the post-registration account-confirmation step (policy and side effects are internal to the service).
+     */
+    User registerUserRequiringAccountConfirmation(
+            String email, String forename, String surname, String password, String passwordConfirm, Locale locale);
+
+    /**
+     * When the account-confirmation screen is shown, ensures prerequisites so the user can complete the step (no-op if {@code email} is blank or unknown).
+     */
+    void ensureAccountConfirmationPrerequisites(String email, Locale locale);
+
+    /**
+     * Asks the service to issue another confirmation for {@code email}.
+     * @return {@code false} if there is no account for that address (caller may show a generic message)
+     */
+    boolean requestAccountConfirmationResend(String email, Locale locale);
+
+    /** Confirms the account with the code the user entered; returns the user id. */
+    long completeAccountConfirmation(String email, String code);
 }

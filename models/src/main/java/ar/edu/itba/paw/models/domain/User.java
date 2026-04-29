@@ -7,7 +7,7 @@ import java.util.Optional;
 /**
  * Domain user. Prefer {@link #builder()} or {@link #identities(long, String, String, String)} over ad-hoc construction.
  */
-public class User {
+public final class User {
 
     private final long id;
     private final String email;
@@ -260,6 +260,33 @@ public class User {
 
     public boolean isIdentityValidated() {
         return Boolean.TRUE.equals(identityValidated);
+    }
+
+    /**
+     * Entity identity based on persisted {@code id}. Two instances with {@code id == 0} are not considered equal
+     * unless they are the same object reference.
+     */
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof User)) {
+            return false;
+        }
+        final User other = (User) o;
+        if (id == 0L || other.id == 0L) {
+            return false;
+        }
+        return id == other.id;
+    }
+
+    @Override
+    public int hashCode() {
+        if (id == 0L) {
+            return System.identityHashCode(this);
+        }
+        return Long.hashCode(id);
     }
 
     @Override

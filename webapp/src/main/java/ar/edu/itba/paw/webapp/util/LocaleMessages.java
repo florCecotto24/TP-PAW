@@ -1,19 +1,18 @@
 package ar.edu.itba.paw.webapp.util;
 
-import ar.edu.itba.paw.exception.RydenException;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Locale;
+
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
-import java.util.Locale;
+import ar.edu.itba.paw.exception.RydenException;
 
 @Component
-public class LocaleMessages {
+public final class LocaleMessages {
 
     private final MessageSource messageSource;
 
-    @Autowired
     public LocaleMessages(final MessageSource messageSource) {
         this.messageSource = messageSource;
     }

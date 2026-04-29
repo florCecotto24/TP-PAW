@@ -5,7 +5,6 @@ import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,14 +14,13 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.RydenUserDetails;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 @Component
-public class LatestLocaleSaveInterceptor implements HandlerInterceptor {
+public final class LatestLocaleSaveInterceptor implements HandlerInterceptor {
 
     private final UserService userService;
 
-    @Autowired
     public LatestLocaleSaveInterceptor(final UserService userService) {
         this.userService = userService;
     }

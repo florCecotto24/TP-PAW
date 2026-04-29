@@ -35,7 +35,7 @@ public interface ListingService {
             Long neighborhoodId);
 
     /**
-     * Publica un auto con aviso, disponibilidad e imágenes (flujo de publicación completo).
+     * Publishes a car with listing, availability windows, and images (full publish flow).
      */
     CarPublicationResult publish(
             long ownerId,
@@ -73,9 +73,9 @@ public interface ListingService {
 
     boolean toggleListingStatus(long ownerId, long listingId);
 
-        /**
-         * Misma dirección que el retiro (calle + barrio sin altura), para vistas públicas.
-         */
+    /**
+     * Same address as pickup (street + neighborhood, no number), for public views.
+     */
     String formatPublicDeliveryLocation(Listing listing);
 
     /**

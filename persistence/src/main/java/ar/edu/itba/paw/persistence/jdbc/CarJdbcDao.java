@@ -1,21 +1,23 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
-import ar.edu.itba.paw.persistence.CarDao;
-import ar.edu.itba.paw.models.domain.Car;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.sql.DataSource;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
-import javax.sql.DataSource;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.persistence.CarDao;
 
 @Repository
-public class CarJdbcDao implements CarDao{
+public final class CarJdbcDao implements CarDao {
 
     private final static RowMapper<Car> CAR_ROW_MAPPER = (rs, rowNum) -> Car.builder()
             .id(rs.getLong("id"))
@@ -66,12 +68,11 @@ public class CarJdbcDao implements CarDao{
 
     @Override
     public Optional<Car> getCarById(final long id) {
+        // Primary key: at most one row, so findAny is equivalent to findFirst.
         return jdbcTemplate.query("SELECT * FROM cars WHERE id = ?", CAR_ROW_MAPPER, id).stream().findAny();
-        //ponemos findAny porque el id es unico, entonces o devuelve un resultado o no devuelve nada
     }
 
 
-    //Esto hay que terminar de arreglarlo, no sé cómo vamos a elegir los autos destacados ni los más buscados, por ahora solo devuelve los primeros 8 coches de la base de datos
     @Override
     public List<Car> getCheapestCars() {
         return jdbcTemplate.query(

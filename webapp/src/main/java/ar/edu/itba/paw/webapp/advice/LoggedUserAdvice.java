@@ -12,7 +12,7 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
  * (or {@code null} if there is no authentication or it is anonymous).
  */
 @ControllerAdvice
-public class LoggedUserAdvice {
+public final class LoggedUserAdvice {
 
     /** Attribute name for {@link #addCurrentUser(Model)}. */
     public static final String CURRENT_USER_MODEL_KEY = "currentUser";

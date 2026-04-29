@@ -16,6 +16,7 @@ import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.MessageSource;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -42,7 +43,7 @@ public class MyReservationsControllerTest {
         final ReservationService reservationService = mock(ReservationService.class);
         final ListingService listingService = mock(ListingService.class);
         final ImageService imageService = mock(ImageService.class);
-        final LocaleMessages localeMessages = mock(LocaleMessages.class);
+        final LocaleMessages localeMessages = new LocaleMessages(mock(MessageSource.class));
         final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy = paymentReceiptUploadPolicy();
         final ReviewService reviewService = mock(ReviewService.class);
         final UserService userService = mock(UserService.class);
@@ -93,7 +94,7 @@ public class MyReservationsControllerTest {
         final ReservationService reservationService = mock(ReservationService.class);
         final ListingService listingService = mock(ListingService.class);
         final ImageService imageService = mock(ImageService.class);
-        final LocaleMessages localeMessages = mock(LocaleMessages.class);
+        final LocaleMessages localeMessages = new LocaleMessages(mock(MessageSource.class));
         final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy = paymentReceiptUploadPolicy();
         final ReviewService reviewService = mock(ReviewService.class);
         final UserService userService = mock(UserService.class);

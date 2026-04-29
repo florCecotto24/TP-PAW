@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.exception.user.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +34,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.UserDao;
 
 @Service
-public class UserServiceImpl implements UserService {
+public final class UserServiceImpl implements UserService {
 
     private static final char[] MIGRATION_PASSWORD_ALPHABET =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789".toCharArray();
@@ -47,6 +48,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final UserValidationPolicy validationPolicy;
+    private final EmailVerificationService emailVerificationService;
 
     @Autowired
     public UserServiceImpl(
@@ -56,7 +58,8 @@ public class UserServiceImpl implements UserService {
             final EmailService emailService,
             final PasswordEncoder passwordEncoder,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
-            final UserValidationPolicy validationPolicy) {
+            final UserValidationPolicy validationPolicy,
+            @Lazy final EmailVerificationService emailVerificationService) {
         this.userDao = userDao;
         this.imageService = imageService;
         this.storedFileService = storedFileService;
@@ -64,6 +67,7 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.validationPolicy = validationPolicy;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Override
@@ -428,5 +432,51 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("CBU cannot be null");
         }
         userDao.updateCbu(userId, cbu);
+    }
+
+    @Override
+    @Transactional
+    public User registerUserRequiringAccountConfirmation(
+            final String email,
+            final String forename,
+            final String surname,
+            final String password,
+            final String passwordConfirm,
+            final Locale locale) {
+        final User created = registerUser(email, forename, surname, password, passwordConfirm);
+        emailVerificationService.issueFreshVerificationCode(created.getId(), created.getEmail(), locale);
+        return created;
+    }
+
+    @Override
+    @Transactional
+    public void ensureAccountConfirmationPrerequisites(final String email, final Locale locale) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        findByEmail(email.trim())
+                .ifPresent(u -> emailVerificationService.ensurePendingVerificationCode(
+                        u.getId(), u.getEmail(), locale));
+    }
+
+    @Override
+    @Transactional
+    public boolean requestAccountConfirmationResend(final String email, final Locale locale) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        final Optional<User> userOpt = findByEmail(email.trim());
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+        final User user = userOpt.get();
+        emailVerificationService.resendVerificationCode(user.getId(), user.getEmail(), locale);
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public long completeAccountConfirmation(final String email, final String code) {
+        return emailVerificationService.verifyEmailAndConsumeCode(email, code);
     }
 }

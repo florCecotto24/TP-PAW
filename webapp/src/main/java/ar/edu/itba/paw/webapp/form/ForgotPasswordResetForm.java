@@ -7,7 +7,7 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @RegistrationPasswordRules(groups = ValidationGroups.OnForgotPasswordReset.class)
-public class ForgotPasswordResetForm implements RegistrationPasswordConfirmFields {
+public final class ForgotPasswordResetForm implements RegistrationPasswordConfirmFields {
 
     @NotBlank(message = "{forgotPassword.code.required}", groups = ValidationGroups.OnForgotPasswordReset.class)
     @Pattern(regexp = "[0-9]{6}", message = "{forgotPassword.code.pattern}", groups = ValidationGroups.OnForgotPasswordReset.class)

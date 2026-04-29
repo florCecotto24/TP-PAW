@@ -5,7 +5,7 @@ import javax.validation.constraints.NotBlank;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @RegistrationPasswordRules
-public class RegistrationPasswordForm implements RegistrationPasswordConfirmFields {
+public final class RegistrationPasswordForm implements RegistrationPasswordConfirmFields {
 
     @NotBlank(message = "{validation.registration.password.required}")
     private String password = "";

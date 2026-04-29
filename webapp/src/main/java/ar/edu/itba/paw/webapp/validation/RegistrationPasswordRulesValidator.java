@@ -5,7 +5,6 @@ import java.util.Locale;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -16,12 +15,11 @@ import ar.edu.itba.paw.webapp.form.RegistrationPasswordConfirmFields;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @Component
-public class RegistrationPasswordRulesValidator implements ConstraintValidator<RegistrationPasswordRules, RegistrationPasswordConfirmFields> {
+public final class RegistrationPasswordRulesValidator implements ConstraintValidator<RegistrationPasswordRules, RegistrationPasswordConfirmFields> {
 
     private final UserValidationPolicy policy;
     private final MessageSource messageSource;
 
-    @Autowired
     public RegistrationPasswordRulesValidator(final UserValidationPolicy policy, final MessageSource messageSource) {
         this.policy = policy;
         this.messageSource = messageSource;

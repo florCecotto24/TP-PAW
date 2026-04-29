@@ -5,7 +5,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Business time windows for reservations, read from {@code application.properties}.
+ * Business time windows for reservations, read from {@code application/application.properties}.
  */
 @Component
 public final class ReservationTimingPolicy {

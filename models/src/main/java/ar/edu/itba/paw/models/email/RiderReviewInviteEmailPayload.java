@@ -5,6 +5,7 @@ import java.util.Objects;
 
 /**
  * Email inviting the rider to leave an optional review after the rental period.
+ * Use {@link #builder()} to construct instances.
  */
 public final class RiderReviewInviteEmailPayload {
 
@@ -14,17 +15,16 @@ public final class RiderReviewInviteEmailPayload {
     private final String vehicleLabel;
     private final String reviewSectionPath;
 
-    public RiderReviewInviteEmailPayload(
-            final Locale messageLocale,
-            final String recipientEmail,
-            final String riderFullName,
-            final String vehicleLabel,
-            final String reviewSectionPath) {
-        this.messageLocale = Objects.requireNonNull(messageLocale, "messageLocale");
-        this.recipientEmail = Objects.requireNonNull(recipientEmail, "recipientEmail");
-        this.riderFullName = Objects.requireNonNull(riderFullName, "riderFullName");
-        this.vehicleLabel = Objects.requireNonNull(vehicleLabel, "vehicleLabel");
-        this.reviewSectionPath = Objects.requireNonNull(reviewSectionPath, "reviewSectionPath");
+    private RiderReviewInviteEmailPayload(final Builder builder) {
+        this.messageLocale = Objects.requireNonNull(builder.messageLocale, "messageLocale");
+        this.recipientEmail = Objects.requireNonNull(builder.recipientEmail, "recipientEmail");
+        this.riderFullName = Objects.requireNonNull(builder.riderFullName, "riderFullName");
+        this.vehicleLabel = Objects.requireNonNull(builder.vehicleLabel, "vehicleLabel");
+        this.reviewSectionPath = Objects.requireNonNull(builder.reviewSectionPath, "reviewSectionPath");
+    }
+
+    public static Builder builder() {
+        return new Builder();
     }
 
     public Locale getMessageLocale() {
@@ -46,5 +46,45 @@ public final class RiderReviewInviteEmailPayload {
     /** Absolute-path fragment including hash, e.g. {@code /my-reservations/12#rider-review-owner}. */
     public String getReviewSectionPath() {
         return reviewSectionPath;
+    }
+
+    public static final class Builder {
+        private Locale messageLocale;
+        private String recipientEmail;
+        private String riderFullName;
+        private String vehicleLabel;
+        private String reviewSectionPath;
+
+        private Builder() {
+        }
+
+        public Builder messageLocale(final Locale value) {
+            this.messageLocale = value;
+            return this;
+        }
+
+        public Builder recipientEmail(final String value) {
+            this.recipientEmail = value;
+            return this;
+        }
+
+        public Builder riderFullName(final String value) {
+            this.riderFullName = value;
+            return this;
+        }
+
+        public Builder vehicleLabel(final String value) {
+            this.vehicleLabel = value;
+            return this;
+        }
+
+        public Builder reviewSectionPath(final String value) {
+            this.reviewSectionPath = value;
+            return this;
+        }
+
+        public RiderReviewInviteEmailPayload build() {
+            return new RiderReviewInviteEmailPayload(this);
+        }
     }
 }

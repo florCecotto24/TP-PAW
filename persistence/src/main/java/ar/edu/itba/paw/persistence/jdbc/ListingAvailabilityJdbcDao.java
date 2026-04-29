@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
+public final class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
 
     private static final RowMapper<ListingAvailability> ROW_MAPPER = (rs, rowNum) -> new ListingAvailability(
             rs.getLong("id"),

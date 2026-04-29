@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Service
-public class LocationServiceImpl implements LocationService {
+public final class LocationServiceImpl implements LocationService {
 
     private final LocationDao locationDao;
 

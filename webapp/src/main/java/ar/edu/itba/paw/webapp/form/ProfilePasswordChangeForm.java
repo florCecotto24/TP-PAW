@@ -6,7 +6,7 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
 @RegistrationPasswordRules(groups = ValidationGroups.OnProfilePassword.class)
-public class ProfilePasswordChangeForm implements RegistrationPasswordConfirmFields {
+public final class ProfilePasswordChangeForm implements RegistrationPasswordConfirmFields {
 
     @NotBlank(message = "{profile.password.current.required}", groups = ValidationGroups.OnProfilePassword.class)
     private String currentPassword = "";

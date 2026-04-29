@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
 import ar.edu.itba.paw.models.domain.StoredFile;
 
 @Repository
-public class StoredFileJdbcDao implements StoredFileDao {
+public final class StoredFileJdbcDao implements StoredFileDao {
 
     private static final RowMapper<StoredFile> ROW_MAPPER = (rs, rowNum) -> new StoredFile(
             rs.getLong("id"),

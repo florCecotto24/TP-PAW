@@ -14,7 +14,7 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
  * {@link AvailabilityPeriod#WALL_ZONE}.
  */
 @Component
-public class ListingExhaustionSweepScheduler {
+public final class ListingExhaustionSweepScheduler {
 
     private final ListingService listingService;
 

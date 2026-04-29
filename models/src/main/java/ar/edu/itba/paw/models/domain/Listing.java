@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
-public class Listing {
+public final class Listing {
 
     public enum Status {
         ACTIVE, PAUSED, FINISHED
@@ -202,7 +202,7 @@ public class Listing {
         return Optional.ofNullable(ratingAvg);
     }
 
-    /** Calle + altura (trim), para mail o vista con datos completos. */
+    /** Street + number (trimmed), for email or full-detail views. */
     public Optional<String> getFullPickupStreetLine() {
         final String s = startPointStreet == null ? "" : startPointStreet.trim();
         final String n = startPointNumber == null ? "" : startPointNumber.trim();

@@ -1,16 +1,13 @@
 package ar.edu.itba.paw.webapp.config;
 
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.ListingWebAuthorization;
-import ar.edu.itba.paw.webapp.security.ProfileWebAuthorization;
-import ar.edu.itba.paw.webapp.security.ReservationWebAuthorization;
-import ar.edu.itba.paw.webapp.security.RydenAuthenticationProvider;
-import ar.edu.itba.paw.webapp.security.RydenUserDetailsService;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,11 +30,21 @@ import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.security.access.ListingWebAuthorization;
+import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
+import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetailsService;
+
 @Configuration
 @EnableWebSecurity
 public class WebAuthConfig {
 
-    static final String REMEMBER_ME_KEY = "ryden-webapp-remember-me-key";
+    private final String rememberMeKey;
+
+    public WebAuthConfig(@Value("${app.security.remember-me.key}") final String rememberMeKey) {
+        this.rememberMeKey = rememberMeKey;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -51,7 +58,7 @@ public class WebAuthConfig {
 
     @Bean
     public RememberMeAuthenticationProvider rememberMeAuthenticationProvider() {
-        return new RememberMeAuthenticationProvider(REMEMBER_ME_KEY);
+        return new RememberMeAuthenticationProvider(rememberMeKey);
     }
 
     @Bean
@@ -86,8 +93,7 @@ public class WebAuthConfig {
             final RequestCache requestCache,
             final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
             final ListingWebAuthorization listingWebAuthorization,
-            final ReservationWebAuthorization reservationWebAuthorization,
-            final ProfileWebAuthorization profileWebAuthorization) throws Exception {
+            final ReservationWebAuthorization reservationWebAuthorization) throws Exception {
         http
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
@@ -125,11 +131,7 @@ public class WebAuthConfig {
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
                         .antMatchers("/logout").authenticated()
-
-                        .antMatchers("/profile/*/edit", "/profile/*/upload-profile-picture")
-                        .access(profileWebAuthorization.ownerAccess())
-                        .antMatchers("/profile", "/profile/*")
-                        .authenticated()
+                        .antMatchers("/profile", "/profile/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.sendRedirect(request.getContextPath() + "/");
@@ -150,7 +152,7 @@ public class WebAuthConfig {
                         .invalidateHttpSession(true)
                         .deleteCookies("remember-me", "JSESSIONID"))
                 .rememberMe(remember -> remember
-                        .key(REMEMBER_ME_KEY)
+                        .key(rememberMeKey)
                         .rememberMeParameter("remember-me")
                         .rememberMeCookieName("remember-me")
                         .tokenValiditySeconds((int) TimeUnit.DAYS.toSeconds(30))

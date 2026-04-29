@@ -26,7 +26,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import ar.edu.itba.paw.models.email.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 
 @ExtendWith(MockitoExtension.class)
@@ -95,22 +95,23 @@ public class EmailServiceImplTest {
         final String subject = "Subject brandTest modelTest";
         final String reservationTotal = "100.00";
         final String ownerCbu = "1234567890123456789012";
-        final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
-                riderEmail,
-                riderName,
-                reservationId,
-                listingId,
-                vehicleLabel,
-                startDate,
-                endDate,
-                riderHandoverLocation,
-                riderHandoverLocation + " (owner full)",
-                ownerName,
-                ownerEmail,
-                reservationTotal,
-                locale,
-                locale,
-                ownerCbu);
+        final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
+                .recipientEmail(riderEmail)
+                .riderFullName(riderName)
+                .reservationId(reservationId)
+                .listingId(listingId)
+                .vehicleLabel(vehicleLabel)
+                .startDate(startDate)
+                .endDate(endDate)
+                .riderHandoverLocation(riderHandoverLocation)
+                .ownerHandoverLocation(riderHandoverLocation + " (owner full)")
+                .ownerFullName(ownerName)
+                .ownerEmail(ownerEmail)
+                .reservationTotal(reservationTotal)
+                .riderMailLocale(locale)
+                .ownerMailLocale(locale)
+                .ownerCbu(ownerCbu)
+                .build();
 
         Mockito.when(environment.getProperty("mail.server.username", "noreply@localhost"))
                 .thenReturn("noreply@localhost");

@@ -34,7 +34,7 @@
 
             <div class="tab-content">
 
-                <%-- Tab 1: Mis publicaciones --%>
+                <%-- Tab 1: my listings --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'listings' ? 'show active' : ''}" id="listings-pane" role="tabpanel" aria-labelledby="listings-tab">
                     <c:set var="hasActiveFilters" value="${not empty param.q or not empty param.listingStatus}"/>
 
@@ -190,7 +190,7 @@
                     </c:choose>
                 </div>
 
-                <%-- Tab 2: Reservas de mis autos --%>
+                <%-- Tab 2: reservations for my cars --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'reservations' ? 'show active' : ''}" id="reservations-pane" role="tabpanel" aria-labelledby="reservations-tab">
                     <c:url var="myListingsOwnerResPaginationBaseUrl" value="/my-listings">
                         <c:param name="tab" value="reservations"/>

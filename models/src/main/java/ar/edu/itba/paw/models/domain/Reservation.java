@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
-public class Reservation {
+public final class Reservation {
 
     public enum Status {
         PENDING, ACCEPTED, STARTED, CANCELLED, FINISHED

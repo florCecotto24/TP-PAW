@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Builds absolute URLs for mail CTAs. Configure {@code mail.app.base.url} per environment
- * (e.g. {@code application-local.properties} for local, server URL when deployed); must include context path if any.
+ * (e.g. {@code application/application-local.properties} for local, server URL when deployed); must include context path if any.
  */
 @Component
 public final class MailPublicUrls {

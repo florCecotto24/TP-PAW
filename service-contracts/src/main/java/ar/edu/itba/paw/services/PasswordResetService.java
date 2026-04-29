@@ -5,14 +5,11 @@ import java.util.Locale;
 public interface PasswordResetService {
 
     /**
-     * Sends a 6-digit code. If there is an active code, throws an exception.
-     *
-     * @return {@code true} if the email belongs to a user; {@code false} if there is no account (do not reveal to the client).
+     * Starts password recovery for the given address. The service enforces its own policy; delivery details stay inside the service layer.
+     * @return {@code true} if a matching account exists, {@code false} otherwise (caller may not distinguish for security)
      */
-    boolean requestCode(String email, Locale locale);
+    boolean initiatePasswordReset(String email, Locale locale);
 
-    /**
-     * Validates the code, updates the password (BCrypt) and deletes the reset codes for the user.
-     */
-    void resetPassword(String email, String code, String newPassword, String newPasswordConfirm);
+    /** Completes password recovery after the user provides the code and a new password pair. */
+    void completePasswordReset(String email, String code, String newPassword, String newPasswordConfirm);
 }

@@ -5,7 +5,7 @@ import javax.validation.ConstraintValidatorContext;
 
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 
-public class NoPunctuationValidator implements ConstraintValidator<NoPunctuation, String> {
+public final class NoPunctuationValidator implements ConstraintValidator<NoPunctuation, String> {
     @Override
     public void initialize(NoPunctuation constraintAnnotation) {
     }

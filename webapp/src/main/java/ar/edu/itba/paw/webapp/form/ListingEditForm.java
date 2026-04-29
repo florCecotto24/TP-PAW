@@ -15,7 +15,7 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnListingEdit.class)
-public class ListingEditForm implements ListingTimeWindow {
+public final class ListingEditForm implements ListingTimeWindow {
 
     @NotNull(message = "{validation.pricePerDay.notNull}", groups = ValidationGroups.OnListingEdit.class)
     @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}", groups = ValidationGroups.OnListingEdit.class)

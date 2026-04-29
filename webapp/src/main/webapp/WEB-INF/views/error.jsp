@@ -26,6 +26,11 @@
             <p class="text-muted mb-4" style="max-width: 480px; font-size: 1.05rem;">
                 <spring:message code="${messageKey}.desc"/>
             </p>
+            <c:if test="${not empty exceptionMessage}">
+                <p class="text-body mb-4" style="max-width: 480px; font-size: 1.05rem;">
+                    <c:out value="${exceptionMessage}"/>
+                </p>
+            </c:if>
 
             <a href="${pageContext.request.contextPath}/"
                class="btn btn-primary btn-action btn-action-md">

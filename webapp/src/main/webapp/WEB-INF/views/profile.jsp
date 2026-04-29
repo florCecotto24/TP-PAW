@@ -62,7 +62,7 @@
     </c:if>
     <c:if test="${not empty profilePictureErrorCode}">
         <div class="alert alert-danger" role="alert">
-            <%-- Códigos fijados en servidor; no usar code="${...}" sin acotar (riesgo de inyección en atributo). --%>
+            <%-- Server-defined codes; do not use code="${...}" unbounded (attribute injection risk). --%>
             <c:choose>
                 <c:when test="${profilePictureErrorCode eq 'profile.picture.required'}"><spring:message code="profile.picture.required"/></c:when>
                 <c:when test="${profilePictureErrorCode eq 'profile.picture.notImage'}"><spring:message code="profile.picture.notImage"/></c:when>
@@ -208,7 +208,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="profileBirthDateInput" class="form-label"><spring:message code="profile.birthDate"/></label>
-                    <%-- Flatpickr single date; valor ISO yyyy-MM-dd para el servidor --%>
+                    <%-- Flatpickr single date; ISO yyyy-MM-dd for the server --%>
                     <form:input path="birthDate" id="profileBirthDateInput" cssClass="form-control" autocomplete="bday"
                                 readonly="true" data-max-ymd="${profileBirthDateMax}"
                                 data-clear-label="${profileBirthDateClearLabel}"/>

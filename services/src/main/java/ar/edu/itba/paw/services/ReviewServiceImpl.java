@@ -21,7 +21,7 @@ import ar.edu.itba.paw.persistence.ReviewDao;
 import ar.edu.itba.paw.persistence.UserDao;
 
 @Service
-public class ReviewServiceImpl implements ReviewService {
+public final class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
     private final ReservationDao reservationDao;

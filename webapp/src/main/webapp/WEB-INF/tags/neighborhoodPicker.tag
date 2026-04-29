@@ -27,7 +27,7 @@
 <%@ attribute name="formId" required="false" type="java.lang.String" %>
 <%@ attribute name="searchBarInline" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="nbRequiredMessage" required="false" type="java.lang.String" %>
-<%-- Modo get + selección única + springPath: incluir en la página del form:form un <form:hidden path="..." id="nb_hid_${pickerId}"/> (no dentro de este tag). --%>
+<%-- GET + single selection + springPath: the page with form:form must include a <form:hidden path="..." id="nb_hid_${pickerId}"/> (not inside this tag). --%>
 
 <c:set var="resolvedSelectName" value="${empty selectName ? 'neighborhoodId' : selectName}"/>
 <c:set var="nbSearchBar" value="${searchBarInline eq true}"/>
@@ -313,7 +313,7 @@
                     var label = anyLabel;
                     Array.prototype.forEach.call(nbSel.options, function (opt) {
                         if (String(opt.value) === vStr) {
-                            /* Spring/form:option puede dejar el texto vacío y usar el atributo label. */
+                            /* Spring form:option may keep option text empty and use the label attribute. */
                             var t = String(opt.label || opt.textContent || '').trim();
                             if (t) {
                                 label = t;
@@ -490,8 +490,8 @@
                     }
                     if (nbDdWrap) {
                         nbDdWrap.addEventListener('hidden.bs.dropdown', function () {
-                            /* Tras el cierre, el 'change' del radio puede aún no haber corrido; sincronizar en el siguiente frame evita
-                             * borrar el hidden con el radio ya marcado. */
+                            /* After close, the radio 'change' may not have run yet; syncing on the next frame avoids
+                             * clearing the hidden while the radio is already selected. */
                             if (window.requestAnimationFrame) {
                                 window.requestAnimationFrame(function () {
                                     syncSingleListUi();

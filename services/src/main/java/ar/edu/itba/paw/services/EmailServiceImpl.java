@@ -8,7 +8,6 @@ import javax.mail.internet.MimeMessage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.core.env.Environment;
@@ -20,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import ar.edu.itba.paw.models.email.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
@@ -28,7 +27,9 @@ import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 
 @Service
-public class EmailServiceImpl implements EmailService {
+public final class EmailServiceImpl implements EmailService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     @FunctionalInterface
     private interface MailAction {
@@ -44,9 +45,6 @@ public class EmailServiceImpl implements EmailService {
             throw new EmailMessagingException(e);
         }
     }
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
-
 
     private static final String RESERVATION_CONFIRMATION_USER_TEMPLATE = "html/reservation-confirmation-rider";
     private static final String RESERVATION_CONFIRMATION_OWNER_TEMPLATE = "html/reservation-confirmation-owner";
@@ -77,7 +75,7 @@ public class EmailServiceImpl implements EmailService {
     }
 
     /** Shared reservation fields; CTA variables are added by the caller (templates differ). */
-    private Context buildReservationNotificationContext(final ReservationConfirmationPayload payload, final Locale mailLocale) {
+    private Context buildReservationNotificationContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
         final Context ctx = new Context(mailLocale);
         setHtmlLangFromLocale(ctx, mailLocale);
         ctx.setVariable("reservationTotal", payload.getReservationTotal());
@@ -94,7 +92,7 @@ public class EmailServiceImpl implements EmailService {
         return ctx;
     }
 
-    private Context buildReservationConfirmationMailContext(final ReservationConfirmationPayload payload, final Locale mailLocale) {
+    private Context buildReservationConfirmationMailContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
         ctx.setVariable("ctaUrlRider", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId()));
         ctx.setVariable("ctaUrlOwner", mailPublicUrls.absolutePath("/my-listings/" + payload.getListingId()));
@@ -102,41 +100,60 @@ public class EmailServiceImpl implements EmailService {
     }
 
     /** Cancellation / reminder rider templates use {@code ctaUrl} (reservation detail). */
-    private Context buildReservationCancellationRiderMailContext(final ReservationConfirmationPayload payload, final Locale mailLocale) {
+    private Context buildReservationCancellationRiderMailContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
         ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId()));
         return ctx;
     }
 
     /** Cancellation owner template uses {@code ctaUrl} (host listings). */
-    private Context buildReservationCancellationOwnerMailContext(final ReservationConfirmationPayload payload, final Locale mailLocale) {
+    private Context buildReservationCancellationOwnerMailContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
         ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-listings/" + payload.getListingId()));
         return ctx;
     }
 
-    @Autowired
-    private Environment environment;
+    private final Environment environment;
+    private final MailPublicUrls mailPublicUrls;
+    private final JavaMailSender mailSender;
+    private final MessageSource emailMessageSource;
+    private final TemplateEngine htmlTemplateEngine;
 
-    @Autowired
-    private MailPublicUrls mailPublicUrls;
+    public EmailServiceImpl(
+            final Environment environment,
+            final MailPublicUrls mailPublicUrls,
+            final JavaMailSender mailSender,
+            @Qualifier("emailMessageSource") final MessageSource emailMessageSource,
+            @Qualifier("emailTemplateEngine") final TemplateEngine htmlTemplateEngine) {
+        this.environment = environment;
+        this.mailPublicUrls = mailPublicUrls;
+        this.mailSender = mailSender;
+        this.emailMessageSource = emailMessageSource;
+        this.htmlTemplateEngine = htmlTemplateEngine;
+    }
 
-    @Autowired
-    private JavaMailSender mailSender;
+    /** Invalid call site: log once and do not send mail. */
+    private static boolean skipBecauseNullPayload(final Object payload, final String method) {
+        if (payload != null) {
+            return false;
+        }
+        LOGGER.atError().log("{} called with null payload", method);
+        return true;
+    }
 
-    @Autowired
-    @Qualifier("emailMessageSource")
-    private MessageSource emailMessageSource;
-
-    @Autowired
-    @Qualifier("emailTemplateEngine")
-    private TemplateEngine htmlTemplateEngine;
+    /** @return true when listing-deletion mail should be skipped. */
+    private static boolean skipBecauseNullOrEmptyReservations(final List<ReservationConfirmationEmailPayload> list) {
+        if (list != null && !list.isEmpty()) {
+            return false;
+        }
+        LOGGER.atError().log("sendListingDeletionEmail called with null or empty reservationsToCancel");
+        return true;
+    }
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendReservationConfirmationEmail(final ReservationConfirmationPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendReservationConfirmationEmail called with null payload");
+    public void sendReservationConfirmationEmail(final ReservationConfirmationEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendReservationConfirmationEmail")) {
             return;
         }
 
@@ -155,9 +172,8 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendRiderReservationConfirmedAfterPaymentProof(final ReservationConfirmationPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendRiderReservationConfirmedAfterPaymentProof called with null payload");
+    public void sendRiderReservationConfirmedAfterPaymentProof(final ReservationConfirmationEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendRiderReservationConfirmedAfterPaymentProof")) {
             return;
         }
         final Context ctx = buildReservationConfirmationMailContext(payload, payload.getMessageLocale());
@@ -251,9 +267,8 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendReservationReminderEmail(final ReservationConfirmationPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendReservationConfirmationEmail called with null payload");
+    public void sendReservationReminderEmail(final ReservationConfirmationEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendReservationReminderEmail")) {
             return;
         }
 
@@ -274,7 +289,7 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private void sendReservationConfirmationToClient(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+    private void sendReservationConfirmationToClient(final ReservationConfirmationEmailPayload payload, Context ctx) throws EmailMessagingException {
         runMail(() -> {
 
             ctx.setVariable("ownerEmail", payload.getOwnerEmail());
@@ -288,7 +303,7 @@ public class EmailServiceImpl implements EmailService {
         });
     }
 
-    private void sendReservationConfirmationToOwner(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+    private void sendReservationConfirmationToOwner(final ReservationConfirmationEmailPayload payload, Context ctx) throws EmailMessagingException {
         runMail(() -> {
             ctx.setVariable("riderEmail", payload.getRecipientEmail());
 
@@ -304,9 +319,8 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendReservationCancellationEmail(final ReservationConfirmationPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendReservationCancellationEmail called with null payload");
+    public void sendReservationCancellationEmail(final ReservationConfirmationEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendReservationCancellationEmail")) {
             return;
         }
 
@@ -326,8 +340,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async("mailTaskExecutor")
     public void sendRiderReturnReminderEmail(final RiderCarReturnEmailPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendRiderReturnReminderEmail called with null payload");
+        if (skipBecauseNullPayload(payload, "sendRiderReturnReminderEmail")) {
             return;
         }
         final Locale mailLocale = payload.getMessageLocale();
@@ -348,8 +361,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async("mailTaskExecutor")
     public void sendRiderReturnCheckoutEmail(final RiderCarReturnEmailPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendRiderReturnCheckoutEmail called with null payload");
+        if (skipBecauseNullPayload(payload, "sendRiderReturnCheckoutEmail")) {
             return;
         }
         final Locale mailLocale = payload.getMessageLocale();
@@ -370,8 +382,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async("mailTaskExecutor")
     public void sendOwnerPaymentProofReceivedEmail(final OwnerPaymentProofReceivedEmailPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendOwnerPaymentProofReceivedEmail called with null payload");
+        if (skipBecauseNullPayload(payload, "sendOwnerPaymentProofReceivedEmail")) {
             return;
         }
         final Locale mailLocale = payload.getMessageLocale();
@@ -402,8 +413,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async("mailTaskExecutor")
     public void sendRiderReviewInviteEmail(final RiderReviewInviteEmailPayload payload) {
-        if (payload == null) {
-            LOGGER.atError().log("sendRiderReviewInviteEmail called with null payload");
+        if (skipBecauseNullPayload(payload, "sendRiderReviewInviteEmail")) {
             return;
         }
         final Locale mailLocale = payload.getMessageLocale();
@@ -439,19 +449,18 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendListingDeletionEmail(final List<ReservationConfirmationPayload> reservationsToCancel) {
-        if (reservationsToCancel == null || reservationsToCancel.isEmpty()) {
-            LOGGER.atError().log("sendListingDeletionEmail called with null or empty reservationsToCancel");
+    public void sendListingDeletionEmail(final List<ReservationConfirmationEmailPayload> reservationsToCancel) {
+        if (skipBecauseNullOrEmptyReservations(reservationsToCancel)) {
             return;
         }
 
-        final ReservationConfirmationPayload ownerPayload = reservationsToCancel.getFirst();
+        final ReservationConfirmationEmailPayload ownerPayload = reservationsToCancel.getFirst();
         if (ownerPayload == null) {
             LOGGER.atError().log("sendListingDeletionEmail called with a null payload entry");
             return;
         }
 
-        for (final ReservationConfirmationPayload reservationPayload : reservationsToCancel) {
+        for (final ReservationConfirmationEmailPayload reservationPayload : reservationsToCancel) {
             if (reservationPayload == null || reservationPayload.getReservationId() <= 0) {
                 continue;
             }
@@ -488,7 +497,7 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private void sendListingDeletionToOwner(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+    private void sendListingDeletionToOwner(final ReservationConfirmationEmailPayload payload, Context ctx) throws EmailMessagingException {
         runMail(() -> {
 
             ctx.setVariable("ownerEmail", payload.getOwnerEmail());
@@ -502,7 +511,7 @@ public class EmailServiceImpl implements EmailService {
         });
     }
 
-    private void sendReservationCancellationToClient(final ReservationConfirmationPayload payload, Context ctx,
+    private void sendReservationCancellationToClient(final ReservationConfirmationEmailPayload payload, Context ctx,
                                                      String to) throws EmailMessagingException {
         runMail(() -> {
 
@@ -517,7 +526,7 @@ public class EmailServiceImpl implements EmailService {
         });
     }
 
-    private void sendReservationCancellationToOwner(final ReservationConfirmationPayload payload, Context ctx) throws EmailMessagingException {
+    private void sendReservationCancellationToOwner(final ReservationConfirmationEmailPayload payload, Context ctx) throws EmailMessagingException {
         runMail(() -> {
             ctx.setVariable("riderEmail", payload.getRecipientEmail());
 

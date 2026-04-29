@@ -8,8 +8,8 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
 /**
- * Cálculo de la primera fecha de disponibilidad coherente con la regla de anticipación del retiro
- * (configurable en la aplicación, p. ej. {@code app.reservation.pickup-lead-hours}).
+ * First availability wall-calendar day consistent with the pickup lead-time rule
+ * (configurable, e.g. {@code app.reservation.pickup-lead-hours}).
  */
 public final class RiderPickupLeadTime {
 
@@ -17,10 +17,10 @@ public final class RiderPickupLeadTime {
     }
 
     /**
-     * Primer día de calendario (muro) cuyo retiro a la hora publicada del aviso ya cumple
+     * First wall-calendar day on which pickup at the listing's published time satisfies
      * {@code pickupInstant &gt; nowInstant.plus(pickupLeadHours, HOURS)}.
      *
-     * @param pickupLeadHours horas mínimas entre "ahora" y el instante de retiro (≥ 1)
+     * @param pickupLeadHours minimum hours between "now" and pickup instant (≥ 1)
      */
     public static LocalDate minListingAvailabilityFirstDayInclusive(
             final LocalTime listingPickupWallTime,

@@ -10,7 +10,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.webapp.security.RydenUserDetails;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 public final class WebAuthUtils {
 

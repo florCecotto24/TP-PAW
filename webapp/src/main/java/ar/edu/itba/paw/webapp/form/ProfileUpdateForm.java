@@ -9,7 +9,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
-public class ProfileUpdateForm {
+public final class ProfileUpdateForm {
 
     @NotBlank(message = "{profile.forename.required}", groups = ValidationGroups.OnProfileUpdate.class)
     @UserValidationMaxLength(

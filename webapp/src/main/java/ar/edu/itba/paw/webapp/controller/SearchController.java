@@ -7,7 +7,6 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -24,7 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
-public class SearchController {
+public final class SearchController {
 
     private static final String DEFAULT_SORT = "date,desc";
     private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
@@ -32,7 +31,6 @@ public class SearchController {
     private final ListingService listingService;
     private final LocationService locationService;
 
-    @Autowired
     public SearchController(final ListingService listingService, final LocationService locationService) {
         this.listingService = listingService;
         this.locationService = locationService;

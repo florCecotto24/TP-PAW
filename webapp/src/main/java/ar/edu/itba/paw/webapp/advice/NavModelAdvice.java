@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.advice;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -10,11 +9,10 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @ControllerAdvice
-public class NavModelAdvice {
+public final class NavModelAdvice {
 
     private final UserService userService;
 
-    @Autowired
     public NavModelAdvice(final UserService userService) {
         this.userService = userService;
     }

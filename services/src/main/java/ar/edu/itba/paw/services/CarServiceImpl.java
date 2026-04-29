@@ -11,7 +11,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @Service
-public class CarServiceImpl implements CarService {
+public final class CarServiceImpl implements CarService {
 
     private final CarDao carDao;
 

@@ -18,7 +18,6 @@ import java.util.stream.Stream;
 
 import javax.servlet.http.HttpSession;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
@@ -35,7 +34,7 @@ import ar.edu.itba.paw.webapp.form.PublishCarForm;
  * The session only saves references to temporary files on disk; the image bytes are not serialized in the session.
  */
 @Component
-public class PublishCarPictureSessionStash {
+public final class PublishCarPictureSessionStash {
 
     /** Same key as historically used by {@code PublishCarFormController} (current sessions). */
     private static final String SESSION_ATTRIBUTE =
@@ -46,7 +45,6 @@ public class PublishCarPictureSessionStash {
 
     private final LocaleMessages localeMessages;
 
-    @Autowired
     public PublishCarPictureSessionStash(final LocaleMessages localeMessages) {
         this.localeMessages = localeMessages;
     }

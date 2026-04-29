@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class EmailVerificationCodeJdbcDao implements EmailVerificationCodeDao {
+public final class EmailVerificationCodeJdbcDao implements EmailVerificationCodeDao {
 
     private final JdbcTemplate jdbcTemplate;
 

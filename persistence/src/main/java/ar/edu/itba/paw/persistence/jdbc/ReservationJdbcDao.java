@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public class ReservationJdbcDao implements ReservationDao {
+public final class ReservationJdbcDao implements ReservationDao {
 
     private static final String[] ACTIVE_OVERLAP_STATUSES = {"pending", "accepted", "started"};
 

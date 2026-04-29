@@ -8,7 +8,7 @@ import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -31,23 +31,23 @@ import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.StoredFileService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.ProfileUpdateForm;
-import ar.edu.itba.paw.webapp.security.RydenUserDetails;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
-import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 @Controller
 @RequestMapping("/profile")
-public class ProfileController {
+public final class ProfileController {
 
     private final UserService userService;
     private final LocaleMessages localeMessages;
@@ -58,7 +58,6 @@ public class ProfileController {
     private final StoredFileService storedFileService;
     private final SecurityContextRepository securityContextRepository;
 
-    @Autowired
     public ProfileController(
             final UserService userService,
             final LocaleMessages localeMessages,

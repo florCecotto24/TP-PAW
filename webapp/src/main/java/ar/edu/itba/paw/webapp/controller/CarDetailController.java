@@ -1,37 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Listing;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.dto.ListingCard;
-import ar.edu.itba.paw.models.dto.ListingDetail;
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
-import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
-import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.services.ReviewService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
-import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
-import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
-import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.support.RequestContextUtils;
-import org.springframework.web.servlet.view.RedirectView;
-
-import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.Instant;
@@ -44,8 +12,41 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.support.RequestContextUtils;
+import org.springframework.web.servlet.view.RedirectView;
+
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
+import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
+import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
+import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
+
 @Controller
-public class CarDetailController {
+public final class CarDetailController {
 
     private static final int SIMILAR_LISTINGS_LIMIT = 4;
     private static final int LISTING_REVIEWS_PAGE_SIZE = 5;
@@ -57,7 +58,6 @@ public class CarDetailController {
     private final ReviewService reviewService;
     private final UserService userService;
 
-    @Autowired
     public CarDetailController(
             final ListingService listingService,
             final ReservationService reservationService,

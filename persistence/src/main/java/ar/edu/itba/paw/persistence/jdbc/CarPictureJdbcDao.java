@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public class CarPictureJdbcDao implements CarPictureDao {
+public final class CarPictureJdbcDao implements CarPictureDao {
 
     private static final String SELECT_COLUMNS =
             "id, car_id, image_id, display_order, created_at, updated_at";

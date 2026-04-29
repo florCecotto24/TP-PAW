@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PaymentProofSweepScheduler {
+public final class PaymentProofSweepScheduler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentProofSweepScheduler.class);
 

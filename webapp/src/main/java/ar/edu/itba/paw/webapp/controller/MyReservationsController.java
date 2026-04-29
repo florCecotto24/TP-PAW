@@ -24,7 +24,6 @@ import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
@@ -57,7 +56,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Controller
-public class MyReservationsController {
+public final class MyReservationsController {
 
     private static final int PAGE_SIZE = 8;
     private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
@@ -73,7 +72,6 @@ public class MyReservationsController {
     private final ReviewService reviewService;
     private final UserService userService;
 
-    @Autowired
     public MyReservationsController(
             final ReservationService reservationService,
             final ListingService listingService,

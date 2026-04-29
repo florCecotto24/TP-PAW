@@ -1,14 +1,18 @@
 package ar.edu.itba.paw.exception;
 
 /**
- * Keys for {@code exception-messages.properties} (and locale variants). Keep in sync with that file.
+ * Message keys for {@code messages/exception/exception-messages.properties} and locale files
+ * ({@code messages/exception/exception-messages_es.properties}, empty {@code messages/exception/exception-messages_en.properties}). Keep in sync.
+ * <p>
+ * String constants are used (rather than a Java {@code enum}) so keys match the i18n bundle files directly; an
+ * {@code enum} would add indirection and boilerplate here.
  */
 public final class MessageKeys {
 
     private MessageKeys() {
     }
 
-    /* reservation */
+    // reservation
     public static final String RESERVATION_CONFLICT_OVERLAP = "reservation.conflict.overlap";
     public static final String RESERVATION_RIDER_LISTING_NOT_FOUND = "reservation.rider.listingNotFound";
     public static final String RESERVATION_RIDER_DATES_REQUIRED = "reservation.rider.datesRequired";
@@ -39,7 +43,7 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_USER_NOT_FOUND = "reservation.rider.userNotFound";
     public static final String RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE = "reservation.rider.ownerPaymentDetailsUnavailable";
 
-    /* user */
+    // user
     public static final String USER_EMAIL_ALREADY_EXISTS = "user.email.alreadyExists";
     public static final String USER_ACCOUNT_NOT_FOUND = "user.account.notFound";
     public static final String USER_PROFILE_PHONE_INVALID = "user.profile.phoneInvalid";
@@ -61,7 +65,7 @@ public final class MessageKeys {
     public static final String USER_PROFILE_DOCUMENT_INVALID = "user.profile.document.invalid";
     public static final String USER_PROFILE_DOCUMENT_TOO_LARGE = "user.profile.document.tooLarge";
 
-    /* listing */
+    // listing
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";
     public static final String LISTING_AVAILABILITY_INCLUDES_PAST_DATES = "listing.availability.includesPastDates";
@@ -73,12 +77,12 @@ public final class MessageKeys {
     public static final String LISTING_PICKUP_LOCATION_REQUIRED = "listing.pickupLocation.required";
     public static final String LISTING_PICKUP_STREET_NUMBER_DIGITS_ONLY = "listing.pickupStreetNumber.digitsOnly";
     public static final String LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS = "listing.pickupStreetNumber.maxDigits";
-    /* image */
+    // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";
     public static final String IMAGE_CONTENT_TYPE_NOT_IMAGE = "image.contentType.notImage";
 
-    /* publish form */
+    // publish form
     public static final String PUBLISH_IMAGES_READ = "publish.images.read";
     public static final String PUBLISH_FAILED = "publish.failed";
 }

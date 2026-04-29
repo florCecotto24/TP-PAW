@@ -6,7 +6,7 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
 @ReservationWithinMaxBillableDays(groups = ValidationGroups.OnReservationSubmit.class)
-public class ReservationForm {
+public final class ReservationForm {
 
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private Long listingId;

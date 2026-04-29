@@ -8,6 +8,9 @@ import org.springframework.core.env.Environment;
  */
 public final class UploadBinaryMegabyte {
 
+    private UploadBinaryMegabyte() {
+    }
+
     public static final String PROPERTY_BYTES_PER_BINARY_MB = "app.upload.bytes-per-binary-megabyte";
     public static final String PROPERTY_MAX_IMAGE_MB = "app.upload.max-image-megabytes";
     public static final String PROPERTY_MAX_PAYMENT_RECEIPT_MB = "app.upload.max-payment-receipt-megabytes";
@@ -15,9 +18,6 @@ public final class UploadBinaryMegabyte {
     public static final String PROPERTY_MAX_MULTIPART_REQUEST_MB = "app.upload.max-multipart-request-megabytes";
 
     public static final int DEFAULT_BYTES_PER_BINARY_MB = 1024 * 1024;
-
-    private UploadBinaryMegabyte() {
-    }
 
     public static long bytesPerBinaryMegabyte(final Environment environment) {
         final Integer v = environment.getProperty(PROPERTY_BYTES_PER_BINARY_MB, Integer.class);

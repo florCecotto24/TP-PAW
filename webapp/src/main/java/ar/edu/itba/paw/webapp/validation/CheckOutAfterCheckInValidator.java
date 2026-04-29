@@ -5,7 +5,6 @@ import java.util.Locale;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -16,12 +15,11 @@ import ar.edu.itba.paw.webapp.form.ListingTimeWindow;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
 @Component
-public class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, ListingTimeWindow> {
+public final class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, ListingTimeWindow> {
 
     private final MessageSource messageSource;
     private final ListingCheckInOutPolicy listingCheckInOutPolicy;
 
-    @Autowired
     public CheckOutAfterCheckInValidator(
             final MessageSource messageSource,
             final ListingCheckInOutPolicy listingCheckInOutPolicy) {

@@ -14,7 +14,7 @@ import ar.edu.itba.paw.persistence.ImageDao;
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
 @Service
-public class ImageServiceImpl implements ImageService {
+public final class ImageServiceImpl implements ImageService {
 
     private final ImageDao imageDao;
     private final long maxImageBytes;

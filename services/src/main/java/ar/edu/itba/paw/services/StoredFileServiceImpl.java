@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class StoredFileServiceImpl implements StoredFileService {
+public final class StoredFileServiceImpl implements StoredFileService {
 
     private final StoredFileDao storedFileDao;
 

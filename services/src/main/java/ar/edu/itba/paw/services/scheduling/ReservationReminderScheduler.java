@@ -17,12 +17,12 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.email.ReservationConfirmationPayload;
+import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
 
 @Component
-public class ReservationReminderScheduler {
+public final class ReservationReminderScheduler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationReminderScheduler.class);
 
@@ -74,6 +74,7 @@ public class ReservationReminderScheduler {
                 final User listingOwner = ownerOpt.get();
                 final String riderLoc = listingService.formatRiderReservationHandoverSummary(listing, reservation);
                 final String ownerLoc = listingService.formatOwnerReservationHandoverSummary(listing);
+<<<<<<< HEAD
                 final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
                         rider.getEmail(),
                         rider.getForename() + " " + rider.getSurname(),
@@ -91,6 +92,26 @@ public class ReservationReminderScheduler {
                         userService.resolveMailLocale(listingOwner.getId()),
                         null);
                 LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId()).log("Queueing reservation reminder email to {} for reservation id={}");
+=======
+                final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
+                        .recipientEmail(rider.getEmail())
+                        .riderFullName(rider.getForename() + " " + rider.getSurname())
+                        .reservationId(reservation.getId())
+                        .listingId(reservation.getListingId())
+                        .vehicleLabel(listing.getTitle())
+                        .startDate(reservation.getStartDate())
+                        .endDate(reservation.getEndDate())
+                        .riderHandoverLocation(riderLoc)
+                        .ownerHandoverLocation(ownerLoc)
+                        .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
+                        .ownerEmail(listingOwner.getEmail())
+                        .reservationTotal(reservation.getTotalPrice().toString())
+                        .riderMailLocale(userService.resolveMailLocale(rider.getId()))
+                        .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
+                        .build();
+                LOGGER.atInfo().log("Queueing reservation reminder email to " + rider.getEmail()
+                        + " for reservation id=" + reservation.getId());
+>>>>>>> 7b4ad36 (Refactor webapp security, controller boundaries, and tests.)
                 emailService.sendReservationReminderEmail(payload);
             } catch (final Exception e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not send reservation reminder email for reservation id={}");

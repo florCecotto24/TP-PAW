@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,19 +22,18 @@ import ar.edu.itba.paw.services.PasswordResetService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
-import ar.edu.itba.paw.webapp.security.ForgotPasswordSessionAttributes;
+import ar.edu.itba.paw.webapp.security.http.ForgotPasswordSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
 @RequestMapping("/forgot-password")
-public class ForgotPasswordController {
+public final class ForgotPasswordController {
 
     private final PasswordResetService passwordResetService;
     private final LocaleMessages localeMessages;
     private final UserValidationPolicy userValidationPolicy;
 
-    @Autowired
     public ForgotPasswordController(
             final PasswordResetService passwordResetService,
             final LocaleMessages localeMessages,
@@ -80,7 +78,7 @@ public class ForgotPasswordController {
             return "redirect:/forgot-password";
         }
         try {
-            final boolean userFound = passwordResetService.requestCode(email.trim(), LocaleContextHolder.getLocale());
+            final boolean userFound = passwordResetService.initiatePasswordReset(email.trim(), LocaleContextHolder.getLocale());
             if (!userFound) {
                 redirectAttributes.addFlashAttribute("forgotGenericHint", Boolean.TRUE);
                 return "redirect:/forgot-password";
@@ -135,7 +133,7 @@ public class ForgotPasswordController {
         }
         final String email = ((String) rawEmail).trim();
         try {
-            passwordResetService.resetPassword(email, form.getCode(), form.getPassword(), form.getPasswordConfirm());
+            passwordResetService.completePasswordReset(email, form.getCode(), form.getPassword(), form.getPasswordConfirm());
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("forgotResetErrorMessage", localeMessages.msg(e));
             return "redirect:/forgot-password/reset";

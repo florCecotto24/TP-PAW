@@ -12,7 +12,7 @@ import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.persistence.CarPictureDao;
 
 @Service
-public class CarPictureServiceImpl implements CarPictureService{
+public final class CarPictureServiceImpl implements CarPictureService {
 
     private final CarPictureDao carPictureDao;
     private final ImageService imageService;

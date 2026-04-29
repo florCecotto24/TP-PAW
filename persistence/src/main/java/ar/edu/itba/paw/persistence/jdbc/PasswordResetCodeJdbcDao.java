@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class PasswordResetCodeJdbcDao implements PasswordResetCodeDao {
+public final class PasswordResetCodeJdbcDao implements PasswordResetCodeDao {
 
     private final JdbcTemplate jdbcTemplate;
 

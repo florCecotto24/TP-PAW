@@ -24,7 +24,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnPublishCar.class)
-public class PublishCarForm implements ListingTimeWindow {
+public final class PublishCarForm implements ListingTimeWindow {
 
     @NotBlank(message = "{validation.brand.notBlank}", groups = ValidationGroups.OnPublishCar.class)
     @Size(message = "{validation.brand.size}", min = 2, max = 50, groups = ValidationGroups.OnPublishCar.class)
@@ -35,7 +35,6 @@ public class PublishCarForm implements ListingTimeWindow {
 
     @Size(min = 6, max = 10, message = "{validation.plate.size}", groups = ValidationGroups.OnPublishCar.class)
     @NotBlank(message = "{validation.plate.notBlank}", groups = ValidationGroups.OnPublishCar.class)
-    // Acá podríamos poner las validaciones de las patentes argentinas (dividir entre nuevas y viejas)
     @NoPunctuation(groups = ValidationGroups.OnPublishCar.class)
     private String plate;
 

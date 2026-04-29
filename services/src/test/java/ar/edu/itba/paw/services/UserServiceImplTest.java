@@ -50,6 +50,9 @@ public class UserServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private EmailVerificationService emailVerificationService;
+
     private UserServiceImpl userService;
     private ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
 
@@ -66,7 +69,8 @@ public class UserServiceImplTest {
                 emailService,
                 passwordEncoder,
                 profileDocumentUploadPolicy,
-                UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"));
+                UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"),
+                emailVerificationService);
     }
 
     @Test

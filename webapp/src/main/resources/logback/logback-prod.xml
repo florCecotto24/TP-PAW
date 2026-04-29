@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Production loggers: included from classpath root logback.xml -->
+<included>
+    <!-- Suppress DEBUG from common frameworks in production. -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.apache" level="WARN"/>
+    <logger name="com.zaxxer" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+
+    <!-- Application code: INFO+ to PAW files (INFO in -app-info; WARN/ERROR in -app-warn). No DEBUG. -->
+    <logger name="ar.edu.itba.paw" level="INFO" additivity="false">
+        <appender-ref ref="APP_INFO"/>
+        <appender-ref ref="APP_WARN"/>
+    </logger>
+
+    <!-- Optional: persistence layer in its own files (uncomment to enable package-specific files). -->
+    <!--
+    <logger name="ar.edu.itba.paw.persistence" level="INFO" additivity="false">
+        <appender-ref ref="APP_INFO"/>
+        <appender-ref ref="APP_WARN"/>
+    </logger>
+    -->
+
+    <!--
+      Root: INFO allows third-party log events to be evaluated; only PLATFORM_WARN appender keeps WARN+.
+      Application packages use additivity=false so they do not duplicate into platform file.
+    -->
+    <root level="INFO">
+        <appender-ref ref="PLATFORM_WARN"/>
+    </root>
+</included>

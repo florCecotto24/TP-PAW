@@ -54,7 +54,7 @@ import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @Service
-public class ListingServiceImpl implements ListingService {
+public final class ListingServiceImpl implements ListingService {
 
     private final ListingDao listingDao;
     private final ListingAvailabilityDao listingAvailabilityDao;

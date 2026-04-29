@@ -1,11 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import java.util.Optional;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
@@ -24,36 +21,31 @@ import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.services.EmailVerificationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
-import ar.edu.itba.paw.webapp.security.RegistrationSessionAttributes;
-import ar.edu.itba.paw.webapp.security.SessionLoginService;
+import ar.edu.itba.paw.webapp.security.auth.SessionLoginService;
+import ar.edu.itba.paw.webapp.security.http.RegistrationSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
-public class RegistrationController {
+public final class RegistrationController {
 
     private final UserService userService;
-    private final EmailVerificationService emailVerificationService;
     private final LocaleMessages localeMessages;
     private final UserValidationPolicy userValidationPolicy;
     private final SessionLoginService sessionLoginService;
     private final RequestCache requestCache;
 
-    @Autowired
     public RegistrationController(
             final UserService userService,
-            final EmailVerificationService emailVerificationService,
             final LocaleMessages localeMessages,
             final UserValidationPolicy userValidationPolicy,
             final SessionLoginService sessionLoginService,
             final RequestCache requestCache) {
         this.userService = userService;
-        this.emailVerificationService = emailVerificationService;
         this.localeMessages = localeMessages;
         this.userValidationPolicy = userValidationPolicy;
         this.sessionLoginService = sessionLoginService;
@@ -129,14 +121,13 @@ public class RegistrationController {
             return "register";
         }
         try {
-            final User created = userService.registerUser(
+            final User created = userService.registerUserRequiringAccountConfirmation(
                     registrationAccountForm.getEmail(),
                     registrationAccountForm.getForename(),
                     registrationAccountForm.getSurname(),
                     registrationAccountForm.getPassword(),
-                    registrationAccountForm.getPasswordConfirm());
-            emailVerificationService.issueFreshVerificationCode(
-                    created.getId(), created.getEmail(), LocaleContextHolder.getLocale());
+                    registrationAccountForm.getPasswordConfirm(),
+                    LocaleContextHolder.getLocale());
             redirectAttributes.addFlashAttribute("verifyEmailHint", created.getEmail());
             return "redirect:/verify-email";
         } catch (final EmailAlreadyExistsException e) {
@@ -171,8 +162,8 @@ public class RegistrationController {
                 if (pending instanceof String && StringUtils.hasText((String) pending)) {
                     final String pendingEmail = ((String) pending).trim();
                     model.addAttribute("verifyEmailHint", pendingEmail);
-                    userService.findByEmail(pendingEmail).ifPresent(u -> emailVerificationService.ensurePendingVerificationCode(
-                            u.getId(), u.getEmail(), LocaleContextHolder.getLocale()));
+                    userService.ensureAccountConfirmationPrerequisites(
+                            pendingEmail, LocaleContextHolder.getLocale());
                 }
             }
         } else if (StringUtils.hasText(email)) {
@@ -194,15 +185,12 @@ public class RegistrationController {
             redirectAttributes.addFlashAttribute("verifyFieldError", Boolean.TRUE);
             return "redirect:/verify-email";
         }
-        final Optional<User> userOpt = userService.findByEmail(email.trim());
-        if (userOpt.isEmpty()) {
-            redirectAttributes.addFlashAttribute("verifyErrorMessage", localeMessages.msg("verifyEmail.resendUnknown"));
-            redirectAttributes.addFlashAttribute("verifyEmail", email.trim());
-            return "redirect:/verify-email";
-        }
-        final User user = userOpt.get();
         try {
-            emailVerificationService.resendVerificationCode(user.getId(), user.getEmail(), LocaleContextHolder.getLocale());
+            if (!userService.requestAccountConfirmationResend(email.trim(), LocaleContextHolder.getLocale())) {
+                redirectAttributes.addFlashAttribute("verifyErrorMessage", localeMessages.msg("verifyEmail.resendUnknown"));
+                redirectAttributes.addFlashAttribute("verifyEmail", email.trim());
+                return "redirect:/verify-email";
+            }
             redirectAttributes.addFlashAttribute("verifyResent", Boolean.TRUE);
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("verifyErrorMessage", localeMessages.msg(e));
@@ -224,7 +212,7 @@ public class RegistrationController {
             return "redirect:/verify-email";
         }
         try {
-            final long userId = emailVerificationService.verifyEmailAndConsumeCode(email, code.trim());
+            final long userId = userService.completeAccountConfirmation(email, code.trim());
             final HttpSession session = request.getSession(false);
             if (session != null) {
                 session.removeAttribute(RegistrationSessionAttributes.PENDING_VERIFY_EMAIL);

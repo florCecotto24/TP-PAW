@@ -11,7 +11,7 @@ import ar.edu.itba.paw.services.ReservationService;
  * Cron expressions and zone are configured under {@code app.scheduler.return-emails.*}.
  */
 @Component
-public class ReservationReturnEmailScheduler {
+public final class ReservationReturnEmailScheduler {
 
     private final ReservationService reservationService;
 

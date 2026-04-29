@@ -16,7 +16,6 @@ import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -34,7 +33,7 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
 @Controller
 @RequestMapping("/reservation")
-public class ReservationFormController {
+public final class ReservationFormController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationFormController.class);
 
@@ -46,7 +45,6 @@ public class ReservationFormController {
     private final WallDateTimeUiFormatter wallDateTimeUiFormatter;
     private final UserService userService;
 
-    @Autowired
     public ReservationFormController(
             final ListingService listingService,
             final ReservationService reservationService,

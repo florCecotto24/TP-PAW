@@ -1,30 +1,28 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.dto.ListingCard;
-import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
-import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 
 @Controller
-public class HomeController {
+public final class HomeController {
 
     private static final int CAROUSEL_PAGE_SIZE = 8;
 
     private final ListingService listingService;
 
-    @Autowired
     public HomeController(final ListingService listingService) {
         this.listingService = listingService;
     }

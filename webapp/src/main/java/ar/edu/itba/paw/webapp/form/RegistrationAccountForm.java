@@ -10,7 +10,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
 @RegistrationPasswordRules(groups = ValidationGroups.OnRegistration.class)
-public class RegistrationAccountForm implements RegistrationPasswordConfirmFields {
+public final class RegistrationAccountForm implements RegistrationPasswordConfirmFields {
 
     @NotBlank(message = "{register.forename.required}", groups = ValidationGroups.OnRegistration.class)
     @UserValidationMaxLength(

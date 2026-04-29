@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public class ImageJdbcDao implements ImageDao {
+public final class ImageJdbcDao implements ImageDao {
 
     private static final String SELECT_IMAGE_BY_ID =
             "SELECT id, image_name, content_type, byte_array FROM images WHERE id = ?";

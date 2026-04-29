@@ -25,7 +25,7 @@ import org.thymeleaf.templateresolver.StringTemplateResolver;
 
 
 @Configuration
-@PropertySource(value = "classpath:mail/emailconfig.properties", encoding = "UTF-8")
+@PropertySource(value = "classpath:mail/config/emailconfig.properties", encoding = "UTF-8")
 public class SpringMailConfig implements ApplicationContextAware, EnvironmentAware {
 
     private ApplicationContext applicationContext;

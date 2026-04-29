@@ -41,7 +41,7 @@ import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
 @Repository
-public class ListingJdbcDao implements ListingDao {
+public final class ListingJdbcDao implements ListingDao {
 
     private static final String HOME_SECTION_CHEAPEST = "C";
     private static final String HOME_SECTION_RECENT = "R";

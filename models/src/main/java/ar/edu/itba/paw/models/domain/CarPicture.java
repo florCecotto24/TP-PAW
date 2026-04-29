@@ -2,7 +2,7 @@ package ar.edu.itba.paw.models.domain;
 
 import java.time.OffsetDateTime;
 
-public class CarPicture {
+public final class CarPicture {
     private final long id;
     private final long carId;
     private final long imageId;

@@ -252,7 +252,7 @@
                 </c:if>
             </div>
 
-            <%-- Fila 1: stats de estado --%>
+            <%-- Row 1: status stats --%>
             <div class="row g-2 mb-4">
                 <div class="col-6 col-sm-4 col-lg-2">
                     <div class="p-3 rounded-3 text-center bg-body-tertiary border">
@@ -292,7 +292,7 @@
                 </div>
             </div>
 
-            <%-- Fila 2: stats financieras y de actividad --%>
+            <%-- Row 2: financial and activity stats --%>
             <div class="row g-3 pt-2 border-top">
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">

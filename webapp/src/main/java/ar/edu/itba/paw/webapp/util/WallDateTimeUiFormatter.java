@@ -10,7 +10,7 @@ import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 
 @Component
-public class WallDateTimeUiFormatter {
+public final class WallDateTimeUiFormatter {
 
     public String formatReservationDateTimeInput(final String raw) {
         final Locale locale = LocaleContextHolder.getLocale();

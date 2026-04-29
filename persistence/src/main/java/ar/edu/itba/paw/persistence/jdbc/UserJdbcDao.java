@@ -24,7 +24,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.security.UserRole;
 
 @Repository
-public class UserJdbcDao implements UserDao {
+public final class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =
             "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, latest_locale, cbu, member_since, "

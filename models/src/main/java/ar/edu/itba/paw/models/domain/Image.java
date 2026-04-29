@@ -2,7 +2,7 @@ package ar.edu.itba.paw.models.domain;
 
 import java.util.Arrays;
 
-public class Image {
+public final class Image {
     private final long id;
     private final String name;
     private final String contentType;

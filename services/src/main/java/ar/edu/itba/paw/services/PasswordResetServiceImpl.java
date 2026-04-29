@@ -23,7 +23,7 @@ import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
 import ar.edu.itba.paw.persistence.UserDao;
 
 @Service
-public class PasswordResetServiceImpl implements PasswordResetService {
+public final class PasswordResetServiceImpl implements PasswordResetService {
 
     private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -53,7 +53,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     @Override
     @Transactional
-    public boolean requestCode(final String email, final Locale locale) {
+    public boolean initiatePasswordReset(final String email, final Locale locale) {
         final String normalized = EmailNormalizer.normalize(email);
         final Optional<User> userOpt = userDao.findByEmail(normalized);
         if (userOpt.isEmpty()) {
@@ -75,7 +75,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     @Override
     @Transactional
-    public void resetPassword(
+    public void completePasswordReset(
             final String email,
             final String code,
             final String newPassword,

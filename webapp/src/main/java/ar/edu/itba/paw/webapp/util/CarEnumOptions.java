@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.util;
 
 import ar.edu.itba.paw.models.domain.Car;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -14,7 +13,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
-public class CarEnumOptions {
+public final class CarEnumOptions {
 
     private static final String[] SEARCH_PRICE_BAND_KEYS = {
             "UNDER_5000", "5000_TO_15000", "15000_TO_30000", "OVER_30000"
@@ -22,7 +21,6 @@ public class CarEnumOptions {
 
     private final MessageSource messageSource;
 
-    @Autowired
     public CarEnumOptions(@Qualifier("messageSource") final MessageSource messageSource) {
         this.messageSource = messageSource;
     }

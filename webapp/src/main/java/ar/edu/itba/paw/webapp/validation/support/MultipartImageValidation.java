@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.validation.support;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,12 +14,11 @@ import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
 @Component
-public class MultipartImageValidation {
+public final class MultipartImageValidation {
 
     private final ImageService imageService;
     private final LocaleMessages localeMessages;
 
-    @Autowired
     public MultipartImageValidation(final ImageService imageService, final LocaleMessages localeMessages) {
         this.imageService = imageService;
         this.localeMessages = localeMessages;

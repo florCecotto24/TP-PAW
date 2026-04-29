@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.services;
 
-public class EmailMessagingException extends Exception {
+public final class EmailMessagingException extends Exception {
 
     public EmailMessagingException(final String message) {
         super(message);

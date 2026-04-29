@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.dto;
 
 import java.math.BigDecimal;
 
-public class VehicleCardView {
+public final class VehicleCardView {
     private final long listingId;
     private final String brand;
     private final String model;

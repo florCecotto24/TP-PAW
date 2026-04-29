@@ -11,7 +11,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 @Controller
-public class LoginController {
+public final class LoginController {
 
     @GetMapping("/login")
     public String loginForm(

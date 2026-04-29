@@ -17,7 +17,6 @@ import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
@@ -47,7 +46,7 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/my-listings")
-public class MyListingsController {
+public final class MyListingsController {
 
     private static final int PAGE_SIZE = 8;
     private static final Set<String> OWNER_LISTING_STATUS_WHITELIST = Set.of("active", "paused", "finished");
@@ -61,7 +60,6 @@ public class MyListingsController {
     private final ReservationService reservationService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
 
-    @Autowired
     public MyListingsController(
             final ListingService listingService,
             final LocationService locationService,

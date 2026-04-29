@@ -166,7 +166,7 @@
     });
 })();
 
-/* Funciones modal */
+/* Modal helpers */
 (function () {
 
     var OPEN_CLASS = 'is-open';
@@ -611,8 +611,8 @@
                     return;
                 }
             }
-            /* Tras este listener puede ejecutarse otro (barrio, disponibilidad) que haga preventDefault.
-             * El estado "cargando" solo aplica si el envío no fue cancelado por ningún handler síncrono. */
+            /* Another listener (neighborhood, availability) may run after this one and call preventDefault.
+             * "Loading" state only applies if no synchronous handler cancelled the submit. */
             setTimeout(function () {
                 if (e.defaultPrevented) {
                     return;
@@ -1076,7 +1076,7 @@
     }
 })();
 
-/* Perfil: fecha de nacimiento (Flatpickr single, Y-m-d, coherente con búsqueda/reservas) */
+/* Profile: birth date (Flatpickr single, Y-m-d; aligned with search / reservations) */
 (function () {
     var birthEl = document.getElementById("profileBirthDateInput");
     if (!birthEl || typeof flatpickr === "undefined" || !window.RydenFlatpickrRange) {
@@ -1339,7 +1339,7 @@
     syncAddBtn();
 })();
 
-/* Mostrar / ocultar contraseña (botón .ryden-password-toggle dentro de .input-group) */
+/* Show / hide password (.ryden-password-toggle button inside .input-group) */
 (function () {
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll(".ryden-password-toggle").forEach(function (btn) {
@@ -1381,7 +1381,7 @@
     });
 })();
 
-/* Evita que la rueda del mouse cambie el valor de inputs type="number" al scrollear la página. */
+/* Prevent the mouse wheel from changing type="number" input values when scrolling the page. */
 (function () {
     function bindNoWheelStep(el) {
         if (el.getAttribute("data-ryden-no-wheel") === "1") {
@@ -1408,7 +1408,7 @@
     }
 })();
 
-/* Evita que la rueda del mouse cambie el valor de inputs type="number" al scrollear la página. */
+/* Prevent the mouse wheel from changing type="number" input values when scrolling the page. */
 (function () {
     function bindNoWheelStep(el) {
         if (el.getAttribute("data-ryden-no-wheel") === "1") {

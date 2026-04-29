@@ -52,9 +52,8 @@
   </filter-mapping>
 
   <!--
-    ANTES de Spring Security: con enctype="multipart/form-data", el CsrfFilter
-    necesita que el cuerpo ya esté parseado para leer _csrf; si no, responde 403
-    aunque el usuario esté autenticado.
+    Before Spring Security: for enctype="multipart/form-data", CsrfFilter must read the body
+    after it is parsed to obtain _csrf; otherwise it returns 403 even for authenticated users.
   -->
   <filter>
     <filter-name>multipartFilter</filter-name>
@@ -78,7 +77,7 @@
     <url-pattern>/*</url-pattern>
   </filter-mapping>
 
-  <!-- Acá vamos a definir los servlets y a qué url mappean -->
+  <!-- Dispatcher servlet: Spring MVC; maps to url-pattern / -->
   <servlet>
     <servlet-name>dispatcher</servlet-name>
     <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>

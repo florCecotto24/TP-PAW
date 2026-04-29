@@ -37,10 +37,10 @@ public final class BookableWallRangesJson {
     }
 
     /**
-     * Recorta el inicio de cada segmento para que el primer día seleccionable como retiro cumpla la misma regla
-     * que {@code ReservationServiceImpl}: instante de retiro &gt; {@code minPickupExclusive}.
+     * Trims the start of each segment so the first day selectable as pickup matches the same rule as
+     * {@code ReservationServiceImpl}: pickup instant &gt; {@code minPickupExclusive}.
      *
-     * @param pickupWallTime hora de retiro publicada (muro); si es null se usa 10:00 como en el formulario
+     * @param pickupWallTime published pickup time (wall zone); if null, defaults to 10:00 like the form
      */
     public static List<LocalDateSegment> clipSegmentsToMinPickupInstant(
             final List<LocalDateSegment> merged,

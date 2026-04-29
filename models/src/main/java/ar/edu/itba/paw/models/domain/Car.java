@@ -2,7 +2,7 @@ package ar.edu.itba.paw.models.domain;
 
 import java.util.Objects;
 
-public class Car {
+public final class Car {
     public interface PrettyNamed {
         default String prettyName() {
             return ((Enum<?>) this).name().replace("_", " ").toLowerCase();

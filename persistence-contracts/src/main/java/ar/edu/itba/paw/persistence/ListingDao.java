@@ -8,12 +8,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
-import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 
 public interface ListingDao {
 
@@ -32,7 +32,7 @@ public interface ListingDao {
     Optional<Listing> getListingById(long id);
 
     /**
-     * {@code check_in_time} por listado (para reglas de anticipación del retiro en búsqueda / browse).
+     * {@code check_in_time} per listing (pickup lead-time rules in search / browse).
      */
     Map<Long, LocalTime> findCheckInTimeByListingIds(Collection<Long> listingIds);
 

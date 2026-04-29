@@ -10,7 +10,7 @@ import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.common.util.Levenshtein;
 
 /**
- * Aproximated matching of search text tokens with neighborhood names (Levenshtein bounded).
+ * Approximate matching of search text tokens with neighborhood names (Levenshtein bounded).
  */
 public final class NeighborhoodNameMatcher {
 

@@ -5,7 +5,6 @@ import java.util.Locale;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -16,7 +15,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
 @Component
-public class UserValidationMaxLengthValidator implements ConstraintValidator<UserValidationMaxLength, String> {
+public final class UserValidationMaxLengthValidator implements ConstraintValidator<UserValidationMaxLength, String> {
 
     private final UserValidationPolicy policy;
     private final MessageSource messageSource;
@@ -24,7 +23,6 @@ public class UserValidationMaxLengthValidator implements ConstraintValidator<Use
     private Kind kind;
     private String messageKey;
 
-    @Autowired
     public UserValidationMaxLengthValidator(final UserValidationPolicy policy, final MessageSource messageSource) {
         this.policy = policy;
         this.messageSource = messageSource;

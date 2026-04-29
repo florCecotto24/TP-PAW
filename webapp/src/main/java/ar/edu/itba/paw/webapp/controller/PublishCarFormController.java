@@ -12,7 +12,6 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpSession;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -51,7 +50,7 @@ import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 @Controller
 @RequestMapping("/publish-car")
-public class PublishCarFormController {
+public final class PublishCarFormController {
 
     private final ListingService listingService;
     private final LocaleMessages localeMessages;
@@ -64,7 +63,6 @@ public class PublishCarFormController {
     private final ReservationService reservationService;
     private final UserService userService;
 
-    @Autowired
     public PublishCarFormController(
             final ListingService listingService,
             final LocaleMessages localeMessages,
@@ -118,7 +116,7 @@ public class PublishCarFormController {
             @CurrentUser final User currentUser,
             final HttpSession session) {
         pictureStash.clear(session);
-        // Obtener usuario fresco de la BD para verificar CBU actualizado
+        // Load a fresh user row so we validate against the current CBU in the database
         final User freshUser = userService.getUserById(currentUser.getId())
                 .orElse(currentUser);
         if(freshUser.getCbu().isEmpty()){

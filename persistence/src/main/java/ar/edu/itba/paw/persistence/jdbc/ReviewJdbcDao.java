@@ -20,7 +20,7 @@ import ar.edu.itba.paw.persistence.ReviewDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
 @Repository
-public class ReviewJdbcDao implements ReviewDao {
+public final class ReviewJdbcDao implements ReviewDao {
 
     private static final RowMapper<ListingPublicReview> PUBLIC_REVIEW_MAPPER = (rs, rowNum) -> new ListingPublicReview(
             rs.getString("reviewer_forename"),

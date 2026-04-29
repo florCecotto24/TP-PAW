@@ -38,7 +38,6 @@ import org.springframework.validation.beanvalidation.SpringConstraintValidatorFa
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ViewResolver;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -62,8 +61,10 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 @Configuration
 @Import({SpringMailConfig.class, WebAuthConfig.class, ValidationWebConfig.class})
 @PropertySources({
-    @PropertySource("classpath:application.properties"),
-    @PropertySource(value = "classpath:application-${spring.profiles.active}.properties", ignoreResourceNotFound = true)
+    @PropertySource("classpath:application/application.properties"),
+    @PropertySource(
+            value = "classpath:application/application-${spring.profiles.active}.properties",
+            ignoreResourceNotFound = true)
 })
 @ComponentScan({
         "ar.edu.itba.paw.webapp.controller",
@@ -77,13 +78,16 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 })
 public class WebConfig implements WebMvcConfigurer {
 
-    @Autowired
-    private LatestLocaleSaveInterceptor latestLocaleSaveInterceptor;
+    private final LatestLocaleSaveInterceptor latestLocaleSaveInterceptor;
+
+    public WebConfig(final LatestLocaleSaveInterceptor latestLocaleSaveInterceptor) {
+        this.latestLocaleSaveInterceptor = latestLocaleSaveInterceptor;
+    }
 
     @Bean
     public MessageSource messageSource() {
         final ReloadableResourceBundleMessageSource bundle = new ReloadableResourceBundleMessageSource();
-        bundle.setBasenames("classpath:messages", "classpath:exception-messages");
+        bundle.setBasenames("classpath:messages/messages", "classpath:messages/exception/exception-messages");
         bundle.setDefaultEncoding(StandardCharsets.UTF_8.name());
         bundle.setFallbackToSystemLocale(false);
         return bundle;
@@ -207,8 +211,8 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     /**
-     * Multipart vía Apache Commons FileUpload (integrated in Spring {@link CommonsMultipartResolver}),
-     * With {@code MultipartFilter} declared in {@code web.xml} before Spring Security.
+     * Multipart using Apache Commons FileUpload (Spring {@link CommonsMultipartResolver}),
+     * with {@code MultipartFilter} in {@code web.xml} before Spring Security.
      */
     @Bean
     public CommonsMultipartResolver multipartResolver(final Environment environment) {

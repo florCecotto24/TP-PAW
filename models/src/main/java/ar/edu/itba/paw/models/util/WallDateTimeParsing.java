@@ -12,6 +12,9 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 public final class WallDateTimeParsing {
 
+    private WallDateTimeParsing() {
+    }
+
     /** Pattern for HTML {@code datetime-local} and search inputs (no seconds). */
     public static final String WALL_INPUT_DATE_TIME_PATTERN = "yyyy-MM-dd'T'HH:mm";
 
@@ -25,9 +28,6 @@ public final class WallDateTimeParsing {
 
     /** Day-only labels (listing availability windows). */
     public static final DateTimeFormatter WALL_DISPLAY_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    private WallDateTimeParsing() {
-    }
 
     /**
      * Parses a wall-local date-time from forms (ISO-8601 local, typically {@code yyyy-MM-ddTHH:mm}) to UTC.

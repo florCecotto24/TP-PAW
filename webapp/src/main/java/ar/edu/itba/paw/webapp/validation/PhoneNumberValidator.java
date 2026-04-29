@@ -5,7 +5,6 @@ import java.util.Locale;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -15,12 +14,11 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 
 @Component
-public class PhoneNumberValidator implements ConstraintValidator<PhoneNumber, String> {
+public final class PhoneNumberValidator implements ConstraintValidator<PhoneNumber, String> {
 
     private final UserValidationPolicy policy;
     private final MessageSource messageSource;
 
-    @Autowired
     public PhoneNumberValidator(final UserValidationPolicy policy, final MessageSource messageSource) {
         this.policy = policy;
         this.messageSource = messageSource;

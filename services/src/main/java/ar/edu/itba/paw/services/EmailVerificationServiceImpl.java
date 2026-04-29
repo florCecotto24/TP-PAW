@@ -17,7 +17,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 
 @Service
-public class EmailVerificationServiceImpl implements EmailVerificationService {
+public final class EmailVerificationServiceImpl implements EmailVerificationService {
 
     private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final SecureRandom RANDOM = new SecureRandom();
