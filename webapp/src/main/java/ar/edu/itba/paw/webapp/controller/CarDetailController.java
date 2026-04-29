@@ -7,18 +7,23 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
+import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,6 +36,7 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,19 +49,23 @@ public class CarDetailController {
 
     private static final int SIMILAR_LISTINGS_LIMIT = 4;
     private static final int LISTING_REVIEWS_PAGE_SIZE = 5;
+    private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
 
     private final ListingService listingService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
+    private final UserService userService;
 
     @Autowired
     public CarDetailController(
             final ListingService listingService,
             final ReservationService reservationService,
-            final ReviewService reviewService) {
+            final ReviewService reviewService,
+            final UserService userService) {
         this.listingService = listingService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
+        this.userService = userService;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -73,6 +83,9 @@ public class CarDetailController {
         final Car car = detail.getCar();
 
         final User owner = detail.getOwner();
+        final Long ownerProfileImageId = userService.getUserById(owner.getId())
+                .flatMap(User::getProfilePictureId)
+                .orElse(null);
 
         final List<String> carGalleryImagePaths = detail.getPictures().stream()
                 .map(cp -> "/image/" + cp.getImageId())
@@ -134,6 +147,7 @@ public class CarDetailController {
         mav.addObject("listingReviewPage", listingReviewPage);
         mav.addObject("car", car);
         mav.addObject("owner", owner);
+        mav.addObject("ownerProfileImageId", ownerProfileImageId);
         mav.addObject("carGalleryImagePaths", carGalleryImagePaths);
         mav.addObject("hasBookableDays", hasBookableDays);
         mav.addObject("bookableWallRangesJson", bookableWallRangesJson);
@@ -144,6 +158,50 @@ public class CarDetailController {
                 + "&transmission=" + car.getTransmission().name()
                 + "&powertrain=" + car.getPowertrain().name();
         mav.addObject("similarSearchUrl", similarSearchUrl);
+        return mav;
+    }
+
+    @GetMapping("/counterparty-profile")
+    public ModelAndView ownerProfile(@RequestParam("userId") final long userId) {
+        final Optional<User> counterpartyOpt = userService.getUserById(userId);
+        if (counterpartyOpt.isEmpty()) {
+            return new ModelAndView(new RedirectView("/search", true));
+        }
+
+        final User counterparty = counterpartyOpt.get();
+        final Locale locale = LocaleContextHolder.getLocale();
+        final DateTimeFormatter memberSinceFormatter = DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale);
+        final BigDecimal averageRating = reviewService.getAverageRatingForCounterparty(counterparty.getId(), true);
+        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
+                counterparty.getId(),
+                true,
+                COUNTERPARTY_RECENT_REVIEWS_LIMIT);
+        final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
+                counterparty.getForename() + " " + counterparty.getSurname(),
+                counterparty.getForename(),
+                counterparty.getSurname(),
+                null,
+                averageRating,
+                0L,
+                counterparty.getAbout().map(String::trim).orElse(null),
+                counterparty.getMemberSince().orElse(null),
+                counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
+                counterparty.getProfilePictureId().orElse(null));
+
+        final ModelAndView mav = new ModelAndView("counterpartyProfile");
+        mav.addObject("activeTab", "explore");
+        mav.addObject("counterpartyForename", headerDto.getForename());
+        mav.addObject("counterpartySurname", headerDto.getSurname());
+        mav.addObject("counterpartyAbout", headerDto.getAbout().orElse(""));
+        mav.addObject("counterpartyProfileImageId", headerDto.getProfileImageId().orElse(null));
+        mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
+        mav.addObject("counterpartyAverageRating", headerDto.getAverageRating());
+        mav.addObject(
+                "recentReviewComments",
+                recentReviewItems.stream()
+                        .map(item -> item.getComment().orElse("").trim())
+                        .filter(comment -> !comment.isEmpty())
+                        .collect(Collectors.toList()));
         return mav;
     }
 

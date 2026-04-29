@@ -41,13 +41,33 @@
 
             <!-- Owner contact info -->
             <div class="d-flex align-items-center gap-2">
-                <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary"
-                      style="width:40px; height:40px;" aria-hidden="true">
-                    <i class="bi bi-person-fill fs-5"></i>
-                </span>
-                <span class="fw-semibold" aria-label="Owner name">
-                    <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
-                </span>
+                <c:choose>
+                    <c:when test="${ownerProfileImageId != null}">
+                        <c:url var="ownerProfileImageUrl" value="/image/${ownerProfileImageId}"/>
+                        <img
+                                src="${ownerProfileImageUrl}"
+                                alt="Owner profile image"
+                                class="rounded-circle border"
+                                style="width:40px; height:40px; object-fit:cover;"/>
+                    </c:when>
+                    <c:otherwise>
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary"
+                              style="width:40px; height:40px;" aria-hidden="true">
+                            <i class="bi bi-person-fill fs-5"></i>
+                        </span>
+                    </c:otherwise>
+                </c:choose>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-semibold" aria-label="Owner name">
+                        <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
+                    </span>
+                    <c:url var="ownerProfileUrl" value="/counterparty-profile">
+                        <c:param name="userId" value="${owner.id}"/>
+                    </c:url>
+                    <a class="btn btn-outline-secondary btn-sm" href="${ownerProfileUrl}">
+                        <spring:message code="carDetail.owner.viewProfile"/>
+                    </a>
+                </div>
             </div>
             <c:if test="${not empty listing.description}">
                 <section>
