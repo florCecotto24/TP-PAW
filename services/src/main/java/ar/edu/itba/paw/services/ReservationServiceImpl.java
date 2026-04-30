@@ -185,25 +185,6 @@ public final class ReservationServiceImpl implements ReservationService {
                     riderHandoverLocation == null || riderHandoverLocation.isBlank() ? null : riderHandoverLocation.trim();
             final String trimmedOwnerLoc =
                     ownerHandoverLocation == null || ownerHandoverLocation.isBlank() ? null : ownerHandoverLocation.trim();
-<<<<<<< HEAD
-            final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
-                    rider.getEmail(),
-                    riderFullName,
-                    reservation.getId(),
-                    listingId,
-                    vehicleLabel,
-                    reservation.getStartDate(),
-                    reservation.getEndDate(),
-                    trimmedRiderLoc,
-                    trimmedOwnerLoc,
-                    listingOwner.getForename() + " " + listingOwner.getSurname(),
-                    listingOwner.getEmail(),
-                    reservation.getTotalPrice().toString(),
-                    userService.resolveMailLocale(rider.getId()),
-                    userService.resolveMailLocale(listingOwner.getId()),
-                    cbu);
-            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId()).log("Queueing reservation confirmation email to {} for reservation id={}");
-=======
             final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
@@ -221,9 +202,8 @@ public final class ReservationServiceImpl implements ReservationService {
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .ownerCbu(cbu)
                     .build();
-            LOGGER.atInfo().log("Queueing reservation confirmation email to " + rider.getEmail()
-                    + " for reservation id=" + reservation.getId());
->>>>>>> 7b4ad36 (Refactor webapp security, controller boundaries, and tests.)
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing reservation confirmation email to {} for reservation id={}");
             emailService.sendReservationConfirmationEmail(payload);
         } catch (final Exception e) {
             LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue reservation confirmation email for reservation id={}");
@@ -468,25 +448,6 @@ public final class ReservationServiceImpl implements ReservationService {
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
             final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
             final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
-<<<<<<< HEAD
-            final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
-                    rider.getEmail(),
-                    riderFullName,
-                    reservation.getId(),
-                    listingId,
-                    vehicleLabel,
-                    reservation.getStartDate(),
-                    reservation.getEndDate(),
-                    riderLoc,
-                    ownerLoc,
-                    listingOwner.getForename() + " " + listingOwner.getSurname(),
-                    listingOwner.getEmail(),
-                    reservation.getTotalPrice().toString(),
-                    userService.resolveMailLocale(rider.getId()),
-                    userService.resolveMailLocale(listingOwner.getId()),
-                    null);
-            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservationId).log("Queueing reservation cancellation email to {} for reservation id={}");
-=======
             final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
@@ -503,9 +464,8 @@ public final class ReservationServiceImpl implements ReservationService {
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
-            LOGGER.atInfo().log("Queueing reservation cancellation email to " + rider.getEmail()
-                    + " for reservation id=" + reservationId);
->>>>>>> 7b4ad36 (Refactor webapp security, controller boundaries, and tests.)
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservationId)
+                    .log("Queueing reservation cancellation email to {} for reservation id={}");
             emailService.sendReservationCancellationEmail(payload);
         } catch (final Exception e) {
             LOGGER.atError().setCause(e).addArgument(reservationId).log("Could not enqueue reservation cancellation email for reservation id={}");
@@ -573,25 +533,6 @@ public final class ReservationServiceImpl implements ReservationService {
             final User listingOwner = listingOwnerOpt.get();
             final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
             final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
-<<<<<<< HEAD
-            final ReservationConfirmationPayload payload = new ReservationConfirmationPayload(
-                    rider.getEmail(),
-                    rider.getForename() + " " + rider.getSurname(),
-                    reservation.getId(),
-                    listing.getId(),
-                    listing.getTitle(),
-                    reservation.getStartDate(),
-                    reservation.getEndDate(),
-                    riderLoc,
-                    ownerLoc,
-                    listingOwner.getForename() + " " + listingOwner.getSurname(),
-                    listingOwner.getEmail(),
-                    reservation.getTotalPrice().toString(),
-                    userService.resolveMailLocale(rider.getId()),
-                    userService.resolveMailLocale(listingOwner.getId()),
-                    null);
-            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId()).log("Queueing rider reservation confirmed-after-proof email to {} for reservation id={}");
-=======
             final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
@@ -608,9 +549,8 @@ public final class ReservationServiceImpl implements ReservationService {
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
-            LOGGER.atInfo().log("Queueing rider reservation confirmed-after-proof email to " + rider.getEmail()
-                    + " for reservation id=" + reservation.getId());
->>>>>>> 7b4ad36 (Refactor webapp security, controller boundaries, and tests.)
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing rider reservation confirmed-after-proof email to {} for reservation id={}");
             emailService.sendRiderReservationConfirmedAfterPaymentProof(payload);
         } catch (final Exception e) {
             LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue rider confirmed-after-proof email for reservation id={}");
