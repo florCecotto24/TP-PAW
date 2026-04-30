@@ -379,9 +379,14 @@ public final class ProfileController {
             final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
-        if (documentType == null || findProfileDocument(me.getId(), documentType).isEmpty()) {
+        if (documentType == null) {
             return "redirect:/profile";
         }
+        final var storedOpt = findProfileDocument(me.getId(), documentType);
+        if (storedOpt.isEmpty()) {
+            return "redirect:/profile";
+        }
+        model.addAttribute("documentFileName", storedOpt.get().getFileName());
         model.addAttribute("documentType", documentType.name());
         return "profile-document-view";
     }

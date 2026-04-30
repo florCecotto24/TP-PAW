@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><spring:message code="app.title"/></title>
+    <title><spring:message code="app.title"/> - <c:out value="${documentFileName}"/></title>
     <link rel="icon" type="image/svg+xml" href="${pageContext.request.contextPath}/assets/images/Ryden_logo.ico">
     <style>
         html, body {
