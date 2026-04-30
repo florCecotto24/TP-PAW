@@ -79,6 +79,6 @@ temp/
 node_modules/
 
 # Credentials
-webapp/src/main/resources/application/application-local.properties
-webapp/src/main/resources/application/application-deployed.properties
+application-local.properties
+application-deployed.properties
 
