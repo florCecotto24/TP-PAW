@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
@@ -48,7 +49,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/my-listings")
 public final class MyListingsController {
 
-    private static final int PAGE_SIZE = 8;
     private static final Set<String> OWNER_LISTING_STATUS_WHITELIST =
             Set.of("active", "paused", "finished", "paused_due_to_lack_of_cbu");
     private static final Set<String> RESERVATION_STATUS_WHITELIST =
@@ -60,16 +60,19 @@ public final class MyListingsController {
     private final LocationService locationService;
     private final ReservationService reservationService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
+    private final PaginationPolicy paginationPolicy;
 
     public MyListingsController(
             final ListingService listingService,
             final LocationService locationService,
             final ReservationService reservationService,
-            final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator) {
+            final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
+            final PaginationPolicy paginationPolicy) {
         this.listingService = listingService;
         this.locationService = locationService;
         this.reservationService = reservationService;
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
+        this.paginationPolicy = paginationPolicy;
     }
 
     @InitBinder("editForm")
@@ -97,7 +100,8 @@ public final class MyListingsController {
 
         // Listings tab data
         final Page<ListingCard> resultPage =
-                listingService.getOwnerListingCards(me.getId(), page, PAGE_SIZE, listingStatusFilter, q);
+                listingService.getOwnerListingCards(
+                        me.getId(), page, paginationPolicy.getDefaultPageSize(), listingStatusFilter, q);
         final int lastPage = resultPage.getTotalPages() - 1;
         if (page > lastPage) {
             final RedirectView redirectView = new RedirectView(
@@ -109,19 +113,12 @@ public final class MyListingsController {
             return new ModelAndView(redirectView);
         }
         final List<VehicleCardView> listings = resultPage.getContent().stream()
-                .map(card -> new VehicleCardView(
-                        card.getListingId(),
-                        card.getBrand(),
-                        card.getModel(),
-                        card.getDayPrice(),
-                        card.getImageId(),
-                        card.getStatus().map(Listing.Status::name).orElse(null),
-                        card.getRatingAvg().orElse(null)))
+                .map(VehicleCardView::fromOwnerListingCard)
                 .collect(Collectors.toList());
 
         // Reservations tab data
         final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(
-                me.getId(), ownerPage, PAGE_SIZE, ownerStatusFilter);
+                me.getId(), ownerPage, paginationPolicy.getDefaultPageSize(), ownerStatusFilter);
         final int lastOwnerPage = ownerResultPage.getTotalPages() - 1;
         if (ownerPage > lastOwnerPage) {
             final RedirectView redirectView = new RedirectView(
@@ -254,7 +251,8 @@ public final class MyListingsController {
         page = Math.max(0, page);
         final String statusFilter = normalizeReservationStatusParam(reservationStatus);
         final Page<ReservationCard> resultPage =
-                reservationService.getListingReservationCards(me.getId(), listingId, page, PAGE_SIZE, statusFilter);
+                reservationService.getListingReservationCards(
+                        me.getId(), listingId, page, paginationPolicy.getDefaultPageSize(), statusFilter);
         final int lastPage = resultPage.getTotalPages() - 1;
         if (page > lastPage) {
             final RedirectView redirectView = new RedirectView(

@@ -28,14 +28,14 @@ import org.springframework.web.servlet.ModelAndView;
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
-import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
@@ -60,7 +60,6 @@ public final class PublishCarFormController {
     private final CarEnumOptions carEnumOptions;
     private final LocationService locationService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
-    private final ReservationService reservationService;
     private final UserService userService;
 
     public PublishCarFormController(
@@ -72,7 +71,6 @@ public final class PublishCarFormController {
             final CarEnumOptions carEnumOptions,
             final LocationService locationService,
             final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
-            final ReservationService reservationService,
             final UserService userService) {
         this.listingService = listingService;
         this.localeMessages = localeMessages;
@@ -82,7 +80,6 @@ public final class PublishCarFormController {
         this.carEnumOptions = carEnumOptions;
         this.locationService = locationService;
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
-        this.reservationService = reservationService;
         this.userService = userService;
     }
 
@@ -138,9 +135,8 @@ public final class PublishCarFormController {
     public Map<String, String> availabilityMinFrom(
             @RequestParam(name = "checkIn", required = false) final String checkInRaw) {
         final LocalTime lt = parseCheckInParam(checkInRaw);
-        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
-        final LocalDate minFrom = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
-                lt, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
+        final LocalDate minFrom =
+                listingService.getPublicationMinAvailabilityFirstWallDay(lt, Instant.now());
         return Map.of("minFrom", minFrom.toString());
     }
 
@@ -191,7 +187,18 @@ public final class PublishCarFormController {
         }
 
         listingNeighborhoodFormValidator.validate(form, errors);
-        validatePublishAvailabilityRiderLead(form, errors);
+        if (!errors.hasErrors()) {
+            try {
+                listingService.validatePublicationAvailabilityRiderLead(
+                        form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now());
+            } catch (final AvailabilityRiderLeadViolationException e) {
+                errors.rejectValue(
+                        "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
+                        e.getMessageCode(),
+                        e.getMessageArgs(),
+                        localeMessages.msg(e));
+            }
+        }
         if (!errors.hasErrors()) {
             try {
                 listingService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
@@ -284,33 +291,12 @@ public final class PublishCarFormController {
 
     private static LocalTime parseCheckInParam(final String checkInRaw) {
         if (checkInRaw == null || checkInRaw.isBlank()) {
-            return LocalTime.of(10, 0);
+            return Listing.DEFAULT_CHECK_IN_TIME;
         }
         try {
             return LocalTime.parse(checkInRaw.trim());
         } catch (final DateTimeParseException e) {
-            return LocalTime.of(10, 0);
-        }
-    }
-
-    private void validatePublishAvailabilityRiderLead(final PublishCarForm form, final BindingResult errors) {
-        final LocalTime pickup = form.getCheckInTime() != null ? form.getCheckInTime() : LocalTime.of(10, 0);
-        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
-        final LocalDate minStart = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
-                pickup, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
-        final List<PublishCarForm.AvailabilityRow> rows = form.getAvailabilityRows();
-        for (int i = 0; i < rows.size(); i++) {
-            final LocalDate from = rows.get(i).getFrom();
-            if (from != null && from.isBefore(minStart)) {
-                errors.rejectValue(
-                        "availabilityRows[" + i + "].from",
-                        "validation.availabilityRow.from.riderLeadTime",
-                        new Object[] { minStart, pickupLeadHours },
-                        localeMessages.msg(
-                                "validation.availabilityRow.from.riderLeadTime",
-                                minStart,
-                                pickupLeadHours));
-            }
+            return Listing.DEFAULT_CHECK_IN_TIME;
         }
     }
 
@@ -327,12 +313,10 @@ public final class PublishCarFormController {
         mav.addObject("retainedPictureTokens", stashedTokens);
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
         mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
-        final LocalTime pickup = publishFormForMinAvail.getCheckInTime() != null
-                ? publishFormForMinAvail.getCheckInTime()
-                : LocalTime.of(10, 0);
-        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
-        final LocalDate publishMinAvailabilityFrom = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
-                pickup, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
+        final LocalDate publishMinAvailabilityFrom =
+                listingService.getPublicationMinAvailabilityFirstWallDay(
+                        publishFormForMinAvail.getCheckInTime(), Instant.now());
+        final int pickupLeadHours = listingService.getConfiguredPickupLeadHours();
         mav.addObject("publishMinAvailabilityFrom", publishMinAvailabilityFrom.toString());
         mav.addObject("pickupLeadHours", pickupLeadHours);
         final int forwardDays = listingService.getConfiguredMaxAvailabilityForwardWallDays();

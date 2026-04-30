@@ -3,10 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.Instant;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -28,7 +25,6 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
@@ -39,34 +35,35 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
-import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
 
 @Controller
 public final class CarDetailController {
 
     private static final int SIMILAR_LISTINGS_LIMIT = 4;
-    private static final int LISTING_REVIEWS_PAGE_SIZE = 5;
     private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
-    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
 
     private final ListingService listingService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
     private final UserService userService;
+    private final PaginationPolicy paginationPolicy;
 
     public CarDetailController(
             final ListingService listingService,
             final ReservationService reservationService,
             final ReviewService reviewService,
-            final UserService userService) {
+            final UserService userService,
+            final PaginationPolicy paginationPolicy) {
         this.listingService = listingService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
         this.userService = userService;
+        this.paginationPolicy = paginationPolicy;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -96,20 +93,12 @@ public final class CarDetailController {
         final List<VehicleCardView> similarListings = listingService
                 .findSimilarListingCards(listingId, SIMILAR_LISTINGS_LIMIT, viewer)
                 .stream()
-                .map(CarDetailController::listingCardToVehicleCardView)
+                .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
 
-        final List<AvailabilityPeriod> bookable = listingService.getBookableWallAvailabilityPeriods(listingId);
-        final List<LocalDateSegment> rawSegments = new ArrayList<>(bookable.size());
-        for (final AvailabilityPeriod p : bookable) {
-            rawSegments.add(new LocalDateSegment(p.getStartInclusive(), p.getEndInclusive()));
-        }
-        List<LocalDateSegment> bookableSegments = BookableWallRangesJson.mergeAdjacentSegments(rawSegments);
-        final LocalTime pickupWall = Optional.ofNullable(listing.getCheckInTime()).orElse(LocalTime.of(10, 0));
-        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
-        final Instant minPickupExclusive = Instant.now().plus(pickupLeadHours, ChronoUnit.HOURS);
-        bookableSegments = BookableWallRangesJson.clipSegmentsToMinPickupInstant(
-                bookableSegments, pickupWall, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+        final List<AvailabilityPeriod> bookableSegments =
+                listingService.getBookableWallAvailabilityPeriodsForRiderDatePicker(
+                        listingId, listing.getCheckInTime(), Instant.now());
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
 
@@ -118,7 +107,8 @@ public final class CarDetailController {
         final Locale locale = RequestContextUtils.getLocale(request);
         final long reviewTotal = reviewService.countReviewsForListing(listingId);
         final Page<ListingPublicReview> reviewSource =
-                reviewService.getListingPublicReviews(listingId, reviewPage, LISTING_REVIEWS_PAGE_SIZE);
+                reviewService.getListingPublicReviews(
+                        listingId, reviewPage, paginationPolicy.getListingPublicReviewsPageSize());
         final List<ListingReviewRowView> reviewRows = reviewSource.getContent().stream()
                 .map(r -> new ListingReviewRowView(
                         r.getReviewerForename(),
@@ -193,13 +183,13 @@ public final class CarDetailController {
         final List<VehicleCardView> counterpartyActiveListings = listingService.getOwnerListingCards(
                         counterparty.getId(),
                         0,
-                        COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE,
+                        paginationPolicy.getDefaultPageSize(),
                         "active",
                         null)
                 .getContent()
                 .stream()
                 .filter(card -> currentListingId == null || card.getListingId() != currentListingId)
-                .map(CarDetailController::listingCardToVehicleCardView)
+                .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
 
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
@@ -237,14 +227,4 @@ public final class CarDetailController {
         return nf.format(value);
     }
 
-    private static VehicleCardView listingCardToVehicleCardView(final ListingCard card) {
-        return new VehicleCardView(
-                card.getListingId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                null,
-                card.getRatingAvg().orElse(null));
-    }
 }

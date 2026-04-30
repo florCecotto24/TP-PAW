@@ -32,7 +32,7 @@ class ListingDetailTest {
                 .dayPrice(new BigDecimal("99.99"))
                 .startPointStreet("Palermo")
                 .description("Great city car")
-                .checkInTime(LocalTime.of(10, 0))
+                .checkInTime(Listing.DEFAULT_CHECK_IN_TIME)
                 .checkOutTime(LocalTime.of(18, 0))
                 .build();
 

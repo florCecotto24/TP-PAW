@@ -10,6 +10,7 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
@@ -47,6 +48,7 @@ public class MyReservationsControllerTest {
         final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy = paymentReceiptUploadPolicy();
         final ReviewService reviewService = mock(ReviewService.class);
         final UserService userService = mock(UserService.class);
+        final PaginationPolicy paginationPolicy = paginationPolicy();
         final MyReservationsController controller = new MyReservationsController(
                 reservationService,
                 listingService,
@@ -54,7 +56,8 @@ public class MyReservationsControllerTest {
                 localeMessages,
                 paymentReceiptUploadPolicy,
                 reviewService,
-                userService);
+                userService,
+                paginationPolicy);
 
         final long meId = 100L;
         final long reservationId = 200L;
@@ -98,6 +101,7 @@ public class MyReservationsControllerTest {
         final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy = paymentReceiptUploadPolicy();
         final ReviewService reviewService = mock(ReviewService.class);
         final UserService userService = mock(UserService.class);
+        final PaginationPolicy paginationPolicy = paginationPolicy();
         final MyReservationsController controller = new MyReservationsController(
                 reservationService,
                 listingService,
@@ -105,7 +109,8 @@ public class MyReservationsControllerTest {
                 localeMessages,
                 paymentReceiptUploadPolicy,
                 reviewService,
-                userService);
+                userService,
+                paginationPolicy);
 
         final long meId = 700L;
         final long reservationId = 800L;
@@ -162,5 +167,12 @@ public class MyReservationsControllerTest {
         return new PaymentReceiptUploadPolicy(new MockEnvironment()
                 .withProperty("app.upload.max-payment-receipt-megabytes", "5")
                 .withProperty("app.upload.bytes-per-binary-megabyte", "1048576"));
+    }
+
+    /** {@link PaginationPolicy} is {@code final}; use a real instance with test properties. */
+    private static PaginationPolicy paginationPolicy() {
+        return new PaginationPolicy(new MockEnvironment()
+                .withProperty("app.pagination.default-page-size", "8")
+                .withProperty("app.pagination.listing-public-reviews-page-size", "5"));
     }
 }

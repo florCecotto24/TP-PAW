@@ -1,15 +1,14 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -73,7 +72,7 @@ public final class SearchController {
             return new ModelAndView(redirectView);
         }
         final List<VehicleCardView> results = resultPage.getContent().stream()
-                .map(SearchController::toVehicleCardView)
+                .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
 
         final String safeSort = sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
@@ -110,14 +109,4 @@ public final class SearchController {
         return values != null && values.length > 0;
     }
 
-    private static VehicleCardView toVehicleCardView(final ListingCard card) {
-        return new VehicleCardView(
-                card.getListingId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                null,
-                card.getRatingAvg().orElse(null));
-    }
 }

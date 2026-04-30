@@ -13,18 +13,19 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 
 @Controller
 public final class HomeController {
 
-    private static final int CAROUSEL_PAGE_SIZE = 8;
-
     private final ListingService listingService;
+    private final PaginationPolicy paginationPolicy;
 
-    public HomeController(final ListingService listingService) {
+    public HomeController(final ListingService listingService, final PaginationPolicy paginationPolicy) {
         this.listingService = listingService;
+        this.paginationPolicy = paginationPolicy;
     }
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
@@ -39,10 +40,11 @@ public final class HomeController {
 
         final User viewer = currentUser;
 
+        final int pageSize = paginationPolicy.getDefaultPageSize();
         final Page<ListingCard> cheapestRaw =
-                listingService.getCheapestListingCards(cheapestPage, CAROUSEL_PAGE_SIZE, viewer);
+                listingService.getCheapestListingCards(cheapestPage, pageSize, viewer);
         final Page<ListingCard> recentRaw =
-                listingService.getMostRecentListingCards(recentPage, CAROUSEL_PAGE_SIZE, viewer);
+                listingService.getMostRecentListingCards(recentPage, pageSize, viewer);
 
         final Page<VehicleCardView> cheapestCarsPage = mapPage(cheapestRaw);
         final Page<VehicleCardView> recentCarsPage   = mapPage(recentRaw);
@@ -56,19 +58,8 @@ public final class HomeController {
 
     private static Page<VehicleCardView> mapPage(final Page<ListingCard> source) {
         final List<VehicleCardView> views = source.getContent().stream()
-                .map(HomeController::toVehicleCardView)
+                .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
         return new Page<>(views, source.getCurrentPage(), source.getPageSize(), source.getTotalItems());
-    }
-
-    private static VehicleCardView toVehicleCardView(final ListingCard card) {
-        return new VehicleCardView(
-                card.getListingId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                null,
-                card.getRatingAvg().orElse(null));
     }
 }

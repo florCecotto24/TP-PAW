@@ -19,6 +19,7 @@ import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -58,9 +59,7 @@ import java.util.stream.Collectors;
 @Controller
 public final class MyReservationsController {
 
-    private static final int PAGE_SIZE = 8;
     private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
-    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
     private static final Set<String> RESERVATION_STATUS_WHITELIST =
             Set.of("pending", "accepted", "started", "cancelled", "finished");
 
@@ -71,6 +70,7 @@ public final class MyReservationsController {
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
     private final UserService userService;
+    private final PaginationPolicy paginationPolicy;
 
     public MyReservationsController(
             final ReservationService reservationService,
@@ -79,7 +79,8 @@ public final class MyReservationsController {
             final LocaleMessages localeMessages,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             final ReviewService reviewService,
-            final UserService userService) {
+            final UserService userService,
+            final PaginationPolicy paginationPolicy) {
         this.reservationService = reservationService;
         this.listingService = listingService;
         this.imageService = imageService;
@@ -87,6 +88,7 @@ public final class MyReservationsController {
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
         this.userService = userService;
+        this.paginationPolicy = paginationPolicy;
     }
 
     @GetMapping("/my-reservations")
@@ -100,7 +102,7 @@ public final class MyReservationsController {
         final String riderStatusFilter = normalizeReservationStatusParam(riderStatus);
 
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(
-                me.getId(), riderPage, PAGE_SIZE, riderStatusFilter);
+                me.getId(), riderPage, paginationPolicy.getDefaultPageSize(), riderStatusFilter);
         final Locale locale = LocaleContextHolder.getLocale();
         final List<ReservationCardView> riderReservations = riderResultPage.getContent().stream()
                 .map(card -> toReservationCardView(card, locale))
@@ -267,13 +269,13 @@ public final class MyReservationsController {
                 ? listingService.getOwnerListingCards(
                                 counterparty.getId(),
                                 0,
-                                COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE,
+                                paginationPolicy.getDefaultPageSize(),
                                 "active",
                                 null)
                         .getContent()
                         .stream()
                         .filter(card -> card.getListingId() != reservation.getListingId())
-                        .map(MyReservationsController::toVehicleCardView)
+                        .map(VehicleCardView::fromListingCard)
                         .collect(Collectors.toList())
                 : List.of();
 
@@ -303,17 +305,6 @@ public final class MyReservationsController {
         mav.addObject("showCounterpartyActiveListings", counterpartyIsOwner);
         mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
         return mav;
-    }
-
-    private static VehicleCardView toVehicleCardView(final ListingCard card) {
-        return new VehicleCardView(
-                card.getListingId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                null,
-                card.getRatingAvg().orElse(null));
     }
 
     @GetMapping("/my-reservations/{reservationId}/payment-receipt/download")

@@ -7,6 +7,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
+import ar.edu.itba.paw.models.domain.Listing;
+
 /**
  * First availability wall-calendar day consistent with the pickup lead-time rule
  * (configurable, e.g. {@code app.reservation.pickup-lead-hours}).
@@ -30,7 +32,8 @@ public final class RiderPickupLeadTime {
         if (pickupLeadHours < 1) {
             throw new IllegalArgumentException("pickupLeadHours must be >= 1");
         }
-        final LocalTime pickup = listingPickupWallTime != null ? listingPickupWallTime : LocalTime.of(10, 0);
+        final LocalTime pickup =
+                listingPickupWallTime != null ? listingPickupWallTime : Listing.DEFAULT_CHECK_IN_TIME;
         final Instant threshold = nowInstant.plus(pickupLeadHours, ChronoUnit.HOURS);
         LocalDate d = LocalDate.now(wallZone);
         for (int i = 0; i < 800; i++) {

@@ -43,7 +43,7 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
                 "Palermo",
                 "1234",
                 "Great car",
-                LocalTime.of(10, 0),
+                Listing.DEFAULT_CHECK_IN_TIME,
                 LocalTime.of(18, 0),
                 null);
         final Optional<Listing> found = listingDao.getListingById(created.getId());
@@ -53,7 +53,7 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertTrue(found.isPresent());
         Assertions.assertEquals("Title", found.get().getTitle());
         Assertions.assertEquals(Listing.Status.ACTIVE, found.get().getStatus());
-        Assertions.assertEquals(LocalTime.of(10, 0), found.get().getCheckInTime());
+        Assertions.assertEquals(Listing.DEFAULT_CHECK_IN_TIME, found.get().getCheckInTime());
         Assertions.assertEquals(LocalTime.of(18, 0), found.get().getCheckOutTime());
     }
 
@@ -280,7 +280,7 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
                         "Palermo",
                         "1",
                         "desc",
-                        LocalTime.of(10, 0),
+                        Listing.DEFAULT_CHECK_IN_TIME,
                         LocalTime.of(18, 0),
                         null));
     }

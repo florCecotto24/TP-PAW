@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -124,6 +126,25 @@ public interface ListingService {
 
     List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(long listingId);
 
+    /**
+     * Bookable wall days for the listing date picker: same as {@link #getBookableWallAvailabilityPeriods(long)} then
+     * merged and clipped so the first selectable pickup respects configured rider pickup lead from {@code now}.
+     */
+    List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePicker(
+            long listingId, LocalTime listingPickupWall, Instant now);
+
+    /**
+     * First wall-calendar day allowed for a new listing's availability "from" fields (pickup lead vs {@code now}).
+     */
+    LocalDate getPublicationMinAvailabilityFirstWallDay(LocalTime listingPickupWall, Instant now);
+
+    /**
+     * Publication: each period start must be on or after {@link #getPublicationMinAvailabilityFirstWallDay}.
+     *
+     * @throws ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException on the first violating row
+     */
+    void validatePublicationAvailabilityRiderLead(List<AvailabilityPeriod> periods, LocalTime checkInTime, Instant now);
+
     boolean reservationIntervalFitsListingAvailability(
             long listingId,
             Long availabilityId,
@@ -170,6 +191,9 @@ public interface ListingService {
      * published listing availability ({@code app.listing.max-availability-forward-wall-days}).
      */
     int getConfiguredMaxAvailabilityForwardWallDays();
+
+    /** {@code app.reservation.pickup-lead-hours} (same source as {@link ReservationService#getConfiguredPickupLeadHours()}). */
+    int getConfiguredPickupLeadHours();
 
     /**
      * Publication rule: availability dates must lie within {@link #getConfiguredMaxAvailabilityForwardWallDays()}

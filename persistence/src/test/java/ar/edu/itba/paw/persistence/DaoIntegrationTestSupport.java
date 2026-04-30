@@ -93,7 +93,7 @@ public abstract class DaoIntegrationTestSupport {
                 createdAt.plusMinutes(1),
                 "Palermo",
                 "desc",
-                LocalTime.of(10, 0),
+                Listing.DEFAULT_CHECK_IN_TIME,
                 LocalTime.of(18, 0));
     }
 
@@ -117,7 +117,7 @@ public abstract class DaoIntegrationTestSupport {
                 updatedAt,
                 startPointStreet,
                 description,
-                LocalTime.of(10, 0),
+                Listing.DEFAULT_CHECK_IN_TIME,
                 LocalTime.of(18, 0));
     }
 

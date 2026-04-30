@@ -8,6 +8,9 @@ import java.util.Optional;
 
 public final class Listing {
 
+    /** Default pickup (check-in) wall time when the listing or form omits one (publish UI, JDBC fallback, availability math). */
+    public static final LocalTime DEFAULT_CHECK_IN_TIME = LocalTime.of(10, 0);
+
     public enum Status {
         ACTIVE,
         PAUSED,

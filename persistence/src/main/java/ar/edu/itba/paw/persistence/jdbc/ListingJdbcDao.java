@@ -273,7 +273,7 @@ public final class ListingJdbcDao implements ListingDao {
                     while (rs.next()) {
                         LocalTime t = JdbcDateTimeUtils.readLocalTime(rs, "check_in_time");
                         if (t == null) {
-                            t = LocalTime.of(10, 0);
+                            t = Listing.DEFAULT_CHECK_IN_TIME;
                         }
                         out.put(rs.getLong("id"), t);
                     }

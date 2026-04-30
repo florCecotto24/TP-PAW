@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.dto.CarPublicationResult;
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
@@ -38,7 +39,9 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -51,6 +54,7 @@ import ar.edu.itba.paw.services.util.NeighborhoodNameMatcher;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @Service
@@ -68,6 +72,7 @@ public final class ListingServiceImpl implements ListingService {
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final ListingCheckInOutPolicy listingCheckInOutPolicy;
     private final ListingAvailabilityPolicy listingAvailabilityPolicy;
+    private final PaginationPolicy paginationPolicy;
 
     @Autowired
     public ListingServiceImpl(
@@ -82,7 +87,8 @@ public final class ListingServiceImpl implements ListingService {
             final LocationService locationService,
             final ReservationTimingPolicy reservationTimingPolicy,
             final ListingCheckInOutPolicy listingCheckInOutPolicy,
-            final ListingAvailabilityPolicy listingAvailabilityPolicy) {
+            final ListingAvailabilityPolicy listingAvailabilityPolicy,
+            final PaginationPolicy paginationPolicy) {
         this.listingDao = listingDao;
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.carDao = carDao;
@@ -95,6 +101,7 @@ public final class ListingServiceImpl implements ListingService {
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.listingCheckInOutPolicy = listingCheckInOutPolicy;
         this.listingAvailabilityPolicy = listingAvailabilityPolicy;
+        this.paginationPolicy = paginationPolicy;
     }
 
     @Override
@@ -431,6 +438,50 @@ public final class ListingServiceImpl implements ListingService {
         return mergeAdjacentWallDaysToPeriods(days);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePicker(
+            final long listingId, final LocalTime listingPickupWall, final Instant now) {
+        final List<AvailabilityPeriod> bookable = getBookableWallAvailabilityPeriods(listingId);
+        final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(bookable);
+        final int leadHours = reservationTimingPolicy.getPickupLeadHours();
+        final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
+        return BookableWallAvailabilityCalendar.clipPeriodsToMinPickupInstant(
+                merged, listingPickupWall, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LocalDate getPublicationMinAvailabilityFirstWallDay(
+            final LocalTime listingPickupWall, final Instant now) {
+        final LocalTime pickup = listingPickupWall != null ? listingPickupWall : Listing.DEFAULT_CHECK_IN_TIME;
+        return RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                pickup,
+                AvailabilityPeriod.WALL_ZONE,
+                now,
+                reservationTimingPolicy.getPickupLeadHours());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validatePublicationAvailabilityRiderLead(
+            final List<AvailabilityPeriod> periods, final LocalTime checkInTime, final Instant now) {
+        if (periods == null || periods.isEmpty()) {
+            return;
+        }
+        final int pickupLeadHours = reservationTimingPolicy.getPickupLeadHours();
+        final LocalTime pickup = checkInTime != null ? checkInTime : Listing.DEFAULT_CHECK_IN_TIME;
+        final LocalDate minStart = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                pickup, AvailabilityPeriod.WALL_ZONE, now, pickupLeadHours);
+        for (int i = 0; i < periods.size(); i++) {
+            final LocalDate from = periods.get(i).getStartInclusive();
+            if (from.isBefore(minStart)) {
+                throw new AvailabilityRiderLeadViolationException(
+                        i, "validation.availabilityRow.from.riderLeadTime", minStart, pickupLeadHours);
+            }
+        }
+    }
+
     private static List<AvailabilityPeriod> mergeAdjacentWallDaysToPeriods(final SortedSet<LocalDate> days) {
         if (days.isEmpty()) {
             return List.of();
@@ -548,7 +599,7 @@ public final class ListingServiceImpl implements ListingService {
             final String listingStatus,
             final String textQuery) {
         final int safePage = Math.max(0, page);
-        final int safePageSize = pageSize > 0 ? pageSize : PAGE_SIZE;
+        final int safePageSize = pageSize > 0 ? pageSize : paginationPolicy.getDefaultPageSize();
         return listingDao.getOwnerListingCards(ownerId, safePage, safePageSize, listingStatus, textQuery);
     }
 
@@ -599,8 +650,6 @@ public final class ListingServiceImpl implements ListingService {
         return filtered.stream().limit(limit).collect(Collectors.toList());
     }
 
-    private static final int PAGE_SIZE = 8;
-
     @Override
     public ListingSearchCriteria buildSearchCriteria(
             final String query,
@@ -650,7 +699,7 @@ public final class ListingServiceImpl implements ListingService {
         return new ListingSearchCriteria(
                 query, transmissions, powertrains, mergedCarTypes, bands,
                 rangeStart, rangeEndExclusive,
-                page, PAGE_SIZE, sortBy, sortDir,
+                page, paginationPolicy.getDefaultPageSize(), sortBy, sortDir,
                 browseWallDate, browseExcludeOwnerId(viewer),
                 mergedNeighborhoodIds);
     }
@@ -721,7 +770,7 @@ public final class ListingServiceImpl implements ListingService {
         final Map<Long, LocalTime> checkInByListing = listingDao.findCheckInTimeByListingIds(listingIds);
         final ZoneId wallZone = AvailabilityPeriod.WALL_ZONE;
         for (final Map.Entry<Long, TreeSet<LocalDate>> e : daysByListing.entrySet()) {
-            final LocalTime checkIn = checkInByListing.getOrDefault(e.getKey(), LocalTime.of(10, 0));
+            final LocalTime checkIn = checkInByListing.getOrDefault(e.getKey(), Listing.DEFAULT_CHECK_IN_TIME);
             e.getValue().removeIf(day ->
                     !ZonedDateTime.of(day, checkIn, wallZone).toInstant().isAfter(minPickupExclusive));
         }
@@ -931,5 +980,11 @@ public final class ListingServiceImpl implements ListingService {
     @Transactional(readOnly = true)
     public int getConfiguredMaxAvailabilityForwardWallDays() {
         return listingAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int getConfiguredPickupLeadHours() {
+        return reservationTimingPolicy.getPickupLeadHours();
     }
 }

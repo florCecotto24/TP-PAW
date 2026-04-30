@@ -39,6 +39,7 @@ import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @ExtendWith(MockitoExtension.class)
@@ -79,6 +80,9 @@ public class ListingServiceImplTest {
 
     @Mock
     private ListingAvailabilityPolicy listingAvailabilityPolicy;
+
+    @Mock
+    private PaginationPolicy paginationPolicy;
 
     @InjectMocks
     private ListingServiceImpl listingService;
@@ -375,7 +379,7 @@ public class ListingServiceImplTest {
         final String description1 = "d";
         final String description2 = "d2";
         final LocalTime checkIn1 = LocalTime.of(9, 0);
-        final LocalTime checkIn2 = LocalTime.of(10, 0);
+        final LocalTime checkIn2 = Listing.DEFAULT_CHECK_IN_TIME;
         final LocalTime checkOut1 = LocalTime.of(18, 0);
         final LocalTime checkOut2 = LocalTime.of(19, 0);
         final BigDecimal dayPrice1 = new BigDecimal("10");
@@ -475,7 +479,7 @@ public class ListingServiceImplTest {
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-02T12:00:00Z");
         final Listing.Status status = Listing.Status.ACTIVE;
-        final LocalTime checkInTime = LocalTime.of(10, 0);
+        final LocalTime checkInTime = Listing.DEFAULT_CHECK_IN_TIME;
         final LocalTime checkOutTime = LocalTime.of(12, 0);
         final LocalDate startDate = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
         final LocalDate endDate = startDate.plusDays(30);

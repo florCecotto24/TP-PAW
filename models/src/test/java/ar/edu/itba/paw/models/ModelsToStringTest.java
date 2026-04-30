@@ -63,7 +63,7 @@ class ModelsToStringTest {
                 .dayPrice(new BigDecimal("150.00"))
                 .startPointStreet("Belgrano")
                 .description("Description")
-                .checkInTime(LocalTime.of(10, 0))
+                .checkInTime(Listing.DEFAULT_CHECK_IN_TIME)
                 .checkOutTime(LocalTime.of(18, 0))
                 .build();
         // Exercise

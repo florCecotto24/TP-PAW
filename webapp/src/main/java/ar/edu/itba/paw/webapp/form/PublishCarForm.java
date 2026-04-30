@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
@@ -86,7 +87,7 @@ public final class PublishCarForm implements ListingTimeWindow {
     private List<@Valid AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public PublishCarForm() {
-        checkInTime = LocalTime.of(10, 0);
+        checkInTime = Listing.DEFAULT_CHECK_IN_TIME;
         checkOutTime = LocalTime.of(18, 0);
         availabilityRows.add(new AvailabilityRow());
     }
