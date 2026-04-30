@@ -66,6 +66,19 @@
         </table>
     </div>
 
+    <!-- OWNER CONTACT CARD -->
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
+                padding:20px; margin-bottom:24px;">
+
+        <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:12px;"
+           th:text="#{mail.reservationConfirmation.promptContactOwner}">
+            Need help? Contact the owner:
+        </p>
+        <p style="font-size:13px; color:#4b5563; line-height:1.6; margin:0;"
+           th:text="#{mail.reservationConfirmation.credentialsLine(${ownerFullName}, ${ownerEmail})}">
+        </p>
+    </div>
+
     <div style="margin-bottom:20px;">
         <div style="margin-bottom:10px;">
         <a th:href="${ctaUrl}"

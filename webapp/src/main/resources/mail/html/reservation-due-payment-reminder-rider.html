@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="#{mail.reservationReminder.emailTitle}">Reservation reminder</title>
+    <title th:text="#{mail.reservationDuePaymentProof.emailTitle}">Reservation request sent</title>
 </head>
 <body style="margin:0; padding:0; background-color:#eef2ff;
              font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -20,8 +20,8 @@
 
     <!-- TITLE -->
     <p style="font-size:16px; font-weight:700; color:#3730a3; margin-bottom:6px;"
-       th:text="#{mail.reservationReminder.emailTitle}">
-        Reservation reminder
+       th:text="#{mail.reservationDuePaymentProof.emailTitle}">
+        Reservation request sent
     </p>
     <p style="font-size:14px; color:#4b5563; line-height:1.6; margin-bottom:0;"
        th:text="#{mail.common.greeting(${riderFullName})}">
@@ -30,7 +30,7 @@
 
     <!-- INTRO -->
     <p style="font-size:14px; color:#374151; line-height:1.6; margin-bottom:20px;"
-       th:text="#{mail.reservationReminder.introRider}">
+       th:text="#{mail.reservationDuePaymentProof.introRider}">
         Intro
     </p>
 
@@ -79,6 +79,22 @@
                     th:text="${deliveryLocation}">—</td>
             </tr>
         </table>
+
+    </div>
+
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
+                padding:20px; margin-bottom:24px;">
+        <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:16px;">
+            <span th:text="#{mail.reservationConfirmation.transferDetails}">Transfer details #</span>
+        </p>
+
+        <!-- cbu -->
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                  padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
+            <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.ownerCbu}">ownerCbu</span>
+            &nbsp;
+            <span style="font-weight:600; color:#1e1b4b;" th:text=" ${ownerCbu}">—</span>
+        </div>
     </div>
 
     <!-- OWNER CONTACT CARD -->
@@ -96,17 +112,17 @@
     <!-- CTA BUTTON -->
     <div style="margin-bottom:20px;">
         <div style="margin-bottom:10px;">
-        <a th:href="${ctaUrl}"
+        <a th:href="${ctaUrlRider}"
            style="display:inline-block; padding:12px 24px; background-color:#4338ca;
                 color:#ffffff; text-decoration:none; border-radius:8px;
                 font-size:14px; font-weight:600;"
-           th:text="#{mail.reservationReminder.viewReservation}">
+           th:text="#{mail.reservationConfirmation.viewReservation}">
             View reservation
         </a>
         </div>
         <p style="font-size:12px; color:#4b5563; line-height:1.6; margin:0;">
             <span th:text="#{mail.common.fallbackAuthLinkCopy}">If the button does not work</span><br/>
-            <a th:href="${ctaUrl}" th:text="${ctaUrl}" style="word-break:break-all; color:#4338ca;">https://</a>
+            <a th:href="${ctaUrlRider}" th:text="${ctaUrlRider}" style="word-break:break-all; color:#4338ca;">https://</a>
         </p>
     </div>
 
