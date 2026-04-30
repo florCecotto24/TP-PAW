@@ -275,7 +275,13 @@
                         </span>
                     </p>
                     <c:if test="${not empty licenseFileName}">
-                        <p class="small text-muted mb-2"><c:out value="${licenseFileName}"/></p>
+                        <p class="small mb-2">
+                            <a class="link-primary text-break"
+                               href="<c:url value='/profile/document/view'><c:param name='documentType' value='LICENSE'/></c:url>"
+                               target="_blank" rel="noopener noreferrer">
+                                <c:out value="${licenseFileName}"/>
+                            </a>
+                        </p>
                         <button type="submit"
                                 class="btn btn-outline-danger btn-sm mb-2"
                                 formaction="<c:url value='/profile/document/delete'/>"
@@ -310,7 +316,13 @@
                         </span>
                     </p>
                     <c:if test="${not empty insuranceFileName}">
-                        <p class="small text-muted mb-2"><c:out value="${insuranceFileName}"/></p>
+                        <p class="small mb-2">
+                            <a class="link-primary text-break"
+                               href="<c:url value='/profile/document/view'><c:param name='documentType' value='INSURANCE'/></c:url>"
+                               target="_blank" rel="noopener noreferrer">
+                                <c:out value="${insuranceFileName}"/>
+                            </a>
+                        </p>
                         <button type="submit"
                                 class="btn btn-outline-danger btn-sm mb-2"
                                 formaction="<c:url value='/profile/document/delete'/>"
@@ -345,7 +357,13 @@
                         </span>
                     </p>
                     <c:if test="${not empty identityFileName}">
-                        <p class="small text-muted mb-2"><c:out value="${identityFileName}"/></p>
+                        <p class="small mb-2">
+                            <a class="link-primary text-break"
+                               href="<c:url value='/profile/document/view'><c:param name='documentType' value='IDENTITY'/></c:url>"
+                               target="_blank" rel="noopener noreferrer">
+                                <c:out value="${identityFileName}"/>
+                            </a>
+                        </p>
                         <button type="submit"
                                 class="btn btn-outline-danger btn-sm mb-2"
                                 formaction="<c:url value='/profile/document/delete'/>"

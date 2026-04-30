@@ -10,6 +10,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -29,6 +33,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.services.ImageService;
@@ -339,6 +344,48 @@ public final class ProfileController {
         return "redirect:/profile";
     }
 
+    @GetMapping("/document")
+    public ResponseEntity<byte[]> downloadProfileDocument(
+            @CurrentUser final User currentUser,
+            @RequestParam("documentType") final String documentTypeRaw) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
+        if (documentType == null) {
+            return ResponseEntity.notFound().build();
+        }
+        final var storedOpt = findProfileDocument(me.getId(), documentType);
+        if (storedOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        final StoredFile sf = storedOpt.get();
+        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
+        try {
+            if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
+                contentType = MediaType.parseMediaType(sf.getContentType());
+            }
+        } catch (final IllegalArgumentException ignored) {
+            contentType = MediaType.APPLICATION_OCTET_STREAM;
+        }
+        final HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(contentType);
+        headers.setContentLength(sf.getData().length);
+        return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/document/view")
+    public String viewProfileDocument(
+            @CurrentUser final User currentUser,
+            @RequestParam("documentType") final String documentTypeRaw,
+            final Model model) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
+        if (documentType == null || findProfileDocument(me.getId(), documentType).isEmpty()) {
+            return "redirect:/profile";
+        }
+        model.addAttribute("documentType", documentType.name());
+        return "profile-document-view";
+    }
+
     @GetMapping("/password")
     public String passwordFormGet(
             @CurrentUser final User currentUser,
@@ -440,6 +487,20 @@ public final class ProfileController {
         } catch (final IllegalArgumentException ex) {
             return null;
         }
+    }
+
+    private java.util.Optional<StoredFile> findProfileDocument(final long userId, final UserDocumentType documentType) {
+        final var userOpt = userService.getUserById(userId);
+        if (userOpt.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        final var user = userOpt.get();
+        final var fileId = switch (documentType) {
+            case LICENSE -> user.getLicenseFileId();
+            case INSURANCE -> user.getInsuranceFileId();
+            case IDENTITY -> user.getIdentityFileId();
+        };
+        return fileId.flatMap(storedFileService::findById);
     }
 
     private void uploadSingleProfileDocument(
