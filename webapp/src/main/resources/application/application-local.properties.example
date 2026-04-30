@@ -1,0 +1,16 @@
+# Copy to application-local.properties in this directory (gitignored). Use with: -Dspring.profiles.active=local
+# Merged: JDBC + email base URL for links + security + mail password (and any other env-only overrides you need).
+
+# PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/paw
+spring.datasource.username=pawdbuser
+spring.datasource.password=change-me-local
+
+# Public base URL for email CTAs (browser origin, include context path, no trailing slash)
+mail.app.base.url=http://localhost:8080/api
+
+# Spring Security remember-me
+app.security.remember-me.key=change-me-remember-me-key-local
+
+# Gmail / SMTP (JavaMail) — app password, not the account password
+mail.server.password=local-mail-not-configured

@@ -1,0 +1,16 @@
+# Copy to application-deployed.properties in this directory (gitignored). Used by default (no "local" profile;
+# e.g. Tomcat on Pampero without -D, or if you do not set spring.profiles.active=local). Merged secrets + DB.
+
+# PostgreSQL (example host; set real values on the server)
+spring.datasource.url=jdbc:postgresql://10.0.0.0:5432/paw-2026a-08
+spring.datasource.username=paw-2026a-08
+spring.datasource.password=change-me-deployed
+
+# Public base URL for email CTAs (Pampero / production origin, no trailing slash)
+mail.app.base.url=http://pawserver.it.itba.edu.ar/paw-2026a-08
+
+# Spring Security remember-me (use a long random secret in production)
+app.security.remember-me.key=change-me-remember-me-key
+
+# Gmail / SMTP app password
+mail.server.password=change-me-smtp

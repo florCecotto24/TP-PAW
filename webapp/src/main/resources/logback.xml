@@ -2,9 +2,8 @@
 <!--
   Classpath entry for Logback auto-configuration. File appenders and patterns: logback/logback-includes.xml; production loggers: logback/logback-prod.xml.
 
-  Production-style logging: no console (use files only for the app and PAW-specific names).
-  Local development with console: -Dlogback.configurationFile=classpath:logback/logback-local.xml
-  (see webapp/pom.xml jetty jvmArgs)
+  Default for WAR / Tomcat: this file (no JVM -D). File appenders under LOG_DIR (default logs/).
+  Local with console: -Dlogback.configurationFile=classpath:logback/logback-local.xml (e.g. mvn jetty:run in webapp/pom.xml).
 
   Log directory: -DLOG_DIR=... (default: ./logs under the process working directory).
 -->

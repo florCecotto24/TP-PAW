@@ -169,13 +169,12 @@
       <plugin>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-maven-plugin</artifactId>
-        <version>${jetty.maven.version}</version>
         <configuration>
           <scanIntervalSeconds>10</scanIntervalSeconds>
           <port>8080</port>
           <useTestScope>true</useTestScope>
           <!-- dev: PAW log files + Logback console -->
-          <jvmArgs>-Dlogback.configurationFile=classpath:logback/logback-local.xml -Dfile.encoding=UTF-8</jvmArgs>
+          <jvmArgs>-Dspring.profiles.active=local -Dlogback.configurationFile=classpath:logback/logback-local.xml -Dfile.encoding=UTF-8</jvmArgs>
         </configuration>
         <dependencies>
           <dependency>

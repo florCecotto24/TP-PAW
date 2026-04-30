@@ -7,3 +7,5 @@ WHERE member_since IS NULL;
 
 ALTER TABLE users
     ALTER COLUMN member_since SET NOT NULL;
+
+

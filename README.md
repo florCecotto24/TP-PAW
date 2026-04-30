@@ -14,6 +14,17 @@ Multi-module **Spring MVC** + **JSP** web application. **Java 21**.
 
 - Adjust host, user, and database to match `application-local.properties` in `webapp/src/main/resources/` (or your own overrides).
 
+### Environment properties (required)
+
+Startup **requires** **`.properties`** files that are **not** in the repository (they are `.gitignore`d). **Create them from the matching `.example`** files in the same directory:
+
+| Profile / use case | File to create | Template |
+|--------------------|-----------------|----------|
+| Local development (`-Dspring.profiles.active=local`, e.g. `mvn jetty:run` on the webapp module) | `webapp/src/main/resources/application/application-local.properties` | `application-local.properties.example` |
+| Deployment (without the `local` profile, e.g. Tomcat on Pampero) | `webapp/src/main/resources/application/application-deployed.properties` | `application-deployed.properties.example` |
+
+Those files hold JDBC settings, SMTP password, *remember-me* key, and `mail.app.base.url`, in addition to shared settings in committed `application.properties`. Without the `.properties` file for the active profile, the Spring context will not start.
+
 ## Build and run (from repository root)
 
 ```bash
@@ -54,7 +65,7 @@ mvn test
 | **common** | Small shared helpers under `ar.edu.itba.paw.common`. |
 | **models** | Domain entities and DTOs (`models.domain`, `models.dto`, `models.util`). |
 | **persistence-contracts** | DAO interfaces (`persistence`) used by services and JDBC. |
-| **persistence** | JDBC implementations (`persistence.jdbc`), catalogs (`persistence.catalog`), SQL (`schema.sql`). |
+| **persistence** | JDBC implementations (`persistence.jdbc`), catalogs (`persistence.catalog`), `schema.sql` as a reference for the current schema (not executed at runtime). |
 | **service-contracts** | Service interfaces (`services`), exceptions, message keys (`exception`). |
 | **services** | Business logic (`services`, `services.policy`), DAO integration, application rules. |
 | **webapp** | WAR: Spring MVC (`webapp.controller`), configuration (`webapp.config`), security (`webapp.security`), form validation (`webapp.validation`), forms (`webapp.form`), Flyway migrations (`webapp/src/main/resources/db/migration/`), JSPs and static assets. |

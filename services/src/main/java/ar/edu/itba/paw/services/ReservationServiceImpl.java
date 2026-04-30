@@ -871,7 +871,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final User rider = riderOpt.get();
         final Listing listing = listingOpt.get();
         final Locale locale = userService.resolveMailLocale(rider.getId());
-        final String path = "/my-reservations/" + reservation.getId() + "#rider-review-owner";
+        final String path = "/my-reservations/" + reservation.getId() + "?role=rider#rider-review-owner";
         return Optional.of(RiderReviewInviteEmailPayload.builder()
                 .messageLocale(locale)
                 .recipientEmail(rider.getEmail())

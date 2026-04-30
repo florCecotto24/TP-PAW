@@ -6,28 +6,23 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executor;
+
 import javax.sql.DataSource;
 
-import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.annotation.PropertySources;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.jdbc.datasource.SimpleDriverDataSource;
-import org.springframework.jdbc.datasource.init.DataSourceInitializer;
-import org.springframework.jdbc.datasource.init.DatabasePopulator;
-import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -35,6 +30,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ViewResolver;
@@ -42,10 +38,10 @@ import org.springframework.web.servlet.config.annotation.DefaultServletHandlerCo
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
@@ -59,13 +55,14 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 @EnableScheduling
 @EnableTransactionManagement
 @Configuration
-@Import({SpringMailConfig.class, WebAuthConfig.class, ValidationWebConfig.class})
-@PropertySources({
-    @PropertySource("classpath:application/application.properties"),
-    @PropertySource(
-            value = "classpath:application/application-${spring.profiles.active}.properties",
-            ignoreResourceNotFound = true)
+@Import({
+    LocalApplicationEnvironmentConfig.class,
+    DeployedApplicationEnvironmentConfig.class,
+    SpringMailConfig.class,
+    WebAuthConfig.class,
+    ValidationWebConfig.class
 })
+@PropertySource("classpath:application/application.properties")
 @ComponentScan({
         "ar.edu.itba.paw.webapp.controller",
         "ar.edu.itba.paw.webapp.advice",
@@ -78,10 +75,24 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 })
 public class WebConfig implements WebMvcConfigurer {
 
-    private final LatestLocaleSaveInterceptor latestLocaleSaveInterceptor;
+    private final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor;
 
-    public WebConfig(final LatestLocaleSaveInterceptor latestLocaleSaveInterceptor) {
+    /**
+     * Defer resolution until {@link #addInterceptors}: avoids a context cycle and avoids {@code @Lazy} (CGLIB cannot
+     * proxy {@link LatestLocaleSaveInterceptor} because it is final).
+     */
+    public WebConfig(
+            final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor) {
         this.latestLocaleSaveInterceptor = latestLocaleSaveInterceptor;
+    }
+
+    /**
+     * Needed for {@link org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher} with path variables
+     * (e.g. {@code /my-reservations/{reservationId}/**}), distinct from Ant {@code *} patterns.
+     */
+    @Bean
+    public HandlerMappingIntrospector handlerMappingIntrospector(final ApplicationContext applicationContext) {
+        return new HandlerMappingIntrospector(applicationContext);
     }
 
     @Bean
@@ -165,44 +176,6 @@ public class WebConfig implements WebMvcConfigurer {
         return executor;
     }
 
-    @Bean
-    public static DataSource dataSource(final Environment environment) {
-        final SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
-        dataSource.setDriverClass(org.postgresql.Driver.class);
-        dataSource.setUrl(requiredProperty(environment, "spring.datasource.url"));
-        dataSource.setUsername(requiredProperty(environment, "spring.datasource.username"));
-        dataSource.setPassword(requiredProperty(environment, "spring.datasource.password"));
-
-        final ResourceDatabasePopulator schemaBootstrap = new ResourceDatabasePopulator();
-        schemaBootstrap.addScript(new ClassPathResource("schema.sql"));
-        DatabasePopulatorUtils.execute(schemaBootstrap, dataSource);
-
-        Flyway.configure()
-                .dataSource(dataSource)
-                .locations("classpath:db/migration")
-                .baselineOnMigrate(true)
-                .baselineVersion("1")
-                .failOnMissingLocations(true)
-                .load()
-                .migrate();
-
-        return dataSource;
-    }
-
-    @Bean
-    public DataSourceInitializer dataSourceInitializer(final DataSource dataSource) {
-        final DataSourceInitializer initializer = new DataSourceInitializer();
-        initializer.setDataSource(dataSource);
-        initializer.setDatabasePopulator(databasePopulator());
-        return initializer;
-    }
-
-    private DatabasePopulator databasePopulator() {
-        final ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-        populator.addScript(new ClassPathResource("schema.sql"));
-        return populator;
-    }
-
     @Override
     public void addResourceHandlers(final ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/css/**").addResourceLocations("/css/");
@@ -232,7 +205,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
-        registry.addInterceptor(latestLocaleSaveInterceptor).addPathPatterns("/**");
+        registry.addInterceptor(latestLocaleSaveInterceptor.getObject()).addPathPatterns("/**");
     }
 
     /**
@@ -260,11 +233,4 @@ public class WebConfig implements WebMvcConfigurer {
         };
     }
 
-    private static String requiredProperty(final Environment environment, final String key) {
-        final String value = environment.getProperty(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Missing or empty datasource configuration property: " + key);
-        }
-        return value;
-    }
 }

@@ -27,8 +27,10 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.access.ListingWebAuthorization;
@@ -92,6 +94,7 @@ public class WebAuthConfig {
             final SecurityContextRepository securityContextRepository,
             final RequestCache requestCache,
             final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
+            final HandlerMappingIntrospector handlerMappingIntrospector,
             final ListingWebAuthorization listingWebAuthorization,
             final ReservationWebAuthorization reservationWebAuthorization) throws Exception {
         http
@@ -103,30 +106,69 @@ public class WebAuthConfig {
                         .antMatchers("/error").permitAll()
                         .antMatchers("/search", "/car-detail").permitAll()
                         .antMatchers("/image/**").permitAll()
-                        .antMatchers("/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
+                        .antMatchers(
+                                "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
                         .antMatchers("/publish-car", "/publish-car/**").authenticated()
                         .antMatchers("/my-listings").authenticated()
-                        .antMatchers("/my-listings/**")
+                        .requestMatchers(
+                                mvc(handlerMappingIntrospector, "/my-listings/{listingId}"),
+                                mvc(handlerMappingIntrospector, "/my-listings/{listingId}/**"))
                         .access(listingWebAuthorization.ownerAccess())
                         .antMatchers("/my-reservations").authenticated()
-                        .antMatchers("/my-reservations/*/payment-receipt/approval")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/payment-receipt/approval"))
                         .access(reservationWebAuthorization.ownerAccess())
-                        .antMatchers("/my-reservations/*/payment-receipt/download")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/payment-receipt/download"))
                         .access(reservationWebAuthorization.participantAccess())
-                        .antMatchers(HttpMethod.POST, "/my-reservations/*/payment-receipt")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/payment-receipt"))
                         .access(reservationWebAuthorization.riderAccess())
-                        .antMatchers("/my-reservations/*/car-returned")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/car-returned"))
                         .access(reservationWebAuthorization.ownerAccess())
-                        .antMatchers("/my-reservations/*/owner-review-rider")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/owner-review-rider"))
                         .access(reservationWebAuthorization.ownerAccess())
-                        .antMatchers("/my-reservations/*/rider-review-owner")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/rider-review-owner"))
                         .access(reservationWebAuthorization.riderAccess())
-                        .antMatchers("/my-reservations/*/cancel")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/cancel"))
                         .access(reservationWebAuthorization.participantAccess())
-                        .antMatchers("/my-reservations/*/counterparty-profile")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/counterparty-profile"))
                         .access(reservationWebAuthorization.participantAccess())
-                        .antMatchers("/my-reservations/*")
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}"))
                         .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
@@ -177,5 +219,19 @@ public class WebAuthConfig {
             }
             response.addCookie(c);
         }
+    }
+
+    private static MvcRequestMatcher mvc(
+            final HandlerMappingIntrospector introspector,
+            final HttpMethod method,
+            final String pattern) {
+        final MvcRequestMatcher m = new MvcRequestMatcher(introspector, pattern);
+        m.setMethod(method);
+        return m;
+    }
+
+    private static MvcRequestMatcher mvc(
+            final HandlerMappingIntrospector introspector, final String pattern) {
+        return new MvcRequestMatcher(introspector, pattern);
     }
 }
