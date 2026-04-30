@@ -101,7 +101,7 @@ mvn test
 
 ### Application properties
 
-- **Main config**: `webapp/src/main/resources/application.properties` defines database credentials, server port, context path (`/api`), upload limits, validation rules (password min-length, phone pattern), and mail links context.
+- **Main config**: `webapp/src/main/resources/application.properties` defines database credentials, server port, context path (`/webapp`), upload limits, validation rules (password min-length, phone pattern), and mail links context.
 - **Profile-specific**: `application-local.properties` for local PostgreSQL development (overrides `spring.datasource.*` settings).
 - **Mail config**: `mail/emailconfig.properties` and `mail/javamail.properties` under `webapp/src/main/resources/mail/`.
 

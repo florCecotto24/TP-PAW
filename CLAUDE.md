@@ -21,7 +21,7 @@ mvn test -pl persistence
 mvn test -pl persistence -Dtest=ListingJdbcDaoTest
 ```
 
-The app is served at `http://localhost:8080/` (context path is `/api` per `application.properties`, so routes like `/api/home`).
+The app is served at `http://localhost:8080/` (context path is `/webapp` per `application.properties`, so routes like `/webapp/home`).
 
 ## Database
 
