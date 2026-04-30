@@ -34,6 +34,7 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.access.ListingWebAuthorization;
+import ar.edu.itba.paw.webapp.security.access.ProfileWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetailsService;
@@ -96,7 +97,8 @@ public class WebAuthConfig {
             final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
             final HandlerMappingIntrospector handlerMappingIntrospector,
             final ListingWebAuthorization listingWebAuthorization,
-            final ReservationWebAuthorization reservationWebAuthorization) throws Exception {
+            final ReservationWebAuthorization reservationWebAuthorization,
+            final ProfileWebAuthorization profileWebAuthorization) throws Exception {
         http
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
@@ -173,7 +175,8 @@ public class WebAuthConfig {
                         .antMatchers("/reservation", "/reservation/**").authenticated()
                         .antMatchers("/login").permitAll()
                         .antMatchers("/logout").authenticated()
-                        .antMatchers("/profile", "/profile/**").authenticated()
+                        .antMatchers("/profile", "/profile/**")
+                        .access(profileWebAuthorization.selfProfileAccess())
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.sendRedirect(request.getContextPath() + "/");
