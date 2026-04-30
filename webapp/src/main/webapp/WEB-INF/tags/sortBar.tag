@@ -2,10 +2,14 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<%@ attribute name="baseUrl"     required="true" type="java.lang.String" %>
-<%@ attribute name="currentSort" required="false" type="java.lang.String" %>
+<%@ attribute name="baseUrl"      required="true"  type="java.lang.String" %>
+<%@ attribute name="currentSort"  required="false" type="java.lang.String" %>
+<%@ attribute name="sortParamName" required="false" type="java.lang.String" %>
+<%@ attribute name="pageParamName" required="false" type="java.lang.String" %>
 
 <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&amp;' : '?'}"/>
+<c:set var="resolvedSortParam" value="${empty sortParamName ? 'sort' : sortParamName}"/>
+<c:set var="resolvedPageParam" value="${empty pageParamName ? 'page' : pageParamName}"/>
 
 <spring:message code="search.sort.label"    var="sortLabel"/>
 <spring:message code="search.sort.dateDesc" var="lblDateDesc"/>
@@ -14,16 +18,16 @@
 <spring:message code="search.sort.priceDesc" var="lblPriceDesc"/>
 
 <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
-    <label for="sortSelect" class="text-secondary small fw-medium mb-0"><c:out value="${sortLabel}"/>:</label>
-    <select id="sortSelect" class="form-select form-select-sm w-auto"
+    <label for="sortSelect_<c:out value='${resolvedSortParam}'/>" class="text-secondary small fw-medium mb-0"><c:out value="${sortLabel}"/>:</label>
+    <select id="sortSelect_<c:out value='${resolvedSortParam}'/>" class="form-select form-select-sm w-auto"
             onchange="window.location.href = this.value">
-        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}sort=date,desc&amp;page=0"
+        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=date,desc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
                 ${empty currentSort || currentSort == 'date,desc' ? 'selected' : ''}><c:out value="${lblDateDesc}"/></option>
-        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}sort=date,asc&amp;page=0"
+        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=date,asc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
                 ${currentSort == 'date,asc' ? 'selected' : ''}><c:out value="${lblDateAsc}"/></option>
-        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}sort=price,asc&amp;page=0"
+        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=price,asc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
                 ${currentSort == 'price,asc' ? 'selected' : ''}><c:out value="${lblPriceAsc}"/></option>
-        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}sort=price,desc&amp;page=0"
+        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=price,desc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
                 ${currentSort == 'price,desc' ? 'selected' : ''}><c:out value="${lblPriceDesc}"/></option>
     </select>
 </div>

@@ -41,6 +41,7 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.dto.Page;
@@ -592,15 +593,55 @@ public final class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> getOwnerListingCards(
+    public Page<ListingCard> getOwnerListingCards(final OwnerListingSearchCriteria criteria) {
+        return listingDao.getOwnerListingCards(criteria);
+    }
+
+    @Override
+    public OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
             final long ownerId,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final List<String> price,
+            final List<String> listingStatus,
+            final String textQuery,
             final int page,
-            final int pageSize,
-            final String listingStatus,
-            final String textQuery) {
-        final int safePage = Math.max(0, page);
-        final int safePageSize = pageSize > 0 ? pageSize : paginationPolicy.getDefaultPageSize();
-        return listingDao.getOwnerListingCards(ownerId, safePage, safePageSize, listingStatus, textQuery);
+            final String sort) {
+        final List<String> carTypes = collectCarTypeParams(category);
+        final List<String> transmissions = collectTransmissionParams(transmission);
+        final List<String> powertrains = collectPowertrainParams(powertrain);
+        final List<String> bands = new ArrayList<>();
+        if (price != null) {
+            for (final String p : price) {
+                if (p == null || p.isBlank()) {
+                    continue;
+                }
+                final String u = p.trim().toUpperCase();
+                if ("UNDER_5000".equals(u) || "5000_TO_15000".equals(u)
+                        || "15000_TO_30000".equals(u) || "OVER_30000".equals(u)) {
+                    bands.add(u);
+                }
+            }
+        }
+        final List<String> statuses = new ArrayList<>();
+        if (listingStatus != null) {
+            for (final String s : listingStatus) {
+                if (s == null || s.isBlank()) {
+                    continue;
+                }
+                final String low = s.trim().toLowerCase();
+                if (LISTING_STATUSES.contains(low)) {
+                    statuses.add(low);
+                }
+            }
+        }
+        final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
+        final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
+        final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
+        return new OwnerListingSearchCriteria(
+                ownerId, page, PAGE_SIZE, statuses, textQuery,
+                carTypes, transmissions, powertrains, bands, sortBy, sortDir);
     }
 
     @Override
@@ -649,6 +690,10 @@ public final class ListingServiceImpl implements ListingService {
         final List<ListingCard> filtered = retainBookableListingCards(raw, wall);
         return filtered.stream().limit(limit).collect(Collectors.toList());
     }
+
+    private static final int PAGE_SIZE = 8;
+    private static final Set<String> LISTING_STATUSES = Set.of("active", "paused", "finished");
+
 
     @Override
     public ListingSearchCriteria buildSearchCriteria(

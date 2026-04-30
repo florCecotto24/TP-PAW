@@ -12,6 +12,7 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 
 public interface ReservationDao {
 
@@ -40,11 +41,11 @@ public interface ReservationDao {
 
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
 
-    Page<ReservationCard> getRiderReservationCards(long riderId, int page, int pageSize, String statusFilter);
+    Page<ReservationCard> getRiderReservationCards(ReservationSearchCriteria criteria);
 
     List<Reservation> getReminderReservations(final OffsetDateTime from, final OffsetDateTime to);
 
-    Page<ReservationCard> getOwnerReservationCards(long ownerId, int page, int pageSize, String statusFilter);
+    Page<ReservationCard> getOwnerReservationCards(ReservationSearchCriteria criteria);
 
     int updateReservationStatus(long reservationId, String status);
 

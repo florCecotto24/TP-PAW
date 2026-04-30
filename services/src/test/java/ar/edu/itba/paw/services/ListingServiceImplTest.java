@@ -33,6 +33,7 @@ import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
@@ -435,14 +436,12 @@ public class ListingServiceImplTest {
 
     @Test
     public void testGetOwnerListingCardsDelegatesToDao() {
-        final long ownerId = 5L;
-        final int page = 2;
-        final int pageSize = 8;
         final List<ListingCard> cards = List.of(new ListingCard(100L, "Ford", "Focus", new BigDecimal("100.00"), 0L));
-        final Page<ListingCard> ownerPage = new Page<>(cards, page, pageSize, 1);
-        Mockito.when(listingDao.getOwnerListingCards(ownerId, page, pageSize, null, null)).thenReturn(ownerPage);
+        final Page<ListingCard> ownerPage = new Page<>(cards, 0, 8, 1);
+        Mockito.when(listingDao.getOwnerListingCards(Mockito.any(OwnerListingSearchCriteria.class))).thenReturn(ownerPage);
 
-        final Page<ListingCard> result = listingService.getOwnerListingCards(ownerId, page, pageSize, null, null);
+        final OwnerListingSearchCriteria criteria = new OwnerListingSearchCriteria(5L, 0, 8, null, null, null, null, null, null, "date", "desc");
+        final Page<ListingCard> result = listingService.getOwnerListingCards(criteria);
 
         Assertions.assertEquals(ownerPage, result);
     }

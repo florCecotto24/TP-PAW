@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
@@ -72,7 +73,11 @@ public class MyReservationsControllerTest {
         when(reviewService.getAverageRatingForCounterparty(ownerId, true)).thenReturn(BigDecimal.valueOf(4.8));
         when(reviewService.getRecentCommentReviewsForCounterparty(ownerId, true, 3))
                 .thenReturn(List.of(new ReviewItemDto(11L, "Ana", null, 5, LocalDate.of(2026, 1, 1), "Great")));
-        when(listingService.getOwnerListingCards(ownerId, 0, 8, "active", null))
+        final OwnerListingSearchCriteria ownerCriteria = new OwnerListingSearchCriteria(
+                ownerId, 0, 8, List.of("active"), null, null, null, null, null, "date", "desc");
+        when(listingService.buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, 0, null))
+                .thenReturn(ownerCriteria);
+        when(listingService.getOwnerListingCards(ownerCriteria))
                 .thenReturn(new Page<>(List.of(
                         new ListingCard(listingId, "Toyota", "Etios", BigDecimal.valueOf(100), 1L),
                         new ListingCard(301L, "Ford", "Fiesta", BigDecimal.valueOf(120), 2L)
@@ -89,7 +94,7 @@ public class MyReservationsControllerTest {
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertEquals(1, cards.size());
         assertEquals(301L, cards.get(0).getListingId());
-        verify(listingService).getOwnerListingCards(ownerId, 0, 8, "active", null);
+        verify(listingService).buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, 0, null);
     }
 
     @Test
@@ -135,7 +140,7 @@ public class MyReservationsControllerTest {
         @SuppressWarnings("unchecked")
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertTrue(cards.isEmpty());
-        verify(listingService, never()).getOwnerListingCards(1000L, 0, 8, "active", null);
+        verify(listingService, never()).buildOwnerListingSearchCriteria(1000L, null, null, null, null, List.of("active"), null, 0, null);
     }
 
     private static User user(final long id, final String forename, final String surname) {

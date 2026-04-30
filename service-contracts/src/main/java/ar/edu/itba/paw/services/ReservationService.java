@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 
 public interface ReservationService {
 
@@ -27,9 +28,20 @@ public interface ReservationService {
 
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
 
-    Page<ReservationCard> getRiderReservationCards(long riderId, int page, int pageSize, String statusFilter);
+    Page<ReservationCard> getRiderReservationCards(ReservationSearchCriteria criteria);
 
-    Page<ReservationCard> getOwnerReservationCards(long ownerId, int page, int pageSize, String statusFilter);
+    Page<ReservationCard> getOwnerReservationCards(ReservationSearchCriteria criteria);
+
+    ReservationSearchCriteria buildReservationSearchCriteria(
+            Long ownerId,
+            Long riderId,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            List<String> price,
+            List<String> statusFilter,
+            int page,
+            String sort);
 
     Optional<String> normalizeClientReservationTotal(String reservationTotal);
 

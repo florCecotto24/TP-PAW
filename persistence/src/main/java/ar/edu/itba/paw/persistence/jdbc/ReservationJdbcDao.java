@@ -5,9 +5,12 @@ import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.stereotype.Repository;
 
@@ -27,7 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Repository
-public final class ReservationJdbcDao implements ReservationDao {
+public class ReservationJdbcDao implements ReservationDao {
 
     private static final String[] ACTIVE_OVERLAP_STATUSES = {"pending", "accepted", "started"};
 
@@ -72,11 +75,13 @@ public final class ReservationJdbcDao implements ReservationDao {
     );
 
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
 
     @Autowired
     public ReservationJdbcDao(final DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)
                 .withTableName("reservations")
                 .usingGeneratedKeyColumns("id");
@@ -158,7 +163,6 @@ public final class ReservationJdbcDao implements ReservationDao {
         values.put("return_reminder_email_sent", Boolean.FALSE);
         values.put("return_checkout_email_sent", Boolean.FALSE);
         values.put("rider_review_invite_email_sent", Boolean.FALSE);
-        values.put("pending_paymentproof_email_sent", Boolean.FALSE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
         return Reservation.builder()
@@ -240,84 +244,21 @@ public final class ReservationJdbcDao implements ReservationDao {
     }
 
     @Override
-    public Page<ReservationCard> getRiderReservationCards(
-            final long riderId,
-            final int page,
-            final int pageSize,
-            final String statusFilter) {
-        final List<Object> countArgs = new ArrayList<>();
-        countArgs.add(riderId);
-        final StringBuilder countSql = new StringBuilder("SELECT COUNT(*) FROM reservations WHERE rider_id = ? ");
-        appendReservationStatusFilter(countSql, countArgs, statusFilter, "status");
-        final Long total = jdbcTemplate.queryForObject(countSql.toString(), Long.class, countArgs.toArray());
-        final int offset = page * pageSize;
-        final List<Object> listArgs = new ArrayList<>();
-        listArgs.add(riderId);
-        final StringBuilder listSql = new StringBuilder(
-                "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
-                        + "c.brand, c.model, l.day_price, "
-                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
-                        + "FROM reservations r "
-                        + "JOIN listings l ON l.id = r.listing_id "
-                        + "JOIN cars c ON c.id = l.car_id "
-                        + "WHERE r.rider_id = ? ");
-        appendReservationStatusFilter(listSql, listArgs, statusFilter, "r.status");
-        listSql.append("ORDER BY r.created_at DESC LIMIT ? OFFSET ?");
-        listArgs.add(pageSize);
-        listArgs.add(offset);
-        final List<ReservationCard> content = jdbcTemplate.query(
-                listSql.toString(),
-                RESERVATION_CARD_ROW_MAPPER,
-                listArgs.toArray());
-        return new Page<>(content, page, pageSize, total != null ? total : 0L);
-    }
-
-    private static void appendReservationStatusFilter(
-            final StringBuilder sql,
-            final List<Object> args,
-            final String statusFilter,
-            final String statusColumnSql) {
-        if (statusFilter == null || statusFilter.isBlank()) {
-            return;
-        }
-        final String sf = statusFilter.trim().toLowerCase();
-        if ("cancelled".equals(sf)) {
-            sql.append("AND LOWER(").append(statusColumnSql).append(") IN (?, ?, ?, ?) ");
-            args.add("cancelled");
-            args.add("cancelled_by_rider");
-            args.add("cancelled_by_owner");
-            args.add("cancelled_due_to_missing_payment_proof");
-            return;
-        }
-        if ("pending".equals(sf) || "accepted".equals(sf) || "started".equals(sf)
-                || "cancelled_by_rider".equals(sf)
-                || "cancelled_by_owner".equals(sf)
-                || "cancelled_due_to_missing_payment_proof".equals(sf)
-                || "finished".equals(sf)) {
-            sql.append("AND LOWER(").append(statusColumnSql).append(") = ? ");
-            args.add(sf);
-        }
-    }
-
-    @Override
-    public Page<ReservationCard> getOwnerReservationCards(
-            final long ownerId,
-            final int page,
-            final int pageSize,
-            final String statusFilter) {
-        final List<Object> countArgs = new ArrayList<>();
-        countArgs.add(ownerId);
+    public Page<ReservationCard> getRiderReservationCards(final ReservationSearchCriteria criteria) {
+        final int page = criteria.getPage();
+        final int pageSize = criteria.getPageSize();
+        final MapSqlParameterSource countParams = new MapSqlParameterSource("riderId", criteria.getRiderId());
         final StringBuilder countSql = new StringBuilder(
                 "SELECT COUNT(*) FROM reservations r "
                         + "JOIN listings l ON l.id = r.listing_id "
                         + "JOIN cars c ON c.id = l.car_id "
-                        + "WHERE c.owner_id = ? ");
-        appendReservationStatusFilter(countSql, countArgs, statusFilter, "r.status");
-        final Long total = jdbcTemplate.queryForObject(countSql.toString(), Long.class, countArgs.toArray());
+                        + "WHERE r.rider_id = :riderId ");
+        appendReservationFilters(countSql, countParams, criteria);
+        final Long total = namedParameterJdbcTemplate.queryForObject(countSql.toString(), countParams, Long.class);
         final int offset = page * pageSize;
-        final List<Object> listArgs = new ArrayList<>();
-        listArgs.add(ownerId);
+        final MapSqlParameterSource listParams = new MapSqlParameterSource("riderId", criteria.getRiderId())
+                .addValue("limit", pageSize)
+                .addValue("offset", offset);
         final StringBuilder listSql = new StringBuilder(
                 "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
                         + "c.brand, c.model, l.day_price, "
@@ -326,16 +267,93 @@ public final class ReservationJdbcDao implements ReservationDao {
                         + "FROM reservations r "
                         + "JOIN listings l ON l.id = r.listing_id "
                         + "JOIN cars c ON c.id = l.car_id "
-                        + "WHERE c.owner_id = ? ");
-        appendReservationStatusFilter(listSql, listArgs, statusFilter, "r.status");
-        listSql.append("ORDER BY r.created_at DESC LIMIT ? OFFSET ?");
-        listArgs.add(pageSize);
-        listArgs.add(offset);
-        final List<ReservationCard> content = jdbcTemplate.query(
-                listSql.toString(),
-                RESERVATION_CARD_ROW_MAPPER,
-                listArgs.toArray());
+                        + "WHERE r.rider_id = :riderId ");
+        appendReservationFilters(listSql, listParams, criteria);
+        listSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+               .append(" LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = namedParameterJdbcTemplate.query(
+                listSql.toString(), listParams, RESERVATION_CARD_ROW_MAPPER);
         return new Page<>(content, page, pageSize, total != null ? total : 0L);
+    }
+
+    @Override
+    public Page<ReservationCard> getOwnerReservationCards(final ReservationSearchCriteria criteria) {
+        final int page = criteria.getPage();
+        final int pageSize = criteria.getPageSize();
+        final MapSqlParameterSource countParams = new MapSqlParameterSource("ownerId", criteria.getOwnerId());
+        final StringBuilder countSql = new StringBuilder(
+                "SELECT COUNT(*) FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = :ownerId ");
+        appendReservationFilters(countSql, countParams, criteria);
+        final Long total = namedParameterJdbcTemplate.queryForObject(countSql.toString(), countParams, Long.class);
+        final int offset = page * pageSize;
+        final MapSqlParameterSource listParams = new MapSqlParameterSource("ownerId", criteria.getOwnerId())
+                .addValue("limit", pageSize)
+                .addValue("offset", offset);
+        final StringBuilder listSql = new StringBuilder(
+                "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
+                        + "c.brand, c.model, l.day_price, "
+                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                        + "FROM reservations r "
+                        + "JOIN listings l ON l.id = r.listing_id "
+                        + "JOIN cars c ON c.id = l.car_id "
+                        + "WHERE c.owner_id = :ownerId ");
+        appendReservationFilters(listSql, listParams, criteria);
+        listSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+               .append(" LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = namedParameterJdbcTemplate.query(
+                listSql.toString(), listParams, RESERVATION_CARD_ROW_MAPPER);
+        return new Page<>(content, page, pageSize, total != null ? total : 0L);
+    }
+
+    private static void appendReservationFilters(
+            final StringBuilder sql,
+            final MapSqlParameterSource params,
+            final ReservationSearchCriteria criteria) {
+        if (!criteria.getStatusFilters().isEmpty()) {
+            sql.append("AND LOWER(r.status) IN (:resStatuses) ");
+            params.addValue("resStatuses", criteria.getStatusFilters());
+        }
+        if (!criteria.getCarTypes().isEmpty()) {
+            sql.append("AND c.type IN (:resCarTypes) ");
+            params.addValue("resCarTypes", criteria.getCarTypes());
+        }
+        if (!criteria.getTransmissions().isEmpty()) {
+            sql.append("AND c.transmission IN (:resTransmissions) ");
+            params.addValue("resTransmissions", criteria.getTransmissions());
+        }
+        if (!criteria.getPowertrains().isEmpty()) {
+            sql.append("AND c.powertrain IN (:resPowertrains) ");
+            params.addValue("resPowertrains", criteria.getPowertrains());
+        }
+        final List<String> bands = criteria.getPriceBands();
+        if (!bands.isEmpty()) {
+            final List<String> conditions = new ArrayList<>();
+            if (bands.contains("UNDER_5000")) {
+                conditions.add("l.day_price < 5000");
+            }
+            if (bands.contains("5000_TO_15000")) {
+                conditions.add("(l.day_price >= 5000 AND l.day_price < 15000)");
+            }
+            if (bands.contains("15000_TO_30000")) {
+                conditions.add("(l.day_price >= 15000 AND l.day_price < 30000)");
+            }
+            if (bands.contains("OVER_30000")) {
+                conditions.add("l.day_price >= 30000");
+            }
+            if (!conditions.isEmpty()) {
+                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
+            }
+        }
+    }
+
+    private static String buildReservationOrderBy(final String sortBy, final String sortDirection) {
+        final String col = "price".equals(sortBy) ? "l.day_price" : "r.created_at";
+        final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
+        return col + " " + dir;
     }
 
     @Override
@@ -371,7 +389,10 @@ public final class ReservationJdbcDao implements ReservationDao {
                         + "JOIN listings l ON l.id = r.listing_id "
                         + "JOIN cars c ON c.id = l.car_id "
                         + "WHERE c.owner_id = ? AND r.listing_id = ? ");
-        appendReservationStatusFilter(countSql, countArgs, statusFilter, "r.status");
+        if (statusFilter != null) {
+            countSql.append("AND LOWER(r.status) = ? ");
+            countArgs.add(statusFilter);
+        }
         final Long total = jdbcTemplate.queryForObject(countSql.toString(), Long.class, countArgs.toArray());
         final int offset = page * pageSize;
         final List<Object> listArgs = new ArrayList<>();
@@ -386,7 +407,10 @@ public final class ReservationJdbcDao implements ReservationDao {
                         + "JOIN listings l ON l.id = r.listing_id "
                         + "JOIN cars c ON c.id = l.car_id "
                         + "WHERE c.owner_id = ? AND r.listing_id = ? ");
-        appendReservationStatusFilter(listSql, listArgs, statusFilter, "r.status");
+        if (statusFilter != null) {
+            listSql.append("AND LOWER(r.status) = ? ");
+            listArgs.add(statusFilter);
+        }
         listSql.append("ORDER BY r.created_at DESC LIMIT ? OFFSET ?");
         listArgs.add(pageSize);
         listArgs.add(offset);
@@ -563,28 +587,6 @@ public final class ReservationJdbcDao implements ReservationDao {
         return jdbcTemplate.update(
                 "UPDATE reservations SET rider_review_invite_email_sent = TRUE, updated_at = ? "
                         + "WHERE id = ? AND rider_review_invite_email_sent = FALSE",
-                JdbcDateTimeUtils.nowTimestamp(),
-                reservationId);
-    }
-
-    @Override
-    public List<Reservation> findReservationsWithDuePendingPaymentProof(final OffsetDateTime now) {
-        final OffsetDateTime twoHoursFromNow = now.plusHours(2);
-        return jdbcTemplate.query(
-                "SELECT * FROM reservations r "
-                        + "WHERE r.payment_proof_deadline_at IS NOT NULL "
-                        + "AND r.payment_proof_deadline_at <= ? "
-                        + "AND r.payment_approved = FALSE "
-                        + "AND r.pending_paymentproof_email_sent = FALSE",
-                RESERVATION_ROW_MAPPER,
-                JdbcDateTimeUtils.toTimestamp(twoHoursFromNow));
-    }
-
-    @Override
-    public int claimPendingPaymentProofEmailSent(final long reservationId) {
-        return jdbcTemplate.update(
-                "UPDATE reservations SET pending_paymentproof_email_sent = TRUE, updated_at = ? "
-                        + "WHERE id = ? AND pending_paymentproof_email_sent = FALSE",
                 JdbcDateTimeUtils.nowTimestamp(),
                 reservationId);
     }

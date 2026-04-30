@@ -9,11 +9,13 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,8 @@ import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
@@ -44,6 +48,8 @@ import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 public final class ReservationServiceImpl implements ReservationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationServiceImpl.class);
+    private static final Set<String> RESERVATION_STATUSES =
+            Set.of("pending", "accepted", "started", "cancelled", "finished");
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
@@ -232,14 +238,120 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReservationCard> getRiderReservationCards(final long riderId, final int page, final int pageSize, final String statusFilter) {
-        return reservationDao.getRiderReservationCards(riderId, page, pageSize, statusFilter);
+    public Page<ReservationCard> getRiderReservationCards(final ReservationSearchCriteria criteria) {
+        return reservationDao.getRiderReservationCards(criteria);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReservationCard> getOwnerReservationCards(final long ownerId, final int page, final int pageSize, final String statusFilter) {
-        return reservationDao.getOwnerReservationCards(ownerId, page, pageSize, statusFilter);
+    public Page<ReservationCard> getOwnerReservationCards(final ReservationSearchCriteria criteria) {
+        return reservationDao.getOwnerReservationCards(criteria);
+    }
+
+    @Override
+    public ReservationSearchCriteria buildReservationSearchCriteria(
+            final Long ownerId,
+            final Long riderId,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final List<String> price,
+            final List<String> statusFilter,
+            final int page,
+            final String sort) {
+        final List<String> carTypes = collectCarTypeParams(category);
+        final List<String> transmissions = collectTransmissionParams(transmission);
+        final List<String> powertrains = collectPowertrainParams(powertrain);
+        final ArrayList<String> bands = new ArrayList<>();
+        if (price != null) {
+            for (final String p : price) {
+                if (p == null || p.isBlank()) {
+                    continue;
+                }
+                final String u = p.trim().toUpperCase();
+                if ("UNDER_5000".equals(u) || "5000_TO_15000".equals(u)
+                        || "15000_TO_30000".equals(u) || "OVER_30000".equals(u)) {
+                    bands.add(u);
+                }
+            }
+        }
+        final ArrayList<String> statuses = new ArrayList<>();
+        if (statusFilter != null) {
+            for (final String s : statusFilter) {
+                if (s == null || s.isBlank()) {
+                    continue;
+                }
+                final String low = s.trim().toLowerCase();
+                if (RESERVATION_STATUSES.contains(low)) {
+                    statuses.add(low);
+                }
+            }
+        }
+        final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
+        final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
+        final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
+        return new ReservationSearchCriteria(
+                ownerId, riderId, page, 8, statuses,
+                carTypes, transmissions, powertrains, bands, sortBy, sortDir);
+    }
+
+    private static List<String> collectCarTypeParams(final List<String> raw) {
+        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
+        if (raw == null) {
+            return out;
+        }
+        for (final String s : raw) {
+            if (s == null || s.isBlank()) {
+                continue;
+            }
+            final String u = s.trim().toUpperCase();
+            try {
+                Car.Type.valueOf(u);
+                if (!out.contains(u)) {
+                    out.add(u);
+                }
+            } catch (final IllegalArgumentException ignored) {
+            }
+        }
+        return out;
+    }
+
+    private static List<String> collectTransmissionParams(final List<String> raw) {
+        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
+        if (raw == null) {
+            return out;
+        }
+        for (final String s : raw) {
+            if (s == null || s.isBlank()) {
+                continue;
+            }
+            final String u = s.trim().toUpperCase();
+            try {
+                Car.Transmission.valueOf(u);
+                out.add(u);
+            } catch (final IllegalArgumentException ignored) {
+            }
+        }
+        return out;
+    }
+
+    private static List<String> collectPowertrainParams(final List<String> raw) {
+        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
+        if (raw == null) {
+            return out;
+        }
+        for (final String s : raw) {
+            if (s == null || s.isBlank()) {
+                continue;
+            }
+            final String u = s.trim().toUpperCase();
+            try {
+                Car.Powertrain.valueOf(u);
+                out.add(u);
+            } catch (final IllegalArgumentException ignored) {
+            }
+        }
+        return out;
     }
 
     @Override

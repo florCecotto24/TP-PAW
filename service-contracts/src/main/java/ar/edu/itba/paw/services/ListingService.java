@@ -21,6 +21,7 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 
 public interface ListingService {
 
@@ -163,7 +164,18 @@ public interface ListingService {
 
     Page<ListingCard> getMostRecentListingCards(int page, int pageSize, User viewer);
 
-    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize, String listingStatus, String textQuery);
+    Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
+
+    OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
+            long ownerId,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            List<String> price,
+            List<String> listingStatus,
+            String textQuery,
+            int page,
+            String sort);
 
     boolean hasListingsByOwner(long ownerId);
 

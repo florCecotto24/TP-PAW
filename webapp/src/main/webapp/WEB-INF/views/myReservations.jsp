@@ -1,7 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,27 +20,40 @@
     </section>
 
     <c:url var="reserveCarUrl" value="/search"/>
+    <c:set var="hasActiveRiderFilters" value="${not empty paramValues.riderStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
     <c:url var="myReservationsRiderPaginationBaseUrl" value="/my-reservations">
-        <c:if test="${not empty riderStatusFilter}">
-            <c:param name="riderStatus" value="${riderStatusFilter}"/>
-        </c:if>
+        <c:forEach var="rs" items="${paramValues.riderStatus}">
+            <c:param name="riderStatus"><c:out value="${rs}"/></c:param>
+        </c:forEach>
+        <c:forEach var="cat" items="${paramValues.category}">
+            <c:param name="category"><c:out value="${cat}"/></c:param>
+        </c:forEach>
+        <c:forEach var="tr" items="${paramValues.transmission}">
+            <c:param name="transmission"><c:out value="${tr}"/></c:param>
+        </c:forEach>
+        <c:forEach var="pw" items="${paramValues.powertrain}">
+            <c:param name="powertrain"><c:out value="${pw}"/></c:param>
+        </c:forEach>
+        <c:forEach var="pr" items="${paramValues.price}">
+            <c:param name="price"><c:out value="${pr}"/></c:param>
+        </c:forEach>
     </c:url>
 
-    <c:if test="${not empty riderReservations or not empty riderStatusFilter}">
-        <spring:message code="validation.dropdown.invalid" var="myReservationsDropdownInvalid" htmlEscape="true"/>
-
-        <form id="myReservationsRiderFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations"
-              data-ryden-dropdown-invalid="<c:out value='${myReservationsDropdownInvalid}'/>">
-            <div class="col-md-5 col-lg-4">
-                <label class="form-label small text-secondary mb-1" for="rider_res_status"><spring:message code="myReservations.filter.status"/></label>
-                <select class="form-select" id="rider_res_status" name="riderStatus">
-                    <option value="" ${empty riderStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
-                    <option value="pending" ${riderStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
-                    <option value="accepted" ${riderStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
-                    <option value="started" ${riderStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
-                    <option value="cancelled" ${riderStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
-                    <option value="finished" ${riderStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
-                </select>
+    <c:if test="${not empty riderReservations or hasActiveRiderFilters}">
+        <form id="myReservationsRiderFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations">
+            <div class="col-12">
+                <div class="d-flex flex-wrap align-items-center gap-0 pt-1">
+                    <spring:message code="myReservations.filter.status" var="riderStatusLabel"/>
+                    <ryden:exploreFilterDropdown filterLabel="${riderStatusLabel}" paramName="riderStatus" ariaGroup="rider-status" options="${reservationStatusOptions}"/>
+                    <spring:message code="search.filter.category" var="riderCategoryLabel"/>
+                    <ryden:exploreFilterDropdown filterLabel="${riderCategoryLabel}" paramName="category" ariaGroup="rider-category" options="${categoryFilterOptions}"/>
+                    <spring:message code="search.filter.transmission" var="riderTransmissionLabel"/>
+                    <ryden:exploreFilterDropdown filterLabel="${riderTransmissionLabel}" paramName="transmission" ariaGroup="rider-transmission" options="${transmissionFilterOptions}"/>
+                    <spring:message code="search.filter.powertrain" var="riderPowertrainLabel"/>
+                    <ryden:exploreFilterDropdown filterLabel="${riderPowertrainLabel}" paramName="powertrain" ariaGroup="rider-powertrain" options="${powertrainFilterOptions}"/>
+                    <spring:message code="search.filter.price" var="riderPriceLabel"/>
+                    <ryden:exploreFilterDropdown filterLabel="${riderPriceLabel}" paramName="price" ariaGroup="rider-price" options="${priceFilterOptions}"/>
+                </div>
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
                 <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
@@ -49,6 +61,10 @@
             </div>
         </form>
 
+        <ryden:sortBar baseUrl="${myReservationsRiderPaginationBaseUrl}" currentSort="${currentSort}"/>
+    </c:if>
+
+    <c:if test="${not empty riderReservations or hasActiveRiderFilters}">
         <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <h3 class="h6 mb-0">
                 <c:choose>
@@ -66,23 +82,17 @@
 
     <c:choose>
         <c:when test="${empty riderReservations}">
-            <c:choose>
-                <c:when test="${not empty riderStatusFilter}">
-                    <div class="search-empty-state text-center">
-                        <h2 class="h4 fw-semibold mb-2">
-                            <spring:message code="myReservations.noResults.title"/>
-                        </h2>
+            <div class="search-empty-state text-center">
+                <c:choose>
+                    <c:when test="${hasActiveRiderFilters}">
+                        <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.noResults.title"/></h2>
                         <div class="search-empty-state__actions mt-4">
                             <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary">
                                 <spring:message code="search.filters.clear"/>
                             </a>
                         </div>
-                    </div>
-                </c:when>
-                <c:otherwise>
-                    <div class="search-empty-state text-center">
-                        <img src="${pageContext.request.contextPath}/assets/images/filmore-cars.png"
-                             alt="" class="mb-4 img-fluid" style="max-width:260px"/>
+                    </c:when>
+                    <c:otherwise>
                         <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.empty.title"/></h2>
                         <p class="text-secondary mb-0 search-empty-state__text">
                             <spring:message code="myReservations.empty.description"/>
@@ -92,9 +102,9 @@
                                 <spring:message code="myReservations.empty.reserve"/>
                             </a>
                         </div>
-                    </div>
-                </c:otherwise>
-            </c:choose>
+                    </c:otherwise>
+                </c:choose>
+            </div>
         </c:when>
         <c:otherwise>
             <div class="d-flex flex-column gap-3 mb-4">
@@ -103,7 +113,7 @@
                     <a href="<c:out value='${reservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
                             <span class="position-absolute top-0 end-0 m-2 z-1">
-                                <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : fn:startsWith(reservation.statusKey, 'cancelled') ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
+                                <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : reservation.statusKey eq 'cancelled' ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
                                     <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
                                 </span>
                             </span>
@@ -158,30 +168,11 @@
                     currentPage="${riderReservationsPage.currentPage}"
                     totalPages="${riderReservationsPage.totalPages}"
                     baseUrl="${myReservationsRiderPaginationBaseUrl}"
-                    pageParam="riderPage"/>
+                    pageParam="riderPage"
+                    sortParam="${currentSort}"/>
         </c:otherwise>
     </c:choose>
 </main>
-
-<script>
-    (function () {
-        var allowed = ['', 'pending', 'accepted', 'started', 'cancelled', 'finished'];
-        var form = document.getElementById('myReservationsRiderFilterForm');
-        var sel = document.getElementById('rider_res_status');
-        if (!form || !sel) return;
-        var msg = form.getAttribute('data-ryden-dropdown-invalid') || '';
-        form.addEventListener('submit', function (ev) {
-            var v = (sel.value || '').trim().toLowerCase();
-            if (allowed.indexOf(v) < 0) {
-                ev.preventDefault();
-                sel.setCustomValidity(msg);
-                sel.reportValidity();
-                return;
-            }
-            sel.setCustomValidity('');
-        });
-    })();
-</script>
 
 <%@include file="footer.jsp"%>
 </body>

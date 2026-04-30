@@ -35,13 +35,14 @@ import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
 @Repository
-public final class ListingJdbcDao implements ListingDao {
+public class ListingJdbcDao implements ListingDao {
 
     private static final String HOME_SECTION_CHEAPEST = "C";
     private static final String HOME_SECTION_RECENT = "R";
@@ -89,16 +90,6 @@ public final class ListingJdbcDao implements ListingDao {
             rs.getBigDecimal("day_price"),
             rs.getLong("image_id"),
             readNullableRatingAvg(rs, "rating_avg")
-    );
-
-    private static final RowMapper<ListingCard> OWNER_LISTING_CARD_ROW_MAPPER = (rs, rowNum) -> new ListingCard(
-            rs.getLong("listing_id"),
-            rs.getString("brand"),
-            rs.getString("model"),
-            rs.getBigDecimal("day_price"),
-            rs.getLong("image_id"),
-            readNullableRatingAvg(rs, "rating_avg"),
-            Listing.Status.valueOf(rs.getString("listing_status").toUpperCase())
     );
 
     private static final ResultSetExtractor<Optional<ListingDetail>> LISTING_DETAIL_EXTRACTOR = rs -> {
@@ -473,52 +464,77 @@ public final class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public Page<ListingCard> getOwnerListingCards(
-            final long ownerId,
-            final int page,
-            final int pageSize,
-            final String statusFilter,
-            final String textQuery) {
-        final MapSqlParameterSource countParams = new MapSqlParameterSource("ownerId", ownerId);
+    public Page<ListingCard> getOwnerListingCards(final OwnerListingSearchCriteria criteria) {
+        final int page = criteria.getPage();
+        final int pageSize = criteria.getPageSize();
+        final MapSqlParameterSource countParams = new MapSqlParameterSource("ownerId", criteria.getOwnerId());
         final StringBuilder countSql = new StringBuilder(
                 "SELECT COUNT(*) FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId ");
-        appendOwnerListingFilters(countSql, countParams, statusFilter, textQuery);
+        appendOwnerListingFilters(countSql, countParams, criteria);
         final Long total = namedParameterJdbcTemplate.queryForObject(countSql.toString(), countParams, Long.class);
         final int offset = page * pageSize;
-        final MapSqlParameterSource listParams = new MapSqlParameterSource("ownerId", ownerId)
+        final MapSqlParameterSource listParams = new MapSqlParameterSource("ownerId", criteria.getOwnerId())
                 .addValue("limit", pageSize)
                 .addValue("offset", offset);
         final StringBuilder listSql = new StringBuilder(
-                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, l.status AS listing_status, "
+                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l JOIN cars c ON c.id = l.car_id "
                         + "WHERE c.owner_id = :ownerId ");
-        appendOwnerListingFilters(listSql, listParams, statusFilter, textQuery);
-        listSql.append("ORDER BY l.created_at DESC LIMIT :limit OFFSET :offset");
-        final List<ListingCard> content = namedParameterJdbcTemplate.query(listSql.toString(), listParams, OWNER_LISTING_CARD_ROW_MAPPER);
+        appendOwnerListingFilters(listSql, listParams, criteria);
+        listSql.append("ORDER BY ").append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+               .append(" LIMIT :limit OFFSET :offset");
+        final List<ListingCard> content = namedParameterJdbcTemplate.query(listSql.toString(), listParams, LISTING_CARD_ROW_MAPPER);
         return new Page<>(content, page, pageSize, total != null ? total : 0L);
     }
 
     private static void appendOwnerListingFilters(
             final StringBuilder sql,
             final MapSqlParameterSource params,
-            final String statusFilter,
-            final String textQuery) {
-        if (statusFilter != null && !statusFilter.isBlank()) {
-            final String sf = statusFilter.trim().toLowerCase();
-            if ("active".equals(sf) || "paused".equals(sf) || "finished".equals(sf)
-                    || "paused_due_to_lack_of_cbu".equals(sf)) {
-                sql.append("AND LOWER(l.status) = :ownerListingStatus ");
-                params.addValue("ownerListingStatus", sf);
-            }
+            final OwnerListingSearchCriteria criteria) {
+        if (!criteria.getListingStatusFilters().isEmpty()) {
+            sql.append("AND LOWER(l.status) IN (:ownerListingStatuses) ");
+            params.addValue("ownerListingStatuses", criteria.getListingStatusFilters());
         }
-        if (textQuery != null && !textQuery.isBlank()) {
-            final String q = "%" + escapeLike(textQuery.trim()) + "%";
+        final String textQuery = criteria.getTextQuery();
+        if (textQuery != null) {
+            final String q = "%" + escapeLike(textQuery) + "%";
             sql.append("AND (LOWER(c.brand) LIKE LOWER(:ownerListingSearch) ESCAPE '\\' "
                     + "OR LOWER(c.model) LIKE LOWER(:ownerListingSearch) ESCAPE '\\' "
                     + "OR LOWER(l.title) LIKE LOWER(:ownerListingSearch) ESCAPE '\\') ");
             params.addValue("ownerListingSearch", q);
+        }
+        if (!criteria.getCarTypes().isEmpty()) {
+            sql.append("AND c.type IN (:ownerCarTypes) ");
+            params.addValue("ownerCarTypes", criteria.getCarTypes());
+        }
+        if (!criteria.getTransmissions().isEmpty()) {
+            sql.append("AND c.transmission IN (:ownerTransmissions) ");
+            params.addValue("ownerTransmissions", criteria.getTransmissions());
+        }
+        if (!criteria.getPowertrains().isEmpty()) {
+            sql.append("AND c.powertrain IN (:ownerPowertrains) ");
+            params.addValue("ownerPowertrains", criteria.getPowertrains());
+        }
+        final List<String> bands = criteria.getPriceBands();
+        if (!bands.isEmpty()) {
+            final List<String> conditions = new ArrayList<>();
+            if (bands.contains("UNDER_5000")) {
+                conditions.add("l.day_price < 5000");
+            }
+            if (bands.contains("5000_TO_15000")) {
+                conditions.add("(l.day_price >= 5000 AND l.day_price < 15000)");
+            }
+            if (bands.contains("15000_TO_30000")) {
+                conditions.add("(l.day_price >= 15000 AND l.day_price < 30000)");
+            }
+            if (bands.contains("OVER_30000")) {
+                conditions.add("l.day_price >= 30000");
+            }
+            if (!conditions.isEmpty()) {
+                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
+            }
         }
     }
 

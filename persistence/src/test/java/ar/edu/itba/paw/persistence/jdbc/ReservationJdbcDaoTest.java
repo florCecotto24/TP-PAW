@@ -3,6 +3,7 @@ package ar.edu.itba.paw.persistence.jdbc;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
@@ -147,7 +148,8 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
                 created.plusDays(1));
 
         // Exercise
-        final Page<ReservationCard> cardsPage = reservationDao.getRiderReservationCards(2L, 0, 8, null);
+        final var criteria = new ReservationSearchCriteria(null, 2L, 0, 8, null, null, null, null, null, "date", "desc");
+        final Page<ReservationCard> cardsPage = reservationDao.getRiderReservationCards(criteria);
         final List<ReservationCard> cards = cardsPage.getContent();
 
         // Assert

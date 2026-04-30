@@ -49,10 +49,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/my-listings")
 public final class MyListingsController {
 
-    private static final Set<String> OWNER_LISTING_STATUS_WHITELIST =
-            Set.of("active", "paused", "finished", "paused_due_to_lack_of_cbu");
-    private static final Set<String> RESERVATION_STATUS_WHITELIST =
-            Set.of("pending", "accepted", "started", "cancelled", "finished");
+    private static final int PAGE_SIZE = 8;
     private static final String TAB_LISTINGS = "listings";
     private static final String TAB_RESERVATIONS = "reservations";
 
@@ -80,28 +77,39 @@ public final class MyListingsController {
         binder.addValidators(listingNeighborhoodFormValidator);
     }
 
+    private static final String DEFAULT_SORT = "date,desc";
+    private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
+
     @GetMapping
     public ModelAndView myListings(
             @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "0") int ownerPage,
-            @RequestParam(required = false) final String listingStatus,
-            @RequestParam(required = false) final String ownerStatus,
+            @RequestParam(required = false) final List<String> listingStatus,
+            @RequestParam(required = false) final List<String> ownerStatus,
             @RequestParam(required = false) final String q,
             @RequestParam(required = false) final String tab,
+            @RequestParam(required = false) final List<String> category,
+            @RequestParam(required = false) final List<String> transmission,
+            @RequestParam(required = false) final List<String> powertrain,
+            @RequestParam(required = false) final List<String> price,
+            @RequestParam(required = false) final String sort,
+            @RequestParam(required = false) final List<String> ownerCategory,
+            @RequestParam(required = false) final List<String> ownerTransmission,
+            @RequestParam(required = false) final List<String> ownerPowertrain,
+            @RequestParam(required = false) final List<String> ownerPrice,
+            @RequestParam(required = false) final String ownerSort,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
         ownerPage = Math.max(0, ownerPage);
 
         final String selectedTab = TAB_RESERVATIONS.equals(tab) ? TAB_RESERVATIONS : TAB_LISTINGS;
-        final String listingStatusFilter = normalizeOwnerListingStatusParam(listingStatus);
-        final String ownerStatusFilter = normalizeReservationStatusParam(ownerStatus);
-
         // Listings tab data
-        final Page<ListingCard> resultPage =
-                listingService.getOwnerListingCards(
-                        me.getId(), page, paginationPolicy.getDefaultPageSize(), listingStatusFilter, q);
+        final var listingsCriteria = listingService.buildOwnerListingSearchCriteria(
+                me.getId(), category, transmission, powertrain, price,
+                listingStatus, q, page, sort);
+        final Page<ListingCard> resultPage = listingService.getOwnerListingCards(listingsCriteria);
         final int lastPage = resultPage.getTotalPages() - 1;
         if (page > lastPage) {
             final RedirectView redirectView = new RedirectView(
@@ -117,8 +125,10 @@ public final class MyListingsController {
                 .collect(Collectors.toList());
 
         // Reservations tab data
-        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(
-                me.getId(), ownerPage, paginationPolicy.getDefaultPageSize(), ownerStatusFilter);
+        final var ownerCriteria = reservationService.buildReservationSearchCriteria(
+                me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain, ownerPrice,
+                ownerStatus, ownerPage, ownerSort);
+        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(ownerCriteria);
         final int lastOwnerPage = ownerResultPage.getTotalPages() - 1;
         if (ownerPage > lastOwnerPage) {
             final RedirectView redirectView = new RedirectView(
@@ -141,18 +151,13 @@ public final class MyListingsController {
         mav.addObject("ownerReservationsPage", ownerResultPage);
         mav.addObject("selectedListingsTab", selectedTab);
         mav.addObject("activeTab", "my-listings");
-        mav.addObject("ownerListingStatusFilter", listingStatusFilter != null ? listingStatusFilter : "");
-        mav.addObject("ownerStatusFilter", ownerStatusFilter);
+        mav.addObject("listingsCurrentSort", sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT);
+        mav.addObject("ownerCurrentSort", ownerSort != null && VALID_SORTS.contains(ownerSort) ? ownerSort : DEFAULT_SORT);
         return mav;
     }
 
-    private static String normalizeOwnerListingStatusParam(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        final String t = raw.trim().toLowerCase();
-        return OWNER_LISTING_STATUS_WHITELIST.contains(t) ? t : null;
-    }
+    private static final Set<String> RESERVATION_STATUS_WHITELIST =
+            Set.of("pending", "accepted", "started", "cancelled", "finished");
 
     private static String normalizeReservationStatusParam(final String raw) {
         if (raw == null || raw.isBlank()) {

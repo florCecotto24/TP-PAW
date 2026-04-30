@@ -60,9 +60,7 @@ import java.util.stream.Collectors;
 public final class MyReservationsController {
 
     private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
-    private static final Set<String> RESERVATION_STATUS_WHITELIST =
-            Set.of("pending", "accepted", "started", "cancelled", "finished");
-
+    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
     private final ReservationService reservationService;
     private final ListingService listingService;
     private final ImageService imageService;
@@ -91,18 +89,28 @@ public final class MyReservationsController {
         this.paginationPolicy = paginationPolicy;
     }
 
+    private static final String DEFAULT_SORT = "date,desc";
+    private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
+
+
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
             @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int riderPage,
-            @RequestParam(required = false) final String riderStatus,
+            @RequestParam(required = false) final List<String> riderStatus,
+            @RequestParam(required = false) final List<String> category,
+            @RequestParam(required = false) final List<String> transmission,
+            @RequestParam(required = false) final List<String> powertrain,
+            @RequestParam(required = false) final List<String> price,
+            @RequestParam(required = false) final String sort,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         riderPage = Math.max(0, riderPage);
-        final String riderStatusFilter = normalizeReservationStatusParam(riderStatus);
 
-        final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(
-                me.getId(), riderPage, paginationPolicy.getDefaultPageSize(), riderStatusFilter);
+        final var criteria = reservationService.buildReservationSearchCriteria(
+                null, me.getId(), category, transmission, powertrain, price,
+                riderStatus, riderPage, sort);
+        final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
         final Locale locale = LocaleContextHolder.getLocale();
         final List<ReservationCardView> riderReservations = riderResultPage.getContent().stream()
                 .map(card -> toReservationCardView(card, locale))
@@ -123,16 +131,8 @@ public final class MyReservationsController {
         mav.addObject("riderReservations", riderReservations);
         mav.addObject("riderReservationsPage", riderResultPage);
         mav.addObject("activeTab", "my-reservations");
-        mav.addObject("riderStatusFilter", riderStatusFilter);
+        mav.addObject("currentSort", sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT);
         return mav;
-    }
-
-    private static String normalizeReservationStatusParam(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        final String t = raw.trim().toLowerCase();
-        return RESERVATION_STATUS_WHITELIST.contains(t) ? t : null;
     }
 
     @GetMapping("/my-reservations/{reservationId}")
@@ -265,13 +265,12 @@ public final class MyReservationsController {
                 counterparty.getMemberSince().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
+        // COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE (8) matches the service PAGE_SIZE used by buildOwnerListingSearchCriteria
         final List<VehicleCardView> counterpartyActiveListings = counterpartyIsOwner
                 ? listingService.getOwnerListingCards(
-                                counterparty.getId(),
-                                0,
-                                paginationPolicy.getDefaultPageSize(),
-                                "active",
-                                null)
+                                listingService.buildOwnerListingSearchCriteria(
+                                        counterparty.getId(), null, null, null, null,
+                                        List.of("active"), null, 0, null))
                         .getContent()
                         .stream()
                         .filter(card -> card.getListingId() != reservation.getListingId())

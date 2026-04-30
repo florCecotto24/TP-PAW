@@ -5,8 +5,9 @@
 <%@ attribute name="currentPage" required="true" type="java.lang.Integer" %>
 <%@ attribute name="totalPages"  required="true" type="java.lang.Integer" %>
 <%@ attribute name="baseUrl"     required="true" type="java.lang.String" %>
-<%@ attribute name="pageParam"   required="false" type="java.lang.String" %>
-<%@ attribute name="sortParam"   required="false" type="java.lang.String" %>
+<%@ attribute name="pageParam"     required="false" type="java.lang.String" %>
+<%@ attribute name="sortParam"     required="false" type="java.lang.String" %>
+<%@ attribute name="sortParamName" required="false" type="java.lang.String" %>
 
 <%-- Renders nothing when there is only one page --%>
 <c:if test="${totalPages > 1}">
@@ -16,8 +17,9 @@
     </c:if>
     
     <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&amp;' : '?'}"/>
+    <c:set var="resolvedSortParamName" value="${empty sortParamName ? 'sort' : sortParamName}"/>
     <c:if test="${not empty sortParam}">
-        <c:set var="sortSuffix" value="&amp;sort=${fn:escapeXml(sortParam)}"/>
+        <c:set var="sortSuffix" value="&amp;${resolvedSortParamName}=${fn:escapeXml(sortParam)}"/>
     </c:if>
     <c:if test="${empty sortParam}">
         <c:set var="sortSuffix" value=""/>

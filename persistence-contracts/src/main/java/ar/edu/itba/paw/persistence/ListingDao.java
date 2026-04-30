@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 
 public interface ListingDao {
 
@@ -72,7 +73,7 @@ public interface ListingDao {
 
     Page<ListingCard> getMostRecentListingCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
 
-    Page<ListingCard> getOwnerListingCards(long ownerId, int page, int pageSize, String statusFilter, String textQuery);
+    Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
 
     boolean hasListingsByOwner(long ownerId);
 

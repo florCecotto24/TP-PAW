@@ -57,6 +57,25 @@ public final class CarEnumOptions {
         return sortByLabel(m);
     }
 
+    public Map<String, String> listingStatusSelectOptions() {
+        final Map<String, String> m = new LinkedHashMap<>();
+        for (final ar.edu.itba.paw.models.domain.Listing.Status s
+                : ar.edu.itba.paw.models.domain.Listing.Status.values()) {
+            m.put(s.name().toLowerCase(), label("enum.listing.status." + s.name(), s.name()));
+        }
+        return m;
+    }
+
+    public Map<String, String> reservationStatusSelectOptions() {
+        final Map<String, String> m = new LinkedHashMap<>();
+        for (final ar.edu.itba.paw.models.domain.Reservation.Status s
+                : ar.edu.itba.paw.models.domain.Reservation.Status.values()) {
+            final String key = s.name().toLowerCase();
+            m.put(key, label("enum.reservation.status." + key, key));
+        }
+        return m;
+    }
+
     /**
      * Search price buckets in ascending order (not sorted alphabetically by label).
      */
