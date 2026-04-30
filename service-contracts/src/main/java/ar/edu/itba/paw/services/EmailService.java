@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import java.util.List;
 import java.util.Locale;
 
+import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
@@ -15,7 +16,7 @@ public interface EmailService {
     /** Rider only: after payment proof upload; includes full pickup address (street number). */
     void sendRiderReservationConfirmedAfterPaymentProof(ReservationConfirmationEmailPayload payload);
 
-    void sendReservationCancellationEmail(ReservationConfirmationEmailPayload payload);
+    void sendReservationCancellationEmail(ReservationConfirmationEmailPayload payload, Reservation.Status cancellationStatus);
 
     void sendEmailVerificationCode(String to, String code, Locale locale);
 

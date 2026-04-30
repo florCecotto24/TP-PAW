@@ -9,7 +9,10 @@ import java.util.Optional;
 public final class Listing {
 
     public enum Status {
-        ACTIVE, PAUSED, FINISHED
+        ACTIVE,
+        PAUSED,
+        FINISHED,
+        PAUSED_DUE_TO_LACK_OF_CBU
     }
 
     private final long id;

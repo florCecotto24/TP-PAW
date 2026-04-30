@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +28,7 @@ import org.springframework.web.servlet.ModelAndView;
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
@@ -192,7 +192,16 @@ public final class PublishCarFormController {
 
         listingNeighborhoodFormValidator.validate(form, errors);
         validatePublishAvailabilityRiderLead(form, errors);
-        validatePublishAvailabilityTotalDays(form, errors);
+        if (!errors.hasErrors()) {
+            try {
+                listingService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
+            } catch (final ListingValidationException e) {
+                errors.reject(
+                        e.getMessageCode(),
+                        e.getMessageArgs(),
+                        localeMessages.msg(e));
+            }
+        }
         if (errors.hasErrors()) {
             return publishCarFormView(currentUser, session, form);
         }
@@ -305,29 +314,6 @@ public final class PublishCarFormController {
         }
     }
 
-    private void validatePublishAvailabilityTotalDays(final PublishCarForm form, final BindingResult errors) {
-        final int maxDays = listingService.getConfiguredMaxAvailabilityTotalDays();
-        long totalInclusive = 0L;
-        final List<PublishCarForm.AvailabilityRow> rows = form.getAvailabilityRows();
-        for (int i = 0; i < rows.size(); i++) {
-            final LocalDate from = rows.get(i).getFrom();
-            final LocalDate until = rows.get(i).getUntil();
-            if (from == null || until == null) {
-                continue;
-            }
-            if (until.isBefore(from)) {
-                continue;
-            }
-            totalInclusive += ChronoUnit.DAYS.between(from, until) + 1;
-        }
-        if (totalInclusive > maxDays) {
-            errors.reject(
-                    "validation.availabilityRows.totalMaxDays",
-                    new Object[] { maxDays },
-                    localeMessages.msg("validation.availabilityRows.totalMaxDays", maxDays));
-        }
-    }
-
     private ModelAndView publishCarFormView(
             final User currentUser,
             final HttpSession session,
@@ -349,7 +335,10 @@ public final class PublishCarFormController {
                 pickup, AvailabilityPeriod.WALL_ZONE, Instant.now(), pickupLeadHours);
         mav.addObject("publishMinAvailabilityFrom", publishMinAvailabilityFrom.toString());
         mav.addObject("pickupLeadHours", pickupLeadHours);
-        mav.addObject("maxAvailabilityTotalDays", listingService.getConfiguredMaxAvailabilityTotalDays());
+        final int forwardDays = listingService.getConfiguredMaxAvailabilityForwardWallDays();
+        mav.addObject("maxAvailabilityForwardWallDays", forwardDays);
+        final LocalDate wallToday = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        mav.addObject("publishMaxAvailabilityWallInclusive", wallToday.plusDays(forwardDays).toString());
         return mav;
     }
 

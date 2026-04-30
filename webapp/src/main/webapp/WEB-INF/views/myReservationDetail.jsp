@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <!DOCTYPE html>
@@ -273,7 +274,8 @@
                         <!-- <button type="button" class="btn btn-primary" disabled>
                             <spring:message code="myReservationDetail.actions.modify"/>
                         </button> -->
-                        <c:set var="canCancel" value="${reservation.status.name() eq 'PENDING' and not hasPaymentReceipt}"/>
+                        <c:set var="canCancel"
+                               value="${(reservation.status.name() eq 'PENDING' || reservation.status.name() eq 'ACCEPTED') and not hasPaymentReceipt}"/>
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
                         <c:choose>
                             <c:when test="${canCancel}">
@@ -311,7 +313,7 @@
                                             <c:when test="${statusKey eq 'pending' and reservationRole eq 'owner'}">
                                                 <p class="mb-0"><spring:message code="myReservationDetail.alert.pendingPaymentOwner"/></p>
                                             </c:when>
-                                            <c:when test="${statusKey eq 'cancelled'}">
+                                            <c:when test="${fn:startsWith(statusKey, 'cancelled')}">
                                                 <p class="mb-0"><spring:message code="myReservationDetail.alert.cancelled"/></p>
                                             </c:when>
                                             <c:when test="${statusKey eq 'started'}">

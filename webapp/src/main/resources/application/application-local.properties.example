@@ -7,7 +7,7 @@ spring.datasource.username=pawdbuser
 spring.datasource.password=change-me-local
 
 # Public base URL for email CTAs (browser origin, include context path, no trailing slash)
-mail.app.base.url=http://localhost:8080/api
+mail.app.base.url=http://localhost:8080/webapp
 
 # Spring Security remember-me
 app.security.remember-me.key=change-me-remember-me-key-local

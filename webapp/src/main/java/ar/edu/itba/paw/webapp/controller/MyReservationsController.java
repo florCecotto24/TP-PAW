@@ -188,7 +188,7 @@ public final class MyReservationsController {
         mav.addObject("cbu", listingDetail.getOwner().getCbu().orElse(""));
         mav.addObject("pickupDateTime", pickupDisplay);
         mav.addObject("returnDateTime", returnDisplay);
-        mav.addObject("statusKey", reservation.getStatus().name().toLowerCase());
+        mav.addObject("statusKey", reservation.getStatus().name().toLowerCase(Locale.ROOT));
         mav.addObject("totalPrice", totalPrice);
         mav.addObject("carImageId", carImageId);
         mav.addObject("activeTab", "my-reservations");
@@ -408,7 +408,7 @@ public final class MyReservationsController {
                 card.getModel(),
                 pickupDisplay,
                 returnDisplay,
-                card.getStatus().name().toLowerCase(),
+                card.getStatus().name().toLowerCase(Locale.ROOT),
                 totalPrice);
     }
 

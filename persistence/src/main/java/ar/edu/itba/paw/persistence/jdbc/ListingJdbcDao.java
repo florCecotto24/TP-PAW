@@ -507,7 +507,8 @@ public final class ListingJdbcDao implements ListingDao {
             final String textQuery) {
         if (statusFilter != null && !statusFilter.isBlank()) {
             final String sf = statusFilter.trim().toLowerCase();
-            if ("active".equals(sf) || "paused".equals(sf) || "finished".equals(sf)) {
+            if ("active".equals(sf) || "paused".equals(sf) || "finished".equals(sf)
+                    || "paused_due_to_lack_of_cbu".equals(sf)) {
                 sql.append("AND LOWER(l.status) = :ownerListingStatus ");
                 params.addValue("ownerListingStatus", sf);
             }

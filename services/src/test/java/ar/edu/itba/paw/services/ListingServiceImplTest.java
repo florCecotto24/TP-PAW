@@ -85,7 +85,8 @@ public class ListingServiceImplTest {
 
     private void stubPublishListingPolicies() {
         Mockito.when(listingCheckInOutPolicy.hasMinimumGap(Mockito.any(), Mockito.any())).thenReturn(true);
-        Mockito.doNothing().when(listingAvailabilityPolicy).validateAvailabilityPeriodsTotalDays(Mockito.anyList());
+        Mockito.doNothing().when(listingAvailabilityPolicy).validateAvailabilityWithinPublishHorizon(
+                Mockito.any(), Mockito.anyList());
     }
 
     @Test

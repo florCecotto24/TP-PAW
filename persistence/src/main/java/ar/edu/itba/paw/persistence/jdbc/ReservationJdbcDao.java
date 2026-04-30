@@ -281,7 +281,18 @@ public final class ReservationJdbcDao implements ReservationDao {
             return;
         }
         final String sf = statusFilter.trim().toLowerCase();
-        if ("pending".equals(sf) || "accepted".equals(sf) || "started".equals(sf) || "cancelled".equals(sf)
+        if ("cancelled".equals(sf)) {
+            sql.append("AND LOWER(").append(statusColumnSql).append(") IN (?, ?, ?, ?) ");
+            args.add("cancelled");
+            args.add("cancelled_by_rider");
+            args.add("cancelled_by_owner");
+            args.add("cancelled_due_to_missing_payment_proof");
+            return;
+        }
+        if ("pending".equals(sf) || "accepted".equals(sf) || "started".equals(sf)
+                || "cancelled_by_rider".equals(sf)
+                || "cancelled_by_owner".equals(sf)
+                || "cancelled_due_to_missing_payment_proof".equals(sf)
                 || "finished".equals(sf)) {
             sql.append("AND LOWER(").append(statusColumnSql).append(") = ? ");
             args.add(sf);

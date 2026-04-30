@@ -43,7 +43,10 @@ public final class RiderReviewInviteEmailPayload {
         return vehicleLabel;
     }
 
-    /** Path from context root for the mail CTA, e.g. {@code /my-reservations/12?role=rider#rider-review-owner}. */
+    /**
+     * Path from servlet context root for the mail CTA; must align with {@code GET /my-reservations/{id}} and fragment
+     * {@code rider-review-owner} on {@code myReservationDetail.jsp}.
+     */
     public String getReviewSectionPath() {
         return reviewSectionPath;
     }

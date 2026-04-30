@@ -49,7 +49,8 @@ import java.util.stream.Collectors;
 public final class MyListingsController {
 
     private static final int PAGE_SIZE = 8;
-    private static final Set<String> OWNER_LISTING_STATUS_WHITELIST = Set.of("active", "paused", "finished");
+    private static final Set<String> OWNER_LISTING_STATUS_WHITELIST =
+            Set.of("active", "paused", "finished", "paused_due_to_lack_of_cbu");
     private static final Set<String> RESERVATION_STATUS_WHITELIST =
             Set.of("pending", "accepted", "started", "cancelled", "finished");
     private static final String TAB_LISTINGS = "listings";
@@ -179,7 +180,7 @@ public final class MyListingsController {
                 card.getModel(),
                 pickupDisplay,
                 returnDisplay,
-                card.getStatus().name().toLowerCase(),
+                card.getStatus().name().toLowerCase(Locale.ROOT),
                 totalPrice);
     }
 

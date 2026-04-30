@@ -1,7 +1,8 @@
 package ar.edu.itba.paw.services.policy;
 
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -12,48 +13,54 @@ import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
- * Limits the total published availability for a listing: the sum of inclusive calendar days
- * across all rows (each period: {@code from..until} both inclusive) must not exceed the configured cap.
+ * Limits how far into the future listing availability may extend on the publication wall calendar
+ * ({@link AvailabilityPeriod#WALL_ZONE}), measured from {@code referenceWallDay} (normally “today” in that zone):
+ * inclusive start/end dates must not fall after {@code referenceWallDay + configuredForwardDays}.
  */
 @Component
 public final class ListingAvailabilityPolicy {
 
-    private final int maxAvailabilityTotalDays;
+    private final int maxAvailabilityForwardWallDays;
 
     @Autowired
     public ListingAvailabilityPolicy(final Environment environment) {
-        this.maxAvailabilityTotalDays =
-                readPositiveInt(environment, "app.listing.max-availability-total-days", 365);
+        this.maxAvailabilityForwardWallDays = resolveForwardWallDays(environment);
     }
 
-    private static int readPositiveInt(final Environment env, final String key, final int defaultValue) {
-        final Integer v = env.getProperty(key, Integer.class);
-        if (v == null || v < 1) {
-            return defaultValue;
+    private static int resolveForwardWallDays(final Environment environment) {
+        final Integer forward = environment.getProperty("app.listing.max-availability-forward-wall-days", Integer.class);
+        if (forward != null && forward >= 1) {
+            return forward;
         }
-        return v;
+        final Integer legacy = environment.getProperty("app.listing.max-availability-total-days", Integer.class);
+        if (legacy != null && legacy >= 1) {
+            return legacy;
+        }
+        return 365;
     }
 
-    public int getMaxAvailabilityTotalDays() {
-        return maxAvailabilityTotalDays;
+    public int getMaxAvailabilityForwardWallDays() {
+        return maxAvailabilityForwardWallDays;
     }
 
-    /**
-     * Sums inclusive days per valid row; total must be at most {@link #getMaxAvailabilityTotalDays()}.
-     */
-    public void validateAvailabilityPeriodsTotalDays(final List<AvailabilityPeriod> periods) {
+    public void validateAvailabilityWithinPublishHorizon(
+            final LocalDate referenceWallDay,
+            final List<AvailabilityPeriod> periods) {
+        Objects.requireNonNull(referenceWallDay, "referenceWallDay");
         if (periods == null || periods.isEmpty()) {
             return;
         }
-        long totalInclusiveDays = 0L;
+        final LocalDate latestAllowedInclusive = referenceWallDay.plusDays(maxAvailabilityForwardWallDays);
         for (final AvailabilityPeriod period : periods) {
             if (period == null || !period.isValidOrder()) {
                 continue;
             }
-            totalInclusiveDays += ChronoUnit.DAYS.between(period.getStartInclusive(), period.getEndInclusive()) + 1;
-        }
-        if (totalInclusiveDays > maxAvailabilityTotalDays) {
-            throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_MAX_TOTAL_DAYS, maxAvailabilityTotalDays);
+            if (period.getStartInclusive().isAfter(latestAllowedInclusive)
+                    || period.getEndInclusive().isAfter(latestAllowedInclusive)) {
+                throw new ListingValidationException(
+                        MessageKeys.LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON,
+                        maxAvailabilityForwardWallDays);
+            }
         }
     }
 }

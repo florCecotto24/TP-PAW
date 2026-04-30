@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
@@ -64,6 +65,7 @@
                                     <option value="active" ${ownerListingStatusFilter eq 'active' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.ACTIVE"/></option>
                                     <option value="paused" ${ownerListingStatusFilter eq 'paused' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.PAUSED"/></option>
                                     <option value="finished" ${ownerListingStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.FINISHED"/></option>
+                                    <option value="paused_due_to_lack_of_cbu" ${ownerListingStatusFilter eq 'paused_due_to_lack_of_cbu' ? 'selected="selected"' : ''}><spring:message code="enum.listing.status.PAUSED_DUE_TO_LACK_OF_CBU"/></option>
                                 </select>
                             </div>
                             <div class="col-auto d-flex flex-wrap gap-2">
@@ -131,9 +133,9 @@
                                                             <spring:message code="enum.listing.status.ACTIVE"/>
                                                         </span>
                                                     </c:when>
-                                                    <c:when test="${car.statusKey == 'PAUSED'}">
+                                                    <c:when test="${car.statusKey == 'PAUSED' || car.statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
                                                         <span class="position-absolute top-0 end-0 m-3" style="background-color:#e4960b; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                                            <spring:message code="enum.listing.status.PAUSED"/>
+                                                            <spring:message code="enum.listing.status.${car.statusKey}"/>
                                                         </span>
                                                     </c:when>
                                                     <c:when test="${car.statusKey == 'FINISHED'}">
@@ -272,7 +274,7 @@
                                     <a href="<c:out value='${ownerReservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
                                             <span class="position-absolute top-0 end-0 m-2 z-1">
-                                                <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : reservation.statusKey eq 'cancelled' ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
+                                                <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : fn:startsWith(reservation.statusKey, 'cancelled') ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
                                                     <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
                                                 </span>
                                             </span>

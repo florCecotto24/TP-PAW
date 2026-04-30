@@ -6,11 +6,7 @@
     xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
   <display-name>PAW webapp 2026a</display-name>
 
-  <!--
-    No spring.profiles.active here so -Dspring.profiles.active=local in the JVM wins over servlet init params
-    in Spring's StandardServletEnvironment. Without that flag, the app uses application-deployed.properties
-    (see LocalApplicationEnvironmentConfig / DeployedApplicationEnvironmentConfig and application-*.example).
-  -->
+
   <context-param>
     <param-name>contextClass</param-name>
     <param-value>

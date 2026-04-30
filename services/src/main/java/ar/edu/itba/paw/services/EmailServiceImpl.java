@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
@@ -99,18 +100,51 @@ public final class EmailServiceImpl implements EmailService {
         return ctx;
     }
 
-    /** Cancellation / reminder rider templates use {@code ctaUrl} (reservation detail). */
-    private Context buildReservationCancellationRiderMailContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
+    /** Rider-facing templates that deep-link into {@code GET /my-reservations/{id}} (default role is rider). */
+    private Context buildRiderReservationDetailMailContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
         ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId()));
         return ctx;
     }
 
-    /** Cancellation owner template uses {@code ctaUrl} (host listings). */
-    private Context buildReservationCancellationOwnerMailContext(final ReservationConfirmationEmailPayload payload, final Locale mailLocale) {
+    private Context buildReservationCancellationRiderMailContext(
+            final ReservationConfirmationEmailPayload payload,
+            final Locale mailLocale,
+            final Reservation.Status cancellationStatus) {
+        final Context ctx = buildRiderReservationDetailMailContext(payload, mailLocale);
+        ctx.setVariable("cancellationIntroRider", riderCancellationIntro(cancellationStatus, mailLocale));
+        return ctx;
+    }
+
+    /** Owner cancellation template uses {@code ctaUrl} (host listings). */
+    private Context buildReservationCancellationOwnerMailContext(
+            final ReservationConfirmationEmailPayload payload,
+            final Locale mailLocale,
+            final Reservation.Status cancellationStatus) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
         ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-listings/" + payload.getListingId()));
+        ctx.setVariable("cancellationIntroOwner", ownerCancellationIntro(cancellationStatus, mailLocale));
         return ctx;
+    }
+
+    private String riderCancellationIntro(final Reservation.Status cancellationStatus, final Locale mailLocale) {
+        final String key = switch (cancellationStatus) {
+            case CANCELLED_BY_RIDER -> "mail.reservationCancelled.introRider.byRider";
+            case CANCELLED_BY_OWNER -> "mail.reservationCancelled.introRider.byOwner";
+            case CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF -> "mail.reservationCancelled.introRider.missingProof";
+            default -> "mail.reservationCancelled.intro.generic";
+        };
+        return emailMessageSource.getMessage(key, null, mailLocale);
+    }
+
+    private String ownerCancellationIntro(final Reservation.Status cancellationStatus, final Locale mailLocale) {
+        final String key = switch (cancellationStatus) {
+            case CANCELLED_BY_RIDER -> "mail.reservationCancelled.introOwner.byRider";
+            case CANCELLED_BY_OWNER -> "mail.reservationCancelled.introOwner.byOwner";
+            case CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF -> "mail.reservationCancelled.introOwner.missingProof";
+            default -> "mail.reservationCancelled.intro.generic";
+        };
+        return emailMessageSource.getMessage(key, null, mailLocale);
     }
 
     private final Environment environment;
@@ -273,7 +307,7 @@ public final class EmailServiceImpl implements EmailService {
         }
 
         final Locale mailLocale = payload.getMessageLocale();
-        final Context ctx = buildReservationCancellationRiderMailContext(payload, mailLocale);
+        final Context ctx = buildRiderReservationDetailMailContext(payload, mailLocale);
 
         final String to = payload.getRecipientEmail();
 
@@ -319,13 +353,17 @@ public final class EmailServiceImpl implements EmailService {
 
     @Override
     @Async("mailTaskExecutor")
-    public void sendReservationCancellationEmail(final ReservationConfirmationEmailPayload payload) {
+    public void sendReservationCancellationEmail(
+            final ReservationConfirmationEmailPayload payload,
+            final Reservation.Status cancellationStatus) {
         if (skipBecauseNullPayload(payload, "sendReservationCancellationEmail")) {
             return;
         }
 
-        final Context riderCtx = buildReservationCancellationRiderMailContext(payload, payload.getMessageLocale());
-        final Context ownerCtx = buildReservationCancellationOwnerMailContext(payload, payload.getOwnerMailLocale());
+        final Context riderCtx = buildReservationCancellationRiderMailContext(
+                payload, payload.getMessageLocale(), cancellationStatus);
+        final Context ownerCtx = buildReservationCancellationOwnerMailContext(
+                payload, payload.getOwnerMailLocale(), cancellationStatus);
 
         try {
             sendReservationCancellationToClient(payload, riderCtx, payload.getRecipientEmail());
@@ -467,7 +505,8 @@ public final class EmailServiceImpl implements EmailService {
 
             final Context cancellationCtx = buildReservationCancellationRiderMailContext(
                     reservationPayload,
-                    reservationPayload.getMessageLocale());
+                    reservationPayload.getMessageLocale(),
+                    Reservation.Status.CANCELLED);
 
             try {
                 sendReservationCancellationToClient(reservationPayload, cancellationCtx, reservationPayload.getRecipientEmail());

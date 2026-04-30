@@ -1153,6 +1153,21 @@
         }
     }
 
+    function readPublishMaxAvailWallYmd() {
+        if (!section) {
+            return '';
+        }
+        return (section.getAttribute('data-publish-max-avail-wall-ymd') || '').trim();
+    }
+
+    function maxDateForPublish() {
+        var ymd = readPublishMaxAvailWallYmd();
+        if (!ymd) {
+            return undefined;
+        }
+        return RydenFlatpickrRange.localWallDayEndFromYmd(ymd);
+    }
+
     function refreshAllPublishRowsMinDateFromServer() {
         var urlBase = window.rydenPublishAvailMinFromUrl;
         if (!urlBase) {
@@ -1180,9 +1195,13 @@
                 if (!minD) {
                     return;
                 }
+                var maxD = maxDateForPublish();
                 root.querySelectorAll('[data-publish-avail-row]').forEach(function (rrow) {
                     if (rrow._rydenAvailFp && rrow._rydenAvailFp.fp) {
                         rrow._rydenAvailFp.fp.set('minDate', minD);
+                        if (maxD) {
+                            rrow._rydenAvailFp.fp.set('maxDate', maxD);
+                        }
                     }
                 });
             })
@@ -1223,7 +1242,8 @@
             defaults.push(new Date(fromH.value + 'T00:00:00'));
             defaults.push(new Date(untilH.value + 'T00:00:00'));
         }
-        var c = RydenFlatpickrRange.init({
+        var md = maxDateForPublish();
+        var initCfg = {
             anchor: anchor,
             fromHidden: fromH,
             untilHidden: untilH,
@@ -1231,7 +1251,11 @@
             dateFormat: 'Y-m-d',
             minDate: minDateForPublish(),
             defaultDate: defaults.length ? defaults : undefined
-        });
+        };
+        if (md) {
+            initCfg.maxDate = md;
+        }
+        var c = RydenFlatpickrRange.init(initCfg);
         row._rydenAvailFp = c;
     }
 
@@ -1305,33 +1329,39 @@
             if (!section) {
                 return;
             }
-            var maxStr = section.getAttribute('data-max-availability-total-days');
-            var maxD = parseInt(maxStr, 10);
-            if (!isFinite(maxD) || maxD < 1) {
+            var maxYmd = readPublishMaxAvailWallYmd();
+            if (!maxYmd || maxYmd.length < 10) {
                 return;
             }
-            var msgTmpl = section.getAttribute('data-max-availability-total-exceeded');
+            var msgTmpl = section.getAttribute('data-publish-availability-beyond-msg');
+
+            function ymdTail(d) {
+                return String(d || '').substring(0, 10);
+            }
+            function ymdBeyondCap(ymd) {
+                return ymdTail(ymd) > maxYmd.substring(0, 10);
+            }
             var rows = root.querySelectorAll('[data-publish-avail-row]');
-            var totalDays = 0;
             for (var i = 0; i < rows.length; i++) {
                 var fr = rows[i].querySelector('.ryden-avail-from');
                 var u = rows[i].querySelector('.ryden-avail-until');
-                if (!fr || !u || !fr.value || !u.value) {
+                if (!fr || !u) {
                     continue;
                 }
-                var a = RydenFlatpickrRange.localNoonFromYmd(fr.value);
-                var b = RydenFlatpickrRange.localNoonFromYmd(u.value);
-                if (!a || !b) {
-                    continue;
+                if (fr.value && ymdBeyondCap(fr.value)) {
+                    e.preventDefault();
+                    if (msgTmpl && window.alert) {
+                        window.alert(msgTmpl);
+                    }
+                    return false;
                 }
-                totalDays += Math.floor((b - a) / 86400000) + 1;
-            }
-            if (totalDays > maxD) {
-                e.preventDefault();
-                if (msgTmpl && window.alert) {
-                    window.alert(msgTmpl);
+                if (u.value && ymdBeyondCap(u.value)) {
+                    e.preventDefault();
+                    if (msgTmpl && window.alert) {
+                        window.alert(msgTmpl);
+                    }
+                    return false;
                 }
-                return false;
             }
         });
     }

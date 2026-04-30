@@ -166,8 +166,14 @@ public interface ListingService {
             List<Long> neighborhoodIds);
 
     /**
-     * Max total inclusive days across all availability periods for a listing
-     * ({@code app.listing.max-availability-total-days}).
+     * Max inclusive wall-calendar end date offset from {@code LocalDate.now(AvailabilityPeriod.WALL_ZONE)} for
+     * published listing availability ({@code app.listing.max-availability-forward-wall-days}).
      */
-    int getConfiguredMaxAvailabilityTotalDays();
+    int getConfiguredMaxAvailabilityForwardWallDays();
+
+    /**
+     * Publication rule: availability dates must lie within {@link #getConfiguredMaxAvailabilityForwardWallDays()}
+     * of “today” in {@link AvailabilityPeriod#WALL_ZONE}.
+     */
+    void validatePublicationAvailabilityAgainstWallCalendar(List<AvailabilityPeriod> periods);
 }

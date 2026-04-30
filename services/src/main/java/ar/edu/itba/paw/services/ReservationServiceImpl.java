@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -374,19 +375,20 @@ public final class ReservationServiceImpl implements ReservationService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private Optional<Reservation> performCancellationAndNotify(final long reservationId) {
-        reservationDao.updateReservationStatus(reservationId, Reservation.Status.CANCELLED.name().toLowerCase());
+    private Optional<Reservation> performCancellationAndNotify(
+            final long reservationId,
+            final Reservation.Status cancelledStatus) {
+        reservationDao.updateReservationStatus(reservationId, cancelledStatus.name().toLowerCase(Locale.ROOT));
         final Optional<Reservation> reservationOpt = reservationDao.getReservationById(reservationId);
-        if (reservationOpt.isPresent()) {
-            enqueueCancellationEmail(reservationId, reservationOpt.get());
-        }
+        reservationOpt.ifPresent(r -> enqueueCancellationEmail(r));
         return reservationOpt;
     }
 
     @Override
     @Transactional
     public Optional<Reservation> cancelReservation(final long reservationId) {
-        return performCancellationAndNotify(reservationId);
+        return performCancellationAndNotify(
+                reservationId, Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF);
     }
 
     @Override
@@ -407,8 +409,10 @@ public final class ReservationServiceImpl implements ReservationService {
         if (!isRider && !isOwner) {
             return Optional.empty();
         }
+        final Reservation.Status cancelledStatus =
+                isRider ? Reservation.Status.CANCELLED_BY_RIDER : Reservation.Status.CANCELLED_BY_OWNER;
         return switch (r.getStatus()) {
-            case PENDING, ACCEPTED -> performCancellationAndNotify(reservationId);
+            case PENDING, ACCEPTED -> performCancellationAndNotify(reservationId, cancelledStatus);
             default -> Optional.empty();
         };
     }
@@ -420,9 +424,7 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
 
-    private void enqueueCancellationEmail(
-            final long reservationId,
-            final Reservation reservation) {
+    private void enqueueCancellationEmail(final Reservation reservation) {
         try {
             final long riderId = reservation.getRiderId();
             final long listingId = reservation.getListingId();
@@ -430,15 +432,18 @@ public final class ReservationServiceImpl implements ReservationService {
             final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
             final Optional<Listing> listingOpt = listingService.getListingById(listingId);
             if (riderOpt.isEmpty()) {
-                LOGGER.atWarn().addArgument(riderId).addArgument(reservationId).log("Skipping reservation cancellation email: user not found for riderId={} reservationId={}");
+                LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId())
+                        .log("Skipping reservation cancellation email: user not found for riderId={} reservationId={}");
                 return;
             }
             if (listingOpt.isEmpty()) {
-                LOGGER.atWarn().addArgument(listingId).addArgument(reservationId).log("Skipping reservation cancellation email: listing not found for listingId={} reservationId={}");
+                LOGGER.atWarn().addArgument(listingId).addArgument(reservation.getId())
+                        .log("Skipping reservation cancellation email: listing not found for listingId={} reservationId={}");
                 return;
             }
             if (listingOwnerOpt.isEmpty()) {
-                LOGGER.atWarn().addArgument(listingId).addArgument(reservationId).log("Skipping reservation cancellation email: listing owner not found for listingId={} reservationId={}");
+                LOGGER.atWarn().addArgument(listingId).addArgument(reservation.getId())
+                        .log("Skipping reservation cancellation email: listing owner not found for listingId={} reservationId={}");
                 return;
             }
             final User rider = riderOpt.get();
@@ -464,11 +469,12 @@ public final class ReservationServiceImpl implements ReservationService {
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
-            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservationId)
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing reservation cancellation email to {} for reservation id={}");
-            emailService.sendReservationCancellationEmail(payload);
+            emailService.sendReservationCancellationEmail(payload, reservation.getStatus());
         } catch (final Exception e) {
-            LOGGER.atError().setCause(e).addArgument(reservationId).log("Could not enqueue reservation cancellation email for reservation id={}");
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue reservation cancellation email for reservation id={}");
         }
     }
 
@@ -648,7 +654,23 @@ public final class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> countListingReservationsByStatus(final long ownerId, final long listingId) {
-        return reservationDao.countListingReservationsByStatus(ownerId, listingId);
+        return mergeCancelledBuckets(reservationDao.countListingReservationsByStatus(ownerId, listingId));
+    }
+
+    /**
+     * Keeps a single {@code cancelled} counter for owner dashboards while persisting granular statuses in the database.
+     */
+    private static Map<String, Long> mergeCancelledBuckets(final Map<String, Long> raw) {
+        final Map<String, Long> out = new LinkedHashMap<>(raw);
+        long merged = out.getOrDefault("cancelled", 0L);
+        merged += out.getOrDefault("cancelled_by_rider", 0L);
+        merged += out.getOrDefault("cancelled_by_owner", 0L);
+        merged += out.getOrDefault("cancelled_due_to_missing_payment_proof", 0L);
+        out.remove("cancelled_by_rider");
+        out.remove("cancelled_by_owner");
+        out.remove("cancelled_due_to_missing_payment_proof");
+        out.put("cancelled", merged);
+        return out;
     }
 
     @Override
@@ -811,6 +833,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final User rider = riderOpt.get();
         final Listing listing = listingOpt.get();
         final Locale locale = userService.resolveMailLocale(rider.getId());
+        /* Deep link: must stay consistent with GET /my-reservations/{id} (default role=rider) + #rider-review-owner. */
         final String path = "/my-reservations/" + reservation.getId() + "?role=rider#rider-review-owner";
         return Optional.of(RiderReviewInviteEmailPayload.builder()
                 .messageLocale(locale)

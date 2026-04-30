@@ -119,7 +119,8 @@ public final class ListingServiceImpl implements ListingService {
                 throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
             }
         }
-        listingAvailabilityPolicy.validateAvailabilityPeriodsTotalDays(availabilityPeriods);
+        listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
+                LocalDate.now(AvailabilityPeriod.WALL_ZONE), availabilityPeriods);
         validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_CAR_NOT_FOUND, carId));
@@ -293,7 +294,8 @@ public final class ListingServiceImpl implements ListingService {
                     throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
                 }
             }
-            listingAvailabilityPolicy.validateAvailabilityPeriodsTotalDays(availabilityPeriods);
+            listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
+                    LocalDate.now(AvailabilityPeriod.WALL_ZONE), availabilityPeriods);
             validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
         }
         final String safeStartStreet = startPointStreet == null ? "" : startPointStreet.trim();
@@ -343,20 +345,27 @@ public final class ListingServiceImpl implements ListingService {
             return;
         }
         final Listing.Status status = opt.get().getStatus();
-        if (status != Listing.Status.ACTIVE && status != Listing.Status.PAUSED) {
+        if (status != Listing.Status.ACTIVE && status != Listing.Status.PAUSED
+                && status != Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU) {
             return;
         }
         final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         final Set<Long> bookable = listingIdsWithAtLeastOneBookableWallDay(List.of(listingId), wall);
         if (!bookable.contains(listingId)) {
-            listingDao.updateListingStatus(listingId, Listing.Status.FINISHED, Listing.Status.ACTIVE, Listing.Status.PAUSED);
+            listingDao.updateListingStatus(
+                    listingId,
+                    Listing.Status.FINISHED,
+                    Listing.Status.ACTIVE,
+                    Listing.Status.PAUSED,
+                    Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
         }
     }
 
     @Override
     @Transactional
     public void refreshExhaustedListingsToFinished() {
-        final List<Long> ids = listingDao.findListingIdsWithStatuses(Listing.Status.ACTIVE, Listing.Status.PAUSED);
+        final List<Long> ids = listingDao.findListingIdsWithStatuses(
+                Listing.Status.ACTIVE, Listing.Status.PAUSED, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
         if (ids.isEmpty()) {
             return;
         }
@@ -367,7 +376,12 @@ public final class ListingServiceImpl implements ListingService {
             final Set<Long> bookable = listingIdsWithAtLeastOneBookableWallDay(slice, wall);
             for (final long id : slice) {
                 if (!bookable.contains(id)) {
-                    listingDao.updateListingStatus(id, Listing.Status.FINISHED, Listing.Status.ACTIVE, Listing.Status.PAUSED);
+                    listingDao.updateListingStatus(
+                            id,
+                            Listing.Status.FINISHED,
+                            Listing.Status.ACTIVE,
+                            Listing.Status.PAUSED,
+                            Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
                 }
             }
         }
@@ -908,7 +922,14 @@ public final class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public int getConfiguredMaxAvailabilityTotalDays() {
-        return listingAvailabilityPolicy.getMaxAvailabilityTotalDays();
+    public void validatePublicationAvailabilityAgainstWallCalendar(final List<AvailabilityPeriod> periods) {
+        listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
+                LocalDate.now(AvailabilityPeriod.WALL_ZONE), periods);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int getConfiguredMaxAvailabilityForwardWallDays() {
+        return listingAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
     }
 }

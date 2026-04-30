@@ -194,7 +194,7 @@
                             <c:when test="${statusKey == 'ACTIVE'}">
                                 <span class="badge text-bg-success fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
                             </c:when>
-                            <c:when test="${statusKey == 'PAUSED'}">
+                            <c:when test="${statusKey == 'PAUSED' || statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
                                 <span class="badge text-bg-warning text-dark fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
                             </c:when>
                             <c:when test="${statusKey == 'FINISHED'}">

@@ -69,7 +69,7 @@ public final class MessageKeys {
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";
     public static final String LISTING_AVAILABILITY_INCLUDES_PAST_DATES = "listing.availability.includesPastDates";
-    public static final String LISTING_AVAILABILITY_MAX_TOTAL_DAYS = "listing.availability.maxTotalDays";
+    public static final String LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON = "listing.availability.beyondPublishHorizon";
     public static final String LISTING_CHECKOUT_NOT_AFTER_CHECKIN = "listing.times.checkOutNotAfterCheckIn";
     public static final String LISTING_CHECKINOUT_MIN_GAP = "listing.times.minGapHours";
     public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";

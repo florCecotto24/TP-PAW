@@ -7,8 +7,34 @@ import java.util.Optional;
 
 public final class Reservation {
 
+    /**
+     * Stored in lowercase with underscores ({@code pending}, {@code cancelled_by_rider}, …).
+     * Participant-driven cancellations use {@code cancelled_by_*}; automated rules use {@code cancelled_due_to_*}
+     * (English {@code due to} reads more naturally than {@code by} when there is no cancelling user).
+     * {@link #CANCELLED} remains for reservations cancelled before granular reasons existed.
+     */
     public enum Status {
-        PENDING, ACCEPTED, STARTED, CANCELLED, FINISHED
+        PENDING,
+        ACCEPTED,
+        STARTED,
+        CANCELLED,
+        CANCELLED_BY_RIDER,
+        CANCELLED_BY_OWNER,
+        CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF,
+        FINISHED
+    }
+
+    /**
+     * Any terminal cancellation status, including legacy {@link Status#CANCELLED}.
+     */
+    public static boolean isCancelledStatus(final Status status) {
+        if (status == null) {
+            return false;
+        }
+        return switch (status) {
+            case CANCELLED, CANCELLED_BY_RIDER, CANCELLED_BY_OWNER, CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF -> true;
+            default -> false;
+        };
     }
 
     private final long id;

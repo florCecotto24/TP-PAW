@@ -53,7 +53,8 @@ public interface ReservationService {
     long calculateBillableDays(OffsetDateTime startDate, OffsetDateTime endDate);
 
     /**
-     * Cancels without participant checks (e.g. expired pending payment job). Prefer
+     * Cancels without participant checks (e.g. expired pending payment job). Persists
+     * {@link ar.edu.itba.paw.models.domain.Reservation.Status#CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF}. Prefer
      * {@link #cancelReservationAsParticipant(long, long)} for user-initiated cancellations.
      */
     Optional<Reservation> cancelReservation(long reservationId);
