@@ -26,47 +26,48 @@
         </c:if>
     </c:url>
 
-    <spring:message code="validation.dropdown.invalid" var="myReservationsDropdownInvalid" htmlEscape="true"/>
+    <c:if test="${not empty riderReservations or not empty riderStatusFilter}">
+        <spring:message code="validation.dropdown.invalid" var="myReservationsDropdownInvalid" htmlEscape="true"/>
 
-    <form id="myReservationsRiderFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations"
-          data-ryden-dropdown-invalid="<c:out value='${myReservationsDropdownInvalid}'/>">
-        <div class="col-md-5 col-lg-4">
-            <label class="form-label small text-secondary mb-1" for="rider_res_status"><spring:message code="myReservations.filter.status"/></label>
-            <select class="form-select" id="rider_res_status" name="riderStatus">
-                <option value="" ${empty riderStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
-                <option value="pending" ${riderStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
-                <option value="accepted" ${riderStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
-                <option value="started" ${riderStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
-                <option value="cancelled" ${riderStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
-                <option value="finished" ${riderStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
-            </select>
-        </div>
-        <div class="col-auto d-flex flex-wrap gap-2">
-            <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-            <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
-        </div>
-    </form>
+        <form id="myReservationsRiderFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations"
+              data-ryden-dropdown-invalid="<c:out value='${myReservationsDropdownInvalid}'/>">
+            <div class="col-md-5 col-lg-4">
+                <label class="form-label small text-secondary mb-1" for="rider_res_status"><spring:message code="myReservations.filter.status"/></label>
+                <select class="form-select" id="rider_res_status" name="riderStatus">
+                    <option value="" ${empty riderStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
+                    <option value="pending" ${riderStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
+                    <option value="accepted" ${riderStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
+                    <option value="started" ${riderStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
+                    <option value="cancelled" ${riderStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
+                    <option value="finished" ${riderStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
+                </select>
+            </div>
+            <div class="col-auto d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+            </div>
+        </form>
 
-    <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <h3 class="h6 mb-0">
-            <c:choose>
-                <c:when test="${riderReservationsPage.totalItems > 0}">
-                    <spring:message code="myReservations.resultsRange"
-                                    arguments="${riderReservationsPage.firstItemNumber},${riderReservationsPage.lastItemNumber},${riderReservationsPage.totalItems}"/>
-                </c:when>
-                <c:otherwise>
-                    <spring:message code="myReservations.resultsCount" arguments="0"/>
-                </c:otherwise>
-            </c:choose>
-        </h3>
-    </div>
+        <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h3 class="h6 mb-0">
+                <c:choose>
+                    <c:when test="${riderReservationsPage.totalItems > 0}">
+                        <spring:message code="myReservations.resultsRange"
+                                        arguments="${riderReservationsPage.firstItemNumber},${riderReservationsPage.lastItemNumber},${riderReservationsPage.totalItems}"/>
+                    </c:when>
+                    <c:otherwise>
+                        <spring:message code="myReservations.resultsCount" arguments="0"/>
+                    </c:otherwise>
+                </c:choose>
+            </h3>
+        </div>
+    </c:if>
 
     <c:choose>
         <c:when test="${empty riderReservations}">
             <div class="search-empty-state text-center">
-                <div class="search-empty-state__icon" aria-hidden="true">
-                    <i class="bi bi-calendar2-check"></i>
-                </div>
+                <img src="${pageContext.request.contextPath}/assets/images/filmore-cars.png"
+                     alt="" class="mb-4 img-fluid" style="max-width:260px"/>
                 <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.empty.title"/></h2>
                 <p class="text-secondary mb-0 search-empty-state__text">
                     <spring:message code="myReservations.empty.description"/>

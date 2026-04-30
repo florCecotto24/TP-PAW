@@ -68,7 +68,7 @@
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                             <div class="d-flex align-items-stretch gap-2">
                                 <label class="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
-                                    <span id="paymentReceiptFileText" class="text-truncate text-muted pe-1"><c:out value="${paymentReceiptChooseHint}"/></span>
+                                    <span id="paymentReceiptFileText" class="text-truncate text-muted pe-1 flex-grow-1 min-w-0"><c:out value="${paymentReceiptChooseHint}"/></span>
                                     <input type="file" class="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
                                            id="paymentReceipt" name="paymentReceipt" required
                                            accept="image/*,application/pdf"

@@ -398,10 +398,10 @@ public class MyReservationsController {
     private ReservationCardView toReservationCardView(final ReservationCard card, final Locale locale) {
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getEndDate(), locale);
-        final String totalPrice = reservationService
-                .calculateTotal(card.getListingId(), card.getStartDate(), card.getEndDate())
-                .map(MyReservationsController::formatMoney)
-                .orElse("-");
+        final long days = reservationService.calculateBillableDays(card.getStartDate(), card.getEndDate());
+        final String totalPrice = days > 0
+                ? formatMoney(card.getDayPrice().multiply(BigDecimal.valueOf(days)))
+                : "-";
         return new ReservationCardView(
                 card.getReservationId(),
                 card.getListingId(),

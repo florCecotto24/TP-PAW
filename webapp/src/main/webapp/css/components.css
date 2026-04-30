@@ -1324,6 +1324,8 @@ select.form-select.ryden-car-spec-select option {
 .ryden-payment-receipt__file-label {
     cursor: pointer;
     min-height: calc(1.5em + 0.75rem + 2px);
+    width: auto;
+    min-width: 0;
 }
 
 .ryden-payment-receipt__file-input {

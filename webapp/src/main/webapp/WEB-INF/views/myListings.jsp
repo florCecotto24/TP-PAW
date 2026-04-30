@@ -89,16 +89,34 @@
 
                     <c:choose>
                         <c:when test="${empty results}">
-                            <div class="search-empty-state text-center">
-                                <h2 class="h4 fw-semibold mb-2">
-                                    <spring:message code="myListings.noResults.title"/>
-                                </h2>
-                                <div class="search-empty-state__actions mt-4">
-                                    <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary">
-                                        <spring:message code="search.filters.clear"/>
-                                    </a>
-                                </div>
-                            </div>
+                            <c:choose>
+                                <c:when test="${hasActiveFilters}">
+                                    <div class="search-empty-state text-center">
+                                        <h2 class="h4 fw-semibold mb-2">
+                                            <spring:message code="myListings.noResults.title"/>
+                                        </h2>
+                                        <div class="search-empty-state__actions mt-4">
+                                            <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary">
+                                                <spring:message code="search.filters.clear"/>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="search-empty-state text-center">
+                                        <img src="${pageContext.request.contextPath}/assets/images/filmore-cars.png"
+                                             alt="" class="mb-4 img-fluid" style="max-width:260px"/>
+                                        <h2 class="h4 fw-semibold mb-2">
+                                            <spring:message code="myListings.empty.title"/>
+                                        </h2>
+                                        <div class="search-empty-state__actions mt-4">
+                                            <a href="${pageContext.request.contextPath}/publish" class="btn btn-primary">
+                                                <spring:message code="myListings.empty.publishButton"/>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
                         </c:when>
                         <c:otherwise>
                             <div class="d-flex flex-column gap-3">
@@ -181,52 +199,69 @@
                         </c:if>
                     </c:url>
 
-                    <spring:message code="validation.dropdown.invalid" var="myListingsOwnerResDropdownInvalid" htmlEscape="true"/>
-                    <form id="myListingsOwnerResFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-listings"
-                          data-ryden-dropdown-invalid="<c:out value='${myListingsOwnerResDropdownInvalid}'/>">
-                        <input type="hidden" name="tab" value="reservations"/>
-                        <div class="col-md-5 col-lg-4">
-                            <label class="form-label small text-secondary mb-1" for="owner_res_status"><spring:message code="myReservations.filter.status"/></label>
-                            <select class="form-select" id="owner_res_status" name="ownerStatus">
-                                <option value="" ${empty ownerStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
-                                <option value="pending" ${ownerStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
-                                <option value="accepted" ${ownerStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
-                                <option value="started" ${ownerStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
-                                <option value="cancelled" ${ownerStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
-                                <option value="finished" ${ownerStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
-                            </select>
-                        </div>
-                        <div class="col-auto d-flex flex-wrap gap-2">
-                            <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                            <a href="${pageContext.request.contextPath}/my-listings?tab=reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
-                        </div>
-                    </form>
+                    <c:if test="${not empty ownerReservations or not empty ownerStatusFilter}">
+                        <spring:message code="validation.dropdown.invalid" var="myListingsOwnerResDropdownInvalid" htmlEscape="true"/>
+                        <form id="myListingsOwnerResFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-listings"
+                              data-ryden-dropdown-invalid="<c:out value='${myListingsOwnerResDropdownInvalid}'/>">
+                            <input type="hidden" name="tab" value="reservations"/>
+                            <div class="col-md-5 col-lg-4">
+                                <label class="form-label small text-secondary mb-1" for="owner_res_status"><spring:message code="myReservations.filter.status"/></label>
+                                <select class="form-select" id="owner_res_status" name="ownerStatus">
+                                    <option value="" ${empty ownerStatusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
+                                    <option value="pending" ${ownerStatusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
+                                    <option value="accepted" ${ownerStatusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
+                                    <option value="started" ${ownerStatusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
+                                    <option value="cancelled" ${ownerStatusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
+                                    <option value="finished" ${ownerStatusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
+                                </select>
+                            </div>
+                            <div class="col-auto d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                                <a href="${pageContext.request.contextPath}/my-listings?tab=reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                            </div>
+                        </form>
 
-                    <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <h3 class="h6 mb-0">
-                            <c:choose>
-                                <c:when test="${ownerReservationsPage.totalItems > 0}">
-                                    <spring:message code="myReservations.ownerResultsRange"
-                                                    arguments="${ownerReservationsPage.firstItemNumber},${ownerReservationsPage.lastItemNumber},${ownerReservationsPage.totalItems}"/>
-                                </c:when>
-                                <c:otherwise>
-                                    <spring:message code="myReservations.ownerResultsCount" arguments="0"/>
-                                </c:otherwise>
-                            </c:choose>
-                        </h3>
-                    </div>
+                        <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <h3 class="h6 mb-0">
+                                <c:choose>
+                                    <c:when test="${ownerReservationsPage.totalItems > 0}">
+                                        <spring:message code="myReservations.ownerResultsRange"
+                                                        arguments="${ownerReservationsPage.firstItemNumber},${ownerReservationsPage.lastItemNumber},${ownerReservationsPage.totalItems}"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <spring:message code="myReservations.ownerResultsCount" arguments="0"/>
+                                    </c:otherwise>
+                                </c:choose>
+                            </h3>
+                        </div>
+                    </c:if>
 
                     <c:choose>
                         <c:when test="${empty ownerReservations}">
-                            <div class="search-empty-state text-center">
-                                <div class="search-empty-state__icon" aria-hidden="true">
-                                    <i class="bi bi-calendar-check"></i>
-                                </div>
-                                <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.ownerEmpty.title"/></h2>
-                                <p class="text-secondary mb-0 search-empty-state__text">
-                                    <spring:message code="myReservations.ownerEmpty.description"/>
-                                </p>
-                            </div>
+                            <c:choose>
+                                <c:when test="${not empty ownerStatusFilter}">
+                                    <div class="search-empty-state text-center">
+                                        <h2 class="h4 fw-semibold mb-2">
+                                            <spring:message code="myReservations.ownerNoResults.title"/>
+                                        </h2>
+                                        <div class="search-empty-state__actions mt-4">
+                                            <a href="${pageContext.request.contextPath}/my-listings?tab=reservations" class="btn btn-outline-secondary">
+                                                <spring:message code="search.filters.clear"/>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </c:when>
+                                <c:otherwise>
+                                    <div class="search-empty-state text-center">
+                                        <img src="${pageContext.request.contextPath}/assets/images/filmore-cars.png"
+                                             alt="" class="mb-4 img-fluid" style="max-width:260px"/>
+                                        <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.ownerEmpty.title"/></h2>
+                                        <p class="text-secondary mb-0 search-empty-state__text">
+                                            <spring:message code="myReservations.ownerEmpty.description"/>
+                                        </p>
+                                    </div>
+                                </c:otherwise>
+                            </c:choose>
                         </c:when>
                         <c:otherwise>
                             <div class="d-flex flex-column gap-3 mb-4">

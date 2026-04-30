@@ -146,10 +146,8 @@ public class EmailServiceImpl implements EmailService {
         try {
             sendReservationConfirmationToClient(payload, riderCtx);
             sendReservationConfirmationToOwner(payload, ownerCtx);
-            LOGGER.atInfo().log("Reservation confirmation email sent to " + payload.getRecipientEmail()
-                    + " (reservation id=" + payload.getReservationId() + ")");
-            LOGGER.atInfo().log("Reservation confirmation email sent to " + payload.getOwnerEmail()
-                    + " (reservation id=" + payload.getReservationId() + ")");
+            LOGGER.atInfo().addArgument(payload.getRecipientEmail()).addArgument(payload.getReservationId()).log("Reservation confirmation email sent to {} (reservation id={})");
+            LOGGER.atInfo().addArgument(payload.getOwnerEmail()).addArgument(payload.getReservationId()).log("Reservation confirmation email sent to {} (reservation id={})");
         } catch (final Exception e) {
             LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to send reservation confirmation email (reservation id={})");
         }
@@ -172,8 +170,7 @@ public class EmailServiceImpl implements EmailService {
                         payload.getMessageLocale());
                 sendEmail(payload.getRecipientEmail(), subject, htmlContent);
             });
-            LOGGER.atInfo().log("Rider reservation confirmed-after-proof email sent to " + payload.getRecipientEmail()
-                    + " (reservation id=" + payload.getReservationId() + ")");
+            LOGGER.atInfo().addArgument(payload.getRecipientEmail()).addArgument(payload.getReservationId()).log("Rider reservation confirmed-after-proof email sent to {} (reservation id={})");
         } catch (final Exception e) {
             LOGGER.atError().addArgument(payload.getReservationId()).log(
                     "Failed to send rider confirmed-after-proof email (reservation id={})");
@@ -319,10 +316,8 @@ public class EmailServiceImpl implements EmailService {
         try {
             sendReservationCancellationToClient(payload, riderCtx, payload.getRecipientEmail());
             sendReservationCancellationToOwner(payload, ownerCtx);
-            LOGGER.atInfo().log("Reservation cancellation email sent to " + payload.getRecipientEmail()
-                    + " (reservation id=" + payload.getReservationId() + ")");
-            LOGGER.atInfo().log("Reservation cancellation email sent to " + payload.getOwnerEmail()
-                    + " (reservation id=" + payload.getReservationId() + ")");
+            LOGGER.atInfo().addArgument(payload.getRecipientEmail()).addArgument(payload.getReservationId()).log("Reservation cancellation email sent to {} (reservation id={})");
+            LOGGER.atInfo().addArgument(payload.getOwnerEmail()).addArgument(payload.getReservationId()).log("Reservation cancellation email sent to {} (reservation id={})");
         } catch (final Exception e) {
             LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to send reservation cancellation email (reservation id={})");
         }
@@ -549,7 +544,7 @@ public class EmailServiceImpl implements EmailService {
             helper.addInline("logo", logo);
             mailSender.send(message);
         } catch (MessagingException e) {
-            LOGGER.atError().log("Error enviando mail a "+ to + ":" + e.getMessage());
+            LOGGER.atError().setCause(e).addArgument(to).log("Error sending email to {}");
         }
     }
 

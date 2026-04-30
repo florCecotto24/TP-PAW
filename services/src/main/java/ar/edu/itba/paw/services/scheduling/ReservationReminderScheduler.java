@@ -49,20 +49,18 @@ public class ReservationReminderScheduler {
         final OffsetDateTime from = tomorrow.atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         final OffsetDateTime to = tomorrow.plusDays(1).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         final var reservations = reservationDao.getReminderReservations(from, to);
-        LOGGER.atInfo().log("Found " + reservations.size() + " reservations to send reminders for");
+        LOGGER.atInfo().addArgument(reservations.size()).log("Found {} reservations to send reminders for");
 
         for (final Reservation reservation : reservations) {
             try {
                 final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
                 final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
                 if (riderOpt.isEmpty()) {
-                    LOGGER.atWarn().log("Skipping reservation reminder email: user not found for riderId=" + reservation.getRiderId()
-                            + " reservationId=" + reservation.getId());
+                    LOGGER.atWarn().addArgument(reservation.getRiderId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: user not found for riderId={} reservationId={}");
                     continue;
                 }
                 if (listingOpt.isEmpty()) {
-                    LOGGER.atWarn().log("Skipping reservation reminder email: listing not found for listingId=" + reservation.getListingId()
-                            + " reservationId=" + reservation.getId());
+                    LOGGER.atWarn().addArgument(reservation.getListingId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: listing not found for listingId={} reservationId={}");
                     continue;
                 }
 
@@ -70,8 +68,7 @@ public class ReservationReminderScheduler {
                 final Listing listing = listingOpt.get();
                 final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
                 if (ownerOpt.isEmpty()) {
-                    LOGGER.atWarn().log("Skipping reservation reminder email: listing owner not found for listingId="
-                            + reservation.getListingId() + " reservationId=" + reservation.getId());
+                    LOGGER.atWarn().addArgument(reservation.getListingId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: listing owner not found for listingId={} reservationId={}");
                     continue;
                 }
                 final User listingOwner = ownerOpt.get();
@@ -93,11 +90,10 @@ public class ReservationReminderScheduler {
                         userService.resolveMailLocale(rider.getId()),
                         userService.resolveMailLocale(listingOwner.getId()),
                         null);
-                LOGGER.atInfo().log("Queueing reservation reminder email to " + rider.getEmail()
-                        + " for reservation id=" + reservation.getId());
+                LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId()).log("Queueing reservation reminder email to {} for reservation id={}");
                 emailService.sendReservationReminderEmail(payload);
             } catch (final Exception e) {
-                LOGGER.atError().log("Could not send reservation reminder email for reservation id=" + reservation.getId(), e);
+                LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not send reservation reminder email for reservation id={}");
             }
         }
     }

@@ -74,21 +74,25 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public int getConfiguredPickupLeadHours() {
         return reservationTimingPolicy.getPickupLeadHours();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public int getConfiguredPaymentProofDeadlineHours() {
         return reservationTimingPolicy.getPaymentProofDeadlineHours();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public int getConfiguredReturnReminderHoursBeforeCheckout() {
         return reservationTimingPolicy.getReturnReminderHoursBeforeCheckout();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public int getConfiguredMaxReservationBillableDays() {
         return reservationTimingPolicy.getMaxBillableDaysPerReservation();
     }
@@ -161,18 +165,15 @@ public class ReservationServiceImpl implements ReservationService {
             final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
             final Optional<Listing> listingOpt = listingService.getListingById(listingId);
             if (riderOpt.isEmpty()) {
-                LOGGER.atWarn().log("Skipping reservation confirmation email: user not found for riderId=" + riderId
-                        + " reservationId=" + reservation.getId());
+                LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId()).log("Skipping reservation confirmation email: user not found for riderId={} reservationId={}");
                 return;
             }
             if (listingOpt.isEmpty()) {
-                LOGGER.atWarn().log("Skipping reservation confirmation email: listing not found for listingId=" + listingId
-                        + " reservationId=" + reservation.getId());
+                LOGGER.atWarn().addArgument(listingId).addArgument(reservation.getId()).log("Skipping reservation confirmation email: listing not found for listingId={} reservationId={}");
                 return;
             }
             if (listingOwnerOpt.isEmpty()) {
-                LOGGER.atWarn().log("Skipping reservation confirmation email: listing owner not found for listingId=" + listingId
-                        + " reservationId=" + reservation.getId());
+                LOGGER.atWarn().addArgument(listingId).addArgument(reservation.getId()).log("Skipping reservation confirmation email: listing owner not found for listingId={} reservationId={}");
                 return;
             }
             final User rider = riderOpt.get();
@@ -200,11 +201,10 @@ public class ReservationServiceImpl implements ReservationService {
                     userService.resolveMailLocale(rider.getId()),
                     userService.resolveMailLocale(listingOwner.getId()),
                     cbu);
-            LOGGER.atInfo().log("Queueing reservation confirmation email to " + rider.getEmail()
-                    + " for reservation id=" + reservation.getId());
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId()).log("Queueing reservation confirmation email to {} for reservation id={}");
             emailService.sendReservationConfirmationEmail(payload);
         } catch (final Exception e) {
-            LOGGER.atError().log("Could not enqueue reservation confirmation email for reservation id=" + reservation.getId(), e);
+            LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue reservation confirmation email for reservation id={}");
         }
     }
 
@@ -240,6 +240,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     public Optional<String> normalizeClientReservationTotal(final String reservationTotal) {
         if (isBlank(reservationTotal)) {
             return Optional.empty();
@@ -329,6 +330,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
     public long calculateBillableDays(final OffsetDateTime startDate, final OffsetDateTime endDate) {
         if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
             return 0;
@@ -426,18 +428,15 @@ public class ReservationServiceImpl implements ReservationService {
             final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
             final Optional<Listing> listingOpt = listingService.getListingById(listingId);
             if (riderOpt.isEmpty()) {
-                LOGGER.atWarn().log("Skipping reservation cancellation email: user not found for riderId=" + riderId
-                        + " reservationId=" + reservationId);
+                LOGGER.atWarn().addArgument(riderId).addArgument(reservationId).log("Skipping reservation cancellation email: user not found for riderId={} reservationId={}");
                 return;
             }
             if (listingOpt.isEmpty()) {
-                LOGGER.atWarn().log("Skipping reservation cancellation email: listing not found for listingId=" + listingId
-                        + " reservationId=" + reservationId);
+                LOGGER.atWarn().addArgument(listingId).addArgument(reservationId).log("Skipping reservation cancellation email: listing not found for listingId={} reservationId={}");
                 return;
             }
             if (listingOwnerOpt.isEmpty()) {
-                LOGGER.atWarn().log("Skipping reservation cancellation email: listing owner not found for listingId=" + listingId
-                        + " reservationId=" + reservationId);
+                LOGGER.atWarn().addArgument(listingId).addArgument(reservationId).log("Skipping reservation cancellation email: listing owner not found for listingId={} reservationId={}");
                 return;
             }
             final User rider = riderOpt.get();
@@ -463,11 +462,10 @@ public class ReservationServiceImpl implements ReservationService {
                     userService.resolveMailLocale(rider.getId()),
                     userService.resolveMailLocale(listingOwner.getId()),
                     null);
-            LOGGER.atInfo().log("Queueing reservation cancellation email to " + rider.getEmail()
-                    + " for reservation id=" + reservationId);
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservationId).log("Queueing reservation cancellation email to {} for reservation id={}");
             emailService.sendReservationCancellationEmail(payload);
         } catch (final Exception e) {
-            LOGGER.atError().log("Could not enqueue reservation cancellation email for reservation id=" + reservationId, e);
+            LOGGER.atError().setCause(e).addArgument(reservationId).log("Could not enqueue reservation cancellation email for reservation id={}");
         }
     }
 
@@ -548,11 +546,10 @@ public class ReservationServiceImpl implements ReservationService {
                     userService.resolveMailLocale(rider.getId()),
                     userService.resolveMailLocale(listingOwner.getId()),
                     null);
-            LOGGER.atInfo().log("Queueing rider reservation confirmed-after-proof email to " + rider.getEmail()
-                    + " for reservation id=" + reservation.getId());
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId()).log("Queueing rider reservation confirmed-after-proof email to {} for reservation id={}");
             emailService.sendRiderReservationConfirmedAfterPaymentProof(payload);
         } catch (final Exception e) {
-            LOGGER.atError().log("Could not enqueue rider confirmed-after-proof email for reservation id=" + reservation.getId(), e);
+            LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue rider confirmed-after-proof email for reservation id={}");
         }
     }
 
@@ -582,7 +579,7 @@ public class ReservationServiceImpl implements ReservationService {
             LOGGER.atInfo().addArgument(owner.getEmail()).addArgument(reservationId).log("Queueing owner payment-proof email to {} (reservation id={})");
             emailService.sendOwnerPaymentProofReceivedEmail(mailPayload);
         } catch (final Exception e) {
-            LOGGER.atError().log("Could not enqueue owner payment-proof email for reservation id=" + reservationId, e);
+            LOGGER.atError().setCause(e).addArgument(reservationId).log("Could not enqueue owner payment-proof email for reservation id={}");
         }
     }
 

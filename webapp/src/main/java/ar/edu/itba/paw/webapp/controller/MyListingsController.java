@@ -110,19 +110,14 @@ public class MyListingsController {
             return new ModelAndView(redirectView);
         }
         final List<VehicleCardView> listings = resultPage.getContent().stream()
-                .map(card -> {
-                    final String statusKey = listingService.getListingById(card.getListingId())
-                            .map(l -> l.getStatus().name())
-                            .orElse(null);
-                    return new VehicleCardView(
-                            card.getListingId(),
-                            card.getBrand(),
-                            card.getModel(),
-                            card.getDayPrice(),
-                            card.getImageId(),
-                            statusKey,
-                            card.getRatingAvg().orElse(null));
-                })
+                .map(card -> new VehicleCardView(
+                        card.getListingId(),
+                        card.getBrand(),
+                        card.getModel(),
+                        card.getDayPrice(),
+                        card.getImageId(),
+                        card.getStatus().map(Listing.Status::name).orElse(null),
+                        card.getRatingAvg().orElse(null)))
                 .collect(Collectors.toList());
 
         // Reservations tab data
@@ -174,10 +169,10 @@ public class MyListingsController {
     private ReservationCardView toReservationCardView(final ReservationCard card, final Locale locale) {
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getEndDate(), locale);
-        final String totalPrice = reservationService
-                .calculateTotal(card.getListingId(), card.getStartDate(), card.getEndDate())
-                .map(MyListingsController::formatMoney)
-                .orElse("-");
+        final long days = reservationService.calculateBillableDays(card.getStartDate(), card.getEndDate());
+        final String totalPrice = days > 0
+                ? formatMoney(card.getDayPrice().multiply(BigDecimal.valueOf(days)))
+                : "-";
         return new ReservationCardView(
                 card.getReservationId(),
                 card.getListingId(),

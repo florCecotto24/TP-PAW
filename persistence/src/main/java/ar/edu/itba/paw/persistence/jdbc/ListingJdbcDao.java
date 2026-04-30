@@ -91,6 +91,16 @@ public class ListingJdbcDao implements ListingDao {
             readNullableRatingAvg(rs, "rating_avg")
     );
 
+    private static final RowMapper<ListingCard> OWNER_LISTING_CARD_ROW_MAPPER = (rs, rowNum) -> new ListingCard(
+            rs.getLong("listing_id"),
+            rs.getString("brand"),
+            rs.getString("model"),
+            rs.getBigDecimal("day_price"),
+            rs.getLong("image_id"),
+            readNullableRatingAvg(rs, "rating_avg"),
+            Listing.Status.valueOf(rs.getString("listing_status").toUpperCase())
+    );
+
     private static final ResultSetExtractor<Optional<ListingDetail>> LISTING_DETAIL_EXTRACTOR = rs -> {
         Listing listing = null;
         Car car = null;
@@ -479,14 +489,14 @@ public class ListingJdbcDao implements ListingDao {
                 .addValue("limit", pageSize)
                 .addValue("offset", offset);
         final StringBuilder listSql = new StringBuilder(
-                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
+                "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, l.status AS listing_status, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                         + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
                         + "FROM listings l JOIN cars c ON c.id = l.car_id "
                         + "WHERE c.owner_id = :ownerId ");
         appendOwnerListingFilters(listSql, listParams, statusFilter, textQuery);
         listSql.append("ORDER BY l.created_at DESC LIMIT :limit OFFSET :offset");
-        final List<ListingCard> content = namedParameterJdbcTemplate.query(listSql.toString(), listParams, LISTING_CARD_ROW_MAPPER);
+        final List<ListingCard> content = namedParameterJdbcTemplate.query(listSql.toString(), listParams, OWNER_LISTING_CARD_ROW_MAPPER);
         return new Page<>(content, page, pageSize, total != null ? total : 0L);
     }
 
