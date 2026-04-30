@@ -1371,3 +1371,27 @@ select.form-select.ryden-car-spec-select option {
     white-space: nowrap;
 }
 
+/* Star rating widget */
+.ryden-star-rating {
+    display: flex;
+    gap: 2px;
+    line-height: 1;
+}
+
+.ryden-star-rating .ryden-star {
+    font-size: 2rem;
+    cursor: pointer;
+    color: #d1d5db;
+    transition: color 0.1s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ryden-star-rating .ryden-star.ryden-star--selected {
+    color: #fbbc04;
+}
+
+.ryden-star-rating .ryden-star.ryden-star--hover {
+    color: #fbbc04;
+}
+

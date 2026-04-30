@@ -41,11 +41,16 @@
                                 <fmt:formatNumber value="${averageRating}" minFractionDigits="1" maxFractionDigits="2"/>
                             </span>
                             <div class="d-inline-flex align-items-center gap-1" aria-label="<spring:message code='counterpartyProfile.rating.ariaLabel'/>">
-                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                <c:forEach begin="1" end="5" var="star">
+                                    <c:choose>
+                                        <c:when test="${star <= averageRating}">
+                                            <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <i class="bi bi-star text-secondary-subtle" aria-hidden="true"></i>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </c:forEach>
                             </div>
                         </c:when>
                         <c:otherwise>

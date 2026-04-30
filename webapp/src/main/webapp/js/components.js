@@ -1438,6 +1438,56 @@
     }
 })();
 
+/* Star rating widget (.ryden-star-rating) */
+(function () {
+    function initStarWidget(widget) {
+        var targetId = widget.getAttribute('data-target');
+        var hiddenInput = targetId ? document.getElementById(targetId) : null;
+        var stars = Array.prototype.slice.call(widget.querySelectorAll('.ryden-star'));
+        var currentVal = 0;
+
+        function applySelected(val) {
+            stars.forEach(function (s, i) {
+                s.classList.toggle('ryden-star--selected', i < val);
+            });
+        }
+
+        function applyHover(val) {
+            stars.forEach(function (s, i) {
+                s.classList.toggle('ryden-star--hover', i < val);
+            });
+        }
+
+        stars.forEach(function (star) {
+            star.addEventListener('click', function () {
+                currentVal = parseInt(star.getAttribute('data-value'), 10) || 0;
+                if (hiddenInput) {
+                    hiddenInput.value = currentVal || '';
+                }
+                applySelected(currentVal);
+            });
+
+            star.addEventListener('mouseenter', function () {
+                applyHover(parseInt(star.getAttribute('data-value'), 10) || 0);
+            });
+        });
+
+        widget.addEventListener('mouseleave', function () {
+            applyHover(0);
+        });
+    }
+
+    function init() {
+        document.querySelectorAll('.ryden-star-rating').forEach(initStarWidget);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+
 /* Prevent the mouse wheel from changing type="number" input values when scrolling the page. */
 (function () {
     function bindNoWheelStep(el) {

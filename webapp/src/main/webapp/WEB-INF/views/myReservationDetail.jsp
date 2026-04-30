@@ -170,16 +170,26 @@
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewOwner.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewOwner.intro"/></p>
                         <c:url var="ownerReviewUrl" value="/my-reservations/${reservation.id}/owner-review-rider"/>
+                        <form id="ownerSkipForm" method="post" action="<c:out value='${ownerReviewUrl}'/>">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                        </form>
                         <form method="post" action="<c:out value='${ownerReviewUrl}'/>" class="vstack gap-2">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <label class="form-label small" for="ownerReviewRating"><spring:message code="myReservationDetail.review.rating"/></label>
-                            <select name="rating" id="ownerReviewRating" class="form-select form-select-sm">
-                                <option value=""><spring:message code="myReservationDetail.review.rating.placeholder"/></option>
-                                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                            </select>
+                            <label class="form-label small"><spring:message code="myReservationDetail.review.rating"/></label>
+                            <div class="ryden-star-rating" data-target="ownerReviewRating">
+                                <span class="ryden-star" data-value="1">&#9733;</span>
+                                <span class="ryden-star" data-value="2">&#9733;</span>
+                                <span class="ryden-star" data-value="3">&#9733;</span>
+                                <span class="ryden-star" data-value="4">&#9733;</span>
+                                <span class="ryden-star" data-value="5">&#9733;</span>
+                            </div>
+                            <input type="hidden" name="rating" id="ownerReviewRating"/>
                             <label class="form-label small" for="ownerReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
                             <textarea name="comment" id="ownerReviewComment" class="form-control" rows="3" maxlength="<c:out value='${reviewCommentMaxLength}'/>"></textarea>
-                            <button type="submit" class="btn btn-primary btn-sm"><spring:message code="myReservationDetail.review.submit"/></button>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm"><spring:message code="myReservationDetail.review.submit"/></button>
+                                <button type="submit" form="ownerSkipForm" class="btn btn-outline-secondary btn-sm"><spring:message code="myReservationDetail.review.skip"/></button>
+                            </div>
                         </form>
                     </div>
                 </article>
@@ -191,16 +201,26 @@
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewRider.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewRider.intro"/></p>
                         <c:url var="riderReviewUrl" value="/my-reservations/${reservation.id}/rider-review-owner"/>
+                        <form id="riderSkipForm" method="post" action="<c:out value='${riderReviewUrl}'/>">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                        </form>
                         <form method="post" action="<c:out value='${riderReviewUrl}'/>" class="vstack gap-2">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <label class="form-label small" for="riderReviewRating"><spring:message code="myReservationDetail.review.rating"/></label>
-                            <select name="rating" id="riderReviewRating" class="form-select form-select-sm">
-                                <option value=""><spring:message code="myReservationDetail.review.rating.placeholder"/></option>
-                                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                            </select>
+                            <label class="form-label small"><spring:message code="myReservationDetail.review.rating"/></label>
+                            <div class="ryden-star-rating" data-target="riderReviewRating">
+                                <span class="ryden-star" data-value="1">&#9733;</span>
+                                <span class="ryden-star" data-value="2">&#9733;</span>
+                                <span class="ryden-star" data-value="3">&#9733;</span>
+                                <span class="ryden-star" data-value="4">&#9733;</span>
+                                <span class="ryden-star" data-value="5">&#9733;</span>
+                            </div>
+                            <input type="hidden" name="rating" id="riderReviewRating"/>
                             <label class="form-label small" for="riderReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
                             <textarea name="comment" id="riderReviewComment" class="form-control" rows="3" maxlength="<c:out value='${reviewCommentMaxLength}'/>"></textarea>
-                            <button type="submit" class="btn btn-primary btn-sm"><spring:message code="myReservationDetail.review.submit"/></button>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm"><spring:message code="myReservationDetail.review.submit"/></button>
+                                <button type="submit" form="riderSkipForm" class="btn btn-outline-secondary btn-sm"><spring:message code="myReservationDetail.review.skip"/></button>
+                            </div>
                         </form>
                     </div>
                 </article>

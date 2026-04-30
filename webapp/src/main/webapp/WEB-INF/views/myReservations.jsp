@@ -66,19 +66,35 @@
 
     <c:choose>
         <c:when test="${empty riderReservations}">
-            <div class="search-empty-state text-center">
-                <img src="${pageContext.request.contextPath}/assets/images/filmore-cars.png"
-                     alt="" class="mb-4 img-fluid" style="max-width:260px"/>
-                <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.empty.title"/></h2>
-                <p class="text-secondary mb-0 search-empty-state__text">
-                    <spring:message code="myReservations.empty.description"/>
-                </p>
-                <div class="search-empty-state__actions mt-4">
-                    <a href="<c:out value='${reserveCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
-                        <spring:message code="myReservations.empty.reserve"/>
-                    </a>
-                </div>
-            </div>
+            <c:choose>
+                <c:when test="${not empty riderStatusFilter}">
+                    <div class="search-empty-state text-center">
+                        <h2 class="h4 fw-semibold mb-2">
+                            <spring:message code="myReservations.noResults.title"/>
+                        </h2>
+                        <div class="search-empty-state__actions mt-4">
+                            <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary">
+                                <spring:message code="search.filters.clear"/>
+                            </a>
+                        </div>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="search-empty-state text-center">
+                        <img src="${pageContext.request.contextPath}/assets/images/filmore-cars.png"
+                             alt="" class="mb-4 img-fluid" style="max-width:260px"/>
+                        <h2 class="h4 fw-semibold mb-2"><spring:message code="myReservations.empty.title"/></h2>
+                        <p class="text-secondary mb-0 search-empty-state__text">
+                            <spring:message code="myReservations.empty.description"/>
+                        </p>
+                        <div class="search-empty-state__actions mt-4">
+                            <a href="<c:out value='${reserveCarUrl}'/>" class="btn btn-primary btn-action btn-action-md">
+                                <spring:message code="myReservations.empty.reserve"/>
+                            </a>
+                        </div>
+                    </div>
+                </c:otherwise>
+            </c:choose>
         </c:when>
         <c:otherwise>
             <div class="d-flex flex-column gap-3 mb-4">
