@@ -156,7 +156,7 @@
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.birthDate"/></span>
-                <span class="profile-field-value"><c:out value="${profileForm.birthDate}"/></span>
+                <span class="profile-field-value"><c:out value="${profileBirthDateDisplay}"/></span>
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.cbu"/></span>

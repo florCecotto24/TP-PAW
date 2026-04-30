@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -162,9 +163,20 @@ public class ProfileController {
     @GetMapping
     public String profileGet(
             @CurrentUser final User currentUser,
-            @ModelAttribute("profileForm") final ProfileUpdateForm profileForm) {
+            @ModelAttribute("profileForm") final ProfileUpdateForm profileForm,
+            final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
         populateFormFromUser(me.getId(), profileForm);
+        if (profileForm.getBirthDate() != null && !profileForm.getBirthDate().isBlank()) {
+            try {
+                final LocalDate bd = LocalDate.parse(profileForm.getBirthDate());
+                final Locale locale = LocaleContextHolder.getLocale();
+                final String pattern = locale.getLanguage().equals("es") ? "dd/MM/yyyy" : "MM/dd/yyyy";
+                model.addAttribute("profileBirthDateDisplay",
+                        bd.format(DateTimeFormatter.ofPattern(pattern)));
+            } catch (final DateTimeParseException ignored) {
+            }
+        }
         return "profile";
     }
 

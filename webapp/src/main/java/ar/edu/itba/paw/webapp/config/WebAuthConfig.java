@@ -128,7 +128,7 @@ public class WebAuthConfig {
 
                         .antMatchers("/profile/*/edit", "/profile/*/upload-profile-picture")
                         .access(profileWebAuthorization.ownerAccess())
-                        .antMatchers("/profile/*")
+                        .antMatchers("/profile", "/profile/*")
                         .authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
