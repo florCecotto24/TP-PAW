@@ -61,6 +61,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String RIDER_RETURN_CHECKOUT_TEMPLATE = "html/rider-return-checkout";
     private static final String RIDER_REVIEW_INVITE_TEMPLATE = "html/rider-review-invite";
     private static final String OWNER_PAYMENT_PROOF_RECEIVED_TEMPLATE = "html/owner-payment-proof-received";
+    private static final String RIDER_DUE_PAYMENT_PROOF_TEMPLATE = "html/reservation-due-payment-reminder-rider";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
@@ -320,6 +321,30 @@ public final class EmailServiceImpl implements EmailService {
             LOGGER.atInfo().addArgument(to).log("Reminder sent to {}");
         } catch (final Exception e) {
             LOGGER.atError().addArgument(to).log("Failed to reminder to {}");
+        }
+    }
+
+    @Override
+    @Async("mailTaskExecutor")
+    public void sendRiderDuePaymentProofEmail(final ReservationConfirmationEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendRiderDuePaymentProofEmail")) {
+            return;
+        }
+
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = buildReservationConfirmationMailContext(payload, mailLocale);
+
+        final String to = payload.getRecipientEmail();
+
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(RIDER_DUE_PAYMENT_PROOF_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.reservationDuePaymentProof.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).log("Due payment proof reminder email queued for {}");
+        } catch (final Exception e) {
+            LOGGER.atError().addArgument(to).log("Failed to queue due payment proof reminder email for {}");
         }
     }
 

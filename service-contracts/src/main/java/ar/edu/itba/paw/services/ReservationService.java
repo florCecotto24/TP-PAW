@@ -117,4 +117,7 @@ public interface ReservationService {
 
     /** Scheduled job: invite the rider to leave an optional review after the rental period. */
     void dispatchRiderReviewInviteEmails();
+
+    /** Scheduled job: send payment proof due reminder to riders (when deadline is within 2 hours). */
+    void dispatchDuePaymentProofReminderEmails();
 }

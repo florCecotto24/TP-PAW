@@ -158,6 +158,7 @@ public final class ReservationJdbcDao implements ReservationDao {
         values.put("return_reminder_email_sent", Boolean.FALSE);
         values.put("return_checkout_email_sent", Boolean.FALSE);
         values.put("rider_review_invite_email_sent", Boolean.FALSE);
+        values.put("pending_paymentproof_email_sent", Boolean.FALSE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
         return Reservation.builder()
@@ -562,6 +563,28 @@ public final class ReservationJdbcDao implements ReservationDao {
         return jdbcTemplate.update(
                 "UPDATE reservations SET rider_review_invite_email_sent = TRUE, updated_at = ? "
                         + "WHERE id = ? AND rider_review_invite_email_sent = FALSE",
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
+    }
+
+    @Override
+    public List<Reservation> findReservationsWithDuePendingPaymentProof(final OffsetDateTime now) {
+        final OffsetDateTime twoHoursFromNow = now.plusHours(2);
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations r "
+                        + "WHERE r.payment_proof_deadline_at IS NOT NULL "
+                        + "AND r.payment_proof_deadline_at <= ? "
+                        + "AND r.payment_approved = FALSE "
+                        + "AND r.pending_paymentproof_email_sent = FALSE",
+                RESERVATION_ROW_MAPPER,
+                JdbcDateTimeUtils.toTimestamp(twoHoursFromNow));
+    }
+
+    @Override
+    public int claimPendingPaymentProofEmailSent(final long reservationId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET pending_paymentproof_email_sent = TRUE, updated_at = ? "
+                        + "WHERE id = ? AND pending_paymentproof_email_sent = FALSE",
                 JdbcDateTimeUtils.nowTimestamp(),
                 reservationId);
     }

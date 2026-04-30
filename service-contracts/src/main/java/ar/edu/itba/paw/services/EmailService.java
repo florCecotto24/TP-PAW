@@ -35,4 +35,6 @@ public interface EmailService {
     void sendRiderReviewInviteEmail(RiderReviewInviteEmailPayload payload);
 
     void sendOwnerPaymentProofReceivedEmail(OwnerPaymentProofReceivedEmailPayload payload);
+
+    void sendRiderDuePaymentProofEmail(ReservationConfirmationEmailPayload payload);
 }

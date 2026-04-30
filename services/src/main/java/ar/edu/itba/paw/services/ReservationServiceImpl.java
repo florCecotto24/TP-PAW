@@ -798,6 +798,65 @@ public final class ReservationServiceImpl implements ReservationService {
         }
     }
 
+    @Override
+    @Transactional
+    public void dispatchDuePaymentProofReminderEmails() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        for (final Reservation reservation : reservationDao.findReservationsWithDuePendingPaymentProof(now)) {
+            final Optional<ReservationConfirmationEmailPayload> payload = buildDuePaymentProofReminderEmailPayload(reservation);
+            if (payload.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping due payment proof reminder: missing data (reservation id={})");
+                continue;
+            }
+            if (reservationDao.claimPendingPaymentProofEmailSent(reservation.getId()) == 0) {
+                continue;
+            }
+            try {
+                emailService.sendRiderDuePaymentProofEmail(payload.get());
+            } catch (final Exception e) {
+                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue due payment proof reminder email (reservation id={})");
+            }
+        }
+    }
+
+    private Optional<ReservationConfirmationEmailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {
+        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+        final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
+        if (riderOpt.isEmpty() || listingOpt.isEmpty() || ownerOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User rider = riderOpt.get();
+        final User owner = ownerOpt.get();
+        final Listing listing = listingOpt.get();
+        
+        // Retrieve owner's CBU; if not found, skip sending email and keep flag false
+        String ownerCbu;
+        try {
+            ownerCbu = userService.getUserCbu(owner.getId());
+        } catch (final Exception e) {
+            LOGGER.atWarn().addArgument(reservation.getId()).addArgument(owner.getId())
+                    .log("Skipping due payment proof reminder: owner has no CBU (reservation id={}, owner id={})");
+            return Optional.empty();
+        }
+        
+        final Locale riderLocale = userService.resolveMailLocale(rider.getId());
+        return Optional.of(ReservationConfirmationEmailPayload.builder()
+                .recipientEmail(rider.getEmail())
+                .riderFullName(rider.getForename() + " " + rider.getSurname())
+                .reservationId(reservation.getId())
+                .listingId(listing.getId())
+                .vehicleLabel(listing.getTitle())
+                .startDate(reservation.getStartDate())
+                .endDate(reservation.getEndDate())
+                .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                .ownerEmail(owner.getEmail())
+                .reservationTotal(reservation.getTotalPrice().toString())
+                .ownerCbu(ownerCbu)
+                .riderMailLocale(riderLocale)
+                .build());
+    }
+
     private Optional<RiderCarReturnEmailPayload> buildRiderCarReturnEmailPayload(final Reservation reservation) {
         final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
         final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());

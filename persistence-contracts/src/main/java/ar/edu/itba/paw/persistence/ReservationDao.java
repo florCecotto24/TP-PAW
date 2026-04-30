@@ -78,4 +78,13 @@ public interface ReservationDao {
 
     /** Sets {@code rider_review_invite_email_sent} if still false; returns rows updated (0 or 1). */
     int claimRiderReviewInviteEmailSent(long reservationId);
+
+    /**
+     * Finds reservations with a payment proof deadline within 2 hours from now,
+     * payment not yet approved, and email not yet sent.
+     */
+    List<Reservation> findReservationsWithDuePendingPaymentProof(OffsetDateTime now);
+
+    /** Sets {@code pending_paymentproof_email_sent} if still false; returns rows updated (0 or 1). */
+    int claimPendingPaymentProofEmailSent(long reservationId);
 }
