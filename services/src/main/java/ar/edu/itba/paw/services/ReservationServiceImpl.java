@@ -590,11 +590,17 @@ public final class ReservationServiceImpl implements ReservationService {
         }
     }
 
+    /**
+     * Batch cancellation for expired proof deadlines. Uses {@link #performCancellationAndNotify} directly so all
+     * iterations run in this method’s single {@code @Transactional} boundary (no self-invocation through
+     * {@code cancelReservation}, which would ignore that method’s transaction metadata when called from here).
+     */
     @Override
     @Transactional
     public void cancelExpiredPendingPaymentReservations() {
+        final Reservation.Status status = Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF;
         for (final Reservation r : reservationDao.findPendingPaymentPastDeadline(OffsetDateTime.now(ZoneOffset.UTC))) {
-            cancelReservation(r.getId());
+            performCancellationAndNotify(r.getId(), status);
         }
     }
 
