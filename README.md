@@ -51,6 +51,13 @@ Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tom
 
 Jetty is configured on port **8080** in the parent POM. The app may use a servlet context path (see `server.servlet.context-path` in `application.properties`); try `http://localhost:8080/` and `http://localhost:8080/webapp/` if the home page is not at the root you expect.
 
+## Demo account
+
+For demos or manual testing you can sign in with this user. The same credentials work for the associated Gmail inbox (to read e-mail sent by the app during a demo):
+
+- **Email:** `user.ryden.paw@gmail.com`
+- **Password:** `ryden.password`
+
 ## Tests
 
 ```bash
