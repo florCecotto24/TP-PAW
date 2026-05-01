@@ -103,8 +103,8 @@
                             <h2 class="h6 fw-semibold mb-1"><spring:message code="myReservationDetail.payment.viewReceipt"/></h2>
                             <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.payment.hint" arguments="${uploadMaxPaymentReceiptMegabytes}"/></p>
                         </div>
-                        <c:url var="paymentReceiptDownloadUrl" value="/my-reservations/${reservation.id}/payment-receipt/download"/>
-                        <a class="btn btn-outline-primary" href="<c:out value='${paymentReceiptDownloadUrl}'/>" target="_blank" rel="noopener noreferrer">
+                        <c:url var="paymentReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
+                        <a class="btn btn-outline-primary" href="<c:out value='${paymentReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
                             <spring:message code="myReservationDetail.payment.viewReceipt"/>
                         </a>
                     </div>
@@ -117,8 +117,8 @@
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.payment.ownerIntro"/></p>
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                            <c:url var="ownerReceiptDownloadUrl" value="/my-reservations/${reservation.id}/payment-receipt/download"/>
-                            <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptDownloadUrl}'/>" target="_blank" rel="noopener noreferrer">
+                            <c:url var="ownerReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
+                            <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
                                 <spring:message code="myReservationDetail.payment.viewReceipt"/>
                             </a>
                             <c:if test="${paymentReceiptApproved}">
@@ -327,7 +327,7 @@
                                 </ryden:modal>
                             </c:when>
                             <c:otherwise>
-                                <c:if test="${not (statusKey eq 'pending' and reservationRole eq 'rider')}">
+                                <c:if test="${(statusKey eq 'pending' and reservationRole eq 'owner') or fn:startsWith(statusKey, 'cancelled') or statusKey eq 'started' or statusKey eq 'finished'}">
                                     <div class="alert alert-info mb-0" role="alert">
                                         <c:choose>
                                             <c:when test="${statusKey eq 'pending' and reservationRole eq 'owner'}">

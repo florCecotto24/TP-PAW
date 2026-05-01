@@ -308,6 +308,21 @@ public final class MyReservationsController {
         return mav;
     }
 
+    @GetMapping("/my-reservations/{reservationId}/payment-receipt/view")
+    public ModelAndView viewPaymentReceipt(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<StoredFile> fileOpt = reservationService.findPaymentReceiptForParticipant(me.getId(), reservationId);
+        if (fileOpt.isEmpty()) {
+            return new ModelAndView("redirect:/my-reservations/" + reservationId);
+        }
+        final ModelAndView view = new ModelAndView("payment-receipt-view");
+        view.addObject("reservationId", reservationId);
+        view.addObject("receiptFileName", fileOpt.get().getFileName());
+        return view;
+    }
+
     @GetMapping("/my-reservations/{reservationId}/payment-receipt/download")
     public ResponseEntity<byte[]> downloadPaymentReceipt(
             @CurrentUser final User currentUser,

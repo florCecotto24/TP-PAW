@@ -214,26 +214,48 @@
                             <spring:message code="myListingDetail.actions.viewListing"/>
                         </a>
 
-                        <form method="post" action="<c:out value='${toggleListingUrl}'/>">
-                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <c:choose>
-                                <c:when test="${statusKey == 'ACTIVE'}">
-                                    <button type="submit" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" aria-label="<spring:message code='myListingDetail.actions.pause'/>">
-                                        <spring:message code="myListingDetail.actions.pause"/>
-                                    </button>
-                                </c:when>
-                                <c:when test="${statusKey == 'PAUSED'}">
+                        <c:choose>
+                            <c:when test="${statusKey == 'ACTIVE'}">
+                                <spring:message code="myListingDetail.pauseModal.title" var="pauseModalTitle"/>
+                                <spring:message code="myListingDetail.pauseModal.message" var="pauseModalMessage"/>
+                                <spring:message code="myListingDetail.pauseModal.confirm" var="pauseModalConfirm"/>
+                                <spring:message code="myListingDetail.pauseModal.back" var="pauseModalBack"/>
+                                <spring:message code="myListingDetail.actions.pause" var="pauseBtnLabel"/>
+                                <button type="button" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" data-modal-open="pauseListingModal" aria-label="${pauseBtnLabel}">
+                                    <c:out value="${pauseBtnLabel}"/>
+                                </button>
+                                <ryden:modal
+                                    id="pauseListingModal"
+                                    title="${pauseModalTitle}"
+                                    message="${pauseModalMessage}"
+                                    variant="danger">
+                                    <form method="post" action="<c:out value='${toggleListingUrl}'/>">
+                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                        <div class="d-flex justify-content-end gap-2 mt-3">
+                                            <button type="button" class="btn btn-secondary" data-modal-close="pauseListingModal">
+                                                <c:out value="${pauseModalBack}"/>
+                                            </button>
+                                            <button type="submit" class="btn btn-danger">
+                                                <c:out value="${pauseModalConfirm}"/>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </ryden:modal>
+                            </c:when>
+                            <c:when test="${statusKey == 'PAUSED'}">
+                                <form method="post" action="<c:out value='${toggleListingUrl}'/>">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                                     <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myListingDetail.actions.activate'/>">
                                         <spring:message code="myListingDetail.actions.activate"/>
                                     </button>
-                                </c:when>
-                                <c:when test="${statusKey == 'FINISHED'}">
-                                    <p class="text-secondary small mb-0">
-                                        <spring:message code="myListingDetail.status.finishedHint"/>
-                                    </p>
-                                </c:when>
-                            </c:choose>
-                        </form>
+                                </form>
+                            </c:when>
+                            <c:when test="${statusKey == 'FINISHED'}">
+                                <p class="text-secondary small mb-0">
+                                    <spring:message code="myListingDetail.status.finishedHint"/>
+                                </p>
+                            </c:when>
+                        </c:choose>
                     </div>
                 </div>
             </article>
