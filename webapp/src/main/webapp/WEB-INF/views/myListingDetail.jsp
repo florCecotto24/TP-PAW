@@ -71,9 +71,9 @@
                             <c:if test="${not empty listing.startPointStreet}">
                                 <div class="mb-2 small text-secondary">
                                     <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
+                                    <c:if test="${not empty listingNeighborhoodName}"><c:out value="${listingNeighborhoodName}"/>, </c:if>
                                     <c:out value="${listing.startPointStreet}"/>
                                     <c:if test="${not empty listingStreetNumber}"> <c:out value="${listingStreetNumber}"/></c:if>
-                                    <c:if test="${not empty listingNeighborhoodName}">, <c:out value="${listingNeighborhoodName}"/></c:if>
                                 </div>
                             </c:if>
                             <div class="d-flex align-items-center gap-2 mt-1 pt-2 border-top">
