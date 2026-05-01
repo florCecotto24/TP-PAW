@@ -163,6 +163,7 @@ public class ReservationJdbcDao implements ReservationDao {
         values.put("return_reminder_email_sent", Boolean.FALSE);
         values.put("return_checkout_email_sent", Boolean.FALSE);
         values.put("rider_review_invite_email_sent", Boolean.FALSE);
+        values.put("pending_paymentproof_email_sent", Boolean.FALSE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
         return Reservation.builder()

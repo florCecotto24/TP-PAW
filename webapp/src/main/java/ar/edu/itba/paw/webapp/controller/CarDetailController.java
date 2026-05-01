@@ -20,7 +20,6 @@ import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
-import ar.edu.itba.paw.webapp.util.BookableWallRangesJson.LocalDateSegment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
@@ -36,10 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.Instant;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -97,20 +93,12 @@ public class CarDetailController {
         final List<VehicleCardView> similarListings = listingService
                 .findSimilarListingCards(listingId, SIMILAR_LISTINGS_LIMIT, viewer)
                 .stream()
-                .map(CarDetailController::listingCardToVehicleCardView)
+                .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
 
-        final List<AvailabilityPeriod> bookable = listingService.getBookableWallAvailabilityPeriods(listingId);
-        final List<LocalDateSegment> rawSegments = new ArrayList<>(bookable.size());
-        for (final AvailabilityPeriod p : bookable) {
-            rawSegments.add(new LocalDateSegment(p.getStartInclusive(), p.getEndInclusive()));
-        }
-        List<LocalDateSegment> bookableSegments = BookableWallRangesJson.mergeAdjacentSegments(rawSegments);
-        final LocalTime pickupWall = Optional.ofNullable(listing.getCheckInTime()).orElse(LocalTime.of(10, 0));
-        final int pickupLeadHours = reservationService.getConfiguredPickupLeadHours();
-        final Instant minPickupExclusive = Instant.now().plus(pickupLeadHours, ChronoUnit.HOURS);
-        bookableSegments = BookableWallRangesJson.clipSegmentsToMinPickupInstant(
-                bookableSegments, pickupWall, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+        final List<AvailabilityPeriod> bookableSegments =
+                listingService.getBookableWallAvailabilityPeriodsForRiderDatePicker(
+                        listingId, listing.getCheckInTime(), Instant.now());
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
 
@@ -197,7 +185,7 @@ public class CarDetailController {
                 .getContent()
                 .stream()
                 .filter(card -> currentListingId == null || card.getListingId() != currentListingId)
-                .map(CarDetailController::listingCardToVehicleCardView)
+                .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
 
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
@@ -235,14 +223,4 @@ public class CarDetailController {
         return nf.format(value);
     }
 
-    private static VehicleCardView listingCardToVehicleCardView(final ListingCard card) {
-        return new VehicleCardView(
-                card.getListingId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                null,
-                card.getRatingAvg().orElse(null));
-    }
 }
