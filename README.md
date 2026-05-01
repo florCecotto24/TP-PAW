@@ -36,7 +36,8 @@ mvn jetty:run -pl webapp
 
 ```text
 -Dspring.profiles.active=local
--Dlogback.configurationFile=<absolute-path-to-repo>/webapp/src/test/resources/logback-test.xml
+-Dlogback.configurationFile=classpath:logback/logback-local.xml
+-Dfile.encoding=UTF-8
 ```
 
 From a Unix shell at the repo root you can use:
