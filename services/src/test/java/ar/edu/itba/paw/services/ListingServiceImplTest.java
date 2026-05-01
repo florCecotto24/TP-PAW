@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -38,6 +38,7 @@ import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.services.pagination.ListingBrowsePagination;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
@@ -85,8 +86,32 @@ public class ListingServiceImplTest {
     @Mock
     private PaginationPolicy paginationPolicy;
 
-    @InjectMocks
+    private ListingBrowsePagination listingBrowsePagination;
+
     private ListingServiceImpl listingService;
+
+    @BeforeEach
+    void setUp() {
+        Mockito.lenient().when(paginationPolicy.getUiPageSize()).thenReturn(8);
+        Mockito.lenient().when(paginationPolicy.getDbFetchSize()).thenReturn(24);
+        Mockito.lenient().when(paginationPolicy.getDefaultPageSize()).thenReturn(8);
+        listingBrowsePagination = new ListingBrowsePagination(paginationPolicy);
+        listingService = new ListingServiceImpl(
+                listingDao,
+                listingAvailabilityDao,
+                carDao,
+                reservationDao,
+                userService,
+                imageService,
+                carPictureService,
+                emailService,
+                locationService,
+                reservationTimingPolicy,
+                listingCheckInOutPolicy,
+                listingAvailabilityPolicy,
+                paginationPolicy,
+                listingBrowsePagination);
+    }
 
     private void stubPublishListingPolicies() {
         Mockito.when(listingCheckInOutPolicy.hasMinimumGap(Mockito.any(), Mockito.any())).thenReturn(true);

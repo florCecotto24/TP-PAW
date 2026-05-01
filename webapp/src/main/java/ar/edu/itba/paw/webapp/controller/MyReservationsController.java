@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -116,11 +117,12 @@ public final class MyReservationsController {
                 .map(card -> toReservationCardView(card, locale))
                 .collect(Collectors.toList());
 
-        final int lastRiderPage = riderResultPage.getTotalPages() - 1;
-        if (riderPage > lastRiderPage) {
+        final int safeRiderPage = UiPaging.clampZeroBasedPage(
+                riderPage, riderResultPage.getTotalItems(), riderResultPage.getPageSize());
+        if (safeRiderPage != riderPage) {
             final RedirectView redirectView = new RedirectView(
                     UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
-                            .replaceQueryParam("riderPage", lastRiderPage)
+                            .replaceQueryParam("riderPage", safeRiderPage)
                             .build()
                             .toUriString());
             redirectView.setExposeModelAttributes(false);

@@ -39,6 +39,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
 import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
@@ -53,6 +54,7 @@ import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.services.util.NeighborhoodNameMatcher;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.services.pagination.ListingBrowsePagination;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
@@ -74,6 +76,7 @@ public final class ListingServiceImpl implements ListingService {
     private final ListingCheckInOutPolicy listingCheckInOutPolicy;
     private final ListingAvailabilityPolicy listingAvailabilityPolicy;
     private final PaginationPolicy paginationPolicy;
+    private final ListingBrowsePagination listingBrowsePagination;
 
     @Autowired
     public ListingServiceImpl(
@@ -89,7 +92,8 @@ public final class ListingServiceImpl implements ListingService {
             final ReservationTimingPolicy reservationTimingPolicy,
             final ListingCheckInOutPolicy listingCheckInOutPolicy,
             final ListingAvailabilityPolicy listingAvailabilityPolicy,
-            final PaginationPolicy paginationPolicy) {
+            final PaginationPolicy paginationPolicy,
+            final ListingBrowsePagination listingBrowsePagination) {
         this.listingDao = listingDao;
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.carDao = carDao;
@@ -103,6 +107,7 @@ public final class ListingServiceImpl implements ListingService {
         this.listingCheckInOutPolicy = listingCheckInOutPolicy;
         this.listingAvailabilityPolicy = listingAvailabilityPolicy;
         this.paginationPolicy = paginationPolicy;
+        this.listingBrowsePagination = listingBrowsePagination;
     }
 
     @Override
@@ -575,20 +580,41 @@ public final class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> getCheapestListingCards(final int page, final int pageSize, final User viewer) {
-        final LocalDate wall = publicBrowseMinBookableWallDate();
-        final Page<ListingCard> raw = listingDao.getCheapestListingCards(page, pageSize, wall, browseExcludeOwnerId(viewer));
-        final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), wall);
-        return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
+    public Page<ListingCard> getCheapestListingCards(final int uiPage, final int pageSize, final User viewer) {
+        return pagedBrowseListingCards(
+                uiPage,
+                pageSize,
+                browseExcludeOwnerId(viewer),
+                (offset, limit, wall, ex) -> listingDao.getCheapestListingCardsWindow(offset, limit, wall, ex));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ListingCard> getMostRecentListingCards(final int page, final int pageSize, final User viewer) {
+    public Page<ListingCard> getMostRecentListingCards(final int uiPage, final int pageSize, final User viewer) {
+        return pagedBrowseListingCards(
+                uiPage,
+                pageSize,
+                browseExcludeOwnerId(viewer),
+                (offset, limit, wall, ex) -> listingDao.getMostRecentListingCardsWindow(offset, limit, wall, ex));
+    }
+
+    @FunctionalInterface
+    private interface ListingCardWindowQuery {
+        List<ListingCard> load(int offset, int limit, LocalDate wall, Long excludeOwnerUserId);
+    }
+
+    private Page<ListingCard> pagedBrowseListingCards(
+            final int uiPage,
+            final int pageSize,
+            final Long excludeOwnerUserId,
+            final ListingCardWindowQuery windowQuery) {
+        final DualLayerPageWindow w = listingBrowsePagination.window(uiPage, pageSize);
         final LocalDate wall = publicBrowseMinBookableWallDate();
-        final Page<ListingCard> raw = listingDao.getMostRecentListingCards(page, pageSize, wall, browseExcludeOwnerId(viewer));
-        final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), wall);
-        return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
+        final long total = listingDao.countBrowseEligibleActiveListings(wall, excludeOwnerUserId);
+        final List<ListingCard> batch = windowQuery.load(w.sqlOffset(), w.sqlLimit(), wall, excludeOwnerUserId);
+        final List<ListingCard> slice = DualLayerPageWindow.sliceBatch(batch, w);
+        final List<ListingCard> filtered = retainBookableListingCards(slice, wall);
+        return new Page<>(filtered, w.uiPage(), w.uiPageSize(), total);
     }
 
     @Override
@@ -666,16 +692,12 @@ public final class ListingServiceImpl implements ListingService {
     @Override
     @Transactional(readOnly = true)
     public Page<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
-        List<ListingCard> all = listingDao.searchListingCards(criteria);
-        if (criteria.getBrowseWallDate() != null) {
-            all = retainBookableListingCards(all, criteria.getBrowseWallDate());
+        final Page<ListingCard> raw = listingDao.searchListingCards(criteria);
+        if (criteria.getBrowseWallDate() == null) {
+            return raw;
         }
-        final long total = all.size();
-        final int offset = criteria.getPage() * criteria.getPageSize();
-        final List<ListingCard> slice = all.subList(
-                Math.min(offset, all.size()),
-                Math.min(offset + criteria.getPageSize(), all.size()));
-        return new Page<>(slice, criteria.getPage(), criteria.getPageSize(), total);
+        final List<ListingCard> filtered = retainBookableListingCards(raw.getContent(), criteria.getBrowseWallDate());
+        return new Page<>(filtered, raw.getCurrentPage(), raw.getPageSize(), raw.getTotalItems());
     }
 
     @Override
@@ -741,12 +763,22 @@ public final class ListingServiceImpl implements ListingService {
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         final LocalDate browseWallDate = publicBrowseMinBookableWallDate();
         final List<Long> mergedNeighborhoodIds = mergeNeighborhoodIdsForSearch(query, neighborhoodIds);
-        return new ListingSearchCriteria(
-                query, transmissions, powertrains, mergedCarTypes, bands,
-                rangeStart, rangeEndExclusive,
-                page, paginationPolicy.getDefaultPageSize(), sortBy, sortDir,
-                browseWallDate, browseExcludeOwnerId(viewer),
-                mergedNeighborhoodIds);
+        return ListingSearchCriteria.builder()
+                .query(query)
+                .transmissions(transmissions)
+                .powertrains(powertrains)
+                .carTypes(mergedCarTypes)
+                .priceBands(bands)
+                .availabilityRange(rangeStart, rangeEndExclusive)
+                .page(page)
+                .uiPageSize(paginationPolicy.getUiPageSize())
+                .dbFetchSize(paginationPolicy.getDbFetchSize())
+                .sortBy(sortBy)
+                .sortDirection(sortDir)
+                .browseWallDate(browseWallDate)
+                .excludeOwnerUserId(browseExcludeOwnerId(viewer))
+                .neighborhoodIds(mergedNeighborhoodIds)
+                .build();
     }
 
     private List<Long> mergeNeighborhoodIdsForSearch(final String query, final List<Long> explicitNeighborhoodIds) {

@@ -34,6 +34,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.models.dto.Page;
@@ -391,18 +392,55 @@ public class ListingJdbcDao implements ListingDao {
         return filterByAvailabilityCoverage(criteria, result, Listing::getId);
     }
 
-    @Override
-    public List<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
-        final StringBuilder sql = new StringBuilder(
-                "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
-                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
-                        + "FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
-        final MapSqlParameterSource params = new MapSqlParameterSource();
+    private static String listingCardSearchSelectClause() {
+        return "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
+                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id ";
+    }
+
+    private void appendListingCardSearchFromWhere(
+            final StringBuilder sql,
+            final MapSqlParameterSource params,
+            final ListingSearchCriteria criteria) {
+        sql.append("FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
         appendSearchFilters(sql, params, criteria);
-        sql.append("ORDER BY ").append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()));
-        final List<ListingCard> result = namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_CARD_ROW_MAPPER);
-        return filterByAvailabilityCoverage(criteria, result, ListingCard::getListingId);
+    }
+
+    @Override
+    public Page<ListingCard> searchListingCards(final ListingSearchCriteria criteria) {
+        final DualLayerPageWindow w = DualLayerPageWindow.compute(
+                criteria.getPage(), criteria.getUiPageSize(), criteria.getDbFetchSize());
+        if (criteria.hasAvailabilityRange()) {
+            final MapSqlParameterSource params = new MapSqlParameterSource();
+            final StringBuilder sql = new StringBuilder(listingCardSearchSelectClause());
+            appendListingCardSearchFromWhere(sql, params, criteria);
+            sql.append("ORDER BY ").append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()));
+            List<ListingCard> result = namedParameterJdbcTemplate.query(sql.toString(), params, LISTING_CARD_ROW_MAPPER);
+            result = filterByAvailabilityCoverage(criteria, result, ListingCard::getListingId);
+            final long total = result.size();
+            final List<ListingCard> slice = DualLayerPageWindow.sliceGlobalOrdered(result, w);
+            return new Page<>(slice, w.uiPage(), w.uiPageSize(), total);
+        }
+
+        final MapSqlParameterSource countParams = new MapSqlParameterSource();
+        final StringBuilder countFromWhere = new StringBuilder();
+        appendListingCardSearchFromWhere(countFromWhere, countParams, criteria);
+        final String countSql = "SELECT COUNT(*) " + countFromWhere;
+        final Long totalObj = namedParameterJdbcTemplate.queryForObject(countSql, countParams, Long.class);
+        final long total = totalObj != null ? totalObj : 0L;
+
+        final MapSqlParameterSource listParams = new MapSqlParameterSource(countParams.getValues());
+        listParams.addValue("limit", w.sqlLimit());
+        listParams.addValue("offset", w.sqlOffset());
+        final StringBuilder listSql = new StringBuilder(listingCardSearchSelectClause());
+        appendListingCardSearchFromWhere(listSql, listParams, criteria);
+        listSql.append("ORDER BY ")
+                .append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+                .append(" LIMIT :limit OFFSET :offset");
+        final List<ListingCard> batch = namedParameterJdbcTemplate.query(
+                listSql.toString(), listParams, LISTING_CARD_ROW_MAPPER);
+        final List<ListingCard> slice = DualLayerPageWindow.sliceBatch(batch, w);
+        return new Page<>(slice, w.uiPage(), w.uiPageSize(), total);
     }
 
     @Override
@@ -416,15 +454,13 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
-    public Page<ListingCard> getCheapestListingCards(
-            final int page,
-            final int pageSize,
+    public List<ListingCard> getCheapestListingCardsWindow(
+            final int offset,
+            final int limit,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
-        final long total = countBrowseEligibleActiveListings(browseWallDate, excludeOwnerUserId);
-        final int offset = page * pageSize;
         final MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("limit", pageSize)
+                .addValue("limit", limit)
                 .addValue("offset", offset);
         appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
         final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
@@ -435,20 +471,17 @@ public class ListingJdbcDao implements ListingDao {
                 + publicBrowseAvailabilitySql(browseWallDate)
                 + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
                 + "ORDER BY l.day_price ASC LIMIT :limit OFFSET :offset";
-        final List<ListingCard> content = namedParameterJdbcTemplate.query(sql, params, LISTING_CARD_ROW_MAPPER);
-        return new Page<>(content, page, pageSize, total);
+        return namedParameterJdbcTemplate.query(sql, params, LISTING_CARD_ROW_MAPPER);
     }
 
     @Override
-    public Page<ListingCard> getMostRecentListingCards(
-            final int page,
-            final int pageSize,
+    public List<ListingCard> getMostRecentListingCardsWindow(
+            final int offset,
+            final int limit,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
-        final long total = countBrowseEligibleActiveListings(browseWallDate, excludeOwnerUserId);
-        final int offset = page * pageSize;
         final MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("limit", pageSize)
+                .addValue("limit", limit)
                 .addValue("offset", offset);
         appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
         final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
@@ -459,8 +492,7 @@ public class ListingJdbcDao implements ListingDao {
                 + publicBrowseAvailabilitySql(browseWallDate)
                 + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
                 + "ORDER BY l.created_at DESC LIMIT :limit OFFSET :offset";
-        final List<ListingCard> content = namedParameterJdbcTemplate.query(sql, params, LISTING_CARD_ROW_MAPPER);
-        return new Page<>(content, page, pageSize, total);
+        return namedParameterJdbcTemplate.query(sql, params, LISTING_CARD_ROW_MAPPER);
     }
 
     @Override

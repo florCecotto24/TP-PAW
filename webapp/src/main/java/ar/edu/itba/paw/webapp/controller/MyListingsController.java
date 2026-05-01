@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
@@ -49,7 +50,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/my-listings")
 public final class MyListingsController {
 
-    private static final int PAGE_SIZE = 8;
     private static final String TAB_LISTINGS = "listings";
     private static final String TAB_RESERVATIONS = "reservations";
 
@@ -110,11 +110,11 @@ public final class MyListingsController {
                 me.getId(), category, transmission, powertrain, price,
                 listingStatus, q, page, sort);
         final Page<ListingCard> resultPage = listingService.getOwnerListingCards(listingsCriteria);
-        final int lastPage = resultPage.getTotalPages() - 1;
-        if (page > lastPage) {
+        final int safeListingsPage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
+        if (safeListingsPage != page) {
             final RedirectView redirectView = new RedirectView(
                     UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
-                            .replaceQueryParam("page", lastPage)
+                            .replaceQueryParam("page", safeListingsPage)
                             .build()
                             .toUriString());
             redirectView.setExposeModelAttributes(false);
@@ -129,11 +129,12 @@ public final class MyListingsController {
                 me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain, ownerPrice,
                 ownerStatus, ownerPage, ownerSort);
         final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(ownerCriteria);
-        final int lastOwnerPage = ownerResultPage.getTotalPages() - 1;
-        if (ownerPage > lastOwnerPage) {
+        final int safeOwnerPage = UiPaging.clampZeroBasedPage(
+                ownerPage, ownerResultPage.getTotalItems(), ownerResultPage.getPageSize());
+        if (safeOwnerPage != ownerPage) {
             final RedirectView redirectView = new RedirectView(
                     UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
-                            .replaceQueryParam("ownerPage", lastOwnerPage)
+                            .replaceQueryParam("ownerPage", safeOwnerPage)
                             .build()
                             .toUriString());
             redirectView.setExposeModelAttributes(false);
@@ -258,11 +259,11 @@ public final class MyListingsController {
         final Page<ReservationCard> resultPage =
                 reservationService.getListingReservationCards(
                         me.getId(), listingId, page, paginationPolicy.getDefaultPageSize(), statusFilter);
-        final int lastPage = resultPage.getTotalPages() - 1;
-        if (page > lastPage) {
+        final int safeReservationsPage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
+        if (safeReservationsPage != page) {
             final RedirectView redirectView = new RedirectView(
                     UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
-                            .replaceQueryParam("page", lastPage)
+                            .replaceQueryParam("page", safeReservationsPage)
                             .build()
                             .toUriString());
             redirectView.setExposeModelAttributes(false);

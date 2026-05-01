@@ -6,6 +6,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
+
+/**
+ * Immutable search filters + paging (Item 17). Prefer {@link #builder()} (Item 2); in the web app, wire sizes from
+ * Spring {@code Environment} via the listing service {@code buildSearchCriteria}.
+ */
 public final class ListingSearchCriteria {
 
     private final String query;
@@ -16,7 +22,8 @@ public final class ListingSearchCriteria {
     private final Instant availabilityRangeStart;
     private final Instant availabilityRangeEndExclusive;
     private final int page;
-    private final int pageSize;
+    private final int uiPageSize;
+    private final int dbFetchSize;
     private final String sortBy;
     private final String sortDirection;
     /** When set, SQL requires published availability reaching this wall-calendar day or later. */
@@ -25,83 +32,142 @@ public final class ListingSearchCriteria {
     private final Long excludeOwnerUserId;
     private final List<Long> neighborhoodIds;
 
-    public ListingSearchCriteria(
-            final String query,
-            final List<String> transmissions,
-            final List<String> powertrains,
-            final List<String> carTypes,
-            final List<String> priceBands,
-            final Instant availabilityRangeStart,
-            final Instant availabilityRangeEndExclusive) {
-        this(query, transmissions, powertrains, carTypes, priceBands,
-                availabilityRangeStart, availabilityRangeEndExclusive, 0, 8, "date", "desc", null, null, List.of());
+    private ListingSearchCriteria(final Builder b) {
+        this.query = b.query != null && !b.query.isBlank() ? b.query.trim() : null;
+        this.transmissions = b.transmissions;
+        this.powertrains = b.powertrains;
+        this.carTypes = b.carTypes;
+        this.priceBands = b.priceBands;
+        this.availabilityRangeStart = b.availabilityRangeStart;
+        this.availabilityRangeEndExclusive = b.availabilityRangeEndExclusive;
+        this.page = normalizedPage(b.page);
+        final int ui = normalizedUiPageSize(b.uiPageSize);
+        this.uiPageSize = ui;
+        this.dbFetchSize = normalizedDbFetchSize(ui, b.dbFetchSize);
+        this.sortBy = b.sortBy != null ? b.sortBy : "date";
+        this.sortDirection = "asc".equalsIgnoreCase(b.sortDirection) ? "asc" : "desc";
+        this.browseWallDate = b.browseWallDate;
+        this.excludeOwnerUserId = b.excludeOwnerUserId;
+        this.neighborhoodIds = normalizeIdList(b.neighborhoodIds);
     }
 
-    public ListingSearchCriteria(
-            final String query,
-            final List<String> transmissions,
-            final List<String> powertrains,
-            final List<String> carTypes,
-            final List<String> priceBands,
-            final Instant availabilityRangeStart,
-            final Instant availabilityRangeEndExclusive,
-            final int page,
-            final int pageSize,
-            final String sortBy,
-            final String sortDirection) {
-        this(query, transmissions, powertrains, carTypes, priceBands,
-                availabilityRangeStart, availabilityRangeEndExclusive, page, pageSize, sortBy, sortDirection, null, null,
-                List.of());
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public ListingSearchCriteria(
-            final String query,
-            final List<String> transmissions,
-            final List<String> powertrains,
-            final List<String> carTypes,
-            final List<String> priceBands,
-            final Instant availabilityRangeStart,
-            final Instant availabilityRangeEndExclusive,
-            final int page,
-            final int pageSize,
-            final String sortBy,
-            final String sortDirection,
-            final LocalDate browseWallDate,
-            final Long excludeOwnerUserId) {
-        this(query, transmissions, powertrains, carTypes, priceBands,
-                availabilityRangeStart, availabilityRangeEndExclusive, page, pageSize, sortBy, sortDirection,
-                browseWallDate, excludeOwnerUserId, List.of());
+    /**
+     * Builder for {@link ListingSearchCriteria} (Effective Java Item 2). Not thread-safe.
+     */
+    public static final class Builder {
+
+        private String query;
+        private List<String> transmissions = List.of();
+        private List<String> powertrains = List.of();
+        private List<String> carTypes = List.of();
+        private List<String> priceBands = List.of();
+        private Instant availabilityRangeStart;
+        private Instant availabilityRangeEndExclusive;
+        private int page;
+        /** {@code 0} means use {@link PaginationFallbackSizes#UI_PAGE_SIZE} at {@link #build()}. */
+        private int uiPageSize;
+        /** {@code 0} means use {@link PaginationFallbackSizes#DB_FETCH_SIZE} at {@link #build()}. */
+        private int dbFetchSize;
+        private String sortBy = "date";
+        private String sortDirection = "desc";
+        private LocalDate browseWallDate;
+        private Long excludeOwnerUserId;
+        private List<Long> neighborhoodIds = List.of();
+
+        public Builder query(final String query) {
+            this.query = query;
+            return this;
+        }
+
+        public Builder transmissions(final List<String> transmissions) {
+            this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
+            return this;
+        }
+
+        public Builder powertrains(final List<String> powertrains) {
+            this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);
+            return this;
+        }
+
+        public Builder carTypes(final List<String> carTypes) {
+            this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);
+            return this;
+        }
+
+        public Builder priceBands(final List<String> priceBands) {
+            this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
+            return this;
+        }
+
+        public Builder availabilityRange(final Instant startInclusive, final Instant endExclusive) {
+            this.availabilityRangeStart = startInclusive;
+            this.availabilityRangeEndExclusive = endExclusive;
+            return this;
+        }
+
+        public Builder page(final int page) {
+            this.page = page;
+            return this;
+        }
+
+        public Builder uiPageSize(final int uiPageSize) {
+            this.uiPageSize = uiPageSize;
+            return this;
+        }
+
+        public Builder dbFetchSize(final int dbFetchSize) {
+            this.dbFetchSize = dbFetchSize;
+            return this;
+        }
+
+        public Builder sortBy(final String sortBy) {
+            this.sortBy = sortBy;
+            return this;
+        }
+
+        public Builder sortDirection(final String sortDirection) {
+            this.sortDirection = sortDirection;
+            return this;
+        }
+
+        public Builder browseWallDate(final LocalDate browseWallDate) {
+            this.browseWallDate = browseWallDate;
+            return this;
+        }
+
+        public Builder excludeOwnerUserId(final Long excludeOwnerUserId) {
+            this.excludeOwnerUserId = excludeOwnerUserId;
+            return this;
+        }
+
+        public Builder neighborhoodIds(final List<Long> neighborhoodIds) {
+            this.neighborhoodIds = neighborhoodIds == null ? List.of() : List.copyOf(neighborhoodIds);
+            return this;
+        }
+
+        public ListingSearchCriteria build() {
+            return new ListingSearchCriteria(this);
+        }
     }
 
-    public ListingSearchCriteria(
-            final String query,
-            final List<String> transmissions,
-            final List<String> powertrains,
-            final List<String> carTypes,
-            final List<String> priceBands,
-            final Instant availabilityRangeStart,
-            final Instant availabilityRangeEndExclusive,
-            final int page,
-            final int pageSize,
-            final String sortBy,
-            final String sortDirection,
-            final LocalDate browseWallDate,
-            final Long excludeOwnerUserId,
-            final List<Long> neighborhoodIds) {
-        this.query = query != null && !query.isBlank() ? query.trim() : null;
-        this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
-        this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);
-        this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);
-        this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
-        this.availabilityRangeStart = availabilityRangeStart;
-        this.availabilityRangeEndExclusive = availabilityRangeEndExclusive;
-        this.page = Math.max(0, page);
-        this.pageSize = pageSize > 0 ? pageSize : 8;
-        this.sortBy = sortBy != null ? sortBy : "date";
-        this.sortDirection = "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
-        this.browseWallDate = browseWallDate;
-        this.excludeOwnerUserId = excludeOwnerUserId;
-        this.neighborhoodIds = normalizeIdList(neighborhoodIds);
+    private static int normalizedPage(final int page) {
+        return Math.max(0, page);
+    }
+
+    private static int normalizedUiPageSize(final int uiPageSize) {
+        return uiPageSize > 0 ? uiPageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
+    }
+
+    /**
+     * Ensures a positive DB window at least as large as the UI page (dual-layer paging invariant).
+     */
+    private static int normalizedDbFetchSize(final int resolvedUiPageSize, final int dbFetchSize) {
+        final int base = dbFetchSize > 0 ? dbFetchSize : PaginationFallbackSizes.DB_FETCH_SIZE;
+        return Math.max(resolvedUiPageSize, base);
     }
 
     private static List<Long> normalizeIdList(final List<Long> raw) {
@@ -155,8 +221,14 @@ public final class ListingSearchCriteria {
         return page;
     }
 
-    public int getPageSize() {
-        return pageSize;
+    /** Items shown per UI page (e.g. 8). */
+    public int getUiPageSize() {
+        return uiPageSize;
+    }
+
+    /** Rows fetched per DB query window (e.g. 24); must be ≥ {@link #getUiPageSize()}. */
+    public int getDbFetchSize() {
+        return dbFetchSize;
     }
 
     public String getSortBy() {

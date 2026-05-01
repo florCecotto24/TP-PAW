@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test;
 
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 
-class ListingSearchCriteriaTest {
+public final class ListingSearchCriteriaTest {
 
     @Test
-    void constructorNormalizesQueryAndCopiesCollections() {
+    void builderNormalizesQueryAndCopiesCollections() {
         // Arrange
         final List<String> transmissions = new ArrayList<>(List.of("MANUAL"));
         final List<String> powertrains = new ArrayList<>(List.of("HYBRID"));
@@ -20,14 +20,13 @@ class ListingSearchCriteriaTest {
         final List<String> priceBands = new ArrayList<>(List.of("200-300"));
 
         // Exercise
-        final ListingSearchCriteria criteria = new ListingSearchCriteria(
-                "  city center  ",
-                transmissions,
-                powertrains,
-                carTypes,
-                priceBands,
-                null,
-                null);
+        final ListingSearchCriteria criteria = ListingSearchCriteria.builder()
+                .query("  city center  ")
+                .transmissions(transmissions)
+                .powertrains(powertrains)
+                .carTypes(carTypes)
+                .priceBands(priceBands)
+                .build();
 
         // Assert
         Assertions.assertEquals("city center", criteria.getQuery());
@@ -53,17 +52,16 @@ class ListingSearchCriteriaTest {
     }
 
     @Test
-    void constructorTurnsBlankQueryIntoNullAndNullListsIntoEmptyLists() {
+    void builderTurnsBlankQueryIntoNullAndNullListsIntoEmptyLists() {
 
         // Exercise
-        final ListingSearchCriteria criteria = new ListingSearchCriteria(
-                "   ",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        final ListingSearchCriteria criteria = ListingSearchCriteria.builder()
+                .query("   ")
+                .transmissions(null)
+                .powertrains(null)
+                .carTypes(null)
+                .priceBands(null)
+                .build();
         // Assert
         Assertions.assertNull(criteria.getQuery());
         Assertions.assertTrue(criteria.getTransmissions().isEmpty());
@@ -78,32 +76,17 @@ class ListingSearchCriteriaTest {
         final Instant start = Instant.parse("2026-04-05T10:00:00Z");
 
         // Exercise
-        final ListingSearchCriteria valid = new ListingSearchCriteria(
-                null,
-                null,
-                null,
-                null,
-                null,
-                start,
-                Instant.parse("2026-04-05T10:00:01Z"));
+        final ListingSearchCriteria valid = ListingSearchCriteria.builder()
+                .availabilityRange(start, Instant.parse("2026-04-05T10:00:01Z"))
+                .build();
 
-        final ListingSearchCriteria equal = new ListingSearchCriteria(
-                null,
-                null,
-                null,
-                null,
-                null,
-                start,
-                start);
+        final ListingSearchCriteria equal = ListingSearchCriteria.builder()
+                .availabilityRange(start, start)
+                .build();
 
-        final ListingSearchCriteria missingEnd = new ListingSearchCriteria(
-                null,
-                null,
-                null,
-                null,
-                null,
-                start,
-                null);
+        final ListingSearchCriteria missingEnd = ListingSearchCriteria.builder()
+                .availabilityRange(start, null)
+                .build();
 
         // Assert
         Assertions.assertTrue(valid.hasAvailabilityRange());

@@ -2,6 +2,8 @@ package ar.edu.itba.paw.models.dto;
 
 import java.util.List;
 
+import ar.edu.itba.paw.models.pagination.UiPaging;
+
 public final class Page<T> {
 
     private final List<T> content;
@@ -33,7 +35,7 @@ public final class Page<T> {
     }
 
     public int getTotalPages() {
-        return totalItems == 0 ? 1 : (int) Math.ceil((double) totalItems / pageSize);
+        return UiPaging.totalPages(totalItems, pageSize);
     }
 
     public boolean isHasPrevious() {

@@ -40,11 +40,11 @@ public final class HomeController {
 
         final User viewer = currentUser;
 
-        final int pageSize = paginationPolicy.getDefaultPageSize();
+        final int uiPageSize = paginationPolicy.getUiPageSize();
         final Page<ListingCard> cheapestRaw =
-                listingService.getCheapestListingCards(cheapestPage, pageSize, viewer);
+                listingService.getCheapestListingCards(cheapestPage, uiPageSize, viewer);
         final Page<ListingCard> recentRaw =
-                listingService.getMostRecentListingCards(recentPage, pageSize, viewer);
+                listingService.getMostRecentListingCards(recentPage, uiPageSize, viewer);
 
         final Page<VehicleCardView> cheapestCarsPage = mapPage(cheapestRaw);
         final Page<VehicleCardView> recentCarsPage   = mapPage(recentRaw);

@@ -58,16 +58,7 @@ mvn test
 
 (`mvn clean install` already runs tests unless skipped.)
 
-## Maven modules
 
-| Module | Purpose |
-|--------|---------|
-| **common** | Small shared helpers under `ar.edu.itba.paw.common`. |
-| **models** | Domain entities and DTOs (`models.domain`, `models.dto`, `models.util`). |
-| **persistence-contracts** | DAO interfaces (`persistence`) used by services and JDBC. |
-| **persistence** | JDBC implementations (`persistence.jdbc`), catalogs (`persistence.catalog`), `schema.sql` as a reference for the current schema (not executed at runtime). |
-| **service-contracts** | Service interfaces (`services`), exceptions, message keys (`exception`). |
-| **services** | Business logic (`services`, `services.policy`), DAO integration, application rules. |
-| **webapp** | WAR: Spring MVC (`webapp.controller`), configuration (`webapp.config`), security (`webapp.security`), form validation (`webapp.validation`), forms (`webapp.form`), Flyway migrations (`webapp/src/main/resources/db/migration/`), JSPs and static assets. |
+
 
 Base Java package: `ar.edu.itba.paw`.

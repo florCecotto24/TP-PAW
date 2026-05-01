@@ -112,14 +112,11 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertCar(11L, 1L, "P2", "Tesla", "Model 3", Car.Type.SEDAN, Car.Powertrain.ELECTRIC, Car.Transmission.AUTOMATIC);
         insertListing(100L, 10L, "City car", Listing.Status.ACTIVE, new BigDecimal("0.00"), base, base, "Palermo", "great hatch");
         insertListing(101L, 11L, "Electric ride", Listing.Status.ACTIVE, new BigDecimal("100.00"), base.plusDays(1), base.plusDays(1), "Belgrano", "silent");
-        final ListingSearchCriteria criteria = new ListingSearchCriteria(
-                "ford",
-                List.of(),
-                List.of(),
-                List.of("HATCHBACK"),
-                List.of("FREE"),
-                null,
-                null);
+        final ListingSearchCriteria criteria = ListingSearchCriteria.builder()
+                .query("ford")
+                .carTypes(List.of("HATCHBACK"))
+                .priceBands(List.of("FREE"))
+                .build();
 
         // Exercise
         final List<Listing> result = listingDao.searchListings(criteria);
@@ -140,22 +137,16 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertListing(100L, 10L, "Available", Listing.Status.ACTIVE, new BigDecimal("50.00"), base);
         insertListingAvailability(1L, 100L, baseDay.plusDays(1), baseDay.plusDays(5), base, base);
         insertReservation(1L, 2L, 100L, base.plusDays(2), base.plusDays(3), Reservation.Status.ACCEPTED, base, base);
-        final ListingSearchCriteria blockedWindow = new ListingSearchCriteria(
-                null,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                Instant.parse("2026-06-02T00:00:00Z"),
-                Instant.parse("2026-06-04T00:00:00Z"));
-        final ListingSearchCriteria freeWindow = new ListingSearchCriteria(
-                null,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                Instant.parse("2026-06-05T00:00:00Z"),
-                Instant.parse("2026-06-06T00:00:00Z"));
+        final ListingSearchCriteria blockedWindow = ListingSearchCriteria.builder()
+                .availabilityRange(
+                        Instant.parse("2026-06-02T00:00:00Z"),
+                        Instant.parse("2026-06-04T00:00:00Z"))
+                .build();
+        final ListingSearchCriteria freeWindow = ListingSearchCriteria.builder()
+                .availabilityRange(
+                        Instant.parse("2026-06-05T00:00:00Z"),
+                        Instant.parse("2026-06-06T00:00:00Z"))
+                .build();
 
         // Exercise & Assert
         Assertions.assertTrue(listingDao.searchListings(blockedWindow).isEmpty());
@@ -175,18 +166,12 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertCarPicture(12L, 10L, 1L, 1, base, base);
 
         // Exercise
-        final List<ListingCard> cards = listingDao.searchListingCards(new ListingSearchCriteria(
-                null,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                null,
-                null));
+        final var page = listingDao.searchListingCards(ListingSearchCriteria.builder().build());
 
         // Assert
-        Assertions.assertEquals(1, cards.size());
-        Assertions.assertEquals(1L, cards.get(0).getImageId());
+        Assertions.assertEquals(1, page.getContent().size());
+        Assertions.assertEquals(1L, page.getContent().get(0).getImageId());
+        Assertions.assertEquals(1L, page.getTotalItems());
     }
 
     @Test

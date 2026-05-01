@@ -69,9 +69,15 @@ public interface ListingDao {
 
     List<Listing> getMostRecentListings(int limit);
 
-    Page<ListingCard> getCheapestListingCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
+    /**
+     * Ordered window for public browse (cheapest first). Caller composes UI pagination with {@link #countBrowseEligibleActiveListings}.
+     */
+    List<ListingCard> getCheapestListingCardsWindow(int offset, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
 
-    Page<ListingCard> getMostRecentListingCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
+    /**
+     * Ordered window for public browse (newest first). Caller composes UI pagination with {@link #countBrowseEligibleActiveListings}.
+     */
+    List<ListingCard> getMostRecentListingCardsWindow(int offset, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
 
     Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
 
@@ -79,7 +85,11 @@ public interface ListingDao {
 
     HomeListingCards getHomeListingCards(int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
 
-    List<ListingCard> searchListingCards(ListingSearchCriteria criteria);
+    /**
+     * Search listing cards with database-backed pagination when the criteria do not include
+     * a wall-calendar availability range (that path still filters in memory after SQL).
+     */
+    Page<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
     List<ListingCard> findSimilarListingCards(long listingId, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
 

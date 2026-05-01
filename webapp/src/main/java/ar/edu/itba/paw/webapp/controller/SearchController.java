@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -60,11 +61,11 @@ public final class SearchController {
                 query, category, transmission, powertrain, price, from, until, page, sort, viewer, neighborhoodIds);
         final Page<ListingCard> resultPage = listingService.searchListingCards(criteria);
 
-        final int lastPage = resultPage.getTotalPages() - 1;
-        if (page > lastPage) {
+        final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
+        if (safePage != page) {
             final String redirectUrl = UriComponentsBuilder
                     .fromHttpRequest(new ServletServerHttpRequest(request))
-                    .replaceQueryParam("page", lastPage)
+                    .replaceQueryParam("page", safePage)
                     .build()
                     .toUriString();
             final RedirectView redirectView = new RedirectView(redirectUrl);
