@@ -43,7 +43,7 @@ mvn jetty:run -pl webapp
 From a Unix shell at the repo root you can use:
 
 ```bash
-export MAVEN_OPTS="-Dspring.profiles.active=local -Dlogback.configurationFile=$(pwd)/webapp/src/test/resources/logback-test.xml"
+export MAVEN_OPTS="-Dspring.profiles.active=local -Dlogback.configurationFile=classpath:logback/logback-local.xml -Dfile.encoding=UTF-8"
 mvn jetty:run -pl webapp
 ```
 
