@@ -3,19 +3,19 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -44,26 +44,27 @@ import java.util.stream.Collectors;
 @Controller
 public class CarDetailController {
 
-    private static final int SIMILAR_LISTINGS_LIMIT = 4;
-    private static final int LISTING_REVIEWS_PAGE_SIZE = 5;
-    private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
-    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
-
     private final ListingService listingService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
     private final UserService userService;
+    private final PaginationPolicy paginationPolicy;
+    private final PresentationLimitsPolicy presentationLimitsPolicy;
 
     @Autowired
     public CarDetailController(
             final ListingService listingService,
             final ReservationService reservationService,
             final ReviewService reviewService,
-            final UserService userService) {
+            final UserService userService,
+            final PaginationPolicy paginationPolicy,
+            final PresentationLimitsPolicy presentationLimitsPolicy) {
         this.listingService = listingService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
         this.userService = userService;
+        this.paginationPolicy = paginationPolicy;
+        this.presentationLimitsPolicy = presentationLimitsPolicy;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -91,7 +92,8 @@ public class CarDetailController {
 
         final User viewer = currentUser;
         final List<VehicleCardView> similarListings = listingService
-                .findSimilarListingCards(listingId, SIMILAR_LISTINGS_LIMIT, viewer)
+                .findSimilarListingCards(
+                        listingId, presentationLimitsPolicy.getCarDetailSimilarListingsLimit(), viewer)
                 .stream()
                 .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
@@ -107,7 +109,8 @@ public class CarDetailController {
         final Locale locale = RequestContextUtils.getLocale(request);
         final long reviewTotal = reviewService.countReviewsForListing(listingId);
         final Page<ListingPublicReview> reviewSource =
-                reviewService.getListingPublicReviews(listingId, reviewPage, LISTING_REVIEWS_PAGE_SIZE);
+                reviewService.getListingPublicReviews(
+                        listingId, reviewPage, paginationPolicy.getListingPublicReviewsPageSize());
         final List<ListingReviewRowView> reviewRows = reviewSource.getContent().stream()
                 .map(r -> new ListingReviewRowView(
                         r.getReviewerForename(),
@@ -167,7 +170,7 @@ public class CarDetailController {
         final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
                 counterparty.getId(),
                 true,
-                COUNTERPARTY_RECENT_REVIEWS_LIMIT);
+                presentationLimitsPolicy.getCounterpartyRecentReviewsLimit());
         final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
                 counterparty.getForename() + " " + counterparty.getSurname(),
                 counterparty.getForename(),

@@ -37,7 +37,10 @@ public final class PaginationPolicy {
                 ? legacyDefault
                 : ui;
         this.listingPublicReviewsPageSize =
-                readPositiveInt(environment, LISTING_PUBLIC_REVIEWS_PAGE_SIZE, 5);
+                readPositiveInt(
+                        environment,
+                        LISTING_PUBLIC_REVIEWS_PAGE_SIZE,
+                        PaginationFallbackSizes.LISTING_PUBLIC_REVIEWS_PAGE_SIZE);
     }
 
     private static int readPositiveInt(final Environment env, final String key, final int defaultValue) {

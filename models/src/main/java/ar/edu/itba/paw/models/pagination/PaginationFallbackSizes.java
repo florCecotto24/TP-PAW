@@ -14,4 +14,7 @@ public final class PaginationFallbackSizes {
 
     /** Default for {@code app.pagination.db-fetch-size}. */
     public static final int DB_FETCH_SIZE = 24;
+
+    /** Default for {@code app.pagination.listing-public-reviews-page-size} (divides {@link #DB_FETCH_SIZE}). */
+    public static final int LISTING_PUBLIC_REVIEWS_PAGE_SIZE = 6;
 }

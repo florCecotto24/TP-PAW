@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingDetail;
-import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
@@ -17,10 +16,10 @@ import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
+import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -29,7 +28,6 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -60,8 +58,6 @@ import java.util.stream.Collectors;
 @Controller
 public final class MyReservationsController {
 
-    private static final int COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
-    private static final int COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE = 8;
     private final ReservationService reservationService;
     private final ListingService listingService;
     private final ImageService imageService;
@@ -69,7 +65,7 @@ public final class MyReservationsController {
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
     private final UserService userService;
-    private final PaginationPolicy paginationPolicy;
+    private final PresentationLimitsPolicy presentationLimitsPolicy;
 
     public MyReservationsController(
             final ReservationService reservationService,
@@ -79,7 +75,7 @@ public final class MyReservationsController {
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             final ReviewService reviewService,
             final UserService userService,
-            final PaginationPolicy paginationPolicy) {
+            final PresentationLimitsPolicy presentationLimitsPolicy) {
         this.reservationService = reservationService;
         this.listingService = listingService;
         this.imageService = imageService;
@@ -87,7 +83,7 @@ public final class MyReservationsController {
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
         this.userService = userService;
-        this.paginationPolicy = paginationPolicy;
+        this.presentationLimitsPolicy = presentationLimitsPolicy;
     }
 
     private static final String DEFAULT_SORT = "date,desc";
@@ -255,7 +251,7 @@ public final class MyReservationsController {
         final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
                 counterparty.getId(),
                 counterpartyIsOwner,
-                COUNTERPARTY_RECENT_REVIEWS_LIMIT);
+                presentationLimitsPolicy.getCounterpartyRecentReviewsLimit());
         final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
                 counterparty.getForename() + " " + counterparty.getSurname(),
                 counterparty.getForename(),
@@ -267,7 +263,6 @@ public final class MyReservationsController {
                 counterparty.getMemberSince().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
-        // COUNTERPARTY_ACTIVE_LISTINGS_PAGE_SIZE (8) matches the service PAGE_SIZE used by buildOwnerListingSearchCriteria
         final List<VehicleCardView> counterpartyActiveListings = counterpartyIsOwner
                 ? listingService.getOwnerListingCards(
                                 listingService.buildOwnerListingSearchCriteria(

@@ -666,7 +666,7 @@ public final class ListingServiceImpl implements ListingService {
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new OwnerListingSearchCriteria(
-                ownerId, page, PAGE_SIZE, statuses, textQuery,
+                ownerId, page, paginationPolicy.getDefaultPageSize(), statuses, textQuery,
                 carTypes, transmissions, powertrains, bands, sortBy, sortDir);
     }
 
@@ -713,7 +713,6 @@ public final class ListingServiceImpl implements ListingService {
         return filtered.stream().limit(limit).collect(Collectors.toList());
     }
 
-    private static final int PAGE_SIZE = 8;
     private static final Set<String> LISTING_STATUSES = Set.of("active", "paused", "finished");
 
 

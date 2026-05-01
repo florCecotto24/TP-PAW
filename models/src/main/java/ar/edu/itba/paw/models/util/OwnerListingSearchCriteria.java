@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.models.util;
 
+import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
+
 import java.util.List;
 import java.util.Objects;
 
@@ -31,7 +33,7 @@ public final class OwnerListingSearchCriteria {
             final String sortDirection) {
         this.ownerId = ownerId;
         this.page = Math.max(0, page);
-        this.pageSize = pageSize > 0 ? pageSize : 8;
+        this.pageSize = pageSize > 0 ? pageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
         this.listingStatusFilters = listingStatusFilters == null ? List.of() : List.copyOf(listingStatusFilters);
         this.textQuery = textQuery != null && !textQuery.isBlank() ? textQuery.trim() : null;
         this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);

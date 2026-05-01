@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.services.ImageService;
@@ -11,8 +12,8 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
+import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ public class MyReservationsControllerTest {
         final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy = paymentReceiptUploadPolicy();
         final ReviewService reviewService = mock(ReviewService.class);
         final UserService userService = mock(UserService.class);
-        final PaginationPolicy paginationPolicy = paginationPolicy();
+        final PresentationLimitsPolicy presentationLimitsPolicy = presentationLimitsPolicy();
         final MyReservationsController controller = new MyReservationsController(
                 reservationService,
                 listingService,
@@ -58,7 +59,7 @@ public class MyReservationsControllerTest {
                 paymentReceiptUploadPolicy,
                 reviewService,
                 userService,
-                paginationPolicy);
+                presentationLimitsPolicy);
 
         final long meId = 100L;
         final long reservationId = 200L;
@@ -74,14 +75,24 @@ public class MyReservationsControllerTest {
         when(reviewService.getRecentCommentReviewsForCounterparty(ownerId, true, 3))
                 .thenReturn(List.of(new ReviewItemDto(11L, "Ana", null, 5, LocalDate.of(2026, 1, 1), "Great")));
         final OwnerListingSearchCriteria ownerCriteria = new OwnerListingSearchCriteria(
-                ownerId, 0, 8, List.of("active"), null, null, null, null, null, "date", "desc");
+                ownerId,
+                0,
+                PaginationFallbackSizes.UI_PAGE_SIZE,
+                List.of("active"),
+                null,
+                null,
+                null,
+                null,
+                null,
+                "date",
+                "desc");
         when(listingService.buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, 0, null))
                 .thenReturn(ownerCriteria);
         when(listingService.getOwnerListingCards(ownerCriteria))
                 .thenReturn(new Page<>(List.of(
                         new ListingCard(listingId, "Toyota", "Etios", BigDecimal.valueOf(100), 1L),
                         new ListingCard(301L, "Ford", "Fiesta", BigDecimal.valueOf(120), 2L)
-                ), 0, 8, 2));
+                ), 0, PaginationFallbackSizes.UI_PAGE_SIZE, 2));
 
         final ModelAndView mav = controller.counterpartyProfile(me, reservationId, "rider");
 
@@ -106,7 +117,7 @@ public class MyReservationsControllerTest {
         final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy = paymentReceiptUploadPolicy();
         final ReviewService reviewService = mock(ReviewService.class);
         final UserService userService = mock(UserService.class);
-        final PaginationPolicy paginationPolicy = paginationPolicy();
+        final PresentationLimitsPolicy presentationLimitsPolicy = presentationLimitsPolicy();
         final MyReservationsController controller = new MyReservationsController(
                 reservationService,
                 listingService,
@@ -115,7 +126,7 @@ public class MyReservationsControllerTest {
                 paymentReceiptUploadPolicy,
                 reviewService,
                 userService,
-                paginationPolicy);
+                presentationLimitsPolicy);
 
         final long meId = 700L;
         final long reservationId = 800L;
@@ -174,10 +185,10 @@ public class MyReservationsControllerTest {
                 .withProperty("app.upload.bytes-per-binary-megabyte", "1048576"));
     }
 
-    /** {@link PaginationPolicy} is {@code final}; use a real instance with test properties. */
-    private static PaginationPolicy paginationPolicy() {
-        return new PaginationPolicy(new MockEnvironment()
-                .withProperty("app.pagination.default-page-size", "8")
-                .withProperty("app.pagination.listing-public-reviews-page-size", "5"));
+    private static PresentationLimitsPolicy presentationLimitsPolicy() {
+        return new PresentationLimitsPolicy(new MockEnvironment()
+                .withProperty("app.presentation.counterparty-recent-reviews-limit", "3")
+                .withProperty("app.presentation.car-detail-similar-listings-limit", "4"));
     }
+
 }

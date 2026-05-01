@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.models.util;
 
+import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
+
 import java.util.List;
 
 public final class ReservationSearchCriteria {
@@ -31,7 +33,7 @@ public final class ReservationSearchCriteria {
         this.ownerId = ownerId;
         this.riderId = riderId;
         this.page = Math.max(0, page);
-        this.pageSize = pageSize > 0 ? pageSize : 8;
+        this.pageSize = pageSize > 0 ? pageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
         this.statusFilters = statusFilters == null ? List.of() : List.copyOf(statusFilters);
         this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
