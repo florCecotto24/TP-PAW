@@ -114,12 +114,12 @@ public interface ListingService {
     String formatOwnerReservationHandoverSummary(Listing listing);
 
     /**
-     * If the listing is active or paused and has no bookable wall day from today onward, sets status to finished.
+     * If the listing is active and has no bookable wall day from today onward, sets status to paused.
      */
     void refreshListingFinishedIfExhausted(long listingId);
 
     /**
-     * Marks every active or paused listing without future bookable days as finished (batch; for scheduled sweeps).
+     * Pauses every active listing without future bookable days (batch; for scheduled sweeps).
      */
     void refreshExhaustedListingsToFinished();
 

@@ -2,6 +2,8 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
@@ -216,6 +218,9 @@ public final class MyListingsController {
         if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
             return new ModelAndView(new RedirectView("/my-listings", true));
         }
+        if (listingDetailOpt.get().getListing().getStatus() == Listing.Status.FINISHED) {
+            return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
+        }
         if (errors.hasErrors()) {
             return buildDetailModelAndView(listingDetailOpt.get(), editForm);
         }
@@ -334,8 +339,17 @@ public final class MyListingsController {
                 .map(dt -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(dt, locale))
                 .orElse(null);
 
+        final List<Neighborhood> allNeighborhoods = locationService.findAllNeighborhoods();
+        final Long listingNbId = listing.getNeighborhoodId().orElse(null);
+        final String listingNeighborhoodName = listingNbId == null ? null : allNeighborhoods.stream()
+                .filter(nb -> nb.getId() == listingNbId)
+                .map(Neighborhood::getName)
+                .findFirst().orElse(null);
+
         final ModelAndView mav = new ModelAndView("myListingDetail");
-        mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
+        mav.addObject("allNeighborhoods", allNeighborhoods);
+        mav.addObject("listingNeighborhoodName", listingNeighborhoodName);
+        mav.addObject("listingStreetNumber", listing.getStartPointNumber().orElse(null));
         mav.addObject("listing", listing);
         mav.addObject("listingCreatedAtDisplay", WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(listing.getCreatedAt(), locale));
         mav.addObject("car", detail.getCar());
@@ -355,6 +369,10 @@ public final class MyListingsController {
         mav.addObject("listingNextReservationDisplay", nextReservationDisplay);
         final int forwardDays = listingService.getConfiguredMaxAvailabilityForwardWallDays();
         final java.time.LocalDate wallToday = java.time.LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final List<ListingAvailability> editPastAvailabilities = detail.getListingAvailabilities().stream()
+                .filter(la -> la.getEndInclusive().isBefore(wallToday))
+                .collect(Collectors.toList());
+        mav.addObject("editPastAvailabilities", editPastAvailabilities);
         mav.addObject("editAvailMaxYmd", wallToday.plusDays(forwardDays).toString());
         mav.addObject("editAvailWallToday", wallToday);
         return mav;

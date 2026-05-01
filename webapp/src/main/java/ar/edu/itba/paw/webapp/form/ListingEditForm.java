@@ -111,7 +111,7 @@ public final class ListingEditForm implements ListingTimeWindow {
     }
 
     @Valid
-    @Size(min = 1, max = 10,
+    @Size(min = 0, max = 10,
           message = "{validation.availabilityRows.size.range}",
           groups = ValidationGroups.OnListingEdit.class)
     private List<AvailabilityRow> availabilityRows = new ArrayList<>();
@@ -126,11 +126,14 @@ public final class ListingEditForm implements ListingTimeWindow {
 
     public void populateDefaultAvailability(final List<ListingAvailability> existing) {
         if (availabilityRows.isEmpty()) {
+            final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
             for (final ListingAvailability la : existing) {
-                final AvailabilityRow row = new AvailabilityRow();
-                row.setFrom(la.getStartInclusive());
-                row.setUntil(la.getEndInclusive());
-                availabilityRows.add(row);
+                if (!la.getEndInclusive().isBefore(today)) {
+                    final AvailabilityRow row = new AvailabilityRow();
+                    row.setFrom(la.getStartInclusive());
+                    row.setUntil(la.getEndInclusive());
+                    availabilityRows.add(row);
+                }
             }
         }
     }

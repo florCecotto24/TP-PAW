@@ -265,18 +265,20 @@ public final class ListingServiceImpl implements ListingService {
     private static boolean availabilityMatchesExisting(
             final List<AvailabilityPeriod> submitted,
             final List<ListingAvailability> existing) {
-        if (submitted.size() != existing.size()) {
+        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final List<ListingAvailability> nonPastExisting = existing.stream()
+                .filter(la -> !la.getEndInclusive().isBefore(today))
+                .sorted(Comparator.comparing(ListingAvailability::getStartInclusive))
+                .collect(Collectors.toList());
+        if (submitted.size() != nonPastExisting.size()) {
             return false;
         }
         final List<AvailabilityPeriod> sortedSubmitted = submitted.stream()
                 .sorted(Comparator.comparing(AvailabilityPeriod::getStartInclusive))
                 .collect(Collectors.toList());
-        final List<ListingAvailability> sortedExisting = existing.stream()
-                .sorted(Comparator.comparing(ListingAvailability::getStartInclusive))
-                .collect(Collectors.toList());
         for (int i = 0; i < sortedSubmitted.size(); i++) {
             final AvailabilityPeriod s = sortedSubmitted.get(i);
-            final ListingAvailability e = sortedExisting.get(i);
+            final ListingAvailability e = nonPastExisting.get(i);
             if (!s.getStartInclusive().equals(e.getStartInclusive())
                     || !s.getEndInclusive().equals(e.getEndInclusive())) {
                 return false;
@@ -374,6 +376,12 @@ public final class ListingServiceImpl implements ListingService {
             final List<ListingAvailability> existing = listingAvailabilityDao.findByListingId(listingId);
             if (!availabilityMatchesExisting(availabilityPeriods, existing)) {
                 listingAvailabilityDao.deleteByListingId(listingId);
+                final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+                for (final ListingAvailability la : existing) {
+                    if (la.getEndInclusive().isBefore(today)) {
+                        listingAvailabilityDao.create(listingId, la.getStartInclusive(), la.getEndInclusive());
+                    }
+                }
                 for (final AvailabilityPeriod p : availabilityPeriods) {
                     listingAvailabilityDao.create(listingId, p.getStartInclusive(), p.getEndInclusive());
                 }
@@ -393,8 +401,7 @@ public final class ListingServiceImpl implements ListingService {
             return;
         }
         final Listing.Status status = opt.get().getStatus();
-        if (status != Listing.Status.ACTIVE && status != Listing.Status.PAUSED
-                && status != Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU) {
+        if (status != Listing.Status.ACTIVE) {
             return;
         }
         final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
@@ -402,18 +409,15 @@ public final class ListingServiceImpl implements ListingService {
         if (!bookable.contains(listingId)) {
             listingDao.updateListingStatus(
                     listingId,
-                    Listing.Status.FINISHED,
-                    Listing.Status.ACTIVE,
                     Listing.Status.PAUSED,
-                    Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+                    Listing.Status.ACTIVE);
         }
     }
 
     @Override
     @Transactional
     public void refreshExhaustedListingsToFinished() {
-        final List<Long> ids = listingDao.findListingIdsWithStatuses(
-                Listing.Status.ACTIVE, Listing.Status.PAUSED, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+        final List<Long> ids = listingDao.findListingIdsWithStatuses(Listing.Status.ACTIVE);
         if (ids.isEmpty()) {
             return;
         }
@@ -426,10 +430,8 @@ public final class ListingServiceImpl implements ListingService {
                 if (!bookable.contains(id)) {
                     listingDao.updateListingStatus(
                             id,
-                            Listing.Status.FINISHED,
-                            Listing.Status.ACTIVE,
                             Listing.Status.PAUSED,
-                            Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+                            Listing.Status.ACTIVE);
                 }
             }
         }
