@@ -1,7 +1,11 @@
 package ar.edu.itba.paw.webapp.form;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
@@ -11,6 +15,8 @@ import javax.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
@@ -102,5 +108,67 @@ public final class ListingEditForm implements ListingTimeWindow {
 
     public void setCheckOutTime(final LocalTime checkOutTime) {
         this.checkOutTime = checkOutTime;
+    }
+
+    @Valid
+    @Size(min = 1, max = 10,
+          message = "{validation.availabilityRows.size.range}",
+          groups = ValidationGroups.OnListingEdit.class)
+    private List<AvailabilityRow> availabilityRows = new ArrayList<>();
+
+    public List<AvailabilityRow> getAvailabilityRows() {
+        return availabilityRows;
+    }
+
+    public void setAvailabilityRows(final List<AvailabilityRow> availabilityRows) {
+        this.availabilityRows = availabilityRows;
+    }
+
+    public void populateDefaultAvailability(final List<ListingAvailability> existing) {
+        if (availabilityRows.isEmpty()) {
+            for (final ListingAvailability la : existing) {
+                final AvailabilityRow row = new AvailabilityRow();
+                row.setFrom(la.getStartInclusive());
+                row.setUntil(la.getEndInclusive());
+                availabilityRows.add(row);
+            }
+        }
+    }
+
+    public List<AvailabilityPeriod> toAvailabilityPeriods() {
+        final List<AvailabilityPeriod> result = new ArrayList<>();
+        for (final AvailabilityRow row : availabilityRows) {
+            result.add(new AvailabilityPeriod(row.getFrom(), row.getUntil()));
+        }
+        return result;
+    }
+
+    public static final class AvailabilityRow {
+
+        @NotNull(message = "{validation.availabilityRow.from.notNull}",
+                 groups = ValidationGroups.OnListingEdit.class)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate from;
+
+        @NotNull(message = "{validation.availabilityRow.until.notNull}",
+                 groups = ValidationGroups.OnListingEdit.class)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+        private LocalDate until;
+
+        public LocalDate getFrom() {
+            return from;
+        }
+
+        public void setFrom(final LocalDate from) {
+            this.from = from;
+        }
+
+        public LocalDate getUntil() {
+            return until;
+        }
+
+        public void setUntil(final LocalDate until) {
+            this.until = until;
+        }
     }
 }

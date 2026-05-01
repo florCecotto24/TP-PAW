@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
@@ -228,7 +229,7 @@ public final class MyListingsController {
                 editForm.getDescription(),
                 editForm.getCheckInTime(),
                 editForm.getCheckOutTime(),
-                null,
+                editForm.toAvailabilityPeriods(),
                 editForm.getNeighborhoodId());
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
@@ -308,6 +309,7 @@ public final class MyListingsController {
         if (editForm.getNeighborhoodId() == null) {
             editForm.setNeighborhoodId(listing.getNeighborhoodId().orElse(null));
         }
+        editForm.populateDefaultAvailability(detail.getListingAvailabilities());
 
         final long carImageId = detail.getPictures().isEmpty() ? 0L : detail.getPictures().get(0).getImageId();
         final long ownerId = detail.getOwner().getId();
@@ -351,6 +353,10 @@ public final class MyListingsController {
         mav.addObject("listingReservationsThisMonth", reservationsThisMonth);
         mav.addObject("listingCancellationRate", cancellationRateDisplay);
         mav.addObject("listingNextReservationDisplay", nextReservationDisplay);
+        final int forwardDays = listingService.getConfiguredMaxAvailabilityForwardWallDays();
+        final java.time.LocalDate wallToday = java.time.LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        mav.addObject("editAvailMaxYmd", wallToday.plusDays(forwardDays).toString());
+        mav.addObject("editAvailWallToday", wallToday);
         return mav;
     }
 }

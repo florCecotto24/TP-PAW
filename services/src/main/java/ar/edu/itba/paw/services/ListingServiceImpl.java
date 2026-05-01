@@ -253,6 +253,38 @@ public final class ListingServiceImpl implements ListingService {
         }
     }
 
+    private static void validateUpdateAvailabilityNoFullyPastPeriods(final List<AvailabilityPeriod> periods) {
+        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        for (final AvailabilityPeriod period : periods) {
+            if (period.getEndInclusive().isBefore(today)) {
+                throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INCLUDES_PAST_DATES);
+            }
+        }
+    }
+
+    private static boolean availabilityMatchesExisting(
+            final List<AvailabilityPeriod> submitted,
+            final List<ListingAvailability> existing) {
+        if (submitted.size() != existing.size()) {
+            return false;
+        }
+        final List<AvailabilityPeriod> sortedSubmitted = submitted.stream()
+                .sorted(Comparator.comparing(AvailabilityPeriod::getStartInclusive))
+                .collect(Collectors.toList());
+        final List<ListingAvailability> sortedExisting = existing.stream()
+                .sorted(Comparator.comparing(ListingAvailability::getStartInclusive))
+                .collect(Collectors.toList());
+        for (int i = 0; i < sortedSubmitted.size(); i++) {
+            final AvailabilityPeriod s = sortedSubmitted.get(i);
+            final ListingAvailability e = sortedExisting.get(i);
+            if (!s.getStartInclusive().equals(e.getStartInclusive())
+                    || !s.getEndInclusive().equals(e.getEndInclusive())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private static List<AvailabilityPeriod> mergeAdjacentAvailabilityPeriods(final List<AvailabilityPeriod> periods) {
         final List<AvailabilityPeriod> sorted = periods.stream()
                 .sorted(Comparator.comparing(AvailabilityPeriod::getStartInclusive))
@@ -309,7 +341,7 @@ public final class ListingServiceImpl implements ListingService {
             }
             listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
                     LocalDate.now(AvailabilityPeriod.WALL_ZONE), availabilityPeriods);
-            validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
+            validateUpdateAvailabilityNoFullyPastPeriods(availabilityPeriods);
         }
         final String safeStartStreet = startPointStreet == null ? "" : startPointStreet.trim();
         final String safeDescription = description == null ? "" : description.trim();
@@ -339,9 +371,12 @@ public final class ListingServiceImpl implements ListingService {
                 checkOutTime,
                 effNeighborhoodId);
         if (updated && availabilityPeriods != null) {
-            listingAvailabilityDao.deleteByListingId(listingId);
-            for (final AvailabilityPeriod p : availabilityPeriods) {
-                listingAvailabilityDao.create(listingId, p.getStartInclusive(), p.getEndInclusive());
+            final List<ListingAvailability> existing = listingAvailabilityDao.findByListingId(listingId);
+            if (!availabilityMatchesExisting(availabilityPeriods, existing)) {
+                listingAvailabilityDao.deleteByListingId(listingId);
+                for (final AvailabilityPeriod p : availabilityPeriods) {
+                    listingAvailabilityDao.create(listingId, p.getStartInclusive(), p.getEndInclusive());
+                }
             }
         }
         if (updated) {

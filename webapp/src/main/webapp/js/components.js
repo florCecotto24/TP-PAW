@@ -1237,6 +1237,42 @@
         if (!anchor || !fromH || !untilH) {
             return;
         }
+
+        if (row.hasAttribute('data-avail-past-start')) {
+            // Start date is in the past and locked — only the end date is editable.
+            // Use a single-date picker so Flatpickr never touches fromH.
+            var untilDefault = untilH.value ? new Date(untilH.value + 'T00:00:00') : undefined;
+            var fromDisplay = fromH.value || '';
+            var md = maxDateForPublish();
+            var singleCfg = {
+                mode: 'single',
+                enableTime: false,
+                dateFormat: 'Y-m-d',
+                minDate: minDateForPublish(),
+                defaultDate: untilDefault,
+                // onReady fires after Flatpickr has set the input value, so we can override it.
+                onReady: function () {
+                    if (untilH.value) {
+                        anchor.value = fromDisplay + ' – ' + untilH.value;
+                    }
+                },
+                onChange: function (selectedDates) {
+                    if (selectedDates.length === 1) {
+                        var fmt = RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0]);
+                        untilH.value = fmt;
+                        anchor.value = fromDisplay + ' – ' + fmt;
+                    } else {
+                        untilH.value = '';
+                        anchor.value = '';
+                    }
+                }
+            };
+            if (md) { singleCfg.maxDate = md; }
+            var fp = flatpickr(anchor, singleCfg);
+            row._rydenAvailFp = { fp: fp, destroy: function () { fp.destroy(); } };
+            return;
+        }
+
         var defaults = [];
         if (fromH.value && untilH.value) {
             defaults.push(new Date(fromH.value + 'T00:00:00'));

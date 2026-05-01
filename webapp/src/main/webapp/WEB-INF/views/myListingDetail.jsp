@@ -16,6 +16,8 @@
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
     <c:url var="editListingUrl" value="/my-listings/${listing.id}/edit"/>
     <c:url var="toggleListingUrl" value="/my-listings/${listing.id}/toggle"/>
+    <c:set var="editBindingResult" value="${requestScope['org.springframework.validation.BindingResult.editForm']}"/>
+    <c:set var="hasEditErrors" value="${editBindingResult != null and editBindingResult.errorCount > 0}"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
             homeHref="${pageContext.request.contextPath}/my-listings"
@@ -32,13 +34,14 @@
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingDetail.carSummary.title"/></h2>
+                        <c:if test="${statusKey != 'FINISHED'}">
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm"
-                                id="toggleEditBtn"
-                                onclick="toggleEditForm()">
+                                id="toggleEditBtn">
                             <i class="bi bi-pencil me-1" aria-hidden="true"></i>
                             <spring:message code="myListingDetail.actions.editListing"/>
                         </button>
+                        </c:if>
                     </div>
                     <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
                         <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
@@ -56,7 +59,6 @@
                         </div>
                         <div class="flex-grow-1">
                             <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                            <p class="text-secondary mb-2"><c:out value="${listing.title}"/></p>
                             <div class="d-flex flex-wrap gap-2 mb-2">
                                 <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                 <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
@@ -66,7 +68,15 @@
                             <p class="mb-2 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
                             </p>
-                            <div class="d-flex align-items-center gap-2 mt-3 pt-2 border-top">
+                            <c:if test="${not empty listing.startPointStreet}">
+                                <div class="mb-2 small text-secondary">
+                                    <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
+                                    <c:out value="${listing.startPointStreet}"/>
+                                    <c:if test="${not empty listingStreetNumber}"> <c:out value="${listingStreetNumber}"/></c:if>
+                                    <c:if test="${not empty listingNeighborhoodName}">, <c:out value="${listingNeighborhoodName}"/></c:if>
+                                </div>
+                            </c:if>
+                            <div class="d-flex align-items-center gap-2 mt-1 pt-2 border-top">
                                 <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
                                     <spring:message code="myListingDetail.pricePerDay"/>
                                 </span>
@@ -78,7 +88,9 @@
                 </div>
             </article>
 
-            <article class="card border-0 shadow-sm rounded-4 mb-4 d-none" id="editListingSection">
+            <c:if test="${statusKey != 'FINISHED'}">
+            <article class="card border-0 shadow-sm rounded-4 mb-4" id="editListingSection"
+                     style="${hasEditErrors ? '' : 'display:none;'}">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
                     <spring:message code="validation.neighborhood.invalid" var="editNbInvalidMsg" htmlEscape="true"/>
@@ -149,8 +161,80 @@
                             <form:errors path="description" cssClass="text-danger d-block"/>
                         </div>
 
+                        <spring:message code="publishCar.form.period" var="editPeriodLabel"/>
+                        <spring:message code="publishCar.form.remove" var="editRemoveLabel"/>
+                        <spring:message code="publishCar.form.dateRange.placeholder" var="editDateRangePh"/>
+                        <div class="col-12 mb-2" id="publishAvailabilitySection"
+                             data-publish-min-avail-ymd="<c:out value='${editAvailWallToday}'/>"
+                             data-publish-max-avail-wall-ymd="<c:out value='${editAvailMaxYmd}'/>">
+                            <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
+                            <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
+                            <c:if test="${not empty editPastAvailabilities}">
+                                <c:forEach items="${editPastAvailabilities}" var="pastRow">
+                                    <div class="border rounded-3 p-3 mb-2 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                                            <span class="small text-secondary"><c:out value="${editPeriodLabel}"/></span>
+                                            <span class="badge text-bg-secondary"><spring:message code="myListingDetail.availability.past.badge"/></span>
+                                        </div>
+                                        <input type="text" class="form-control form-control-sm"
+                                               value="<c:out value='${pastRow.startInclusive}'/> – <c:out value='${pastRow.endInclusive}'/>"
+                                               disabled aria-label="<spring:message code='myListingDetail.availability.past.badge'/>"/>
+                                    </div>
+                                </c:forEach>
+                            </c:if>
+                            <div id="publish_availability_rows">
+                                <c:forEach items="${editForm.availabilityRows}" var="editAvailRow" varStatus="st">
+                                    <c:set var="isPastStart" value="${editAvailRow.from != null and editAvailRow.from.isBefore(editAvailWallToday)}"/>
+                                    <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row
+                                         <c:if test="${isPastStart}">data-avail-past-start</c:if>>
+                                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                                            <span class="small text-secondary">
+                                                <c:out value="${editPeriodLabel}"/> <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span>
+                                            </span>
+                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove"
+                                                    aria-label="<c:out value='${editRemoveLabel}'/>">
+                                                <c:out value="${editRemoveLabel}"/>
+                                            </button>
+                                        </div>
+                                        <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly
+                                               placeholder="<c:out value='${editDateRangePh}'/>" aria-label="Availability date range"/>
+                                        <c:if test="${isPastStart}">
+                                            <small class="text-muted d-block mt-1">
+                                                <spring:message code="myListingDetail.availability.pastStart.hint"/>
+                                            </small>
+                                        </c:if>
+                                        <form:hidden path="availabilityRows[${st.index}].from" cssClass="ryden-avail-from"/>
+                                        <form:hidden path="availabilityRows[${st.index}].until" cssClass="ryden-avail-until"/>
+                                        <form:errors path="availabilityRows[${st.index}].from" cssClass="text-danger d-block"/>
+                                        <form:errors path="availabilityRows[${st.index}].until" cssClass="text-danger d-block"/>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="publish_avail_add">
+                                <i class="bi bi-plus-lg" aria-hidden="true"></i> <spring:message code="publishCar.form.addPeriod"/>
+                            </button>
+                        </div>
+
+                        <template id="publish_avail_row_template">
+                            <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
+                                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+                                    <span class="small text-secondary">
+                                        <c:out value="${editPeriodLabel}"/> <span class="publish-avail-index">1</span>
+                                    </span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove"
+                                            aria-label="<c:out value='${editRemoveLabel}'/>">
+                                        <c:out value="${editRemoveLabel}"/>
+                                    </button>
+                                </div>
+                                <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly
+                                       placeholder="<c:out value='${editDateRangePh}'/>" aria-label="Availability date range"/>
+                                <input type="hidden" class="ryden-avail-from" name="availabilityRows[__IDX__].from" value=""/>
+                                <input type="hidden" class="ryden-avail-until" name="availabilityRows[__IDX__].until" value=""/>
+                            </div>
+                        </template>
+
                         <div class="col-12 d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-outline-secondary" onclick="cancelEdit()">
+                            <button type="button" class="btn btn-outline-secondary" id="cancelEditListingBtn">
                                 <spring:message code="common.cancel"/>
                             </button>
                             <button type="submit" class="btn btn-primary">
@@ -160,8 +244,10 @@
                     </form:form>
                 </div>
             </article>
+            </c:if>
 
-            <article class="card border-0 shadow-sm rounded-4 mb-4">
+            <article class="card border-0 shadow-sm rounded-4 mb-4" id="availabilityDisplaySection"
+                     style="${hasEditErrors ? 'display:none;' : ''}">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.availability.title"/></h2>
                     <c:choose>
@@ -378,28 +464,28 @@
 <%@include file="footer.jsp"%>
 
 <script>
-    function toggleEditForm() {
-        var section = document.getElementById('editListingSection');
-        var btn = document.getElementById('toggleEditBtn');
-        section.classList.remove('d-none');
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        btn.disabled = true;
+document.addEventListener('DOMContentLoaded', function() {
+    var hasEditErrors = ${hasEditErrors ? 'true' : 'false'};
+    var editSection   = document.getElementById('editListingSection');
+    var availSection  = document.getElementById('availabilityDisplaySection');
+    var toggleBtn     = document.getElementById('toggleEditBtn');
+    var cancelBtn     = document.getElementById('cancelEditListingBtn');
+
+    function setListingEditMode(isEditing) {
+        if (editSection)  editSection.style.display  = isEditing ? 'block' : 'none';
+        if (availSection) availSection.style.display = isEditing ? 'none'  : 'block';
+        if (toggleBtn)    toggleBtn.style.display    = isEditing ? 'none'  : '';
     }
 
-    function cancelEdit() {
-        var section = document.getElementById('editListingSection');
-        var btn = document.getElementById('toggleEditBtn');
-        section.classList.add('d-none');
-        btn.disabled = false;
-    }
+    setListingEditMode(hasEditErrors);
 
-    (function() {
-        var section = document.getElementById('editListingSection');
-        if (section && section.querySelector('.text-danger')) {
-            section.classList.remove('d-none');
-            document.getElementById('toggleEditBtn').disabled = true;
-        }
-    })();
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() { setListingEditMode(true); });
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() { setListingEditMode(false); });
+    }
+});
 </script>
 </body>
 </html>
