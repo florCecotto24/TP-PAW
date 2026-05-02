@@ -310,6 +310,12 @@
                             <spring:message code="myListingDetail.actions.viewListing"/>
                         </a>
 
+                        <spring:message code="myListingDetail.actions.finish" var="finishBtnLabel"/>
+                        <spring:message code="myListingDetail.finishModal.title" var="finishModalTitle"/>
+                        <spring:message code="myListingDetail.finishModal.message" var="finishModalMessage"/>
+                        <spring:message code="myListingDetail.finishModal.confirm" var="finishModalConfirm"/>
+                        <spring:message code="myListingDetail.finishModal.back" var="finishModalBack"/>
+
                         <c:choose>
                             <c:when test="${statusKey == 'ACTIVE'}">
                                 <spring:message code="myListingDetail.pauseModal.title" var="pauseModalTitle"/>
@@ -320,29 +326,9 @@
                                 <button type="button" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" data-modal-open="pauseListingModal" aria-label="${pauseBtnLabel}">
                                     <c:out value="${pauseBtnLabel}"/>
                                 </button>
-                                <ryden:modal
-                                    id="pauseListingModal"
-                                    title="${pauseModalTitle}"
-                                    message="${pauseModalMessage}"
-                                    variant="danger">
-                                    <form method="post" action="<c:out value='${toggleListingUrl}'/>">
-                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                        <div class="d-flex justify-content-end gap-2 mt-3">
-                                            <button type="button" class="btn btn-secondary" data-modal-close="pauseListingModal">
-                                                <c:out value="${pauseModalBack}"/>
-                                            </button>
-                                            <button type="submit" class="btn btn-danger">
-                                                <c:out value="${pauseModalConfirm}"/>
-                                            </button>
-                                        </div>
-                                    </form>
-                                </ryden:modal>
-                                <form method="post" action="<c:out value='${finishListingUrl}'/>">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <button type="submit" class="btn btn-outline-danger w-100 mt-1">
-                                        <spring:message code="myListingDetail.actions.finish"/>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="${finishBtnLabel}">
+                                    <c:out value="${finishBtnLabel}"/>
+                                </button>
                             </c:when>
                             <c:when test="${statusKey == 'PAUSED'}">
                                 <form method="post" action="<c:out value='${toggleListingUrl}'/>">
@@ -351,12 +337,9 @@
                                         <spring:message code="myListingDetail.actions.activate"/>
                                     </button>
                                 </form>
-                                <form method="post" action="<c:out value='${finishListingUrl}'/>">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <button type="submit" class="btn btn-outline-danger w-100 mt-1">
-                                        <spring:message code="myListingDetail.actions.finish"/>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="${finishBtnLabel}">
+                                    <c:out value="${finishBtnLabel}"/>
+                                </button>
                             </c:when>
                             <c:when test="${statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
                                 <p class="text-secondary small mb-2">
@@ -365,12 +348,9 @@
                                 <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
                                     <spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
                                 </a>
-                                <form method="post" action="<c:out value='${finishListingUrl}'/>">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <button type="submit" class="btn btn-outline-danger w-100 mt-1">
-                                        <spring:message code="myListingDetail.actions.finish"/>
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="${finishBtnLabel}">
+                                    <c:out value="${finishBtnLabel}"/>
+                                </button>
                             </c:when>
                             <c:when test="${statusKey == 'FINISHED'}">
                                 <p class="text-secondary small mb-0">
@@ -496,6 +476,42 @@
             </div>
         </div>
     </article>
+    <ryden:modal
+            id="pauseListingModal"
+            title="${pauseModalTitle}"
+            message="${pauseModalMessage}"
+            variant="danger">
+        <form method="post" action="<c:out value='${toggleListingUrl}'/>">
+            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="button" class="btn btn-secondary" data-modal-close="pauseListingModal">
+                    <c:out value="${pauseModalBack}"/>
+                </button>
+                <button type="submit" class="btn btn-danger">
+                    <c:out value="${pauseModalConfirm}"/>
+                </button>
+            </div>
+        </form>
+    </ryden:modal>
+    <c:if test="${statusKey != 'FINISHED'}">
+        <ryden:modal
+                id="finishListingModal"
+                title="${finishModalTitle}"
+                message="${finishModalMessage}"
+                variant="danger">
+            <form method="post" action="<c:out value='${finishListingUrl}'/>">
+                <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <button type="button" class="btn btn-secondary" data-modal-close="finishListingModal">
+                        <c:out value="${finishModalBack}"/>
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <c:out value="${finishModalConfirm}"/>
+                    </button>
+                </div>
+            </form>
+        </ryden:modal>
+    </c:if>
 </main>
 <%@include file="footer.jsp"%>
 
