@@ -3,8 +3,8 @@ package ar.edu.itba.paw.webapp.security.auth.exception;
 import org.springframework.security.core.AuthenticationException;
 
 /**
- * Indicates that a user without a password received a temporary password by email;
- * (extiende {@link AuthenticationException}).
+ * Thrown when a legacy account without a stored password was mailed a one-time password; extends
+ * {@link AuthenticationException}.
  */
 public final class LegacyPasswordMailedException extends AuthenticationException {
 

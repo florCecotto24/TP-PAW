@@ -39,6 +39,9 @@ import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetailsService;
 
+/**
+ * Spring Security filter chain: form login, remember-me, CSRF, and path-specific authorization managers.
+ */
 @Configuration
 @EnableWebSecurity
 public class WebAuthConfig {

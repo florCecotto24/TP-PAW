@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.StoredFile;
 
+/** Binary file payloads linked to an uploader user. */
 public interface StoredFileDao {
 
     StoredFile create(long uploaderUserId, String fileName, String contentType, byte[] data);

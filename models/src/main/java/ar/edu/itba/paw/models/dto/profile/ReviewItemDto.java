@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models.dto.profile;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/** Single review row in profile counterparty history (reviewer identity, rating, wall-local date, comment). */
 public final class ReviewItemDto {
 
     private final long reviewerUserId;

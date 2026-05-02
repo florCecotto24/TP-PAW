@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.webapp.validation.constraint.OptionalCbu;
 
+/** Bean Validation engine for {@link OptionalCbu} using {@link CbuRules}. */
 @Component
 public final class OptionalCbuValidator implements ConstraintValidator<OptionalCbu, String> {
 

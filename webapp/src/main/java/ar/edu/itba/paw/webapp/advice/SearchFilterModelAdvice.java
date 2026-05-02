@@ -14,6 +14,9 @@ import ar.edu.itba.paw.webapp.controller.MyReservationsController;
 import ar.edu.itba.paw.webapp.controller.SearchController;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 
+/**
+ * Supplies search and filter dropdown options on home, search, and “my” listing/reservation controllers.
+ */
 @ControllerAdvice(assignableTypes = {
         HomeController.class, SearchController.class,
         MyListingsController.class, MyReservationsController.class

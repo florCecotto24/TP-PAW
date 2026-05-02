@@ -3,10 +3,12 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +24,8 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
@@ -59,8 +63,16 @@ public class ReservationServiceImplTest {
     @Mock
     private PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
 
+    @Mock
+    private PaginationPolicy paginationPolicy;
+
     @InjectMocks
     private ReservationServiceImpl reservationService;
+
+    @BeforeEach
+    void stubPaginationDefaults() {
+        Mockito.lenient().when(paginationPolicy.getDefaultPageSize()).thenReturn(PaginationFallbackSizes.UI_PAGE_SIZE);
+    }
 
     /** For {@link ReservationServiceImpl#createReservation} (max billable days only). */
     private void stubReservationTimingForReservationFlow() {
@@ -96,6 +108,7 @@ public class ReservationServiceImplTest {
         Mockito.when(reservationDao.hasActiveOverlap(listingId, START, END)).thenReturn(false);
         Mockito.when(userService.getListingOwner(listingId))
                 .thenReturn(Optional.of(User.identities(99L, "owner@example.com", "O", "Owner")));
+        Mockito.when(userService.getUserCbu(99L)).thenReturn("0170200203000008777719");
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
         Mockito.when(listingService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
@@ -234,6 +247,7 @@ public class ReservationServiceImplTest {
                 Mockito.any(OffsetDateTime.class))).thenReturn(true);
 
         Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(listingOwner));
+        Mockito.when(userService.getUserCbu(ownerId)).thenReturn("0170200203000008777719");
 
         Mockito.when(reservationDao.hasActiveOverlap(
                 Mockito.eq(listingId),
@@ -380,6 +394,29 @@ public class ReservationServiceImplTest {
 
         // 3. Assert
         Assertions.assertFalse(result.isPresent());
+    }
+
+    @Test
+    public void findReminderReservationsReturnsDaoListForSameWindow() {
+        final OffsetDateTime from = OffsetDateTime.parse("2026-06-02T03:00:00Z");
+        final OffsetDateTime to = OffsetDateTime.parse("2026-06-03T03:00:00Z");
+        final List<Reservation> expected = List.of(
+                Reservation.builder()
+                        .id(7L)
+                        .riderId(1L)
+                        .listingId(2L)
+                        .startDate(from)
+                        .endDate(END)
+                        .status(Reservation.Status.ACCEPTED)
+                        .createdAt(CREATED_AT)
+                        .updatedAt(UPDATED_AT)
+                        .totalPrice(TOTAL_PRICE)
+                        .build());
+        Mockito.when(reservationDao.getReminderReservations(from, to)).thenReturn(expected);
+
+        final List<Reservation> result = reservationService.findReminderReservations(from, to);
+
+        Assertions.assertEquals(expected, result);
     }
 
     @Test

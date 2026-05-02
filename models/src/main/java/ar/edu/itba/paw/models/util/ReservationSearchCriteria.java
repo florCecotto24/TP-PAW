@@ -5,6 +5,9 @@ import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Immutable filters and paging for rider or owner reservation card lists (status, vehicle facets, price, rating, sort).
+ */
 public final class ReservationSearchCriteria {
 
     private final Long ownerId;

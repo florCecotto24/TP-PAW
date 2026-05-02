@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.domain;
 
 import java.util.Arrays;
 
+/** Stored image metadata and inline bytes (legacy path; profile and uploads may use {@link StoredFile} instead). */
 public final class Image {
     private final long id;
     private final String name;

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models.dto;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
+/** One public review on a listing detail page (reviewer names, instant, rating, comment). */
 public final class ListingPublicReview {
 
     private final String reviewerForename;

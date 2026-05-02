@@ -18,6 +18,7 @@ import java.util.Optional;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.jdbc.core.RowMapper;
@@ -203,7 +204,7 @@ public class ListingJdbcDao implements ListingDao {
                             + "WHERE table_schema = current_schema() "
                             + "AND table_name = 'listings' AND column_name = 'start_point')",
                     Boolean.class));
-        } catch (final Exception e) {
+        } catch (final DataAccessException e) {
             return false;
         }
     }

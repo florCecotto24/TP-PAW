@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.NoPunctuationValidator;
 
+/** Allows letters, marks, digits, and spaces only (no punctuation) on display-name style fields. */
 @Documented
 @Constraint(validatedBy = NoPunctuationValidator.class)
 @Target({ElementType.METHOD, ElementType.FIELD})

@@ -5,6 +5,9 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Rental agreement between a rider and a listing: UTC interval, money total, payment proof state, and lifecycle status.
+ */
 public final class Reservation {
 
     /**

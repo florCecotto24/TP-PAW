@@ -56,6 +56,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
 @Controller
 public final class MyReservationsController {
 

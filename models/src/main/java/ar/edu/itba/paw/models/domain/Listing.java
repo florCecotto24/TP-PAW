@@ -6,6 +6,9 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * Published rental offer: links to {@link Car}, daily price, handover address, wall check-in/out times, status, and optional neighborhood and rating cache.
+ */
 public final class Listing {
 
     /** Default pickup (check-in) wall time when the listing or form omits one (publish UI, JDBC fallback, availability math). */

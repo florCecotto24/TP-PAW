@@ -7,6 +7,7 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.security.UserRole;
 
+/** Users, roles, profile fields, and listing-owner resolution joins. */
 public interface UserDao {
     User createUser(String email, String forename, String surname, String passwordHash);
 

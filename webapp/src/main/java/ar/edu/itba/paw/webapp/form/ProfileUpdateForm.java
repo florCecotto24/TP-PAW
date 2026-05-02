@@ -9,6 +9,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
+/** Profile POST: forename, surname, phone, optional CBU, and about text. */
 public final class ProfileUpdateForm {
 
     @NotBlank(message = "{profile.forename.required}", groups = ValidationGroups.OnProfileUpdate.class)

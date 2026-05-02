@@ -16,6 +16,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 
+/** Listings, search/browse projections, and home-card queries. */
 public interface ListingDao {
 
     Listing createListing(

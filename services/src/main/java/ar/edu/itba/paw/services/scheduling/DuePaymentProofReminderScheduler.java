@@ -7,8 +7,9 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.services.ReservationService;
 
 /**
- * Sends payment proof due reminder emails to riders when their payment proof deadline
- * is within 2 hours and payment has not yet been approved.
+ * Sends payment proof due reminder emails when the deadline is within
+ * {@code app.reservation.payment-proof-reminder-lead-hours} and payment is not yet approved.
+ * Cron and zone: {@code app.scheduler.payment-proof-reminder.*}.
  */
 @Component
 public final class DuePaymentProofReminderScheduler {
@@ -21,8 +22,8 @@ public final class DuePaymentProofReminderScheduler {
     }
 
     @Scheduled(
-            cron = "0 0/10 * * * ?",
-            zone = "America/Argentina/Buenos_Aires")
+            cron = "${app.scheduler.payment-proof-reminder.cron:0 0/10 * * * ?}",
+            zone = "${app.scheduler.payment-proof-reminder.zone:America/Argentina/Buenos_Aires}")
     public void sendDuePaymentProofReminders() {
         reservationService.dispatchDuePaymentProofReminderEmails();
     }

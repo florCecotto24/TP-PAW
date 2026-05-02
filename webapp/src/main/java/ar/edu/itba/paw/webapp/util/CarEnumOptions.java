@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/** Localized labels for car search filters (category, transmission, powertrain, rating bands). */
 @Component
 public final class CarEnumOptions {
 

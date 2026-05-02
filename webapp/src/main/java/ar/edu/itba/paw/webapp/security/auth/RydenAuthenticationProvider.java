@@ -20,6 +20,9 @@ import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedExcept
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
 
+/**
+ * Email and password authentication backed by {@link UserService}, BCrypt, and email-validation rules.
+ */
 @Component
 public final class RydenAuthenticationProvider implements AuthenticationProvider {
 

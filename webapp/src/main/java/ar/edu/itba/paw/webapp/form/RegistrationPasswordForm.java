@@ -4,6 +4,7 @@ import javax.validation.constraints.NotBlank;
 
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
+/** Post-verification password completion for a newly registered account. */
 @RegistrationPasswordRules
 public final class RegistrationPasswordForm implements RegistrationPasswordConfirmFields {
 

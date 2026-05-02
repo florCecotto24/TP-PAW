@@ -21,8 +21,8 @@ import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
-import ar.edu.itba.paw.persistence.UserDao;
 
+/** Uses only {@link PasswordResetCodeDao}; user lookup and password hash updates go through {@link UserService}. */
 @Service
 public final class PasswordResetServiceImpl implements PasswordResetService {
 
@@ -30,7 +30,6 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final PasswordResetCodeDao passwordResetCodeDao;
-    private final UserDao userDao;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UserValidationPolicy validationPolicy;
@@ -39,13 +38,11 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
     @Autowired
     public PasswordResetServiceImpl(
             final PasswordResetCodeDao passwordResetCodeDao,
-            final UserDao userDao,
             final EmailService emailService,
             final PasswordEncoder passwordEncoder,
             final UserValidationPolicy validationPolicy,
             final UserService userService) {
         this.passwordResetCodeDao = passwordResetCodeDao;
-        this.userDao = userDao;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.validationPolicy = validationPolicy;
@@ -56,7 +53,7 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
     @Transactional
     public boolean initiatePasswordReset(final String email, final Locale locale) {
         final String normalized = EmailNormalizer.normalize(email);
-        final Optional<User> userOpt = userDao.findByEmail(normalized);
+        final Optional<User> userOpt = userService.findByEmail(normalized);
         if (userOpt.isEmpty()) {
             return false;
         }
@@ -86,7 +83,7 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
             final String newPassword,
             final String newPasswordConfirm) {
         final String normalized = EmailNormalizer.normalize(email);
-        final User user = userDao.findByEmail(normalized)
+        final User user = userService.findByEmail(normalized)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (newPassword == null || newPasswordConfirm == null || !newPassword.equals(newPasswordConfirm)) {
             throw new RegistrationPasswordException(MessageKeys.USER_REGISTRATION_PASSWORD_MISMATCH);
@@ -105,6 +102,6 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
         if (!ok) {
             throw new PasswordResetCodeInvalidException(MessageKeys.USER_PASSWORD_RESET_CODE_INVALID);
         }
-        userDao.updatePasswordHash(user.getId(), passwordEncoder.encode(newPassword));
+        userService.replacePasswordHash(user.getId(), passwordEncoder.encode(newPassword));
     }
 }

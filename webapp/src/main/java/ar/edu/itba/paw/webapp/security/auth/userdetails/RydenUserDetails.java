@@ -6,6 +6,7 @@ import java.util.Objects;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+/** {@link UserDetails} view of a domain user (id, names, encoded password, authorities). */
 public final class RydenUserDetails implements UserDetails {
 
     private final long userId;

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.domain;
 
 import java.time.OffsetDateTime;
 
+/** User-uploaded binary blob with filename, MIME type, and creation timestamp. */
 public final class StoredFile {
     private final long id;
     private final long uploaderUserId;

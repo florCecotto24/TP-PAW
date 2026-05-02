@@ -8,6 +8,7 @@ import java.util.Optional;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
@@ -32,13 +33,17 @@ public final class CarJdbcDao implements CarDao {
 
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
+    private final int carCatalogLimit;
 
     @Autowired
-    public CarJdbcDao(final DataSource dataSource) {
+    public CarJdbcDao(
+            final DataSource dataSource,
+            @Value("${app.listing.car-catalog-limit:8}") final int carCatalogLimit) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.jdbcInsert = new SimpleJdbcInsert(dataSource)
                 .withTableName("cars")
                 .usingGeneratedKeyColumns("id");
+        this.carCatalogLimit = Math.max(1, carCatalogLimit);
     }
 
     @Override
@@ -80,9 +85,9 @@ public final class CarJdbcDao implements CarDao {
                         "JOIN listings ON listings.car_id = cars.id " +
                         "WHERE listings.status = 'active' " +
                         "ORDER BY listings.day_price ASC " +
-                        "LIMIT 8",
-                CAR_ROW_MAPPER
-        );
+                        "LIMIT ?",
+                CAR_ROW_MAPPER,
+                carCatalogLimit);
     }
 
     @Override
@@ -92,9 +97,9 @@ public final class CarJdbcDao implements CarDao {
                         "JOIN listings ON listings.car_id = cars.id " +
                         "WHERE listings.status = 'active' " +
                         "ORDER BY listings.created_at DESC " +
-                        "LIMIT 8",
-                CAR_ROW_MAPPER
-        );
+                        "LIMIT ?",
+                CAR_ROW_MAPPER,
+                carCatalogLimit);
     }
 
 }

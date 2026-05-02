@@ -14,6 +14,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
+/** Bean Validation engine for {@link UserValidationMaxLength} using policy limits and {@link MessageSource}. */
 @Component
 public final class UserValidationMaxLengthValidator implements ConstraintValidator<UserValidationMaxLength, String> {
 

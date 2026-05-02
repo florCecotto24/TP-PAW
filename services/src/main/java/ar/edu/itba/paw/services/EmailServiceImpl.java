@@ -34,6 +34,7 @@ import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 
+/** Thymeleaf + JavaMail; {@code @Async} on send methods; no JDBC DAOs. */
 @Service
 public final class EmailServiceImpl implements EmailService {
 
@@ -221,8 +222,9 @@ public final class EmailServiceImpl implements EmailService {
             sendReservationConfirmationToOwner(payload, ownerCtx);
             LOGGER.atInfo().addArgument(payload.getRecipientEmail()).addArgument(payload.getReservationId()).log("Reservation confirmation email sent to {} (reservation id={})");
             LOGGER.atInfo().addArgument(payload.getOwnerEmail()).addArgument(payload.getReservationId()).log("Reservation confirmation email sent to {} (reservation id={})");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to send reservation confirmation email (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
+                    .log("Failed to send reservation confirmation email (reservation id={})");
         }
     }
 
@@ -243,9 +245,9 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(payload.getRecipientEmail(), subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(payload.getRecipientEmail()).addArgument(payload.getReservationId()).log("Rider reservation confirmed-after-proof email sent to {} (reservation id={})");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(payload.getReservationId()).log(
-                    "Failed to send rider confirmed-after-proof email (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
+                    .log("Failed to send rider confirmed-after-proof email (reservation id={})");
         }
     }
 
@@ -271,8 +273,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Email verification code sent to {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to send email verification code to {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send email verification code to {}");
         }
     }
 
@@ -296,8 +298,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Migrated user password email sent to {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to send migrated password email to {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send migrated password email to {}");
         }
     }
 
@@ -322,8 +324,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Password reset code sent to {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to send password reset code to {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send password reset code to {}");
         }
     }
 
@@ -346,8 +348,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Reminder sent to {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to reminder to {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send reservation reminder email to {}");
         }
     }
 
@@ -374,8 +376,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Due payment proof reminder email queued for {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to queue due payment proof reminder email for {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to queue due payment proof reminder email for {}");
         }
     }
 
@@ -430,8 +432,9 @@ public final class EmailServiceImpl implements EmailService {
             sendReservationCancellationToOwner(mail, ownerCtx);
             LOGGER.atInfo().addArgument(mail.getRecipientEmail()).addArgument(mail.getReservationId()).log("Reservation cancellation email sent to {} (reservation id={})");
             LOGGER.atInfo().addArgument(mail.getOwnerEmail()).addArgument(mail.getReservationId()).log("Reservation cancellation email sent to {} (reservation id={})");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(mail.getReservationId()).log("Failed to send reservation cancellation email (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(mail.getReservationId())
+                    .log("Failed to send reservation cancellation email (reservation id={})");
         }
     }
 
@@ -451,8 +454,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Return reminder email queued for {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to queue return reminder email for {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to queue return reminder email for {}");
         }
     }
 
@@ -472,8 +475,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Return checkout email queued for {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to queue return checkout email for {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to queue return checkout email for {}");
         }
     }
 
@@ -505,8 +508,9 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).addArgument(payload.getReservationId()).log("Owner payment-proof email queued for {} (reservation id={})");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(payload.getReservationId()).log("Failed to queue owner payment-proof email (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
+                    .log("Failed to queue owner payment-proof email (reservation id={})");
         }
     }
 
@@ -530,8 +534,8 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Rider review invite email queued for {}");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(to).log("Failed to queue rider review invite email for {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to queue rider review invite email for {}");
         }
     }
 
@@ -575,8 +579,8 @@ public final class EmailServiceImpl implements EmailService {
                 LOGGER.atInfo().addArgument(reservationPayload.getRecipientEmail())
                         .addArgument(reservationPayload.getListingId())
                         .log("Reservation cancellation email sent to {} (listing id={})");
-            } catch (final Exception e) {
-                LOGGER.atError().addArgument(reservationPayload.getListingId())
+            } catch (final EmailMessagingException | RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservationPayload.getListingId())
                         .log("Failed to send reservation cancellation email (listing id={})");
             }
         }
@@ -592,8 +596,8 @@ public final class EmailServiceImpl implements EmailService {
             sendListingDeletionToOwner(ownerPayload, ownerCtx);
             LOGGER.atInfo().addArgument(ownerPayload.getOwnerEmail()).addArgument(ownerPayload.getListingId())
                     .log("Listing deletion owner email sent to {} (listing id={})");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(ownerPayload.getListingId())
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(ownerPayload.getListingId())
                     .log("Failed to send listing deletion owner email (listing id={})");
         }
     }
@@ -670,8 +674,9 @@ public final class EmailServiceImpl implements EmailService {
                 sendEmail(ownerEmail, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(ownerEmail).addArgument(listingId).log("Listing paused (missing CBU) email sent to {} (listing id={})");
-        } catch (final Exception e) {
-            LOGGER.atError().addArgument(listingId).log("Failed to send listing paused (missing CBU) email (listing id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(listingId)
+                    .log("Failed to send listing paused (missing CBU) email (listing id={})");
         }
     }
 

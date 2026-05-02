@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.CarDao;
 
+/** Pass-through to {@link CarDao}. */
 @Service
 public final class CarServiceImpl implements CarService {
 

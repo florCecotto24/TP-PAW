@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.UserService;
 
+/** Loads {@link RydenUserDetails} by email for Spring Security. */
 public final class RydenUserDetailsService implements UserDetailsService {
 
     private final UserService userService;

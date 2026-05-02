@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.security.http;
 
+/** Session attribute keys used during registration, password completion, and email verification. */
 public final class RegistrationSessionAttributes {
 
     public static final String PENDING_PASSWORD_USER_ID = "PENDING_PASSWORD_USER_ID";

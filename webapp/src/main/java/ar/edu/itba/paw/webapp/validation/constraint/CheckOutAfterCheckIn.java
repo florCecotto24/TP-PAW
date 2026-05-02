@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.CheckOutAfterCheckInValidator;
 
+/** Type-level check: listing check-out wall time is strictly after check-in (and minimum gap when configured). */
 @Documented
 @Constraint(validatedBy = CheckOutAfterCheckInValidator.class)
 @Target({ ElementType.TYPE })

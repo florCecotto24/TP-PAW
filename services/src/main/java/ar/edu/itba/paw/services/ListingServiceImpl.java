@@ -23,6 +23,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,24 +53,26 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeParsing;
-import ar.edu.itba.paw.persistence.CarDao;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.services.util.NeighborhoodNameMatcher;
-import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.pagination.ListingBrowsePagination;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
+/**
+ * Listing lifecycle and search: uses only {@link ListingDao}. Car, availability segments, and blocking reservations
+ * are accessed through {@link CarService}, {@link ListingAvailabilityService}, and {@link ReservationService}
+ * ({@code @Lazy} on the latter avoids a constructor cycle with {@link ReservationServiceImpl}).
+ */
 @Service
 public final class ListingServiceImpl implements ListingService {
 
     private final ListingDao listingDao;
-    private final ListingAvailabilityDao listingAvailabilityDao;
-    private final CarDao carDao;
-    private final ReservationDao reservationDao;
+    private final ListingAvailabilityService listingAvailabilityService;
+    private final CarService carService;
+    private final ReservationService reservationService;
     private final UserService userService;
     private final ImageService imageService;
     private final CarPictureService carPictureService;
@@ -84,9 +87,9 @@ public final class ListingServiceImpl implements ListingService {
     @Autowired
     public ListingServiceImpl(
             final ListingDao listingDao,
-            final ListingAvailabilityDao listingAvailabilityDao,
-            final CarDao carDao,
-            final ReservationDao reservationDao,
+            final ListingAvailabilityService listingAvailabilityService,
+            final CarService carService,
+            @Lazy final ReservationService reservationService,
             final UserService userService,
             final ImageService imageService,
             final CarPictureService carPictureService,
@@ -98,9 +101,9 @@ public final class ListingServiceImpl implements ListingService {
             final PaginationPolicy paginationPolicy,
             final ListingBrowsePagination listingBrowsePagination) {
         this.listingDao = listingDao;
-        this.listingAvailabilityDao = listingAvailabilityDao;
-        this.carDao = carDao;
-        this.reservationDao = reservationDao;
+        this.listingAvailabilityService = listingAvailabilityService;
+        this.carService = carService;
+        this.reservationService = reservationService;
         this.userService = userService;
         this.imageService = imageService;
         this.carPictureService = carPictureService;
@@ -138,7 +141,7 @@ public final class ListingServiceImpl implements ListingService {
         listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
                 LocalDate.now(AvailabilityPeriod.WALL_ZONE), availabilityPeriods);
         validateAvailabilityIncludesNoDatesBeforeToday(availabilityPeriods);
-        final Car car = carDao.getCarById(carId)
+        final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_CAR_NOT_FOUND, carId));
         final String title = car.getBrand() + " " + car.getModel();
 
@@ -146,7 +149,7 @@ public final class ListingServiceImpl implements ListingService {
                 carId, title, status, dayPrice, startPointStreet, startPointNumber, description, checkInTime, checkOutTime,
                 neighborhoodId);
         for (final AvailabilityPeriod period : mergeAdjacentAvailabilityPeriods(availabilityPeriods)) {
-            listingAvailabilityDao.create(
+            listingAvailabilityService.create(
                     listing.getId(),
                     period.getStartInclusive(),
                     period.getEndInclusive());
@@ -184,7 +187,7 @@ public final class ListingServiceImpl implements ListingService {
             throw new ListingValidationException(
                     MessageKeys.LISTING_PUBLISH_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
         }
-        final Car car = carDao.createCar(
+        final Car car = carService.createCar(
                 publisher.getId(),
                 plate,
                 brand,
@@ -384,17 +387,17 @@ public final class ListingServiceImpl implements ListingService {
                 checkOutTime,
                 effNeighborhoodId);
         if (updated && availabilityPeriods != null) {
-            final List<ListingAvailability> existing = listingAvailabilityDao.findByListingId(listingId);
+            final List<ListingAvailability> existing = listingAvailabilityService.findByListingId(listingId);
             if (!availabilityMatchesExisting(availabilityPeriods, existing)) {
-                listingAvailabilityDao.deleteByListingId(listingId);
+                listingAvailabilityService.deleteByListingId(listingId);
                 final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
                 for (final ListingAvailability la : existing) {
                     if (la.getEndInclusive().isBefore(today)) {
-                        listingAvailabilityDao.create(listingId, la.getStartInclusive(), la.getEndInclusive());
+                        listingAvailabilityService.create(listingId, la.getStartInclusive(), la.getEndInclusive());
                     }
                 }
                 for (final AvailabilityPeriod p : availabilityPeriods) {
-                    listingAvailabilityDao.create(listingId, p.getStartInclusive(), p.getEndInclusive());
+                    listingAvailabilityService.create(listingId, p.getStartInclusive(), p.getEndInclusive());
                 }
             }
         }
@@ -455,7 +458,7 @@ public final class ListingServiceImpl implements ListingService {
         if (listingOpt.isEmpty()) {
             return false;
         }
-        final Optional<Car> carOpt = carDao.getCarById(listingOpt.get().getCarId());
+        final Optional<Car> carOpt = carService.getCarById(listingOpt.get().getCarId());
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             return false;
         }
@@ -471,7 +474,7 @@ public final class ListingServiceImpl implements ListingService {
             return false;
         }
         final Listing listing = listingOpt.get();
-        final Optional<Car> carOpt = carDao.getCarById(listing.getCarId());
+        final Optional<Car> carOpt = carService.getCarById(listing.getCarId());
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             return false;
         }
@@ -490,7 +493,7 @@ public final class ListingServiceImpl implements ListingService {
     @Override
     @Transactional(readOnly = true)
     public List<ListingAvailability> findAvailabilityByListingId(final long listingId) {
-        return listingAvailabilityDao.findByListingId(listingId);
+        return listingAvailabilityService.findByListingId(listingId);
     }
 
     @Override
@@ -505,7 +508,7 @@ public final class ListingServiceImpl implements ListingService {
             }
         }
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
-        for (final Reservation r : reservationDao.findBlockingByListingId(listingId)) {
+        for (final Reservation r : reservationService.findBlockingReservationsByListingId(listingId)) {
             LocalDate d = r.getStartDate().toInstant().atZone(wall).toLocalDate();
             final LocalDate until = r.getEndDate().toInstant().atZone(wall).toLocalDate();
             while (!d.isAfter(until)) {
@@ -877,8 +880,8 @@ public final class ListingServiceImpl implements ListingService {
             return Set.of();
         }
         final List<ListingAvailability> overlapping =
-                listingAvailabilityDao.findByListingIdsEndingOnOrAfter(listingIds, fromWall);
-        final List<Reservation> blocking = reservationDao.findBlockingByListingIds(listingIds);
+                listingAvailabilityService.findByListingIdsEndingOnOrAfter(listingIds, fromWall);
+        final List<Reservation> blocking = reservationService.findBlockingReservationsByListingIds(listingIds);
         final Map<Long, TreeSet<LocalDate>> daysByListing = new HashMap<>();
         for (final ListingAvailability la : overlapping) {
             final LocalDate start = la.getStartInclusive().isBefore(fromWall) ? fromWall : la.getStartInclusive();

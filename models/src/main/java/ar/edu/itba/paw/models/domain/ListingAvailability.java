@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models.domain;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
+/** Wall-calendar inclusive availability segment for a {@link Listing} (publish and edit forms). */
 public final class ListingAvailability {
 
     private final long id;

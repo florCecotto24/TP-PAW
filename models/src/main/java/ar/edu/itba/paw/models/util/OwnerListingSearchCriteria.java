@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
+/** Immutable filters and paging for an owner's “my listings” grid (status, text query, vehicle facets, price, sort). */
 public final class OwnerListingSearchCriteria {
 
     private final long ownerId;

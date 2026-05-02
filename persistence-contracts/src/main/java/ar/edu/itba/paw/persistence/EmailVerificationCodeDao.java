@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import java.time.Instant;
 
+/** Email verification codes for new accounts (single active code per user). */
 public interface EmailVerificationCodeDao {
 
     void deleteForUser(long userId);

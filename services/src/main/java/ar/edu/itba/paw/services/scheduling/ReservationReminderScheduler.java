@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.scheduling;
 
 import ar.edu.itba.paw.services.EmailService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -20,36 +21,41 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.persistence.ReservationDao;
 
+/**
+ * Daily job: emails riders a reminder the day before pickup for reservations starting tomorrow (wall zone window
+ * mapped to UTC for the query). Cron and zone: {@code app.scheduler.reservation-reminder.*}.
+ */
 @Component
 public final class ReservationReminderScheduler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationReminderScheduler.class);
 
-    private final ReservationDao reservationDao;
+    private final ReservationService reservationService;
     private final ListingService listingService;
     private final UserService userService;
     private final EmailService emailService;
 
     @Autowired
     public ReservationReminderScheduler(
-            final ReservationDao reservationDao,
+            final ReservationService reservationService,
             final ListingService listingService,
             final UserService userService,
             final EmailService emailService) {
-        this.reservationDao = reservationDao;
+        this.reservationService = reservationService;
         this.listingService = listingService;
         this.userService = userService;
         this.emailService = emailService;
     }
 
-    @Scheduled(cron = "0 0 9 * * ?")
+    @Scheduled(
+            cron = "${app.scheduler.reservation-reminder.cron:0 0 9 * * ?}",
+            zone = "${app.scheduler.reservation-reminder.zone:America/Argentina/Buenos_Aires}")
     public void sendReservationReminders() {
         final LocalDate tomorrow = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
         final OffsetDateTime from = tomorrow.atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         final OffsetDateTime to = tomorrow.plusDays(1).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
-        final var reservations = reservationDao.getReminderReservations(from, to);
+        final var reservations = reservationService.findReminderReservations(from, to);
         LOGGER.atInfo().addArgument(reservations.size()).log("Found {} reservations to send reminders for");
 
         for (final Reservation reservation : reservations) {
@@ -94,7 +100,7 @@ public final class ReservationReminderScheduler {
                 LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                         .log("Queueing reservation reminder email to {} for reservation id={}");
                 emailService.sendReservationReminderEmail(payload);
-            } catch (final Exception e) {
+            } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not send reservation reminder email for reservation id={}");
             }
         }

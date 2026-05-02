@@ -7,6 +7,8 @@ import java.util.Locale;
 import java.util.Optional;
 
 import ar.edu.itba.paw.exception.user.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,8 +37,14 @@ import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.UserDao;
 
+/**
+ * User rows via {@link UserDao}; blobs, mail, verification, and listing side effects use peer services.
+ * {@code @Lazy} breaks cycles with {@link EmailVerificationService} and {@link ListingService}.
+ */
 @Service
 public final class UserServiceImpl implements UserService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserServiceImpl.class);
 
     private static final char[] MIGRATION_PASSWORD_ALPHABET =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789".toCharArray();
@@ -298,6 +306,13 @@ public final class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public void replacePasswordHash(final long userId, final String bcryptEncodedHash) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        userDao.updatePasswordHash(userId, bcryptEncodedHash);
+    }
+
+    @Override
+    @Transactional
     public void assignRandomPasswordAndEmailForLegacyUser(final long userId, final String email, final Locale locale) {
         final String normalized = EmailNormalizer.normalize(email);
         final User withHash = userDao.findByEmailForAuthentication(normalized)
@@ -353,6 +368,27 @@ public final class UserServiceImpl implements UserService {
             throw new CBUNotFoundException(userId);
         }
         return cbu.get();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> findOwnerCbuForListing(final long listingId) {
+        final Optional<User> listingOwnerOpt = getListingOwner(listingId);
+        if (listingOwnerOpt.isEmpty()) {
+            LOGGER.atWarn().addArgument(listingId).log("Listing owner missing when resolving CBU for listing (listingId={})");
+            return Optional.empty();
+        }
+        final long ownerId = listingOwnerOpt.get().getId();
+        try {
+            return Optional.of(getUserCbu(ownerId));
+        } catch (final UserNotFoundException | CBUNotFoundException e) {
+            LOGGER.atWarn()
+                    .setCause(e)
+                    .addArgument(listingId)
+                    .addArgument(ownerId)
+                    .log("Owner CBU unavailable for listing (listingId={}, ownerId={})");
+            return Optional.empty();
+        }
     }
 
     private void assertNewPasswordPair(final String password, final String passwordConfirm) {

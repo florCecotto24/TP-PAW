@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
+/** Spring Security login form; redirects authenticated users away from guest-only entry. */
 @Controller
 public final class LoginController {
 

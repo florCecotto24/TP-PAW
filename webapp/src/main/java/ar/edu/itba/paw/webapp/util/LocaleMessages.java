@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.RydenException;
 
+/** Resolves UI exception messages from {@link MessageSource} using {@link LocaleContextHolder}. */
 @Component
 public final class LocaleMessages {
 

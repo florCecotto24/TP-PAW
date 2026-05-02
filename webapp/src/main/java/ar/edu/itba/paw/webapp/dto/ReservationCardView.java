@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.dto;
 
+/** Immutable card row for rider or owner “my reservations” lists (pre-formatted dates and i18n status key). */
 public final class ReservationCardView {
 
     private final long reservationId;

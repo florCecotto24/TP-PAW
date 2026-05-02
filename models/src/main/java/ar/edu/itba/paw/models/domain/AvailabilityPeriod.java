@@ -7,6 +7,9 @@ import java.util.Objects;
 
 import ar.edu.itba.paw.models.util.WallDateTimeParsing;
 
+/**
+ * Normalized wall-zone date range for availability UIs and JSON; {@link #WALL_ZONE} is the business calendar for listings and reservations.
+ */
 public final class AvailabilityPeriod {
 
     public static final ZoneId WALL_ZONE = ZoneId.of("America/Argentina/Buenos_Aires");

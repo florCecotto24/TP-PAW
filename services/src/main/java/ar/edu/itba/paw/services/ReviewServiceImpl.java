@@ -16,27 +16,26 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
-import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.persistence.ReviewDao;
-import ar.edu.itba.paw.persistence.UserDao;
 
+/** Uses only {@link ReviewDao}; reservation and user reads go through peer services. */
 @Service
 public final class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
-    private final ReservationDao reservationDao;
-    private final UserDao userDao;
+    private final ReservationService reservationService;
+    private final UserService userService;
     private final ReviewValidationPolicy reviewValidationPolicy;
 
     @Autowired
     public ReviewServiceImpl(
             final ReviewDao reviewDao,
-            final ReservationDao reservationDao,
-            final UserDao userDao,
+            final ReservationService reservationService,
+            final UserService userService,
             final ReviewValidationPolicy reviewValidationPolicy) {
         this.reviewDao = reviewDao;
-        this.reservationDao = reservationDao;
-        this.userDao = userDao;
+        this.reservationService = reservationService;
+        this.userService = userService;
         this.reviewValidationPolicy = reviewValidationPolicy;
     }
 
@@ -95,7 +94,7 @@ public final class ReviewServiceImpl implements ReviewService {
         if (rating == null) {
             return;
         }
-        final Reservation r = reservationDao.getOwnerReservationById(ownerUserId, reservationId)
+        final Reservation r = reservationService.getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
         if (!r.isCarReturned()) {
             throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
@@ -119,8 +118,7 @@ public final class ReviewServiceImpl implements ReviewService {
         if (rating == null) {
             return;
         }
-        final Reservation r = reservationDao.getReservationById(reservationId)
-                .filter(res -> res.getRiderId() == riderUserId)
+        final Reservation r = reservationService.getRiderReservationById(riderUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
             throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
@@ -130,7 +128,7 @@ public final class ReviewServiceImpl implements ReviewService {
         }
         reviewDao.insertReview(reservationId, true, rating, trimmedComment);
         final long listingId = r.getListingId();
-        userDao.getListingOwner(listingId).ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
+        userService.getListingOwner(listingId).ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
         reviewDao.refreshListingRatingAvg(listingId);
     }
 

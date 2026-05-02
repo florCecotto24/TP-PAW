@@ -6,12 +6,12 @@ This is a Java web application based on **Spring Framework 5.3**, organized as a
 
 The project is divided into the following modules:
 
-- **models**: Domain entities (POJOs) and shared utilities (e.g. wall-clock parsing, `AvailabilityPeriod` with `America/Argentina/Buenos_Aires`).
+- **models**: Domain entities, DTOs for services and mail templates, immutable search criteria (`ListingSearchCriteria`, `ReservationSearchCriteria`, `OwnerListingSearchCriteria`), and shared utilities (e.g. wall-clock parsing, `AvailabilityPeriod` with `America/Argentina/Buenos_Aires`).
 - **persistence-contracts**: DAO interfaces.
 - **persistence**: JDBC implementations using `JdbcTemplate`.
 - **service-contracts**: Service interfaces, shared exceptions, and `MessageKeys` for i18n codes.
 - **services**: Service implementations (business logic, email, async mail task).
-- **webapp**: Spring MVC controllers, JSP views, static assets, `application.properties`, and mail Thymeleaf templates under `classpath:mail/`.
+- **webapp**: Spring MVC controllers, JSP views, static assets, `application/application.properties`, and mail Thymeleaf templates under `classpath:mail/`.
 
 ## Technologies
 
@@ -78,9 +78,12 @@ mvn test
 ### Coding style
 
 - **Dependency injection**: Constructor injection with Spring `@Autowired` (as used in existing services/config).
+- **Service ↔ persistence**: Each service implementation injects only its own DAO (e.g. `ListingServiceImpl` → `ListingDao`, `PasswordResetServiceImpl` → `PasswordResetCodeDao`, `ReviewServiceImpl` → `ReviewDao`, `CarServiceImpl` → `CarDao`). Cross-aggregate persistence goes through peer services (`UserService`, `ReservationService`, `CarService`, `ListingAvailabilityService`, …). When two services need each other, use `@Lazy` on one constructor parameter to avoid a Spring cycle.
+- **Scheduling** (`services/.../scheduling`): `@Scheduled` beans call service APIs; do not inject DAOs into schedulers so reads and rules stay inside `*ServiceImpl`.
 - **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, `ValidationWebConfig`) plus `web.xml` for servlet bootstrap.
 - **Security**: Configured in `WebAuthConfig` with Spring Security 5.7.14. Uses `@EnableWebSecurity`, `SecurityFilterChain`, custom `RydenAuthenticationProvider` and `RydenUserDetailsService`. Remember-me support, session-based auth, CSRF protection.
 - **Validation**: `ValidationWebConfig` implements `WebMvcConfigurer` to inject `LocalValidatorFactoryBean` as the MVC validator. Bean validation and Spring form validation combined.
+- **Javadoc**: Public contracts in `service-contracts` and `persistence-contracts` are in **English**. Avoid HTML paragraph tags (`<p>` / `</p>`); split ideas with extra `*` lines or `{@code …}` / `{@link …}` where useful. Spring MVC controllers under `webapp/.../controller` use a short **English** class-level summary before `@Controller` where it helps navigation.
 
 ### Dependency management
 
@@ -104,8 +107,8 @@ mvn test
 
 ### Application properties
 
-- **Main config**: `webapp/src/main/resources/application.properties` defines database credentials, server port, context path (`/webapp`), upload limits, validation rules (password min-length, phone pattern), and mail links context.
-- **Profile-specific**: `application-local.properties` for local PostgreSQL development (overrides `spring.datasource.*` settings).
+- **Main config**: `webapp/src/main/resources/application/application.properties` (loaded via `@PropertySource` on `WebConfig`) defines server port, context path (`/webapp`), upload limits, validation rules, pagination, reservation timing, and **`app.scheduler.*`** cron/zone keys for background jobs (listing exhaustion, payment-proof sweep and reminders, reservation pickup reminder, return/review mail batches).
+- **Profile-specific**: `application/application-local.properties` or `application/application-deployed.properties` (see examples in the same folder) supply JDBC credentials and secrets; not committed.
 - **Mail config**: `mail/emailconfig.properties` and `mail/javamail.properties` under `webapp/src/main/resources/mail/`.
 
 ### Flyway database migrations
@@ -122,7 +125,7 @@ mvn test
 - `src/main/resources`: Config, SQL, i18n bundles, mail templates.
 - `src/test/java`: Tests.
 - `webapp/src/main/webapp`: JSPs, CSS, JS, `WEB-INF/web.xml`.
-- **webapp component scan** (`WebConfig`): Covers `ar.edu.itba.paw.webapp.controller`, `ar.edu.itba.paw.webapp.util`, `ar.edu.itba.paw.webapp.security`, `ar.edu.itba.paw.webapp.validation`, plus `ar.edu.itba.paw.services` and `ar.edu.itba.paw.persistence`.
+- **webapp component scan** (`WebConfig`): `controller`, `advice`, `util`, `security`, `validation`, `interceptor`, plus `ar.edu.itba.paw.services` and `ar.edu.itba.paw.persistence`. `webapp.form` and `webapp.dto` hold MVC backing beans and view models (not scanned). `CurrentUserArgumentResolver` in `webapp.support` is registered programmatically on the MVC adapter. Servlet listeners under `webapp.listener` are declared in `WEB-INF/web.xml`.
 
 ### Key services and DAOs
 

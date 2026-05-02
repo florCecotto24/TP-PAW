@@ -48,6 +48,7 @@ import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
+/** Owner wizard to publish a car, listing, neighborhood, availability, and gallery images. */
 @Controller
 @RequestMapping("/publish-car")
 public final class PublishCarFormController {

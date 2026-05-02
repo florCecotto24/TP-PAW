@@ -2,6 +2,10 @@ package ar.edu.itba.paw.services;
 
 import java.util.Locale;
 
+/**
+ * Forgot-password flow: time-boxed codes, email delivery, and password update.
+ * Implementations use {@code PasswordResetCodeDao} only; account lookup and password persistence go through {@code UserService}.
+ */
 public interface PasswordResetService {
 
     /**

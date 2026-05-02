@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.domain;
 
 import java.util.Objects;
 
+/** Vehicle inventory row: owner, plate, brand/model, and category enums for search filters. */
 public final class Car {
     public interface PrettyNamed {
         default String prettyName() {

@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.OptionalCbuValidator;
 
+/** When non-blank, value must be a valid Argentine CBU length and digit checksum. */
 @Documented
 @Constraint(validatedBy = OptionalCbuValidator.class)
 @Target({ ElementType.FIELD })

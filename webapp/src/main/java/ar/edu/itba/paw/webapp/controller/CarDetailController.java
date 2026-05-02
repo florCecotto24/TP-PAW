@@ -41,6 +41,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/** Public listing detail, reviews pagination, similar listings, and bookable availability JSON for pickers. */
 @Controller
 public class CarDetailController {
 

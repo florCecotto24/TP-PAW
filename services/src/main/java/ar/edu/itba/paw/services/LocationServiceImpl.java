@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+/** Catalog reads via {@link LocationDao}; search query fragments are normalized here (ids, de-duplication, order). */
 @Service
 public final class LocationServiceImpl implements LocationService {
 

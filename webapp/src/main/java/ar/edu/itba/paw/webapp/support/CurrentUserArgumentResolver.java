@@ -10,6 +10,9 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
+/**
+ * Resolves {@link User} controller parameters annotated with {@link CurrentUser} from the security context.
+ */
 public final class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
 
     @Override

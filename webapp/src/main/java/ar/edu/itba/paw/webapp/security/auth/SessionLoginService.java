@@ -18,6 +18,9 @@ import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
 
+/**
+ * Establishes an authenticated session after post-registration password set or similar flows.
+ */
 @Component
 public final class SessionLoginService {
 

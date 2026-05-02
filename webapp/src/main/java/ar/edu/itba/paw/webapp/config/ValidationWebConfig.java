@@ -5,7 +5,9 @@ import org.springframework.validation.Validator;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-
+/**
+ * Registers the shared {@link LocalValidatorFactoryBean} as the MVC {@link Validator} for {@code @Valid} on controllers.
+ */
 @Configuration
 public class ValidationWebConfig implements WebMvcConfigurer {
 

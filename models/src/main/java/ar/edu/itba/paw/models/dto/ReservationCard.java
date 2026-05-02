@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 
+/** Reservation with listing vehicle summary and UTC dates for “my reservations” service queries. */
 public final class ReservationCard {
 
     private final long reservationId;

@@ -13,6 +13,9 @@ import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
+/**
+ * Controller helper: rejects non-image multipart parts and enforces count/size/type using {@link ImageService}.
+ */
 @Component
 public final class MultipartImageValidation {
 

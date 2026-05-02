@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.ReservationWithinMaxBillableDaysValidator;
 
+/** Type-level check: parsed reservation interval does not exceed configured max billable days. */
 @Documented
 @Constraint(validatedBy = ReservationWithinMaxBillableDaysValidator.class)
 @Target({ ElementType.TYPE })

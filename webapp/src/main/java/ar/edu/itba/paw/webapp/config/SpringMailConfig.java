@@ -23,7 +23,9 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import org.thymeleaf.templateresolver.ITemplateResolver;
 import org.thymeleaf.templateresolver.StringTemplateResolver;
 
-
+/**
+ * JavaMail sender plus Thymeleaf template engine for HTML mail under {@code classpath:mail/}.
+ */
 @Configuration
 @PropertySource(value = "classpath:mail/config/emailconfig.properties", encoding = "UTF-8")
 public class SpringMailConfig implements ApplicationContextAware, EnvironmentAware {

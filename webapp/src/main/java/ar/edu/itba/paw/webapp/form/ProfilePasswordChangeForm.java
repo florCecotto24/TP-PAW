@@ -5,6 +5,7 @@ import javax.validation.constraints.NotBlank;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
+/** Profile password change: current password plus new password and confirmation. */
 @RegistrationPasswordRules(groups = ValidationGroups.OnProfilePassword.class)
 public final class ProfilePasswordChangeForm implements RegistrationPasswordConfirmFields {
 

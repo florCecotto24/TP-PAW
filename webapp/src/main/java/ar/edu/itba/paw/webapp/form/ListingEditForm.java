@@ -20,6 +20,7 @@ import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
+/** Owner listing edit: price, handover address, availability periods, and neighborhood. */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnListingEdit.class)
 public final class ListingEditForm implements ListingTimeWindow {
 

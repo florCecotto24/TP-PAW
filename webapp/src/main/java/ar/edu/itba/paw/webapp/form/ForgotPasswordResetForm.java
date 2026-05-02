@@ -6,6 +6,7 @@ import javax.validation.constraints.Pattern;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
+/** Forgot-password reset: emailed six-digit code plus new password pair. */
 @RegistrationPasswordRules(groups = ValidationGroups.OnForgotPasswordReset.class)
 public final class ForgotPasswordResetForm implements RegistrationPasswordConfirmFields {
 

@@ -5,7 +5,6 @@ import java.util.regex.PatternSyntaxException;
 
 /**
  * Central limits for user account and profile text, aligned with {@code app.validation.*} (excluding review comments).
- * <p>
  * Instances are obtained via {@link #fromValidatedConfiguration(int, int, int, int, int, int, String)} so invariants are
  * checked at creation time.
  */

@@ -15,6 +15,9 @@ import ar.edu.itba.paw.webapp.security.auth.exception.EmailNotValidatedException
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;
 import ar.edu.itba.paw.webapp.security.http.RegistrationSessionAttributes;
 
+/**
+ * Redirects failed logins to {@code /login?error} and stores session flags for verify-email or legacy-password mail flows.
+ */
 @Component
 public final class RydenAuthenticationFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 

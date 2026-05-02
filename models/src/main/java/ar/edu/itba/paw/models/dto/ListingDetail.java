@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.User;
 
+/** Aggregated public listing view: listing, car, owner, gallery pictures, and availability segments. */
 public final class ListingDetail {
 
     private final Listing listing;

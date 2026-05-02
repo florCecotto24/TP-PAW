@@ -9,6 +9,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
 
+/** Registration step: names, email, password pair. */
 @RegistrationPasswordRules(groups = ValidationGroups.OnRegistration.class)
 public final class RegistrationAccountForm implements RegistrationPasswordConfirmFields {
 

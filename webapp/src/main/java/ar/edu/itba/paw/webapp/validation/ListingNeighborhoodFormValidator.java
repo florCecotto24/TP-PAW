@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
+/** Spring {@link Validator} ensuring publish/edit neighborhood id exists in {@link LocationService}. */
 @Component
 public final class ListingNeighborhoodFormValidator implements Validator {
 

@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.UserValidationMaxLengthValidator;
 
+/** Field max length derived from {@code UserValidationPolicy} for the chosen {@link Kind}. */
 @Documented
 @Constraint(validatedBy = UserValidationMaxLengthValidator.class)
 @Target({ ElementType.FIELD })

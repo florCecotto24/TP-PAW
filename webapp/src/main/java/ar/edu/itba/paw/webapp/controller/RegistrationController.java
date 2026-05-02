@@ -30,6 +30,7 @@ import ar.edu.itba.paw.webapp.security.http.RegistrationSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
+/** Registration wizard, optional post-login redirect from saved request, and account confirmation entry. */
 @Controller
 public final class RegistrationController {
 

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingCard;
 
+/** Listing teaser for home and search grids, optionally enriched with status and average rating. */
 public final class VehicleCardView {
     private final long listingId;
     private final String brand;

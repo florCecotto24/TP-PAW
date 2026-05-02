@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Listing;
 
+/** Compact listing row for search, home sections, and reservation cards (price, cover image, optional rating and status). */
 public final class ListingCard {
 
     private final long listingId;

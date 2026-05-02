@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
+/** Pass-through to {@link StoredFileDao}. */
 @Service
 public final class StoredFileServiceImpl implements StoredFileService {
 

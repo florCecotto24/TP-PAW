@@ -17,6 +17,7 @@ import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 
+/** Uses only {@link EmailVerificationCodeDao}; user and mail side effects go through {@link UserService} and {@link EmailService}. */
 @Service
 public final class EmailVerificationServiceImpl implements EmailVerificationService {
 

@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
+/** Reviews per reservation and aggregated rating maintenance. */
 public interface ReviewDao {
 
     boolean existsReview(long reservationId, boolean madeByRider);

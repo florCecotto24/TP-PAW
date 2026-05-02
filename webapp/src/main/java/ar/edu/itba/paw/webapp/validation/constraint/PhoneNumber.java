@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.PhoneNumberValidator;
 
+/** Profile phone: non-empty values must match configured max length and digit-only pattern. */
 @Documented
 @Constraint(validatedBy = PhoneNumberValidator.class)
 @Target({ ElementType.FIELD })

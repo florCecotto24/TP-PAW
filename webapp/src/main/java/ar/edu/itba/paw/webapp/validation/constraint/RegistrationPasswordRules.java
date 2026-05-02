@@ -11,6 +11,7 @@ import javax.validation.Payload;
 
 import ar.edu.itba.paw.webapp.validation.RegistrationPasswordRulesValidator;
 
+/** Type-level password policy: match confirmation, length, and complexity from {@code UserValidationPolicy}. */
 @Documented
 @Constraint(validatedBy = RegistrationPasswordRulesValidator.class)
 @Target({ ElementType.TYPE })

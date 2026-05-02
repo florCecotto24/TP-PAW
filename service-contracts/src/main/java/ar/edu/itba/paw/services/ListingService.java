@@ -23,8 +23,16 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 
+/**
+ * Listing catalog, wall availability, search/browse, and publish flows.
+ * The implementation uses {@code ListingDao} only; cars, availability segments, and blocking reservations go through
+ * {@code CarService}, {@code ListingAvailabilityService}, and {@code ReservationService}.
+ */
 public interface ListingService {
 
+    /**
+     * Persists a new listing row for an existing car (price, pickup address, check-in/out, availability, neighborhood).
+     */
     Listing createListing(
             long carId,
             Listing.Status status,
@@ -63,10 +71,17 @@ public interface ListingService {
             List<ImageUpload> images,
             Long neighborhoodId);
 
+    /** Loads a listing by primary key, when present. */
     Optional<Listing> getListingById(long id);
 
+    /** Public detail projection (car, media, reviews slice) for the listing detail page. */
     Optional<ListingDetail> getListingDetailById(long id);
 
+    /**
+     * Updates an owned listing’s core fields and replaces availability rows.
+     *
+     * @return {@code true} when the listing existed, belonged to {@code ownerId}, and was updated
+     */
     boolean updateOwnerListing(
             long ownerId,
             long listingId,
@@ -79,8 +94,18 @@ public interface ListingService {
             List<AvailabilityPeriod> availabilityPeriods,
             Long neighborhoodId);
 
+    /**
+     * Toggles active/inactive for an owned listing when business rules allow.
+     *
+     * @return {@code true} when the transition was applied
+     */
     boolean toggleListingStatus(long ownerId, long listingId);
 
+    /**
+     * Marks an owned listing as finished (owner-initiated terminal state when allowed).
+     *
+     * @return {@code true} when the listing was updated
+     */
     boolean finishListing(long ownerId, long listingId);
 
     /**
@@ -98,6 +123,7 @@ public interface ListingService {
      */
     String formatFullDeliveryLocation(Listing listing);
 
+    /** Pickup address with street number and neighborhood (full line for trusted views). */
     String formatFullPickupLocation(Listing listing);
 
     /**
@@ -130,8 +156,10 @@ public interface ListingService {
      */
     void refreshExhaustedListingsToFinished();
 
+    /** Raw availability rows for the listing (DB order). */
     List<ListingAvailability> findAvailabilityByListingId(long listingId);
 
+    /** Merged wall-calendar periods that still accept new reservations for this listing. */
     List<AvailabilityPeriod> getBookableWallAvailabilityPeriods(long listingId);
 
     /**
@@ -153,26 +181,40 @@ public interface ListingService {
      */
     void validatePublicationAvailabilityRiderLead(List<AvailabilityPeriod> periods, LocalTime checkInTime, Instant now);
 
+    /**
+     * Whether {@code [startDate, endDate]} lies entirely inside published availability (optional concrete
+     * availability row when {@code availabilityId} is non-null).
+     */
     boolean reservationIntervalFitsListingAvailability(
             long listingId,
             Long availabilityId,
             OffsetDateTime startDate,
             OffsetDateTime endDate);
 
+    /** All listings (admin-style listing). */
     List<Listing> getAllListings();
 
+    /** Filtered listing rows for back-office or legacy search. */
     List<Listing> searchListings(ListingSearchCriteria criteria);
 
+    /** Up to {@code limit} lowest-priced active listings. */
     List<Listing> getCheapestListings(int limit);
 
+    /** Up to {@code limit} most recently created active listings. */
     List<Listing> getMostRecentListings(int limit);
 
+    /** Paginated cheapest cards for home-style grids; {@code viewer} affects personalized fields when applicable. */
     Page<ListingCard> getCheapestListingCards(int page, int pageSize, User viewer);
 
+    /** Paginated most-recent cards for home-style grids. */
     Page<ListingCard> getMostRecentListingCards(int page, int pageSize, User viewer);
 
+    /** Owner dashboard: paginated cards for one owner with filters and sort. */
     Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
 
+    /**
+     * Builds {@link OwnerListingSearchCriteria} from request parameters (sanitizes enums, sort, pagination defaults).
+     */
     OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
             long ownerId,
             List<String> category,
@@ -186,14 +228,24 @@ public interface ListingService {
             int page,
             String sort);
 
+    /** Whether the owner has at least one listing row. */
     boolean hasListingsByOwner(long ownerId);
 
+    /** Home page: mixed cheapest/recent slices up to {@code limit} cards. */
     HomeListingCards getHomeListingCards(int limit, User viewer);
 
+    /** Public search: paginated cards from {@link ListingSearchCriteria}. */
     Page<ListingCard> searchListingCards(ListingSearchCriteria criteria);
 
+    /**
+     * Similar active listings for the detail page: same body type, powertrain, and transmission as the reference
+     * car, excluding the current listing (and optionally the viewer’s own listings when authenticated).
+     */
     List<ListingCard> findSimilarListingCards(long listingId, int limit, User viewer);
 
+    /**
+     * Builds {@link ListingSearchCriteria} from home/search form parameters (text, filters, wall dates, pagination).
+     */
     ListingSearchCriteria buildSearchCriteria(
             String query,
             List<String> category,

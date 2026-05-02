@@ -14,6 +14,7 @@ import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
 import ar.edu.itba.paw.webapp.form.ListingTimeWindow;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
+/** Bean Validation engine for {@link CheckOutAfterCheckIn} on {@link ListingTimeWindow} forms. */
 @Component
 public final class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, ListingTimeWindow> {
 

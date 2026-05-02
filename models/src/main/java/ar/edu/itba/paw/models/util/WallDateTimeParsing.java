@@ -10,6 +10,10 @@ import java.time.format.DateTimeParseException;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
+/**
+ * Parses and formats wall-zone date/time strings from HTML inputs and maps instants to UTC using
+ * {@link AvailabilityPeriod#WALL_ZONE}.
+ */
 public final class WallDateTimeParsing {
 
     private WallDateTimeParsing() {

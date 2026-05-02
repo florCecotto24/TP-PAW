@@ -16,6 +16,7 @@ import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
+/** Bean Validation engine for {@link ReservationWithinMaxBillableDays} using {@link ReservationService} billable-day rules. */
 @Component
 public final class ReservationWithinMaxBillableDaysValidator
         implements ConstraintValidator<ReservationWithinMaxBillableDays, ReservationForm> {

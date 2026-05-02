@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
+/** Wall-calendar availability segments for listings. */
 public interface ListingAvailabilityDao {
 
     ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive);

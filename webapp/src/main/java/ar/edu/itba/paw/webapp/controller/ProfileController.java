@@ -51,6 +51,7 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
+/** Signed-in profile: display name, locale, CBU, password, picture, and identity or license documents. */
 @Controller
 @RequestMapping("/profile")
 public final class ProfileController {

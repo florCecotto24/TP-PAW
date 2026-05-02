@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 
+/** Bean Validation engine for {@link PhoneNumber} against {@link UserValidationPolicy}. */
 @Component
 public final class PhoneNumberValidator implements ConstraintValidator<PhoneNumber, String> {
 

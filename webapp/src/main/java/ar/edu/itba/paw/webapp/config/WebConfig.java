@@ -50,6 +50,10 @@ import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
 import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 
+/**
+ * Central Spring MVC setup: view resolver, i18n, multipart, async mail executor, Flyway-ready property sources,
+ * and component scan for controllers, advice, util, security, validation, interceptor, services, and persistence.
+ */
 @EnableWebMvc
 @EnableAsync
 @EnableScheduling

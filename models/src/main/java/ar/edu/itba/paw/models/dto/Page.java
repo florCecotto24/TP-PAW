@@ -4,6 +4,7 @@ import java.util.List;
 
 import ar.edu.itba.paw.models.pagination.UiPaging;
 
+/** Generic paginated window: items for the current page, page index, size, and total count (see {@link UiPaging}). */
 public final class Page<T> {
 
     private final List<T> content;

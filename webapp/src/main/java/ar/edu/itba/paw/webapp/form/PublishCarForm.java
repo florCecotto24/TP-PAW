@@ -24,6 +24,9 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 
+/**
+ * Publish flow: vehicle attributes, listing price and handover, availability windows, neighborhood, and picture uploads.
+ */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnPublishCar.class)
 public final class PublishCarForm implements ListingTimeWindow {
 

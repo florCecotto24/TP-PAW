@@ -17,6 +17,7 @@ import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 
+/** Home page: cheapest and most-recent listing cards with guest-aware browse exclusions. */
 @Controller
 public final class HomeController {
 

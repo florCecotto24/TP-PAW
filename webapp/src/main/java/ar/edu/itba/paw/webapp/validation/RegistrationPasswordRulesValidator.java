@@ -14,6 +14,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.RegistrationPasswordConfirmFields;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 
+/** Bean Validation engine for {@link RegistrationPasswordRules} on password pair forms. */
 @Component
 public final class RegistrationPasswordRulesValidator implements ConstraintValidator<RegistrationPasswordRules, RegistrationPasswordConfirmFields> {
 

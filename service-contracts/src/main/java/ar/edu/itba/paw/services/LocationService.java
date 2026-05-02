@@ -5,10 +5,16 @@ import ar.edu.itba.paw.models.domain.Neighborhood;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Neighborhood catalog and parsing of search/filter parameters for listing browse.
+ * Implementations use {@code LocationDao} for catalog reads; ID parsing and de-duplication live in the service layer.
+ */
 public interface LocationService {
 
+    /** All neighborhoods for pickers and filters. */
     List<Neighborhood> findAllNeighborhoods();
 
+    /** Single catalog row by id when present. */
     Optional<Neighborhood> findNeighborhoodById(long neighborhoodId);
 
     /**

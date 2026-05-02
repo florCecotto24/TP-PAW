@@ -5,6 +5,7 @@ import javax.validation.ConstraintValidatorContext;
 
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 
+/** Stateless validator for {@link NoPunctuation} (Unicode letters, marks, digits, spaces). */
 public final class NoPunctuationValidator implements ConstraintValidator<NoPunctuation, String> {
     @Override
     public void initialize(NoPunctuation constraintAnnotation) {

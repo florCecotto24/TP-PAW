@@ -16,6 +16,9 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
+/**
+ * After each request, persists the resolved MVC locale for signed-in users (not anonymous) for mail and defaults.
+ */
 @Component
 public final class LatestLocaleSaveInterceptor implements HandlerInterceptor {
 

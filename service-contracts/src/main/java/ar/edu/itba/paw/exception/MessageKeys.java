@@ -3,7 +3,6 @@ package ar.edu.itba.paw.exception;
 /**
  * Message keys for {@code messages/exception/exception-messages.properties} and locale files
  * ({@code messages/exception/exception-messages_es.properties}, empty {@code messages/exception/exception-messages_en.properties}). Keep in sync.
- * <p>
  * String constants are used (rather than a Java {@code enum}) so keys match the i18n bundle files directly; an
  * {@code enum} would add indirection and boilerplate here.
  */

@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.exception.user.CBUNotFoundException;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
@@ -43,9 +46,15 @@ import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.ReservationDao;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
+/**
+ * Reservation workflows: persists through {@link ReservationDao} only.
+ * Listings, users, stored files, images, and mail go through {@link ListingService}, {@link UserService},
+ * {@link StoredFileService}, {@link ImageService}, and {@link EmailService}; timing and pagination use policy beans.
+ */
 @Service
 public final class ReservationServiceImpl implements ReservationService {
 
@@ -61,6 +70,7 @@ public final class ReservationServiceImpl implements ReservationService {
     private final ImageService imageService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
+    private final PaginationPolicy paginationPolicy;
 
     @Autowired
     public ReservationServiceImpl(
@@ -71,7 +81,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final StoredFileService storedFileService,
             final ImageService imageService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy) {
+            final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
+            final PaginationPolicy paginationPolicy) {
         this.reservationDao = reservationDao;
         this.listingService = listingService;
         this.userService = userService;
@@ -80,6 +91,7 @@ public final class ReservationServiceImpl implements ReservationService {
         this.imageService = imageService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
+        this.paginationPolicy = paginationPolicy;
     }
 
     @Override
@@ -132,10 +144,11 @@ public final class ReservationServiceImpl implements ReservationService {
         if (ownerId == riderId) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
         }
-        String cbu;
-        try{
+        final String cbu;
+        try {
             cbu = userService.getUserCbu(ownerId);
-        } catch (Exception e) {
+        } catch (final UserNotFoundException | CBUNotFoundException e) {
+            LOGGER.atWarn().setCause(e).addArgument(ownerId).log("Owner payment details unavailable for ownerId={}");
             throw new RiderReservationException(MessageKeys.RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE);
         }
         final String reservationTotal = calculateTotal(listingId, startDate, endDate).map(this::formatMoney)
@@ -214,7 +227,7 @@ public final class ReservationServiceImpl implements ReservationService {
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing reservation confirmation email to {} for reservation id={}");
             emailService.sendReservationConfirmationEmail(payload);
-        } catch (final Exception e) {
+        } catch (final RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue reservation confirmation email for reservation id={}");
         }
     }
@@ -298,7 +311,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new ReservationSearchCriteria(
-                ownerId, riderId, page, 8, statuses,
+                ownerId, riderId, page, paginationPolicy.getDefaultPageSize(), statuses,
                 carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDir);
     }
 
@@ -595,7 +608,7 @@ public final class ReservationServiceImpl implements ReservationService {
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing reservation cancellation email to {} for reservation id={}");
             emailService.sendReservationCancellationEmail(cancelPayload);
-        } catch (final Exception e) {
+        } catch (final RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(reservation.getId())
                     .log("Could not enqueue reservation cancellation email for reservation id={}");
         }
@@ -687,7 +700,7 @@ public final class ReservationServiceImpl implements ReservationService {
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing rider reservation confirmed-after-proof email to {} for reservation id={}");
             emailService.sendRiderReservationConfirmedAfterPaymentProof(payload);
-        } catch (final Exception e) {
+        } catch (final RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue rider confirmed-after-proof email for reservation id={}");
         }
     }
@@ -720,7 +733,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     .build();
             LOGGER.atInfo().addArgument(owner.getEmail()).addArgument(reservationId).log("Queueing owner payment-proof email to {} (reservation id={})");
             emailService.sendOwnerPaymentProofReceivedEmail(mailPayload);
-        } catch (final Exception e) {
+        } catch (final RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(reservationId).log("Could not enqueue owner payment-proof email for reservation id={}");
         }
     }
@@ -881,8 +894,9 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderReturnReminderEmail(payload.get());
-            } catch (final Exception e) {
-                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue return reminder email (reservation id={})");
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to queue return reminder email (reservation id={})");
             }
         }
     }
@@ -902,8 +916,9 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderReturnCheckoutEmail(payload.get());
-            } catch (final Exception e) {
-                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue return checkout email (reservation id={})");
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to queue return checkout email (reservation id={})");
             }
         }
     }
@@ -923,8 +938,9 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderReviewInviteEmail(payload.get());
-            } catch (final Exception e) {
-                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue rider review invite email (reservation id={})");
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to queue rider review invite email (reservation id={})");
             }
         }
     }
@@ -944,8 +960,9 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderDuePaymentProofEmail(payload.get());
-            } catch (final Exception e) {
-                LOGGER.atError().addArgument(reservation.getId()).log("Failed to queue due payment proof reminder email (reservation id={})");
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to queue due payment proof reminder email (reservation id={})");
             }
         }
     }
@@ -965,9 +982,12 @@ public final class ReservationServiceImpl implements ReservationService {
         String ownerCbu;
         try {
             ownerCbu = userService.getUserCbu(owner.getId());
-        } catch (final Exception e) {
-            LOGGER.atWarn().addArgument(reservation.getId()).addArgument(owner.getId())
-                    .log("Skipping due payment proof reminder: owner has no CBU (reservation id={}, owner id={})");
+        } catch (final UserNotFoundException | CBUNotFoundException e) {
+            LOGGER.atDebug()
+                    .setCause(e)
+                    .addArgument(reservation.getId())
+                    .addArgument(owner.getId())
+                    .log("Skipping due payment proof reminder: owner CBU unavailable (reservation id={}, owner id={})");
             return Optional.empty();
         }
         
@@ -1033,6 +1053,24 @@ public final class ReservationServiceImpl implements ReservationService {
                 .vehicleLabel(listing.getTitle())
                 .reviewSectionPath(path)
                 .build());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findBlockingReservationsByListingId(final long listingId) {
+        return reservationDao.findBlockingByListingId(listingId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findBlockingReservationsByListingIds(final Collection<Long> listingIds) {
+        return reservationDao.findBlockingByListingIds(listingIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findReminderReservations(final OffsetDateTime from, final OffsetDateTime to) {
+        return reservationDao.getReminderReservations(from, to);
     }
 
     private static String trimName(final String forename, final String surname) {

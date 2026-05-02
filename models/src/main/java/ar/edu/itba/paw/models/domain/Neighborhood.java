@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models.domain;
 
+/** City neighborhood row for listing location pickers. */
 public final class Neighborhood {
     private final long id;
     private final String name;

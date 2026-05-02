@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
+/** Header block for the rider/owner profile panel: identity, ratings badge, about, member since, profile image id. */
 public final class CounterpartyHeaderDto {
 
     private final String fullName;

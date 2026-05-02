@@ -26,6 +26,7 @@ import ar.edu.itba.paw.webapp.security.http.ForgotPasswordSessionAttributes;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
+/** Password reset: request code and complete reset with session-scoped email context. */
 @Controller
 @RequestMapping("/forgot-password")
 public final class ForgotPasswordController {

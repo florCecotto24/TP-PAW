@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
+/**
+ * Adds authenticated user forename, surname, and optional profile picture id for layout navigation.
+ */
 @ControllerAdvice
 public final class NavModelAdvice {
 

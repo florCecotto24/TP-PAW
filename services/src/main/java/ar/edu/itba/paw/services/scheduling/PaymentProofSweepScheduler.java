@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+/**
+ * Cancels reservations stuck in pending payment proof after the configured deadline (cron from
+ * {@code app.scheduler.payment-proof.cron}).
+ */
 @Component
 public final class PaymentProofSweepScheduler {
 
@@ -23,8 +27,8 @@ public final class PaymentProofSweepScheduler {
     public void cancelStalePendingPayment() {
         try {
             reservationService.cancelExpiredPendingPaymentReservations();
-        } catch (final Exception e) {
-            LOGGER.atError().log("payment proof sweep failed", e);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).log("Payment proof sweep failed");
         }
     }
 }

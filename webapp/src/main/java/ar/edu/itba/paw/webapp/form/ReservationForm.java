@@ -5,6 +5,7 @@ import javax.validation.constraints.NotNull;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
+/** Rider reservation request: listing, wall-local pickup/return strings, handover labels, and vehicle label for display. */
 @ReservationWithinMaxBillableDays(groups = ValidationGroups.OnReservationSubmit.class)
 public final class ReservationForm {
 

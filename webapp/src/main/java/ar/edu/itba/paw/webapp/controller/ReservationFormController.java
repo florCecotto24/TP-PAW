@@ -9,8 +9,8 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
@@ -32,6 +32,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
+/** Rider flow to create a reservation for a listing (GET form + POST submit). */
 @Controller
 @RequestMapping("/reservation")
 public final class ReservationFormController {
@@ -51,7 +52,8 @@ public final class ReservationFormController {
             final ReservationService reservationService,
             final ImageService imageService,
             final LocaleMessages localeMessages,
-            final WallDateTimeUiFormatter wallDateTimeUiFormatter, UserService userService) {
+            final WallDateTimeUiFormatter wallDateTimeUiFormatter,
+            final UserService userService) {
         this.listingService = listingService;
         this.reservationService = reservationService;
         this.imageService = imageService;
@@ -146,9 +148,13 @@ public final class ReservationFormController {
         try {
             final long riderId = WebAuthUtils.requireUser(currentUser).getId();
 
-            LOGGER.atInfo().log("Submitting reservation for riderId={}, listingId={}, availabilityId={}, " +
-                            "fromDateTime={}, untilDateTime={}",
-                    riderId, listingId, availabilityId, form.getFromDateTime(), form.getUntilDateTime());
+            LOGGER.atInfo()
+                    .addArgument(riderId)
+                    .addArgument(listingId)
+                    .addArgument(availabilityId)
+                    .addArgument(form.getFromDateTime())
+                    .addArgument(form.getUntilDateTime())
+                    .log("Submitting reservation for riderId={}, listingId={}, availabilityId={}, fromDateTime={}, untilDateTime={}");
 
             reservation = reservationService.submitRiderReservation(
                     riderId,
@@ -184,8 +190,7 @@ public final class ReservationFormController {
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("reservationTotal", ArsMoneyFormat.format(reservation.getTotalPrice()));
-        User owner = userService.getListingOwner(listingId).orElseThrow(() -> new RuntimeException("Listing owner not found for listingId " + listingId));
-        mav.addObject("ownerCbu", userService.getUserCbu(owner.getId()));
+        mav.addObject("ownerCbu", userService.findOwnerCbuForListing(listingId).orElse(""));
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         addReservationPolicyHours(mav);
         mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());

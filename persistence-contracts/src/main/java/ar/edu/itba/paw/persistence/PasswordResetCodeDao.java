@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import java.time.Instant;
 
+/** Time-boxed password reset codes per user. */
 public interface PasswordResetCodeDao {
 
     void deleteForUser(long userId);

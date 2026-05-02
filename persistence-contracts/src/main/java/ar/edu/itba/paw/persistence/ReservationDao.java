@@ -7,13 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-
-
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 
+/** Reservations, overlap checks, listing analytics, and mail-claim flags. */
 public interface ReservationDao {
 
     boolean hasActiveOverlap(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);

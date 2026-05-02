@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** Public listing search and filters with canonical sort tokens and pagination. */
 @Controller
 public final class SearchController {
 

@@ -317,4 +317,43 @@ public class UserServiceImplTest {
                         1L, UserDocumentType.IDENTITY, "dni.txt", "text/plain", new byte[] {1, 2}));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_DOCUMENT_INVALID, thrown.getMessageCode());
     }
+
+    @Test
+    public void findOwnerCbuForListingWhenOwnerHasCbuReturnsValue() {
+        final long listingId = 2L;
+        final User owner = User.builder()
+                .id(9L)
+                .email("o@example.com")
+                .forename("O")
+                .surname("Owner")
+                .cbu("0170200203000008777719")
+                .build();
+        Mockito.when(userDao.getListingOwner(listingId)).thenReturn(Optional.of(owner));
+        Mockito.when(userDao.getUserById(9L)).thenReturn(Optional.of(owner));
+
+        final Optional<String> result = userService.findOwnerCbuForListing(listingId);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals("0170200203000008777719", result.get());
+    }
+
+    @Test
+    public void findOwnerCbuForListingWhenNoOwnerReturnsEmpty() {
+        Mockito.when(userDao.getListingOwner(2L)).thenReturn(Optional.empty());
+
+        final Optional<String> result = userService.findOwnerCbuForListing(2L);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void findOwnerCbuForListingWhenCbuMissingReturnsEmpty() {
+        final User owner = User.identities(9L, "o@example.com", "O", "Owner");
+        Mockito.when(userDao.getListingOwner(2L)).thenReturn(Optional.of(owner));
+        Mockito.when(userDao.getUserById(9L)).thenReturn(Optional.of(owner));
+
+        final Optional<String> result = userService.findOwnerCbuForListing(2L);
+
+        Assertions.assertTrue(result.isEmpty());
+    }
 }

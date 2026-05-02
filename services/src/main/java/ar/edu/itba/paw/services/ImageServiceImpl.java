@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.ImageDao;
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
+/** Validates upload size then persists via {@link ImageDao}. */
 @Service
 public final class ImageServiceImpl implements ImageService {
 

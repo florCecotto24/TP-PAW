@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Neighborhood;
 
+/** Read-only neighborhood catalog. */
 public interface LocationDao {
 
     List<Neighborhood> findAllNeighborhoods();

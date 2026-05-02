@@ -9,6 +9,7 @@ import org.springframework.web.servlet.ModelAndView;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 
+/** Formats wall-local reservation datetimes for JSP display from raw client input strings. */
 @Component
 public final class WallDateTimeUiFormatter {
 

@@ -53,6 +53,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/** Owner hub: listing cards, edit, pause/finish, and per-listing reservation analytics and actions. */
 @Controller
 @RequestMapping("/my-listings")
 public final class MyListingsController {
