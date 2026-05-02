@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Neighborhood;
@@ -14,7 +13,8 @@ import ar.edu.itba.paw.services.LocationService;
 /**
  * Builds human-readable pickup and return address lines for a listing. Combines street, optional door number, and
  * neighborhood label from {@link LocationService}. Intended for JSPs, reservation detail views, and email payloads;
- * does not read or write listing persistence.
+ * does not read or write listing persistence. Transaction boundaries are provided by callers (e.g. {@code ListingViewServiceImpl});
+ * this type stays {@code final} and is not proxied for AOP.
  */
 @Component
 public final class ListingAddressFormatter {
@@ -35,7 +35,6 @@ public final class ListingAddressFormatter {
      * @param listing listing whose start point defines the address
      * @return street and neighborhood without door number, trimmed segments
      */
-    @Transactional(readOnly = true)
     public String formatPublicDeliveryLocation(final Listing listing) {
         return formatPublicPickupLocation(listing);
     }
@@ -46,7 +45,6 @@ public final class ListingAddressFormatter {
      * @param listing listing whose start point defines the address
      * @return street, optional number, and neighborhood when available
      */
-    @Transactional(readOnly = true)
     public String formatFullDeliveryLocation(final Listing listing) {
         return formatFullPickupLocation(listing);
     }
@@ -57,7 +55,6 @@ public final class ListingAddressFormatter {
      * @param listing listing row (street and optional neighborhood id)
      * @return non-null string; may be blank if both street and neighborhood name are missing
      */
-    @Transactional(readOnly = true)
     public String formatPublicPickupLocation(final Listing listing) {
         final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
         if (listing.getNeighborhoodId().isEmpty()) {
@@ -81,7 +78,6 @@ public final class ListingAddressFormatter {
      * @param listing listing row (street, optional number, optional neighborhood id)
      * @return non-null string; may be blank if all parts are missing
      */
-    @Transactional(readOnly = true)
     public String formatFullPickupLocation(final Listing listing) {
         final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
         final Optional<String> numberOpt = listing.getStartPointNumber();
@@ -119,7 +115,6 @@ public final class ListingAddressFormatter {
      * @param viewerIsOwner when {@code true}, always show the full delivery line
      * @return formatted return location text
      */
-    @Transactional(readOnly = true)
     public String formatDeliveryForReservationView(
             final Listing listing,
             final Reservation reservation,
@@ -138,7 +133,6 @@ public final class ListingAddressFormatter {
      * @param viewerIsOwner when {@code true}, always show the full pickup line
      * @return formatted pickup location text
      */
-    @Transactional(readOnly = true)
     public String formatPickupForReservationView(
             final Listing listing,
             final Reservation reservation,
@@ -157,7 +151,6 @@ public final class ListingAddressFormatter {
      * @param reservation reservation whose payment state gates the rider view
      * @return combined pickup and return text, separated by {@code " · "} when both differ
      */
-    @Transactional(readOnly = true)
     public String formatRiderReservationHandoverSummary(final Listing listing, final Reservation reservation) {
         final String p = formatPickupForReservationView(listing, reservation, false);
         final String d = formatDeliveryForReservationView(listing, reservation, false);
@@ -177,7 +170,6 @@ public final class ListingAddressFormatter {
      * @param listing listing address
      * @return combined pickup and return text, separated by {@code " · "} when both differ
      */
-    @Transactional(readOnly = true)
     public String formatOwnerReservationHandoverSummary(final Listing listing) {
         final String p = formatFullPickupLocation(listing);
         final String d = formatFullDeliveryLocation(listing);
