@@ -243,9 +243,6 @@ public final class UserServiceImpl implements UserService {
             case LICENSE:
                 userDao.updateLicenseDocument(userId, stored.getId(), true);
                 return;
-            case INSURANCE:
-                userDao.updateInsuranceDocument(userId, stored.getId(), true);
-                return;
             case IDENTITY:
                 userDao.updateIdentityDocument(userId, stored.getId(), true);
                 return;
@@ -257,7 +254,6 @@ public final class UserServiceImpl implements UserService {
     private static boolean profileDocumentSlotOccupied(final User user, final UserDocumentType documentType) {
         return switch (documentType) {
             case LICENSE -> user.getLicenseFileId().isPresent();
-            case INSURANCE -> user.getInsuranceFileId().isPresent();
             case IDENTITY -> user.getIdentityFileId().isPresent();
         };
     }
@@ -272,9 +268,6 @@ public final class UserServiceImpl implements UserService {
         switch (documentType) {
             case LICENSE:
                 userDao.clearLicenseDocument(userId);
-                return;
-            case INSURANCE:
-                userDao.clearInsuranceDocument(userId);
                 return;
             case IDENTITY:
                 userDao.clearIdentityDocument(userId);

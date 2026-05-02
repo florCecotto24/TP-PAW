@@ -314,56 +314,6 @@
                 </div>
                 <div class="mb-3">
                     <c:choose>
-                        <c:when test="${empty insuranceFileName}">
-                            <label for="insuranceFileInput" class="form-label"><spring:message code="profile.documents.insurance"/></label>
-                        </c:when>
-                        <c:otherwise>
-                            <div class="form-label"><spring:message code="profile.documents.insurance"/></div>
-                        </c:otherwise>
-                    </c:choose>
-                    <p class="small mb-2">
-                        <c:choose>
-                            <c:when test="${insuranceValidated}">
-                                <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
-                            </c:when>
-                            <c:otherwise>
-                                <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
-                            </c:otherwise>
-                        </c:choose>
-                        <span class="ms-1">
-                            <c:choose>
-                                <c:when test="${insuranceValidated}">
-                                    <spring:message code="profile.documents.status.validated"/>
-                                </c:when>
-                                <c:otherwise>
-                                    <spring:message code="profile.documents.status.notValidated"/>
-                                </c:otherwise>
-                            </c:choose>
-                        </span>
-                    </p>
-                    <c:if test="${not empty insuranceFileName}">
-                        <p class="small mb-2">
-                            <a class="link-primary text-break"
-                               href="<c:url value='/profile/document/view'><c:param name='documentType' value='INSURANCE'/></c:url>"
-                               target="_blank" rel="noopener noreferrer">
-                                <c:out value="${insuranceFileName}"/>
-                            </a>
-                        </p>
-                        <button type="submit"
-                                class="btn btn-outline-danger btn-sm mb-2"
-                                formaction="<c:url value='/profile/document/delete'/>"
-                                formmethod="post"
-                                name="documentType"
-                                value="INSURANCE">
-                            <spring:message code="profile.documents.remove"/>
-                        </button>
-                    </c:if>
-                    <c:if test="${empty insuranceFileName}">
-                        <input id="insuranceFileInput" class="form-control form-control-sm" type="file" name="insuranceFile" accept="image/*,application/pdf"/>
-                    </c:if>
-                </div>
-                <div class="mb-3">
-                    <c:choose>
                         <c:when test="${empty identityFileName}">
                             <label for="identityFileInput" class="form-label"><spring:message code="profile.documents.identity"/></label>
                         </c:when>
@@ -413,7 +363,7 @@
                     </c:if>
                 </div>
             </div>
-            <c:if test="${empty licenseFileName or empty insuranceFileName or empty identityFileName}">
+            <c:if test="${empty licenseFileName or empty identityFileName}">
                 <button type="submit" class="btn btn-outline-primary btn-sm"><spring:message code="profile.documents.upload"/></button>
             </c:if>
         </form>

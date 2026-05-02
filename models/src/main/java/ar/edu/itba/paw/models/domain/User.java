@@ -26,8 +26,6 @@ public final class User {
     private final String cbu;
     private final Long licenseFileId;
     private final Boolean licenseValidated;
-    private final Long insuranceFileId;
-    private final Boolean insuranceValidated;
     private final Long identityFileId;
     private final Boolean identityValidated;
 
@@ -47,8 +45,6 @@ public final class User {
         this.cbu = b.cbu;
         this.licenseFileId = b.licenseFileId;
         this.licenseValidated = b.licenseValidated;
-        this.insuranceFileId = b.insuranceFileId;
-        this.insuranceValidated = b.insuranceValidated;
         this.identityFileId = b.identityFileId;
         this.identityValidated = b.identityValidated;
     }
@@ -78,8 +74,6 @@ public final class User {
         private String cbu;
         private Long licenseFileId;
         private Boolean licenseValidated;
-        private Long insuranceFileId;
-        private Boolean insuranceValidated;
         private Long identityFileId;
         private Boolean identityValidated;
 
@@ -155,16 +149,6 @@ public final class User {
 
         public Builder licenseValidated(final Boolean licenseValidated) {
             this.licenseValidated = licenseValidated;
-            return this;
-        }
-
-        public Builder insuranceFileId(final Long insuranceFileId) {
-            this.insuranceFileId = insuranceFileId;
-            return this;
-        }
-
-        public Builder insuranceValidated(final Boolean insuranceValidated) {
-            this.insuranceValidated = insuranceValidated;
             return this;
         }
 
@@ -244,14 +228,6 @@ public final class User {
 
     public boolean isLicenseValidated() {
         return Boolean.TRUE.equals(licenseValidated);
-    }
-
-    public Optional<Long> getInsuranceFileId() {
-        return Optional.ofNullable(insuranceFileId);
-    }
-
-    public boolean isInsuranceValidated() {
-        return Boolean.TRUE.equals(insuranceValidated);
     }
 
     public Optional<Long> getIdentityFileId() {

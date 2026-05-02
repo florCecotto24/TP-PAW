@@ -203,9 +203,6 @@ public class CarDetailController {
                 "counterpartyLicenseValidated",
                 counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent());
         mav.addObject(
-                "counterpartyInsuranceValidated",
-                counterparty.isInsuranceValidated() || counterparty.getInsuranceFileId().isPresent());
-        mav.addObject(
                 "counterpartyIdentityValidated",
                 counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent());
         mav.addObject(

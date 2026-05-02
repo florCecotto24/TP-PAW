@@ -151,14 +151,10 @@ public final class ProfileController {
                 model.addAttribute("profileMemberSinceDisplay", display);
             });
             model.addAttribute("licenseValidated", u.isLicenseValidated());
-            model.addAttribute("insuranceValidated", u.isInsuranceValidated());
             model.addAttribute("identityValidated", u.isIdentityValidated());
             u.getLicenseFileId()
                     .flatMap(storedFileService::findById)
                     .ifPresent(sf -> model.addAttribute("licenseFileName", sf.getFileName()));
-            u.getInsuranceFileId()
-                    .flatMap(storedFileService::findById)
-                    .ifPresent(sf -> model.addAttribute("insuranceFileName", sf.getFileName()));
             u.getIdentityFileId()
                     .flatMap(storedFileService::findById)
                     .ifPresent(sf -> model.addAttribute("identityFileName", sf.getFileName()));
@@ -305,20 +301,16 @@ public final class ProfileController {
     public String uploadProfileDocuments(
             @CurrentUser final User currentUser,
             @RequestParam(name = "licenseFile", required = false) final MultipartFile licenseFile,
-            @RequestParam(name = "insuranceFile", required = false) final MultipartFile insuranceFile,
             @RequestParam(name = "identityFile", required = false) final MultipartFile identityFile,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (isMissingOrEmpty(licenseFile) && isMissingOrEmpty(insuranceFile) && isMissingOrEmpty(identityFile)) {
+        if (isMissingOrEmpty(licenseFile) && isMissingOrEmpty(identityFile)) {
             redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
             return "redirect:/profile";
         }
         try {
             if (!isMissingOrEmpty(licenseFile)) {
                 uploadSingleProfileDocument(me.getId(), UserDocumentType.LICENSE, licenseFile);
-            }
-            if (!isMissingOrEmpty(insuranceFile)) {
-                uploadSingleProfileDocument(me.getId(), UserDocumentType.INSURANCE, insuranceFile);
             }
             if (!isMissingOrEmpty(identityFile)) {
                 uploadSingleProfileDocument(me.getId(), UserDocumentType.IDENTITY, identityFile);
@@ -510,7 +502,6 @@ public final class ProfileController {
         final var user = userOpt.get();
         final var fileId = switch (documentType) {
             case LICENSE -> user.getLicenseFileId();
-            case INSURANCE -> user.getInsuranceFileId();
             case IDENTITY -> user.getIdentityFileId();
         };
         return fileId.flatMap(storedFileService::findById);

@@ -26,7 +26,6 @@
                         profileImageId="${counterpartyProfileImageId}"
                         averageRating="${counterpartyAverageRating}"
                         licenseValidated="${counterpartyLicenseValidated}"
-                        insuranceValidated="${counterpartyInsuranceValidated}"
                         identityValidated="${counterpartyIdentityValidated}"/>
 
                 <ryden:counterpartyProfileReviews

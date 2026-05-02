@@ -32,7 +32,7 @@ public class CarJdbcDaoTest extends DaoIntegrationTestSupport {
                 Car.Powertrain.GASOLINE,
                 Car.Transmission.AUTOMATIC);
 
-        // Assert 
+        // Assert
         Assertions.assertTrue(created.getId() > 0);
         final Map<String, Object> row = jdbcTemplate.queryForMap(
                 "SELECT owner_id, plate, brand, model, type, transmission, powertrain FROM cars WHERE id = ?",

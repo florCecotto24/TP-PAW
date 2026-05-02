@@ -11,7 +11,6 @@
 <%@ attribute name="profileImageId" required="false" type="java.lang.Long" %>
 <%@ attribute name="averageRating" required="false" type="java.math.BigDecimal" %>
 <%@ attribute name="licenseValidated" required="false" type="java.lang.Boolean" %>
-<%@ attribute name="insuranceValidated" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="identityValidated" required="false" type="java.lang.Boolean" %>
 <c:set var="initials" value="${fn:substring(forename, 0, 1)}${fn:substring(surname, 0, 1)}"/>
 
@@ -99,19 +98,6 @@
                     </c:otherwise>
                 </c:choose>
                 <span class="fw-semibold ms-1"><spring:message code="profile.documents.license"/></span>
-            </li>
-            <li class="mb-2">
-                <c:choose>
-                    <c:when test="${insuranceValidated}">
-                        <i class="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
-                        <span class="visually-hidden"><spring:message code="profile.documents.status.validated"/></span>
-                    </c:when>
-                    <c:otherwise>
-                        <i class="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
-                        <span class="visually-hidden"><spring:message code="profile.documents.status.notValidated"/></span>
-                    </c:otherwise>
-                </c:choose>
-                <span class="fw-semibold ms-1"><spring:message code="profile.documents.insurance"/></span>
             </li>
             <li>
                 <c:choose>

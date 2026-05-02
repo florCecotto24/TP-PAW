@@ -28,7 +28,7 @@ public final class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =
             "id, email, forename, surname, email_validated, phone_number, birth_date, about, profile_picture_id, latest_locale, cbu, member_since, "
-                    + "license_file_id, license_validated, insurance_file_id, insurance_validated, identity_file_id, identity_validated";
+                    + "license_file_id, license_validated, identity_file_id, identity_validated";
 
     private static Long readNullableLongId(final ResultSet rs, final String column) throws SQLException {
         final Object v = rs.getObject(column);
@@ -64,8 +64,6 @@ public final class UserJdbcDao implements UserDao {
                 .cbu(rs.getString("cbu"))
                 .licenseFileId(readNullableLongId(rs, "license_file_id"))
                 .licenseValidated(rs.getObject("license_validated", Boolean.class))
-                .insuranceFileId(readNullableLongId(rs, "insurance_file_id"))
-                .insuranceValidated(rs.getObject("insurance_validated", Boolean.class))
                 .identityFileId(readNullableLongId(rs, "identity_file_id"))
                 .identityValidated(rs.getObject("identity_validated", Boolean.class))
                 .build();
@@ -180,22 +178,6 @@ public final class UserJdbcDao implements UserDao {
     }
 
     @Override
-    public void updateInsuranceDocument(final long userId, final long fileId, final boolean validated) {
-        jdbcTemplate.update(
-                "UPDATE users SET insurance_file_id = ?, insurance_validated = ? WHERE id = ?",
-                fileId,
-                validated,
-                userId);
-    }
-
-    @Override
-    public void clearInsuranceDocument(final long userId) {
-        jdbcTemplate.update(
-                "UPDATE users SET insurance_file_id = NULL, insurance_validated = FALSE WHERE id = ?",
-                userId);
-    }
-
-    @Override
     public void updateIdentityDocument(final long userId, final long fileId, final boolean validated) {
         jdbcTemplate.update(
                 "UPDATE users SET identity_file_id = ?, identity_validated = ? WHERE id = ?",
@@ -227,7 +209,7 @@ public final class UserJdbcDao implements UserDao {
                 "SELECT u.id, u.email, u.forename, u.surname, u.email_validated, u.phone_number, u.birth_date, "
                         + "u.about, u.profile_picture_id, u.latest_locale, u.cbu, "
                         + "u.member_since, "
-                        + "u.license_file_id, u.license_validated, u.insurance_file_id, u.insurance_validated, "
+                        + "u.license_file_id, u.license_validated, "
                         + "u.identity_file_id, u.identity_validated FROM users u "
                         + "JOIN cars c ON c.owner_id = u.id "
                         + "JOIN listings l ON l.car_id = c.id "
