@@ -10,9 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class ListingAvailabilityJdbcDaoTest extends DaoIntegrationTestSupport {
 
@@ -20,7 +22,7 @@ public class ListingAvailabilityJdbcDaoTest extends DaoIntegrationTestSupport {
     private ListingAvailabilityJdbcDao listingAvailabilityDao;
 
     @Test
-    public void testCreateAndFindByListingId() {
+    public void testCreateListingAvailabilityPersistsRow() {
         // Arrange
         final LocalDate start = LocalDate.parse("2026-05-01");
         final LocalDate end = LocalDate.parse("2026-05-05");
@@ -31,12 +33,21 @@ public class ListingAvailabilityJdbcDaoTest extends DaoIntegrationTestSupport {
 
         // Exercise
         final ListingAvailability created = listingAvailabilityDao.create(100L, start, end);
-        final List<ListingAvailability> availabilities = listingAvailabilityDao.findByListingId(100L);
 
-        // Assert
+        // Assert 
         Assertions.assertEquals(100L, created.getListingId());
-        Assertions.assertEquals(1, availabilities.size());
-        Assertions.assertEquals(start, availabilities.get(0).getStartInclusive());
+        Assertions.assertEquals(start, created.getStartInclusive());
+        Assertions.assertEquals(end, created.getEndInclusive());
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT listing_id, start_date, end_date FROM listing_availability WHERE id = ?",
+                created.getId());
+        Assertions.assertEquals(100L, ((Number) row.get("LISTING_ID")).longValue());
+        Assertions.assertEquals(start, ((Date) row.get("START_DATE")).toLocalDate());
+        Assertions.assertEquals(end, ((Date) row.get("END_DATE")).toLocalDate());
+
+        final Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM listing_availability WHERE listing_id = ?", Integer.class, 100L);
+        Assertions.assertEquals(Integer.valueOf(1), count);
     }
 
     @Test
@@ -53,10 +64,15 @@ public class ListingAvailabilityJdbcDaoTest extends DaoIntegrationTestSupport {
         // Exercise
         final List<ListingAvailability> availabilities = listingAvailabilityDao.findByListingId(100L);
 
-        // Assert
-        Assertions.assertEquals(2, availabilities.size());
-        Assertions.assertEquals(base, availabilities.get(0).getStartInclusive());
-        Assertions.assertEquals(base.plusDays(2), availabilities.get(1).getStartInclusive());
+        // Assert: JDBC ordering is ground truth; DAO result must match.
+        final List<LocalDate> startDatesFromDb = jdbcTemplate.query(
+                "SELECT start_date FROM listing_availability WHERE listing_id = ? ORDER BY start_date ASC",
+                (rs, rn) -> rs.getDate(1).toLocalDate(),
+                100L);
+        Assertions.assertEquals(List.of(base, base.plusDays(2)), startDatesFromDb);
+        Assertions.assertEquals(
+                startDatesFromDb,
+                availabilities.stream().map(ListingAvailability::getStartInclusive).toList());
     }
 
     @Test

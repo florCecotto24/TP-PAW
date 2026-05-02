@@ -1,7 +1,8 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
-import java.util.Optional;
+
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -16,18 +17,21 @@ public class ImageJdbcDaoTest extends DaoIntegrationTestSupport {
     private ImageJdbcDao imageDao;
 
     @Test
-    public void testCreateAndGetImageById() {
+    public void testCreateImagePersistsRow() {
         // Arrange
         final byte[] data = new byte[] {1, 2, 3, 4};
 
         // Exercise
         final Image created = imageDao.createImage("car.png", "image/png", data);
-        final Optional<Image> found = imageDao.getImageById(created.getId());
 
         // Assert
-        Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals("car.png", found.get().getName());
-        Assertions.assertArrayEquals(data, found.get().getData());
+        Assertions.assertTrue(created.getId() > 0);
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT image_name, content_type, byte_array FROM images WHERE id = ?",
+                created.getId());
+        Assertions.assertEquals("car.png", row.get("IMAGE_NAME"));
+        Assertions.assertEquals("image/png", row.get("CONTENT_TYPE"));
+        Assertions.assertArrayEquals(data, (byte[]) row.get("BYTE_ARRAY"));
     }
 
     @Test
@@ -50,17 +54,18 @@ public class ImageJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     public void testDeleteImageRemovesRow() {
-        // Arrange
+        // Arrange — row from SQL, not createImage on the same DAO under test
+        final long imageId = 77L;
         final byte[] data = new byte[] {9};
-        final String contentType = "image/png";
-        final String name = "x.png";
+        insertImage(imageId, "x.png", "image/png", data);
 
         // Exercise
-        final Image created = imageDao.createImage(name, contentType, data);
-        imageDao.deleteImage(created.getId());
+        imageDao.deleteImage(imageId);
 
         // Assert
-        Assertions.assertTrue(imageDao.getImageById(created.getId()).isEmpty());
+        final Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM images WHERE id = ?", Integer.class, imageId);
+        Assertions.assertEquals(Integer.valueOf(0), count);
     }
 }
 

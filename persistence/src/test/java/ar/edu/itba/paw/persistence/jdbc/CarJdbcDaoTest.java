@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 public class CarJdbcDaoTest extends DaoIntegrationTestSupport {
 
@@ -18,7 +18,7 @@ public class CarJdbcDaoTest extends DaoIntegrationTestSupport {
     private CarJdbcDao carDao;
 
     @Test
-    public void testCreateCarAndGetById() {
+    public void testCreateCarPersistsRow() {
         // Arrange
         insertUser(1L, "owner@mail.com", "Owner", "One");
 
@@ -32,13 +32,18 @@ public class CarJdbcDaoTest extends DaoIntegrationTestSupport {
                 Car.Powertrain.GASOLINE,
                 Car.Transmission.AUTOMATIC);
 
-        // Assert
+        // Assert 
         Assertions.assertTrue(created.getId() > 0);
-
-        final Optional<Car> found = carDao.getCarById(created.getId());
-        Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals("AA123AA", found.get().getPlate());
-        Assertions.assertEquals(Car.Transmission.AUTOMATIC, found.get().getTransmission());
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT owner_id, plate, brand, model, type, transmission, powertrain FROM cars WHERE id = ?",
+                created.getId());
+        Assertions.assertEquals(1L, ((Number) row.get("OWNER_ID")).longValue());
+        Assertions.assertEquals("AA123AA", row.get("PLATE"));
+        Assertions.assertEquals("Toyota", row.get("BRAND"));
+        Assertions.assertEquals("Corolla", row.get("MODEL"));
+        Assertions.assertEquals("SEDAN", row.get("TYPE"));
+        Assertions.assertEquals("AUTOMATIC", row.get("TRANSMISSION"));
+        Assertions.assertEquals("GASOLINE", row.get("POWERTRAIN"));
     }
 
     @Test

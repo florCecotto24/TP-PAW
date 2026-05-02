@@ -2,11 +2,13 @@ package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -29,7 +31,7 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
     private ListingJdbcDao listingDao;
 
     @Test
-    public void testCreateListingAndGetById() {
+    public void testCreateListingPersistsRow() {
         // Arrange
         final OffsetDateTime now = OffsetDateTime.parse("2026-04-01T10:00:00Z");
         insertUser(1L, "owner@mail.com", "Owner", "One");
@@ -47,15 +49,24 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
                 Listing.DEFAULT_CHECK_IN_TIME,
                 LocalTime.of(18, 0),
                 null);
-        final Optional<Listing> found = listingDao.getListingById(created.getId());
 
-        // Assert
+        // Assert 
         Assertions.assertTrue(created.getCreatedAt().isAfter(now.minusDays(1)));
-        Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals("Title", found.get().getTitle());
-        Assertions.assertEquals(Listing.Status.ACTIVE, found.get().getStatus());
-        Assertions.assertEquals(Listing.DEFAULT_CHECK_IN_TIME, found.get().getCheckInTime());
-        Assertions.assertEquals(LocalTime.of(18, 0), found.get().getCheckOutTime());
+        Assertions.assertTrue(created.getId() > 0);
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT title, status, day_price, start_point_street, start_point_number, description,"
+                        + " check_in_time, check_out_time FROM listings WHERE id = ?",
+                created.getId());
+        Assertions.assertEquals("Title", row.get("TITLE"));
+        Assertions.assertEquals("active", row.get("STATUS"));
+        Assertions.assertEquals(0, new BigDecimal("44.50").compareTo((BigDecimal) row.get("DAY_PRICE")));
+        Assertions.assertEquals("Palermo", row.get("START_POINT_STREET"));
+        Assertions.assertEquals("1234", row.get("START_POINT_NUMBER"));
+        Assertions.assertEquals("Great car", row.get("DESCRIPTION"));
+        Assertions.assertEquals(
+                Listing.DEFAULT_CHECK_IN_TIME,
+                ((Time) row.get("CHECK_IN_TIME")).toLocalTime());
+        Assertions.assertEquals(LocalTime.of(18, 0), ((Time) row.get("CHECK_OUT_TIME")).toLocalTime());
     }
 
     @Test
@@ -70,10 +81,12 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         // Exercise
         final List<Listing> all = listingDao.getAllListings();
 
-        // Assert
-        Assertions.assertEquals(2, all.size());
-        Assertions.assertEquals(102L, all.get(0).getId());
-        Assertions.assertEquals(101L, all.get(1).getId());
+        // Assert: JDBC order is ground truth; DAO must agree.
+        final List<Long> idsOrdered = jdbcTemplate.query(
+                "SELECT id FROM listings ORDER BY created_at DESC",
+                (rs, rn) -> rs.getLong(1));
+        Assertions.assertEquals(List.of(102L, 101L), idsOrdered);
+        Assertions.assertEquals(idsOrdered, all.stream().map(Listing::getId).toList());
     }
 
     @Test

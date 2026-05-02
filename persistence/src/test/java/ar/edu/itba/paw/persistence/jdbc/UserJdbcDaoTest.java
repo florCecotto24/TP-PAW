@@ -2,8 +2,10 @@ package ar.edu.itba.paw.persistence.jdbc;
 
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import java.math.BigDecimal;
+import java.sql.Date;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -20,22 +22,35 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
     private UserJdbcDao userDao;
 
     @Test
-    public void testCreateUserNormalizesEmailAndFindByEmailIsCaseInsensitive() {
-
+    public void testCreateUserNormalizesEmailPersistsRow() {
+        final LocalDate todayWall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
 
         // Exercise
         final User created = userDao.createUser("  TEST@MAIL.COM ", "Ada", "Lovelace");
-        final Optional<User> found = userDao.findByEmail("test@mail.com");
 
-        // Assert
-        Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals(created.getId(), found.get().getId());
-        Assertions.assertEquals("test@mail.com", found.get().getEmail());
         Assertions.assertEquals(Optional.of(false), created.getEmailValidated());
-        Assertions.assertEquals(Optional.of(false), found.get().getEmailValidated());
-        final LocalDate todayWall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         Assertions.assertEquals(Optional.of(todayWall), created.getMemberSince());
-        Assertions.assertEquals(Optional.of(todayWall), found.get().getMemberSince());
+
+        // Assert 
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT email, forename, surname, email_validated, member_since FROM users WHERE id = ?",
+                created.getId());
+        Assertions.assertEquals("test@mail.com", row.get("EMAIL"));
+        Assertions.assertEquals("Ada", row.get("FORENAME"));
+        Assertions.assertEquals("Lovelace", row.get("SURNAME"));
+        Assertions.assertEquals(Boolean.FALSE, row.get("EMAIL_VALIDATED"));
+        Assertions.assertEquals(todayWall, ((Date) row.get("MEMBER_SINCE")).toLocalDate());
+    }
+
+    @Test
+    public void testFindByEmailIsCaseInsensitive() {
+        insertUser(1L, "test@mail.com", "A", "B");
+
+        final Optional<User> found = userDao.findByEmail("TEST@mail.com");
+
+        Assertions.assertTrue(found.isPresent());
+        Assertions.assertEquals(1L, found.get().getId());
+        Assertions.assertEquals("test@mail.com", found.get().getEmail());
     }
 
     @Test
@@ -48,70 +63,64 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     public void testUpdateUserNamePersistsNewValues() {
-        // Arrange
-        final User created = userDao.createUser("u@mail.com", "Old", "Name");
+        insertUser(200L, "u@mail.com", "Old", "Name");
 
         // Exercise
-        userDao.updateUserName(created.getId(), "New", "Surname");
-        final Optional<User> updated = userDao.getUserById(created.getId());
+        userDao.updateUserName(200L, "New", "Surname");
 
-        // Assert
-        Assertions.assertTrue(updated.isPresent());
-        Assertions.assertEquals("New", updated.get().getForename());
-        Assertions.assertEquals("Surname", updated.get().getSurname());
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT forename, surname FROM users WHERE id = ?", 200L);
+        Assertions.assertEquals("New", row.get("FORENAME"));
+        Assertions.assertEquals("Surname", row.get("SURNAME"));
     }
 
     @Test
     public void testUpdateOptionalPhoneNumberSetsAndClearsWithoutTouchingBirthDate() {
-        final User created = userDao.createUser("test@mail.com", "Test", "User");
+        insertUser(201L, "test@mail.com", "Test", "User");
         final LocalDate birth = LocalDate.of(1990, 5, 15);
-        userDao.updateBirthDate(created.getId(), birth);
+        jdbcTemplate.update("UPDATE users SET birth_date = ? WHERE id = ?", Date.valueOf(birth), 201L);
 
-        userDao.updatePhoneNumber(created.getId(), "+5491112345678");
-        Optional<User> loaded = userDao.getUserById(created.getId());
-        Assertions.assertTrue(loaded.isPresent());
-        Assertions.assertEquals("+5491112345678", loaded.get().getPhoneNumber().orElseThrow());
-        Assertions.assertEquals(birth, loaded.get().getBirthDate().orElseThrow());
+        userDao.updatePhoneNumber(201L, "+5491112345678");
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT phone_number, birth_date FROM users WHERE id = ?", 201L);
+        Assertions.assertEquals("+5491112345678", row.get("PHONE_NUMBER"));
+        Assertions.assertEquals(birth, ((Date) row.get("BIRTH_DATE")).toLocalDate());
 
-        userDao.updatePhoneNumber(created.getId(), null);
-        loaded = userDao.getUserById(created.getId());
-        Assertions.assertTrue(loaded.isPresent());
-        Assertions.assertTrue(loaded.get().getPhoneNumber().isEmpty());
-        Assertions.assertEquals(birth, loaded.get().getBirthDate().orElseThrow());
+        userDao.updatePhoneNumber(201L, null);
+        row = jdbcTemplate.queryForMap("SELECT phone_number, birth_date FROM users WHERE id = ?", 201L);
+        Assertions.assertNull(row.get("PHONE_NUMBER"));
+        Assertions.assertEquals(birth, ((Date) row.get("BIRTH_DATE")).toLocalDate());
     }
 
     @Test
     public void testUpdateOptionalBirthDateSetsAndClearsWithoutTouchingPhone() {
-        final User created = userDao.createUser("birth@mail.com", "Test", "User");
-        userDao.updatePhoneNumber(created.getId(), "+5411");
+        insertUser(202L, "birth@mail.com", "Test", "User");
+        jdbcTemplate.update("UPDATE users SET phone_number = ? WHERE id = ?", "+5411", 202L);
         final LocalDate birth = LocalDate.of(1991, 6, 20);
 
-        userDao.updateBirthDate(created.getId(), birth);
-        Optional<User> loaded = userDao.getUserById(created.getId());
-        Assertions.assertTrue(loaded.isPresent());
-        Assertions.assertEquals(birth, loaded.get().getBirthDate().orElseThrow());
-        Assertions.assertEquals("+5411", loaded.get().getPhoneNumber().orElseThrow());
+        userDao.updateBirthDate(202L, birth);
+        Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT birth_date, phone_number FROM users WHERE id = ?", 202L);
+        Assertions.assertEquals(birth, ((Date) row.get("BIRTH_DATE")).toLocalDate());
+        Assertions.assertEquals("+5411", row.get("PHONE_NUMBER"));
 
-        userDao.updateBirthDate(created.getId(), null);
-        loaded = userDao.getUserById(created.getId());
-        Assertions.assertTrue(loaded.isPresent());
-        Assertions.assertTrue(loaded.get().getBirthDate().isEmpty());
-        Assertions.assertEquals("+5411", loaded.get().getPhoneNumber().orElseThrow());
+        userDao.updateBirthDate(202L, null);
+        row = jdbcTemplate.queryForMap("SELECT birth_date, phone_number FROM users WHERE id = ?", 202L);
+        Assertions.assertNull(row.get("BIRTH_DATE"));
+        Assertions.assertEquals("+5411", row.get("PHONE_NUMBER"));
     }
 
     @Test
     public void testUpdateOptionalAboutSetsAndClears() {
-        final User created = userDao.createUser("about@mail.com", "Test", "User");
+        insertUser(203L, "about@mail.com", "Test", "User");
 
-        userDao.updateAbout(created.getId(), "Host and rider.");
-        Optional<User> loaded = userDao.getUserById(created.getId());
-        Assertions.assertTrue(loaded.isPresent());
-        Assertions.assertEquals("Host and rider.", loaded.get().getAbout().orElseThrow());
+        userDao.updateAbout(203L, "Host and rider.");
+        Map<String, Object> row = jdbcTemplate.queryForMap("SELECT about FROM users WHERE id = ?", 203L);
+        Assertions.assertEquals("Host and rider.", row.get("ABOUT"));
 
-        userDao.updateAbout(created.getId(), null);
-        loaded = userDao.getUserById(created.getId());
-        Assertions.assertTrue(loaded.isPresent());
-        Assertions.assertTrue(loaded.get().getAbout().isEmpty());
+        userDao.updateAbout(203L, null);
+        row = jdbcTemplate.queryForMap("SELECT about FROM users WHERE id = ?", 203L);
+        Assertions.assertNull(row.get("ABOUT"));
     }
 
     @Test
@@ -131,6 +140,10 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertTrue(owner.isPresent());
         Assertions.assertEquals(1L, owner.get().getId());
         Assertions.assertEquals("owner@mail.com", owner.get().getEmail());
+    }
+
+    @Test
+    public void testGetListingOwnerWhenListingMissingReturnsEmpty() {
         Assertions.assertTrue(userDao.getListingOwner(999L).isEmpty());
     }
 
@@ -147,12 +160,9 @@ public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     public void testCreateUserWithDuplicateEmailThrowsConstraintViolation() {
-        // Arrange
-        userDao.createUser("duplicate@mail.com", "A", "A");
+        insertUser(1L, "duplicate@mail.com", "A", "A");
 
-        // Exercise & Assert
         Assertions.assertThrows(DataIntegrityViolationException.class,
                 () -> userDao.createUser("duplicate@mail.com", "B", "B"));
     }
 }
-

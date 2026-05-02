@@ -85,6 +85,7 @@ Configured in `WebAuthConfig` with Spring Security 5.7.14. Uses `@EnableWebSecur
 
 - **Unit tests**: JUnit 5 + Mockito in `services` and `models`.
 - **Persistence tests**: HSQLDB (`TestPersistenceConfig`), integration-style DAO tests under `persistence/src/test`.
+- **DAO integration tests** (`*JdbcDaoTest`, `DaoIntegrationTestSupport`): After a **write** (`create*`, `update*`, `delete*`), assert with **`JdbcTemplate`** or SQL fixtures in arrange — **never** confirm persistence via a **second method on the same DAO** (e.g. `createCar` + `getCarById`). Prefer `insert*` / SQL for setup when testing updates or deletes on that DAO. For ordered **read** results backed by SQL fixtures, optionally assert ordering against a matching `ORDER BY` query via `JdbcTemplate`.
 - **Strict Mockito**: Unused stubbings fail with `UnnecessaryStubbingException` — remove any `when(...)` that isn't exercised by the test.
 - **No interaction verification**: Do not use `Mockito.verify`, `never()`, `times()`, `InOrder`, or captors to assert collaborator calls — tests assert outcomes (returns, models, state), not implementation wiring.
 - **Fixed literals in matchers**: Do not use `Mockito.anyLong()` (or `any*()`) as the value inside `when(...)` — use fixed literals so tests are deterministic and intention is clear.

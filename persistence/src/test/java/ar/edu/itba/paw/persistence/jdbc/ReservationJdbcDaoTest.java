@@ -13,9 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
 
@@ -23,7 +25,7 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
     private ReservationJdbcDao reservationDao;
 
     @Test
-    public void testCreateReservationAndGetById() {
+    public void testCreateReservationPersistsRow() {
         // Arrange
         final OffsetDateTime start = OffsetDateTime.parse("2026-07-01T10:00:00Z");
         final OffsetDateTime end = OffsetDateTime.parse("2026-07-05T10:00:00Z");
@@ -41,12 +43,28 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
                 Reservation.Status.ACCEPTED,
                 new BigDecimal("150.00"),
                 start.plusHours(12));
-        final Optional<Reservation> found = reservationDao.getReservationById(created.getId());
+        // Assert 
+        Assertions.assertTrue(created.getId() > 0);
+        final Map<String, Object> row = jdbcTemplate.queryForMap(
+                "SELECT rider_id, listing_id, start_date, end_date, status, total_price FROM reservations WHERE id = ?",
+                created.getId());
+        Assertions.assertEquals(2L, ((Number) row.get("RIDER_ID")).longValue());
+        Assertions.assertEquals(100L, ((Number) row.get("LISTING_ID")).longValue());
+        Assertions.assertEquals("accepted", row.get("STATUS"));
+        Assertions.assertEquals(0, new BigDecimal("150.00").compareTo((BigDecimal) row.get("TOTAL_PRICE")));
+        Assertions.assertEquals(start.toInstant(), toInstantUtc(row.get("START_DATE")));
+        Assertions.assertEquals(end.toInstant(), toInstantUtc(row.get("END_DATE")));
+    }
 
-        // Assert
-        Assertions.assertTrue(found.isPresent());
-        Assertions.assertEquals(2L, found.get().getRiderId());
-        Assertions.assertEquals(Reservation.Status.ACCEPTED, found.get().getStatus());
+    private static Instant toInstantUtc(final Object jdbcValue) {
+        Assertions.assertNotNull(jdbcValue);
+        return switch (jdbcValue) {
+            case final Timestamp timestamp -> timestamp.toInstant();
+            case final OffsetDateTime offsetDateTime -> offsetDateTime.toInstant();
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unexpected JDBC type for instant: " + jdbcValue.getClass().getName());
+        };
     }
 
     @Test
