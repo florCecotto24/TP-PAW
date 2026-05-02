@@ -15,10 +15,6 @@ import java.util.stream.Collectors;
 @Component
 public final class CarEnumOptions {
 
-    private static final String[] SEARCH_PRICE_BAND_KEYS = {
-            "UNDER_5000", "5000_TO_15000", "15000_TO_30000", "OVER_30000"
-    };
-
     private static final String[] SEARCH_RATING_BAND_KEYS = {
             "UNDER_2", "2_TO_3", "3_TO_4", "OVER_4"
     };
@@ -76,17 +72,6 @@ public final class CarEnumOptions {
                 : ar.edu.itba.paw.models.domain.Reservation.Status.values()) {
             final String key = s.name().toLowerCase();
             m.put(key, label("enum.reservation.status." + key, key));
-        }
-        return m;
-    }
-
-    /**
-     * Search price buckets in ascending order (not sorted alphabetically by label).
-     */
-    public Map<String, String> searchPriceBandOptions() {
-        final Map<String, String> m = new LinkedHashMap<>();
-        for (final String k : SEARCH_PRICE_BAND_KEYS) {
-            m.put(k, label("enum.search.price." + k, k));
         }
         return m;
     }

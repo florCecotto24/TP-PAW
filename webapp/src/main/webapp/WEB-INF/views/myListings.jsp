@@ -36,7 +36,7 @@
 
                 <%-- Tab 1: Mis publicaciones --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'listings' ? 'show active' : ''}" id="listings-pane" role="tabpanel" aria-labelledby="listings-tab">
-                    <c:set var="hasActiveFilters" value="${not empty param.q or not empty paramValues.listingStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price or not empty paramValues.rating}"/>
+                    <c:set var="hasActiveFilters" value="${not empty param.q or not empty paramValues.listingStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty param.priceMin or not empty param.priceMax or not empty paramValues.rating}"/>
 
                     <c:url var="myListingsBaseUrl" value="/my-listings">
                         <c:param name="tab" value="listings"/>
@@ -55,9 +55,12 @@
                         <c:forEach var="pw" items="${paramValues.powertrain}">
                             <c:param name="powertrain"><c:out value="${pw}"/></c:param>
                         </c:forEach>
-                        <c:forEach var="pr" items="${paramValues.price}">
-                            <c:param name="price"><c:out value="${pr}"/></c:param>
-                        </c:forEach>
+                        <c:if test="${not empty param.priceMin}">
+                            <c:param name="priceMin"><c:out value="${param.priceMin}"/></c:param>
+                        </c:if>
+                        <c:if test="${not empty param.priceMax}">
+                            <c:param name="priceMax"><c:out value="${param.priceMax}"/></c:param>
+                        </c:if>
                         <c:forEach var="rt" items="${paramValues.rating}">
                             <c:param name="rating"><c:out value="${rt}"/></c:param>
                         </c:forEach>
@@ -82,7 +85,25 @@
                                     <spring:message code="search.filter.powertrain" var="lstPowertrainLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstPowertrainLabel}" paramName="powertrain" ariaGroup="lst-powertrain" options="${powertrainFilterOptions}"/>
                                     <spring:message code="search.filter.price" var="lstPriceLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${lstPriceLabel}" paramName="price" ariaGroup="lst-price" options="${priceFilterOptions}"/>
+                                    <spring:message code="search.filter.price.min" var="lstPriceMinLabel"/>
+                                    <spring:message code="search.filter.price.max" var="lstPriceMaxLabel"/>
+                                    <c:set var="hasActiveLstPrice" value="${not empty param.priceMin or not empty param.priceMax}"/>
+                                    <div class="dropdown explore-filter-dropdown mx-1 my-1">
+                                        <button class="btn btn-light border dropdown-toggle rounded-4 d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                            <span class="explore-filter-dropdown__label"><c:out value="${lstPriceLabel}"/></span>
+                                            <span class="badge text-bg-primary rounded-pill <c:if test='${not hasActiveLstPrice}'>d-none</c:if>" data-filter-count="true">1</span>
+                                        </button>
+                                        <div class="dropdown-menu p-3" style="min-width:200px">
+                                            <div class="mb-2">
+                                                <label class="form-label small mb-1"><c:out value="${lstPriceMinLabel}"/></label>
+                                                <input type="number" class="form-control form-control-sm" name="priceMin" min="0" step="1" value="<c:out value='${param.priceMin}'/>"/>
+                                            </div>
+                                            <div>
+                                                <label class="form-label small mb-1"><c:out value="${lstPriceMaxLabel}"/></label>
+                                                <input type="number" class="form-control form-control-sm" name="priceMax" min="0" step="1" value="<c:out value='${param.priceMax}'/>"/>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <spring:message code="search.filter.rating" var="lstRatingLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstRatingLabel}" paramName="rating" ariaGroup="lst-rating" options="${ratingFilterOptions}"/>
                                 </div>
@@ -216,7 +237,7 @@
 
                 <%-- Tab 2: Reservas de mis autos --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'reservations' ? 'show active' : ''}" id="reservations-pane" role="tabpanel" aria-labelledby="reservations-tab">
-                    <c:set var="hasActiveOwnerFilters" value="${not empty paramValues.ownerStatus or not empty paramValues.ownerCategory or not empty paramValues.ownerTransmission or not empty paramValues.ownerPowertrain or not empty paramValues.ownerPrice or not empty paramValues.ownerRating}"/>
+                    <c:set var="hasActiveOwnerFilters" value="${not empty paramValues.ownerStatus or not empty paramValues.ownerCategory or not empty paramValues.ownerTransmission or not empty paramValues.ownerPowertrain or not empty param.ownerPriceMin or not empty param.ownerPriceMax or not empty paramValues.ownerRating}"/>
                     <c:url var="myListingsOwnerResPaginationBaseUrl" value="/my-listings">
                         <c:param name="tab" value="reservations"/>
                         <c:forEach var="rs" items="${paramValues.ownerStatus}">
@@ -231,9 +252,12 @@
                         <c:forEach var="pw" items="${paramValues.ownerPowertrain}">
                             <c:param name="ownerPowertrain"><c:out value="${pw}"/></c:param>
                         </c:forEach>
-                        <c:forEach var="pr" items="${paramValues.ownerPrice}">
-                            <c:param name="ownerPrice"><c:out value="${pr}"/></c:param>
-                        </c:forEach>
+                        <c:if test="${not empty param.ownerPriceMin}">
+                            <c:param name="ownerPriceMin"><c:out value="${param.ownerPriceMin}"/></c:param>
+                        </c:if>
+                        <c:if test="${not empty param.ownerPriceMax}">
+                            <c:param name="ownerPriceMax"><c:out value="${param.ownerPriceMax}"/></c:param>
+                        </c:if>
                         <c:forEach var="rt" items="${paramValues.ownerRating}">
                             <c:param name="ownerRating"><c:out value="${rt}"/></c:param>
                         </c:forEach>
@@ -253,7 +277,25 @@
                                     <spring:message code="search.filter.powertrain" var="ownPowertrainLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${ownPowertrainLabel}" paramName="ownerPowertrain" ariaGroup="own-powertrain" options="${powertrainFilterOptions}"/>
                                     <spring:message code="search.filter.price" var="ownPriceLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${ownPriceLabel}" paramName="ownerPrice" ariaGroup="own-price" options="${priceFilterOptions}"/>
+                                    <spring:message code="search.filter.price.min" var="ownPriceMinLabel"/>
+                                    <spring:message code="search.filter.price.max" var="ownPriceMaxLabel"/>
+                                    <c:set var="hasActiveOwnPrice" value="${not empty param.ownerPriceMin or not empty param.ownerPriceMax}"/>
+                                    <div class="dropdown explore-filter-dropdown mx-1 my-1">
+                                        <button class="btn btn-light border dropdown-toggle rounded-4 d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                            <span class="explore-filter-dropdown__label"><c:out value="${ownPriceLabel}"/></span>
+                                            <span class="badge text-bg-primary rounded-pill <c:if test='${not hasActiveOwnPrice}'>d-none</c:if>" data-filter-count="true">1</span>
+                                        </button>
+                                        <div class="dropdown-menu p-3" style="min-width:200px">
+                                            <div class="mb-2">
+                                                <label class="form-label small mb-1"><c:out value="${ownPriceMinLabel}"/></label>
+                                                <input type="number" class="form-control form-control-sm" name="ownerPriceMin" min="0" step="1" value="<c:out value='${param.ownerPriceMin}'/>"/>
+                                            </div>
+                                            <div>
+                                                <label class="form-label small mb-1"><c:out value="${ownPriceMaxLabel}"/></label>
+                                                <input type="number" class="form-control form-control-sm" name="ownerPriceMax" min="0" step="1" value="<c:out value='${param.ownerPriceMax}'/>"/>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <spring:message code="search.filter.rating" var="ownRatingLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${ownRatingLabel}" paramName="ownerRating" ariaGroup="own-rating" options="${ratingFilterOptions}"/>
                                 </div>

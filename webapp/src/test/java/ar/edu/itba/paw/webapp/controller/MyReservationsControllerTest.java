@@ -83,9 +83,10 @@ public class MyReservationsControllerTest {
                 null,
                 null,
                 null,
+                null,
                 "date",
                 "desc");
-        when(listingService.buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, null, 0, null))
+        when(listingService.buildOwnerListingSearchCriteria(ownerId, null, null, null, null, null, List.of("active"), null, null, 0, null))
                 .thenReturn(ownerCriteria);
         when(listingService.getOwnerListingCards(ownerCriteria))
                 .thenReturn(new Page<>(List.of(

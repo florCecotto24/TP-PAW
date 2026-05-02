@@ -330,24 +330,13 @@ public class ReservationJdbcDao implements ReservationDao {
             sql.append("AND c.powertrain IN (:resPowertrains) ");
             params.addValue("resPowertrains", criteria.getPowertrains());
         }
-        final List<String> bands = criteria.getPriceBands();
-        if (!bands.isEmpty()) {
-            final List<String> conditions = new ArrayList<>();
-            if (bands.contains("UNDER_5000")) {
-                conditions.add("l.day_price < 5000");
-            }
-            if (bands.contains("5000_TO_15000")) {
-                conditions.add("(l.day_price >= 5000 AND l.day_price < 15000)");
-            }
-            if (bands.contains("15000_TO_30000")) {
-                conditions.add("(l.day_price >= 15000 AND l.day_price < 30000)");
-            }
-            if (bands.contains("OVER_30000")) {
-                conditions.add("l.day_price >= 30000");
-            }
-            if (!conditions.isEmpty()) {
-                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
-            }
+        if (criteria.getMinPrice() != null) {
+            sql.append("AND l.day_price >= :resMinPrice ");
+            params.addValue("resMinPrice", criteria.getMinPrice());
+        }
+        if (criteria.getMaxPrice() != null) {
+            sql.append("AND l.day_price <= :resMaxPrice ");
+            params.addValue("resMaxPrice", criteria.getMaxPrice());
         }
         final List<String> ratingBands = criteria.getRatingBands();
         if (!ratingBands.isEmpty()) {

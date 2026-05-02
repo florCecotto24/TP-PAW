@@ -34,7 +34,6 @@ public class SearchFilterModelAdvice {
         model.addAttribute("categoryFilterOptions", carEnumOptions.carTypeSelectOptions());
         model.addAttribute("transmissionFilterOptions", carEnumOptions.transmissionSelectOptions());
         model.addAttribute("powertrainFilterOptions", carEnumOptions.powertrainSelectOptions());
-        model.addAttribute("priceFilterOptions", carEnumOptions.searchPriceBandOptions());
         model.addAttribute("ratingFilterOptions", carEnumOptions.searchRatingBandOptions());
         model.addAttribute("listingStatusOptions", carEnumOptions.listingStatusSelectOptions());
         model.addAttribute("reservationStatusOptions", carEnumOptions.reservationStatusSelectOptions());

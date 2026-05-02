@@ -570,24 +570,13 @@ public class ListingJdbcDao implements ListingDao {
             sql.append("AND c.powertrain IN (:ownerPowertrains) ");
             params.addValue("ownerPowertrains", criteria.getPowertrains());
         }
-        final List<String> bands = criteria.getPriceBands();
-        if (!bands.isEmpty()) {
-            final List<String> conditions = new ArrayList<>();
-            if (bands.contains("UNDER_5000")) {
-                conditions.add("l.day_price < 5000");
-            }
-            if (bands.contains("5000_TO_15000")) {
-                conditions.add("(l.day_price >= 5000 AND l.day_price < 15000)");
-            }
-            if (bands.contains("15000_TO_30000")) {
-                conditions.add("(l.day_price >= 15000 AND l.day_price < 30000)");
-            }
-            if (bands.contains("OVER_30000")) {
-                conditions.add("l.day_price >= 30000");
-            }
-            if (!conditions.isEmpty()) {
-                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
-            }
+        if (criteria.getMinPrice() != null) {
+            sql.append("AND l.day_price >= :ownerMinPrice ");
+            params.addValue("ownerMinPrice", criteria.getMinPrice());
+        }
+        if (criteria.getMaxPrice() != null) {
+            sql.append("AND l.day_price <= :ownerMaxPrice ");
+            params.addValue("ownerMaxPrice", criteria.getMaxPrice());
         }
         appendRatingBandFilter(sql, criteria.getRatingBands());
     }
@@ -774,24 +763,13 @@ public class ListingJdbcDao implements ListingDao {
             params.addValue("carTypes", criteria.getCarTypes());
         }
 
-        final List<String> bands = criteria.getPriceBands();
-        if (!bands.isEmpty()) {
-            final List<String> conditions = new ArrayList<>();
-            if (bands.contains("UNDER_5000")) {
-                conditions.add("l.day_price < 5000");
-            }
-            if (bands.contains("5000_TO_15000")) {
-                conditions.add("(l.day_price >= 5000 AND l.day_price < 15000)");
-            }
-            if (bands.contains("15000_TO_30000")) {
-                conditions.add("(l.day_price >= 15000 AND l.day_price < 30000)");
-            }
-            if (bands.contains("OVER_30000")) {
-                conditions.add("l.day_price >= 30000");
-            }
-            if (!conditions.isEmpty()) {
-                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
-            }
+        if (criteria.getMinPrice() != null) {
+            sql.append("AND l.day_price >= :minPrice ");
+            params.addValue("minPrice", criteria.getMinPrice());
+        }
+        if (criteria.getMaxPrice() != null) {
+            sql.append("AND l.day_price <= :maxPrice ");
+            params.addValue("maxPrice", criteria.getMaxPrice());
         }
 
         appendRatingBandFilter(sql, criteria.getRatingBands());

@@ -12,7 +12,6 @@
 <%@ attribute name="categoryFilterOptions" required="true" type="java.util.Map" %>
 <%@ attribute name="transmissionFilterOptions" required="true" type="java.util.Map" %>
 <%@ attribute name="powertrainFilterOptions" required="true" type="java.util.Map" %>
-<%@ attribute name="priceFilterOptions" required="true" type="java.util.Map" %>
 <%@ attribute name="clearFiltersHref" required="false" type="java.lang.String" %>
 <%@ attribute name="showClearFilters" required="false" type="java.lang.Boolean" %>
 
@@ -138,13 +137,29 @@
                             ariaGroup="powertrain"
                             options="${powertrainFilterOptions}"/>
                     <spring:message code="search.filter.price" var="priceLabel"/>
-                    <spring:message code="search.filter.price.helper" var="priceHelper"/>
-                    <ryden:exploreFilterDropdown
-                            filterLabel="${priceLabel}"
-                            helperText="${priceHelper}"
-                            paramName="price"
-                            ariaGroup="price"
-                            options="${priceFilterOptions}"/>
+                    <spring:message code="search.filter.price.min" var="priceMinLabel"/>
+                    <spring:message code="search.filter.price.max" var="priceMaxLabel"/>
+                    <c:set var="hasActivePrice" value="${not empty param.priceMin or not empty param.priceMax}"/>
+                    <div class="dropdown explore-filter-dropdown mx-1 my-1">
+                        <button class="btn btn-light border dropdown-toggle rounded-4 d-inline-flex align-items-center gap-1" type="button"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                aria-expanded="false">
+                            <span class="explore-filter-dropdown__label"><c:out value="${priceLabel}"/></span>
+                            <span class="badge text-bg-primary rounded-pill <c:if test='${not hasActivePrice}'>d-none</c:if>" data-filter-count="true">1</span>
+                        </button>
+                        <div class="dropdown-menu p-3" style="min-width:200px">
+                            <div class="mb-2">
+                                <label class="form-label small mb-1"><c:out value="${priceMinLabel}"/></label>
+                                <input type="number" class="form-control form-control-sm js-price-input" name="priceMin"
+                                       min="0" step="1" value="<c:out value='${param.priceMin}'/>"/>
+                            </div>
+                            <div>
+                                <label class="form-label small mb-1"><c:out value="${priceMaxLabel}"/></label>
+                                <input type="number" class="form-control form-control-sm js-price-input" name="priceMax"
+                                       min="0" step="1" value="<c:out value='${param.priceMax}'/>"/>
+                            </div>
+                        </div>
+                    </div>
                     <spring:message code="search.filter.rating" var="ratingLabel"/>
                     <ryden:exploreFilterDropdown
                             filterLabel="${ratingLabel}"
@@ -182,6 +197,14 @@
                     <c:if test="${resolvedAutoSubmit}">form.submit();</c:if>
                 });
             });
+
+            <c:if test="${resolvedAutoSubmit}">
+            form.querySelectorAll('.js-price-input').forEach(function (input) {
+                input.addEventListener('change', function () {
+                    form.submit();
+                });
+            });
+            </c:if>
         })();
     </script>
 </c:if>

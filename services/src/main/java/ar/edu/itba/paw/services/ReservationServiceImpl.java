@@ -258,7 +258,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final List<String> category,
             final List<String> transmission,
             final List<String> powertrain,
-            final List<String> price,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
             final List<String> rating,
             final List<String> statusFilter,
             final int page,
@@ -266,19 +267,8 @@ public final class ReservationServiceImpl implements ReservationService {
         final List<String> carTypes = collectCarTypeParams(category);
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
-        final ArrayList<String> bands = new ArrayList<>();
-        if (price != null) {
-            for (final String p : price) {
-                if (p == null || p.isBlank()) {
-                    continue;
-                }
-                final String u = p.trim().toUpperCase();
-                if ("UNDER_5000".equals(u) || "5000_TO_15000".equals(u)
-                        || "15000_TO_30000".equals(u) || "OVER_30000".equals(u)) {
-                    bands.add(u);
-                }
-            }
-        }
+        final BigDecimal minPrice = priceMin != null && priceMin.compareTo(BigDecimal.ZERO) >= 0 ? priceMin : null;
+        final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
         final ArrayList<String> statuses = new ArrayList<>();
         if (statusFilter != null) {
             for (final String s : statusFilter) {
@@ -308,7 +298,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new ReservationSearchCriteria(
                 ownerId, riderId, page, 8, statuses,
-                carTypes, transmissions, powertrains, bands, ratingBands, sortBy, sortDir);
+                carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDir);
     }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {

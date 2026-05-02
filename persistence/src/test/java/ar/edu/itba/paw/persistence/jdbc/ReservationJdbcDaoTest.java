@@ -148,7 +148,7 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
                 created.plusDays(1));
 
         // Exercise
-        final var criteria = new ReservationSearchCriteria(null, 2L, 0, 8, null, null, null, null, null, null, "date", "desc");
+        final var criteria = new ReservationSearchCriteria(null, 2L, 0, 8, null, null, null, null, null, null, null, "date", "desc");
         final Page<ReservationCard> cardsPage = reservationDao.getRiderReservationCards(criteria);
         final List<ReservationCard> cards = cardsPage.getContent();
 

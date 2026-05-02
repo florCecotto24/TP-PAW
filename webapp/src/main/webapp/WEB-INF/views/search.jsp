@@ -23,8 +23,7 @@
                     showClearFilters="${hasActiveSearchFilters}"
                     categoryFilterOptions="${categoryFilterOptions}"
                     transmissionFilterOptions="${transmissionFilterOptions}"
-                    powertrainFilterOptions="${powertrainFilterOptions}"
-                    priceFilterOptions="${priceFilterOptions}"/>
+                    powertrainFilterOptions="${powertrainFilterOptions}"/>
             <div class="container">
 
                 <%-- Build baseUrl preserving all filter params except page and sort --%>
@@ -50,9 +49,12 @@
                     <c:forEach var="pw" items="${paramValues.powertrain}">
                         <c:param name="powertrain"><c:out value="${pw}"/></c:param>
                     </c:forEach>
-                    <c:forEach var="pr" items="${paramValues.price}">
-                        <c:param name="price"><c:out value="${pr}"/></c:param>
-                    </c:forEach>
+                    <c:if test="${not empty param.priceMin}">
+                        <c:param name="priceMin"><c:out value="${param.priceMin}"/></c:param>
+                    </c:if>
+                    <c:if test="${not empty param.priceMax}">
+                        <c:param name="priceMax"><c:out value="${param.priceMax}"/></c:param>
+                    </c:if>
                     <c:forEach var="rt" items="${paramValues.rating}">
                         <c:param name="rating"><c:out value="${rt}"/></c:param>
                     </c:forEach>

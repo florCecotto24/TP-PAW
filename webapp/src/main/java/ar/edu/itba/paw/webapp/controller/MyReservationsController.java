@@ -99,7 +99,8 @@ public final class MyReservationsController {
             @RequestParam(required = false) final List<String> category,
             @RequestParam(required = false) final List<String> transmission,
             @RequestParam(required = false) final List<String> powertrain,
-            @RequestParam(required = false) final List<String> price,
+            @RequestParam(required = false) final BigDecimal priceMin,
+            @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String sort,
             final HttpServletRequest request) {
@@ -107,7 +108,7 @@ public final class MyReservationsController {
         riderPage = Math.max(0, riderPage);
 
         final var criteria = reservationService.buildReservationSearchCriteria(
-                null, me.getId(), category, transmission, powertrain, price,
+                null, me.getId(), category, transmission, powertrain, priceMin, priceMax,
                 rating, riderStatus, riderPage, sort);
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
         final Locale locale = LocaleContextHolder.getLocale();
@@ -268,7 +269,7 @@ public final class MyReservationsController {
         final List<VehicleCardView> counterpartyActiveListings = counterpartyIsOwner
                 ? listingService.getOwnerListingCards(
                                 listingService.buildOwnerListingSearchCriteria(
-                                        counterparty.getId(), null, null, null, null,
+                                        counterparty.getId(), null, null, null, null, null,
                                         List.of("active"), null, null, 0, null))
                         .getContent()
                         .stream()

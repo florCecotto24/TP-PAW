@@ -184,7 +184,7 @@ public class CarDetailController {
                 counterparty.getProfilePictureId().orElse(null));
         final List<VehicleCardView> counterpartyActiveListings = listingService.getOwnerListingCards(
                         listingService.buildOwnerListingSearchCriteria(
-                                counterparty.getId(), null, null, null, null, List.of("active"), null, null, 0, null))
+                                counterparty.getId(), null, null, null, null, null, List.of("active"), null, null, 0, null))
                 .getContent()
                 .stream()
                 .filter(card -> currentListingId == null || card.getListingId() != currentListingId)

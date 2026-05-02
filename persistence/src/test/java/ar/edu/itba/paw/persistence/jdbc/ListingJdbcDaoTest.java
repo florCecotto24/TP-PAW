@@ -115,7 +115,6 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         final ListingSearchCriteria criteria = ListingSearchCriteria.builder()
                 .query("ford")
                 .carTypes(List.of("HATCHBACK"))
-                .priceBands(List.of("FREE"))
                 .build();
 
         // Exercise
@@ -230,7 +229,7 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertListing(101L, 10L, "Mine-new", Listing.Status.PAUSED, new BigDecimal("70.00"), base.plusDays(1));
         insertListing(102L, 11L, "Not-mine", Listing.Status.ACTIVE, new BigDecimal("40.00"), base.plusDays(2));
 
-        final var criteria = new OwnerListingSearchCriteria(1L, 0, 8, null, null, null, null, null, null, null, "date", "desc");
+        final var criteria = new OwnerListingSearchCriteria(1L, 0, 8, null, null, null, null, null, null, null, null, "date", "desc");
         final var page = listingDao.getOwnerListingCards(criteria);
 
         Assertions.assertEquals(2, page.getTotalItems());

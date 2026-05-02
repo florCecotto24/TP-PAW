@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +18,6 @@ public final class ListingSearchCriteriaTest {
         final List<String> transmissions = new ArrayList<>(List.of("MANUAL"));
         final List<String> powertrains = new ArrayList<>(List.of("HYBRID"));
         final List<String> carTypes = new ArrayList<>(List.of("SUV"));
-        final List<String> priceBands = new ArrayList<>(List.of("200-300"));
 
         // Exercise
         final ListingSearchCriteria criteria = ListingSearchCriteria.builder()
@@ -25,7 +25,8 @@ public final class ListingSearchCriteriaTest {
                 .transmissions(transmissions)
                 .powertrains(powertrains)
                 .carTypes(carTypes)
-                .priceBands(priceBands)
+                .minPrice(new BigDecimal("200"))
+                .maxPrice(new BigDecimal("300"))
                 .build();
 
         // Assert
@@ -33,22 +34,20 @@ public final class ListingSearchCriteriaTest {
         Assertions.assertEquals(List.of("MANUAL"), criteria.getTransmissions());
         Assertions.assertEquals(List.of("HYBRID"), criteria.getPowertrains());
         Assertions.assertEquals(List.of("SUV"), criteria.getCarTypes());
-        Assertions.assertEquals(List.of("200-300"), criteria.getPriceBands());
+        Assertions.assertEquals(new BigDecimal("200"), criteria.getMinPrice());
+        Assertions.assertEquals(new BigDecimal("300"), criteria.getMaxPrice());
 
         transmissions.add("AUTOMATIC");
         powertrains.add("ELECTRIC");
         carTypes.add("SEDAN");
-        priceBands.add("300-400");
 
         Assertions.assertEquals(List.of("MANUAL"), criteria.getTransmissions());
         Assertions.assertEquals(List.of("HYBRID"), criteria.getPowertrains());
         Assertions.assertEquals(List.of("SUV"), criteria.getCarTypes());
-        Assertions.assertEquals(List.of("200-300"), criteria.getPriceBands());
 
         Assertions.assertThrows(UnsupportedOperationException.class, () -> criteria.getTransmissions().add("AUTO"));
         Assertions.assertThrows(UnsupportedOperationException.class, () -> criteria.getPowertrains().add("GASOLINE"));
         Assertions.assertThrows(UnsupportedOperationException.class, () -> criteria.getCarTypes().add("PICKUP"));
-        Assertions.assertThrows(UnsupportedOperationException.class, () -> criteria.getPriceBands().add("400-500"));
     }
 
     @Test
@@ -60,14 +59,14 @@ public final class ListingSearchCriteriaTest {
                 .transmissions(null)
                 .powertrains(null)
                 .carTypes(null)
-                .priceBands(null)
                 .build();
         // Assert
         Assertions.assertNull(criteria.getQuery());
         Assertions.assertTrue(criteria.getTransmissions().isEmpty());
         Assertions.assertTrue(criteria.getPowertrains().isEmpty());
         Assertions.assertTrue(criteria.getCarTypes().isEmpty());
-        Assertions.assertTrue(criteria.getPriceBands().isEmpty());
+        Assertions.assertNull(criteria.getMinPrice());
+        Assertions.assertNull(criteria.getMaxPrice());
     }
 
     @Test

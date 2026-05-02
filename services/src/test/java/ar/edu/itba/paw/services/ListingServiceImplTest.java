@@ -473,7 +473,7 @@ public class ListingServiceImplTest {
         final Page<ListingCard> ownerPage = new Page<>(cards, 0, 8, 1);
         Mockito.when(listingDao.getOwnerListingCards(Mockito.any(OwnerListingSearchCriteria.class))).thenReturn(ownerPage);
 
-        final OwnerListingSearchCriteria criteria = new OwnerListingSearchCriteria(5L, 0, 8, null, null, null, null, null, null, null, "date", "desc");
+        final OwnerListingSearchCriteria criteria = new OwnerListingSearchCriteria(5L, 0, 8, null, null, null, null, null, null, null, null, "date", "desc");
         final Page<ListingCard> result = listingService.getOwnerListingCards(criteria);
 
         Assertions.assertEquals(ownerPage, result);

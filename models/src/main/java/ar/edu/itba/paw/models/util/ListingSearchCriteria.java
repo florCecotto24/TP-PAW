@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models.util;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -18,7 +19,8 @@ public final class ListingSearchCriteria {
     private final List<String> transmissions;
     private final List<String> powertrains;
     private final List<String> carTypes;
-    private final List<String> priceBands;
+    private final BigDecimal minPrice;
+    private final BigDecimal maxPrice;
     private final List<String> ratingBands;
     private final Instant availabilityRangeStart;
     private final Instant availabilityRangeEndExclusive;
@@ -38,7 +40,8 @@ public final class ListingSearchCriteria {
         this.transmissions = b.transmissions;
         this.powertrains = b.powertrains;
         this.carTypes = b.carTypes;
-        this.priceBands = b.priceBands;
+        this.minPrice = b.minPrice;
+        this.maxPrice = b.maxPrice;
         this.ratingBands = b.ratingBands;
         this.availabilityRangeStart = b.availabilityRangeStart;
         this.availabilityRangeEndExclusive = b.availabilityRangeEndExclusive;
@@ -66,7 +69,8 @@ public final class ListingSearchCriteria {
         private List<String> transmissions = List.of();
         private List<String> powertrains = List.of();
         private List<String> carTypes = List.of();
-        private List<String> priceBands = List.of();
+        private BigDecimal minPrice;
+        private BigDecimal maxPrice;
         private List<String> ratingBands = List.of();
         private Instant availabilityRangeStart;
         private Instant availabilityRangeEndExclusive;
@@ -101,8 +105,13 @@ public final class ListingSearchCriteria {
             return this;
         }
 
-        public Builder priceBands(final List<String> priceBands) {
-            this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
+        public Builder minPrice(final BigDecimal minPrice) {
+            this.minPrice = minPrice;
+            return this;
+        }
+
+        public Builder maxPrice(final BigDecimal maxPrice) {
+            this.maxPrice = maxPrice;
             return this;
         }
 
@@ -207,8 +216,12 @@ public final class ListingSearchCriteria {
         return carTypes;
     }
 
-    public List<String> getPriceBands() {
-        return priceBands;
+    public BigDecimal getMinPrice() {
+        return minPrice;
+    }
+
+    public BigDecimal getMaxPrice() {
+        return maxPrice;
     }
 
     public List<String> getRatingBands() {

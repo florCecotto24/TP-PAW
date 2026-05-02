@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.util;
 
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -15,7 +16,8 @@ public final class OwnerListingSearchCriteria {
     private final List<String> carTypes;
     private final List<String> transmissions;
     private final List<String> powertrains;
-    private final List<String> priceBands;
+    private final BigDecimal minPrice;
+    private final BigDecimal maxPrice;
     private final List<String> ratingBands;
     private final String sortBy;
     private final String sortDirection;
@@ -29,7 +31,8 @@ public final class OwnerListingSearchCriteria {
             final List<String> carTypes,
             final List<String> transmissions,
             final List<String> powertrains,
-            final List<String> priceBands,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
             final List<String> ratingBands,
             final String sortBy,
             final String sortDirection) {
@@ -41,7 +44,8 @@ public final class OwnerListingSearchCriteria {
         this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
         this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);
-        this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
+        this.minPrice = minPrice;
+        this.maxPrice = maxPrice;
         this.ratingBands = ratingBands == null ? List.of() : List.copyOf(ratingBands);
         this.sortBy = sortBy != null ? sortBy : "date";
         this.sortDirection = "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
@@ -79,8 +83,12 @@ public final class OwnerListingSearchCriteria {
         return powertrains;
     }
 
-    public List<String> getPriceBands() {
-        return priceBands;
+    public BigDecimal getMinPrice() {
+        return minPrice;
+    }
+
+    public BigDecimal getMaxPrice() {
+        return maxPrice;
     }
 
     public List<String> getRatingBands() {

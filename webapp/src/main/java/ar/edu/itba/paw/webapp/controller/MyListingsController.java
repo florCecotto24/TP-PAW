@@ -102,13 +102,15 @@ public final class MyListingsController {
             @RequestParam(required = false) final List<String> category,
             @RequestParam(required = false) final List<String> transmission,
             @RequestParam(required = false) final List<String> powertrain,
-            @RequestParam(required = false) final List<String> price,
+            @RequestParam(required = false) final BigDecimal priceMin,
+            @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String sort,
             @RequestParam(required = false) final List<String> ownerCategory,
             @RequestParam(required = false) final List<String> ownerTransmission,
             @RequestParam(required = false) final List<String> ownerPowertrain,
-            @RequestParam(required = false) final List<String> ownerPrice,
+            @RequestParam(required = false) final BigDecimal ownerPriceMin,
+            @RequestParam(required = false) final BigDecimal ownerPriceMax,
             @RequestParam(required = false) final List<String> ownerRating,
             @RequestParam(required = false) final String ownerSort,
             final HttpServletRequest request) {
@@ -119,7 +121,7 @@ public final class MyListingsController {
         final String selectedTab = TAB_RESERVATIONS.equals(tab) ? TAB_RESERVATIONS : TAB_LISTINGS;
         // Listings tab data
         final var listingsCriteria = listingService.buildOwnerListingSearchCriteria(
-                me.getId(), category, transmission, powertrain, price,
+                me.getId(), category, transmission, powertrain, priceMin, priceMax,
                 listingStatus, rating, q, page, sort);
         final Page<ListingCard> resultPage = listingService.getOwnerListingCards(listingsCriteria);
         final int safeListingsPage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
@@ -138,7 +140,7 @@ public final class MyListingsController {
 
         // Reservations tab data
         final var ownerCriteria = reservationService.buildReservationSearchCriteria(
-                me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain, ownerPrice,
+                me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain, ownerPriceMin, ownerPriceMax,
                 ownerRating, ownerStatus, ownerPage, ownerSort);
         final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(ownerCriteria);
         final int safeOwnerPage = UiPaging.clampZeroBasedPage(
