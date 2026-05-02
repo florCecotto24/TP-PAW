@@ -1,4 +1,4 @@
-<%@ tag language="java" pageEncoding="UTF-8" body-content="JSP" %>
+<%@ tag language="java" pageEncoding="UTF-8" body-content="scriptless" %>
 <%--
   Reusable "prompt for data" modal: intro (optional body or plain bodyText), one text field, error line, cancel/confirm.
   Composes with ryden:modal. Example (CBU before publish):

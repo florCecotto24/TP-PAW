@@ -39,8 +39,7 @@
                         showClearFilters="${hasActiveSearchFilters}"
                         categoryFilterOptions="${categoryFilterOptions}"
                         transmissionFilterOptions="${transmissionFilterOptions}"
-                        powertrainFilterOptions="${powertrainFilterOptions}"
-                        priceFilterOptions="${priceFilterOptions}"/>
+                        powertrainFilterOptions="${powertrainFilterOptions}"/>
             </div>
 
 
