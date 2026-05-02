@@ -82,6 +82,7 @@ public class CarDetailController {
         final Car car = detail.getCar();
 
         final User owner = detail.getOwner();
+        final boolean isOwnerRequesting = currentUser != null && currentUser.getId() == owner.getId();
         final Long ownerProfileImageId = userService.getUserById(owner.getId())
                 .flatMap(User::getProfilePictureId)
                 .orElse(null);
@@ -132,6 +133,7 @@ public class CarDetailController {
                         : null;
 
         final ModelAndView mav = new ModelAndView("carDetail");
+        mav.addObject("isOwnerRequesting", isOwnerRequesting);
         mav.addObject("maxReservationBillableDays", reservationService.getConfiguredMaxReservationBillableDays());
         mav.addObject("listing", listing);
         mav.addObject("listingPublicLocation", listingPublicLocation);

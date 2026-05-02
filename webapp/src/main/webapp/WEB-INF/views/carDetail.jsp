@@ -165,7 +165,8 @@
                         carName="${listing.title}"
                         pickupTime="${listing.checkInTime}"
                         returnTime="${listing.checkOutTime}"
-                        maxBillableDays="${maxReservationBillableDays}"/>
+                        maxBillableDays="${maxReservationBillableDays}"
+                        isOwnerRequesting="${isOwnerRequesting}"/>
             </div>
         </div>
     </div>

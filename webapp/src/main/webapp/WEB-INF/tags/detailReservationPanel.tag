@@ -12,6 +12,7 @@
 <%@ attribute name="pickupTime" required="false" type="java.lang.String" %>
 <%@ attribute name="returnTime" required="false" type="java.lang.String" %>
 <%@ attribute name="maxBillableDays" required="true" type="java.lang.Integer" %>
+<%@ attribute name="isOwnerRequesting" required="true" type="java.lang.Boolean" %>
 
 <c:url var="newReservationUrl" value="/reservation/new" />
 <spring:message code="validation.reservationForm.maxBillableDays" arguments="${maxBillableDays}" var="maxBillableExceededMsg" htmlEscape="true"/>
@@ -61,37 +62,39 @@
         </div>
     </div>
 
-    <div class="mb-3">
-        <label class="form-label small mb-2" for="detail_daterange"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
-        <spring:message code="detailReservationPanel.maxBillableDays.hint" arguments="${maxBillableDays}" var="maxBillableHintLine"/>
-        <p class="form-text small text-muted mb-2"><c:out value="${maxBillableHintLine}"/></p>
-        <spring:message code="detailReservationPanel.dates.placeholder" var="datesPlaceholder"/>
-        <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
-        <input
-                type="text"
-                id="detail_daterange"
-                class="form-control"
-                placeholder="<c:out value='${datesPlaceholder}'/>"
-                readonly
-                aria-label="<c:out value='${datesAriaLabel}'/>">
-        <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
-        <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
-    </div>
+        <c:if  test="${!isOwnerRequesting}">
+            <div class="mb-3">
+                <label class="form-label small mb-2" for="detail_daterange"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
+                <spring:message code="detailReservationPanel.maxBillableDays.hint" arguments="${maxBillableDays}" var="maxBillableHintLine"/>
+                <p class="form-text small text-muted mb-2"><c:out value="${maxBillableHintLine}"/></p>
+                <spring:message code="detailReservationPanel.dates.placeholder" var="datesPlaceholder"/>
+                <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
+                <input
+                        type="text"
+                        id="detail_daterange"
+                        class="form-control"
+                        placeholder="<c:out value='${datesPlaceholder}'/>"
+                        readonly
+                        aria-label="<c:out value='${datesAriaLabel}'/>">
+                <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
+                <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
+            </div>
 
-    <div class="alert alert-danger mb-3" id="detail_date_alert" role="alert" hidden>
-        <spring:message code="detailReservationPanel.dateAlert"/>
-    </div>
+            <div class="alert alert-danger mb-3" id="detail_date_alert" role="alert" hidden>
+                <spring:message code="detailReservationPanel.dateAlert"/>
+            </div>
 
-    <div class="alert alert-danger mb-3" id="detail_max_billable_alert" role="alert" hidden>
-        <c:out value="${maxBillableExceededMsg}"/>
-    </div>
+            <div class="alert alert-danger mb-3" id="detail_max_billable_alert" role="alert" hidden>
+                <c:out value="${maxBillableExceededMsg}"/>
+            </div>
 
-    <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">
-        <spring:message code="detailReservationPanel.startReservation"/>
-    </button>
+            <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">
+                <spring:message code="detailReservationPanel.startReservation"/>
+            </button>
+
+            <p class="text-center text-secondary small mb-0 text-uppercase detail-reservation-disclaimer">
+                <spring:message code="detailReservationPanel.disclaimer"/>
+            </p>
+        </c:if>
     </form>
-
-    <p class="text-center text-secondary small mb-0 text-uppercase detail-reservation-disclaimer">
-        <spring:message code="detailReservationPanel.disclaimer"/>
-    </p>
 </div>
