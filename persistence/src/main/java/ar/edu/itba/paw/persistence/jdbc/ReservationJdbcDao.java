@@ -349,12 +349,36 @@ public class ReservationJdbcDao implements ReservationDao {
                 sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
             }
         }
+        final List<String> ratingBands = criteria.getRatingBands();
+        if (!ratingBands.isEmpty()) {
+            final List<String> conditions = new ArrayList<>();
+            if (ratingBands.contains("UNDER_2")) {
+                conditions.add("l.rating_avg < 2");
+            }
+            if (ratingBands.contains("2_TO_3")) {
+                conditions.add("(l.rating_avg >= 2 AND l.rating_avg < 3)");
+            }
+            if (ratingBands.contains("3_TO_4")) {
+                conditions.add("(l.rating_avg >= 3 AND l.rating_avg < 4)");
+            }
+            if (ratingBands.contains("OVER_4")) {
+                conditions.add("l.rating_avg >= 4");
+            }
+            if (!conditions.isEmpty()) {
+                sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
+            }
+        }
     }
 
     private static String buildReservationOrderBy(final String sortBy, final String sortDirection) {
-        final String col = "price".equals(sortBy) ? "l.day_price" : "r.created_at";
         final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
-        return col + " " + dir;
+        if ("price".equals(sortBy)) {
+            return "l.day_price " + dir;
+        } else if ("rating".equals(sortBy)) {
+            return "l.rating_avg " + dir + " NULLS LAST, r.created_at DESC";
+        } else {
+            return "r.created_at " + dir;
+        }
     }
 
     @Override

@@ -26,7 +26,8 @@ import java.util.stream.Collectors;
 public final class SearchController {
 
     private static final String DEFAULT_SORT = "date,desc";
-    private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
+    private static final Set<String> VALID_SORTS = Set.of(
+            "date,desc", "date,asc", "price,asc", "price,desc", "rating,asc", "rating,desc");
 
     private final ListingService listingService;
     private final LocationService locationService;
@@ -43,6 +44,7 @@ public final class SearchController {
             @RequestParam(required = false) final List<String> transmission,
             @RequestParam(required = false) final List<String> powertrain,
             @RequestParam(required = false) final List<String> price,
+            @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String from,
             @RequestParam(required = false) final String until,
             @RequestParam(defaultValue = "0") int page,
@@ -58,7 +60,7 @@ public final class SearchController {
 
         final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
         final var criteria = listingService.buildSearchCriteria(
-                query, category, transmission, powertrain, price, from, until, page, sort, viewer, neighborhoodIds);
+                query, category, transmission, powertrain, price, rating, from, until, page, sort, viewer, neighborhoodIds);
         final Page<ListingCard> resultPage = listingService.searchListingCards(criteria);
 
         final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
@@ -99,7 +101,8 @@ public final class SearchController {
         return hasAnyValues(request.getParameterValues("category"))
                 || hasAnyValues(request.getParameterValues("transmission"))
                 || hasAnyValues(request.getParameterValues("powertrain"))
-                || hasAnyValues(request.getParameterValues("price"));
+                || hasAnyValues(request.getParameterValues("price"))
+                || hasAnyValues(request.getParameterValues("rating"));
     }
 
     private static boolean nonBlank(final String s) {

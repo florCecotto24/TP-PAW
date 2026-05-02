@@ -49,8 +49,9 @@ public class ListingJdbcDao implements ListingDao {
     private static final String HOME_SECTION_RECENT = "R";
 
     private static final Map<String, String> SORT_COLUMNS = Map.of(
-            "price", "l.day_price",
-            "date",  "l.created_at"
+            "price",  "l.day_price",
+            "date",   "l.created_at",
+            "rating", "l.rating_avg"
     );
     private static final String DEFAULT_ORDER_BY = "l.created_at DESC";
 
@@ -568,6 +569,7 @@ public class ListingJdbcDao implements ListingDao {
                 sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
             }
         }
+        appendRatingBandFilter(sql, criteria.getRatingBands());
     }
 
     @Override
@@ -713,6 +715,9 @@ public class ListingJdbcDao implements ListingDao {
     private static String buildOrderBy(final String sortBy, final String sortDirection) {
         final String col = SORT_COLUMNS.getOrDefault(sortBy, "l.created_at");
         final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
+        if ("rating".equals(sortBy)) {
+            return col + " " + dir + " NULLS LAST, l.created_at DESC";
+        }
         return col + " " + dir;
     }
 
@@ -767,6 +772,8 @@ public class ListingJdbcDao implements ListingDao {
                 sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
             }
         }
+
+        appendRatingBandFilter(sql, criteria.getRatingBands());
 
         if (criteria.hasAvailabilityRange()) {
             final Instant fromInstant = criteria.getAvailabilityRangeStart();
@@ -867,5 +874,27 @@ public class ListingJdbcDao implements ListingDao {
 
     private static String escapeLike(final String raw) {
         return raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    private static void appendRatingBandFilter(final StringBuilder sql, final List<String> ratingBands) {
+        if (ratingBands.isEmpty()) {
+            return;
+        }
+        final List<String> conditions = new ArrayList<>();
+        if (ratingBands.contains("UNDER_2")) {
+            conditions.add("l.rating_avg < 2");
+        }
+        if (ratingBands.contains("2_TO_3")) {
+            conditions.add("(l.rating_avg >= 2 AND l.rating_avg < 3)");
+        }
+        if (ratingBands.contains("3_TO_4")) {
+            conditions.add("(l.rating_avg >= 3 AND l.rating_avg < 4)");
+        }
+        if (ratingBands.contains("OVER_4")) {
+            conditions.add("l.rating_avg >= 4");
+        }
+        if (!conditions.isEmpty()) {
+            sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
+        }
     }
 }

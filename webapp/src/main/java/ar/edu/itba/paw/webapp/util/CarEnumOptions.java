@@ -19,6 +19,10 @@ public final class CarEnumOptions {
             "UNDER_5000", "5000_TO_15000", "15000_TO_30000", "OVER_30000"
     };
 
+    private static final String[] SEARCH_RATING_BAND_KEYS = {
+            "UNDER_2", "2_TO_3", "3_TO_4", "OVER_4"
+    };
+
     private final MessageSource messageSource;
 
     public CarEnumOptions(@Qualifier("messageSource") final MessageSource messageSource) {
@@ -83,6 +87,14 @@ public final class CarEnumOptions {
         final Map<String, String> m = new LinkedHashMap<>();
         for (final String k : SEARCH_PRICE_BAND_KEYS) {
             m.put(k, label("enum.search.price." + k, k));
+        }
+        return m;
+    }
+
+    public Map<String, String> searchRatingBandOptions() {
+        final Map<String, String> m = new LinkedHashMap<>();
+        for (final String k : SEARCH_RATING_BAND_KEYS) {
+            m.put(k, label("enum.search.rating." + k, k));
         }
         return m;
     }

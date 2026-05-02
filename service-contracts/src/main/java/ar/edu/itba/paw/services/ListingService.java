@@ -173,6 +173,7 @@ public interface ListingService {
             List<String> powertrain,
             List<String> price,
             List<String> listingStatus,
+            List<String> rating,
             String textQuery,
             int page,
             String sort);
@@ -191,6 +192,7 @@ public interface ListingService {
             List<String> transmission,
             List<String> powertrain,
             List<String> price,
+            List<String> rating,
             String from,
             String until,
             int page,

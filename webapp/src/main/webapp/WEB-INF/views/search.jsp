@@ -53,6 +53,9 @@
                     <c:forEach var="pr" items="${paramValues.price}">
                         <c:param name="price"><c:out value="${pr}"/></c:param>
                     </c:forEach>
+                    <c:forEach var="rt" items="${paramValues.rating}">
+                        <c:param name="rating"><c:out value="${rt}"/></c:param>
+                    </c:forEach>
                 </c:url>
 
                 <div class="mb-3 pt-5 d-flex flex-wrap align-items-center justify-content-between gap-2">

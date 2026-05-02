@@ -15,6 +15,7 @@ public final class ReservationSearchCriteria {
     private final List<String> transmissions;
     private final List<String> powertrains;
     private final List<String> priceBands;
+    private final List<String> ratingBands;
     private final String sortBy;
     private final String sortDirection;
 
@@ -28,6 +29,7 @@ public final class ReservationSearchCriteria {
             final List<String> transmissions,
             final List<String> powertrains,
             final List<String> priceBands,
+            final List<String> ratingBands,
             final String sortBy,
             final String sortDirection) {
         this.ownerId = ownerId;
@@ -39,6 +41,7 @@ public final class ReservationSearchCriteria {
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
         this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);
         this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
+        this.ratingBands = ratingBands == null ? List.of() : List.copyOf(ratingBands);
         this.sortBy = sortBy != null ? sortBy : "date";
         this.sortDirection = "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
     }
@@ -77,6 +80,10 @@ public final class ReservationSearchCriteria {
 
     public List<String> getPriceBands() {
         return priceBands;
+    }
+
+    public List<String> getRatingBands() {
+        return ratingBands;
     }
 
     public String getSortBy() {

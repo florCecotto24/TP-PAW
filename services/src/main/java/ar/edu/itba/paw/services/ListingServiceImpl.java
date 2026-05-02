@@ -668,6 +668,7 @@ public final class ListingServiceImpl implements ListingService {
             final List<String> powertrain,
             final List<String> price,
             final List<String> listingStatus,
+            final List<String> rating,
             final String textQuery,
             final int page,
             final String sort) {
@@ -699,12 +700,13 @@ public final class ListingServiceImpl implements ListingService {
                 }
             }
         }
+        final List<String> ratingBands = collectRatingBandParams(rating);
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new OwnerListingSearchCriteria(
                 ownerId, page, paginationPolicy.getDefaultPageSize(), statuses, textQuery,
-                carTypes, transmissions, powertrains, bands, sortBy, sortDir);
+                carTypes, transmissions, powertrains, bands, ratingBands, sortBy, sortDir);
     }
 
     @Override
@@ -760,6 +762,7 @@ public final class ListingServiceImpl implements ListingService {
             final List<String> transmission,
             final List<String> powertrain,
             final List<String> price,
+            final List<String> rating,
             final String from,
             final String until,
             final int page,
@@ -782,6 +785,7 @@ public final class ListingServiceImpl implements ListingService {
                 }
             }
         }
+        final List<String> ratingBands = collectRatingBandParams(rating);
         Instant rangeStart = WallDateTimeParsing.parseSearchFilterRangeStartInstant(from);
         Instant rangeEndExclusive = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(until);
         if (rangeStart != null && rangeEndExclusive != null && !rangeEndExclusive.isAfter(rangeStart)) {
@@ -805,6 +809,7 @@ public final class ListingServiceImpl implements ListingService {
                 .powertrains(powertrains)
                 .carTypes(mergedCarTypes)
                 .priceBands(bands)
+                .ratingBands(ratingBands)
                 .availabilityRange(rangeStart, rangeEndExclusive)
                 .page(page)
                 .uiPageSize(paginationPolicy.getUiPageSize())
@@ -964,6 +969,25 @@ public final class ListingServiceImpl implements ListingService {
                 out.add(u);
             } catch (final IllegalArgumentException ignored) {
                 // ignore
+            }
+        }
+        return out;
+    }
+
+    private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
+
+    private static List<String> collectRatingBandParams(final List<String> raw) {
+        final List<String> out = new ArrayList<>();
+        if (raw == null) {
+            return out;
+        }
+        for (final String s : raw) {
+            if (s == null || s.isBlank()) {
+                continue;
+            }
+            final String u = s.trim().toUpperCase();
+            if (RATING_BANDS.contains(u)) {
+                out.add(u);
             }
         }
         return out;

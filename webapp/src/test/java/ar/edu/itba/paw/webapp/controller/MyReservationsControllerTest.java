@@ -84,9 +84,10 @@ public class MyReservationsControllerTest {
                 null,
                 null,
                 null,
+                null,
                 "date",
                 "desc");
-        when(listingService.buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, 0, null))
+        when(listingService.buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, null, 0, null))
                 .thenReturn(ownerCriteria);
         when(listingService.getOwnerListingCards(ownerCriteria))
                 .thenReturn(new Page<>(List.of(
@@ -105,7 +106,7 @@ public class MyReservationsControllerTest {
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertEquals(1, cards.size());
         assertEquals(301L, cards.get(0).getListingId());
-        verify(listingService).buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, 0, null);
+        verify(listingService).buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, null, 0, null);
     }
 
     @Test
@@ -151,7 +152,7 @@ public class MyReservationsControllerTest {
         @SuppressWarnings("unchecked")
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertTrue(cards.isEmpty());
-        verify(listingService, never()).buildOwnerListingSearchCriteria(1000L, null, null, null, null, List.of("active"), null, 0, null);
+        verify(listingService, never()).buildOwnerListingSearchCriteria(1000L, null, null, null, null, List.of("active"), null, null, 0, null);
     }
 
     private static User user(final long id, final String forename, final String surname) {

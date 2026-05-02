@@ -11,11 +11,13 @@
 <c:set var="resolvedSortParam" value="${empty sortParamName ? 'sort' : sortParamName}"/>
 <c:set var="resolvedPageParam" value="${empty pageParamName ? 'page' : pageParamName}"/>
 
-<spring:message code="search.sort.label"    var="sortLabel"/>
-<spring:message code="search.sort.dateDesc" var="lblDateDesc"/>
-<spring:message code="search.sort.dateAsc"  var="lblDateAsc"/>
-<spring:message code="search.sort.priceAsc" var="lblPriceAsc"/>
-<spring:message code="search.sort.priceDesc" var="lblPriceDesc"/>
+<spring:message code="search.sort.label"      var="sortLabel"/>
+<spring:message code="search.sort.dateDesc"   var="lblDateDesc"/>
+<spring:message code="search.sort.dateAsc"    var="lblDateAsc"/>
+<spring:message code="search.sort.priceAsc"   var="lblPriceAsc"/>
+<spring:message code="search.sort.priceDesc"  var="lblPriceDesc"/>
+<spring:message code="search.sort.ratingDesc" var="lblRatingDesc"/>
+<spring:message code="search.sort.ratingAsc"  var="lblRatingAsc"/>
 
 <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
     <label for="sortSelect_<c:out value='${resolvedSortParam}'/>" class="text-secondary small fw-medium mb-0"><c:out value="${sortLabel}"/>:</label>
@@ -29,5 +31,9 @@
                 ${currentSort == 'price,asc' ? 'selected' : ''}><c:out value="${lblPriceAsc}"/></option>
         <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=price,desc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
                 ${currentSort == 'price,desc' ? 'selected' : ''}><c:out value="${lblPriceDesc}"/></option>
+        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=rating,desc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
+                ${currentSort == 'rating,desc' ? 'selected' : ''}><c:out value="${lblRatingDesc}"/></option>
+        <option value="<c:out value='${baseUrl}' escapeXml='false'/>${sep}<c:out value='${resolvedSortParam}' escapeXml='false'/>=rating,asc&amp;<c:out value='${resolvedPageParam}' escapeXml='false'/>=0"
+                ${currentSort == 'rating,asc' ? 'selected' : ''}><c:out value="${lblRatingAsc}"/></option>
     </select>
 </div>

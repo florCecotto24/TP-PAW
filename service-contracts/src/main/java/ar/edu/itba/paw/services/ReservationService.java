@@ -39,6 +39,7 @@ public interface ReservationService {
             List<String> transmission,
             List<String> powertrain,
             List<String> price,
+            List<String> rating,
             List<String> statusFilter,
             int page,
             String sort);

@@ -20,7 +20,7 @@
     </section>
 
     <c:url var="reserveCarUrl" value="/search"/>
-    <c:set var="hasActiveRiderFilters" value="${not empty paramValues.riderStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
+    <c:set var="hasActiveRiderFilters" value="${not empty paramValues.riderStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price or not empty paramValues.rating}"/>
     <c:url var="myReservationsRiderPaginationBaseUrl" value="/my-reservations">
         <c:forEach var="rs" items="${paramValues.riderStatus}">
             <c:param name="riderStatus"><c:out value="${rs}"/></c:param>
@@ -36,6 +36,9 @@
         </c:forEach>
         <c:forEach var="pr" items="${paramValues.price}">
             <c:param name="price"><c:out value="${pr}"/></c:param>
+        </c:forEach>
+        <c:forEach var="rt" items="${paramValues.rating}">
+            <c:param name="rating"><c:out value="${rt}"/></c:param>
         </c:forEach>
     </c:url>
 
@@ -53,6 +56,8 @@
                     <ryden:exploreFilterDropdown filterLabel="${riderPowertrainLabel}" paramName="powertrain" ariaGroup="rider-powertrain" options="${powertrainFilterOptions}"/>
                     <spring:message code="search.filter.price" var="riderPriceLabel"/>
                     <ryden:exploreFilterDropdown filterLabel="${riderPriceLabel}" paramName="price" ariaGroup="rider-price" options="${priceFilterOptions}"/>
+                    <spring:message code="search.filter.rating" var="riderRatingLabel"/>
+                    <ryden:exploreFilterDropdown filterLabel="${riderRatingLabel}" paramName="rating" ariaGroup="rider-rating" options="${ratingFilterOptions}"/>
                 </div>
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">

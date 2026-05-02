@@ -248,6 +248,8 @@ public final class ReservationServiceImpl implements ReservationService {
         return reservationDao.getOwnerReservationCards(criteria);
     }
 
+    private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
+
     @Override
     public ReservationSearchCriteria buildReservationSearchCriteria(
             final Long ownerId,
@@ -256,6 +258,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final List<String> transmission,
             final List<String> powertrain,
             final List<String> price,
+            final List<String> rating,
             final List<String> statusFilter,
             final int page,
             final String sort) {
@@ -287,12 +290,24 @@ public final class ReservationServiceImpl implements ReservationService {
                 }
             }
         }
+        final ArrayList<String> ratingBands = new ArrayList<>();
+        if (rating != null) {
+            for (final String r : rating) {
+                if (r == null || r.isBlank()) {
+                    continue;
+                }
+                final String u = r.trim().toUpperCase();
+                if (RATING_BANDS.contains(u)) {
+                    ratingBands.add(u);
+                }
+            }
+        }
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new ReservationSearchCriteria(
                 ownerId, riderId, page, 8, statuses,
-                carTypes, transmissions, powertrains, bands, sortBy, sortDir);
+                carTypes, transmissions, powertrains, bands, ratingBands, sortBy, sortDir);
     }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {

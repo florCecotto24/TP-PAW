@@ -87,7 +87,8 @@ public final class MyReservationsController {
     }
 
     private static final String DEFAULT_SORT = "date,desc";
-    private static final Set<String> VALID_SORTS = Set.of("date,desc", "date,asc", "price,asc", "price,desc");
+    private static final Set<String> VALID_SORTS = Set.of(
+            "date,desc", "date,asc", "price,asc", "price,desc", "rating,asc", "rating,desc");
 
 
     @GetMapping("/my-reservations")
@@ -99,6 +100,7 @@ public final class MyReservationsController {
             @RequestParam(required = false) final List<String> transmission,
             @RequestParam(required = false) final List<String> powertrain,
             @RequestParam(required = false) final List<String> price,
+            @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String sort,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -106,7 +108,7 @@ public final class MyReservationsController {
 
         final var criteria = reservationService.buildReservationSearchCriteria(
                 null, me.getId(), category, transmission, powertrain, price,
-                riderStatus, riderPage, sort);
+                rating, riderStatus, riderPage, sort);
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
         final Locale locale = LocaleContextHolder.getLocale();
         final List<ReservationCardView> riderReservations = riderResultPage.getContent().stream()
@@ -267,7 +269,7 @@ public final class MyReservationsController {
                 ? listingService.getOwnerListingCards(
                                 listingService.buildOwnerListingSearchCriteria(
                                         counterparty.getId(), null, null, null, null,
-                                        List.of("active"), null, 0, null))
+                                        List.of("active"), null, null, 0, null))
                         .getContent()
                         .stream()
                         .filter(card -> card.getListingId() != reservation.getListingId())

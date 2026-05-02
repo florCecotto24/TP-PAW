@@ -19,6 +19,7 @@ public final class ListingSearchCriteria {
     private final List<String> powertrains;
     private final List<String> carTypes;
     private final List<String> priceBands;
+    private final List<String> ratingBands;
     private final Instant availabilityRangeStart;
     private final Instant availabilityRangeEndExclusive;
     private final int page;
@@ -38,6 +39,7 @@ public final class ListingSearchCriteria {
         this.powertrains = b.powertrains;
         this.carTypes = b.carTypes;
         this.priceBands = b.priceBands;
+        this.ratingBands = b.ratingBands;
         this.availabilityRangeStart = b.availabilityRangeStart;
         this.availabilityRangeEndExclusive = b.availabilityRangeEndExclusive;
         this.page = normalizedPage(b.page);
@@ -65,6 +67,7 @@ public final class ListingSearchCriteria {
         private List<String> powertrains = List.of();
         private List<String> carTypes = List.of();
         private List<String> priceBands = List.of();
+        private List<String> ratingBands = List.of();
         private Instant availabilityRangeStart;
         private Instant availabilityRangeEndExclusive;
         private int page;
@@ -100,6 +103,11 @@ public final class ListingSearchCriteria {
 
         public Builder priceBands(final List<String> priceBands) {
             this.priceBands = priceBands == null ? List.of() : List.copyOf(priceBands);
+            return this;
+        }
+
+        public Builder ratingBands(final List<String> ratingBands) {
+            this.ratingBands = ratingBands == null ? List.of() : List.copyOf(ratingBands);
             return this;
         }
 
@@ -201,6 +209,10 @@ public final class ListingSearchCriteria {
 
     public List<String> getPriceBands() {
         return priceBands;
+    }
+
+    public List<String> getRatingBands() {
+        return ratingBands;
     }
 
     public Instant getAvailabilityRangeStart() {

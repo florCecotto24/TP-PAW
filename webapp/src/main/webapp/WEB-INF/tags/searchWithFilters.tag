@@ -145,6 +145,12 @@
                             paramName="price"
                             ariaGroup="price"
                             options="${priceFilterOptions}"/>
+                    <spring:message code="search.filter.rating" var="ratingLabel"/>
+                    <ryden:exploreFilterDropdown
+                            filterLabel="${ratingLabel}"
+                            paramName="rating"
+                            ariaGroup="rating"
+                            options="${ratingFilterOptions}"/>
                 </div>
             </c:if>
         </div>

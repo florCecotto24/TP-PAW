@@ -36,7 +36,7 @@
 
                 <%-- Tab 1: Mis publicaciones --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'listings' ? 'show active' : ''}" id="listings-pane" role="tabpanel" aria-labelledby="listings-tab">
-                    <c:set var="hasActiveFilters" value="${not empty param.q or not empty paramValues.listingStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
+                    <c:set var="hasActiveFilters" value="${not empty param.q or not empty paramValues.listingStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price or not empty paramValues.rating}"/>
 
                     <c:url var="myListingsBaseUrl" value="/my-listings">
                         <c:param name="tab" value="listings"/>
@@ -57,6 +57,9 @@
                         </c:forEach>
                         <c:forEach var="pr" items="${paramValues.price}">
                             <c:param name="price"><c:out value="${pr}"/></c:param>
+                        </c:forEach>
+                        <c:forEach var="rt" items="${paramValues.rating}">
+                            <c:param name="rating"><c:out value="${rt}"/></c:param>
                         </c:forEach>
                     </c:url>
 
@@ -80,6 +83,8 @@
                                     <ryden:exploreFilterDropdown filterLabel="${lstPowertrainLabel}" paramName="powertrain" ariaGroup="lst-powertrain" options="${powertrainFilterOptions}"/>
                                     <spring:message code="search.filter.price" var="lstPriceLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstPriceLabel}" paramName="price" ariaGroup="lst-price" options="${priceFilterOptions}"/>
+                                    <spring:message code="search.filter.rating" var="lstRatingLabel"/>
+                                    <ryden:exploreFilterDropdown filterLabel="${lstRatingLabel}" paramName="rating" ariaGroup="lst-rating" options="${ratingFilterOptions}"/>
                                 </div>
                             </div>
                             <div class="col-auto d-flex flex-wrap gap-2">
@@ -206,7 +211,7 @@
 
                 <%-- Tab 2: Reservas de mis autos --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'reservations' ? 'show active' : ''}" id="reservations-pane" role="tabpanel" aria-labelledby="reservations-tab">
-                    <c:set var="hasActiveOwnerFilters" value="${not empty paramValues.ownerStatus or not empty paramValues.ownerCategory or not empty paramValues.ownerTransmission or not empty paramValues.ownerPowertrain or not empty paramValues.ownerPrice}"/>
+                    <c:set var="hasActiveOwnerFilters" value="${not empty paramValues.ownerStatus or not empty paramValues.ownerCategory or not empty paramValues.ownerTransmission or not empty paramValues.ownerPowertrain or not empty paramValues.ownerPrice or not empty paramValues.ownerRating}"/>
                     <c:url var="myListingsOwnerResPaginationBaseUrl" value="/my-listings">
                         <c:param name="tab" value="reservations"/>
                         <c:forEach var="rs" items="${paramValues.ownerStatus}">
@@ -223,6 +228,9 @@
                         </c:forEach>
                         <c:forEach var="pr" items="${paramValues.ownerPrice}">
                             <c:param name="ownerPrice"><c:out value="${pr}"/></c:param>
+                        </c:forEach>
+                        <c:forEach var="rt" items="${paramValues.ownerRating}">
+                            <c:param name="ownerRating"><c:out value="${rt}"/></c:param>
                         </c:forEach>
                     </c:url>
 
@@ -241,6 +249,8 @@
                                     <ryden:exploreFilterDropdown filterLabel="${ownPowertrainLabel}" paramName="ownerPowertrain" ariaGroup="own-powertrain" options="${powertrainFilterOptions}"/>
                                     <spring:message code="search.filter.price" var="ownPriceLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${ownPriceLabel}" paramName="ownerPrice" ariaGroup="own-price" options="${priceFilterOptions}"/>
+                                    <spring:message code="search.filter.rating" var="ownRatingLabel"/>
+                                    <ryden:exploreFilterDropdown filterLabel="${ownRatingLabel}" paramName="ownerRating" ariaGroup="own-rating" options="${ratingFilterOptions}"/>
                                 </div>
                             </div>
                             <div class="col-auto d-flex flex-wrap gap-2">
