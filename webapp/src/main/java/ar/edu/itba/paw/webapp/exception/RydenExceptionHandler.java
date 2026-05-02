@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.webapp.advice;
+package ar.edu.itba.paw.webapp.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

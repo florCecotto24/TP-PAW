@@ -52,7 +52,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 
 /**
  * Central Spring MVC setup: view resolver, i18n, multipart, async mail executor, Flyway-ready property sources,
- * and component scan for controllers, advice, util, security, validation, interceptor, services, and persistence.
+ * and component scan for controllers, advice, exception handlers, util, security, validation, interceptor, services, and persistence.
  */
 @EnableWebMvc
 @EnableAsync
@@ -70,6 +70,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 @ComponentScan({
         "ar.edu.itba.paw.webapp.controller",
         "ar.edu.itba.paw.webapp.advice",
+        "ar.edu.itba.paw.webapp.exception",
         "ar.edu.itba.paw.webapp.util",
         "ar.edu.itba.paw.webapp.security",
         "ar.edu.itba.paw.webapp.validation",
