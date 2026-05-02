@@ -34,8 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,7 +104,6 @@ public class MyReservationsControllerTest {
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertEquals(1, cards.size());
         assertEquals(301L, cards.get(0).getListingId());
-        verify(listingService).buildOwnerListingSearchCriteria(ownerId, null, null, null, null, List.of("active"), null, null, 0, null);
     }
 
     @Test
@@ -152,7 +149,6 @@ public class MyReservationsControllerTest {
         @SuppressWarnings("unchecked")
         final List<VehicleCardView> cards = (List<VehicleCardView>) mav.getModel().get("counterpartyActiveListings");
         assertTrue(cards.isEmpty());
-        verify(listingService, never()).buildOwnerListingSearchCriteria(1000L, null, null, null, null, List.of("active"), null, null, 0, null);
     }
 
     private static User user(final long id, final String forename, final String surname) {

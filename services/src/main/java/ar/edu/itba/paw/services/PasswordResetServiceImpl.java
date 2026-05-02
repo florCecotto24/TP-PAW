@@ -17,6 +17,7 @@ import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
@@ -69,7 +70,11 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
         passwordResetCodeDao.insert(user.getId(), code, now.plus(CODE_TTL), now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
         final Locale mailLocale = userService.resolveMailLocaleOrElse(user.getId(), fallback);
-        emailService.sendPasswordResetCode(user.getEmail(), code, mailLocale);
+        emailService.sendPasswordResetCode(PasswordResetCodeEmailPayload.builder()
+                .messageLocale(mailLocale)
+                .recipientEmail(user.getEmail())
+                .code(code)
+                .build());
         return true;
     }
 

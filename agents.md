@@ -92,7 +92,8 @@ mvn test
 
 - **Unit tests**: JUnit 5 and Mockito (`services`, `models`).
 - **Persistence tests**: HSQLDB (`TestPersistenceConfig`, DAO integration-style tests under `persistence/src/test`).
-- **Service tests**: Mock DAOs and collaborators; avoid `Mockito.anyLong()` (and similar) as **assigned values** — use fixed literals inside `when(...)` / `verify(...)`.
+- **Contract over implementation**: Tests assert **observable outcomes** (return values, `ModelAndView` / HTTP, domain state via test doubles or integration tests). **Do not** use `Mockito.verify`, `never()`, `times()`, `InOrder`, or argument captors to assert that collaborators were called — that couples tests to internal wiring.
+- **Service tests**: Mock DAOs and collaborators only to supply behavior; avoid `Mockito.anyLong()` (and similar) as **assigned values** — use fixed literals inside `when(...)`.
 - **Strict Mockito**: Remove unused stubbings or they fail with `UnnecessaryStubbingException`.
 
 ### Message keys

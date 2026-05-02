@@ -64,6 +64,8 @@ public final class MessageKeys {
     public static final String USER_PROFILE_ABOUT_TOO_LONG = "user.profile.aboutTooLong";
     public static final String USER_PROFILE_DOCUMENT_INVALID = "user.profile.document.invalid";
     public static final String USER_PROFILE_DOCUMENT_TOO_LARGE = "user.profile.document.tooLarge";
+    public static final String USER_PROFILE_DOCUMENT_ALREADY_UPLOADED = "user.profile.document.alreadyUploaded";
+    public static final String USER_PROFILE_CBU_INVALID = "user.profile.cbuInvalid";
 
     // listing
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
@@ -77,6 +79,8 @@ public final class MessageKeys {
     public static final String LISTING_PICKUP_LOCATION_REQUIRED = "listing.pickupLocation.required";
     public static final String LISTING_PICKUP_STREET_NUMBER_DIGITS_ONLY = "listing.pickupStreetNumber.digitsOnly";
     public static final String LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS = "listing.pickupStreetNumber.maxDigits";
+    public static final String LISTING_PUBLISH_CBU_REQUIRED = "listing.publish.cbuRequired";
+    public static final String LISTING_ACTIVATE_CBU_REQUIRED = "listing.activate.cbuRequired";
     // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";

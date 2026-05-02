@@ -1,32 +1,34 @@
 package ar.edu.itba.paw.services;
 
 import java.util.List;
-import java.util.Locale;
-
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
+import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
+import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 
 public interface EmailService {
 
-    void sendReservationConfirmationEmail(ReservationConfirmationEmailPayload payload);
+    void sendReservationConfirmationEmail(ReservationMailPayload payload);
 
     /** Rider only: after payment proof upload; includes full pickup address (street number). */
-    void sendRiderReservationConfirmedAfterPaymentProof(ReservationConfirmationEmailPayload payload);
+    void sendRiderReservationConfirmedAfterPaymentProof(ReservationMailPayload payload);
 
-    void sendReservationCancellationEmail(ReservationConfirmationEmailPayload payload, Reservation.Status cancellationStatus);
+    void sendReservationCancellationEmail(ReservationCancellationEmailPayload payload);
 
-    void sendEmailVerificationCode(String to, String code, Locale locale);
+    void sendEmailVerificationCode(EmailVerificationCodeEmailPayload payload);
 
-    void sendMigratedUserPassword(String to, String plainPassword, Locale locale);
+    void sendMigratedUserPassword(MigratedUserPasswordEmailPayload payload);
 
-    void sendPasswordResetCode(String to, String code, Locale locale);
+    void sendPasswordResetCode(PasswordResetCodeEmailPayload payload);
 
-    void sendReservationReminderEmail(final ReservationConfirmationEmailPayload payload);
+    void sendReservationReminderEmail(ReservationMailPayload payload);
 
-    void sendListingDeletionEmail(List<ReservationConfirmationEmailPayload> reservationsToCancel);
+    void sendListingDeletionEmail(List<ReservationMailPayload> reservationsToCancel);
 
     void sendRiderReturnReminderEmail(RiderCarReturnEmailPayload payload);
 
@@ -36,5 +38,8 @@ public interface EmailService {
 
     void sendOwnerPaymentProofReceivedEmail(OwnerPaymentProofReceivedEmailPayload payload);
 
-    void sendRiderDuePaymentProofEmail(ReservationConfirmationEmailPayload payload);
+    void sendRiderDuePaymentProofEmail(ReservationMailPayload payload);
+
+    /** Owner notified when an active listing was paused because CBU was removed or invalid. */
+    void sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload payload);
 }

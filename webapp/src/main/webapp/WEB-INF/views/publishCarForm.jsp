@@ -1,8 +1,8 @@
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -29,6 +29,11 @@
                                modelAttribute="publishCarForm"
                                enctype="multipart/form-data"
                                htmlEscape="true"
+                               data-ryden-user-has-cbu="${userHasCbu ? 'true' : 'false'}"
+                               data-ryden-context-path="${pageContext.request.contextPath}"
+                               data-ryden-quick-cbu-url="${pageContext.request.contextPath}/publish-car/quick-cbu"
+                               data-ryden-cbu-invalid="<spring:message code='publishCar.missingCbu.invalid' arguments='${cbuRequiredDigits}' htmlEscape='true'/>"
+                               data-ryden-cbu-save-failed="<spring:message code='publishCar.missingCbu.saveFailed' htmlEscape='true'/>"
                                data-publish-retained-count="<c:out value='${retainedPicturesCount}'/>"
                                data-ryden-nb-invalid="<c:out value='${publishNbInvalidMsg}'/>"
                                data-ryden-nb-required="<c:out value='${publishNbRequiredMsg}'/>">
@@ -244,6 +249,31 @@
                         </button>
 
                     </form:form>
+
+                    <c:if test="${not userHasCbu}">
+                        <spring:message code="publishCar.missingCbu.modalTitle" var="pubMissingCbuTitle"/>
+                        <spring:message code="publishCar.missingCbu.fieldLabel" var="pubMissingCbuFieldLabel" arguments="${cbuRequiredDigits}"/>
+                        <spring:message code="publishCar.missingCbu.save" var="pubMissingCbuSave"/>
+                        <spring:message code="publishCar.missingCbu.cancel" var="pubMissingCbuCancel"/>
+                        <ryden:dataPromptModal
+                                id="publishMissingCbuModal"
+                                title="${pubMissingCbuTitle}"
+                                fieldId="publishMissingCbuInput"
+                                fieldLabel="${pubMissingCbuFieldLabel}"
+                                errorId="publishMissingCbuError"
+                                confirmId="publishMissingCbuSaveBtn"
+                                openButtonId="rydenPublishMissingCbuModalOpen"
+                                includeOpenTrigger="true"
+                                inputType="text"
+                                maxlength="${cbuRequiredDigits}"
+                                inputmode="numeric"
+                                inputPattern="[0-9]*"
+                                digitsOnly="true"
+                                cancelLabel="${pubMissingCbuCancel}"
+                                confirmLabel="${pubMissingCbuSave}">
+                            <p class="mb-3 text-secondary"><spring:message code="publishCar.missingCbu.modalBody" arguments="${cbuRequiredDigits}"/></p>
+                        </ryden:dataPromptModal>
+                    </c:if>
                 </div>
             </div>
         </div>

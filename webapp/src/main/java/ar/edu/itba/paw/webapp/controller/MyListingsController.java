@@ -15,7 +15,9 @@ import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.dto.ReservationCardView;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
@@ -61,18 +64,21 @@ public final class MyListingsController {
     private final ReservationService reservationService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
     private final PaginationPolicy paginationPolicy;
+    private final LocaleMessages localeMessages;
 
     public MyListingsController(
             final ListingService listingService,
             final LocationService locationService,
             final ReservationService reservationService,
             final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
-            final PaginationPolicy paginationPolicy) {
+            final PaginationPolicy paginationPolicy,
+            final LocaleMessages localeMessages) {
         this.listingService = listingService;
         this.locationService = locationService;
         this.reservationService = reservationService;
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
         this.paginationPolicy = paginationPolicy;
+        this.localeMessages = localeMessages;
     }
 
     @InitBinder("editForm")
@@ -245,9 +251,14 @@ public final class MyListingsController {
     @PostMapping("/{listingId}/toggle")
     public ModelAndView toggleListing(
             @CurrentUser final User currentUser,
-            @PathVariable("listingId") final long listingId) {
+            @PathVariable("listingId") final long listingId,
+            final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        listingService.toggleListingStatus(me.getId(), listingId);
+        try {
+            listingService.toggleListingStatus(me.getId(), listingId);
+        } catch (final ListingValidationException e) {
+            redirectAttributes.addFlashAttribute("listingToggleErrorMessage", localeMessages.msg(e));
+        }
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 

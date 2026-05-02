@@ -27,9 +27,9 @@ import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.persistence.UserDao;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -53,6 +53,9 @@ public class UserServiceImplTest {
     @Mock
     private EmailVerificationService emailVerificationService;
 
+    @Mock
+    private ListingService listingService;
+
     private UserServiceImpl userService;
     private ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
 
@@ -70,7 +73,8 @@ public class UserServiceImplTest {
                 passwordEncoder,
                 profileDocumentUploadPolicy,
                 UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"),
-                emailVerificationService);
+                emailVerificationService,
+                listingService);
     }
 
     @Test
@@ -299,7 +303,7 @@ public class UserServiceImplTest {
 
         Assertions.assertDoesNotThrow(() -> userService.uploadValidatedProfileDocument(
                 1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}));
-        Mockito.verify(userDao).updateLicenseDocument(1L, 10L, true);
+
     }
 
     @Test

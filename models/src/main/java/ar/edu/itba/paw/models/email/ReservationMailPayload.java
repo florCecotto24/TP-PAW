@@ -5,12 +5,12 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Mail data for reservation-related emails (confirmation, reminder, listing deletion, cancellation, etc.).
- * Rider copy uses {@link #getMessageLocale()}; owner copy uses {@link #getOwnerMailLocale()}.
+ * Shared mail data for reservation lifecycle emails (confirmation, reminder, payment proof, listing deletion rider
+ * parts, etc.). Rider-facing locale is {@link #getMessageLocale()}; owner-facing is {@link #getOwnerMailLocale()}.
  * <p>
- * Built with {@link #builder()} to avoid long constructor parameter lists.
+ * Cancellation intro copy uses {@link ReservationCancellationEmailPayload}.
  */
-public final class ReservationConfirmationEmailPayload {
+public final class ReservationMailPayload {
 
     private final String recipientEmail;
     private final String riderFullName;
@@ -33,7 +33,7 @@ public final class ReservationConfirmationEmailPayload {
     private final Locale ownerMailLocale;
     private final String ownerCbu;
 
-    private ReservationConfirmationEmailPayload(final Builder builder) {
+    private ReservationMailPayload(final Builder builder) {
         this.recipientEmail = Objects.requireNonNull(builder.recipientEmail, "recipientEmail");
         this.riderFullName = Objects.requireNonNull(builder.riderFullName, "riderFullName");
         this.reservationId = Objects.requireNonNull(builder.reservationId, "reservationId");
@@ -218,8 +218,8 @@ public final class ReservationConfirmationEmailPayload {
             return this;
         }
 
-        public ReservationConfirmationEmailPayload build() {
-            return new ReservationConfirmationEmailPayload(this);
+        public ReservationMailPayload build() {
+            return new ReservationMailPayload(this);
         }
     }
 }

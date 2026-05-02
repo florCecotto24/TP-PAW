@@ -68,6 +68,15 @@ public class ListingJdbcDao implements ListingDao {
         return v.setScale(2, RoundingMode.HALF_UP);
     }
 
+    private static Listing.Status readNullableListingStatus(final java.sql.ResultSet rs, final String column)
+            throws java.sql.SQLException {
+        final String raw = rs.getString(column);
+        if (raw == null || rs.wasNull()) {
+            return null;
+        }
+        return Listing.Status.valueOf(raw.toUpperCase());
+    }
+
     private static final RowMapper<Listing> LISTING_ROW_MAPPER = (rs, rowNum) -> Listing.builder()
             .id(rs.getLong("id"))
             .title(rs.getString("title"))
@@ -91,7 +100,8 @@ public class ListingJdbcDao implements ListingDao {
             rs.getString("model"),
             rs.getBigDecimal("day_price"),
             rs.getLong("image_id"),
-            readNullableRatingAvg(rs, "rating_avg")
+            readNullableRatingAvg(rs, "rating_avg"),
+            readNullableListingStatus(rs, "listing_status")
     );
 
     private static final ResultSetExtractor<Optional<ListingDetail>> LISTING_DETAIL_EXTRACTOR = rs -> {
@@ -394,7 +404,7 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     private static String listingCardSearchSelectClause() {
-        return "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
+        return "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, l.status AS listing_status, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id ";
     }
@@ -455,6 +465,16 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     @Override
+    public List<Listing> findListingsByOwnerIdAndStatus(final long ownerId, final Listing.Status status) {
+        return jdbcTemplate.query(
+                "SELECT l.* FROM listings l INNER JOIN cars c ON l.car_id = c.id "
+                        + "WHERE c.owner_id = ? AND LOWER(l.status) = ?",
+                LISTING_ROW_MAPPER,
+                ownerId,
+                status.name().toLowerCase());
+    }
+
+    @Override
     public List<ListingCard> getCheapestListingCardsWindow(
             final int offset,
             final int limit,
@@ -466,7 +486,7 @@ public class ListingJdbcDao implements ListingDao {
         appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
         final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.status AS listing_status "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id "
                 + "WHERE l.status = 'active' "
                 + publicBrowseAvailabilitySql(browseWallDate)
@@ -487,7 +507,7 @@ public class ListingJdbcDao implements ListingDao {
         appendPublicBrowseFilters(params, browseWallDate, excludeOwnerUserId);
         final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.status AS listing_status "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id "
                 + "WHERE l.status = 'active' "
                 + publicBrowseAvailabilitySql(browseWallDate)
@@ -512,7 +532,7 @@ public class ListingJdbcDao implements ListingDao {
         final StringBuilder listSql = new StringBuilder(
                 "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                         + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.status AS listing_status "
                         + "FROM listings l JOIN cars c ON c.id = l.car_id "
                         + "WHERE c.owner_id = :ownerId ");
         appendOwnerListingFilters(listSql, listParams, criteria);
@@ -643,7 +663,7 @@ public class ListingJdbcDao implements ListingDao {
         appendPublicBrowseFilters(homeParams, browseWallDate, excludeOwnerUserId);
         final String sql = "(SELECT :cheapestSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.status AS listing_status "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
                 + publicBrowseAvailabilitySql(browseWallDate)
                 + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
@@ -651,7 +671,7 @@ public class ListingJdbcDao implements ListingDao {
                 + "UNION ALL "
                 + "(SELECT :recentSection AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.status AS listing_status "
                 + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
                 + publicBrowseAvailabilitySql(browseWallDate)
                 + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
@@ -670,7 +690,8 @@ public class ListingJdbcDao implements ListingDao {
                                 rs.getString("model"),
                                 rs.getBigDecimal("day_price"),
                                 rs.getLong("image_id"),
-                                readNullableRatingAvg(rs, "rating_avg"));
+                                readNullableRatingAvg(rs, "rating_avg"),
+                                readNullableListingStatus(rs, "listing_status"));
                         final String section = rs.getString("home_section");
                         if (HOME_SECTION_CHEAPEST.equals(section)) {
                             cheapest.add(card);
@@ -694,7 +715,7 @@ public class ListingJdbcDao implements ListingDao {
         appendPublicBrowseFilters(similarParams, browseWallDate, excludeOwnerUserId);
         final String sql = "SELECT l.id AS listing_id, l.day_price, c.brand, c.model, l.rating_avg, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id "
+                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.status AS listing_status "
                 + "FROM listings l "
                 + "INNER JOIN cars c ON l.car_id = c.id "
                 + "INNER JOIN listings la ON la.id = :listingId "

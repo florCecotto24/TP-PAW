@@ -32,7 +32,8 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
-import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.domain.StoredFile;
@@ -192,7 +193,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     riderHandoverLocation == null || riderHandoverLocation.isBlank() ? null : riderHandoverLocation.trim();
             final String trimmedOwnerLoc =
                     ownerHandoverLocation == null || ownerHandoverLocation.isBlank() ? null : ownerHandoverLocation.trim();
-            final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
+            final ReservationMailPayload payload = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
                     .reservationId(reservation.getId())
@@ -580,7 +581,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
             final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
             final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
-            final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
+            final ReservationMailPayload mail = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
                     .reservationId(reservation.getId())
@@ -596,9 +597,13 @@ public final class ReservationServiceImpl implements ReservationService {
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
+            final ReservationCancellationEmailPayload cancelPayload = ReservationCancellationEmailPayload.builder()
+                    .mail(mail)
+                    .cancellationStatus(reservation.getStatus())
+                    .build();
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing reservation cancellation email to {} for reservation id={}");
-            emailService.sendReservationCancellationEmail(payload, reservation.getStatus());
+            emailService.sendReservationCancellationEmail(cancelPayload);
         } catch (final Exception e) {
             LOGGER.atError().setCause(e).addArgument(reservation.getId())
                     .log("Could not enqueue reservation cancellation email for reservation id={}");
@@ -672,7 +677,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final User listingOwner = listingOwnerOpt.get();
             final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
             final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
-            final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
+            final ReservationMailPayload payload = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
                     .reservationId(reservation.getId())
@@ -936,7 +941,7 @@ public final class ReservationServiceImpl implements ReservationService {
     public void dispatchDuePaymentProofReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         for (final Reservation reservation : reservationDao.findReservationsWithDuePendingPaymentProof(now)) {
-            final Optional<ReservationConfirmationEmailPayload> payload = buildDuePaymentProofReminderEmailPayload(reservation);
+            final Optional<ReservationMailPayload> payload = buildDuePaymentProofReminderEmailPayload(reservation);
             if (payload.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping due payment proof reminder: missing data (reservation id={})");
                 continue;
@@ -952,7 +957,7 @@ public final class ReservationServiceImpl implements ReservationService {
         }
     }
 
-    private Optional<ReservationConfirmationEmailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {
+    private Optional<ReservationMailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {
         final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
         final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
         final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
@@ -974,7 +979,7 @@ public final class ReservationServiceImpl implements ReservationService {
         }
         
         final Locale riderLocale = userService.resolveMailLocale(rider.getId());
-        return Optional.of(ReservationConfirmationEmailPayload.builder()
+        return Optional.of(ReservationMailPayload.builder()
                 .recipientEmail(rider.getEmail())
                 .riderFullName(rider.getForename() + " " + rider.getSurname())
                 .reservationId(reservation.getId())
@@ -987,6 +992,7 @@ public final class ReservationServiceImpl implements ReservationService {
                 .reservationTotal(reservation.getTotalPrice().toString())
                 .ownerCbu(ownerCbu)
                 .riderMailLocale(riderLocale)
+                .ownerMailLocale(userService.resolveMailLocale(owner.getId()))
                 .build());
     }
 

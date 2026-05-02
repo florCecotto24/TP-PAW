@@ -24,9 +24,11 @@ import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
@@ -49,6 +51,7 @@ public final class UserServiceImpl implements UserService {
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final UserValidationPolicy validationPolicy;
     private final EmailVerificationService emailVerificationService;
+    private final ListingService listingService;
 
     @Autowired
     public UserServiceImpl(
@@ -59,7 +62,8 @@ public final class UserServiceImpl implements UserService {
             final PasswordEncoder passwordEncoder,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final UserValidationPolicy validationPolicy,
-            @Lazy final EmailVerificationService emailVerificationService) {
+            @Lazy final EmailVerificationService emailVerificationService,
+            @Lazy final ListingService listingService) {
         this.userDao = userDao;
         this.imageService = imageService;
         this.storedFileService = storedFileService;
@@ -68,6 +72,7 @@ public final class UserServiceImpl implements UserService {
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.validationPolicy = validationPolicy;
         this.emailVerificationService = emailVerificationService;
+        this.listingService = listingService;
     }
 
     @Override
@@ -215,7 +220,7 @@ public final class UserServiceImpl implements UserService {
             final String originalFilename,
             final String contentType,
             final byte[] data) {
-        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        final User user = userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (documentType == null
                 || originalFilename == null || originalFilename.isBlank()
                 || !StoredFile.isAllowedPaymentReceiptContentType(contentType)) {
@@ -229,6 +234,9 @@ public final class UserServiceImpl implements UserService {
             throw new InvalidProfileDocumentException(
                     MessageKeys.USER_PROFILE_DOCUMENT_TOO_LARGE,
                     profileDocumentUploadPolicy.getMaxMegabytesRoundedUp());
+        }
+        if (profileDocumentSlotOccupied(user, documentType)) {
+            throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_ALREADY_UPLOADED);
         }
         final StoredFile stored = storedFileService.create(userId, originalFilename, contentType, data);
         switch (documentType) {
@@ -244,6 +252,14 @@ public final class UserServiceImpl implements UserService {
             default:
                 throw new InvalidProfileDocumentException(MessageKeys.USER_PROFILE_DOCUMENT_INVALID);
         }
+    }
+
+    private static boolean profileDocumentSlotOccupied(final User user, final UserDocumentType documentType) {
+        return switch (documentType) {
+            case LICENSE -> user.getLicenseFileId().isPresent();
+            case INSURANCE -> user.getInsuranceFileId().isPresent();
+            case IDENTITY -> user.getIdentityFileId().isPresent();
+        };
     }
 
     @Override
@@ -303,7 +319,11 @@ public final class UserServiceImpl implements UserService {
         userDao.updatePasswordHash(userId, passwordEncoder.encode(plain));
         userDao.updateEmailValidated(userId, true);
         final Locale mailLocale = resolveMailLocaleOrElse(userId, locale != null ? locale : Locale.ENGLISH);
-        emailService.sendMigratedUserPassword(withHash.getEmail(), plain, mailLocale);
+        emailService.sendMigratedUserPassword(MigratedUserPasswordEmailPayload.builder()
+                .messageLocale(mailLocale)
+                .recipientEmail(withHash.getEmail())
+                .plainPassword(plain)
+                .build());
     }
 
     private void assertRegistrationFieldLengths(final String normalizedEmail, final String forename, final String surname) {
@@ -425,13 +445,33 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean hasValidCbu(final User user) {
+        if (user == null) {
+            return false;
+        }
+        return user.getCbu().filter(CbuRules::isValidFormat).isPresent();
+    }
+
+    @Override
+    public boolean isValidCbuFormat(final String cbuRaw) {
+        return CbuRules.isValidFormat(cbuRaw);
+    }
+
+    @Override
     @Transactional
     public void updateCbu(final long userId, final String cbu) {
         userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        if (cbu == null){
-            throw new IllegalArgumentException("CBU cannot be null");
+        final String normalized = cbu == null ? "" : cbu.trim();
+        if (normalized.isEmpty()) {
+            userDao.updateCbu(userId, null);
+            listingService.pauseActiveListingsDueToMissingCbuForOwnerAndNotify(userId);
+            return;
         }
-        userDao.updateCbu(userId, cbu);
+        if (!CbuRules.isValidFormat(normalized)) {
+            throw new InvalidCbuFormatException(CbuRules.REQUIRED_DIGIT_LENGTH);
+        }
+        userDao.updateCbu(userId, normalized);
+        listingService.resumeListingsPausedDueToMissingCbuForOwner(userId);
     }
 
     @Override

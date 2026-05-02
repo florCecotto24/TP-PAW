@@ -37,6 +37,7 @@
     function bindDigitsOnly(el) {
         var cap = maxLenAttr(el);
         el.addEventListener("beforeinput", function (e) {
+            if (e.isComposing) return;
             if (e.data === null || e.data === "") {
                 return;
             }
@@ -44,7 +45,11 @@
                 e.preventDefault();
             }
         });
-        el.addEventListener("input", function () {
+        el.addEventListener("input", function (e) {
+            if (e.isComposing) return;
+            el.value = el.value.replace(/\D/g, "").slice(0, cap);
+        });
+        el.addEventListener("compositionend", function () {
             el.value = el.value.replace(/\D/g, "").slice(0, cap);
         });
         el.addEventListener("paste", function (e) {
@@ -1403,6 +1408,104 @@
     }
 
     syncAddBtn();
+})();
+
+/* Publish flow: block submit until CBU is captured via modal when profile has no CBU */
+(function () {
+    var form = document.getElementById("publishCarFormEl");
+    if (!form || form.getAttribute("data-ryden-user-has-cbu") === "true") {
+        return;
+    }
+    var invalidMsg = form.getAttribute("data-ryden-cbu-invalid") || "";
+    var saveFailedMsg = form.getAttribute("data-ryden-cbu-save-failed") || "";
+    var quickUrl = form.getAttribute("data-ryden-quick-cbu-url");
+    var modalOpenBtn = document.getElementById("rydenPublishMissingCbuModalOpen");
+    var saveBtn = document.getElementById("publishMissingCbuSaveBtn");
+    var cbuInput = document.getElementById("publishMissingCbuInput");
+    var errEl = document.getElementById("publishMissingCbuError");
+
+    function findCsrf(formEl) {
+        var inputs = formEl.querySelectorAll('input[type="hidden"]');
+        var i;
+        for (i = 0; i < inputs.length; i++) {
+            var n = inputs[i].name || "";
+            if (n.toLowerCase().indexOf("csrf") >= 0) {
+                return { name: inputs[i].name, value: inputs[i].value };
+            }
+        }
+        return null;
+    }
+
+    form.addEventListener(
+        "submit",
+        function (e) {
+            if (form.getAttribute("data-ryden-user-has-cbu") === "true") {
+                return;
+            }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (modalOpenBtn) {
+                modalOpenBtn.click();
+            }
+        },
+        true
+    );
+
+    if (!saveBtn || !quickUrl || !cbuInput) {
+        return;
+    }
+
+    saveBtn.addEventListener("click", function () {
+        if (errEl) {
+            errEl.textContent = "";
+            errEl.classList.add("d-none");
+        }
+        var v = (cbuInput.value || "").replace(/\D/g, "").slice(0, 22);
+        if (v.length !== 22) {
+            if (errEl) {
+                errEl.textContent = invalidMsg;
+                errEl.classList.remove("d-none");
+            }
+            return;
+        }
+        var csrf = findCsrf(form);
+        if (!csrf) {
+            if (errEl) {
+                errEl.textContent = saveFailedMsg;
+                errEl.classList.remove("d-none");
+            }
+            return;
+        }
+        var body = new URLSearchParams();
+        body.set("cbu", v);
+        body.set(csrf.name, csrf.value);
+        fetch(quickUrl, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Accept: "*/*",
+            },
+            body: body.toString(),
+        })
+            .then(function (res) {
+                if (!res.ok) {
+                    throw new Error("bad");
+                }
+                form.setAttribute("data-ryden-user-has-cbu", "true");
+                var closeBtn = document.querySelector('[data-modal-close="publishMissingCbuModal"]');
+                if (closeBtn) {
+                    closeBtn.click();
+                }
+                form.submit();
+            })
+            .catch(function () {
+                if (errEl) {
+                    errEl.textContent = saveFailedMsg;
+                    errEl.classList.remove("d-none");
+                }
+            });
+    });
 })();
 
 /* Show / hide password (.ryden-password-toggle button inside .input-group) */

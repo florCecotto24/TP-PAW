@@ -1,10 +1,10 @@
 package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
+import ar.edu.itba.paw.webapp.validation.constraint.OptionalCbu;
 import ar.edu.itba.paw.webapp.validation.constraint.PhoneNumber;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
@@ -37,7 +37,7 @@ public final class ProfileUpdateForm {
             groups = ValidationGroups.OnProfileUpdate.class)
     private String about = "";
 
-    @Pattern(regexp = "\\d{22}", message = "{profile.cbu.size}")
+    @OptionalCbu(groups = ValidationGroups.OnProfileUpdate.class)
     private String cbu;
 
     public String getForename() {

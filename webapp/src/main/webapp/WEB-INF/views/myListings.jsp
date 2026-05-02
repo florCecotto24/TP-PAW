@@ -159,6 +159,11 @@
                                                             <spring:message code="enum.listing.status.FINISHED"/>
                                                         </span>
                                                     </c:when>
+                                                    <c:when test="${car.statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
+                                                        <span class="position-absolute top-0 end-0 m-3" style="background-color:#b91c1c; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                            <spring:message code="enum.listing.status.PAUSED_DUE_TO_LACK_OF_CBU"/>
+                                                        </span>
+                                                    </c:when>
                                                 </c:choose>
                                             </c:if>
                                             <div class="row g-0 align-items-stretch">

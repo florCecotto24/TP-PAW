@@ -13,6 +13,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
+import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 
@@ -71,7 +72,11 @@ public final class EmailVerificationServiceImpl implements EmailVerificationServ
         emailVerificationCodeDao.insert(userId, code, now.plus(CODE_TTL), now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
         final Locale mailLocale = userService.resolveMailLocaleOrElse(userId, fallback);
-        emailService.sendEmailVerificationCode(email, code, mailLocale);
+        emailService.sendEmailVerificationCode(EmailVerificationCodeEmailPayload.builder()
+                .messageLocale(mailLocale)
+                .recipientEmail(email)
+                .code(code)
+                .build());
     }
 
     @Override

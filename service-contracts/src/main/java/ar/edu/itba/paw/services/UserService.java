@@ -63,6 +63,10 @@ public interface UserService {
     /** Removes the profile picture and deletes the associated image row if it exists. */
     void clearProfilePicture(long userId);
 
+    /**
+     * Stores one profile document per {@link UserDocumentType}. If that slot already has a file, remove it first via
+     * {@link #clearProfileDocument(long, UserDocumentType)}.
+     */
     void uploadValidatedProfileDocument(long userId, UserDocumentType documentType, String originalFilename, String contentType, byte[] data);
     void clearProfileDocument(long userId, UserDocumentType documentType);
 
@@ -90,9 +94,19 @@ public interface UserService {
      */
     Locale resolveMailLocaleOrElse(long userId, Locale fallback);
 
+    /**
+     * Persists a valid CBU or clears it when the trimmed input is empty.
+     * @throws ar.edu.itba.paw.exception.user.InvalidCbuFormatException when input is non-blank but not a valid CBU
+     */
     void updateCbu(long userId, String cbu);
 
     String getUserCbu(long userId);
+
+    /** Whether {@code user} has a persisted CBU that satisfies {@link ar.edu.itba.paw.models.util.CbuRules}. */
+    boolean hasValidCbu(User user);
+
+    /** Whether {@code cbuRaw} is acceptable as a CBU per {@link ar.edu.itba.paw.models.util.CbuRules}. */
+    boolean isValidCbuFormat(String cbuRaw);
 
     /**
      * Registration: creates the user and runs the post-registration account-confirmation step (policy and side effects are internal to the service).

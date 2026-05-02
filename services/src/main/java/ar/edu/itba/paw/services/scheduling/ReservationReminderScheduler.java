@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.email.ReservationConfirmationEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReservationDao;
 
@@ -74,7 +74,7 @@ public final class ReservationReminderScheduler {
                 final User listingOwner = ownerOpt.get();
                 final String riderLoc = listingService.formatRiderReservationHandoverSummary(listing, reservation);
                 final String ownerLoc = listingService.formatOwnerReservationHandoverSummary(listing);
-                final ReservationConfirmationEmailPayload payload = ReservationConfirmationEmailPayload.builder()
+                final ReservationMailPayload payload = ReservationMailPayload.builder()
                         .recipientEmail(rider.getEmail())
                         .riderFullName(rider.getForename() + " " + rider.getSurname())
                         .reservationId(reservation.getId())

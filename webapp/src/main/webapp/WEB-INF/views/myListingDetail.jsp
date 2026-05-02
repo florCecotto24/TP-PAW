@@ -28,6 +28,13 @@
         <p class="text-secondary mb-0"><spring:message code="myListingDetail.subheading"/></p>
     </section>
 
+    <c:if test="${not empty listingToggleErrorMessage}">
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <c:out value="${listingToggleErrorMessage}"/>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </c:if>
+
     <div class="row g-4 align-items-start">
         <div class="col-lg-8">
             <article class="card border-0 shadow-sm rounded-4 mb-4">
@@ -335,6 +342,14 @@
                                         <spring:message code="myListingDetail.actions.activate"/>
                                     </button>
                                 </form>
+                            </c:when>
+                            <c:when test="${statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
+                                <p class="text-secondary small mb-2">
+                                    <spring:message code="myListingDetail.status.pausedMissingCbuHint" arguments="${cbuRequiredDigits}"/>
+                                </p>
+                                <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
+                                    <spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
+                                </a>
                             </c:when>
                             <c:when test="${statusKey == 'FINISHED'}">
                                 <p class="text-secondary small mb-0">

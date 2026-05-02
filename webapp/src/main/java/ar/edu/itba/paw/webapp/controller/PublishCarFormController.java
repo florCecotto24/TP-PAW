@@ -116,11 +116,6 @@ public final class PublishCarFormController {
         // Load a fresh user row so we validate against the current CBU in the database
         final User freshUser = userService.getUserById(currentUser.getId())
                 .orElse(currentUser);
-        if(freshUser.getCbu().isEmpty()){
-            ModelAndView mav = new ModelAndView("missingCbu");
-            mav.addObject("profileUrl", "/profile");
-            return mav;
-        }
         final PublishCarForm form = new PublishCarForm();
         final ModelAndView mav = publishCarFormView(freshUser, session, form);
         mav.addObject("publishCarForm", form);
@@ -300,6 +295,22 @@ public final class PublishCarFormController {
         }
     }
 
+    /**
+     * Saves CBU from the publish flow modal (same validation as profile); responds without a full page reload.
+     */
+    @PostMapping(value = "/quick-cbu", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<Void> publishQuickCbu(
+            @CurrentUser final User currentUser,
+            @RequestParam("cbu") final String cbuRaw) {
+        WebAuthUtils.requireUser(currentUser);
+        final String trimmed = cbuRaw == null ? "" : cbuRaw.trim();
+        if (!userService.isValidCbuFormat(cbuRaw)) {
+            return ResponseEntity.badRequest().build();
+        }
+        userService.updateCbu(currentUser.getId(), trimmed);
+        return ResponseEntity.noContent().build();
+    }
+
     private ModelAndView publishCarFormView(
             final User currentUser,
             final HttpSession session,
@@ -307,8 +318,11 @@ public final class PublishCarFormController {
         final ModelAndView mav = new ModelAndView("publishCarForm");
         mav.addObject("activeTab", "publish-car");
         final User me = WebAuthUtils.requireUser(currentUser);
-        mav.addObject("publisherEmail", me.getEmail());
-        mav.addObject("publisherDisplayName", me.getForename() + " " + me.getSurname());
+        final User publisherRow = userService.getUserById(me.getId()).orElse(me);
+        final boolean userHasCbu = userService.hasValidCbu(publisherRow);
+        mav.addObject("userHasCbu", userHasCbu);
+        mav.addObject("publisherEmail", publisherRow.getEmail());
+        mav.addObject("publisherDisplayName", publisherRow.getForename() + " " + publisherRow.getSurname());
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());

@@ -27,12 +27,13 @@ import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.dto.ListingCard;
-import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
@@ -111,6 +112,13 @@ public class ListingServiceImplTest {
                 listingAvailabilityPolicy,
                 paginationPolicy,
                 listingBrowsePagination);
+        Mockito.lenient().when(userService.hasValidCbu(Mockito.any(User.class))).thenAnswer(inv -> {
+            final User u = inv.getArgument(0);
+            if (u == null) {
+                return false;
+            }
+            return u.getCbu().map(CbuRules::isValidFormat).orElse(false);
+        });
     }
 
     private void stubPublishListingPolicies() {
@@ -538,7 +546,13 @@ public class ListingServiceImplTest {
                 .checkOutTime(checkOutTime)
                 .neighborhoodId(neighborhoodId)
                 .build();
-        final User user = User.identities(ownerId, "owner@test.com", "ownerName", "ownerSurname");
+        final User user = User.builder()
+                .id(ownerId)
+                .email("owner@test.com")
+                .forename("ownerName")
+                .surname("ownerSurname")
+                .cbu("1234567890123456789012")
+                .build();
         final CarPicture carPicture = new CarPicture(carPictureId, carId, imageId, 1, createdAt, updatedAt);
         final List<AvailabilityPeriod> periods = List.of(new AvailabilityPeriod(startDate, endDate));
         final List<ImageUpload> uploads = List.of(new ImageUpload(imageName, imageType, imageData));

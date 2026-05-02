@@ -237,6 +237,8 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(2, page.getContent().size());
         Assertions.assertEquals(101L, page.getContent().get(0).getListingId());
         Assertions.assertEquals(100L, page.getContent().get(1).getListingId());
+        Assertions.assertEquals(Listing.Status.PAUSED, page.getContent().get(0).getStatus().orElse(null));
+        Assertions.assertEquals(Listing.Status.ACTIVE, page.getContent().get(1).getStatus().orElse(null));
     }
 
     @Test

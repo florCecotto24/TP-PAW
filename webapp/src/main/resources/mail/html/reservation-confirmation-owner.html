@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title th:text="#{mail.reservationRequestSent.emailTitle}">Reservation request sent</title>
+  <title th:text="#{mail.reservationRequestReceived.emailTitle}">Reservation request received</title>
 </head>
 <body style="margin:0; padding:0; background-color:#eef2ff;
              font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
@@ -21,8 +21,8 @@
 
   <!-- TITLE -->
   <p style="font-size:16px; font-weight:700; color:#3730a3; margin-bottom:6px;"
-     th:text="#{mail.reservationRequestSent.emailTitle}">
-    Reservation request sent
+     th:text="#{mail.reservationRequestReceived.emailTitle}">
+    Reservation request received
   </p>
   <p style="font-size:14px; color:#4b5563; line-height:1.6; margin-bottom:0;"
      th:text="#{mail.common.greeting(${ownerFullName})}">
@@ -31,7 +31,7 @@
 
   <!-- INTRO -->
   <p style="font-size:14px; color:#374151; line-height:1.6; margin-bottom:20px;"
-     th:text="#{mail.reservationRequestSent.introOwner}">
+     th:text="#{mail.reservationRequestReceived.introOwner}">
     Intro
   </p>
 

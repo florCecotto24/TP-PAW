@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.user.InvalidCbuFormatException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
@@ -179,7 +180,10 @@ public final class ProfileController {
                 model.addAttribute("profileBirthDateDisplay",
                         bd.format(DateTimeFormatter.ofPattern(pattern)));
             } catch (final DateTimeParseException ignored) {
+                model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
             }
+        } else {
+            model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
         }
         return "profile";
     }
@@ -204,6 +208,10 @@ public final class ProfileController {
             userService.updateAbout(me.getId(), profileForm.getAbout());
             userService.updateCbu(me.getId(), profileForm.getCbu());
         } catch (final RydenException e) {
+            if (e instanceof InvalidCbuFormatException ic) {
+                bindingResult.rejectValue("cbu", ic.getMessageCode(), ic.getMessageArgs(), null);
+                return "profile";
+            }
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile";
         }

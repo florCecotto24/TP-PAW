@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -41,10 +42,12 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
 import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
+import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
 import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
@@ -173,6 +176,10 @@ public final class ListingServiceImpl implements ListingService {
         validatePickupAddress(neighborhoodId, startPointStreet, startPointNumber);
         final User publisher = userService.getUserById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!userService.hasValidCbu(publisher)) {
+            throw new ListingValidationException(
+                    MessageKeys.LISTING_PUBLISH_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
+        }
         final Car car = carDao.createCar(
                 publisher.getId(),
                 plate,
@@ -441,13 +448,22 @@ public final class ListingServiceImpl implements ListingService {
     @Transactional
     public boolean toggleListingStatus(final long ownerId, final long listingId) {
         final Optional<Listing> listingOpt = listingDao.getListingById(listingId);
-        final Optional<User> ownerOpt = userService.getUserById(ownerId);
-        final boolean deleted = listingDao.toggleListingStatus(ownerId, listingId);
-        if (!deleted || listingOpt.isEmpty() || ownerOpt.isEmpty()) {
-            return deleted;
+        if (listingOpt.isEmpty()) {
+            return false;
         }
-
-        return true;
+        final Listing listing = listingOpt.get();
+        final Optional<Car> carOpt = carDao.getCarById(listing.getCarId());
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
+            return false;
+        }
+        if (listing.getStatus() == Listing.Status.PAUSED) {
+            final Optional<User> ownerRow = userService.getUserById(ownerId);
+            if (ownerRow.isEmpty() || !userService.hasValidCbu(ownerRow.get())) {
+                throw new ListingValidationException(
+                        MessageKeys.LISTING_ACTIVATE_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
+            }
+        }
+        return listingDao.toggleListingStatus(ownerId, listingId);
     }
 
 
@@ -1123,5 +1139,46 @@ public final class ListingServiceImpl implements ListingService {
     @Transactional(readOnly = true)
     public int getConfiguredPickupLeadHours() {
         return reservationTimingPolicy.getPickupLeadHours();
+    }
+
+    @Override
+    @Transactional
+    public void pauseActiveListingsDueToMissingCbuForOwnerAndNotify(final long ownerId) {
+        final List<Listing> active = listingDao.findListingsByOwnerIdAndStatus(ownerId, Listing.Status.ACTIVE);
+        if (active.isEmpty()) {
+            return;
+        }
+        final User owner = userService.getUserById(ownerId).orElse(null);
+        if (owner == null) {
+            return;
+        }
+        final String ownerEmail = owner.getEmail();
+        if (ownerEmail == null || ownerEmail.isBlank()) {
+            return;
+        }
+        final String ownerFullName = owner.getForename() + " " + owner.getSurname();
+        final Locale ownerMailLocale = userService.resolveMailLocale(ownerId);
+        for (final Listing li : active) {
+            if (!listingDao.updateListingStatus(li.getId(), Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU, Listing.Status.ACTIVE)) {
+                continue;
+            }
+            emailService.sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload.builder()
+                    .messageLocale(ownerMailLocale)
+                    .ownerEmail(ownerEmail)
+                    .ownerFullName(ownerFullName)
+                    .vehicleLabel(li.getTitle())
+                    .listingId(li.getId())
+                    .build());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void resumeListingsPausedDueToMissingCbuForOwner(final long ownerId) {
+        final List<Listing> toResume = listingDao.findListingsByOwnerIdAndStatus(
+                ownerId, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+        for (final Listing li : toResume) {
+            listingDao.updateListingStatus(li.getId(), Listing.Status.ACTIVE, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+        }
     }
 }

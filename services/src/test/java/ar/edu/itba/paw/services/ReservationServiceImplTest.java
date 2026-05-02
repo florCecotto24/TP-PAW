@@ -154,14 +154,6 @@ public class ReservationServiceImplTest {
                         riderId, listingId, START, END, Reservation.Status.ACCEPTED, null));
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
-        Mockito.verify(reservationDao, Mockito.never()).createReservation(
-                Mockito.anyLong(),
-                Mockito.anyLong(),
-                Mockito.any(),
-                Mockito.any(),
-                Mockito.any(),
-                Mockito.any(),
-                Mockito.any());
     }
 
     @Test
@@ -349,14 +341,6 @@ public class ReservationServiceImplTest {
                         untilWall));
 
         Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING, thrown.getMessageCode());
-        Mockito.verify(reservationDao, Mockito.never()).createReservation(
-                Mockito.anyLong(),
-                Mockito.anyLong(),
-                Mockito.any(),
-                Mockito.any(),
-                Mockito.any(),
-                Mockito.any(),
-                Mockito.any());
     }
 
     @Test

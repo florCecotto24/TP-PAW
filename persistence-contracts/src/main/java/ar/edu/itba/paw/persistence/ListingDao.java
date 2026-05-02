@@ -70,6 +70,11 @@ public interface ListingDao {
     List<Listing> getMostRecentListings(int limit);
 
     /**
+     * Listings for the car owner in the given status (e.g. enforce CBU / resume after CBU).
+     */
+    List<Listing> findListingsByOwnerIdAndStatus(long ownerId, Listing.Status status);
+
+    /**
      * Ordered window for public browse (cheapest first). Caller composes UI pagination with {@link #countBrowseEligibleActiveListings}.
      */
     List<ListingCard> getCheapestListingCardsWindow(int offset, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);

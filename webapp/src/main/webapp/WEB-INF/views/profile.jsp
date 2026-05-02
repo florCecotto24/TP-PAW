@@ -152,7 +152,12 @@
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.phone"/></span>
-                <span class="profile-field-value"><c:out value="${profileForm.phoneNumber}"/></span>
+                <span class="profile-field-value">
+                    <c:choose>
+                        <c:when test="${not empty profileForm.phoneNumber}"><c:out value="${profileForm.phoneNumber}"/></c:when>
+                        <c:otherwise><spring:message code="common.notSpecified"/></c:otherwise>
+                    </c:choose>
+                </span>
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.birthDate"/></span>
@@ -160,7 +165,12 @@
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.cbu"/></span>
-                <span class="profile-field-value"><c:out value="${profileForm.cbu}"/></span>
+                <span class="profile-field-value">
+                    <c:choose>
+                        <c:when test="${not empty profileForm.cbu}"><c:out value="${profileForm.cbu}"/></c:when>
+                        <c:otherwise><spring:message code="common.notSpecified"/></c:otherwise>
+                    </c:choose>
+                </span>
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.about"/></span>
@@ -180,7 +190,7 @@
         <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
         <hr class="profile-card__divider">
         <spring:message code="profile.phone.placeholder" var="profilePhonePlaceholder" htmlEscape="true"/>
-        <spring:message code="profile.cbu.placeholder" var="profileCbuPlaceholder" htmlEscape="true"/>
+        <spring:message code="profile.cbu.placeholder" var="profileCbuPlaceholder" htmlEscape="true" arguments="${cbuRequiredDigits}"/>
         <spring:message code="profile.birthDate.clearSelection" var="profileBirthDateClearLabel" htmlEscape="false"/>
         <form:form modelAttribute="profileForm" method="post" cssClass="needs-validation" novalidate="novalidate"
                    action="${pageContext.request.contextPath}/profile" id="profileForm">
@@ -219,12 +229,12 @@
                     <form:input path="cbu" id="cbu" cssClass="form-control"
                                 type="text"
                                 inputmode="numeric"
-                                maxlength="22"
-                                pattern="[0-9]{22}"
+                                maxlength="${cbuRequiredDigits}"
+                                pattern="\d*"
                                 data-ryden-digits-only="true"
                                 placeholder="${profileCbuPlaceholder}"/>
                     <form:errors path="cbu" cssClass="text-danger small d-block" element="div"/>
-                    <div class="form-text"><spring:message code="profile.cbu.hint"/></div>
+                    <div class="form-text"><spring:message code="profile.cbu.hint" arguments="${cbuRequiredDigits}"/></div>
                 </div>
                 <div class="mb-3">
                     <label for="about" class="form-label"><spring:message code="profile.about"/></label>
@@ -253,7 +263,14 @@
             <%@ include file="includes/csrfHidden.jspf" %>
             <div class="profile-fields-grid">
                 <div class="mb-3">
-                    <label for="licenseFileInput" class="form-label"><spring:message code="profile.documents.license"/></label>
+                    <c:choose>
+                        <c:when test="${empty licenseFileName}">
+                            <label for="licenseFileInput" class="form-label"><spring:message code="profile.documents.license"/></label>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="form-label"><spring:message code="profile.documents.license"/></div>
+                        </c:otherwise>
+                    </c:choose>
                     <p class="small mb-2">
                         <c:choose>
                             <c:when test="${licenseValidated}">
@@ -291,10 +308,19 @@
                             <spring:message code="profile.documents.remove"/>
                         </button>
                     </c:if>
-                    <input id="licenseFileInput" class="form-control form-control-sm" type="file" name="licenseFile" accept="image/*,application/pdf"/>
+                    <c:if test="${empty licenseFileName}">
+                        <input id="licenseFileInput" class="form-control form-control-sm" type="file" name="licenseFile" accept="image/*,application/pdf"/>
+                    </c:if>
                 </div>
                 <div class="mb-3">
-                    <label for="insuranceFileInput" class="form-label"><spring:message code="profile.documents.insurance"/></label>
+                    <c:choose>
+                        <c:when test="${empty insuranceFileName}">
+                            <label for="insuranceFileInput" class="form-label"><spring:message code="profile.documents.insurance"/></label>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="form-label"><spring:message code="profile.documents.insurance"/></div>
+                        </c:otherwise>
+                    </c:choose>
                     <p class="small mb-2">
                         <c:choose>
                             <c:when test="${insuranceValidated}">
@@ -332,10 +358,19 @@
                             <spring:message code="profile.documents.remove"/>
                         </button>
                     </c:if>
-                    <input id="insuranceFileInput" class="form-control form-control-sm" type="file" name="insuranceFile" accept="image/*,application/pdf"/>
+                    <c:if test="${empty insuranceFileName}">
+                        <input id="insuranceFileInput" class="form-control form-control-sm" type="file" name="insuranceFile" accept="image/*,application/pdf"/>
+                    </c:if>
                 </div>
                 <div class="mb-3">
-                    <label for="identityFileInput" class="form-label"><spring:message code="profile.documents.identity"/></label>
+                    <c:choose>
+                        <c:when test="${empty identityFileName}">
+                            <label for="identityFileInput" class="form-label"><spring:message code="profile.documents.identity"/></label>
+                        </c:when>
+                        <c:otherwise>
+                            <div class="form-label"><spring:message code="profile.documents.identity"/></div>
+                        </c:otherwise>
+                    </c:choose>
                     <p class="small mb-2">
                         <c:choose>
                             <c:when test="${identityValidated}">
@@ -373,10 +408,14 @@
                             <spring:message code="profile.documents.remove"/>
                         </button>
                     </c:if>
-                    <input id="identityFileInput" class="form-control form-control-sm" type="file" name="identityFile" accept="image/*,application/pdf"/>
+                    <c:if test="${empty identityFileName}">
+                        <input id="identityFileInput" class="form-control form-control-sm" type="file" name="identityFile" accept="image/*,application/pdf"/>
+                    </c:if>
                 </div>
             </div>
-            <button type="submit" class="btn btn-outline-primary btn-sm"><spring:message code="profile.documents.upload"/></button>
+            <c:if test="${empty licenseFileName or empty insuranceFileName or empty identityFileName}">
+                <button type="submit" class="btn btn-outline-primary btn-sm"><spring:message code="profile.documents.upload"/></button>
+            </c:if>
         </form>
     </div>
 

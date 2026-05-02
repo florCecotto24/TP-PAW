@@ -214,4 +214,15 @@ public interface ListingService {
      * of “today” in {@link AvailabilityPeriod#WALL_ZONE}.
      */
     void validatePublicationAvailabilityAgainstWallCalendar(List<AvailabilityPeriod> periods);
+
+    /**
+     * For each active listing of the owner, sets status to {@link Listing.Status#PAUSED_DUE_TO_LACK_OF_CBU} and
+     * notifies the owner by email (one mail per affected listing).
+     */
+    void pauseActiveListingsDueToMissingCbuForOwnerAndNotify(long ownerId);
+
+    /**
+     * Re-activates listings that were paused only for missing CBU, after a valid CBU is stored.
+     */
+    void resumeListingsPausedDueToMissingCbuForOwner(long ownerId);
 }
