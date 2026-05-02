@@ -132,11 +132,9 @@ public class EmailServiceImplTest {
         emailService.sendReservationConfirmationEmail(payload);
 
         // 3. Assert
-        Assertions.assertEquals(2, sent.size());
-        Assertions.assertEquals(riderEmail, sent.get(0).to());
-        Assertions.assertEquals(subjectRider, sent.get(0).subject());
-        Assertions.assertEquals(ownerEmail, sent.get(1).to());
-        Assertions.assertEquals(subjectOwner, sent.get(1).subject());
+        Assertions.assertIterableEquals(
+                List.of(new SentMail(riderEmail, subjectRider), new SentMail(ownerEmail, subjectOwner)),
+                sent);
     }
 
 
