@@ -12,6 +12,7 @@ public final class ReservationTimingPolicy {
 
     private final int pickupLeadHours;
     private final int paymentProofDeadlineHours;
+    private final int paymentProofReminderLeadHours;
     private final int returnReminderHoursBeforeCheckout;
     private final int maxBillableDaysPerReservation;
 
@@ -20,6 +21,8 @@ public final class ReservationTimingPolicy {
         this.pickupLeadHours = readPositiveInt(environment, "app.reservation.pickup-lead-hours", 24);
         this.paymentProofDeadlineHours =
                 readPositiveInt(environment, "app.reservation.payment-proof-deadline-hours", 12);
+        this.paymentProofReminderLeadHours =
+                readPositiveInt(environment, "app.reservation.payment-proof-reminder-lead-hours", 2);
         this.returnReminderHoursBeforeCheckout =
                 readPositiveInt(environment, "app.reservation.return-reminder-hours-before-checkout", 2);
         this.maxBillableDaysPerReservation = readPositiveInt(environment, "app.reservation.max-billable-days", 30);
@@ -39,6 +42,11 @@ public final class ReservationTimingPolicy {
 
     public int getPaymentProofDeadlineHours() {
         return paymentProofDeadlineHours;
+    }
+
+    /** Lead window for the pending payment-proof rider email ({@code app.reservation.payment-proof-reminder-lead-hours}). */
+    public int getPaymentProofReminderLeadHours() {
+        return paymentProofReminderLeadHours;
     }
 
     public int getReturnReminderHoursBeforeCheckout() {

@@ -52,6 +52,35 @@
                 <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
                     th:text="${endDateFormatted}">—</td>
             </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.reservationConfirmation.totalPrice}">Total</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; border-top:1px solid #f3f4f6;">
+                    <span th:text="${reservationTotal}">—</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px; padding:16px 20px; margin-bottom:20px;">
+        <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:16px;"
+           th:text="#{mail.paymentProofSubmittedOwner.riderContactTitle}">
+            Driver contact
+        </p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+               style="font-size:13px; border-collapse:collapse;">
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; width:42%; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.paymentProofSubmittedOwner.riderNameLabel}">Name</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${riderFullName}">—</td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.paymentProofSubmittedOwner.riderEmailLabel}">Email</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${riderEmail}">—</td>
+            </tr>
         </table>
     </div>
 

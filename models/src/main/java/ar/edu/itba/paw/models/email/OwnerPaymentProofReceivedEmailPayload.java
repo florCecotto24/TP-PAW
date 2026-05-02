@@ -14,6 +14,8 @@ public final class OwnerPaymentProofReceivedEmailPayload {
     private final String recipientEmail;
     private final String ownerFullName;
     private final String riderFullName;
+    private final String riderEmail;
+    private final String reservationTotal;
     private final String vehicleLabel;
     private final long reservationId;
     private final OffsetDateTime startDate;
@@ -24,6 +26,8 @@ public final class OwnerPaymentProofReceivedEmailPayload {
         this.recipientEmail = Objects.requireNonNull(builder.recipientEmail, "recipientEmail");
         this.ownerFullName = Objects.requireNonNull(builder.ownerFullName, "ownerFullName");
         this.riderFullName = Objects.requireNonNull(builder.riderFullName, "riderFullName");
+        this.riderEmail = builder.riderEmail != null ? builder.riderEmail : "";
+        this.reservationTotal = Objects.requireNonNull(builder.reservationTotal, "reservationTotal");
         this.vehicleLabel = Objects.requireNonNull(builder.vehicleLabel, "vehicleLabel");
         this.reservationId = Objects.requireNonNull(builder.reservationId, "reservationId");
         this.startDate = Objects.requireNonNull(builder.startDate, "startDate");
@@ -50,6 +54,14 @@ public final class OwnerPaymentProofReceivedEmailPayload {
         return riderFullName;
     }
 
+    public String getRiderEmail() {
+        return riderEmail;
+    }
+
+    public String getReservationTotal() {
+        return reservationTotal;
+    }
+
     public String getVehicleLabel() {
         return vehicleLabel;
     }
@@ -71,6 +83,8 @@ public final class OwnerPaymentProofReceivedEmailPayload {
         private String recipientEmail;
         private String ownerFullName;
         private String riderFullName;
+        private String riderEmail;
+        private String reservationTotal;
         private String vehicleLabel;
         private Long reservationId;
         private OffsetDateTime startDate;
@@ -96,6 +110,16 @@ public final class OwnerPaymentProofReceivedEmailPayload {
 
         public Builder riderFullName(final String value) {
             this.riderFullName = value;
+            return this;
+        }
+
+        public Builder riderEmail(final String value) {
+            this.riderEmail = value;
+            return this;
+        }
+
+        public Builder reservationTotal(final String value) {
+            this.reservationTotal = value;
             return this;
         }
 

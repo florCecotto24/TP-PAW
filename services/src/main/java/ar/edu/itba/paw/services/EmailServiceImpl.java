@@ -26,6 +26,7 @@ import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
@@ -170,18 +171,21 @@ public final class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
     private final MessageSource emailMessageSource;
     private final TemplateEngine htmlTemplateEngine;
+    private final ReservationTimingPolicy reservationTimingPolicy;
 
     public EmailServiceImpl(
             final Environment environment,
             final MailPublicUrls mailPublicUrls,
             final JavaMailSender mailSender,
             @Qualifier("emailMessageSource") final MessageSource emailMessageSource,
-            @Qualifier("emailTemplateEngine") final TemplateEngine htmlTemplateEngine) {
+            @Qualifier("emailTemplateEngine") final TemplateEngine htmlTemplateEngine,
+            final ReservationTimingPolicy reservationTimingPolicy) {
         this.environment = environment;
         this.mailPublicUrls = mailPublicUrls;
         this.mailSender = mailSender;
         this.emailMessageSource = emailMessageSource;
         this.htmlTemplateEngine = htmlTemplateEngine;
+        this.reservationTimingPolicy = reservationTimingPolicy;
     }
 
     /** Invalid call site: log once and do not send mail. */
@@ -356,13 +360,17 @@ public final class EmailServiceImpl implements EmailService {
 
         final Locale mailLocale = payload.getMessageLocale();
         final Context ctx = buildReservationConfirmationMailContext(payload, mailLocale);
+        ctx.setVariable("duePaymentReminderHours", reservationTimingPolicy.getPaymentProofReminderLeadHours());
 
         final String to = payload.getRecipientEmail();
 
         try {
             runMail(() -> {
                 final String htmlContent = this.htmlTemplateEngine.process(RIDER_DUE_PAYMENT_PROOF_TEMPLATE, ctx);
-                final String subject = emailMessageSource.getMessage("mail.reservationDuePaymentProof.subject", null, mailLocale);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.reservationDuePaymentProof.subject",
+                        new Object[] { payload.getVehicleLabel() },
+                        mailLocale);
                 sendEmail(to, subject, htmlContent);
             });
             LOGGER.atInfo().addArgument(to).log("Due payment proof reminder email queued for {}");
@@ -480,7 +488,9 @@ public final class EmailServiceImpl implements EmailService {
         setHtmlLangFromLocale(ctx, mailLocale);
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
         ctx.setVariable("riderFullName", payload.getRiderFullName());
+        ctx.setVariable("riderEmail", nonBlankEmailForDisplay(payload.getRiderEmail(), mailLocale));
         ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("reservationTotal", payload.getReservationTotal());
         ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate(), mailLocale));
         ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate(), mailLocale));
         ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId() + "?role=owner"));

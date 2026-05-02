@@ -30,7 +30,7 @@
 
     <!-- INTRO -->
     <p style="font-size:14px; color:#374151; line-height:1.6; margin-bottom:20px;"
-       th:text="#{mail.reservationDuePaymentProof.introRider}">
+       th:text="#{mail.reservationDuePaymentProof.introRider(${duePaymentReminderHours})}">
         Intro
     </p>
 
@@ -93,7 +93,7 @@
                   padding:10px 0; border-top:1px solid #f3f4f6; font-size:13px;">
             <span style="color:#6b7280;" th:text="#{mail.reservationConfirmation.ownerCbu}">ownerCbu</span>
             &nbsp;
-            <span style="font-weight:600; color:#1e1b4b;" th:text=" ${ownerCbu}">—</span>
+            <span style="font-weight:600; color:#1e1b4b;" th:text="${ownerCbu}">—</span>
         </div>
     </div>
 

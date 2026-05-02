@@ -711,6 +711,8 @@ public final class ReservationServiceImpl implements ReservationService {
                     .recipientEmail(owner.getEmail())
                     .ownerFullName(ownerFullName)
                     .riderFullName(riderFullName)
+                    .riderEmail(rider.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
                     .vehicleLabel(listing.getTitle())
                     .reservationId(reservationId)
                     .startDate(reservation.getStartDate())

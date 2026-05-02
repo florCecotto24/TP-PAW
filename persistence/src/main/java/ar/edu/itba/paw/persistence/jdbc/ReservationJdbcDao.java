@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -77,6 +78,9 @@ public class ReservationJdbcDao implements ReservationDao {
     private final JdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final SimpleJdbcInsert jdbcInsert;
+
+    @Value("${app.reservation.payment-proof-reminder-lead-hours:2}")
+    private int paymentProofReminderLeadHours;
 
     @Autowired
     public ReservationJdbcDao(final DataSource dataSource) {
@@ -607,7 +611,8 @@ public class ReservationJdbcDao implements ReservationDao {
 
     @Override
     public List<Reservation> findReservationsWithDuePendingPaymentProof(final OffsetDateTime now) {
-        final OffsetDateTime twoHoursFromNow = now.plusHours(2);
+        final int leadHours = Math.max(1, paymentProofReminderLeadHours);
+        final OffsetDateTime windowEnd = now.plusHours(leadHours);
         return jdbcTemplate.query(
                 "SELECT * FROM reservations r "
                         + "WHERE r.payment_proof_deadline_at IS NOT NULL "
@@ -615,7 +620,7 @@ public class ReservationJdbcDao implements ReservationDao {
                         + "AND r.payment_approved = FALSE "
                         + "AND r.pending_paymentproof_email_sent = FALSE",
                 RESERVATION_ROW_MAPPER,
-                JdbcDateTimeUtils.toTimestamp(twoHoursFromNow));
+                JdbcDateTimeUtils.toTimestamp(windowEnd));
     }
 
     @Override

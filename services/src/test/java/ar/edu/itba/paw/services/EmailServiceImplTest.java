@@ -28,6 +28,7 @@ import org.thymeleaf.context.Context;
 
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @ExtendWith(MockitoExtension.class)
 public class EmailServiceImplTest {
@@ -54,6 +55,9 @@ public class EmailServiceImplTest {
 
     @Mock
     private TemplateEngine htmlTemplateEngine;
+
+    @Mock
+    private ReservationTimingPolicy reservationTimingPolicy;
 
     @InjectMocks
     private EmailServiceImpl emailService;
