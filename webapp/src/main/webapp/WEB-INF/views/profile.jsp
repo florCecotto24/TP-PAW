@@ -189,8 +189,9 @@
     <div class="profile-card profile-card--section" id="profileEditingSection" style="${hasProfileErrors ? 'display:block;' : 'display:none;'}">
         <h2 class="profile-section-title"><spring:message code="profile.optionalSection"/></h2>
         <hr class="profile-card__divider">
-        <spring:message code="profile.phone.placeholder" var="profilePhonePlaceholder" htmlEscape="true"/>
-        <spring:message code="profile.cbu.placeholder" var="profileCbuPlaceholder" htmlEscape="true" arguments="${cbuRequiredDigits}"/>
+        <%-- htmlEscape=false: placeholders are HTML attribute values; escaped entities (e.g. &iacute;) would be re-escaped and show literally. --%>
+        <spring:message code="profile.phone.placeholder" var="profilePhonePlaceholder" htmlEscape="false"/>
+        <spring:message code="profile.cbu.placeholder" var="profileCbuPlaceholder" htmlEscape="false" arguments="${cbuRequiredDigits}"/>
         <spring:message code="profile.birthDate.clearSelection" var="profileBirthDateClearLabel" htmlEscape="false"/>
         <form:form modelAttribute="profileForm" method="post" cssClass="needs-validation" novalidate="novalidate"
                    action="${pageContext.request.contextPath}/profile" id="profileForm">

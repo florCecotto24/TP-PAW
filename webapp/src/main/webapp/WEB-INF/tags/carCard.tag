@@ -5,12 +5,13 @@
 
 <%@ attribute name="model" required="true" %>
 <%@ attribute name="brand" required="true" %>
-<%@ attribute name="price" required="true" %>
+<%@ attribute name="price" required="true" type="java.lang.Number" %>
 <%@ attribute name="image" required="false" %>
 <%@ attribute name="pricePeriod" required="false" %>
 <%@ attribute name="href" required="false" %>
 <%@ attribute name="ratingAvg" required="false" type="java.lang.Number" %>
 
+<fmt:setLocale value="es_AR"/>
 <c:if test="${empty pricePeriod}">
     <c:set var="pricePeriod" value="hour" />
 </c:if>
@@ -50,7 +51,7 @@
             </c:if>
         </div>
         <div class="carcard-price text">
-            <p class="carcard-price-amount">$<c:out value="${price}"/></p>
+            <p class="carcard-price-amount"><fmt:formatNumber value="${price}" type="currency" currencyCode="ARS"/></p>
             <p>/<c:out value="${pricePeriodLabel}"/></p>
         </div>
     </div>

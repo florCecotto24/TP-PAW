@@ -52,7 +52,7 @@
                                 <div class="row g-3">
                                     <div class="col-sm-6">
                                         <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.paymentInfo.totalPrice"/></p>
-                                        <p class="mb-0 fw-medium text-primary h5">$<c:out value="${reservationTotal}"/></p>
+                                        <p class="mb-0 fw-medium text-primary h5"><c:out value="${reservationTotal}"/></p>
                                     </div>
                                     <div class="col-sm-6">
                                         <p class="reservation-card__meta-label mb-1"><spring:message code="myReservationDetail.paymentInfo.ownerCbu"/></p>

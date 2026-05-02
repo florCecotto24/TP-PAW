@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationException;
+import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
@@ -182,7 +183,7 @@ public final class ReservationFormController {
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("listingId", listingId);
         mav.addObject("availabilityId", availabilityId);
-        mav.addObject("reservationTotal", reservation.getTotalPrice());
+        mav.addObject("reservationTotal", ArsMoneyFormat.format(reservation.getTotalPrice()));
         User owner = userService.getListingOwner(listingId).orElseThrow(() -> new RuntimeException("Listing owner not found for listingId " + listingId));
         mav.addObject("ownerCbu", userService.getUserCbu(owner.getId()));
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);

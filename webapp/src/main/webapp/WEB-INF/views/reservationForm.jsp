@@ -49,7 +49,7 @@
                         </p>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.location"/></strong> <c:out value="${reservationForm.deliveryLocation}"/></p>
                         <c:if test="${not empty reservationTotal}">
-                            <p class="mb-0"><strong><spring:message code="reservationForm.summary.total"/></strong> $<c:out value="${reservationTotal}"/></p>
+                            <p class="mb-0"><strong><spring:message code="reservationForm.summary.total"/></strong> <c:out value="${reservationTotal}"/></p>
                         </c:if>
                     </div>
 

@@ -287,7 +287,7 @@
                 <div class="card-body p-4">
                     <div class="reservation-price-compact mb-3">
                         <span class="reservation-card__meta-label mb-0"><spring:message code="myReservationDetail.totalPrice"/></span>
-                        <span class="h2 fw-bold text-primary mb-0">$<c:out value="${totalPrice}"/></span>
+                        <span class="h2 fw-bold text-primary mb-0"><c:out value="${totalPrice}"/></span>
                     </div>
 
                     <div class="d-grid gap-2">

@@ -158,6 +158,7 @@
                             </div>
                         </c:when>
                         <c:otherwise>
+                            <fmt:setLocale value="es_AR"/>
                             <div class="d-flex flex-column gap-3">
                                 <c:forEach var="car" items="${results}">
                                     <c:url var="listingDetailUrl" value="/my-listings/${car.listingId}"/>
@@ -215,7 +216,7 @@
                                                         <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                                             <div class="reservation-price-compact">
                                                                 <span class="reservation-card__meta-label mb-0"><spring:message code="myListings.card.pricePerDay"/></span>
-                                                                <span class="h5 mb-0 fw-bold text-primary">$<c:out value="${car.price}"/></span>
+                                                                <span class="h5 mb-0 fw-bold text-primary"><fmt:formatNumber value="${car.price}" type="currency" currencyCode="ARS"/></span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -396,7 +397,7 @@
                                                         <div class="pt-1">
                                                             <div class="reservation-price-compact">
                                                                 <span class="reservation-card__meta-label mb-0"><spring:message code="myReservations.card.totalPrice"/></span>
-                                                                <span class="h5 mb-0 fw-bold text-primary">$<c:out value="${reservation.totalPrice}"/></span>
+                                                                <span class="h5 mb-0 fw-bold text-primary"><c:out value="${reservation.totalPrice}"/></span>
                                                             </div>
                                                         </div>
                                                     </div>

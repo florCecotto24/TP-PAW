@@ -39,6 +39,11 @@ public interface ListingService {
 
     /**
      * Publishes a car with listing, availability windows, and images (full publish flow).
+     * Runs in a single transaction: if any step fails after inserts begin, the whole operation rolls back
+     * (no orphan car or listing). The owner must have a valid CBU before any row is written; otherwise
+     * {@link ar.edu.itba.paw.exception.listing.ListingValidationException} is thrown immediately.
+     * The web UI blocks submit until CBU is saved ({@code /publish-car/quick-cbu}); cancelling the modal
+     * means no POST to this flow, so nothing is persisted.
      */
     CarPublicationResult publish(
             long ownerId,

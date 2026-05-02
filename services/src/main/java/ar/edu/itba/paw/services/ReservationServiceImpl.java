@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.Page;
@@ -205,7 +206,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     .ownerHandoverLocation(trimmedOwnerLoc)
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
-                    .reservationTotal(reservation.getTotalPrice().toString())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .ownerCbu(cbu)
@@ -385,7 +386,7 @@ public final class ReservationServiceImpl implements ReservationService {
         try {
             final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(fromDateTime);
             final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(untilDateTime);
-            return calculateTotal(listingId, startDate, endDate).map(this::formatMoney);
+            return calculateTotal(listingId, startDate, endDate).map(ArsMoneyFormat::format);
         } catch (final DateTimeParseException e) {
             return Optional.empty();
         }
@@ -583,7 +584,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     .ownerHandoverLocation(ownerLoc)
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
-                    .reservationTotal(reservation.getTotalPrice().toString())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
@@ -679,7 +680,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     .ownerHandoverLocation(ownerLoc)
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
-                    .reservationTotal(reservation.getTotalPrice().toString())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
@@ -979,7 +980,7 @@ public final class ReservationServiceImpl implements ReservationService {
                 .endDate(reservation.getEndDate())
                 .ownerFullName(owner.getForename() + " " + owner.getSurname())
                 .ownerEmail(owner.getEmail())
-                .reservationTotal(reservation.getTotalPrice().toString())
+                .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
                 .ownerCbu(ownerCbu)
                 .riderMailLocale(riderLocale)
                 .ownerMailLocale(userService.resolveMailLocale(owner.getId()))

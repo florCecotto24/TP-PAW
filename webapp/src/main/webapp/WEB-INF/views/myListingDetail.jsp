@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
@@ -88,7 +89,8 @@
                                 <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
                                     <spring:message code="myListingDetail.pricePerDay"/>
                                 </span>
-                                <span class="h4 fw-bold text-primary mb-0">$<c:out value="${listing.dayPrice}"/></span>
+                                <fmt:setLocale value="es_AR"/>
+                                <span class="h4 fw-bold text-primary mb-0"><fmt:formatNumber value="${listing.dayPrice}" type="currency" currencyCode="ARS"/></span>
                             </div>
                         </div>
                     </div>
@@ -115,7 +117,7 @@
 
                         <div class="col-sm-6">
                             <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" cssClass="form-control js-no-number-wheel-step" cssErrorClass="form-control is-invalid js-no-number-wheel-step"/>
+                            <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
                         <spring:message code="publishCar.form.neighborhood.placeholder" var="editNbPh"/>
@@ -441,7 +443,7 @@
                         <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
                             <spring:message code="myListingReservations.dashboard.earnings.total"/>
                         </span>
-                        <span class="fw-bold fs-5 text-primary">$<c:out value="${listingTotalEarnings}"/></span>
+                        <span class="fw-bold fs-5 text-primary"><c:out value="${listingTotalEarnings}"/></span>
                     </div>
                 </div>
                 <div class="col-sm-6 col-md-4">
@@ -449,7 +451,7 @@
                         <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
                             <spring:message code="myListingReservations.dashboard.earnings.pending"/>
                         </span>
-                        <span class="fw-bold fs-5 text-warning-emphasis">$<c:out value="${listingPendingEarnings}"/></span>
+                        <span class="fw-bold fs-5 text-warning-emphasis"><c:out value="${listingPendingEarnings}"/></span>
                     </div>
                 </div>
                 <div class="col-sm-6 col-md-4">

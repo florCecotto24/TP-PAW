@@ -70,7 +70,7 @@
         <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
             th:text="#{mail.reservationConfirmation.totalPrice}">Total</td>
         <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; border-top:1px solid #f3f4f6;">
-          $<span th:text="${reservationTotal}">—</span>
+          <span th:text="${reservationTotal}">—</span>
         </td>
       </tr>
       <tr th:if="${hasDeliveryLocation}">

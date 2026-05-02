@@ -1,6 +1,7 @@
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <!DOCTYPE html>
@@ -23,6 +24,9 @@
                     <spring:message code="publishCar.form.pictures.clientRequired" var="publishPicturesClientRequired" htmlEscape="true"/>
                     <spring:message code="validation.neighborhood.invalid" var="publishNbInvalidMsg" htmlEscape="true"/>
                     <spring:message code="validation.neighborhood.notNull" var="publishNbRequiredMsg" htmlEscape="true"/>
+                    <%-- CBU modal reads these via data-* + JS textContent: no nested c:out inside form:form (not evaluated); UTF-8 not HTML entities. --%>
+                    <spring:message code="publishCar.missingCbu.invalid" var="publishMissingCbuInvalidMsg" htmlEscape="false" arguments="${cbuRequiredDigits}"/>
+                    <spring:message code="publishCar.missingCbu.saveFailed" var="publishMissingCbuSaveFailedMsg" htmlEscape="false"/>
                     <form:form id="publishCarFormEl"
                                action="${pageContext.request.contextPath}/publish-car"
                                method="POST"
@@ -32,11 +36,11 @@
                                data-ryden-user-has-cbu="${userHasCbu ? 'true' : 'false'}"
                                data-ryden-context-path="${pageContext.request.contextPath}"
                                data-ryden-quick-cbu-url="${pageContext.request.contextPath}/publish-car/quick-cbu"
-                               data-ryden-cbu-invalid="<spring:message code='publishCar.missingCbu.invalid' arguments='${cbuRequiredDigits}' htmlEscape='true'/>"
-                               data-ryden-cbu-save-failed="<spring:message code='publishCar.missingCbu.saveFailed' htmlEscape='true'/>"
-                               data-publish-retained-count="<c:out value='${retainedPicturesCount}'/>"
-                               data-ryden-nb-invalid="<c:out value='${publishNbInvalidMsg}'/>"
-                               data-ryden-nb-required="<c:out value='${publishNbRequiredMsg}'/>">
+                               data-ryden-cbu-invalid="${fn:escapeXml(publishMissingCbuInvalidMsg)}"
+                               data-ryden-cbu-save-failed="${fn:escapeXml(publishMissingCbuSaveFailedMsg)}"
+                               data-publish-retained-count="${fn:escapeXml(retainedPicturesCount)}"
+                               data-ryden-nb-invalid="${fn:escapeXml(publishNbInvalidMsg)}"
+                               data-ryden-nb-required="${fn:escapeXml(publishNbRequiredMsg)}">
 
                         <form:errors element="div" cssClass="alert alert-danger"/>
 
@@ -97,7 +101,7 @@
 
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" cssClass="form-control js-no-number-wheel-step" cssErrorClass="form-control is-invalid js-no-number-wheel-step" type="number" step="0.01"/>
+                            <form:input path="pricePerDay" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2"/>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
 

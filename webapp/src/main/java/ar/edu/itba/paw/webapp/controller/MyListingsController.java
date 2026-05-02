@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
@@ -202,7 +203,7 @@ public final class MyListingsController {
     }
 
     private static String formatMoney(final BigDecimal amount) {
-        return amount.stripTrailingZeros().toPlainString();
+        return ArsMoneyFormat.format(amount);
     }
 
     @GetMapping("/{listingId}")

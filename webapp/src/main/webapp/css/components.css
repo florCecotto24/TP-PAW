@@ -357,7 +357,8 @@ body.modal-open {
     flex-direction: column;
     width: 100%;
     max-width: 361px;
-    height: 350px;
+    min-height: 350px;
+    height: 100%;
     border: 1px solid rgb(216, 216, 216);
     border-radius: 15px;
     overflow: hidden;
@@ -416,20 +417,22 @@ body.modal-open {
     margin: 10px;
     display: flex;
     flex: 1;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: space-between;
-    gap: 10px;
+    gap: 0.5rem;
+    min-height: 0;
 }
 
-.carcard-info div{
+.carcard-info > div {
     display: flex;
     flex-direction: column;
     justify-content: center;
 }
 
-.carcard-info-text{
+.carcard-info-text {
     text-align: left;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .carcard-info-text * {
@@ -445,15 +448,29 @@ body.modal-open {
     color: #808080FF;
 }
 
+/* Full-width title: do not share a row with price (long ARS amounts were squeezing this to "P…"). */
 .carcard-brand {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
+/* Same row: amount + "/ día" (override .carcard-info > div column). */
+.carcard-info > .carcard-price {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: auto;
 }
 
 .carcard-price * {
-    margin: 2.5px;
-    text-align: center;
+    margin: 0;
+    text-align: right;
     font-weight: lighter;
     font-size: 18px;
     color: grey;
@@ -462,7 +479,11 @@ body.modal-open {
 .carcard-price-amount {
     color: #3277D8;
     font-weight: bold;
-    font-size: 30px;
+    font-size: clamp(1rem, 0.5rem + 1.9vmin, 1.75rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    flex: 0 1 auto;
 }
 
 /* Full-card hit target (Bootstrap stretched-link) */

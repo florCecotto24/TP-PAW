@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
@@ -31,7 +32,8 @@
             <div class="card-body text-start">
               <p><strong><spring:message code="publishCar.confirmation.brand"/></strong> <c:out value="${car.brand}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/> </p>
-              <p><strong><spring:message code="publishCar.confirmation.pricePerDay"/></strong> $<c:out value="${listing.dayPrice}"/></p>
+              <p><strong><spring:message code="publishCar.confirmation.pricePerDay"/></strong>
+                  <fmt:setLocale value="es_AR"/><fmt:formatNumber value="${listing.dayPrice}" type="currency" currencyCode="ARS"/></p>
               <p class="${not empty listing.description ? "d-block" : "d-none"}"><strong><spring:message code="publishCar.confirmation.description"/></strong> <c:out value="${listing.description}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
               <spring:message code="enum.car.type.${car.type.name()}" var="confirmCarTypeLabel"/>

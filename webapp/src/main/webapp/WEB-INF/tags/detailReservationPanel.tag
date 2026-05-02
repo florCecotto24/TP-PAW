@@ -1,8 +1,9 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="listingId" required="true" type="java.lang.Long" %>
-<%@ attribute name="dailyPrice" required="true" type="java.lang.String" %>
+<%@ attribute name="dailyPrice" required="true" type="java.lang.Number" %>
 <%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
 <%@ attribute name="fromDateTimeValue" required="false" type="java.lang.String" %>
 <%@ attribute name="untilDateTimeValue" required="false" type="java.lang.String" %>
@@ -27,7 +28,8 @@
     <input type="hidden" name="reservationTotal" id="detail_reservation_total_hint" value="" />
 
     <div class="d-flex align-items-baseline gap-2 mb-3">
-        <span class="detail-price-amount fw-bold">$<c:out value='${dailyPrice}'/></span>
+        <fmt:setLocale value="es_AR"/>
+        <span class="detail-price-amount fw-bold"><fmt:formatNumber value="${dailyPrice}" type="currency" currencyCode="ARS"/></span>
         <span class="text-secondary"><spring:message code="detailReservationPanel.perDay"/></span>
     </div>
 

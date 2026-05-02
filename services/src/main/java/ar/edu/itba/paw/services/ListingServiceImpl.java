@@ -154,6 +154,10 @@ public final class ListingServiceImpl implements ListingService {
         return listing;
     }
 
+    /**
+     * Car, listing, availability rows and pictures are persisted in one transaction (default propagation
+     * on delegated services joins this boundary). CBU is validated before {@code createCar}.
+     */
     @Override
     @Transactional
     public CarPublicationResult publish(

@@ -107,7 +107,7 @@
                         </div>
                         <div class="col-12 col-md-6 col-lg-3">
                             <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
-                                <i class="bi bi-currency-dollar fs-2"></i>
+                                <i class="bi bi-cash-coin fs-2" aria-hidden="true"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.price.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.price.desc"/></p>

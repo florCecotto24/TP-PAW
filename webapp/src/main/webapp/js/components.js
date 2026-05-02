@@ -1489,15 +1489,19 @@
             body: body.toString(),
         })
             .then(function (res) {
-                if (!res.ok) {
-                    throw new Error("bad");
+                if (res.ok) {
+                    form.setAttribute("data-ryden-user-has-cbu", "true");
+                    var closeBtn = document.querySelector('[data-modal-close="publishMissingCbuModal"]');
+                    if (closeBtn) {
+                        closeBtn.click();
+                    }
+                    form.submit();
+                    return;
                 }
-                form.setAttribute("data-ryden-user-has-cbu", "true");
-                var closeBtn = document.querySelector('[data-modal-close="publishMissingCbuModal"]');
-                if (closeBtn) {
-                    closeBtn.click();
+                if (errEl) {
+                    errEl.textContent = res.status === 400 ? invalidMsg : saveFailedMsg;
+                    errEl.classList.remove("d-none");
                 }
-                form.submit();
             })
             .catch(function () {
                 if (errEl) {
@@ -1568,6 +1572,100 @@
 
     function init() {
         document.querySelectorAll("input.js-no-number-wheel-step[type='number']").forEach(bindNoWheelStep);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+
+/*
+ * Listing day price: match server @Digits(integer=8, fraction=2). maxlength is ignored on type=number;
+ * clamp so users cannot type more than 8 + '.' + 2 characters (e.g. 99999999.99).
+ */
+(function () {
+    function bindListingPriceDecimal(el) {
+        if (el.getAttribute("data-ryden-price-decimal") === "1") {
+            return;
+        }
+        el.setAttribute("data-ryden-price-decimal", "1");
+        var maxInt = parseInt(el.getAttribute("data-max-int"), 10);
+        if (isNaN(maxInt) || maxInt < 1) {
+            maxInt = 8;
+        }
+        var maxFrac = parseInt(el.getAttribute("data-max-frac"), 10);
+        if (isNaN(maxFrac) || maxFrac < 0) {
+            maxFrac = 2;
+        }
+
+        function format(raw) {
+            var v = String(raw == null ? "" : raw).replace(/,/g, ".");
+            v = v.replace(/[^0-9.]/g, "");
+            var d = v.indexOf(".");
+            if (d === -1) {
+                return v.slice(0, maxInt);
+            }
+            var intPart = v.slice(0, d).replace(/\./g, "");
+            var fracSource = v.slice(d + 1).replace(/\./g, "");
+            intPart = intPart.slice(0, maxInt);
+            var fracPart = fracSource.slice(0, maxFrac);
+            if (fracPart.length > 0) {
+                return intPart + "." + fracPart;
+            }
+            return intPart + ".";
+        }
+
+        function apply() {
+            var next = format(el.value);
+            if (next !== el.value) {
+                el.value = next;
+            }
+        }
+
+        el.addEventListener("beforeinput", function (e) {
+            if (e.isComposing) {
+                return;
+            }
+            if (e.data === null || e.data === "") {
+                return;
+            }
+            if (/^[0-9.]$/.test(e.data)) {
+                return;
+            }
+            e.preventDefault();
+        });
+
+        el.addEventListener("input", function (e) {
+            if (e.isComposing) {
+                return;
+            }
+            apply();
+        });
+
+        el.addEventListener("compositionend", apply);
+
+        el.addEventListener("paste", function (e) {
+            var paste = (e.clipboardData || window.clipboardData).getData("text") || "";
+            e.preventDefault();
+            var start = el.selectionStart != null ? el.selectionStart : el.value.length;
+            var end = el.selectionEnd != null ? el.selectionEnd : el.value.length;
+            var merged = el.value.slice(0, start) + paste + el.value.slice(end);
+            el.value = format(merged);
+            var pos = el.value.length;
+            requestAnimationFrame(function () {
+                try {
+                    el.setSelectionRange(pos, pos);
+                } catch (ignore) {
+                    /* readonly or type mismatch */
+                }
+            });
+        });
+    }
+
+    function init() {
+        document.querySelectorAll("input.js-listing-price-decimal[type='number']").forEach(bindListingPriceDecimal);
     }
 
     if (document.readyState === "loading") {

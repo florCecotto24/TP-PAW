@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -86,7 +87,7 @@ public final class ReservationReminderScheduler {
                         .ownerHandoverLocation(ownerLoc)
                         .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                         .ownerEmail(listingOwner.getEmail())
-                        .reservationTotal(reservation.getTotalPrice().toString())
+                        .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
                         .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                         .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                         .build();

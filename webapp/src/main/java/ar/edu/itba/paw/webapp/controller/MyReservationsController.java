@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
+import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.domain.StoredFile;
@@ -176,7 +177,7 @@ public final class MyReservationsController {
         final Locale locale = LocaleContextHolder.getLocale();
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String totalPrice = reservation.getTotalPrice().toString();
+        final String totalPrice = ArsMoneyFormat.format(reservation.getTotalPrice());
         final long carImageId = listingDetail.getPictures().isEmpty() ? 0L : listingDetail.getPictures().get(0).getImageId();
 
         final ModelAndView mav = new ModelAndView("myReservationDetail");
@@ -415,7 +416,7 @@ public final class MyReservationsController {
     }
 
     private static String formatMoney(final BigDecimal amount) {
-        return amount.stripTrailingZeros().toPlainString();
+        return ArsMoneyFormat.format(amount);
     }
 
     @PostMapping("/my-reservations/{reservationId}/car-returned")
