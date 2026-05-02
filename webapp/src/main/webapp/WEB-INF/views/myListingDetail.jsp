@@ -16,6 +16,7 @@
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
     <c:url var="editListingUrl" value="/my-listings/${listing.id}/edit"/>
     <c:url var="toggleListingUrl" value="/my-listings/${listing.id}/toggle"/>
+    <c:url var="finishListingUrl" value="/my-listings/${listing.id}/finish"/>
     <c:set var="editBindingResult" value="${requestScope['org.springframework.validation.BindingResult.editForm']}"/>
     <c:set var="hasEditErrors" value="${editBindingResult != null and editBindingResult.errorCount > 0}"/>
     <ryden:breadcrumbTrail
@@ -334,12 +335,24 @@
                                         </div>
                                     </form>
                                 </ryden:modal>
+                                <form method="post" action="<c:out value='${finishListingUrl}'/>">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <button type="submit" class="btn btn-outline-danger w-100 mt-1">
+                                        <spring:message code="myListingDetail.actions.finish"/>
+                                    </button>
+                                </form>
                             </c:when>
                             <c:when test="${statusKey == 'PAUSED'}">
                                 <form method="post" action="<c:out value='${toggleListingUrl}'/>">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                                     <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myListingDetail.actions.activate'/>">
                                         <spring:message code="myListingDetail.actions.activate"/>
+                                    </button>
+                                </form>
+                                <form method="post" action="<c:out value='${finishListingUrl}'/>">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <button type="submit" class="btn btn-outline-danger w-100 mt-1">
+                                        <spring:message code="myListingDetail.actions.finish"/>
                                     </button>
                                 </form>
                             </c:when>
@@ -350,6 +363,12 @@
                                 <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
                                     <spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
                                 </a>
+                                <form method="post" action="<c:out value='${finishListingUrl}'/>">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <button type="submit" class="btn btn-outline-danger w-100 mt-1">
+                                        <spring:message code="myListingDetail.actions.finish"/>
+                                    </button>
+                                </form>
                             </c:when>
                             <c:when test="${statusKey == 'FINISHED'}">
                                 <p class="text-secondary small mb-0">

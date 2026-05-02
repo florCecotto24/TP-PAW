@@ -446,6 +446,21 @@ public final class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional
+    public boolean finishListing(final long ownerId, final long listingId) {
+        final Optional<Listing> listingOpt = listingDao.getListingById(listingId);
+        if (listingOpt.isEmpty()) {
+            return false;
+        }
+        final Optional<Car> carOpt = carDao.getCarById(listingOpt.get().getCarId());
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
+            return false;
+        }
+        return listingDao.updateListingStatus(listingId, Listing.Status.FINISHED,
+                Listing.Status.ACTIVE, Listing.Status.PAUSED, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+    }
+
+    @Override
+    @Transactional
     public boolean toggleListingStatus(final long ownerId, final long listingId) {
         final Optional<Listing> listingOpt = listingDao.getListingById(listingId);
         if (listingOpt.isEmpty()) {

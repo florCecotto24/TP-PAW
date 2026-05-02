@@ -250,6 +250,15 @@ public final class MyListingsController {
         return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
     }
 
+    @PostMapping("/{listingId}/finish")
+    public ModelAndView finishListing(
+            @CurrentUser final User currentUser,
+            @PathVariable("listingId") final long listingId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        listingService.finishListing(me.getId(), listingId);
+        return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
+    }
+
     @PostMapping("/{listingId}/toggle")
     public ModelAndView toggleListing(
             @CurrentUser final User currentUser,

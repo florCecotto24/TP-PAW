@@ -76,6 +76,8 @@ public interface ListingService {
 
     boolean toggleListingStatus(long ownerId, long listingId);
 
+    boolean finishListing(long ownerId, long listingId);
+
     /**
      * Same address as pickup (street + neighborhood, no number), for public views.
      */
