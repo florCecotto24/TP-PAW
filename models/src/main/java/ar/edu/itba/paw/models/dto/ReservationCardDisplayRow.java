@@ -1,7 +1,9 @@
-package ar.edu.itba.paw.webapp.dto;
+package ar.edu.itba.paw.models.dto;
 
-/** Immutable card row for rider or owner “my reservations” lists (pre-formatted dates and i18n status key). */
-public final class ReservationCardView {
+/**
+ * Pre-formatted reservation card row for owner/rider hub JSPs (wall-local datetimes, ARS total, lowercase status key).
+ */
+public final class ReservationCardDisplayRow {
 
     private final long reservationId;
     private final long listingId;
@@ -13,7 +15,7 @@ public final class ReservationCardView {
     private final String statusKey;
     private final String totalPrice;
 
-    public ReservationCardView(
+    public ReservationCardDisplayRow(
             final long reservationId,
             final long listingId,
             final long imageId,
@@ -70,4 +72,3 @@ public final class ReservationCardView {
         return totalPrice;
     }
 }
-

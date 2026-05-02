@@ -14,7 +14,6 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
@@ -107,44 +106,6 @@ public interface ListingService {
      * @return {@code true} when the listing was updated
      */
     boolean finishListing(long ownerId, long listingId);
-
-    /**
-     * Same address as pickup (street + neighborhood, no number), for public views.
-     */
-    String formatPublicDeliveryLocation(Listing listing);
-
-    /**
-     * Street + neighborhood of pickup (without number), for public views.
-     */
-    String formatPublicPickupLocation(Listing listing);
-
-    /**
-     * Same as {@link #formatFullPickupLocation(Listing)} (pickup and return in the same address).
-     */
-    String formatFullDeliveryLocation(Listing listing);
-
-    /** Pickup address with street number and neighborhood (full line for trusted views). */
-    String formatFullPickupLocation(Listing listing);
-
-    /**
-     * Same as {@link #formatFullPickupLocation(Listing)} (pickup and return in the same address).
-     */
-    String formatDeliveryForReservationView(Listing listing, Reservation reservation, boolean viewerIsOwner);
-
-    /**
-     * Pickup (and return); door number according to role and payment proof.
-     */
-    String formatPickupForReservationView(Listing listing, Reservation reservation, boolean viewerIsOwner);
-
-    /**
-     * Text for emails to the rider (without door number until payment proof).
-     */
-    String formatRiderReservationHandoverSummary(Listing listing, Reservation reservation);
-
-    /**
-     * Unique text for emails to the owner (full data).
-     */
-    String formatOwnerReservationHandoverSummary(Listing listing);
 
     /**
      * If the listing is active and has no bookable wall day from today onward, sets status to paused.

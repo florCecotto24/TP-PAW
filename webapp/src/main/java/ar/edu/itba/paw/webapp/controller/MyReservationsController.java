@@ -1,29 +1,22 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.domain.Listing;
-import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
-import ar.edu.itba.paw.models.util.ArsMoneyFormat;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.util.MyHubSortSanitizer;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
-import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.ReservationViewService;
 import ar.edu.itba.paw.services.ReviewService;
-import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
-import ar.edu.itba.paw.webapp.dto.ReservationCardView;
-import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -48,12 +41,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
@@ -61,37 +50,25 @@ import java.util.stream.Collectors;
 public final class MyReservationsController {
 
     private final ReservationService reservationService;
+    private final ReservationViewService reservationViewService;
     private final ListingService listingService;
-    private final ImageService imageService;
     private final LocaleMessages localeMessages;
-    private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
-    private final UserService userService;
-    private final PresentationLimitsPolicy presentationLimitsPolicy;
 
     public MyReservationsController(
             final ReservationService reservationService,
+            final ReservationViewService reservationViewService,
             final ListingService listingService,
-            final ImageService imageService,
             final LocaleMessages localeMessages,
-            final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
-            final ReviewService reviewService,
-            final UserService userService,
-            final PresentationLimitsPolicy presentationLimitsPolicy) {
+            final ReviewService reviewService) {
         this.reservationService = reservationService;
+        this.reservationViewService = reservationViewService;
         this.listingService = listingService;
-        this.imageService = imageService;
         this.localeMessages = localeMessages;
-        this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
-        this.userService = userService;
-        this.presentationLimitsPolicy = presentationLimitsPolicy;
     }
 
     private static final String DEFAULT_SORT = "date,desc";
-    private static final Set<String> VALID_SORTS = Set.of(
-            "date,desc", "date,asc", "price,asc", "price,desc", "rating,asc", "rating,desc");
-
 
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
@@ -109,13 +86,14 @@ public final class MyReservationsController {
         final User me = WebAuthUtils.requireUser(currentUser);
         riderPage = Math.max(0, riderPage);
 
+        final String riderSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 null, me.getId(), category, transmission, powertrain, priceMin, priceMax,
-                rating, riderStatus, riderPage, sort);
+                rating, riderStatus, riderPage, riderSort);
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
         final Locale locale = LocaleContextHolder.getLocale();
-        final List<ReservationCardView> riderReservations = riderResultPage.getContent().stream()
-                .map(card -> toReservationCardView(card, locale))
+        final List<ReservationCardDisplayRow> riderReservations = riderResultPage.getContent().stream()
+                .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
                 .collect(Collectors.toList());
 
         final int safeRiderPage = UiPaging.clampZeroBasedPage(
@@ -134,7 +112,7 @@ public final class MyReservationsController {
         mav.addObject("riderReservations", riderReservations);
         mav.addObject("riderReservationsPage", riderResultPage);
         mav.addObject("activeTab", "my-reservations");
-        mav.addObject("currentSort", sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT);
+        mav.addObject("currentSort", riderSort);
         return mav;
     }
 
@@ -144,79 +122,15 @@ public final class MyReservationsController {
             @PathVariable("reservationId") final long reservationId,
             @RequestParam(defaultValue = "rider") final String role) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<Reservation> reservationOpt = "owner".equals(role)
-                ? reservationService.getOwnerReservationById(me.getId(), reservationId)
-                : reservationService.getRiderReservationById(me.getId(), reservationId);
-        
-        if (reservationOpt.isEmpty()) {
+        final Optional<ReservationDetailPageModel> detailOpt = reservationViewService.loadMyReservationDetailForViewer(
+                me.getId(), reservationId, role, LocaleContextHolder.getLocale());
+        if (detailOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
         }
-
-        final Reservation reservation = reservationOpt.get();
-        final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(reservation.getListingId());
-        if (listingDetailOpt.isEmpty()) {
-            return new ModelAndView(new RedirectView("/my-reservations", true));
-        }
-
-        final ListingDetail listingDetail = listingDetailOpt.get();
-        final boolean viewerIsOwner = "owner".equals(role);
-        final Optional<User> counterpartyOpt =
-                viewerIsOwner
-                        ? userService.getUserById(reservation.getRiderId())
-                        : Optional.of(listingDetail.getOwner());
-        if (counterpartyOpt.isEmpty()) {
-            return new ModelAndView(new RedirectView("/my-reservations", true));
-        }
-        /* Listing detail embeds a minimal owner row (no profile picture / phone); reload full user. */
-        final User counterparty =
-                userService.getUserById(counterpartyOpt.get().getId()).orElse(counterpartyOpt.get());
-        final Listing listing = listingDetail.getListing();
-        final String reservationPickupLocationDisplay = listingService.formatPickupForReservationView(
-                listing,
-                reservation,
-                viewerIsOwner);
-        final Locale locale = LocaleContextHolder.getLocale();
-        final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
-        final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String totalPrice = ArsMoneyFormat.format(reservation.getTotalPrice());
-        final long carImageId = listingDetail.getPictures().isEmpty() ? 0L : listingDetail.getPictures().get(0).getImageId();
-
+        final ReservationDetailPageModel detail = detailOpt.get();
         final ModelAndView mav = new ModelAndView("myReservationDetail");
-        mav.addObject("reservation", reservation);
-        mav.addObject("listing", listing);
-        mav.addObject("reservationPickupLocationDisplay", reservationPickupLocationDisplay);
-        mav.addObject("car", listingDetail.getCar());
-        mav.addObject("owner", listingDetail.getOwner());
-        mav.addObject("counterparty", counterparty);
-        mav.addObject("counterpartyProfileImageId", counterparty.getProfilePictureId().orElse(null));
-        mav.addObject("counterpartyPhoneDisplay", counterparty.getPhoneNumber().orElse(""));
-        mav.addObject("cbu", listingDetail.getOwner().getCbu().orElse(""));
-        mav.addObject("pickupDateTime", pickupDisplay);
-        mav.addObject("returnDateTime", returnDisplay);
-        mav.addObject("statusKey", reservation.getStatus().name().toLowerCase(Locale.ROOT));
-        mav.addObject("totalPrice", totalPrice);
-        mav.addObject("carImageId", carImageId);
+        detail.populateModel(mav::addObject);
         mav.addObject("activeTab", "my-reservations");
-        mav.addObject("reservationRole", role);
-        mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());
-        mav.addObject("uploadMaxImageMegabytes", imageService.getMaxImageMegabytesRoundedUp());
-        mav.addObject("uploadMaxPaymentReceiptBytes", paymentReceiptUploadPolicy.getMaxBytes());
-        mav.addObject("uploadMaxPaymentReceiptMegabytes", paymentReceiptUploadPolicy.getMaxMegabytesRoundedUp());
-        mav.addObject("reviewCommentMaxLength", reviewService.getReviewCommentMaxLength());
-        final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
-        final boolean periodEnded = nowUtc.isAfter(reservation.getEndDate());
-        mav.addObject("reservationPeriodEnded", periodEnded);
-        mav.addObject("canOwnerMarkCarReturned", viewerIsOwner && periodEnded && !reservation.isCarReturned());
-        final boolean hasOwnerReview = reviewService.hasOwnerReview(reservation.getId());
-        final boolean hasRiderReview = reviewService.hasRiderReview(reservation.getId());
-        mav.addObject("canOwnerReviewRider", viewerIsOwner && reservation.isCarReturned() && !hasOwnerReview);
-        mav.addObject("canRiderReviewOwner", !viewerIsOwner && periodEnded && !hasRiderReview);
-        reservation.getPaymentProofDeadlineAt()
-                .ifPresent(deadline -> mav.addObject(
-                        "paymentProofDeadlineDisplay",
-                        WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(deadline, locale)));
-        mav.addObject("hasPaymentReceipt", reservation.getPaymentReceiptFileId().isPresent());
-        mav.addObject("paymentReceiptApproved", reservation.isPaymentApproved());
         return mav;
     }
 
@@ -229,79 +143,18 @@ public final class MyReservationsController {
         if (!"owner".equals(role) && !"rider".equals(role)) {
             return new ModelAndView(new RedirectView("/my-reservations/" + reservationId, true));
         }
-        final Optional<Reservation> reservationOpt = "owner".equals(role)
-                ? reservationService.getOwnerReservationById(me.getId(), reservationId)
-                : reservationService.getRiderReservationById(me.getId(), reservationId);
-        if (reservationOpt.isEmpty()) {
+        final Optional<CounterpartyProfilePageModel> profileOpt =
+                reservationViewService.loadCounterpartyProfileForReservationParticipant(
+                        me.getId(), reservationId, role, LocaleContextHolder.getLocale());
+        if (profileOpt.isEmpty()) {
             final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=" + role, true);
             rv.setExposeModelAttributes(false);
             return new ModelAndView(rv);
         }
-
-        final Reservation reservation = reservationOpt.get();
-        final Optional<User> counterpartyOpt = "owner".equals(role)
-                ? userService.getUserById(reservation.getRiderId())
-                : userService.getListingOwner(reservation.getListingId());
-        if (counterpartyOpt.isEmpty()) {
-            final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=" + role, true);
-            rv.setExposeModelAttributes(false);
-            return new ModelAndView(rv);
-        }
-
-        final User counterparty = counterpartyOpt.get();
-        final boolean counterpartyIsOwner = "rider".equals(role);
-        final Locale locale = LocaleContextHolder.getLocale();
-        final DateTimeFormatter memberSinceFormatter = DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale);
-        final BigDecimal averageRating = reviewService.getAverageRatingForCounterparty(counterparty.getId(), counterpartyIsOwner);
-        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
-                counterparty.getId(),
-                counterpartyIsOwner,
-                presentationLimitsPolicy.getCounterpartyRecentReviewsLimit());
-        final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
-                counterparty.getForename() + " " + counterparty.getSurname(),
-                counterparty.getForename(),
-                counterparty.getSurname(),
-                null,
-                averageRating,
-                0L,
-                counterparty.getAbout().map(String::trim).orElse(null),
-                counterparty.getMemberSince().orElse(null),
-                counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
-                counterparty.getProfilePictureId().orElse(null));
-        final List<VehicleCardView> counterpartyActiveListings = counterpartyIsOwner
-                ? listingService.getOwnerListingCards(
-                                listingService.buildOwnerListingSearchCriteria(
-                                        counterparty.getId(), null, null, null, null, null,
-                                        List.of("active"), null, null, 0, null))
-                        .getContent()
-                        .stream()
-                        .filter(card -> card.getListingId() != reservation.getListingId())
-                        .map(VehicleCardView::fromListingCard)
-                        .collect(Collectors.toList())
-                : List.of();
-
+        final CounterpartyProfilePageModel profile = profileOpt.get();
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
+        profile.populateModel(mav::addObject);
         mav.addObject("activeTab", "my-reservations");
-        mav.addObject("counterpartyForename", headerDto.getForename());
-        mav.addObject("counterpartySurname", headerDto.getSurname());
-        mav.addObject("counterpartyAbout", headerDto.getAbout().orElse(""));
-        mav.addObject("counterpartyProfileImageId", headerDto.getProfileImageId().orElse(null));
-        mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
-        mav.addObject("counterpartyAverageRating", headerDto.getAverageRating());
-        mav.addObject(
-                "counterpartyLicenseValidated",
-                counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent());
-        mav.addObject(
-                "counterpartyIdentityValidated",
-                counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent());
-        mav.addObject(
-                "recentReviewComments",
-                recentReviewItems.stream()
-                        .map(item -> item.getComment().orElse("").trim())
-                        .filter(comment -> !comment.isEmpty())
-                        .collect(Collectors.toList()));
-        mav.addObject("showCounterpartyActiveListings", counterpartyIsOwner);
-        mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
         return mav;
     }
 
@@ -395,29 +248,6 @@ public final class MyReservationsController {
         final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=rider", true);
         rv.setExposeModelAttributes(false);
         return new ModelAndView(rv);
-    }
-
-    private ReservationCardView toReservationCardView(final ReservationCard card, final Locale locale) {
-        final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getStartDate(), locale);
-        final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getEndDate(), locale);
-        final long days = reservationService.calculateBillableDays(card.getStartDate(), card.getEndDate());
-        final String totalPrice = days > 0
-                ? formatMoney(card.getDayPrice().multiply(BigDecimal.valueOf(days)))
-                : "-";
-        return new ReservationCardView(
-                card.getReservationId(),
-                card.getListingId(),
-                card.getImageId(),
-                card.getBrand(),
-                card.getModel(),
-                pickupDisplay,
-                returnDisplay,
-                card.getStatus().name().toLowerCase(Locale.ROOT),
-                totalPrice);
-    }
-
-    private static String formatMoney(final BigDecimal amount) {
-        return ArsMoneyFormat.format(amount);
     }
 
     @PostMapping("/my-reservations/{reservationId}/car-returned")

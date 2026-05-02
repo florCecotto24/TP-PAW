@@ -20,7 +20,7 @@ import ar.edu.itba.paw.models.dto.ListingDetail;
 class ListingDetailTest {
 
     @Test
-    void constructorCreatesDefensiveUnmodifiableCopiesOfLists() {
+    void testConstructorCreatesDefensiveUnmodifiableCopiesOfLists() {
         // Arrange
         final Listing listing = Listing.builder()
                 .id(1L)

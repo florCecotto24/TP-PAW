@@ -20,7 +20,7 @@ public final class ReservationMailPayload {
     private final OffsetDateTime endDate;
     /**
      * Pickup/return summary for the rider email. Before payment proof: public address (no street number).
-     * After proof (second email): full address including number, see {@code ListingService#formatRiderReservationHandoverSummary}.
+     * After proof (second email): full address including number, see {@code ListingViewService#formatRiderReservationHandoverSummary}.
      */
     private final String riderHandoverLocation;
     /** Full data for the email to the owner. */

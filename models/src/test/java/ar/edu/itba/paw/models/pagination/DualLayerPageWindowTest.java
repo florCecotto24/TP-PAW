@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 public final class DualLayerPageWindowTest {
 
     @Test
-    void computeAlignsSqlWindowAndInnerSlice() {
+    void testComputeAlignsSqlWindowAndInnerSlice() {
         final DualLayerPageWindow w = DualLayerPageWindow.compute(2, 8, 24);
         Assertions.assertEquals(2, w.uiPage());
         Assertions.assertEquals(8, w.uiPageSize());
@@ -21,14 +21,14 @@ public final class DualLayerPageWindowTest {
     }
 
     @Test
-    void computeAdvancesSqlOffsetAcrossBatchBoundary() {
+    void testComputeAdvancesSqlOffsetAcrossBatchBoundary() {
         final DualLayerPageWindow w = DualLayerPageWindow.compute(3, 8, 24);
         Assertions.assertEquals(24, w.sqlOffset());
         Assertions.assertEquals(0, w.innerSliceStart());
     }
 
     @Test
-    void sliceBatchReturnsUiSizedWindow() {
+    void testSliceBatchReturnsUiSizedWindow() {
         final List<Integer> batch = IntStream.range(0, 24).boxed().toList();
         final DualLayerPageWindow w = DualLayerPageWindow.compute(1, 8, 24);
         final List<Integer> slice = DualLayerPageWindow.sliceBatch(batch, w);
@@ -36,14 +36,14 @@ public final class DualLayerPageWindowTest {
     }
 
     @Test
-    void sliceGlobalOrderedUsesFullListIndex() {
+    void testSliceGlobalOrderedUsesFullListIndex() {
         final List<String> all = List.of("a", "b", "c", "d", "e");
         final DualLayerPageWindow w = DualLayerPageWindow.compute(1, 2, 24);
         Assertions.assertEquals(List.of("c", "d"), DualLayerPageWindow.sliceGlobalOrdered(all, w));
     }
 
     @Test
-    void dbSmallerThanUiIsExpanded() {
+    void testDbSmallerThanUiIsExpanded() {
         final DualLayerPageWindow w = DualLayerPageWindow.compute(0, 8, 4);
         Assertions.assertEquals(8, w.dbFetchSize());
     }

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 public class ArsMoneyFormatTest {
 
     @Test
-    void formatIncludesCurrencySymbolNotUsdCode() {
+    void testFormatIncludesCurrencySymbolNotUsdCode() {
         final String s = ArsMoneyFormat.format(new BigDecimal("1234.50"));
         Assertions.assertTrue(s.contains("1234") || s.contains("1.234"));
         Assertions.assertFalse(s.toUpperCase().contains("USD"));

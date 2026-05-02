@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 public final class SingleLayerPageWindowTest {
 
     @Test
-    void computeSetsSqlOffsetAndLimit() {
+    void testComputeSetsSqlOffsetAndLimit() {
         final SingleLayerPageWindow w = SingleLayerPageWindow.compute(2, 10);
         Assertions.assertEquals(2, w.page());
         Assertions.assertEquals(10, w.pageSize());

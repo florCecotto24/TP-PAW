@@ -6,6 +6,10 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
+/**
+ * Max byte size for reservation payment receipt uploads, from {@code app.upload.max-payment-receipt-megabytes}
+ * and {@code app.upload.bytes-per-binary-megabyte}.
+ */
 @Component
 public final class PaymentReceiptUploadPolicy {
 

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test;
 class ModelsToStringTest {
 
     @Test
-    void carToStringIncludesAllFields() {
+    void testCarToStringIncludesAllFields() {
         // Arrange
         final Car car = Car.builder()
                 .id(1L)
@@ -40,7 +40,7 @@ class ModelsToStringTest {
     }
 
     @Test
-    void userToStringIncludesAllFields() {
+    void testUserToStringIncludesAllFields() {
         // Arrange
         final User user = User.identities(1L, "user@example.com", "Ada", "Lovelace");
         // Exercise
@@ -51,7 +51,7 @@ class ModelsToStringTest {
     }
 
     @Test
-    void listingToStringIncludesAllFields() {
+    void testListingToStringIncludesAllFields() {
         // Arrange
         final Listing listing = Listing.builder()
                 .id(3L)
@@ -76,7 +76,7 @@ class ModelsToStringTest {
     }
 
     @Test
-    void reservationToStringIncludesAllFields() {
+    void testReservationToStringIncludesAllFields() {
         // Arrange
         final Reservation reservation = Reservation.builder()
                 .id(5L)
@@ -98,7 +98,7 @@ class ModelsToStringTest {
     }
 
     @Test
-    void listingAvailabilityToStringIncludesAllFields() {
+    void testListingAvailabilityToStringIncludesAllFields() {
         // Arrange
         final ListingAvailability availability = new ListingAvailability(
                 8L,
@@ -116,7 +116,7 @@ class ModelsToStringTest {
     }
 
     @Test
-    void carPictureToStringIncludesAllFields() {
+    void testCarPictureToStringIncludesAllFields() {
         // Arrange
         final CarPicture picture = new CarPicture(
                 1L,
@@ -134,7 +134,7 @@ class ModelsToStringTest {
     }
 
     @Test
-    void imageToStringIncludesAllFieldsIncludingData() {
+    void testImageToStringIncludesAllFieldsIncludingData() {
         // Arrange
         final Image image = new Image(1L, "cover.jpg", "image/jpeg", new byte[] {1, 2, -1});
         // Exercise

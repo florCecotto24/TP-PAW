@@ -8,7 +8,7 @@ import ar.edu.itba.paw.models.domain.Image;
 public class ImageTest {
 
     @Test
-    public void isImageContentTypeAcceptsCommonImageTypes() {
+    public void testIsImageContentTypeAcceptsCommonImageTypes() {
         // 3. Assert
         Assertions.assertTrue(Image.isImageContentType("image/png"));
         Assertions.assertTrue(Image.isImageContentType("IMAGE/JPEG"));
@@ -16,7 +16,7 @@ public class ImageTest {
     }
 
     @Test
-    public void isImageContentTypeRejectsNonImageOrBlank() {
+    public void testIsImageContentTypeRejectsNonImageOrBlank() {
         // 3. Assert
         Assertions.assertFalse(Image.isImageContentType(null));
         Assertions.assertFalse(Image.isImageContentType(""));

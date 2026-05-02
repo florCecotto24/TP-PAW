@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ListingViewService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 public class CarDetailController {
 
     private final ListingService listingService;
+    private final ListingViewService listingViewService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
     private final UserService userService;
@@ -55,12 +57,14 @@ public class CarDetailController {
     @Autowired
     public CarDetailController(
             final ListingService listingService,
+            final ListingViewService listingViewService,
             final ReservationService reservationService,
             final ReviewService reviewService,
             final UserService userService,
             final PaginationPolicy paginationPolicy,
             final PresentationLimitsPolicy presentationLimitsPolicy) {
         this.listingService = listingService;
+        this.listingViewService = listingViewService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
         this.userService = userService;
@@ -106,7 +110,7 @@ public class CarDetailController {
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
 
-        final String listingPublicLocation = listingService.formatPublicPickupLocation(listing);
+        final String listingPublicLocation = listingViewService.formatPublicPickupLocation(listing);
 
         final Locale locale = RequestContextUtils.getLocale(request);
         final long reviewTotal = reviewService.countReviewsForListing(listingId);

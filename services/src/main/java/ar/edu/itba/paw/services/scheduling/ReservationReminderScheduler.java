@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.scheduling;
 
 import ar.edu.itba.paw.services.EmailService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ListingViewService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
 import java.time.LocalDate;
@@ -33,6 +34,7 @@ public final class ReservationReminderScheduler {
 
     private final ReservationService reservationService;
     private final ListingService listingService;
+    private final ListingViewService listingViewService;
     private final UserService userService;
     private final EmailService emailService;
 
@@ -40,10 +42,12 @@ public final class ReservationReminderScheduler {
     public ReservationReminderScheduler(
             final ReservationService reservationService,
             final ListingService listingService,
+            final ListingViewService listingViewService,
             final UserService userService,
             final EmailService emailService) {
         this.reservationService = reservationService;
         this.listingService = listingService;
+        this.listingViewService = listingViewService;
         this.userService = userService;
         this.emailService = emailService;
     }
@@ -79,8 +83,8 @@ public final class ReservationReminderScheduler {
                     continue;
                 }
                 final User listingOwner = ownerOpt.get();
-                final String riderLoc = listingService.formatRiderReservationHandoverSummary(listing, reservation);
-                final String ownerLoc = listingService.formatOwnerReservationHandoverSummary(listing);
+                final String riderLoc = listingViewService.formatRiderReservationHandoverSummary(listing, reservation);
+                final String ownerLoc = listingViewService.formatOwnerReservationHandoverSummary(listing);
                 final ReservationMailPayload payload = ReservationMailPayload.builder()
                         .recipientEmail(rider.getEmail())
                         .riderFullName(rider.getForename() + " " + rider.getSurname())

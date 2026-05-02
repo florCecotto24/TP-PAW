@@ -8,6 +8,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ListingViewService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -41,6 +42,7 @@ public final class ReservationFormController {
 
 
     private final ListingService listingService;
+    private final ListingViewService listingViewService;
     private final ReservationService reservationService;
     private final ImageService imageService;
     private final LocaleMessages localeMessages;
@@ -49,12 +51,14 @@ public final class ReservationFormController {
 
     public ReservationFormController(
             final ListingService listingService,
+            final ListingViewService listingViewService,
             final ReservationService reservationService,
             final ImageService imageService,
             final LocaleMessages localeMessages,
             final WallDateTimeUiFormatter wallDateTimeUiFormatter,
             final UserService userService) {
         this.listingService = listingService;
+        this.listingViewService = listingViewService;
         this.reservationService = reservationService;
         this.imageService = imageService;
         this.localeMessages = localeMessages;
@@ -79,7 +83,7 @@ public final class ReservationFormController {
         final Listing listing = listingOpt.get();
         form.setListingId(listingId);
         form.setCarName(carName != null && !carName.isBlank() ? carName : listing.getTitle());
-        String loc = listingService.formatPublicPickupLocation(listing);
+        String loc = listingViewService.formatPublicPickupLocation(listing);
         if (loc == null || loc.isBlank()) {
             loc = listing.getStartPointStreet();
         }
@@ -184,7 +188,7 @@ public final class ReservationFormController {
         mav.addObject("email", riderDone.getEmail());
         mav.addObject("fromDateTime", form.getFromDateTime());
         mav.addObject("untilDateTime", form.getUntilDateTime());
-        final String confirmLoc = listingService.formatRiderReservationHandoverSummary(listingOpt.get(), reservation);
+        final String confirmLoc = listingViewService.formatRiderReservationHandoverSummary(listingOpt.get(), reservation);
         mav.addObject("deliveryLocation", confirmLoc == null || confirmLoc.isBlank() ? "" : confirmLoc);
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("listingId", listingId);

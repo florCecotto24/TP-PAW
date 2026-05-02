@@ -8,7 +8,7 @@ import ar.edu.itba.paw.models.util.EmailNormalizer;
 class EmailNormalizerTest {
 
     @Test
-    void normalizeTrimsAndLowercasesUsingRootLocale() {
+    void testNormalizeTrimsAndLowercasesUsingRootLocale() {
 
         //Arrange
         String email1= "UsEr.Name+tag@Example.COM";
@@ -21,7 +21,7 @@ class EmailNormalizerTest {
     }
 
     @Test
-    void normalizeThrowsWhenEmailIsNull() {
+    void testNormalizeThrowsWhenEmailIsNull() {
 
         //Arrange
         String nullEmail=null;

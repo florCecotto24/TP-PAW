@@ -85,6 +85,17 @@ mvn test
 - **Validation**: `ValidationWebConfig` implements `WebMvcConfigurer` to inject `LocalValidatorFactoryBean` as the MVC validator. Bean validation and Spring form validation combined.
 - **Javadoc**: Public contracts in `service-contracts` and `persistence-contracts` are in **English**. Avoid HTML paragraph tags (`<p>` / `</p>`); split ideas with extra `*` lines or `{@code …}` / `{@link …}` where useful. Spring MVC controllers under `webapp/.../controller` use a short **English** class-level summary before `@Controller` where it helps navigation.
 
+### Quality & security checklist (recurring audit)
+
+- **Spring stack**: Framework **5.3.x** and **Spring Security 5.7.x** versions live in the root `pom.xml` properties (`spring.version`, `spring-security.version`); module POMs inherit versions via `dependencyManagement`.
+- **Controllers**: Orchestrate only — call **services**, not **persistence**. Do not embed **business rules** or **mail orchestration** (no direct `JavaMailSender` / template sends; use `*Service` APIs). Prefer **constructor injection** and the smallest visibility for collaborators.
+- **Exceptions & UX**: Map domain failures to **`RydenException`** + message keys; generic **`UnhandledExceptionHandler`** must not put raw `Throwable#getMessage()` on the page (use i18n keys; escape any dynamic copy with JSTL `c:out` when shown).
+- **SQL injection**: DAOs use **`JdbcTemplate`** with **`?`** parameters; avoid string-concatenated user input in SQL.
+- **Logging**: Production uses `logback/logback-prod.xml` (**INFO+** for `ar.edu.itba.paw`); local profile may load `logback-local.xml` (**DEBUG** for app packages). Use **SLF4J** parameterized levels (`info` / `warn` / `error`; `debug` where diagnosis needs it locally).
+- **Tests**: Prefer **arrange / exercise / assert**; assert **contract outcomes**, not wiring. **No `Mockito.verify`** (or equivalent call-count tricks). Skip tests that only mirror a one-line delegate with no behavior.
+- **Effective Java–style**: **`final`** where subclasses are not required; **non-instantiable** utility classes (`private` constructor); **immutable** DTOs/criteria where practical; avoid magic numbers in business code — read limits and tuning from **`application.properties`** (with small JVM fallbacks only where documented, e.g. `PaginationFallbackSizes`).
+- **Comments**: Source comments and public API docs in **English** only; remove chatty or obsolete notes.
+
 ### Dependency management
 
 - **Centralized versions**: Maven properties and `<dependencyManagement>` in the root `pom.xml`.

@@ -319,7 +319,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void findOwnerCbuForListingWhenOwnerHasCbuReturnsValue() {
+    public void testFindOwnerCbuForListingWhenOwnerHasCbuReturnsValue() {
         final long listingId = 2L;
         final User owner = User.builder()
                 .id(9L)
@@ -338,7 +338,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void findOwnerCbuForListingWhenNoOwnerReturnsEmpty() {
+    public void testFindOwnerCbuForListingWhenNoOwnerReturnsEmpty() {
         Mockito.when(userDao.getListingOwner(2L)).thenReturn(Optional.empty());
 
         final Optional<String> result = userService.findOwnerCbuForListing(2L);
@@ -347,7 +347,7 @@ public class UserServiceImplTest {
     }
 
     @Test
-    public void findOwnerCbuForListingWhenCbuMissingReturnsEmpty() {
+    public void testFindOwnerCbuForListingWhenCbuMissingReturnsEmpty() {
         final User owner = User.identities(9L, "o@example.com", "O", "Owner");
         Mockito.when(userDao.getListingOwner(2L)).thenReturn(Optional.of(owner));
         Mockito.when(userDao.getUserById(9L)).thenReturn(Optional.of(owner));

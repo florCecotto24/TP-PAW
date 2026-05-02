@@ -5,6 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+/**
+ * Max byte size for profile verification uploads, derived from {@code app.upload.max-profile-document-megabytes}
+ * and {@code app.upload.bytes-per-binary-megabyte}.
+ */
 @Component
 public final class ProfileDocumentUploadPolicy {
 

@@ -47,7 +47,6 @@ import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
-import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -1010,119 +1009,6 @@ public final class ListingServiceImpl implements ListingService {
             }
         }
         return out;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatPublicDeliveryLocation(final Listing listing) {
-        return formatPublicPickupLocation(listing);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatFullDeliveryLocation(final Listing listing) {
-        return formatFullPickupLocation(listing);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatPublicPickupLocation(final Listing listing) {
-        final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
-        if (listing.getNeighborhoodId().isEmpty()) {
-            return street;
-        }
-        final String neighborhoodName = locationService.findNeighborhoodById(listing.getNeighborhoodId().get())
-                .map(Neighborhood::getName)
-                .orElse("");
-        if (neighborhoodName.isBlank()) {
-            return street;
-        }
-        if (street.isBlank()) {
-            return neighborhoodName.trim();
-        }
-        return street + ", " + neighborhoodName.trim();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatFullPickupLocation(final Listing listing) {
-        final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
-        final Optional<String> numberOpt = listing.getStartPointNumber();
-        final String streetWithNumber;
-        if (numberOpt.isPresent() && !numberOpt.get().isBlank()) {
-            streetWithNumber = street.isBlank() ? numberOpt.get().trim() : street + " " + numberOpt.get().trim();
-        } else {
-            streetWithNumber = street;
-        }
-        if (listing.getNeighborhoodId().isEmpty()) {
-            return streetWithNumber;
-        }
-        final String neighborhoodName = locationService.findNeighborhoodById(listing.getNeighborhoodId().get())
-                .map(Neighborhood::getName)
-                .orElse("");
-        if (neighborhoodName.isBlank()) {
-            return streetWithNumber;
-        }
-        if (streetWithNumber.isBlank()) {
-            return neighborhoodName.trim();
-        }
-        return streetWithNumber + ", " + neighborhoodName.trim();
-    }
-
-    private static boolean riderSeesSensitiveAddressNumbers(final Reservation reservation) {
-        return reservation.getPaymentReceiptFileId().isPresent() || reservation.isPaymentApproved();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatDeliveryForReservationView(
-            final Listing listing,
-            final Reservation reservation,
-            final boolean viewerIsOwner) {
-        if (viewerIsOwner || riderSeesSensitiveAddressNumbers(reservation)) {
-            return formatFullDeliveryLocation(listing);
-        }
-        return formatPublicDeliveryLocation(listing);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatPickupForReservationView(
-            final Listing listing,
-            final Reservation reservation,
-            final boolean viewerIsOwner) {
-        if (viewerIsOwner || riderSeesSensitiveAddressNumbers(reservation)) {
-            return formatFullPickupLocation(listing);
-        }
-        return formatPublicPickupLocation(listing);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatRiderReservationHandoverSummary(final Listing listing, final Reservation reservation) {
-        final String p = formatPickupForReservationView(listing, reservation, false);
-        final String d = formatDeliveryForReservationView(listing, reservation, false);
-        if (p.isBlank()) {
-            return d;
-        }
-        if (d.isBlank() || p.trim().equals(d.trim())) {
-            return p;
-        }
-        return p + " · " + d;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public String formatOwnerReservationHandoverSummary(final Listing listing) {
-        final String p = formatFullPickupLocation(listing);
-        final String d = formatFullDeliveryLocation(listing);
-        if (p.isBlank()) {
-            return d;
-        }
-        if (d.isBlank() || p.trim().equals(d.trim())) {
-            return p;
-        }
-        return p + " · " + d;
     }
 
     @Override

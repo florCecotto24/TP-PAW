@@ -13,7 +13,7 @@ import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 public final class ListingSearchCriteriaTest {
 
     @Test
-    void builderNormalizesQueryAndCopiesCollections() {
+    void testBuilderNormalizesQueryAndCopiesCollections() {
         // Arrange
         final List<String> transmissions = new ArrayList<>(List.of("MANUAL"));
         final List<String> powertrains = new ArrayList<>(List.of("HYBRID"));
@@ -51,7 +51,7 @@ public final class ListingSearchCriteriaTest {
     }
 
     @Test
-    void builderTurnsBlankQueryIntoNullAndNullListsIntoEmptyLists() {
+    void testBuilderTurnsBlankQueryIntoNullAndNullListsIntoEmptyLists() {
 
         // Exercise
         final ListingSearchCriteria criteria = ListingSearchCriteria.builder()
@@ -70,7 +70,7 @@ public final class ListingSearchCriteriaTest {
     }
 
     @Test
-    void hasAvailabilityRangeIsTrueOnlyWhenEndIsAfterStart() {
+    void testHasAvailabilityRangeIsTrueOnlyWhenEndIsAfterStart() {
         // Arrange
         final Instant start = Instant.parse("2026-04-05T10:00:00Z");
 

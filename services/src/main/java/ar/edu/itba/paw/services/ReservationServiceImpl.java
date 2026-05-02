@@ -21,6 +21,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.exception.user.CBUNotFoundException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.Page;
@@ -52,18 +54,18 @@ import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 /**
  * Reservation workflows: persists through {@link ReservationDao} only.
- * Listings, users, stored files, images, and mail go through {@link ListingService}, {@link UserService},
- * {@link StoredFileService}, {@link ImageService}, and {@link EmailService}; timing and pagination use policy beans.
+ * Listings, users, stored files, images, and mail go through {@link ListingService}, {@link ListingViewService}
+ * (pickup/delivery lines for mail and payloads), {@link UserService}, {@link StoredFileService}, {@link ImageService},
+ * and {@link EmailService}; timing and pagination use policy beans.
  */
 @Service
 public final class ReservationServiceImpl implements ReservationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationServiceImpl.class);
-    private static final Set<String> RESERVATION_STATUSES =
-            Set.of("pending", "accepted", "started", "cancelled", "finished");
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
+    private final ListingViewService listingViewService;
     private final UserService userService;
     private final EmailService emailService;
     private final StoredFileService storedFileService;
@@ -76,6 +78,7 @@ public final class ReservationServiceImpl implements ReservationService {
     public ReservationServiceImpl(
             final ReservationDao reservationDao,
             final ListingService listingService,
+            @Lazy final ListingViewService listingViewService,
             final UserService userService,
             final EmailService emailService,
             final StoredFileService storedFileService,
@@ -85,6 +88,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final PaginationPolicy paginationPolicy) {
         this.reservationDao = reservationDao;
         this.listingService = listingService;
+        this.listingViewService = listingViewService;
         this.userService = userService;
         this.emailService = emailService;
         this.storedFileService = storedFileService;
@@ -162,12 +166,12 @@ public final class ReservationServiceImpl implements ReservationService {
         listingService.refreshListingFinishedIfExhausted(listingId);
         final Optional<Listing> listingForMail = listingService.getListingById(listingId);
         final String riderLoc = listingForMail
-                .map(l -> listingService.formatRiderReservationHandoverSummary(l, reservation))
+                .map(l -> listingViewService.formatRiderReservationHandoverSummary(l, reservation))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .orElse(null);
         final String ownerLoc = listingForMail
-                .map(listingService::formatOwnerReservationHandoverSummary)
+                .map(listingViewService::formatOwnerReservationHandoverSummary)
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .orElse(null);
@@ -290,7 +294,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     continue;
                 }
                 final String low = s.trim().toLowerCase();
-                if (RESERVATION_STATUSES.contains(low)) {
+                if (ReservationHubStatusWhitelist.contains(low)) {
                     statuses.add(low);
                 }
             }
@@ -583,8 +587,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final Listing listing = listingOpt.get();
             final String vehicleLabel = listing.getTitle();
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
-            final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
-            final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
+            final String riderLoc = trimToNull(listingViewService.formatRiderReservationHandoverSummary(listing, reservation));
+            final String ownerLoc = trimToNull(listingViewService.formatOwnerReservationHandoverSummary(listing));
             final ReservationMailPayload mail = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
@@ -679,8 +683,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final User rider = riderOpt.get();
             final Listing listing = listingOpt.get();
             final User listingOwner = listingOwnerOpt.get();
-            final String riderLoc = trimToNull(listingService.formatRiderReservationHandoverSummary(listing, reservation));
-            final String ownerLoc = trimToNull(listingService.formatOwnerReservationHandoverSummary(listing));
+            final String riderLoc = trimToNull(listingViewService.formatRiderReservationHandoverSummary(listing, reservation));
+            final String ownerLoc = trimToNull(listingViewService.formatOwnerReservationHandoverSummary(listing));
             final ReservationMailPayload payload = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
@@ -1021,7 +1025,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final User owner = ownerOpt.get();
         final Locale locale = userService.resolveMailLocale(rider.getId());
         final String checkout = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String returnLine = listingService.formatPickupForReservationView(listing, reservation, false);
+        final String returnLine = listingViewService.formatPickupForReservationView(listing, reservation, false);
         final String path = "/my-reservations/" + reservation.getId();
         return Optional.of(RiderCarReturnEmailPayload.builder()
                 .messageLocale(locale)

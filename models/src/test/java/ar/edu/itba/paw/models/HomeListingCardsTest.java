@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 class HomeListingCardsTest {
 
     @Test
-    void recordProvidesEqualsHashCodeAndToString() {
+    void testRecordProvidesEqualsHashCodeAndToString() {
         // Arrange
         final ListingCard card = new ListingCard(1L, "Toyota", "Yaris", new BigDecimal("100.00"), 10L);
         final HomeListingCards first = new HomeListingCards(List.of(card), List.of(card));
@@ -29,7 +29,7 @@ class HomeListingCardsTest {
     }
 
     @Test
-    void recordKeepsProvidedListReferences() {
+    void testRecordKeepsProvidedListReferences() {
         // Arrange
         final List<ListingCard> cheapest = new ArrayList<>();
         final List<ListingCard> mostRecent = new ArrayList<>();

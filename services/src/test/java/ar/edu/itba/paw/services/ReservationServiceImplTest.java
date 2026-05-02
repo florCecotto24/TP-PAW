@@ -23,8 +23,8 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
+import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
@@ -44,6 +44,9 @@ public class ReservationServiceImplTest {
 
     @Mock
     private ListingService listingService;
+
+    @Mock
+    private ListingViewService listingViewService;
 
     @Mock
     private UserService userService;
@@ -111,9 +114,9 @@ public class ReservationServiceImplTest {
         Mockito.when(userService.getUserCbu(99L)).thenReturn("0170200203000008777719");
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
-        Mockito.when(listingService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
+        Mockito.when(listingViewService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
-        Mockito.when(listingService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
+        Mockito.when(listingViewService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
         Mockito.doNothing().when(listingService).refreshListingFinishedIfExhausted(listingId);
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(User.identities(riderId, "r@e.com", "R", "Rider")));
         Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(Locale.ENGLISH);
@@ -170,7 +173,7 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void submitRiderReservationWhenListingNotFoundThrowsRiderReservationException() {
+    public void testSubmitRiderReservationWhenListingNotFoundThrowsRiderReservationException() {
         // 1. Arrange
         final long listingId = 99L;
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.empty());
@@ -233,9 +236,9 @@ public class ReservationServiceImplTest {
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
-        Mockito.when(listingService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
+        Mockito.when(listingViewService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
-        Mockito.when(listingService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
+        Mockito.when(listingViewService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
         Mockito.doNothing().when(listingService).refreshListingFinishedIfExhausted(Mockito.anyLong());
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(createdRider));
         Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(Locale.ENGLISH);
@@ -321,7 +324,7 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void submitRiderReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
+    public void testSubmitRiderReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
         stubReservationTimingForSubmitRiderFlow();
         final long listingId = 2L;
         final long sameUserId = 5L;
@@ -397,7 +400,7 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void findReminderReservationsReturnsDaoListForSameWindow() {
+    public void testFindReminderReservationsReturnsDaoListForSameWindow() {
         final OffsetDateTime from = OffsetDateTime.parse("2026-06-02T03:00:00Z");
         final OffsetDateTime to = OffsetDateTime.parse("2026-06-03T03:00:00Z");
         final List<Reservation> expected = List.of(
@@ -420,7 +423,7 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void calculateBillableDaysWhenWallDatesSpanSixteenDaysReturnsSixteen() {
+    public void testCalculateBillableDaysWhenWallDatesSpanSixteenDaysReturnsSixteen() {
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");
         final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-30T18:00");
 
@@ -430,7 +433,7 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void calculateBillableDaysWhenCrossingMidnightReturnsTwo() {
+    public void testCalculateBillableDaysWhenCrossingMidnightReturnsTwo() {
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T23:00");
         final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-16T01:00");
 
@@ -440,7 +443,7 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    public void calculateTotalWhenWallDatesSpanFifteenDaysReturnsExpectedMoney() {
+    public void testCalculateTotalWhenWallDatesSpanFifteenDaysReturnsExpectedMoney() {
         final long listingId = 2L;
         final Listing listing = Mockito.mock(Listing.class);
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");

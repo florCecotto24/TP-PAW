@@ -10,7 +10,7 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 class AvailabilityPeriodTest {
 
     @Test
-    void constructorRejectsNullStart() {
+    void testConstructorRejectsNullStart() {
         // Arrange
         final LocalDate end = LocalDate.of(2026, 4, 10);
         // Exercise & Assert
@@ -18,7 +18,7 @@ class AvailabilityPeriodTest {
     }
 
     @Test
-    void constructorRejectsNullEnd() {
+    void testConstructorRejectsNullEnd() {
         // Arrange
         final LocalDate start = LocalDate.of(2026, 4, 1);
         // Exercise & Assert
@@ -26,7 +26,7 @@ class AvailabilityPeriodTest {
     }
 
     @Test
-    void isValidOrderIsTrueWhenDatesAreEqual() {
+    void testIsValidOrderIsTrueWhenDatesAreEqual() {
         // Arrange
         final LocalDate same = LocalDate.of(2026, 4, 1);
         final AvailabilityPeriod period = new AvailabilityPeriod(same, same);
@@ -39,7 +39,7 @@ class AvailabilityPeriodTest {
     }
 
     @Test
-    void isValidOrderIsFalseWhenEndIsBeforeStart() {
+    void testIsValidOrderIsFalseWhenEndIsBeforeStart() {
         // Arrange
         final AvailabilityPeriod period = new AvailabilityPeriod(
                 LocalDate.of(2026, 4, 2),

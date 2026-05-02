@@ -1,6 +1,8 @@
-package ar.edu.itba.paw.services;
+package ar.edu.itba.paw.exception.email;
 
-/** Checked wrapper for failures while building or sending mail (JavaMail, template processing). */
+/**
+ * Checked exception for failures while composing or sending application email (JavaMail, MIME assembly, template rendering).
+ */
 public final class EmailMessagingException extends Exception {
 
     public EmailMessagingException(final String message) {
