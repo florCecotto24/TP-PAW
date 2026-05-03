@@ -227,9 +227,6 @@
                                                                         <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
                                                                     </p>
                                                                 </c:when>
-                                                                <c:when test="${(car.reviewCount == null or car.reviewCount == 0) and empty car.ratingAvg}">
-                                                                    <p class="small text-secondary mb-0"><spring:message code="carCard.noReviews"/></p>
-                                                                </c:when>
                                                             </c:choose>
                                                         </div>
                                                         <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
