@@ -10,8 +10,8 @@
     <c:if test="${not empty reviewCount}">
         <span class="d-inline-flex align-items-center gap-1 text-secondary">
             <c:if test="${not empty rating}">
-                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                 <span class="text-dark fw-semibold"><c:out value="${rating}"/></span>
+                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
             </c:if>
             <spring:message code="detailListingMeta.reviewsCount" arguments="${reviewCount}" var="reviewsCntText"/>
             <span class="text-muted"><c:out value="${reviewsCntText}"/></span>

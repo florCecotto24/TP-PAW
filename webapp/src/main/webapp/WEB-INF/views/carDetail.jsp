@@ -103,50 +103,46 @@
                         <p class="text-secondary mb-0"><spring:message code="carDetail.reviews.empty"/></p>
                     </c:when>
                     <c:otherwise>
-                        <div id="listingReviewsCarousel" class="carousel slide" data-bs-ride="false">
-                            <div class="carousel-inner">
-                                <c:forEach var="row" items="${listingReviewPage.content}" varStatus="st">
-                                    <div class="carousel-item<c:if test='${st.first}'> active</c:if>">
-                                        <div class="px-1 pb-2">
-                                            <ryden:reviewCard
-                                                    forename="${row.reviewerForename}"
-                                                    surname="${row.reviewerSurname}"
-                                                    dateLabel="${row.dateText}"
-                                                    rating="${row.rating}"
-                                                    comment="${row.comment}"/>
-                                        </div>
-                                    </div>
-                                </c:forEach>
-                            </div>
-                            <c:if test="${listingReviewPage.totalPages > 1}">
-                                <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
-                                    <c:url var="reviewsPrevUrl" value="/car-detail">
-                                        <c:param name="listingId" value="${listing.id}"/>
-                                        <c:param name="reviewPage" value="${listingReviewPage.currentPage - 1}"/>
-                                        <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
-                                    </c:url>
-                                    <c:url var="reviewsNextUrl" value="/car-detail">
-                                        <c:param name="listingId" value="${listing.id}"/>
-                                        <c:param name="reviewPage" value="${listingReviewPage.currentPage + 1}"/>
-                                        <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
-                                    </c:url>
-                                    <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasPrevious ? '' : ' disabled'}"
-                                       href="${listingReviewPage.hasPrevious ? reviewsPrevUrl : '#'}"
-                                       aria-disabled="${listingReviewPage.hasPrevious ? 'false' : 'true'}">
-                                        <spring:message code="carDetail.reviews.prev"/>
-                                    </a>
-                                    <span class="text-secondary small">
-                                        <spring:message code="carDetail.reviews.pageIndicator"
-                                                        arguments="${listingReviewPage.currentPage + 1},${listingReviewPage.totalPages}"/>
-                                    </span>
-                                    <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasNext ? '' : ' disabled'}"
-                                       href="${listingReviewPage.hasNext ? reviewsNextUrl : '#'}"
-                                       aria-disabled="${listingReviewPage.hasNext ? 'false' : 'true'}">
-                                        <spring:message code="carDetail.reviews.next"/>
-                                    </a>
+                        <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
+                            <c:forEach var="row" items="${listingReviewPage.content}">
+                                <div class="col">
+                                    <ryden:reviewCard
+                                            forename="${row.reviewerForename}"
+                                            surname="${row.reviewerSurname}"
+                                            dateLabel="${row.dateText}"
+                                            rating="${row.rating}"
+                                            comment="${row.comment}"/>
                                 </div>
-                            </c:if>
+                            </c:forEach>
                         </div>
+                        <c:if test="${listingReviewPage.totalPages > 1}">
+                            <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
+                                <c:url var="reviewsPrevUrl" value="/car-detail">
+                                    <c:param name="listingId" value="${listing.id}"/>
+                                    <c:param name="reviewPage" value="${listingReviewPage.currentPage - 1}"/>
+                                    <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
+                                </c:url>
+                                <c:url var="reviewsNextUrl" value="/car-detail">
+                                    <c:param name="listingId" value="${listing.id}"/>
+                                    <c:param name="reviewPage" value="${listingReviewPage.currentPage + 1}"/>
+                                    <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
+                                </c:url>
+                                <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasPrevious ? '' : ' disabled'}"
+                                   href="${listingReviewPage.hasPrevious ? reviewsPrevUrl : '#'}"
+                                   aria-disabled="${listingReviewPage.hasPrevious ? 'false' : 'true'}">
+                                    <spring:message code="carDetail.reviews.prev"/>
+                                </a>
+                                <span class="text-secondary small">
+                                    <spring:message code="carDetail.reviews.pageIndicator"
+                                                    arguments="${listingReviewPage.currentPage + 1},${listingReviewPage.totalPages}"/>
+                                </span>
+                                <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasNext ? '' : ' disabled'}"
+                                   href="${listingReviewPage.hasNext ? reviewsNextUrl : '#'}"
+                                   aria-disabled="${listingReviewPage.hasNext ? 'false' : 'true'}">
+                                    <spring:message code="carDetail.reviews.next"/>
+                                </a>
+                            </div>
+                        </c:if>
                     </c:otherwise>
                 </c:choose>
             </section>
