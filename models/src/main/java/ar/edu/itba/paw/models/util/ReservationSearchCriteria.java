@@ -23,6 +23,7 @@ public final class ReservationSearchCriteria {
     private final List<String> ratingBands;
     private final String sortBy;
     private final String sortDirection;
+    private final String textQuery;
 
     public ReservationSearchCriteria(
             final Long ownerId,
@@ -37,7 +38,8 @@ public final class ReservationSearchCriteria {
             final BigDecimal maxPrice,
             final List<String> ratingBands,
             final String sortBy,
-            final String sortDirection) {
+            final String sortDirection,
+            final String textQuery) {
         this.ownerId = ownerId;
         this.riderId = riderId;
         this.page = Math.max(0, page);
@@ -51,6 +53,7 @@ public final class ReservationSearchCriteria {
         this.ratingBands = ratingBands == null ? List.of() : List.copyOf(ratingBands);
         this.sortBy = sortBy != null ? sortBy : "date";
         this.sortDirection = "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
+        this.textQuery = textQuery != null && !textQuery.isBlank() ? textQuery.trim() : null;
     }
 
     public Long getOwnerId() {
@@ -103,5 +106,9 @@ public final class ReservationSearchCriteria {
 
     public String getSortDirection() {
         return sortDirection;
+    }
+
+    public String getTextQuery() {
+        return textQuery;
     }
 }

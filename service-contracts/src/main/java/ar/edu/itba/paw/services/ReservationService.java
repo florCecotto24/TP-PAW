@@ -60,7 +60,8 @@ public interface ReservationService {
             List<String> rating,
             List<String> statusFilter,
             int page,
-            String sort);
+            String sort,
+            String textQuery);
 
     /**
      * Normalizes a client-supplied total string (digits and optional single decimal point); empty when invalid.

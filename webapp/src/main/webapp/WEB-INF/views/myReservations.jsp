@@ -20,7 +20,7 @@
     </section>
 
     <c:url var="reserveCarUrl" value="/search"/>
-    <c:set var="hasActiveRiderFilters" value="${not empty paramValues.riderStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty param.priceMin or not empty param.priceMax or not empty paramValues.rating}"/>
+    <c:set var="hasActiveRiderFilters" value="${not empty param.q or not empty paramValues.riderStatus or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty param.priceMin or not empty param.priceMax or not empty paramValues.rating}"/>
     <c:url var="myReservationsRiderPaginationBaseUrl" value="/my-reservations">
         <c:forEach var="rs" items="${paramValues.riderStatus}">
             <c:param name="riderStatus"><c:out value="${rs}"/></c:param>
@@ -46,9 +46,25 @@
     </c:url>
 
     <c:if test="${not empty riderReservations or hasActiveRiderFilters}">
-        <form id="myReservationsRiderFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations">
-            <div class="col-12">
-                <div class="d-flex flex-wrap align-items-center gap-0 pt-1">
+        <c:set var="showRiderClear" value="${hasActiveRiderFilters or (not empty param.sort and param.sort ne 'date,desc')}"/>
+        <form id="myReservationsRiderFilterForm" class="mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations">
+            <div class="d-flex justify-content-center mb-3">
+                <div class="d-flex align-items-end gap-2 w-100" style="max-width:600px">
+                    <div class="flex-grow-1">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+                            <input type="search" class="form-control border-start-0" id="myReservations_q" name="q" value="<c:out value='${param.q}'/>"
+                                   placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                    <c:if test="${showRiderClear}">
+                        <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                    </c:if>
+                </div>
+            </div>
+            <div class="d-flex justify-content-center mb-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
                     <spring:message code="myReservations.filter.status" var="riderStatusLabel"/>
                     <ryden:exploreFilterDropdown filterLabel="${riderStatusLabel}" paramName="riderStatus" ariaGroup="rider-status" options="${reservationStatusOptions}"/>
                     <spring:message code="search.filter.category" var="riderCategoryLabel"/>
@@ -81,16 +97,8 @@
                     <ryden:exploreFilterDropdown filterLabel="${riderRatingLabel}" paramName="rating" ariaGroup="rider-rating" options="${ratingFilterOptions}"/>
                 </div>
             </div>
-            <div class="col-auto d-flex flex-wrap gap-2">
-                <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
-            </div>
         </form>
 
-        <ryden:sortBar baseUrl="${myReservationsRiderPaginationBaseUrl}" currentSort="${currentSort}"/>
-    </c:if>
-
-    <c:if test="${not empty riderReservations or hasActiveRiderFilters}">
         <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <h3 class="h6 mb-0">
                 <c:choose>
@@ -103,6 +111,8 @@
                     </c:otherwise>
                 </c:choose>
             </h3>
+            <ryden:sortBar baseUrl="${myReservationsRiderPaginationBaseUrl}" currentSort="${currentSort}"
+                           wrapperClass="d-flex align-items-center gap-2 flex-wrap"/>
         </div>
     </c:if>
 

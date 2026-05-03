@@ -6,10 +6,12 @@
 <%@ attribute name="currentSort"  required="false" type="java.lang.String" %>
 <%@ attribute name="sortParamName" required="false" type="java.lang.String" %>
 <%@ attribute name="pageParamName" required="false" type="java.lang.String" %>
+<%@ attribute name="wrapperClass"  required="false" type="java.lang.String" %>
 
 <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&amp;' : '?'}"/>
 <c:set var="resolvedSortParam" value="${empty sortParamName ? 'sort' : sortParamName}"/>
 <c:set var="resolvedPageParam" value="${empty pageParamName ? 'page' : pageParamName}"/>
+<c:set var="resolvedWrapperClass" value="${empty wrapperClass ? 'd-flex align-items-center gap-2 flex-wrap mb-3' : wrapperClass}"/>
 
 <spring:message code="search.sort.label"      var="sortLabel"/>
 <spring:message code="search.sort.dateDesc"   var="lblDateDesc"/>
@@ -19,7 +21,7 @@
 <spring:message code="search.sort.ratingDesc" var="lblRatingDesc"/>
 <spring:message code="search.sort.ratingAsc"  var="lblRatingAsc"/>
 
-<div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+<div class="${resolvedWrapperClass}">
     <label for="sortSelect_<c:out value='${resolvedSortParam}'/>" class="text-secondary small fw-medium mb-0"><c:out value="${sortLabel}"/>:</label>
     <select id="sortSelect_<c:out value='${resolvedSortParam}'/>" class="form-select form-select-sm w-auto"
             onchange="window.location.href = this.value">
