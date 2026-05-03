@@ -9,7 +9,9 @@ import java.util.Set;
 public final class ReservationHubStatusWhitelist {
 
     private static final Set<String> STATUSES =
-            Set.of("pending", "accepted", "started", "cancelled", "finished");
+            Set.of("pending", "accepted", "started", "cancelled",
+                    "cancelled_by_rider", "cancelled_by_owner", "cancelled_due_to_missing_payment_proof",
+                    "finished");
 
     private ReservationHubStatusWhitelist() {
     }
