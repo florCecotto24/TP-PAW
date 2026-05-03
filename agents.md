@@ -104,6 +104,7 @@ mvn test
 
 ### Testing
 
+- **Test method naming**: Every `@Test` method must follow **`testFunctionName`**: a single camelCase identifier that **starts with `test`** and continues with a descriptive name (examples: `testSendConfirmationUsesCapturedLocale()`, `testCreateFailsWhenPaused()`). Avoid `should…`, Given/When/Then prose names, snake_case, or omitting the **`test`** prefix.
 - **Unit tests**: JUnit 5 and Mockito (`services`, `models`).
 - **Persistence tests**: HSQLDB (`TestPersistenceConfig`, DAO integration-style tests under `persistence/src/test`).
 - **DAO integration tests (`*JdbcDaoTest`, `DaoIntegrationTestSupport`)**: After exercising a **write** on the DAO under test (`create*`, `update*`, `delete*`), assert persisted state with **`JdbcTemplate`** (injected on the support class) or **`insert*`** / raw SQL in arrange — **do not** verify the write by calling a **second method on the same DAO** (e.g. `createCar` then `getCarById`). Prefer SQL fixtures for arrange when the goal is to test updates or deletes, so setup does not go through unrelated create methods on that DAO. For **read** methods with SQL fixtures, one DAO call is fine; when the contract is **ordering**, consider aligning assertions with an explicit `ORDER BY` query via `JdbcTemplate` as ground truth.

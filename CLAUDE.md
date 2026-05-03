@@ -83,6 +83,7 @@ Configured in `WebAuthConfig` with Spring Security 5.7.14. Uses `@EnableWebSecur
 
 ## Testing
 
+- **Test method naming**: Every `@Test` method must be named **`testFunctionName`**: camelCase beginning with **`test`**, then a descriptive tail (e.g. `testRegistersUser()`, `testDaoWriteVisibleInJdbcTemplate()`). Do not use `should…`, BDD prose, snake_case, or names without the **`test`** prefix.
 - **Unit tests**: JUnit 5 + Mockito in `services` and `models`.
 - **Persistence tests**: HSQLDB (`TestPersistenceConfig`), integration-style DAO tests under `persistence/src/test`.
 - **DAO integration tests** (`*JdbcDaoTest`, `DaoIntegrationTestSupport`): After a **write** (`create*`, `update*`, `delete*`), assert with **`JdbcTemplate`** or SQL fixtures in arrange — **never** confirm persistence via a **second method on the same DAO** (e.g. `createCar` + `getCarById`). Prefer `insert*` / SQL for setup when testing updates or deletes on that DAO. For ordered **read** results backed by SQL fixtures, optionally assert ordering against a matching `ORDER BY` query via `JdbcTemplate`.
