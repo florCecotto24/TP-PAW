@@ -82,6 +82,7 @@ public final class MyReservationsController {
             @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String sort,
+            @RequestParam(required = false) final String q,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         riderPage = Math.max(0, riderPage);
@@ -89,7 +90,7 @@ public final class MyReservationsController {
         final String riderSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 null, me.getId(), category, transmission, powertrain, priceMin, priceMax,
-                rating, riderStatus, riderPage, riderSort);
+                rating, riderStatus, riderPage, riderSort, q);
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
         final Locale locale = LocaleContextHolder.getLocale();
         final List<ReservationCardDisplayRow> riderReservations = riderResultPage.getContent().stream()

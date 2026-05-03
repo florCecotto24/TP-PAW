@@ -112,6 +112,7 @@ public final class MyListingsController {
             @RequestParam(required = false) final BigDecimal ownerPriceMax,
             @RequestParam(required = false) final List<String> ownerRating,
             @RequestParam(required = false) final String ownerSort,
+            @RequestParam(required = false) final String ownerQ,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
@@ -142,7 +143,7 @@ public final class MyListingsController {
         // Reservations tab data
         final var ownerCriteria = reservationService.buildReservationSearchCriteria(
                 me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain, ownerPriceMin, ownerPriceMax,
-                ownerRating, ownerStatus, ownerPage, ownerResSort);
+                ownerRating, ownerStatus, ownerPage, ownerResSort, ownerQ);
         final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(ownerCriteria);
         final int safeOwnerPage = UiPaging.clampZeroBasedPage(
                 ownerPage, ownerResultPage.getTotalItems(), ownerResultPage.getPageSize());

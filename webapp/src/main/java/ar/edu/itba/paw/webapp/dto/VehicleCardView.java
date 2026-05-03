@@ -14,6 +14,7 @@ public final class VehicleCardView {
     private final long imageId;
     private final String statusKey;
     private final BigDecimal ratingAvg;
+    private final long reviewCount;
 
     public VehicleCardView(
             final long listingId,
@@ -21,7 +22,7 @@ public final class VehicleCardView {
             final String model,
             final BigDecimal price,
             final long imageId) {
-        this(listingId, brand, model, price, imageId, null, null);
+        this(listingId, brand, model, price, imageId, null, null, 0);
     }
 
     public VehicleCardView(
@@ -31,7 +32,7 @@ public final class VehicleCardView {
             final BigDecimal price,
             final long imageId,
             final String statusKey) {
-        this(listingId, brand, model, price, imageId, statusKey, null);
+        this(listingId, brand, model, price, imageId, statusKey, null, 0);
     }
 
     public VehicleCardView(
@@ -42,6 +43,18 @@ public final class VehicleCardView {
             final long imageId,
             final String statusKey,
             final BigDecimal ratingAvg) {
+        this(listingId, brand, model, price, imageId, statusKey, ratingAvg, 0);
+    }
+
+    public VehicleCardView(
+            final long listingId,
+            final String brand,
+            final String model,
+            final BigDecimal price,
+            final long imageId,
+            final String statusKey,
+            final BigDecimal ratingAvg,
+            final long reviewCount) {
         this.listingId = listingId;
         this.brand = brand;
         this.model = model;
@@ -49,6 +62,7 @@ public final class VehicleCardView {
         this.imageId = imageId;
         this.statusKey = statusKey;
         this.ratingAvg = ratingAvg;
+        this.reviewCount = reviewCount;
     }
 
     /**
@@ -77,7 +91,8 @@ public final class VehicleCardView {
                 card.getDayPrice(),
                 card.getImageId(),
                 statusKey,
-                card.getRatingAvg().orElse(null));
+                card.getRatingAvg().orElse(null),
+                card.getReviewCount());
     }
 
     public long getListingId() {
@@ -106,6 +121,10 @@ public final class VehicleCardView {
 
     public BigDecimal getRatingAvg() {
         return ratingAvg;
+    }
+
+    public long getReviewCount() {
+        return reviewCount;
     }
 }
 

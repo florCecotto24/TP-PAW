@@ -140,6 +140,7 @@
                                                 image="${imageUrl}"
                                                 pricePeriod="day"
                                                 ratingAvg="${car.ratingAvg}"
+                                                reviewCount="${car.reviewCount}"
                                                 href="${searchCarDetailHref}"/>
                                     </div>
                                 </c:forEach>

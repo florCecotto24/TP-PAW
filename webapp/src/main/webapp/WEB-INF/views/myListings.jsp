@@ -67,15 +67,26 @@
                     </c:url>
 
                     <c:if test="${not empty results or hasActiveFilters}">
-                        <form id="myListingsFilterForm" class="row g-2 align-items-end mb-4" method="get" action="${pageContext.request.contextPath}/my-listings">
+                        <c:set var="showLstClear" value="${hasActiveFilters or (not empty param.sort and param.sort ne 'date,desc')}"/>
+                        <form id="myListingsFilterForm" class="mb-4" method="get" action="${pageContext.request.contextPath}/my-listings">
                             <input type="hidden" name="tab" value="listings"/>
-                            <div class="col-md-5 col-lg-4">
-                                <label class="form-label small text-secondary mb-1" for="myListings_q"><spring:message code="myListings.filter.query"/></label>
-                                <input type="search" class="form-control" id="myListings_q" name="q" value="<c:out value='${param.q}'/>"
-                                       placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                            <div class="d-flex justify-content-center mb-3">
+                                <div class="d-flex align-items-end gap-2 w-100" style="max-width:600px">
+                                    <div class="flex-grow-1">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+                                            <input type="search" class="form-control border-start-0" id="myListings_q" name="q" value="<c:out value='${param.q}'/>"
+                                                   placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                                    <c:if test="${showLstClear}">
+                                        <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                                    </c:if>
+                                </div>
                             </div>
-                            <div class="col-12">
-                                <div class="d-flex flex-wrap align-items-center gap-0 pt-1">
+                            <div class="d-flex justify-content-center">
+                                <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
                                     <spring:message code="myListings.filter.status" var="lstStatusLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstStatusLabel}" paramName="listingStatus" ariaGroup="lst-status" options="${listingStatusOptions}"/>
                                     <spring:message code="search.filter.category" var="lstCategoryLabel"/>
@@ -108,13 +119,7 @@
                                     <ryden:exploreFilterDropdown filterLabel="${lstRatingLabel}" paramName="rating" ariaGroup="lst-rating" options="${ratingFilterOptions}"/>
                                 </div>
                             </div>
-                            <div class="col-auto d-flex flex-wrap gap-2">
-                                <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                                <a href="${pageContext.request.contextPath}/my-listings" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
-                            </div>
                         </form>
-
-                        <ryden:sortBar baseUrl="${myListingsBaseUrl}" currentSort="${listingsCurrentSort}"/>
 
                         <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
                             <h2 class="h5 mb-0">
@@ -128,6 +133,8 @@
                                     </c:otherwise>
                                 </c:choose>
                             </h2>
+                            <ryden:sortBar baseUrl="${myListingsBaseUrl}" currentSort="${listingsCurrentSort}"
+                                           wrapperClass="d-flex align-items-center gap-2 flex-wrap"/>
                         </div>
                     </c:if>
 
@@ -206,12 +213,21 @@
                                                     <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
                                                         <div>
                                                             <h3 class="h5 fw-semibold mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                                                            <c:if test="${not empty car.ratingAvg}">
-                                                                <p class="small text-secondary mb-0">
-                                                                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                                                    <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
-                                                                </p>
-                                                            </c:if>
+                                                            <c:choose>
+                                                                <c:when test="${not empty car.ratingAvg and car.reviewCount > 0}">
+                                                                    <p class="small text-secondary mb-0">
+                                                                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                                                        <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                                                                        <span class="text-secondary">(<c:out value="${car.reviewCount}"/> <spring:message code="carCard.reviews"/>)</span>
+                                                                    </p>
+                                                                </c:when>
+                                                                <c:when test="${not empty car.ratingAvg and (car.reviewCount == null or car.reviewCount == 0)}">
+                                                                    <p class="small text-secondary mb-0">
+                                                                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                                                        <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                                                                    </p>
+                                                                </c:when>
+                                                            </c:choose>
                                                         </div>
                                                         <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                                             <div class="reservation-price-compact">
@@ -238,7 +254,7 @@
 
                 <%-- Tab 2: Reservas de mis autos --%>
                 <div class="tab-pane fade ${selectedListingsTab eq 'reservations' ? 'show active' : ''}" id="reservations-pane" role="tabpanel" aria-labelledby="reservations-tab">
-                    <c:set var="hasActiveOwnerFilters" value="${not empty paramValues.ownerStatus or not empty paramValues.ownerCategory or not empty paramValues.ownerTransmission or not empty paramValues.ownerPowertrain or not empty param.ownerPriceMin or not empty param.ownerPriceMax or not empty paramValues.ownerRating}"/>
+                    <c:set var="hasActiveOwnerFilters" value="${not empty param.ownerQ or not empty paramValues.ownerStatus or not empty paramValues.ownerCategory or not empty paramValues.ownerTransmission or not empty paramValues.ownerPowertrain or not empty param.ownerPriceMin or not empty param.ownerPriceMax or not empty paramValues.ownerRating}"/>
                     <c:url var="myListingsOwnerResPaginationBaseUrl" value="/my-listings">
                         <c:param name="tab" value="reservations"/>
                         <c:forEach var="rs" items="${paramValues.ownerStatus}">
@@ -265,10 +281,26 @@
                     </c:url>
 
                     <c:if test="${not empty ownerReservations or hasActiveOwnerFilters}">
-                        <form id="myListingsOwnerResFilterForm" class="row g-2 align-items-end mb-3" method="get" action="${pageContext.request.contextPath}/my-listings">
+                        <c:set var="showOwnClear" value="${hasActiveOwnerFilters or (not empty param.ownerSort and param.ownerSort ne 'date,desc')}"/>
+                        <form id="myListingsOwnerResFilterForm" class="mb-3" method="get" action="${pageContext.request.contextPath}/my-listings">
                             <input type="hidden" name="tab" value="reservations"/>
-                            <div class="col-12">
-                                <div class="d-flex flex-wrap align-items-center gap-0 pt-1">
+                            <div class="d-flex justify-content-center mb-3">
+                                <div class="d-flex align-items-end gap-2 w-100" style="max-width:600px">
+                                    <div class="flex-grow-1">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
+                                            <input type="search" class="form-control border-start-0" id="myListings_ownerQ" name="ownerQ" value="<c:out value='${param.ownerQ}'/>"
+                                                   placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                                    <c:if test="${showOwnClear}">
+                                        <a href="${pageContext.request.contextPath}/my-listings?tab=reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                                    </c:if>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-center mb-3">
+                                <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
                                     <spring:message code="myReservations.filter.status" var="ownStatusLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${ownStatusLabel}" paramName="ownerStatus" ariaGroup="own-status" options="${reservationStatusOptions}"/>
                                     <spring:message code="search.filter.category" var="ownCategoryLabel"/>
@@ -301,14 +333,8 @@
                                     <ryden:exploreFilterDropdown filterLabel="${ownRatingLabel}" paramName="ownerRating" ariaGroup="own-rating" options="${ratingFilterOptions}"/>
                                 </div>
                             </div>
-                            <div class="col-auto d-flex flex-wrap gap-2">
-                                <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                                <a href="${pageContext.request.contextPath}/my-listings?tab=reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
-                            </div>
                         </form>
 
-                        <ryden:sortBar baseUrl="${myListingsOwnerResPaginationBaseUrl}" currentSort="${ownerCurrentSort}"
-                                       sortParamName="ownerSort" pageParamName="ownerPage"/>
                     </c:if>
 
                     <c:if test="${not empty ownerReservations or hasActiveOwnerFilters}">
@@ -324,6 +350,9 @@
                                     </c:otherwise>
                                 </c:choose>
                             </h3>
+                            <ryden:sortBar baseUrl="${myListingsOwnerResPaginationBaseUrl}" currentSort="${ownerCurrentSort}"
+                                           sortParamName="ownerSort" pageParamName="ownerPage"
+                                           wrapperClass="d-flex align-items-center gap-2 flex-wrap"/>
                         </div>
                     </c:if>
 

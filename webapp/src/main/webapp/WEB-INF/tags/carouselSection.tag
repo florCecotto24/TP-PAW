@@ -46,6 +46,7 @@
 
                         <ryden:carCard model="${car.model}" brand="${car.brand}" price="${car.price}"
                                      image="${imageUrl}" pricePeriod="day" ratingAvg="${car.ratingAvg}"
+                                     reviewCount="${car.reviewCount}"
                                      href="${pageContext.request.contextPath}/car-detail?listingId=${car.listingId}"/>
                     </div>
 

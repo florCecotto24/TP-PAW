@@ -322,6 +322,14 @@ public class ReservationJdbcDao implements ReservationDao {
             sql.append("AND LOWER(r.status) IN (:resStatuses) ");
             params.addValue("resStatuses", criteria.getStatusFilters());
         }
+        final String textQuery = criteria.getTextQuery();
+        if (textQuery != null) {
+            final String q = "%" + escapeLike(textQuery) + "%";
+            sql.append("AND (LOWER(c.brand) LIKE LOWER(:resSearch) ESCAPE '\\' "
+                    + "OR LOWER(c.model) LIKE LOWER(:resSearch) ESCAPE '\\' "
+                    + "OR LOWER(l.title) LIKE LOWER(:resSearch) ESCAPE '\\') ");
+            params.addValue("resSearch", q);
+        }
         if (!criteria.getCarTypes().isEmpty()) {
             sql.append("AND c.type IN (:resCarTypes) ");
             params.addValue("resCarTypes", criteria.getCarTypes());
@@ -361,6 +369,10 @@ public class ReservationJdbcDao implements ReservationDao {
                 sql.append("AND (").append(String.join(" OR ", conditions)).append(") ");
             }
         }
+    }
+
+    private static String escapeLike(final String raw) {
+        return raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     private static String buildReservationOrderBy(final String sortBy, final String sortDirection) {
