@@ -205,9 +205,11 @@ public class CarDetailController {
         mav.addObject("counterpartyAbout", headerDto.getAbout().orElse(""));
         mav.addObject("counterpartyProfileImageId", headerDto.getProfileImageId().orElse(null));
         mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
-        BigDecimal avgRating = headerDto.getAverageRating();
+        final BigDecimal avgRating = headerDto.getAverageRating();
         mav.addObject("counterpartyAverageRating", avgRating);
-        mav.addObject("counterpartyRatingFloor", avgRating.longValue());
+        mav.addObject(
+                "counterpartyRatingFloor",
+                avgRating != null ? avgRating.longValue() : 0L);
         mav.addObject(
                 "counterpartyLicenseValidated",
                 counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent());
