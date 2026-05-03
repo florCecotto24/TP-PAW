@@ -10,6 +10,7 @@
 <%@ attribute name="pricePeriod" required="false" %>
 <%@ attribute name="href" required="false" %>
 <%@ attribute name="ratingAvg" required="false" type="java.lang.Number" %>
+<%@ attribute name="reviewCount" required="false" type="java.lang.Number" %>
 
 <fmt:setLocale value="es_AR"/>
 <c:if test="${empty pricePeriod}">
@@ -43,12 +44,26 @@
         <div class="carcard-info-text text">
             <h4 class="carcard-brand"><c:out value="${brand}"/></h4>
             <p class="carcard-model"><c:out value="${model}"/></p>
-            <c:if test="${not empty ratingAvg}">
-                <p class="carcard-rating small text-secondary mb-0 mt-1">
-                    <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
-                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                </p>
-            </c:if>
+            <c:choose>
+                <c:when test="${not empty ratingAvg and reviewCount > 0}">
+                    <p class="carcard-rating small text-secondary mb-0 mt-1">
+                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                        <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                        <span class="text-secondary">(<c:out value="${reviewCount}"/> <spring:message code="carCard.reviews"/>)</span>
+                    </p>
+                </c:when>
+                <c:when test="${not empty ratingAvg and (reviewCount == null or reviewCount == 0)}">
+                    <p class="carcard-rating small text-secondary mb-0 mt-1">
+                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                        <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                    </p>
+                </c:when>
+                <c:when test="${(reviewCount == null or reviewCount == 0) and empty ratingAvg}">
+                    <p class="carcard-rating small text-secondary mb-0 mt-1">
+                        <spring:message code="carCard.noReviews"/>
+                    </p>
+                </c:when>
+            </c:choose>
         </div>
         <div class="carcard-price text">
             <p class="carcard-price-amount"><fmt:formatNumber value="${price}" type="currency" currencyCode="ARS"/></p>

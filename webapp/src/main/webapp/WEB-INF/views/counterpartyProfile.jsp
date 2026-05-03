@@ -26,10 +26,11 @@
                         profileImageId="${counterpartyProfileImageId}"
                         averageRating="${counterpartyAverageRating}"
                         licenseValidated="${counterpartyLicenseValidated}"
-                        identityValidated="${counterpartyIdentityValidated}"/>
+                        identityValidated="${counterpartyIdentityValidated}"
+                        ratingFloor="${counterpartyRatingFloor}"/>
 
                 <ryden:counterpartyProfileReviews
-                        comments="${recentReviewComments}"/>
+                        reviews="${recentReviewComments}"/>
 
                 <c:if test="${showCounterpartyActiveListings}">
                     <section class="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4">
@@ -62,6 +63,7 @@
                                                         image="${counterpartyListingImageUrl}"
                                                         pricePeriod="day"
                                                         ratingAvg="${car.ratingAvg}"
+                                                        reviewCount="${car.reviewCount}"
                                                         href="${counterpartyListingHref}"/>
                                             </div>
                                         </c:forEach>

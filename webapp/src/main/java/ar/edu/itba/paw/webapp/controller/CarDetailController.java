@@ -205,7 +205,9 @@ public class CarDetailController {
         mav.addObject("counterpartyAbout", headerDto.getAbout().orElse(""));
         mav.addObject("counterpartyProfileImageId", headerDto.getProfileImageId().orElse(null));
         mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
-        mav.addObject("counterpartyAverageRating", headerDto.getAverageRating());
+        BigDecimal avgRating = headerDto.getAverageRating();
+        mav.addObject("counterpartyAverageRating", avgRating);
+        mav.addObject("counterpartyRatingFloor", avgRating.longValue());
         mav.addObject(
                 "counterpartyLicenseValidated",
                 counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent());
@@ -214,10 +216,7 @@ public class CarDetailController {
                 counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent());
         mav.addObject(
                 "recentReviewComments",
-                recentReviewItems.stream()
-                        .map(item -> item.getComment().orElse("").trim())
-                        .filter(comment -> !comment.isEmpty())
-                        .collect(Collectors.toList()));
+                recentReviewItems);
         mav.addObject("showCounterpartyActiveListings", true);
         mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
         return mav;

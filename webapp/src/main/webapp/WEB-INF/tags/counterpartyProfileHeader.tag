@@ -12,6 +12,7 @@
 <%@ attribute name="averageRating" required="false" type="java.math.BigDecimal" %>
 <%@ attribute name="licenseValidated" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="identityValidated" required="false" type="java.lang.Boolean" %>
+<%@ attribute name="ratingFloor" required="false" type="java.lang.Long" %>
 <c:set var="initials" value="${fn:substring(forename, 0, 1)}${fn:substring(surname, 0, 1)}"/>
 
 <section class="card border-0 shadow-sm rounded-4 counterparty-section-card counterparty-header-card">
@@ -37,13 +38,17 @@
                     <c:choose>
                         <c:when test="${averageRating != null}">
                             <span class="counterparty-rating-value">
-                                <fmt:formatNumber value="${averageRating}" minFractionDigits="1" maxFractionDigits="2"/>
+                                <fmt:formatNumber value="${averageRating}" minFractionDigits="1" maxFractionDigits="1"/>
                             </span>
                             <div class="d-inline-flex align-items-center gap-1" aria-label="<spring:message code='counterpartyProfile.rating.ariaLabel'/>">
+                                <c:set var="ratingFraction" value="${averageRating - ratingFloor}"/>
                                 <c:forEach begin="1" end="5" var="star">
                                     <c:choose>
-                                        <c:when test="${star <= averageRating}">
+                                        <c:when test="${star <= ratingFloor}">
                                             <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                                        </c:when>
+                                        <c:when test="${star == ratingFloor + 1 && ratingFraction >= 0.4 && ratingFraction <= 0.6}">
+                                            <i class="bi bi-star-half text-warning" aria-hidden="true"></i>
                                         </c:when>
                                         <c:otherwise>
                                             <i class="bi bi-star text-secondary-subtle" aria-hidden="true"></i>

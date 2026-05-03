@@ -15,6 +15,7 @@ public final class ListingCard {
     private final long imageId;
     private final BigDecimal ratingAvg;
     private final Listing.Status status;
+    private final long reviewCount;
 
     public ListingCard(
             final long listingId,
@@ -22,7 +23,7 @@ public final class ListingCard {
             final String model,
             final BigDecimal dayPrice,
             final long imageId) {
-        this(listingId, brand, model, dayPrice, imageId, null, null);
+        this(listingId, brand, model, dayPrice, imageId, null, null, 0);
     }
 
     public ListingCard(
@@ -32,7 +33,7 @@ public final class ListingCard {
             final BigDecimal dayPrice,
             final long imageId,
             final BigDecimal ratingAvg) {
-        this(listingId, brand, model, dayPrice, imageId, ratingAvg, null);
+        this(listingId, brand, model, dayPrice, imageId, ratingAvg, null, 0);
     }
 
     public ListingCard(
@@ -43,6 +44,18 @@ public final class ListingCard {
             final long imageId,
             final BigDecimal ratingAvg,
             final Listing.Status status) {
+        this(listingId, brand, model, dayPrice, imageId, ratingAvg, status, 0);
+    }
+
+    public ListingCard(
+            final long listingId,
+            final String brand,
+            final String model,
+            final BigDecimal dayPrice,
+            final long imageId,
+            final BigDecimal ratingAvg,
+            final Listing.Status status,
+            final long reviewCount) {
         this.listingId = listingId;
         this.brand = brand;
         this.model = model;
@@ -50,6 +63,7 @@ public final class ListingCard {
         this.imageId = imageId;
         this.ratingAvg = ratingAvg;
         this.status = status;
+        this.reviewCount = reviewCount;
     }
 
     public long getListingId() {
@@ -78,5 +92,9 @@ public final class ListingCard {
 
     public Optional<Listing.Status> getStatus() {
         return Optional.ofNullable(status);
+    }
+
+    public long getReviewCount() {
+        return reviewCount;
     }
 }

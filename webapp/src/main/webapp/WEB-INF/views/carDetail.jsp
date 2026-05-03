@@ -194,6 +194,7 @@
                                     image="${similarImageUrl}"
                                     pricePeriod="day"
                                     ratingAvg="${similar.ratingAvg}"
+                                    reviewCount="${similar.reviewCount}"
                                     href="${similarCarDetailUrl}"/>
                         </div>
                     </c:forEach>
