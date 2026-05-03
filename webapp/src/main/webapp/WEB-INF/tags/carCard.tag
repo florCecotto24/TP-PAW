@@ -45,8 +45,8 @@
             <p class="carcard-model"><c:out value="${model}"/></p>
             <c:if test="${not empty ratingAvg}">
                 <p class="carcard-rating small text-secondary mb-0 mt-1">
-                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                     <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                    <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                 </p>
             </c:if>
         </div>
