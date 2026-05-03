@@ -220,7 +220,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 card.getModel(),
                 card.getDayPrice(),
                 card.getImageId(),
-                card.getRatingAvg().orElse(null));
+                card.getRatingAvg().orElse(null),
+                card.getReviewCount());
     }
 
     @Override

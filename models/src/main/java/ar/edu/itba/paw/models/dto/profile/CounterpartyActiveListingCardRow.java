@@ -12,6 +12,7 @@ public final class CounterpartyActiveListingCardRow {
     private final BigDecimal price;
     private final long imageId;
     private final BigDecimal ratingAvg;
+    private final long reviewCount;
 
     public CounterpartyActiveListingCardRow(
             final long listingId,
@@ -19,13 +20,15 @@ public final class CounterpartyActiveListingCardRow {
             final String model,
             final BigDecimal price,
             final long imageId,
-            final BigDecimal ratingAvg) {
+            final BigDecimal ratingAvg,
+            final long reviewCount) {
         this.listingId = listingId;
         this.brand = Objects.requireNonNull(brand, "brand");
         this.model = Objects.requireNonNull(model, "model");
         this.price = Objects.requireNonNull(price, "price");
         this.imageId = imageId;
         this.ratingAvg = ratingAvg;
+        this.reviewCount = reviewCount;
     }
 
     public long getListingId() {
@@ -50,5 +53,9 @@ public final class CounterpartyActiveListingCardRow {
 
     public BigDecimal getRatingAvg() {
         return ratingAvg;
+    }
+
+    public long getReviewCount() {
+        return reviewCount;
     }
 }
