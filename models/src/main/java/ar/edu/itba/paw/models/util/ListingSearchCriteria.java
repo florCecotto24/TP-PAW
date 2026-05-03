@@ -13,22 +13,12 @@ import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
  * Immutable search filters + paging (Item 17). Prefer {@link #builder()} (Item 2); in the web app, wire sizes from
  * Spring {@code Environment} via the listing service {@code buildSearchCriteria}.
  */
-public final class ListingSearchCriteria {
+public final class ListingSearchCriteria extends BaseSearchCriteria {
 
     private final String query;
-    private final List<String> transmissions;
-    private final List<String> powertrains;
-    private final List<String> carTypes;
-    private final BigDecimal minPrice;
-    private final BigDecimal maxPrice;
-    private final List<String> ratingBands;
     private final Instant availabilityRangeStart;
     private final Instant availabilityRangeEndExclusive;
-    private final int page;
-    private final int uiPageSize;
     private final int dbFetchSize;
-    private final String sortBy;
-    private final String sortDirection;
     /** When set, SQL requires published availability reaching this wall-calendar day or later. */
     private final LocalDate browseWallDate;
     /** When set, SQL excludes listings owned by this user id (public rider browse). */
@@ -36,21 +26,12 @@ public final class ListingSearchCriteria {
     private final List<Long> neighborhoodIds;
 
     private ListingSearchCriteria(final Builder b) {
+        super(b.page, b.uiPageSize, b.carTypes, b.transmissions, b.powertrains,
+                b.minPrice, b.maxPrice, b.ratingBands, b.sortBy, b.sortDirection);
         this.query = b.query != null && !b.query.isBlank() ? b.query.trim() : null;
-        this.transmissions = b.transmissions;
-        this.powertrains = b.powertrains;
-        this.carTypes = b.carTypes;
-        this.minPrice = b.minPrice;
-        this.maxPrice = b.maxPrice;
-        this.ratingBands = b.ratingBands;
         this.availabilityRangeStart = b.availabilityRangeStart;
         this.availabilityRangeEndExclusive = b.availabilityRangeEndExclusive;
-        this.page = normalizedPage(b.page);
-        final int ui = normalizedUiPageSize(b.uiPageSize);
-        this.uiPageSize = ui;
-        this.dbFetchSize = normalizedDbFetchSize(ui, b.dbFetchSize);
-        this.sortBy = b.sortBy != null ? b.sortBy : "date";
-        this.sortDirection = "asc".equalsIgnoreCase(b.sortDirection) ? "asc" : "desc";
+        this.dbFetchSize = normalizedDbFetchSize(getPageSize(), b.dbFetchSize);
         this.browseWallDate = b.browseWallDate;
         this.excludeOwnerUserId = b.excludeOwnerUserId;
         this.neighborhoodIds = normalizeIdList(b.neighborhoodIds);
@@ -171,14 +152,6 @@ public final class ListingSearchCriteria {
         }
     }
 
-    private static int normalizedPage(final int page) {
-        return Math.max(0, page);
-    }
-
-    private static int normalizedUiPageSize(final int uiPageSize) {
-        return uiPageSize > 0 ? uiPageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
-    }
-
     /**
      * Ensures a positive DB window at least as large as the UI page (dual-layer paging invariant).
      */
@@ -204,30 +177,6 @@ public final class ListingSearchCriteria {
         return query;
     }
 
-    public List<String> getTransmissions() {
-        return transmissions;
-    }
-
-    public List<String> getPowertrains() {
-        return powertrains;
-    }
-
-    public List<String> getCarTypes() {
-        return carTypes;
-    }
-
-    public BigDecimal getMinPrice() {
-        return minPrice;
-    }
-
-    public BigDecimal getMaxPrice() {
-        return maxPrice;
-    }
-
-    public List<String> getRatingBands() {
-        return ratingBands;
-    }
-
     public Instant getAvailabilityRangeStart() {
         return availabilityRangeStart;
     }
@@ -242,26 +191,14 @@ public final class ListingSearchCriteria {
                 && availabilityRangeEndExclusive.isAfter(availabilityRangeStart);
     }
 
-    public int getPage() {
-        return page;
-    }
-
     /** Items shown per UI page (e.g. 8). */
     public int getUiPageSize() {
-        return uiPageSize;
+        return getPageSize();
     }
 
     /** Rows fetched per DB query window (e.g. 24); must be ≥ {@link #getUiPageSize()}. */
     public int getDbFetchSize() {
         return dbFetchSize;
-    }
-
-    public String getSortBy() {
-        return sortBy;
-    }
-
-    public String getSortDirection() {
-        return sortDirection;
     }
 
     public LocalDate getBrowseWallDate() {
