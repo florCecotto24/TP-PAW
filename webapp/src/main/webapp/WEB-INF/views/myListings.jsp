@@ -213,21 +213,6 @@
                                                     <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
                                                         <div>
                                                             <h3 class="h5 fw-semibold mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                                                            <c:choose>
-                                                                <c:when test="${not empty car.ratingAvg and car.reviewCount > 0}">
-                                                                    <p class="small text-secondary mb-0">
-                                                                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                                                        <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
-                                                                        <span class="text-secondary">(<c:out value="${car.reviewCount}"/> <spring:message code="carCard.reviews"/>)</span>
-                                                                    </p>
-                                                                </c:when>
-                                                                <c:when test="${not empty car.ratingAvg and (car.reviewCount == null or car.reviewCount == 0)}">
-                                                                    <p class="small text-secondary mb-0">
-                                                                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
-                                                                        <span class="fw-semibold text-dark"><fmt:formatNumber value="${car.ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
-                                                                    </p>
-                                                                </c:when>
-                                                            </c:choose>
                                                         </div>
                                                         <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                                             <div class="reservation-price-compact">
