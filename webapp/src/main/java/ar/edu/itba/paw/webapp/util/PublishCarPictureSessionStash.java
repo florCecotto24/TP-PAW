@@ -254,10 +254,10 @@ public final class PublishCarPictureSessionStash {
     }
 
     private static List<ImageUpload> toImageUploads(final MultipartFile[] pictures) throws IOException {
-        final List<ImageUpload> out = new ArrayList<>();
         if (pictures == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final List<ImageUpload> out = new ArrayList<>();
         for (final MultipartFile picture : pictures) {
             if (picture == null || picture.isEmpty()) {
                 continue;

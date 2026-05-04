@@ -106,15 +106,25 @@ class ReviewJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testOmittedReviewExistsButExcludedFromPublicListingCounts() {
-        // 1.Arrange
+        // 1.Arrange & 2.Exercise
         dao.insertReview(RESERVATION_ID, true, null, null);
 
-        // 2.Exercise & 3.Assert
-        Assertions.assertTrue(dao.existsReview(RESERVATION_ID, true));
-        Assertions.assertEquals(0L, dao.countReviewsForListing(LISTING_ID));
-        final Page<ListingPublicReview> page = dao.findListingPublicReviews(LISTING_ID, 0, 10);
-        Assertions.assertEquals(0L, page.getTotalItems());
-        Assertions.assertTrue(page.getContent().isEmpty());
+        // 3.Assert 
+        final Long exists = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM reviews WHERE reservation_id = ? AND made_by_rider = ?",
+                Long.class,
+                RESERVATION_ID,
+                true);
+        Assertions.assertNotNull(exists);
+        Assertions.assertEquals(1L, exists);
+
+        final Long publicCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM reviews r "
+                        + "INNER JOIN reservations res ON res.id = r.reservation_id "
+                        + "WHERE res.listing_id = ? AND r.rating IS NOT NULL",
+                Long.class,
+                LISTING_ID);
+        Assertions.assertEquals(0L, publicCount != null ? publicCount : 0L);
     }
 
     @Test

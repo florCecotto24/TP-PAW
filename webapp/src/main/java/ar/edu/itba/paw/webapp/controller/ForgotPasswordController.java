@@ -147,7 +147,6 @@ public final class ForgotPasswordController {
         }
         session.removeAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL);
         sessionLoginService.signInUserAfterPasswordReset(request, response, email);
-        redirectAttributes.addFlashAttribute("passwordResetSignedIn", Boolean.TRUE);
         return "redirect:/";
     }
 

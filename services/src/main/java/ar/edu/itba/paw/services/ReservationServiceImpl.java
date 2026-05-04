@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -328,10 +329,10 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {
-        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;
@@ -349,10 +350,10 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     private static List<String> collectTransmissionParams(final List<String> raw) {
-        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;
@@ -368,10 +369,10 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     private static List<String> collectPowertrainParams(final List<String> raw) {
-        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final java.util.ArrayList<String> out = new java.util.ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;

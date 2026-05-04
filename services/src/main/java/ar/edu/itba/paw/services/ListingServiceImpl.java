@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -991,10 +992,10 @@ public final class ListingServiceImpl implements ListingService {
     }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final List<String> out = new ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;
@@ -1013,10 +1014,10 @@ public final class ListingServiceImpl implements ListingService {
     }
 
     private static List<String> collectTransmissionParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final List<String> out = new ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;
@@ -1033,10 +1034,10 @@ public final class ListingServiceImpl implements ListingService {
     }
 
     private static List<String> collectPowertrainParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final List<String> out = new ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;
@@ -1055,10 +1056,10 @@ public final class ListingServiceImpl implements ListingService {
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 
     private static List<String> collectRatingBandParams(final List<String> raw) {
-        final List<String> out = new ArrayList<>();
         if (raw == null) {
-            return out;
+            return Collections.emptyList();
         }
+        final List<String> out = new ArrayList<>();
         for (final String s : raw) {
             if (s == null || s.isBlank()) {
                 continue;

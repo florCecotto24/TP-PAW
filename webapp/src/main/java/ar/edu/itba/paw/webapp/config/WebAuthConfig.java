@@ -40,7 +40,7 @@ import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetailsService;
 
 /**
- * Spring Security filter chain: form login, remember-me, CSRF, and path-specific authorization managers.
+ * Spring Security filter chain: form login, remember-me, CSRF disabled, and path-specific authorization managers.
  */
 @Configuration
 @EnableWebSecurity
@@ -103,6 +103,7 @@ public class WebAuthConfig {
             final ReservationWebAuthorization reservationWebAuthorization,
             final ProfileWebAuthorization profileWebAuthorization) throws Exception {
         http
+                .csrf(csrf -> csrf.disable())
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
                 .requestCache(rc -> rc.requestCache(requestCache))

@@ -477,6 +477,7 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean hasValidCbu(final User user) {
         if (user == null) {
             return false;
@@ -485,6 +486,7 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean isValidCbuFormat(final String cbuRaw) {
         return CbuRules.isValidFormat(cbuRaw);
     }
