@@ -35,7 +35,7 @@
                                         </div>
                                         <span class="text-secondary small"><c:out value="${review.reviewDate}"/></span>
                                     </div>
-                                    <p class="mb-0 text-secondary"><c:out value="${review.comment.orElse('')}"/></p>
+                                    <p class="mb-0 text-secondary ryden-multiline-plaintext"><c:out value="${review.comment.orElse('')}"/></p>
                                 </div>
                             </li>
                         </c:if>

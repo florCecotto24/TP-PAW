@@ -1416,3 +1416,9 @@ select.form-select.ryden-car-spec-select option {
     color: #fbbc04;
 }
 
+/* Textarea / multiline user text shown with c:out: keep \n as line breaks in HTML. */
+.ryden-multiline-plaintext {
+    white-space: pre-line;
+    word-break: break-word;
+}
+

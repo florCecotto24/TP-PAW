@@ -19,7 +19,7 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
 
 /**
- * Establishes an authenticated session after post-registration password set or similar flows.
+ * Establishes an authenticated session after post-registration password set, email verification, or password reset.
  */
 @Component
 public final class SessionLoginService {
@@ -38,8 +38,25 @@ public final class SessionLoginService {
         final User basic = userService.getUserById(userId).orElseThrow();
         final User withHash = userService.findByEmailForAuthentication(basic.getEmail())
                 .orElseThrow(() -> new IllegalStateException("User missing after verification"));
+        establishSessionForUser(request, response, withHash);
+    }
+
+    /** After forgot-password flow: user has just set a new password for this email. */
+    public void signInUserAfterPasswordReset(
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final String email) {
+        final User withHash = userService.findByEmailForAuthentication(email.trim())
+                .orElseThrow(() -> new IllegalStateException("User missing after password reset"));
+        establishSessionForUser(request, response, withHash);
+    }
+
+    private void establishSessionForUser(
+            final HttpServletRequest request,
+            final HttpServletResponse response,
+            final User withHash) {
         final String hash = withHash.getPasswordHash().filter(h -> !h.isBlank())
-                .orElseThrow(() -> new IllegalStateException("User has no password after verification"));
+                .orElseThrow(() -> new IllegalStateException("User has no password hash for session"));
         final List<GrantedAuthority> authorities =
                 UserRoleAuthorities.fromDbRoleNames(userService.findRoleNamesForUser(withHash.getId()));
         final RydenUserDetails principal = new RydenUserDetails(

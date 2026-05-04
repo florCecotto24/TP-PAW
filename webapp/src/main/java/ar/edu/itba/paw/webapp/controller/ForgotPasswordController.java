@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
@@ -23,6 +24,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.security.http.ForgotPasswordSessionAttributes;
+import ar.edu.itba.paw.webapp.security.auth.SessionLoginService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
@@ -34,14 +36,17 @@ public final class ForgotPasswordController {
     private final PasswordResetService passwordResetService;
     private final LocaleMessages localeMessages;
     private final UserValidationPolicy userValidationPolicy;
+    private final SessionLoginService sessionLoginService;
 
     public ForgotPasswordController(
             final PasswordResetService passwordResetService,
             final LocaleMessages localeMessages,
-            final UserValidationPolicy userValidationPolicy) {
+            final UserValidationPolicy userValidationPolicy,
+            final SessionLoginService sessionLoginService) {
         this.passwordResetService = passwordResetService;
         this.localeMessages = localeMessages;
         this.userValidationPolicy = userValidationPolicy;
+        this.sessionLoginService = sessionLoginService;
     }
 
     @ModelAttribute("registrationPasswordMinLength")
@@ -115,6 +120,7 @@ public final class ForgotPasswordController {
     @PostMapping("/reset")
     public String resetSubmit(
             final HttpServletRequest request,
+            final HttpServletResponse response,
             @CurrentUser final User currentUser,
             final HttpSession session,
             @Validated(ValidationGroups.OnForgotPasswordReset.class) @ModelAttribute("forgotPasswordResetForm")
@@ -140,8 +146,9 @@ public final class ForgotPasswordController {
             return "redirect:/forgot-password/reset";
         }
         session.removeAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL);
-        redirectAttributes.addFlashAttribute("passwordResetDone", Boolean.TRUE);
-        return "redirect:/login";
+        sessionLoginService.signInUserAfterPasswordReset(request, response, email);
+        redirectAttributes.addFlashAttribute("passwordResetSignedIn", Boolean.TRUE);
+        return "redirect:/";
     }
 
 }

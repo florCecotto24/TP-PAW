@@ -32,7 +32,7 @@
         </div>
         <c:choose>
             <c:when test="${not empty comment}">
-                <p class="mb-0 small"><c:out value="${comment}"/></p>
+                <p class="mb-0 small ryden-multiline-plaintext"><c:out value="${comment}"/></p>
             </c:when>
             <c:otherwise>
                 <p class="mb-0 small text-secondary"><spring:message code="reviewCard.noComment"/></p>

@@ -7,10 +7,11 @@
     <logger name="com.zaxxer" level="WARN"/>
     <logger name="io.netty" level="WARN"/>
 
-    <!-- Application code: INFO+ to PAW files (INFO in -app-info; WARN/ERROR in -app-warn). No DEBUG. -->
+    <!-- Application code: INFO / WARN / ERROR each to its own file; DEPLOY_DAILY keeps the combined daily line. No DEBUG. -->
     <logger name="ar.edu.itba.paw" level="INFO" additivity="false">
         <appender-ref ref="APP_INFO"/>
         <appender-ref ref="APP_WARN"/>
+        <appender-ref ref="APP_ERROR"/>
         <appender-ref ref="DEPLOY_DAILY"/>
     </logger>
 
@@ -19,14 +20,16 @@
     <logger name="ar.edu.itba.paw.persistence" level="INFO" additivity="false">
         <appender-ref ref="APP_INFO"/>
         <appender-ref ref="APP_WARN"/>
+        <appender-ref ref="APP_ERROR"/>
     </logger>
     -->
 
     <!--
-      Root: INFO allows third-party log events to be evaluated; only PLATFORM_WARN appender keeps WARN+.
-      Application packages use additivity=false so they do not duplicate into platform file.
+      Root: WARN so third-party libraries only emit WARN+; PLATFORM_WARN / PLATFORM_ERROR split by level.
+      Application packages use additivity=false so they do not duplicate into platform files.
     -->
-    <root level="INFO">
+    <root level="WARN">
         <appender-ref ref="PLATFORM_WARN"/>
+        <appender-ref ref="PLATFORM_ERROR"/>
     </root>
 </included>

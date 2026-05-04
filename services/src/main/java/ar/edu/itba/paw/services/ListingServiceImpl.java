@@ -22,6 +22,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -67,6 +69,8 @@ import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
  */
 @Service
 public final class ListingServiceImpl implements ListingService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListingServiceImpl.class);
 
     private final ListingDao listingDao;
     private final ListingAvailabilityService listingAvailabilityService;
@@ -432,10 +436,12 @@ public final class ListingServiceImpl implements ListingService {
     public void refreshExhaustedListingsToFinished() {
         final List<Long> ids = listingDao.findListingIdsWithStatuses(Listing.Status.ACTIVE);
         if (ids.isEmpty()) {
+            LOGGER.atInfo().log("Listing exhaustion sweep: no active listings");
             return;
         }
         final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         final int batch = 200;
+        int pausedExhausted = 0;
         for (int i = 0; i < ids.size(); i += batch) {
             final List<Long> slice = ids.subList(i, Math.min(i + batch, ids.size()));
             final Set<Long> bookable = listingIdsWithAtLeastOneBookableWallDay(slice, wall);
@@ -445,9 +451,15 @@ public final class ListingServiceImpl implements ListingService {
                             id,
                             Listing.Status.PAUSED,
                             Listing.Status.ACTIVE);
+                    pausedExhausted++;
                 }
             }
         }
+        LOGGER.atInfo()
+                .addArgument(pausedExhausted)
+                .addArgument(ids.size())
+                .addArgument(wall)
+                .log("Listing exhaustion sweep: paused {} of {} active listing(s) with no bookable wall day from {} onward");
     }
 
     @Override

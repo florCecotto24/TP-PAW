@@ -6,8 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -102,6 +102,19 @@ class ReviewJdbcDaoTest extends DaoIntegrationTestSupport {
 
         // 3.Assert
         Assertions.assertEquals(0L, count);
+    }
+
+    @Test
+    void testOmittedReviewExistsButExcludedFromPublicListingCounts() {
+        // 1.Arrange
+        dao.insertReview(RESERVATION_ID, true, null, null);
+
+        // 2.Exercise & 3.Assert
+        Assertions.assertTrue(dao.existsReview(RESERVATION_ID, true));
+        Assertions.assertEquals(0L, dao.countReviewsForListing(LISTING_ID));
+        final Page<ListingPublicReview> page = dao.findListingPublicReviews(LISTING_ID, 0, 10);
+        Assertions.assertEquals(0L, page.getTotalItems());
+        Assertions.assertTrue(page.getContent().isEmpty());
     }
 
     @Test

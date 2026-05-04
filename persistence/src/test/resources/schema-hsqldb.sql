@@ -106,10 +106,11 @@ CREATE TABLE IF NOT EXISTS reviews (
     reservation_id BIGINT NOT NULL,
     made_by_rider BOOLEAN NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    rating INTEGER NOT NULL,
+    rating INTEGER,
     comment VARCHAR(500),
     PRIMARY KEY (reservation_id, made_by_rider),
-    FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE
+    FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE,
+    CONSTRAINT reviews_rating_check CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5))
 );
 
 CREATE TABLE IF NOT EXISTS images (

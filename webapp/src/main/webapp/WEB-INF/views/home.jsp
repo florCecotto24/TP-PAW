@@ -13,6 +13,13 @@
 
     <body>
         <ryden:navbar />
+        <c:if test="${passwordResetSignedIn != null}">
+            <div class="container pt-3">
+                <div class="alert alert-success mb-0" role="alert">
+                    <spring:message code="home.passwordResetSignedIn"/>
+                </div>
+            </div>
+        </c:if>
         <div>
             <div class="hero-section w-100">
                 <div class="hero-overlay pb-2">

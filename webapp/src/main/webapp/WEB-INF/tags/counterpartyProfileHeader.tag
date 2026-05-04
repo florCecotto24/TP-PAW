@@ -64,7 +64,7 @@
                         </c:otherwise>
                     </c:choose>
                 </div>
-                <p class="counterparty-about mt-3 mb-2">
+                <p class="counterparty-about mt-3 mb-2 ryden-multiline-plaintext">
                     <c:choose>
                         <c:when test="${not empty about}">
                             <c:out value="${about}"/>

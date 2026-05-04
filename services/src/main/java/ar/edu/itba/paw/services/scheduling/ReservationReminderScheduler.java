@@ -59,6 +59,11 @@ public final class ReservationReminderScheduler {
         final LocalDate tomorrow = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
         final OffsetDateTime from = tomorrow.atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         final OffsetDateTime to = tomorrow.plusDays(1).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+        LOGGER.atInfo()
+                .addArgument(tomorrow)
+                .addArgument(from)
+                .addArgument(to)
+                .log("Reservation reminder job: pickup wall date {} (UTC window {} .. {})");
         final var reservations = reservationService.findReminderReservations(from, to);
         LOGGER.atInfo().addArgument(reservations.size()).log("Found {} reservations to send reminders for");
 

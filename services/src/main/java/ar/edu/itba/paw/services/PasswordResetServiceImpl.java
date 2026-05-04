@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,8 @@ import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
 /** Uses only {@link PasswordResetCodeDao}; user lookup and password hash updates go through {@link UserService}. */
 @Service
 public final class PasswordResetServiceImpl implements PasswordResetService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PasswordResetServiceImpl.class);
 
     private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -72,6 +76,7 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
                 .recipientEmail(user.getEmail())
                 .code(code)
                 .build());
+        LOGGER.atInfo().addArgument(user.getId()).log("Password reset code issued for user id={}");
         return true;
     }
 
@@ -103,5 +108,6 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
             throw new PasswordResetCodeInvalidException(MessageKeys.USER_PASSWORD_RESET_CODE_INVALID);
         }
         userService.replacePasswordHash(user.getId(), passwordEncoder.encode(newPassword));
+        LOGGER.atInfo().addArgument(user.getId()).log("Password reset completed for user id={}");
     }
 }

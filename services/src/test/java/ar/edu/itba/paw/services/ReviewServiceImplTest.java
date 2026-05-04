@@ -75,11 +75,27 @@ class ReviewServiceImplTest {
     }
 
     @Test
-    void testSubmitOwnerReviewOfRiderIsNoOpWhenRatingAndCommentBlank() {
-        // 1.Arrange / 2.Exercise
-        Assertions.assertDoesNotThrow(() -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, null, "   "));
+    void testSubmitOwnerReviewOfRiderPersistOmitWhenRatingNullAndCommentBlank() {
+        // 1.Arrange
+        Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))));
+        Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
 
-        // 3.Assert
+        // 2.Exercise & 3. Assert
+        Assertions.assertDoesNotThrow(() -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, null, "   "));
+    }
+
+    @Test
+    void testSubmitRiderReviewOfOwnerPersistOmitWhenRatingNullAndCommentBlank() {
+        // 1.Arrange
+        final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
+        Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(reservation(true, past)));
+        Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
+        Mockito.when(userService.getListingOwner(LISTING_ID)).thenReturn(Optional.empty());
+
+        // 2.Exercise & 3. Assert
+        Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, null, null));
     }
 
     @Test

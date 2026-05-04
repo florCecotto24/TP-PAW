@@ -34,7 +34,7 @@
               <p><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/> </p>
               <p><strong><spring:message code="publishCar.confirmation.pricePerDay"/></strong>
                   <fmt:setLocale value="es_AR"/><fmt:formatNumber value="${listing.dayPrice}" type="currency" currencyCode="ARS"/></p>
-              <p class="${not empty listing.description ? "d-block" : "d-none"}"><strong><spring:message code="publishCar.confirmation.description"/></strong> <c:out value="${listing.description}"/></p>
+              <p class="${not empty listing.description ? "d-block" : "d-none"} ryden-multiline-plaintext"><strong><spring:message code="publishCar.confirmation.description"/></strong> <c:out value="${listing.description}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
               <spring:message code="enum.car.type.${car.type.name()}" var="confirmCarTypeLabel"/>
               <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="confirmPowertrainLabel"/>

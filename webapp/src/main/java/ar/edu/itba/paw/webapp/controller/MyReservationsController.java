@@ -12,19 +12,29 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
 import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.webapp.form.ReservationReviewAction;
+import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.MyReservationDetailModelFactory;
+import ar.edu.itba.paw.webapp.support.RiderReservationReviewExceptionMapper;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.HttpHeaders;
@@ -54,21 +64,35 @@ public final class MyReservationsController {
     private final ListingService listingService;
     private final LocaleMessages localeMessages;
     private final ReviewService reviewService;
+    private final ReservationReviewFormValidator reservationReviewFormValidator;
+    private final MyReservationDetailModelFactory reservationDetailFactory;
+    private final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper;
 
     public MyReservationsController(
             final ReservationService reservationService,
             final ReservationViewService reservationViewService,
             final ListingService listingService,
             final LocaleMessages localeMessages,
-            final ReviewService reviewService) {
+            final ReviewService reviewService,
+            final ReservationReviewFormValidator reservationReviewFormValidator,
+            final MyReservationDetailModelFactory reservationDetailFactory,
+            final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
         this.listingService = listingService;
         this.localeMessages = localeMessages;
         this.reviewService = reviewService;
+        this.reservationReviewFormValidator = reservationReviewFormValidator;
+        this.reservationDetailFactory = reservationDetailFactory;
+        this.riderReservationReviewExceptionMapper = riderReservationReviewExceptionMapper;
     }
 
     private static final String DEFAULT_SORT = "date,desc";
+
+    @InitBinder({"ownerReviewForm", "riderReviewForm"})
+    public void reservationReviewFormsBinder(final WebDataBinder binder) {
+        binder.addValidators(reservationReviewFormValidator);
+    }
 
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
@@ -128,11 +152,12 @@ public final class MyReservationsController {
         if (detailOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
         }
-        final ReservationDetailPageModel detail = detailOpt.get();
-        final ModelAndView mav = new ModelAndView("myReservationDetail");
-        detail.populateModel(mav::addObject);
-        mav.addObject("activeTab", "my-reservations");
-        return mav;
+        return reservationDetailFactory.detailWithForms(
+                detailOpt.get(),
+                new ReservationReviewForm(),
+                null,
+                new ReservationReviewForm(),
+                null);
     }
 
     @GetMapping("/my-reservations/{reservationId}/counterparty-profile")
@@ -268,42 +293,82 @@ public final class MyReservationsController {
         return new ModelAndView(rv);
     }
 
+    private static ModelAndView redirectToMyReservationDetail(final long reservationId, final String role) {
+        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=" + role, true);
+        rv.setExposeModelAttributes(false);
+        return new ModelAndView(rv);
+    }
+
     @PostMapping("/my-reservations/{reservationId}/owner-review-rider")
     public ModelAndView submitOwnerReviewOfRider(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam(name = "rating", required = false) final Integer rating,
-            @RequestParam(name = "comment", required = false) final String comment,
+            @ModelAttribute("ownerReviewForm") final ReservationReviewForm ownerReviewForm,
+            final BindingResult ownerBinding,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        try {
-            reviewService.submitOwnerReviewOfRider(me.getId(), reservationId, rating, comment);
-            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(e));
+        if (ownerReviewForm.getReviewAction() == ReservationReviewAction.OMIT) {
+            try {
+                reviewService.submitOwnerReviewOfRider(me.getId(), reservationId, null, null);
+                redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
+            } catch (final RiderReservationException ex) {
+                redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(ex));
+            }
+            return redirectToMyReservationDetail(reservationId, "owner");
         }
-        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=owner", true);
-        rv.setExposeModelAttributes(false);
-        return new ModelAndView(rv);
+        if (ownerBinding.hasErrors()) {
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null);
+        }
+        try {
+            reviewService.submitOwnerReviewOfRider(
+                    me.getId(),
+                    reservationId,
+                    ownerReviewForm.getRating(),
+                    ownerReviewForm.getComment());
+            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
+        } catch (final RiderReservationException ex) {
+            riderReservationReviewExceptionMapper.mergeOntoBinding(ex, ownerBinding);
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null);
+        }
+        return redirectToMyReservationDetail(reservationId, "owner");
     }
 
     @PostMapping("/my-reservations/{reservationId}/rider-review-owner")
     public ModelAndView submitRiderReviewOfOwner(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam(name = "rating", required = false) final Integer rating,
-            @RequestParam(name = "comment", required = false) final String comment,
+            @ModelAttribute("riderReviewForm") final ReservationReviewForm riderReviewForm,
+            final BindingResult riderBinding,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        try {
-            reviewService.submitRiderReviewOfOwner(me.getId(), reservationId, rating, comment);
-            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(e));
+        if (riderReviewForm.getReviewAction() == ReservationReviewAction.OMIT) {
+            try {
+                reviewService.submitRiderReviewOfOwner(me.getId(), reservationId, null, null);
+                redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
+            } catch (final RiderReservationException ex) {
+                redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(ex));
+            }
+            return redirectToMyReservationDetail(reservationId, "rider");
         }
-        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=rider", true);
-        rv.setExposeModelAttributes(false);
-        return new ModelAndView(rv);
+        if (riderBinding.hasErrors()) {
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding);
+        }
+        try {
+            reviewService.submitRiderReviewOfOwner(
+                    me.getId(),
+                    reservationId,
+                    riderReviewForm.getRating(),
+                    riderReviewForm.getComment());
+            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
+        } catch (final RiderReservationException ex) {
+            riderReservationReviewExceptionMapper.mergeOntoBinding(ex, riderBinding);
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding);
+        }
+        return redirectToMyReservationDetail(reservationId, "rider");
     }
 
     @PostMapping("/my-reservations/{reservationId}/cancel")

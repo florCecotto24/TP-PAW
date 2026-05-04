@@ -5,6 +5,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,8 @@ import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 /** Uses only {@link EmailVerificationCodeDao}; user and mail side effects go through {@link UserService} and {@link EmailService}. */
 @Service
 public final class EmailVerificationServiceImpl implements EmailVerificationService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EmailVerificationServiceImpl.class);
 
     private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -90,6 +94,7 @@ public final class EmailVerificationServiceImpl implements EmailVerificationServ
             throw new VerificationCodeInvalidException(MessageKeys.USER_VERIFICATION_CODE_INVALID);
         }
         userService.markEmailVerified(user.getId());
+        LOGGER.atInfo().addArgument(user.getId()).log("Email verified for user id={}");
         return user.getId();
     }
 }

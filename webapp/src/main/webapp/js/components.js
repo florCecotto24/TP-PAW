@@ -1681,7 +1681,8 @@
         var targetId = widget.getAttribute('data-target');
         var hiddenInput = targetId ? document.getElementById(targetId) : null;
         var stars = Array.prototype.slice.call(widget.querySelectorAll('.ryden-star'));
-        var currentVal = 0;
+        var parsedInitial = hiddenInput && hiddenInput.value ? parseInt(hiddenInput.value, 10) : 0;
+        var currentVal = isNaN(parsedInitial) ? 0 : parsedInitial;
 
         function applySelected(val) {
             stars.forEach(function (s, i) {
@@ -1712,6 +1713,10 @@
         widget.addEventListener('mouseleave', function () {
             applyHover(0);
         });
+
+        if (currentVal > 0) {
+            applySelected(currentVal);
+        }
     }
 
     function init() {

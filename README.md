@@ -66,7 +66,17 @@ mvn test
 
 (`mvn clean install` already runs tests unless skipped.)
 
+## Deployed log files (HTTP)
 
+On **Pampero**, the process log directory is exposed under **`/logs/`** on the host (e.g. `pawserver.it.itba.edu.ar`). File names use **defaults** from Logback; override with JVM **`-DLOG_BASENAME=...`** (rolling files) and **`-DDEPLOY_LOG_BASENAME=...`** (daily file) if you change them in deployment.
 
+| Log | URL pattern (replace `yyyy-MM-dd` with the date) |
+|-----|--------------------------------------------------|
+| **General (daily, all application levels written to the rolling daily appender)** | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp.yyyy-MM-dd.log` |
+| **INFO only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-app-info.log` |
+| **WARN only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-app-warn.log` |
+| **ERROR only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-app-error.log` |
+
+The **general** daily file is the same one referenced in `webapp/src/main/resources/logback.xml`. The level-specific files are defined in `webapp/src/main/resources/logback/logback-includes.xml`. Framework and library **WARN** / **ERROR** lines (not under `ar.edu.itba.paw`) go to `paw-platform-warn.log` and `paw-platform-error.log` in the same `/logs/` directory.
 
 Base Java package: `ar.edu.itba.paw`.

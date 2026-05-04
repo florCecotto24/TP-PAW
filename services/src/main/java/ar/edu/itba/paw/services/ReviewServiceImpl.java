@@ -90,10 +90,33 @@ public final class ReviewServiceImpl implements ReviewService {
             final long reservationId,
             final Integer rating,
             final String comment) {
-        final String trimmedComment = validateOptionalReviewInput(rating, comment);
+        final String trimmed = comment == null ? "" : comment.trim();
         if (rating == null) {
+            if (!trimmed.isEmpty()) {
+                throw new RiderReservationException(MessageKeys.REVIEW_RATING_REQUIRED_WHEN_COMMENT);
+            }
+            final Reservation r = reservationService.getOwnerReservationById(ownerUserId, reservationId)
+                    .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+            if (!r.isCarReturned()) {
+                throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+            }
+            if (reviewDao.existsReview(reservationId, false)) {
+                throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
+            }
+            reviewDao.insertReview(reservationId, false, null, null);
+            reviewDao.refreshRiderAverageRating(r.getRiderId());
+            reviewDao.refreshListingRatingAvg(r.getListingId());
             return;
         }
+
+        final int maxCommentLength = reviewValidationPolicy.getCommentMaxLength();
+        if (trimmed.length() > maxCommentLength) {
+            throw new RiderReservationException(MessageKeys.REVIEW_COMMENT_TOO_LONG, maxCommentLength);
+        }
+        if (rating < 1 || rating > 5) {
+            throw new RiderReservationException(MessageKeys.REVIEW_RATING_INVALID);
+        }
+        final String storedComment = trimmed.isEmpty() ? null : trimmed;
         final Reservation r = reservationService.getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
         if (!r.isCarReturned()) {
@@ -102,7 +125,7 @@ public final class ReviewServiceImpl implements ReviewService {
         if (reviewDao.existsReview(reservationId, false)) {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
-        reviewDao.insertReview(reservationId, false, rating, trimmedComment);
+        reviewDao.insertReview(reservationId, false, rating, storedComment);
         reviewDao.refreshRiderAverageRating(r.getRiderId());
         reviewDao.refreshListingRatingAvg(r.getListingId());
     }
@@ -114,10 +137,34 @@ public final class ReviewServiceImpl implements ReviewService {
             final long reservationId,
             final Integer rating,
             final String comment) {
-        final String trimmedComment = validateOptionalReviewInput(rating, comment);
+        final String trimmed = comment == null ? "" : comment.trim();
         if (rating == null) {
+            if (!trimmed.isEmpty()) {
+                throw new RiderReservationException(MessageKeys.REVIEW_RATING_REQUIRED_WHEN_COMMENT);
+            }
+            final Reservation r = reservationService.getRiderReservationById(riderUserId, reservationId)
+                    .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+            if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
+                throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+            }
+            if (reviewDao.existsReview(reservationId, true)) {
+                throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
+            }
+            reviewDao.insertReview(reservationId, true, null, null);
+            final long listingId = r.getListingId();
+            userService.getListingOwner(listingId).ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
+            reviewDao.refreshListingRatingAvg(listingId);
             return;
         }
+
+        final int maxCommentLength = reviewValidationPolicy.getCommentMaxLength();
+        if (trimmed.length() > maxCommentLength) {
+            throw new RiderReservationException(MessageKeys.REVIEW_COMMENT_TOO_LONG, maxCommentLength);
+        }
+        if (rating < 1 || rating > 5) {
+            throw new RiderReservationException(MessageKeys.REVIEW_RATING_INVALID);
+        }
+        final String storedComment = trimmed.isEmpty() ? null : trimmed;
         final Reservation r = reservationService.getRiderReservationById(riderUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
@@ -126,30 +173,9 @@ public final class ReviewServiceImpl implements ReviewService {
         if (reviewDao.existsReview(reservationId, true)) {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
-        reviewDao.insertReview(reservationId, true, rating, trimmedComment);
+        reviewDao.insertReview(reservationId, true, rating, storedComment);
         final long listingId = r.getListingId();
         userService.getListingOwner(listingId).ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
         reviewDao.refreshListingRatingAvg(listingId);
-    }
-
-    /**
-     * @return trimmed comment or {@code null} when the submission is a no-op (no rating and no comment)
-     */
-    private String validateOptionalReviewInput(final Integer rating, final String comment) {
-        final String trimmed = comment == null ? "" : comment.trim();
-        if (rating == null && trimmed.isEmpty()) {
-            return null;
-        }
-        if (rating == null) {
-            throw new RiderReservationException(MessageKeys.REVIEW_RATING_REQUIRED_WHEN_COMMENT);
-        }
-        if (rating < 1 || rating > 5) {
-            throw new RiderReservationException(MessageKeys.REVIEW_RATING_INVALID);
-        }
-        final int maxCommentLength = reviewValidationPolicy.getCommentMaxLength();
-        if (!trimmed.isEmpty() && trimmed.length() > maxCommentLength) {
-            throw new RiderReservationException(MessageKeys.REVIEW_COMMENT_TOO_LONG, maxCommentLength);
-        }
-        return trimmed.isEmpty() ? null : trimmed;
     }
 }

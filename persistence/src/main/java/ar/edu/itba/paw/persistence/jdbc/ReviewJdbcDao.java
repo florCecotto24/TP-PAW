@@ -64,7 +64,7 @@ public final class ReviewJdbcDao implements ReviewDao {
     }
 
     @Override
-    public void insertReview(final long reservationId, final boolean madeByRider, final int rating, final String comment) {
+    public void insertReview(final long reservationId, final boolean madeByRider, final Integer rating, final String comment) {
         jdbcTemplate.update(
                 "INSERT INTO reviews (reservation_id, made_by_rider, created_at, rating, comment) VALUES (?,?,?,?,?)",
                 reservationId,
@@ -79,7 +79,7 @@ public final class ReviewJdbcDao implements ReviewDao {
         final Long total = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM reviews r "
                         + "INNER JOIN reservations res ON res.id = r.reservation_id "
-                        + "WHERE res.listing_id = ?",
+                        + "WHERE res.listing_id = ? AND r.rating IS NOT NULL",
                 Long.class,
                 listingId);
         final int offset = page * pageSize;
@@ -97,7 +97,7 @@ public final class ReviewJdbcDao implements ReviewDao {
                         + "INNER JOIN cars c ON c.id = l.car_id "
                         + "INNER JOIN users ru ON ru.id = res.rider_id "
                         + "INNER JOIN users ou ON ou.id = c.owner_id "
-                        + "WHERE res.listing_id = ? "
+                        + "WHERE res.listing_id = ? AND r.rating IS NOT NULL "
                         + "ORDER BY r.created_at DESC "
                         + "LIMIT ? OFFSET ?",
                 PUBLIC_REVIEW_MAPPER,
@@ -134,7 +134,7 @@ public final class ReviewJdbcDao implements ReviewDao {
         final Long n = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM reviews r "
                         + "INNER JOIN reservations res ON res.id = r.reservation_id "
-                        + "WHERE res.listing_id = ?",
+                        + "WHERE res.listing_id = ? AND r.rating IS NOT NULL",
                 Long.class,
                 listingId);
         return n != null ? n : 0L;
@@ -175,6 +175,7 @@ public final class ReviewJdbcDao implements ReviewDao {
                         + "INNER JOIN users ou ON ou.id = c.owner_id "
                         + "WHERE ((? = TRUE AND r.made_by_rider = TRUE AND c.owner_id = ?) "
                         + "OR (? = FALSE AND r.made_by_rider = FALSE AND res.rider_id = ?)) "
+                        + "AND r.rating IS NOT NULL "
                         + "AND NULLIF(TRIM(r.comment), '') IS NOT NULL "
                         + "ORDER BY r.created_at DESC "
                         + "LIMIT ?",

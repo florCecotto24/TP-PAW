@@ -24,7 +24,8 @@ import org.thymeleaf.templateresolver.ITemplateResolver;
 import org.thymeleaf.templateresolver.StringTemplateResolver;
 
 /**
- * JavaMail sender plus Thymeleaf template engine for HTML mail under {@code classpath:mail/}.
+ * JavaMail sender plus Thymeleaf for HTML mail. SMTP wiring lives under {@code mail/config/} on the webapp
+ * classpath; templates and {@code MailMessages} bundles come from {@code classpath:mail/} (services JAR).
  */
 @Configuration
 @PropertySource(value = "classpath:mail/config/emailconfig.properties", encoding = "UTF-8")

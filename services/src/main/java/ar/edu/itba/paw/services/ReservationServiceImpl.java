@@ -176,6 +176,12 @@ public final class ReservationServiceImpl implements ReservationService {
                 .filter(s -> !s.isEmpty())
                 .orElse(null);
         enqueueReservationConfirmationEmail(riderId, listingId, reservation, riderLoc, ownerLoc, cbu);
+        LOGGER.atInfo()
+                .addArgument(reservation.getId())
+                .addArgument(listingId)
+                .addArgument(riderId)
+                .addArgument(status)
+                .log("Created reservation id={} listingId={} riderId={} status={}");
         return reservation;
     }
 
@@ -524,8 +530,11 @@ public final class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Optional<Reservation> cancelReservation(final long reservationId) {
-        return performCancellationAndNotify(
-                reservationId, Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF);
+        final Optional<Reservation> cancelled =
+                performCancellationAndNotify(reservationId, Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF);
+        cancelled.ifPresent(
+                ignored -> LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} cancelled (missing payment proof)"));
+        return cancelled;
     }
 
     @Override
@@ -549,7 +558,16 @@ public final class ReservationServiceImpl implements ReservationService {
         final Reservation.Status cancelledStatus =
                 isRider ? Reservation.Status.CANCELLED_BY_RIDER : Reservation.Status.CANCELLED_BY_OWNER;
         return switch (r.getStatus()) {
-            case PENDING, ACCEPTED -> performCancellationAndNotify(reservationId, cancelledStatus);
+            case PENDING, ACCEPTED -> {
+                final Optional<Reservation> cancelled = performCancellationAndNotify(reservationId, cancelledStatus);
+                cancelled.ifPresent(
+                        ignored -> LOGGER.atInfo()
+                                .addArgument(userId)
+                                .addArgument(reservationId)
+                                .addArgument(cancelledStatus)
+                                .log("Participant userId={} cancelled reservation id={} ({})"));
+                yield cancelled;
+            }
             default -> Optional.empty();
         };
     }
@@ -628,9 +646,12 @@ public final class ReservationServiceImpl implements ReservationService {
     @Transactional
     public void cancelExpiredPendingPaymentReservations() {
         final Reservation.Status status = Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF;
+        int cancelled = 0;
         for (final Reservation r : reservationDao.findPendingPaymentPastDeadline(OffsetDateTime.now(ZoneOffset.UTC))) {
             performCancellationAndNotify(r.getId(), status);
+            cancelled++;
         }
+        LOGGER.atInfo().addArgument(cancelled).log("Payment proof deadline sweep: cancelled {} pending reservation(s)");
     }
 
     @Override
@@ -669,6 +690,10 @@ public final class ReservationServiceImpl implements ReservationService {
         final Reservation afterAttach = getRiderReservationById(riderId, reservationId).orElse(r);
         notifyOwnerPaymentProofUploaded(reservationId, riderId, afterAttach);
         enqueueRiderReservationConfirmedAfterPaymentProof(riderId, afterAttach);
+        LOGGER.atInfo()
+                .addArgument(riderId)
+                .addArgument(reservationId)
+                .log("Rider riderId={} attached payment receipt for reservation id={}");
     }
 
     private void enqueueRiderReservationConfirmedAfterPaymentProof(final long riderId, final Reservation reservation) {
@@ -787,6 +812,11 @@ public final class ReservationServiceImpl implements ReservationService {
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
         }
+        LOGGER.atInfo()
+                .addArgument(ownerUserId)
+                .addArgument(approved)
+                .addArgument(reservationId)
+                .log("Owner ownerUserId={} set payment receipt approved={} for reservation id={}");
     }
 
     @Override
@@ -881,6 +911,10 @@ public final class ReservationServiceImpl implements ReservationService {
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
+        LOGGER.atInfo()
+                .addArgument(ownerUserId)
+                .addArgument(reservationId)
+                .log("Owner ownerUserId={} marked car returned for reservation id={}");
     }
 
     @Override
@@ -888,7 +922,13 @@ public final class ReservationServiceImpl implements ReservationService {
     public void dispatchReturnReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final int hours = reservationTimingPolicy.getReturnReminderHoursBeforeCheckout();
-        for (final Reservation reservation : reservationDao.findReservationsForReturnReminderEmail(now, hours)) {
+        final List<Reservation> candidates = reservationDao.findReservationsForReturnReminderEmail(now, hours);
+        LOGGER.atInfo()
+                .addArgument(candidates.size())
+                .addArgument(hours)
+                .log("Return reminder run: {} candidate reservation(s) (within {} h before checkout)");
+        int queued = 0;
+        for (final Reservation reservation : candidates) {
             final Optional<RiderCarReturnEmailPayload> payload = buildRiderCarReturnEmailPayload(reservation);
             if (payload.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping return reminder: missing data (reservation id={})");
@@ -899,18 +939,23 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderReturnReminderEmail(payload.get());
+                queued++;
             } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId())
                         .log("Failed to queue return reminder email (reservation id={})");
             }
         }
+        LOGGER.atInfo().addArgument(queued).log("Return reminder run: queued {} email(s)");
     }
 
     @Override
     @Transactional
     public void dispatchReturnCheckoutEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        for (final Reservation reservation : reservationDao.findReservationsForReturnCheckoutEmail(now)) {
+        final List<Reservation> candidates = reservationDao.findReservationsForReturnCheckoutEmail(now);
+        LOGGER.atInfo().addArgument(candidates.size()).log("Return checkout email run: {} candidate reservation(s)");
+        int queued = 0;
+        for (final Reservation reservation : candidates) {
             final Optional<RiderCarReturnEmailPayload> payload = buildRiderCarReturnEmailPayload(reservation);
             if (payload.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping return checkout mail: missing data (reservation id={})");
@@ -921,18 +966,23 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderReturnCheckoutEmail(payload.get());
+                queued++;
             } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId())
                         .log("Failed to queue return checkout email (reservation id={})");
             }
         }
+        LOGGER.atInfo().addArgument(queued).log("Return checkout email run: queued {} email(s)");
     }
 
     @Override
     @Transactional
     public void dispatchRiderReviewInviteEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        for (final Reservation reservation : reservationDao.findReservationsForRiderReviewInviteEmail(now)) {
+        final List<Reservation> candidates = reservationDao.findReservationsForRiderReviewInviteEmail(now);
+        LOGGER.atInfo().addArgument(candidates.size()).log("Rider review invite run: {} candidate reservation(s)");
+        int queued = 0;
+        for (final Reservation reservation : candidates) {
             final Optional<RiderReviewInviteEmailPayload> payload = buildRiderReviewInviteEmailPayload(reservation);
             if (payload.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping rider review invite: missing data (reservation id={})");
@@ -943,18 +993,23 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderReviewInviteEmail(payload.get());
+                queued++;
             } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId())
                         .log("Failed to queue rider review invite email (reservation id={})");
             }
         }
+        LOGGER.atInfo().addArgument(queued).log("Rider review invite run: queued {} email(s)");
     }
 
     @Override
     @Transactional
     public void dispatchDuePaymentProofReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        for (final Reservation reservation : reservationDao.findReservationsWithDuePendingPaymentProof(now)) {
+        final List<Reservation> candidates = reservationDao.findReservationsWithDuePendingPaymentProof(now);
+        LOGGER.atInfo().addArgument(candidates.size()).log("Due payment proof reminder run: {} candidate reservation(s)");
+        int queued = 0;
+        for (final Reservation reservation : candidates) {
             final Optional<ReservationMailPayload> payload = buildDuePaymentProofReminderEmailPayload(reservation);
             if (payload.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping due payment proof reminder: missing data (reservation id={})");
@@ -965,11 +1020,13 @@ public final class ReservationServiceImpl implements ReservationService {
             }
             try {
                 emailService.sendRiderDuePaymentProofEmail(payload.get());
+                queued++;
             } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(reservation.getId())
                         .log("Failed to queue due payment proof reminder email (reservation id={})");
             }
         }
+        LOGGER.atInfo().addArgument(queued).log("Due payment proof reminder run: queued {} email(s)");
     }
 
     private Optional<ReservationMailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {

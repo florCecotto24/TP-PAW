@@ -413,8 +413,8 @@ public class ListingJdbcDao implements ListingDao {
     }
 
     private static String buildReviewCountSql() {
-        return "(SELECT COUNT(DISTINCT r.id) FROM reservations r "
-                + "INNER JOIN reviews rv ON r.id = rv.reservation_id "
+        return "(SELECT COUNT(*) FROM reservations r "
+                + "INNER JOIN reviews rv ON r.id = rv.reservation_id AND rv.rating IS NOT NULL "
                 + "WHERE r.listing_id = l.id)";
     }
 

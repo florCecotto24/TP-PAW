@@ -97,11 +97,13 @@ public final class UserServiceImpl implements UserService {
         }
         assertRegistrationFieldLengths(normalizedEmail, forename, surname);
         assertNewPasswordPair(password, passwordConfirm);
-        return userDao.createUser(
+        final User created = userDao.createUser(
                 normalizedEmail,
                 forename.trim(),
                 surname.trim(),
                 passwordEncoder.encode(password));
+        LOGGER.atInfo().addArgument(created.getId()).log("Registered new user id={}");
+        return created;
     }
 
     @Override

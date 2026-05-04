@@ -177,7 +177,7 @@
                 <span class="profile-field-value">
                     <c:choose>
                         <c:when test="${not empty profileForm.about}">
-                            <c:out value="${profileForm.about}"/>
+                            <span class="ryden-multiline-plaintext d-inline-block w-100"><c:out value="${profileForm.about}"/></span>
                         </c:when>
                         <c:otherwise><spring:message code="common.notSpecified"/></c:otherwise>
                     </c:choose>
