@@ -35,7 +35,7 @@ public final class RiderPickupLeadTime {
         final LocalTime pickup =
                 listingPickupWallTime != null ? listingPickupWallTime : Listing.DEFAULT_CHECK_IN_TIME;
         final Instant threshold = nowInstant.plus(pickupLeadHours, ChronoUnit.HOURS);
-        LocalDate d = LocalDate.now(wallZone);
+        LocalDate d = nowInstant.atZone(wallZone).toLocalDate();
         for (int i = 0; i < 800; i++) {
             if (ZonedDateTime.of(d, pickup, wallZone).toInstant().isAfter(threshold)) {
                 return d;
