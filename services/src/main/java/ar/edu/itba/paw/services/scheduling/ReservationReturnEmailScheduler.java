@@ -32,6 +32,7 @@ public final class ReservationReturnEmailScheduler {
             zone = "${app.scheduler.return-emails.zone:America/Argentina/Buenos_Aires}")
     public void sendReturnCheckoutEmails() {
         reservationService.dispatchReturnCheckoutEmails();
+        reservationService.finalizePastPeriodReservations();
     }
 
     @Scheduled(

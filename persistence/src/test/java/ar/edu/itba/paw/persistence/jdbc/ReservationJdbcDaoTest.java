@@ -177,5 +177,43 @@ public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals("Ford", cards.get(0).getBrand());
         Assertions.assertEquals(2L, cardsPage.getTotalItems());
     }
+
+    @Test
+    public void testFinalizeAcceptedOrStartedPastEndUtcMarksFinished() {
+        final OffsetDateTime created = OffsetDateTime.parse("2026-06-01T10:00:00Z");
+        insertUser(1L, "owner@mail.com", "Owner", "One");
+        insertUser(2L, "rider@mail.com", "Rider", "Two");
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertListing(100L, 10L, "Listing", Listing.Status.ACTIVE, new BigDecimal("30.00"), created.minusDays(10));
+        insertReservation(
+                400L,
+                2L,
+                100L,
+                OffsetDateTime.parse("2026-06-10T10:00:00Z"),
+                OffsetDateTime.parse("2026-06-12T10:00:00Z"),
+                Reservation.Status.ACCEPTED,
+                created,
+                created);
+        insertReservation(
+                401L,
+                2L,
+                100L,
+                OffsetDateTime.parse("2026-06-20T10:00:00Z"),
+                OffsetDateTime.parse("2026-06-25T10:00:00Z"),
+                Reservation.Status.ACCEPTED,
+                created,
+                created);
+
+        final OffsetDateTime cutoff = OffsetDateTime.parse("2026-06-15T12:00:00Z");
+        final int n = reservationDao.finalizeAcceptedOrStartedPastEndUtc(cutoff);
+        Assertions.assertEquals(1, n);
+
+        final String pastStatus = jdbcTemplate.queryForObject(
+                "SELECT LOWER(status) FROM reservations WHERE id = ?", String.class, 400L);
+        final String futureStatus = jdbcTemplate.queryForObject(
+                "SELECT LOWER(status) FROM reservations WHERE id = ?", String.class, 401L);
+        Assertions.assertEquals("finished", pastStatus);
+        Assertions.assertEquals("accepted", futureStatus);
+    }
 }
 

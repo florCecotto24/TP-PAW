@@ -64,6 +64,14 @@ public interface ReservationDao {
 
     int markCarReturned(long reservationId, long ownerUserId);
 
+    /**
+     * Sets {@code status} to {@code finished} for {@code accepted} or {@code started} rows whose {@code end_date}
+     * is on or before {@code nowUtc}.
+     *
+     * @return number of rows updated
+     */
+    int finalizeAcceptedOrStartedPastEndUtc(OffsetDateTime nowUtc);
+
     List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);
 
     List<Reservation> findReservationsForReturnCheckoutEmail(OffsetDateTime now);

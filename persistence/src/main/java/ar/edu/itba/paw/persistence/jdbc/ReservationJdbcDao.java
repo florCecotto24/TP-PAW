@@ -545,11 +545,23 @@ public class ReservationJdbcDao implements ReservationDao {
     @Override
     public int markCarReturned(final long reservationId, final long ownerUserId) {
         return jdbcTemplate.update(
-                "UPDATE reservations SET car_returned = TRUE, updated_at = ? WHERE id = ? AND listing_id IN ("
-                        + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?)",
+                "UPDATE reservations SET car_returned = TRUE, status = 'finished', updated_at = ? WHERE id = ? "
+                        + "AND listing_id IN ("
+                        + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?) "
+                        + "AND LOWER(status) IN ('accepted', 'started')",
                 JdbcDateTimeUtils.nowTimestamp(),
                 reservationId,
                 ownerUserId);
+    }
+
+    @Override
+    public int finalizeAcceptedOrStartedPastEndUtc(final OffsetDateTime nowUtc) {
+        final Timestamp nowTs = JdbcDateTimeUtils.toTimestamp(nowUtc);
+        return jdbcTemplate.update(
+                "UPDATE reservations SET status = 'finished', updated_at = ? "
+                        + "WHERE LOWER(status) IN ('accepted', 'started') AND end_date <= ?",
+                nowTs,
+                nowTs);
     }
 
     @Override

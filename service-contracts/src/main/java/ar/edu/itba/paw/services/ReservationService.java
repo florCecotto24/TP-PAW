@@ -176,6 +176,12 @@ public interface ReservationService {
     /** Scheduled job: email at checkout if the car was not marked returned. */
     void dispatchReturnCheckoutEmails();
 
+    /**
+     * Scheduled job (run after checkout mail sweep): sets {@code finished} on {@code accepted} or {@code started}
+     * reservations whose {@code end_date} is on or before now (UTC).
+     */
+    void finalizePastPeriodReservations();
+
     /** Scheduled job: invite the rider to leave an optional review after the rental period. */
     void dispatchRiderReviewInviteEmails();
 

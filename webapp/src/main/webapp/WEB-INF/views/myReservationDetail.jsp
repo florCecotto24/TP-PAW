@@ -14,11 +14,27 @@
 <ryden:navbar/>
 
 <main class="container pt-5 pb-4">
-    <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
-    <ryden:breadcrumbTrail
-            homeLabel="${myReservationsLabel}"
-            homeHref="${pageContext.request.contextPath}/my-reservations"
-            currentLabel="${listing.title}"/>
+    <c:choose>
+        <c:when test="${not empty reservationDetailOwnerListingHubId}">
+            <spring:message code="navbar.myListings" var="bcHomeLabel"/>
+            <spring:message code="myListingReservations.heading" var="bcMidLabel"/>
+            <spring:message code="myReservationDetail.heading" var="bcCurrentLabel"/>
+            <c:url var="bcMidHref" value="/my-listings/${reservationDetailOwnerListingHubId}/reservations"/>
+            <ryden:breadcrumbTrail
+                    homeLabel="${bcHomeLabel}"
+                    homeHref="${pageContext.request.contextPath}/my-listings"
+                    midLabel="${bcMidLabel}"
+                    midHref="${bcMidHref}"
+                    currentLabel="${bcCurrentLabel}"/>
+        </c:when>
+        <c:otherwise>
+            <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
+            <ryden:breadcrumbTrail
+                    homeLabel="${myReservationsLabel}"
+                    homeHref="${pageContext.request.contextPath}/my-reservations"
+                    currentLabel="${listing.title}"/>
+        </c:otherwise>
+    </c:choose>
 
     <c:if test="${not empty cancelReservationError}">
         <div class="alert alert-danger" role="alert"><c:out value="${cancelReservationError}"/></div>
@@ -68,6 +84,7 @@
                               action="${pageContext.request.contextPath}/my-reservations/${reservation.id}/payment-receipt"
                               class="ryden-payment-receipt__form">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <%@ include file="includes/fromListingHubHidden.jspf" %>
                             <div class="d-flex align-items-stretch gap-2">
                                 <label class="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
                                     <span id="paymentReceiptFileText" class="text-truncate text-muted pe-1 flex-grow-1 min-w-0"><c:out value="${paymentReceiptChooseHint}"/></span>
@@ -130,6 +147,7 @@
                             <c:if test="${not paymentReceiptApproved}">
                                 <form method="post" action="<c:out value='${approvalUrl}'/>" class="d-inline">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
                                     <input type="hidden" name="approved" value="true"/>
                                     <button type="submit" class="btn btn-primary btn-sm">
                                         <spring:message code="myReservationDetail.payment.markReviewed"/>
@@ -139,6 +157,7 @@
                             <c:if test="${paymentReceiptApproved}">
                                 <form method="post" action="<c:out value='${approvalUrl}'/>" class="d-inline">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
                                     <input type="hidden" name="approved" value="false"/>
                                     <button type="submit" class="btn btn-outline-secondary btn-sm">
                                         <spring:message code="myReservationDetail.payment.clearReview"/>
@@ -173,6 +192,7 @@
                         <form:form modelAttribute="ownerReviewForm" action="${ownerReviewUrl}" method="post"
                                    cssClass="vstack gap-2" htmlEscape="true">
                             <%@ include file="includes/csrfHidden.jspf" %>
+                            <%@ include file="includes/fromListingHubHidden.jspf" %>
                             <form:errors path="*" element="div" cssClass="alert alert-danger mb-0 py-2" delimiter=" "/>
                             <label class="form-label small"><spring:message code="myReservationDetail.review.rating"/></label>
                             <div class="ryden-star-rating" data-target="ownerReviewRating">
@@ -206,6 +226,7 @@
                         <form:form modelAttribute="riderReviewForm" action="${riderReviewUrl}" method="post"
                                    cssClass="vstack gap-2" htmlEscape="true">
                             <%@ include file="includes/csrfHidden.jspf" %>
+                            <%@ include file="includes/fromListingHubHidden.jspf" %>
                             <form:errors path="*" element="div" cssClass="alert alert-danger mb-0 py-2" delimiter=" "/>
                             <label class="form-label small"><spring:message code="myReservationDetail.review.rating"/></label>
                             <div class="ryden-star-rating" data-target="riderReviewRating">
@@ -319,6 +340,7 @@
                                     <form:form method="post" action="${cancelUrl}">
                                         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
                                         <input type="hidden" name="role" value="${reservationRole}"/>
+                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
                                         <div class="d-flex justify-content-end gap-2 mt-3">
                                             <button type="button" class="btn btn-secondary" data-modal-close="cancelReservationModal">
                                                 <c:out value="${cancelModalBack}"/>
@@ -362,7 +384,11 @@
                     <hr class="my-4">
                     <c:url var="counterpartyProfileUrl" value="/my-reservations/${reservation.id}/counterparty-profile">
                         <c:param name="role"><c:out value="${reservationRole}"/></c:param>
+                        <c:if test="${not empty reservationDetailOwnerListingHubId}">
+                            <c:param name="fromListing" value="${reservationDetailOwnerListingHubId}"/>
+                        </c:if>
                     </c:url>
+                    <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
                     <section class="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card" aria-labelledby="counterparty-summary-heading">
                         <div class="card-body p-4">
                             <h2 id="counterparty-summary-heading" class="h6 fw-semibold mb-3">
@@ -376,24 +402,27 @@
                                 </c:choose>
                             </h2>
                             <div class="counterparty-summary-card__identity d-flex align-items-center gap-2 mb-3">
-                                <c:choose>
-                                    <c:when test="${counterpartyProfileImageId != null}">
-                                        <c:url var="counterpartySummaryImageUrl" value="/image/${counterpartyProfileImageId}"/>
-                                        <spring:message code="myReservationDetail.counterparty.profileImageAlt" var="counterpartySummaryImageAlt"/>
-                                        <img src="${counterpartySummaryImageUrl}"
-                                             alt="<c:out value='${counterpartySummaryImageAlt}'/>"
-                                             class="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"/>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary flex-shrink-0 counterparty-summary-card__avatar counterparty-summary-card__avatar--placeholder"
-                                              aria-hidden="true">
-                                            <i class="bi bi-person-fill"></i>
-                                        </span>
-                                    </c:otherwise>
-                                </c:choose>
-                                <p class="fw-semibold mb-0 text-break flex-grow-1 min-w-0">
-                                    <c:out value="${counterparty.forename}"/> <c:out value="${counterparty.surname}"/>
-                                </p>
+                                <a href="<c:out value='${counterpartyProfileUrl}'/>"
+                                   class="d-flex align-items-center gap-2 text-decoration-none text-reset flex-grow-1 min-w-0"
+                                   aria-label="<c:out value='${counterpartyProfileLinkAria}'/>">
+                                    <c:choose>
+                                        <c:when test="${counterpartyProfileImageId != null}">
+                                            <c:url var="counterpartySummaryImageUrl" value="/image/${counterpartyProfileImageId}"/>
+                                            <img src="${counterpartySummaryImageUrl}"
+                                                 alt=""
+                                                 class="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"/>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary flex-shrink-0 counterparty-summary-card__avatar counterparty-summary-card__avatar--placeholder"
+                                                  aria-hidden="true">
+                                                <i class="bi bi-person-fill"></i>
+                                            </span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                    <span class="fw-semibold text-decoration-underline text-break flex-grow-1 min-w-0">
+                                        <c:out value="${counterparty.forename}"/> <c:out value="${counterparty.surname}"/>
+                                    </span>
+                                </a>
                             </div>
                             <div class="vstack gap-3 small">
                                 <div>
@@ -425,9 +454,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <a href="<c:out value='${counterpartyProfileUrl}'/>" class="btn btn-outline-primary w-100 mt-3">
-                                <spring:message code="myReservationDetail.counterparty.viewFullProfile"/>
-                            </a>
                         </div>
                     </section>
                     <c:url var="listingUrl" value="/car-detail">

@@ -26,10 +26,14 @@ public final class MyReservationDetailModelFactory {
             final ReservationReviewForm ownerReviewForm,
             final BindingResult ownerReviewBinding,
             final ReservationReviewForm riderReviewForm,
-            final BindingResult riderReviewBinding) {
+            final BindingResult riderReviewBinding,
+            final Long ownerListingHubForBreadcrumb) {
         final ModelAndView mav = new ModelAndView("myReservationDetail");
         detail.populateModel(mav::addObject);
         mav.addObject("activeTab", "my-reservations");
+        if (ownerListingHubForBreadcrumb != null) {
+            mav.addObject("reservationDetailOwnerListingHubId", ownerListingHubForBreadcrumb);
+        }
         final ReservationReviewForm owner = ownerReviewForm != null ? ownerReviewForm : new ReservationReviewForm();
         final ReservationReviewForm rider = riderReviewForm != null ? riderReviewForm : new ReservationReviewForm();
         mav.addObject("ownerReviewForm", owner);
@@ -50,17 +54,35 @@ public final class MyReservationDetailModelFactory {
             final ReservationReviewForm ownerReviewForm,
             final BindingResult ownerReviewBinding,
             final ReservationReviewForm riderReviewForm,
-            final BindingResult riderReviewBinding) {
+            final BindingResult riderReviewBinding,
+            final Long fromListing) {
         final Optional<ReservationDetailPageModel> detailOpt = reservationViewService.loadMyReservationDetailForViewer(
                 viewerUserId, reservationId, viewerRole, LocaleContextHolder.getLocale());
         if (detailOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
         }
+        final ReservationDetailPageModel detail = detailOpt.get();
+        final Long hub = ownerListingHubIfValid(fromListing, viewerRole, detail);
         return detailWithForms(
-                detailOpt.get(),
+                detail,
                 ownerReviewForm,
                 ownerReviewBinding,
                 riderReviewForm,
-                riderReviewBinding);
+                riderReviewBinding,
+                hub);
+    }
+
+    /**
+     * When the owner opens reservation detail from {@code /my-listings/{id}/reservations}, {@code fromListing} matches
+     * the reservation's listing; otherwise returns {@code null} (ignore tampered or stale params).
+     */
+    public static Long ownerListingHubIfValid(
+            final Long fromListing,
+            final String viewerRole,
+            final ReservationDetailPageModel detail) {
+        if (fromListing == null || !"owner".equals(viewerRole) || fromListing.longValue() != detail.getListingId()) {
+            return null;
+        }
+        return fromListing;
     }
 }

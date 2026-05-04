@@ -108,6 +108,7 @@
                 <c:forEach var="reservation" items="${reservations}">
                     <c:url var="reservationDetailUrl" value="/my-reservations/${reservation.reservationId}">
                         <c:param name="role" value="owner"/>
+                        <c:param name="fromListing" value="${listing.id}"/>
                     </c:url>
                     <a href="<c:out value='${reservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">

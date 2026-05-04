@@ -99,6 +99,11 @@ public final class ReservationDetailPageModel {
         this.paymentReceiptApproved = paymentReceiptApproved;
     }
 
+    /** Same as {@link Reservation#getListingId()}; exposed for navigation / breadcrumb context. */
+    public long getListingId() {
+        return reservation.getListingId();
+    }
+
     public final void populateModel(final BiConsumer<String, Object> putObject) {
         putObject.accept("reservation", reservation);
         putObject.accept("listing", listing);

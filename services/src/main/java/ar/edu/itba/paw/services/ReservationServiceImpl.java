@@ -1007,6 +1007,18 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
+    public void finalizePastPeriodReservations() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final int updated = reservationDao.finalizeAcceptedOrStartedPastEndUtc(now);
+        if (updated > 0) {
+            LOGGER.atInfo()
+                    .addArgument(updated)
+                    .log("Finalized {} past-period reservation(s) (accepted/started -> finished)");
+        }
+    }
+
+    @Override
+    @Transactional
     public void dispatchRiderReviewInviteEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationDao.findReservationsForRiderReviewInviteEmail(now);
