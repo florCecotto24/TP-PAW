@@ -40,37 +40,34 @@
                     vehicleLabel="${listing.title}"/>
 
             <!-- Owner contact info -->
+            <c:url var="ownerProfileUrl" value="/counterparty-profile">
+                <c:param name="userId" value="${owner.id}"/>
+                <c:param name="listingId" value="${listing.id}"/>
+            </c:url>
             <div class="d-flex align-items-center gap-2">
-                <c:choose>
-                    <c:when test="${ownerProfileImageId != null}">
-                        <c:url var="ownerProfileImageUrl" value="/image/${ownerProfileImageId}"/>
-                        <spring:message code="carDetail.owner.profileImageAlt" var="ownerProfileImageAlt"/>
-                        <img
-                                src="${ownerProfileImageUrl}"
-                                alt="<c:out value='${ownerProfileImageAlt}'/>"
-                                class="rounded-circle border"
-                                style="width:40px; height:40px; object-fit:cover;"/>
-                    </c:when>
-                    <c:otherwise>
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary"
-                              style="width:40px; height:40px;" aria-hidden="true">
-                            <i class="bi bi-person-fill fs-5"></i>
-                        </span>
-                    </c:otherwise>
-                </c:choose>
-                <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="${ownerProfileUrl}" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
+                    <c:choose>
+                        <c:when test="${ownerProfileImageId != null}">
+                            <c:url var="ownerProfileImageUrl" value="/image/${ownerProfileImageId}"/>
+                            <spring:message code="carDetail.owner.profileImageAlt" var="ownerProfileImageAlt"/>
+                            <img
+                                    src="${ownerProfileImageUrl}"
+                                    alt="<c:out value='${ownerProfileImageAlt}'/>"
+                                    class="rounded-circle border"
+                                    style="width:40px; height:40px; object-fit:cover;"/>
+                        </c:when>
+                        <c:otherwise>
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle border bg-white text-secondary"
+                                  style="width:40px; height:40px;" aria-hidden="true">
+                                <i class="bi bi-person-fill fs-5"></i>
+                            </span>
+                        </c:otherwise>
+                    </c:choose>
                     <spring:message code="carDetail.owner.nameAriaLabel" var="ownerNameAriaLabel"/>
-                    <span class="fw-semibold" aria-label="<c:out value='${ownerNameAriaLabel}'/>">
+                    <span class="fw-semibold text-decoration-underline" aria-label="<c:out value='${ownerNameAriaLabel}'/>">
                         <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
                     </span>
-                    <c:url var="ownerProfileUrl" value="/counterparty-profile">
-                        <c:param name="userId" value="${owner.id}"/>
-                        <c:param name="listingId" value="${listing.id}"/>
-                    </c:url>
-                    <a class="btn btn-outline-secondary btn-sm" href="${ownerProfileUrl}">
-                        <spring:message code="carDetail.owner.viewProfile"/>
-                    </a>
-                </div>
+                </a>
             </div>
             <c:if test="${not empty listing.description}">
                 <section>
