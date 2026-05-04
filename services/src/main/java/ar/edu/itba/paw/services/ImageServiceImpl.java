@@ -36,11 +36,13 @@ public final class ImageServiceImpl implements ImageService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long getMaxImageBytes() {
         return maxImageBytes;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public long getMaxImageMegabytesRoundedUp() {
         return (maxImageBytes + bytesPerBinaryMegabyte - 1) / bytesPerBinaryMegabyte;
     }

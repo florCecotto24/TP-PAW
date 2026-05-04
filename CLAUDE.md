@@ -113,6 +113,22 @@ Read-only methods must use `@Transactional(readOnly = true)` — this is also a 
 
 **Critical proxy limitation**: `@Transactional` is applied via Spring proxy. Internal calls within the same class (e.g. `this.someMethod()`) bypass the proxy and will NOT be transactional, even if annotated. Only public interface methods get the transactional behavior. Annotate every method individually rather than relying on class-level annotations plus internal delegation.
 
+### PR checks (transactionality)
+
+- `services/src/main/java/.../*ServiceImpl.java`: every public method must have explicit `@Transactional`.
+- Pure reads or normalization/build helpers that only read data must use `@Transactional(readOnly = true)`.
+- Writes, state changes, and side effects (including mail dispatch orchestration) must use `@Transactional` without `readOnly = true`.
+- Private helpers are not transactional entry points; the rule applies to public service methods.
+- If a method in a `*ServiceImpl` is intentionally left without `@Transactional`, the PR must justify that exception explicitly.
+
+Quick reviewer checks:
+
+```text
+rg "public .*\\(" services/src/main/java/ar/edu/itba/paw/services | rg "ServiceImpl"
+rg "@Transactional\\(readOnly\\s*=\\s*true\\)|@Transactional" services/src/main/java/ar/edu/itba/paw/services
+rg "this\\.[a-zA-Z0-9_]+\\(" services/src/main/java/ar/edu/itba/paw/services
+```
+
 ## Controller cross-cutting concerns
 
 ### Shared model attributes

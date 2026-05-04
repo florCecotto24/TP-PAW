@@ -276,6 +276,7 @@ public final class ReservationServiceImpl implements ReservationService {
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 
     @Override
+    @Transactional(readOnly = true)
     public ReservationSearchCriteria buildReservationSearchCriteria(
             final Long ownerId,
             final Long riderId,
@@ -386,7 +387,7 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<String> normalizeClientReservationTotal(final String reservationTotal) {
         if (isBlank(reservationTotal)) {
             return Optional.empty();
@@ -476,7 +477,7 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public long calculateBillableDays(final OffsetDateTime startDate, final OffsetDateTime endDate) {
         if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
             return 0;

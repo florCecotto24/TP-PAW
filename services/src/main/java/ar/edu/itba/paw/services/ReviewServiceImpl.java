@@ -40,6 +40,7 @@ public final class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public int getReviewCommentMaxLength() {
         return reviewValidationPolicy.getCommentMaxLength();
     }

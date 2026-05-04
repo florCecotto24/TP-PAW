@@ -710,6 +710,7 @@ public final class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
             final long ownerId,
             final List<String> category,
@@ -739,6 +740,7 @@ public final class ListingServiceImpl implements ListingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
             final long ownerId,
             final List<String> category,
@@ -840,6 +842,7 @@ public final class ListingServiceImpl implements ListingService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public ListingSearchCriteria buildSearchCriteria(
             final String query,
             final List<String> category,

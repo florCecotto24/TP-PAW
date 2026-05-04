@@ -267,6 +267,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String normalizeReservationStatusQueryParam(final String raw) {
         return ReservationHubStatusWhitelist.normalizeStatusQueryParam(raw);
     }
