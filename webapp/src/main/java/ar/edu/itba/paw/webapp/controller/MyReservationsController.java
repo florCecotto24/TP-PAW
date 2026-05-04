@@ -13,7 +13,6 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
 import ar.edu.itba.paw.services.ReviewService;
@@ -61,7 +60,6 @@ public final class MyReservationsController {
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
-    private final ListingService listingService;
     private final LocaleMessages localeMessages;
     private final ReviewService reviewService;
     private final ReservationReviewFormValidator reservationReviewFormValidator;
@@ -71,7 +69,6 @@ public final class MyReservationsController {
     public MyReservationsController(
             final ReservationService reservationService,
             final ReservationViewService reservationViewService,
-            final ListingService listingService,
             final LocaleMessages localeMessages,
             final ReviewService reviewService,
             final ReservationReviewFormValidator reservationReviewFormValidator,
@@ -79,7 +76,6 @@ public final class MyReservationsController {
             final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
-        this.listingService = listingService;
         this.localeMessages = localeMessages;
         this.reviewService = reviewService;
         this.reservationReviewFormValidator = reservationReviewFormValidator;

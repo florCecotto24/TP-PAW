@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import ar.edu.itba.paw.exception.user.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.user.CBUNotFoundException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.IncorrectCurrentPasswordException;
+import ar.edu.itba.paw.exception.user.InvalidCbuFormatException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfileDocumentException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
@@ -26,16 +27,16 @@ import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.util.CbuRules;
-import ar.edu.itba.paw.models.util.EmailNormalizer;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.util.CbuRules;
+import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.persistence.UserDao;
 
 /**
  * User rows via {@link UserDao}; blobs, mail, verification, and listing side effects use peer services.
@@ -486,7 +487,6 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public boolean isValidCbuFormat(final String cbuRaw) {
         return CbuRules.isValidFormat(cbuRaw);
     }

@@ -55,8 +55,8 @@ import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 /**
  * Reservation workflows: persists through {@link ReservationDao} only.
- * Listings, users, stored files, images, and mail go through {@link ListingService}, {@link ListingViewService}
- * (pickup/delivery lines for mail and payloads), {@link UserService}, {@link StoredFileService}, {@link ImageService},
+ * Listings, users, stored files, and mail go through {@link ListingService}, {@link ListingViewService}
+ * (pickup/delivery lines for mail and payloads), {@link UserService}, {@link StoredFileService},
  * and {@link EmailService}; timing and pagination use policy beans.
  */
 @Service
@@ -70,7 +70,6 @@ public final class ReservationServiceImpl implements ReservationService {
     private final UserService userService;
     private final EmailService emailService;
     private final StoredFileService storedFileService;
-    private final ImageService imageService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final PaginationPolicy paginationPolicy;
@@ -83,7 +82,6 @@ public final class ReservationServiceImpl implements ReservationService {
             final UserService userService,
             final EmailService emailService,
             final StoredFileService storedFileService,
-            final ImageService imageService,
             final ReservationTimingPolicy reservationTimingPolicy,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             final PaginationPolicy paginationPolicy) {
@@ -93,7 +91,6 @@ public final class ReservationServiceImpl implements ReservationService {
         this.userService = userService;
         this.emailService = emailService;
         this.storedFileService = storedFileService;
-        this.imageService = imageService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.paginationPolicy = paginationPolicy;

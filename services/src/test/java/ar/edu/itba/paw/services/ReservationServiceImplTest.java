@@ -58,9 +58,6 @@ public class ReservationServiceImplTest {
     private StoredFileService storedFileService;
 
     @Mock
-    private ImageService imageService;
-
-    @Mock
     private ReservationTimingPolicy reservationTimingPolicy;
 
     @Mock

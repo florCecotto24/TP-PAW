@@ -197,7 +197,7 @@
                             <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
                                 <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
                                     <span class="small text-secondary"><c:out value="${periodLabel}"/> <span class="publish-avail-index">1</span></span>
-                                    <button type="button" class="btn btn-outline-danger btn-action btn-action-sm publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove" aria-label="<c:out value='${removeLabel}'/>"><c:out value="${removeLabel}"/></button>
                                 </div>
                                 <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly placeholder="<c:out value='${dateRangePlaceholder}'/>" aria-label="Availability date range"/>
                                 <input type="hidden" class="ryden-avail-from" name="availabilityRows[__IDX__].from" value=""/>
