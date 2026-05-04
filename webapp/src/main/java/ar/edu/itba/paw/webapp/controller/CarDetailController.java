@@ -3,9 +3,11 @@ package ar.edu.itba.paw.webapp.controller;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsLoadMore;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.User;
@@ -33,6 +35,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 import org.springframework.web.servlet.view.RedirectView;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.Instant;
@@ -189,14 +192,32 @@ public class CarDetailController {
                 counterparty.getMemberSince().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
-        final List<VehicleCardView> counterpartyActiveListings = listingService.getOwnerListingCards(
-                        listingService.buildOwnerListingSearchCriteria(
-                                counterparty.getId(), null, null, null, null, null, List.of("active"), null, null, 0, null))
-                .getContent()
-                .stream()
-                .filter(card -> currentListingId == null || card.getListingId() != currentListingId)
+        final int counterpartyListingsPageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
+        final Page<ListingCard> ownerActiveListingsPage = listingService.getOwnerListingCards(
+                listingService.buildOwnerListingSearchCriteria(
+                        counterparty.getId(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of("active"),
+                        null,
+                        null,
+                        0,
+                        ListingService.COUNTERPARTY_OTHER_ACTIVE_LISTINGS_SORT,
+                        counterpartyListingsPageSize,
+                        currentListingId));
+        final List<VehicleCardView> counterpartyActiveListings = ownerActiveListingsPage.getContent().stream()
                 .map(VehicleCardView::fromListingCard)
                 .collect(Collectors.toList());
+        final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
+                CounterpartyActiveListingsLoadMore.of(
+                        ownerActiveListingsPage.isHasNext(),
+                        counterparty.getId(),
+                        currentListingId,
+                        1,
+                        counterpartyListingsPageSize);
 
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
         mav.addObject("activeTab", "explore");
@@ -221,6 +242,58 @@ public class CarDetailController {
                 recentReviewItems);
         mav.addObject("showCounterpartyActiveListings", true);
         mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
+        mav.addObject("counterpartyActiveListingsLoadMore", counterpartyActiveListingsLoadMore);
+        return mav;
+    }
+
+    /**
+     * HTML fragment: next page of active listings for the counterparty profile grid (see {@code counterparty-profile.js}).
+     */
+    @GetMapping("/counterparty-profile/active-listings-page")
+    public ModelAndView counterpartyActiveListingsPage(
+            @RequestParam("userId") final long userId,
+            @RequestParam(name = "listingId", required = false) final Long excludeListingId,
+            @RequestParam("page") final int page,
+            final HttpServletResponse response) {
+        if (page < 1) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return emptyCounterpartyListingsFragment();
+        }
+        if (userService.getUserById(userId).isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return emptyCounterpartyListingsFragment();
+        }
+        final int pageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
+        final Page<ListingCard> listingPage = listingService.getOwnerListingCards(
+                listingService.buildOwnerListingSearchCriteria(
+                        userId,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        List.of("active"),
+                        null,
+                        null,
+                        page,
+                        ListingService.COUNTERPARTY_OTHER_ACTIVE_LISTINGS_SORT,
+                        pageSize,
+                        excludeListingId));
+        final List<VehicleCardView> cards = listingPage.getContent().stream()
+                .map(VehicleCardView::fromListingCard)
+                .collect(Collectors.toList());
+        final ModelAndView mav = new ModelAndView("counterpartyActiveListingCols");
+        mav.addObject("counterpartyActiveListings", cards);
+        mav.addObject("fragmentHasMore", listingPage.isHasNext());
+        mav.addObject("fragmentNextPage", listingPage.isHasNext() ? page + 1 : page);
+        return mav;
+    }
+
+    private static ModelAndView emptyCounterpartyListingsFragment() {
+        final ModelAndView mav = new ModelAndView("counterpartyActiveListingCols");
+        mav.addObject("counterpartyActiveListings", List.of());
+        mav.addObject("fragmentHasMore", false);
+        mav.addObject("fragmentNextPage", 0);
         return mav;
     }
 

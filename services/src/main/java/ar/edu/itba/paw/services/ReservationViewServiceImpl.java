@@ -24,7 +24,9 @@ import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingCardRow;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsLoadMore;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
@@ -178,10 +180,40 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 counterparty.getMemberSince().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
-        final List<CounterpartyActiveListingCardRow> activeRows =
+        final int ownerListingsPageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
+        final Page<ListingCard> ownerListingsPage =
                 counterpartyIsOwner
-                        ? buildCounterpartyActiveListingRowsExcluding(reservation.getListingId(), counterparty.getId())
-                        : List.of();
+                        ? listingService.getOwnerListingCards(
+                                listingService.buildOwnerListingSearchCriteria(
+                                        counterparty.getId(),
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        List.of("active"),
+                                        null,
+                                        null,
+                                        0,
+                                        ListingService.COUNTERPARTY_OTHER_ACTIVE_LISTINGS_SORT,
+                                        ownerListingsPageSize,
+                                        reservation.getListingId()))
+                        : null;
+        final List<CounterpartyActiveListingCardRow> activeRows =
+                ownerListingsPage == null
+                        ? List.of()
+                        : ownerListingsPage.getContent().stream()
+                                .map(ReservationViewServiceImpl::toCounterpartyActiveListingCardRow)
+                                .toList();
+        final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
+                counterpartyIsOwner && ownerListingsPage != null
+                        ? CounterpartyActiveListingsLoadMore.of(
+                                ownerListingsPage.isHasNext(),
+                                counterparty.getId(),
+                                reservation.getListingId(),
+                                1,
+                                ownerListingsPageSize)
+                        : CounterpartyActiveListingsLoadMore.none();
         final List<String> recentReviewComments = recentReviewItems.stream()
                 .map(item -> item.getComment().orElse("").trim())
                 .filter(comment -> !comment.isEmpty())
@@ -198,19 +230,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                         counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent(),
                         recentReviewComments,
                         counterpartyIsOwner,
-                        activeRows));
-    }
-
-    private List<CounterpartyActiveListingCardRow> buildCounterpartyActiveListingRowsExcluding(
-            final long excludeListingId,
-            final long ownerUserId) {
-        final var page = listingService.getOwnerListingCards(
-                listingService.buildOwnerListingSearchCriteria(
-                        ownerUserId, null, null, null, null, null, List.of("active"), null, null, 0, null));
-        return page.getContent().stream()
-                .filter(card -> card.getListingId() != excludeListingId)
-                .map(ReservationViewServiceImpl::toCounterpartyActiveListingCardRow)
-                .toList();
+                        activeRows,
+                        counterpartyActiveListingsLoadMore));
     }
 
     private static CounterpartyActiveListingCardRow toCounterpartyActiveListingCardRow(final ListingCard card) {

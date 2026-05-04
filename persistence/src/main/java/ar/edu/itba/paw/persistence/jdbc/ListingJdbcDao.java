@@ -590,6 +590,10 @@ public class ListingJdbcDao implements ListingDao {
             sql.append("AND l.day_price <= :ownerMaxPrice ");
             params.addValue("ownerMaxPrice", criteria.getMaxPrice());
         }
+        if (criteria.getExcludeListingId() != null) {
+            sql.append("AND l.id <> :ownerExcludeListingId ");
+            params.addValue("ownerExcludeListingId", criteria.getExcludeListingId());
+        }
         appendRatingBandFilter(sql, criteria.getRatingBands());
     }
 

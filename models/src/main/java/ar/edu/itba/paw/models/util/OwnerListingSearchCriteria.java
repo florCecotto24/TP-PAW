@@ -9,6 +9,8 @@ public final class OwnerListingSearchCriteria extends BaseSearchCriteria {
     private final long ownerId;
     private final List<String> listingStatusFilters;
     private final String textQuery;
+    /** When set, rows with this listing id are omitted (public “other listings” grids). */
+    private final Long excludeListingId;
 
     public OwnerListingSearchCriteria(
             final long ownerId,
@@ -23,11 +25,13 @@ public final class OwnerListingSearchCriteria extends BaseSearchCriteria {
             final BigDecimal maxPrice,
             final List<String> ratingBands,
             final String sortBy,
-            final String sortDirection) {
+            final String sortDirection,
+            final Long excludeListingId) {
         super(page, pageSize, carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDirection);
         this.ownerId = ownerId;
         this.listingStatusFilters = listingStatusFilters == null ? List.of() : List.copyOf(listingStatusFilters);
         this.textQuery = textQuery != null && !textQuery.isBlank() ? textQuery.trim() : null;
+        this.excludeListingId = excludeListingId;
     }
 
     public long getOwnerId() {
@@ -40,5 +44,9 @@ public final class OwnerListingSearchCriteria extends BaseSearchCriteria {
 
     public String getTextQuery() {
         return textQuery;
+    }
+
+    public Long getExcludeListingId() {
+        return excludeListingId;
     }
 }

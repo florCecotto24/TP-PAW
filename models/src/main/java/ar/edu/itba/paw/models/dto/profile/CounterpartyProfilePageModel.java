@@ -18,6 +18,7 @@ public final class CounterpartyProfilePageModel {
     private final List<String> recentReviewComments;
     private final boolean showCounterpartyActiveListings;
     private final List<CounterpartyActiveListingCardRow> counterpartyActiveListings;
+    private final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore;
 
     public CounterpartyProfilePageModel(
             final String counterpartyForename,
@@ -30,7 +31,8 @@ public final class CounterpartyProfilePageModel {
             final boolean counterpartyIdentityValidated,
             final List<String> recentReviewComments,
             final boolean showCounterpartyActiveListings,
-            final List<CounterpartyActiveListingCardRow> counterpartyActiveListings) {
+            final List<CounterpartyActiveListingCardRow> counterpartyActiveListings,
+            final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore) {
         this.counterpartyForename = counterpartyForename;
         this.counterpartySurname = counterpartySurname;
         this.counterpartyAbout = counterpartyAbout;
@@ -42,6 +44,10 @@ public final class CounterpartyProfilePageModel {
         this.recentReviewComments = List.copyOf(recentReviewComments);
         this.showCounterpartyActiveListings = showCounterpartyActiveListings;
         this.counterpartyActiveListings = List.copyOf(counterpartyActiveListings);
+        this.counterpartyActiveListingsLoadMore =
+                counterpartyActiveListingsLoadMore != null
+                        ? counterpartyActiveListingsLoadMore
+                        : CounterpartyActiveListingsLoadMore.none();
     }
 
     public final void populateModel(final BiConsumer<String, Object> putObject) {
@@ -56,5 +62,6 @@ public final class CounterpartyProfilePageModel {
         putObject.accept("recentReviewComments", recentReviewComments);
         putObject.accept("showCounterpartyActiveListings", showCounterpartyActiveListings);
         putObject.accept("counterpartyActiveListings", counterpartyActiveListings);
+        putObject.accept("counterpartyActiveListingsLoadMore", counterpartyActiveListingsLoadMore);
     }
 }

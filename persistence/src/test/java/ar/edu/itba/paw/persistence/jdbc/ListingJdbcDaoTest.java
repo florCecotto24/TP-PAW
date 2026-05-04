@@ -242,7 +242,7 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertListing(101L, 10L, "Mine-new", Listing.Status.PAUSED, new BigDecimal("70.00"), base.plusDays(1));
         insertListing(102L, 11L, "Not-mine", Listing.Status.ACTIVE, new BigDecimal("40.00"), base.plusDays(2));
 
-        final var criteria = new OwnerListingSearchCriteria(1L, 0, 8, null, null, null, null, null, null, null, null, "date", "desc");
+        final var criteria = new OwnerListingSearchCriteria(1L, 0, 8, null, null, null, null, null, null, null, null, "date", "desc", null);
         final var page = listingDao.getOwnerListingCards(criteria);
 
         Assertions.assertEquals(2, page.getTotalItems());
@@ -251,6 +251,67 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(100L, page.getContent().get(1).getListingId());
         Assertions.assertEquals(Listing.Status.PAUSED, page.getContent().get(0).getStatus().orElse(null));
         Assertions.assertEquals(Listing.Status.ACTIVE, page.getContent().get(1).getStatus().orElse(null));
+    }
+
+    @Test
+    public void testGetOwnerListingCardsExcludesListingIdFromCountAndRows() {
+        final OffsetDateTime base = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        insertUser(1L, "owner1@mail.com", "Owner", "One");
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertListing(100L, 10L, "Keep-a", Listing.Status.ACTIVE, new BigDecimal("60.00"), base);
+        insertListing(101L, 10L, "Keep-b", Listing.Status.ACTIVE, new BigDecimal("70.00"), base.plusDays(1));
+        insertListing(102L, 10L, "Excluded", Listing.Status.ACTIVE, new BigDecimal("80.00"), base.plusDays(2));
+
+        final var criteria = new OwnerListingSearchCriteria(
+                1L, 0, 8, List.of("active"), null, null, null, null, null, null, null, "date", "desc", 102L);
+        final var page = listingDao.getOwnerListingCards(criteria);
+
+        Assertions.assertEquals(2L, page.getTotalItems());
+        Assertions.assertEquals(2, page.getContent().size());
+        Assertions.assertTrue(page.getContent().stream().noneMatch(c -> c.getListingId() == 102L));
+    }
+
+
+    @Test
+    public void testGetOwnerListingCardsOrdersByRatingDescThenCreatedAtDesc() {
+        final OffsetDateTime base = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        insertUser(1L, "owner1@mail.com", "Owner", "One");
+        insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertCar(11L, 1L, "P2", "VW", "Golf", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        insertCar(12L, 1L, "P3", "Toyota", "Corolla", Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+        insertListing(100L, 10L, "Same-rating-older", Listing.Status.ACTIVE, new BigDecimal("50.00"), base);
+        insertListing(101L, 11L, "Same-rating-newer", Listing.Status.ACTIVE, new BigDecimal("60.00"), base.plusDays(1));
+        insertListing(102L, 12L, "Best-rating", Listing.Status.ACTIVE, new BigDecimal("70.00"), base);
+
+        jdbcTemplate.update("UPDATE listings SET rating_avg = 4.00 WHERE id = 100");
+        jdbcTemplate.update("UPDATE listings SET rating_avg = 4.00 WHERE id = 101");
+        jdbcTemplate.update("UPDATE listings SET rating_avg = 5.00 WHERE id = 102");
+
+        final var criteria = new OwnerListingSearchCriteria(
+                1L,
+                0,
+                10,
+                List.of("active"),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "rating",
+                "desc",
+                null);
+        final var page = listingDao.getOwnerListingCards(criteria);
+
+        final List<Long> expectedOrder = jdbcTemplate.query(
+                "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ? "
+                        + "AND LOWER(l.status) IN ('active') ORDER BY l.rating_avg DESC NULLS LAST, l.created_at DESC",
+                (rs, rn) -> rs.getLong(1),
+                1L);
+
+        Assertions.assertEquals(List.of(102L, 101L, 100L), expectedOrder);
+        Assertions.assertEquals(expectedOrder, page.getContent().stream().map(ListingCard::getListingId).toList());
     }
 
     @Test

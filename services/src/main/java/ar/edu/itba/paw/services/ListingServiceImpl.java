@@ -710,6 +710,37 @@ public final class ListingServiceImpl implements ListingService {
             final String textQuery,
             final int page,
             final String sort) {
+        return buildOwnerListingSearchCriteria(
+                ownerId,
+                category,
+                transmission,
+                powertrain,
+                priceMin,
+                priceMax,
+                listingStatus,
+                rating,
+                textQuery,
+                page,
+                sort,
+                0,
+                null);
+    }
+
+    @Override
+    public OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
+            final long ownerId,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final List<String> listingStatus,
+            final List<String> rating,
+            final String textQuery,
+            final int page,
+            final String sort,
+            final int pageSizeOrZero,
+            final Long excludeListingId) {
         final List<String> carTypes = collectCarTypeParams(category);
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
@@ -731,9 +762,23 @@ public final class ListingServiceImpl implements ListingService {
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
+        final int pageSize =
+                pageSizeOrZero > 0 ? pageSizeOrZero : paginationPolicy.getDefaultPageSize();
         return new OwnerListingSearchCriteria(
-                ownerId, page, paginationPolicy.getDefaultPageSize(), statuses, textQuery,
-                carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDir);
+                ownerId,
+                page,
+                pageSize,
+                statuses,
+                textQuery,
+                carTypes,
+                transmissions,
+                powertrains,
+                minPrice,
+                maxPrice,
+                ratingBands,
+                sortBy,
+                sortDir,
+                excludeListingId);
     }
 
     @Override

@@ -174,6 +174,12 @@ public interface ListingService {
     Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
 
     /**
+     * {@code sort} argument for {@link #buildOwnerListingSearchCriteria} when loading the counterparty profile
+     * “other active listings” grid (initial page and load-more): higher average rating first, then newer listing.
+     */
+    String COUNTERPARTY_OTHER_ACTIVE_LISTINGS_SORT = "rating,desc";
+
+    /**
      * Builds {@link OwnerListingSearchCriteria} from request parameters (sanitizes enums, sort, pagination defaults).
      */
     OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
@@ -188,6 +194,25 @@ public interface ListingService {
             String textQuery,
             int page,
             String sort);
+
+    /**
+     * Same as {@link #buildOwnerListingSearchCriteria(long, List, List, List, BigDecimal, BigDecimal, List, List, String, int, String)}
+     * with explicit page size (when {@code pageSizeOrZero} &gt; 0) and optional listing id to exclude from SQL results.
+     */
+    OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
+            long ownerId,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            List<String> listingStatus,
+            List<String> rating,
+            String textQuery,
+            int page,
+            String sort,
+            int pageSizeOrZero,
+            Long excludeListingId);
 
     /** Whether the owner has at least one listing row. */
     boolean hasListingsByOwner(long ownerId);
