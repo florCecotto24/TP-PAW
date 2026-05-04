@@ -360,6 +360,7 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getUserCbu(long userId){
         Optional<String> cbu = userDao.getUserById(userId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND))

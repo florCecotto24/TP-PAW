@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.persistence.LocationDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -23,16 +24,19 @@ public final class LocationServiceImpl implements LocationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Neighborhood> findAllNeighborhoods() {
         return locationDao.findAllNeighborhoods();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Neighborhood> findNeighborhoodById(final long neighborhoodId) {
         return locationDao.findNeighborhoodById(neighborhoodId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<Long> resolveSearchNeighborhoodId(final String raw) {
         if (raw == null || raw.isBlank()) {
             return Optional.empty();
@@ -49,6 +53,7 @@ public final class LocationServiceImpl implements LocationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Long> resolveSearchNeighborhoodIds(final String[] rawValues) {
         if (rawValues == null || rawValues.length == 0) {
             return List.of();
@@ -57,6 +62,7 @@ public final class LocationServiceImpl implements LocationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Long> resolveSearchNeighborhoodIds(final List<String> rawValues) {
         if (rawValues == null || rawValues.isEmpty()) {
             return List.of();

@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.persistence.StoredFileDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -19,6 +20,7 @@ public final class StoredFileServiceImpl implements StoredFileService {
     }
 
     @Override
+    @Transactional
     public StoredFile create(
             final long uploaderUserId,
             final String fileName,
@@ -28,6 +30,7 @@ public final class StoredFileServiceImpl implements StoredFileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<StoredFile> findById(final long id) {
         return storedFileDao.findById(id);
     }

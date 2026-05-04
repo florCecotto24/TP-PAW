@@ -4,6 +4,7 @@ import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -21,16 +22,19 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     }
 
     @Override
+    @Transactional
     public ListingAvailability create(final long listingId, final LocalDate startInclusive, final LocalDate endInclusive) {
         return listingAvailabilityDao.create(listingId, startInclusive, endInclusive);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ListingAvailability> findByListingId(final long listingId) {
         return listingAvailabilityDao.findByListingId(listingId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ListingAvailability> findByListingIdsEndingOnOrAfter(
             final Collection<Long> listingIds,
             final LocalDate minEndDate) {
@@ -38,6 +42,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     }
 
     @Override
+    @Transactional
     public void deleteByListingId(final long listingId) {
         listingAvailabilityDao.deleteByListingId(listingId);
     }
