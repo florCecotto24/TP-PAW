@@ -24,6 +24,9 @@ import ar.edu.itba.paw.webapp.support.RiderReservationReviewExceptionMapper;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
@@ -57,6 +60,8 @@ import java.util.stream.Collectors;
 /** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
 @Controller
 public final class MyReservationsController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MyReservationsController.class);
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
@@ -210,7 +215,13 @@ public final class MyReservationsController {
         if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
             try {
                 contentType = MediaType.parseMediaType(sf.getContentType());
-            } catch (final IllegalArgumentException ignored) {
+            } catch (final IllegalArgumentException e) {
+                LOG.atLevel(Level.DEBUG)
+                        .setMessage("Invalid payment receipt Content-Type reservationId={} [{}]")
+                        .addArgument(reservationId)
+                        .addArgument(sf.getContentType())
+                        .setCause(e)
+                        .log();
                 contentType = MediaType.APPLICATION_OCTET_STREAM;
             }
         }

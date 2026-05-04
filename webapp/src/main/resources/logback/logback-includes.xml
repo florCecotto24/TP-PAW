@@ -1,24 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Shared appenders: included by classpath logback.xml and logback/logback-local.xml -->
 <included>
-    <!-- Log directory: JVM -DLOG_DIR=... (default: logs/ under the process working directory). -->
+    <!--
+      Log directory on disk: JVM -DLOG_DIR=... (default: logs/ under cwd).
+      On pampero, set LOG_DIR to the folder exposed as http://pawserver.it.itba.edu.ar/logs/ so files appear as e.g.
+      paw-2026a-08-webapp-info.*.log, -warn.-, -error.-, -platform-warn.-, -platform-error.- (Logback writes files only).
+    -->
     <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
     <property name="LOG_BASENAME" value="${LOG_BASENAME:-paw}"/>
     <property name="DEPLOY_LOG_BASENAME" value="${DEPLOY_LOG_BASENAME:-paw-2026a-08-webapp}"/>
     <!-- Prefix in pattern only; do not repeat in log message text in Java. -->
     <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [PAW] [%thread] %-5level %logger{50} - %msg%n"/>
 
-    <!-- App (ar.edu.itba.paw): INFO-only lines -->
+    <!-- App (ar.edu.itba.paw): INFO-only → ${DEPLOY_LOG_BASENAME}-info.yyyy-MM-dd.log -->
     <appender name="APP_INFO" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/${LOG_BASENAME}-app-info.log</file>
         <append>true</append>
         <encoder>
             <charset>UTF-8</charset>
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/archive/${LOG_BASENAME}-app-info.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}-info.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
@@ -29,100 +31,80 @@
         </filter>
     </appender>
 
-    <!-- App (ar.edu.itba.paw): WARN only (ERROR goes to APP_ERROR). -->
+    <!-- App: WARN only -->
     <appender name="APP_WARN" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/${LOG_BASENAME}-app-warn.log</file>
         <append>true</append>
         <encoder>
             <charset>UTF-8</charset>
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/archive/${LOG_BASENAME}-app-warn.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>90</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>WARN</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-    </appender>
-
-    <!-- App (ar.edu.itba.paw): ERROR only. -->
-    <appender name="APP_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/${LOG_BASENAME}-app-error.log</file>
-        <append>true</append>
-        <encoder>
-            <charset>UTF-8</charset>
-            <pattern>${LOG_PATTERN}</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/archive/${LOG_BASENAME}-app-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>90</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>ERROR</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-    </appender>
-
-    <!-- Frameworks / libraries: WARN only. -->
-    <appender name="PLATFORM_WARN" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/${LOG_BASENAME}-platform-warn.log</file>
-        <append>true</append>
-        <encoder>
-            <charset>UTF-8</charset>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [PAW-PLATFORM] [%thread] %-5level %logger{50} - %msg%n</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/archive/${LOG_BASENAME}-platform-warn.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>512MB</totalSizeCap>
-        </rollingPolicy>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>WARN</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-    </appender>
-
-    <!-- Frameworks / libraries: ERROR only. -->
-    <appender name="PLATFORM_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/${LOG_BASENAME}-platform-error.log</file>
-        <append>true</append>
-        <encoder>
-            <charset>UTF-8</charset>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [PAW-PLATFORM] [%thread] %-5level %logger{50} - %msg%n</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/archive/${LOG_BASENAME}-platform-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>512MB</totalSizeCap>
-        </rollingPolicy>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-            <level>ERROR</level>
-            <onMatch>ACCEPT</onMatch>
-            <onMismatch>DENY</onMismatch>
-        </filter>
-    </appender>
-
-    <!-- Daily file: ${DEPLOY_LOG_BASENAME}.yyyy-MM-dd.log (no &lt;file&gt;; active path comes from fileNamePattern). -->
-    <appender name="DEPLOY_DAILY" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>512MB</totalSizeCap>
+            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}-warn.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>90</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>WARN</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- App: ERROR only -->
+    <appender name="APP_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <append>true</append>
         <encoder>
             <charset>UTF-8</charset>
             <pattern>${LOG_PATTERN}</pattern>
         </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}-error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>90</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
     </appender>
+
+    <!-- Frameworks / libraries: WARN only → ${DEPLOY_LOG_BASENAME}-platform-warn.yyyy-MM-dd.log -->
+    <appender name="PLATFORM_WARN" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <append>true</append>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [PAW-PLATFORM] [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}-platform-warn.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>512MB</totalSizeCap>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>WARN</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- Frameworks / libraries: ERROR only -->
+    <appender name="PLATFORM_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <append>true</append>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [PAW-PLATFORM] [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}-platform-error.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>512MB</totalSizeCap>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
 </included>

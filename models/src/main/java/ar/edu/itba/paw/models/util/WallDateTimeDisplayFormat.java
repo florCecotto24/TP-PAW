@@ -6,12 +6,18 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
  * Format for dates/times for UI and emails: Argentina wall-clock, without seconds, pattern according to language.
  */
 public final class WallDateTimeDisplayFormat {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WallDateTimeDisplayFormat.class);
 
     private static final DateTimeFormatter ES_WALL = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter EN_WALL = DateTimeFormatter.ofPattern("MMM d, yyyy, h:mm a", Locale.ENGLISH);
@@ -48,6 +54,12 @@ public final class WallDateTimeDisplayFormat {
             final LocalDateTime ldt = LocalDateTime.parse(t, WallDateTimeParsing.WALL_INPUT_DATE_TIME);
             return formatWallLocalNoSeconds(ldt, locale);
         } catch (final DateTimeParseException e) {
+            LOG.atDebug()
+                    .setMessage("Could not format client wall datetime input as {} ; returning raw [{}]")
+                    .addArgument(WallDateTimeParsing.WALL_INPUT_DATE_TIME_PATTERN)
+                    .addArgument(t)
+                    .setCause(e)
+                    .log();
             return t;
         }
     }

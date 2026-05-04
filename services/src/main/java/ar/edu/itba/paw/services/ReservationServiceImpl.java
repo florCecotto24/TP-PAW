@@ -21,6 +21,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -340,7 +341,12 @@ public final class ReservationServiceImpl implements ReservationService {
                 if (!out.contains(u)) {
                     out.add(u);
                 }
-            } catch (final IllegalArgumentException ignored) {
+            } catch (final IllegalArgumentException ex) {
+                LOGGER.atDebug()
+                        .setMessage("Ignoring invalid car type reservation hub filter token [{}]")
+                        .addArgument(u)
+                        .setCause(ex)
+                        .log();
             }
         }
         return out;
@@ -359,7 +365,12 @@ public final class ReservationServiceImpl implements ReservationService {
             try {
                 Car.Transmission.valueOf(u);
                 out.add(u);
-            } catch (final IllegalArgumentException ignored) {
+            } catch (final IllegalArgumentException ex) {
+                LOGGER.atDebug()
+                        .setMessage("Ignoring invalid transmission reservation hub filter token [{}]")
+                        .addArgument(u)
+                        .setCause(ex)
+                        .log();
             }
         }
         return out;
@@ -378,7 +389,12 @@ public final class ReservationServiceImpl implements ReservationService {
             try {
                 Car.Powertrain.valueOf(u);
                 out.add(u);
-            } catch (final IllegalArgumentException ignored) {
+            } catch (final IllegalArgumentException ex) {
+                LOGGER.atDebug()
+                        .setMessage("Ignoring invalid powertrain reservation hub filter token [{}]")
+                        .addArgument(u)
+                        .setCause(ex)
+                        .log();
             }
         }
         return out;
@@ -411,6 +427,13 @@ public final class ReservationServiceImpl implements ReservationService {
             final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(untilDateTime);
             return calculateTotal(listingId, startDate, endDate).map(ArsMoneyFormat::format);
         } catch (final DateTimeParseException e) {
+            LOGGER.atDebug()
+                    .setMessage("reservationTotalDisplay: unparseable wall datetimes listingId={} from=[{}] until=[{}]")
+                    .addArgument(listingId)
+                    .addArgument(fromDateTime)
+                    .addArgument(untilDateTime)
+                    .setCause(e)
+                    .log();
             return Optional.empty();
         }
     }

@@ -51,6 +51,9 @@ out/
 .vscode/
 context/
 
+# === CLAUDE ===
+.claude/
+
 # === MACOS ===
 .DS_Store
 .AppleDouble
@@ -59,6 +62,7 @@ context/
 # === OTHERS ===
 *.swp
 *~
+
 
 # === SMARTTOMCAT / generated webapp conf ===
 .smarttomcat/

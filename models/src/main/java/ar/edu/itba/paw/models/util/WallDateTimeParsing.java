@@ -8,6 +8,10 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
@@ -15,6 +19,8 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
  * {@link AvailabilityPeriod#WALL_ZONE}.
  */
 public final class WallDateTimeParsing {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WallDateTimeParsing.class);
 
     private WallDateTimeParsing() {
     }
@@ -60,6 +66,11 @@ public final class WallDateTimeParsing {
             }
             return LocalDateTime.parse(t, WALL_INPUT_DATE_TIME).atZone(AvailabilityPeriod.WALL_ZONE).toInstant();
         } catch (final DateTimeParseException e) {
+            LOG.atDebug()
+                    .setMessage("Unparseable search filter range start [{}]")
+                    .addArgument(t)
+                    .setCause(e)
+                    .log();
             return null;
         }
     }
@@ -84,6 +95,11 @@ public final class WallDateTimeParsing {
                     .plusMinutes(1)
                     .toInstant();
         } catch (final DateTimeParseException e) {
+            LOG.atDebug()
+                    .setMessage("Unparseable search filter range end [{}]")
+                    .addArgument(t)
+                    .setCause(e)
+                    .log();
             return null;
         }
     }

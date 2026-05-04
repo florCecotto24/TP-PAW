@@ -409,23 +409,25 @@ public class ReservationJdbcDao implements ReservationDao {
             final int page,
             final int pageSize,
             final String statusFilter) {
-        final List<Object> countArgs = new ArrayList<>();
-        countArgs.add(ownerId);
-        countArgs.add(listingId);
+        final MapSqlParameterSource countParams = new MapSqlParameterSource()
+                .addValue("ownerId", ownerId)
+                .addValue("listingId", listingId);
         final StringBuilder countSql = new StringBuilder(
                 "SELECT COUNT(*) FROM reservations r "
                         + "JOIN listings l ON l.id = r.listing_id "
                         + "JOIN cars c ON c.id = l.car_id "
-                        + "WHERE c.owner_id = ? AND r.listing_id = ? ");
+                        + "WHERE c.owner_id = :ownerId AND r.listing_id = :listingId ");
         if (statusFilter != null) {
-            countSql.append("AND LOWER(r.status) = ? ");
-            countArgs.add(statusFilter);
+            countSql.append("AND LOWER(r.status) = :listingResStatus ");
+            countParams.addValue("listingResStatus", statusFilter);
         }
-        final Long total = jdbcTemplate.queryForObject(countSql.toString(), Long.class, countArgs.toArray());
+        final Long total = namedParameterJdbcTemplate.queryForObject(countSql.toString(), countParams, Long.class);
         final int offset = page * pageSize;
-        final List<Object> listArgs = new ArrayList<>();
-        listArgs.add(ownerId);
-        listArgs.add(listingId);
+        final MapSqlParameterSource listParams = new MapSqlParameterSource()
+                .addValue("ownerId", ownerId)
+                .addValue("listingId", listingId)
+                .addValue("limit", pageSize)
+                .addValue("offset", offset);
         final StringBuilder listSql = new StringBuilder(
                 "SELECT r.id AS reservation_id, r.listing_id, r.start_date, r.end_date, r.status, "
                         + "c.brand, c.model, l.day_price, "
@@ -434,18 +436,14 @@ public class ReservationJdbcDao implements ReservationDao {
                         + "FROM reservations r "
                         + "JOIN listings l ON l.id = r.listing_id "
                         + "JOIN cars c ON c.id = l.car_id "
-                        + "WHERE c.owner_id = ? AND r.listing_id = ? ");
+                        + "WHERE c.owner_id = :ownerId AND r.listing_id = :listingId ");
         if (statusFilter != null) {
-            listSql.append("AND LOWER(r.status) = ? ");
-            listArgs.add(statusFilter);
+            listSql.append("AND LOWER(r.status) = :listingResStatus ");
+            listParams.addValue("listingResStatus", statusFilter);
         }
-        listSql.append("ORDER BY r.created_at DESC LIMIT ? OFFSET ?");
-        listArgs.add(pageSize);
-        listArgs.add(offset);
-        final List<ReservationCard> content = jdbcTemplate.query(
-                listSql.toString(),
-                RESERVATION_CARD_ROW_MAPPER,
-                listArgs.toArray());
+        listSql.append("ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = namedParameterJdbcTemplate.query(
+                listSql.toString(), listParams, RESERVATION_CARD_ROW_MAPPER);
         return new Page<>(content, page, pageSize, total != null ? total : 0L);
     }
 

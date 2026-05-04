@@ -7,12 +7,11 @@
     <logger name="com.zaxxer" level="WARN"/>
     <logger name="io.netty" level="WARN"/>
 
-    <!-- Application code: INFO / WARN / ERROR each to its own file; DEPLOY_DAILY keeps the combined daily line. No DEBUG. -->
+    <!-- Application code: INFO / WARN / ERROR each to its own daily file (see logback-includes.xml). No DEBUG. -->
     <logger name="ar.edu.itba.paw" level="INFO" additivity="false">
         <appender-ref ref="APP_INFO"/>
         <appender-ref ref="APP_WARN"/>
         <appender-ref ref="APP_ERROR"/>
-        <appender-ref ref="DEPLOY_DAILY"/>
     </logger>
 
     <!-- Optional: persistence layer in its own files (uncomment to enable package-specific files). -->

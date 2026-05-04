@@ -7,6 +7,9 @@ import java.util.Locale;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,6 +23,8 @@ import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillable
 @Component
 public final class ReservationWithinMaxBillableDaysValidator
         implements ConstraintValidator<ReservationWithinMaxBillableDays, ReservationForm> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ReservationWithinMaxBillableDaysValidator.class);
 
     private final MessageSource messageSource;
     private final ReservationService reservationService;
@@ -45,6 +50,12 @@ public final class ReservationWithinMaxBillableDaysValidator
             start = AvailabilityPeriod.parseWallLocalDateTimeToUtc(form.getFromDateTime());
             end = AvailabilityPeriod.parseWallLocalDateTimeToUtc(form.getUntilDateTime());
         } catch (final DateTimeParseException e) {
+            LOG.atDebug()
+                    .setMessage("Reservation max-billable-days check skipped: unparseable wall datetimes from=[{}] until=[{}]")
+                    .addArgument(form.getFromDateTime())
+                    .addArgument(form.getUntilDateTime())
+                    .setCause(e)
+                    .log();
             return true;
         }
         if (!end.isAfter(start)) {

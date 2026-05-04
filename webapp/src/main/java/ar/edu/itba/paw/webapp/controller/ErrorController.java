@@ -4,6 +4,9 @@ import java.net.URI;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
@@ -11,6 +14,8 @@ import org.springframework.web.servlet.ModelAndView;
 /** Maps {@code /error} to friendly views or same-app Referer redirects when appropriate. */
 @Controller
 public final class ErrorController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ErrorController.class);
 
     @RequestMapping("/error")
     public ModelAndView error(final HttpServletRequest request) {
@@ -98,6 +103,11 @@ public final class ErrorController {
             }
             return path;
         } catch (final IllegalArgumentException e) {
+            LOG.atDebug()
+                    .setMessage("Referer not usable as same-app redirect URI [{}]")
+                    .addArgument(referer)
+                    .setCause(e)
+                    .log();
             return null;
         }
     }

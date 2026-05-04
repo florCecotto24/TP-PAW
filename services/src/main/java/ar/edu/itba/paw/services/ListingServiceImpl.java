@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -1006,8 +1007,12 @@ public final class ListingServiceImpl implements ListingService {
                 if (!out.contains(u)) {
                     out.add(u);
                 }
-            } catch (final IllegalArgumentException ignored) {
-                // ignore invalid enum
+            } catch (final IllegalArgumentException ex) {
+                LOGGER.atDebug()
+                        .setMessage("Ignoring invalid car type search filter token [{}]")
+                        .addArgument(u)
+                        .setCause(ex)
+                        .log();
             }
         }
         return out;
@@ -1026,8 +1031,12 @@ public final class ListingServiceImpl implements ListingService {
             try {
                 Car.Transmission.valueOf(u);
                 out.add(u);
-            } catch (final IllegalArgumentException ignored) {
-                // ignore
+            } catch (final IllegalArgumentException ex) {
+                LOGGER.atDebug()
+                        .setMessage("Ignoring invalid transmission search filter token [{}]")
+                        .addArgument(u)
+                        .setCause(ex)
+                        .log();
             }
         }
         return out;
@@ -1046,8 +1055,12 @@ public final class ListingServiceImpl implements ListingService {
             try {
                 Car.Powertrain.valueOf(u);
                 out.add(u);
-            } catch (final IllegalArgumentException ignored) {
-                // ignore
+            } catch (final IllegalArgumentException ex) {
+                LOGGER.atDebug()
+                        .setMessage("Ignoring invalid powertrain search filter token [{}]")
+                        .addArgument(u)
+                        .setCause(ex)
+                        .log();
             }
         }
         return out;

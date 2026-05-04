@@ -5,6 +5,10 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Enumeration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
@@ -14,6 +18,8 @@ import javax.servlet.ServletContextListener;
  * so {@link org.apache.catalina.loader.WebappClassLoaderBase} does not deregister "by force".
  */
 public final class JdbcDriverDeregistrationListener implements ServletContextListener {
+
+    private static final Logger LOG = LoggerFactory.getLogger(JdbcDriverDeregistrationListener.class);
 
     @Override
     public void contextInitialized(final ServletContextEvent sce) {
@@ -28,7 +34,13 @@ public final class JdbcDriverDeregistrationListener implements ServletContextLis
             if (driver.getClass().getClassLoader() == thisCl) {
                 try {
                     DriverManager.deregisterDriver(driver);
-                } catch (final SQLException ignored) {
+                } catch (final SQLException e) {
+                    LOG.atDebug()
+                            .setMessage("Failed to deregister JDBC driver {}: {}")
+                            .addArgument(driver.getClass().getName())
+                            .addArgument(e.toString())
+                            .setCause(e)
+                            .log();
                 }
             }
         }

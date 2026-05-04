@@ -18,6 +18,9 @@ import java.util.stream.Stream;
 
 import javax.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
@@ -35,6 +38,8 @@ import ar.edu.itba.paw.webapp.form.PublishCarForm;
  */
 @Component
 public final class PublishCarPictureSessionStash {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PublishCarPictureSessionStash.class);
 
     /** Same key as historically used by {@code PublishCarFormController} (current sessions). */
     private static final String SESSION_ATTRIBUTE =
@@ -60,14 +65,19 @@ public final class PublishCarPictureSessionStash {
                     walk.sorted(Comparator.reverseOrder()).forEach(p -> {
                         try {
                             Files.deleteIfExists(p);
-                        } catch (final IOException ignored) {
-                            // best effort
+                        } catch (final IOException e) {
+                            LOG.atDebug()
+                                    .setMessage("Could not delete publish stash path {}: {}")
+                                    .addArgument(p)
+                                    .addArgument(e.toString())
+                                    .setCause(e)
+                                    .log();
                         }
                     });
                 }
             }
-        } catch (final IOException ignored) {
-            // best effort
+        } catch (final IOException e) {
+            LOG.warn("Could not walk or delete publish stash directory for session {}: {}", sessionId, e.toString(), e);
         }
     }
 
@@ -107,7 +117,14 @@ public final class PublishCarPictureSessionStash {
             if (token.equals(r.stashToken())) {
                 try {
                     Files.deleteIfExists(stashFile(session.getId(), token));
-                } catch (IOException ignored) {}
+                } catch (final IOException e) {
+                    LOG.atDebug()
+                            .setMessage("Could not delete stashed publish image file for token {}: {}")
+                            .addArgument(token)
+                            .addArgument(e.toString())
+                            .setCause(e)
+                            .log();
+                }
                 return true;
             }
             return false;
@@ -134,8 +151,13 @@ public final class PublishCarPictureSessionStash {
         if (Image.isImageContentType(contentType)) {
             try {
                 return MediaType.parseMediaType(contentType);
-            } catch (final IllegalArgumentException ignored) {
-                // fall through
+            } catch (final IllegalArgumentException e) {
+                LOG.atDebug()
+                        .setMessage("Unparseable image Content-Type '{}', using application/octet-stream: {}")
+                        .addArgument(contentType)
+                        .addArgument(e.toString())
+                        .setCause(e)
+                        .log();
             }
         }
         return MediaType.APPLICATION_OCTET_STREAM;
@@ -232,8 +254,13 @@ public final class PublishCarPictureSessionStash {
             if (!r.stashToken().isBlank()) {
                 try {
                     Files.deleteIfExists(stashFile(session.getId(), r.stashToken()));
-                } catch (final IOException ignored) {
-                    // best effort
+                } catch (final IOException e) {
+                    LOG.atDebug()
+                            .setMessage("Could not delete previous stashed publish image {}: {}")
+                            .addArgument(r.stashToken())
+                            .addArgument(e.toString())
+                            .setCause(e)
+                            .log();
                 }
             }
         }

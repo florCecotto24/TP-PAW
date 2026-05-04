@@ -3,6 +3,10 @@ package ar.edu.itba.paw.models.security;
 import java.util.Locale;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
 /**
  * Application roles stored in {@code user_roles.role}. Add enum constants when new roles are introduced
  * in Flyway/ops; values persisted in the DB that are not listed here are ignored when building authorities
@@ -12,6 +16,8 @@ public enum UserRole {
 
     /** Default authenticated user. */
     USER;
+
+    private static final Logger LOG = LoggerFactory.getLogger(UserRole.class);
 
     /**
      * Exact value written to / read from {@code user_roles.role} (matches {@link #name()} for current roles).
@@ -37,6 +43,11 @@ public enum UserRole {
         try {
             return Optional.of(UserRole.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
         } catch (final IllegalArgumentException ex) {
+            LOG.atDebug()
+                    .setMessage("Unknown or unmapped user_roles.role value [{}]")
+                    .addArgument(raw.trim())
+                    .setCause(ex)
+                    .log();
             return Optional.empty();
         }
     }

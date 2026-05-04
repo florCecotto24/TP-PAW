@@ -2,6 +2,9 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.persistence.LocationDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +18,8 @@ import java.util.Set;
 /** Catalog reads via {@link LocationDao}; search query fragments are normalized here (ids, de-duplication, order). */
 @Service
 public final class LocationServiceImpl implements LocationService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LocationServiceImpl.class);
 
     private final LocationDao locationDao;
 
@@ -48,6 +53,11 @@ public final class LocationServiceImpl implements LocationService {
             }
             return locationDao.findNeighborhoodById(id).map(Neighborhood::getId);
         } catch (final NumberFormatException e) {
+            LOG.atDebug()
+                    .setMessage("Search neighborhood id not a number [{}]")
+                    .addArgument(raw)
+                    .setCause(e)
+                    .log();
             return Optional.empty();
         }
     }

@@ -68,15 +68,16 @@ mvn test
 
 ## Deployed log files (HTTP)
 
-On **Pampero**, the process log directory is exposed under **`/logs/`** on the host (e.g. `pawserver.it.itba.edu.ar`). File names use **defaults** from Logback; override with JVM **`-DLOG_BASENAME=...`** (rolling files) and **`-DDEPLOY_LOG_BASENAME=...`** (daily file) if you change them in deployment.
+On **Pampero**, set **`-DLOG_DIR=...`** to the filesystem directory that HTTP serves as **`/logs/`** (e.g. on `pawserver.it.itba.edu.ar`). Logs roll **daily** by level (same basename for app and platform). Override with **`-DDEPLOY_LOG_BASENAME=...`** if needed (default `paw-2026a-08-webapp`).
 
 | Log | URL pattern (replace `yyyy-MM-dd` with the date) |
 |-----|--------------------------------------------------|
-| **General (daily, all application levels written to the rolling daily appender)** | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp.yyyy-MM-dd.log` |
-| **INFO only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-app-info.log` |
-| **WARN only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-app-warn.log` |
-| **ERROR only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-app-error.log` |
+| **INFO only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp-info.yyyy-MM-dd.log` |
+| **WARN only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp-warn.yyyy-MM-dd.log` |
+| **ERROR only** (`ar.edu.itba.paw`) | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp-error.yyyy-MM-dd.log` |
+| **WARN only** (frameworks / libraries, root) | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp-platform-warn.yyyy-MM-dd.log` |
+| **ERROR only** (frameworks / libraries, root) | `http://pawserver.it.itba.edu.ar/logs/paw-2026a-08-webapp-platform-error.yyyy-MM-dd.log` |
 
-The **general** daily file is the same one referenced in `webapp/src/main/resources/logback.xml`. The level-specific files are defined in `webapp/src/main/resources/logback/logback-includes.xml`. Framework and library **WARN** / **ERROR** lines (not under `ar.edu.itba.paw`) go to `paw-platform-warn.log` and `paw-platform-error.log` in the same `/logs/` directory.
+Appenders are defined in `webapp/src/main/resources/logback/logback-includes.xml`. **`LOG_BASENAME`** remains for any future use; platform files now use **`DEPLOY_LOG_BASENAME`** like the app split files.
 
 Base Java package: `ar.edu.itba.paw`.

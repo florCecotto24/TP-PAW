@@ -11,6 +11,9 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -52,6 +55,8 @@ import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 @Controller
 @RequestMapping("/publish-car")
 public final class PublishCarFormController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PublishCarFormController.class);
 
     private final ListingService listingService;
     private final LocaleMessages localeMessages;
@@ -150,6 +155,11 @@ public final class PublishCarFormController {
         try {
             bytes = pictureStash.readRetainedBytes(session, token);
         } catch (final IOException e) {
+            LOG.atDebug()
+                    .setMessage("Could not read retained publish-car picture bytes token=[{}]")
+                    .addArgument(token)
+                    .setCause(e)
+                    .log();
             return ResponseEntity.notFound().build();
         }
         if (bytes.isEmpty()) {
@@ -292,6 +302,11 @@ public final class PublishCarFormController {
         try {
             return LocalTime.parse(checkInRaw.trim());
         } catch (final DateTimeParseException e) {
+            LOG.atDebug()
+                    .setMessage("Unparseable checkIn query param [{}] ; using default")
+                    .addArgument(checkInRaw)
+                    .setCause(e)
+                    .log();
             return Listing.DEFAULT_CHECK_IN_TIME;
         }
     }

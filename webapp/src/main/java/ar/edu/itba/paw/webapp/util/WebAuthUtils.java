@@ -6,6 +6,9 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
@@ -14,6 +17,8 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 /** Helpers to read {@link RydenUserDetails} / {@link User} from Spring Security and safe redirect targets. */
 public final class WebAuthUtils {
+
+    private static final Logger LOG = LoggerFactory.getLogger(WebAuthUtils.class);
 
     private WebAuthUtils() {
     }
@@ -31,6 +36,11 @@ public final class WebAuthUtils {
         try {
             uri = new URI(referer);
         } catch (final URISyntaxException e) {
+            LOG.atDebug()
+                    .setMessage("Referer not a valid URI for guest-only redirect [{}]")
+                    .addArgument(referer)
+                    .setCause(e)
+                    .log();
             return "/";
         }
         final String scheme = uri.getScheme();

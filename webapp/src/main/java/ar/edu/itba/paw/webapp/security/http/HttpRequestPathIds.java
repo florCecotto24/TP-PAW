@@ -4,10 +4,16 @@ import java.util.OptionalLong;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
 /**
  * Parses numeric ids from {@link HttpServletRequest} paths (after context path).
  */
 public final class HttpRequestPathIds {
+
+    private static final Logger LOG = LoggerFactory.getLogger(HttpRequestPathIds.class);
 
     private HttpRequestPathIds() {
     }
@@ -34,6 +40,12 @@ public final class HttpRequestPathIds {
             final long id = Long.parseLong(idPart);
             return id > 0 ? OptionalLong.of(id) : OptionalLong.empty();
         } catch (final NumberFormatException e) {
+            LOG.atDebug()
+                    .setMessage("Path id segment not a positive long after prefix [{}] idPart=[{}]")
+                    .addArgument(prefix)
+                    .addArgument(idPart)
+                    .setCause(e)
+                    .log();
             return OptionalLong.empty();
         }
     }

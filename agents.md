@@ -1,6 +1,6 @@
-# AGENTS.md
+# Repository guidance
 
-This file provides guidance to coding agents when working with code in this repository.
+**`CLAUDE.md`** and **`agents.md`** are identical: guidance for Claude Code, Cursor, and other coding agents.
 
 ## Commands
 
@@ -8,7 +8,7 @@ This file provides guidance to coding agents when working with code in this repo
 # Build all modules
 mvn clean install
 
-# Run the web application (available at http://localhost:8080/)
+# Run the web application
 mvn jetty:run -pl webapp
 
 # Run all tests
@@ -21,25 +21,37 @@ mvn test -pl persistence
 mvn test -pl persistence -Dtest=ListingHibernateDaoTest
 ```
 
-The app is served at `http://localhost:8080/` (context path is `/webapp` per `application.properties`, so routes like `/webapp/home`).
+The app is served at `http://localhost:8080/` with context path **`/webapp`** (see `application/application.properties`), so routes look like `http://localhost:8080/webapp/home`.
 
-## Database
+## Building and running
 
-Database credentials are in `webapp/src/main/resources/application.properties`. The PostgreSQL `DataSource` is built in `RydenDataSourceFactory`: it applies the idempotent baseline `classpath:db/ryden_baseline.sql` first, then runs Flyway over `classpath:db/migration/`.
+### Prerequisites
 
-Tests use an **in-memory HSQLDB** database configured in each module's `TestPersistenceConfig.java` (loads `schema-hsqldb.sql`) — no PostgreSQL required for testing.
+- Java 21
+- Maven
+- PostgreSQL reachable with credentials in **`webapp/src/main/resources/application/application.properties`** (`spring.datasource.url`, `spring.datasource.username`, `spring.datasource.password`). Optional overrides: `application-${spring.profiles.active}.properties` (see `@PropertySources` in `WebConfig`). Local development: use `application-local.properties` for a local PostgreSQL instance.
 
-### Schema management with JPA
+### Key commands
 
-Schema in production comes from the baseline SQL + Flyway migrations (above). At runtime Hibernate is configured with `hibernate.hbm2ddl.auto=update` in `WebConfig#entityManagerFactory` — useful in dev to pick up new `@Entity`/`@Column` definitions, but the source of truth for production is still the Flyway migrations, not Hibernate's auto-DDL. Any schema change must ship as a Flyway migration.
+```text
+mvn clean install
+mvn jetty:run -pl webapp
+mvn test
+```
 
-### Flyway migrations
+Base URL depends on `server.port` and `server.servlet.context-path` in `application.properties`.
 
-New migrations must follow the naming convention `V<number>__<description>.sql` (e.g. `V4__add_reviews.sql`). Flyway config in `RydenDataSourceFactory`: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
+### Data source and schema (JPA)
+
+PostgreSQL **`DataSource`** is built in **`RydenDataSourceFactory`**: idempotent baseline **`classpath:db/ryden_baseline.sql`**, then **Flyway** on **`classpath:db/migration/`**.
+
+Tests use **in-memory HSQLDB** via **`TestPersistenceConfig`** (`schema-hsqldb.sql` under `persistence/src/test/resources`) — no PostgreSQL required for tests.
+
+At runtime, **`WebConfig#entityManagerFactory`** configures Hibernate with `hibernate.hbm2ddl.auto=update` for local convenience; production schema changes must still ship as **Flyway** migrations (`V<number>__<description>.sql`). Flyway flags in **`RydenDataSourceFactory`**: `baselineOnMigrate(true)`, `baselineVersion("1")`, `failOnMissingLocations(true)`.
 
 ## Architecture
 
-This is a **car rental platform** built as a multi-module Maven project with strict layer separation.
+This is a **car rental platform**: a Java web app on **Spring Framework 5.3**, multi-module **Maven**, strict layer separation.
 
 ### Module dependency chain
 
@@ -49,73 +61,145 @@ webapp → services → persistence → models
    service-contracts  persistence-contracts
 ```
 
-- **models** — JPA entities (`@Entity` annotated): `Car`, `User`, `Listing`, `ListingAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, plus DTOs `ListingCard`, `ListingDetail`, `Page`, etc.
-- **persistence-contracts** — DAO interfaces (e.g., `ListingDao`, `CarDao`).
-- **persistence** — Hibernate/JPA implementations under `persistence/hibernate/` (e.g., `ListingHibernateDao`). DAO tests live here and run against HSQLDB. The legacy `persistence/jdbc/` package is **kept as reference only** — those classes have `@Repository` removed and are no longer Spring beans.
-- **service-contracts** — Service interfaces (e.g., `ListingService`, `ReservationService`).
-- **services** — Service implementations containing business logic. Service tests mock DAOs with Mockito.
-- **webapp** — Spring MVC controllers, JSP views, and all Spring configuration.
+### Module responsibilities
+
+- **models** — JPA entities (`@Entity`): `Car`, `User`, `Listing`, `ListingAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, etc., plus DTOs, search criteria, and shared utilities (wall-clock parsing, `AvailabilityPeriod` with `America/Argentina/Buenos_Aires`).
+- **persistence-contracts** — DAO interfaces (`ListingDao`, `ReservationDao`, …).
+- **persistence** — Hibernate/JPA DAOs under `persistence/hibernate/` (`*HibernateDao`). Tests run against HSQLDB. Legacy **`persistence/jdbc/`** may remain as reference; it is not the active persistence path when Hibernate beans are registered.
+- **service-contracts** — Service interfaces, shared exceptions, `MessageKeys` for i18n codes.
+- **services** — Business logic, email, async mail tasks.
+- **webapp** — Spring MVC controllers, JSPs, `application/application.properties`, static assets, Thymeleaf mail under `classpath:mail/`.
 
 ### Key conventions
 
 - **Dependency injection**: Constructor injection with `@Autowired`.
-- **Persistence**: JPA via Hibernate. DAOs inject `@PersistenceContext EntityManager em` and use:
-  - `em.find(Entity.class, id)` for primary-key reads,
-  - `em.persist(entity)` for inserts,
-  - JQL (`em.createQuery("FROM Entity e WHERE …", Entity.class)`) for queries by attribute,
-  - `em.createNativeQuery(...)` only when projecting DTOs (`Object[]`) or doing bulk updates that don't fit cleanly in JQL.
-  - All `*HibernateDao` classes are annotated `@Repository` + `@Transactional`. The `EntityManagerFactory` and `JpaTransactionManager` are wired in `WebConfig#entityManagerFactory` (production) and `TestPersistenceConfig` (HSQLDB tests). Entities are scanned from `ar.edu.itba.paw.models`.
-- **Entity mapping**: FKs are currently modeled as raw `long ownerId` / `long carId` / `long listingId` fields on the entities (not as `@ManyToOne` associations). JQL joins are explicit (`FROM Reservation r, Listing l WHERE l.id = r.listingId AND …`). If you introduce true associations (`@ManyToOne` / `@OneToMany`), default to `fetch = FetchType.LAZY` and add an `OpenEntityManagerInViewFilter` so JSPs can navigate lazy collections.
-- **Enum persistence**:
-  - Stateless taxonomy enums (`Car.Type`, `Car.Powertrain`, `Car.Transmission`) use `@Enumerated(EnumType.STRING)` — uppercase in the DB.
-  - Status enums (`Listing.Status`, `Reservation.Status`) use a JPA `AttributeConverter` (`StatusConverter`) that stores the name in **lowercase** to match the legacy schema and the existing native-SQL filters (`WHERE LOWER(r.status) = 'pending'`). Do not switch these to `@Enumerated(EnumType.STRING)` without a migration to uppercase column values.
-- **IDs**: every entity uses `@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "…_id_seq")` paired with a `@SequenceGenerator(allocationSize = 1)`. Keep `allocationSize = 1` for compatibility with the existing PostgreSQL sequences.
-- **Pagination**: when paginating an **entity** query that contains a `JOIN`, do **not** rely on `setFirstResult` / `setMaxResults` alone — Hibernate will materialize the whole result set and slice in memory. Use the **1+1 queries** pattern (page IDs via a `SELECT id … LIMIT/OFFSET` native or scalar query, then `FROM Entity e WHERE e.id IN :ids`). Most paginated reads in this project already sidestep the issue by returning **DTOs** (`ListingCard`, `ReservationCard`) via `Object[]` projections instead of entities. For the DB-fetch-size > UI-page-size pattern, see `DualLayerPageWindow`.
-- **Dirty checking**: write transactions auto-flush modified managed entities. Do not rely on it implicitly — prefer explicit `em.persist` / explicit `UPDATE` JQL — but be aware that mutating an entity loaded inside a `@Transactional` write method will be persisted on commit even without an explicit save call.
-- **Configuration**: Java-based (`WebConfig.java`, `SpringMailConfig.java`) bootstrapped from `web.xml`. Properties loaded from `application.properties`; profile-specific overrides load from `application-{profile}.properties` if present.
-- **Dependency versions**: All versions declared in root `pom.xml` `<dependencyManagement>`. Child modules reference dependencies without versions. JPA/Hibernate-relevant versions: `org.hibernate.version=5.6.15.Final`, `javax.persistence-api=2.2`, `spring-orm=${spring.version}` (5.3.33).
-- **Views**: JSPs in `webapp/src/main/webapp/WEB-INF/views/`. Reusable tag files in `WEB-INF/tags/`. Static assets (CSS, JS, images) served from `webapp/src/main/webapp/css/`, `/js/`, `/assets/`.
-- **Component scan**: `WebConfig` scans `ar.edu.itba.paw.webapp.controller`, `ar.edu.itba.paw.webapp.advice`, `ar.edu.itba.paw.webapp.exception`, `ar.edu.itba.paw.webapp.util`, `ar.edu.itba.paw.webapp.support`, `ar.edu.itba.paw.webapp.security`, `ar.edu.itba.paw.webapp.validation`, `ar.edu.itba.paw.webapp.interceptor`, `ar.edu.itba.paw.services`, and `ar.edu.itba.paw.persistence` (which picks up the Hibernate DAOs).
+- **Persistence**: JPA via Hibernate. DAOs use `@PersistenceContext EntityManager em` with `em.find`, `em.persist`, JQL, and **`em.createNativeQuery`** for DTO projections (`Object[]`) or bulk updates. Prefer **named parameters** (`:name`) in native SQL and JDBC-style updates for clarity and safe binding. `*HibernateDao` classes are `@Repository` and `@Transactional` as appropriate; `EntityManagerFactory` / `JpaTransactionManager` are wired in `WebConfig` and `TestPersistenceConfig`. Entities are scanned from `ar.edu.itba.paw.models`.
+- **Entity mapping**: Foreign keys are often scalar `long` fields with explicit JQL joins. If you add `@ManyToOne` / `@OneToMany`, prefer `FetchType.LAZY` and consider `OpenEntityManagerInViewFilter` for JSPs.
+- **Enum persistence**: taxonomy enums may use `@Enumerated(EnumType.STRING)`; lifecycle enums (`Listing.Status`, `Reservation.Status`) use **`AttributeConverter`** to persist **lowercase** values matching legacy SQL and `LOWER(status)` filters.
+- **IDs**: `@GeneratedValue(strategy = GenerationType.SEQUENCE, …)` with `@SequenceGenerator(…, allocationSize = 1)` aligned with PostgreSQL sequences.
+- **Pagination**: for heavy entity joins, prefer ID paging + `IN` or DTO-native queries over naive `setFirstResult` / `setMaxResults` on large joined sets (see `DualLayerPageWindow` where applicable).
+- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, `ValidationWebConfig`) plus `web.xml`. Properties from `application.properties`; profile overrides from `application-{profile}.properties` if present.
+- **Dependency versions**: Root `pom.xml` `<dependencyManagement>`; child POMs omit versions where managed. Hibernate / JPA stack versions are managed there (`spring-orm`, `hibernate-core`, `javax.persistence-api`).
+- **Views**: JSPs in `webapp/src/main/webapp/WEB-INF/views/`, tags in `WEB-INF/tags/`, assets under `css/`, `js/`, `assets/`.
+- **Component scan** (`WebConfig`): `ar.edu.itba.paw.webapp.controller`, `.advice`, `.exception`, `.util`, `.support`, `.security`, `.validation`, `.interceptor`, plus `ar.edu.itba.paw.services` and `ar.edu.itba.paw.persistence`. `webapp.form` and `webapp.dto` are not scanned; `CurrentUserArgumentResolver` in `webapp.support` is registered on the MVC adapter. Servlet listeners (e.g. `webapp.listener`) are declared in `WEB-INF/web.xml`.
 
 ### Domain overview
 
-A `User` owns `Car`s. A `Car` can have a `Listing` (rental offer) with a price and availability periods (`listing_availability`). Other users create `Reservation`s against a listing. `Image`s are stored as byte arrays in the DB and associated to cars via `CarPicture`.
+A `User` owns `Car`s. A `Car` can have a `Listing` with price and availability (`listing_availability`). Other users create `Reservation`s. `Image`s are stored as byte arrays and linked via `CarPicture`.
 
-Key enums (defined inside model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, `Listing.Status` (active/paused/finished), `Reservation.Status` (accepted/started/cancelled/finished).
+Key enums (on model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, `Listing.Status` (active/paused/finished), `Reservation.Status` (pending, accepted, started, cancellation variants, finished — see `Reservation.Status` in code).
 
-## Security
+## Technologies
 
-Configured in `WebAuthConfig` with Spring Security 5.7.14. Uses `@EnableWebSecurity`, `SecurityFilterChain`, custom `RydenAuthenticationProvider` and `RydenUserDetailsService`. Includes remember-me support, session-based auth, and CSRF protection. Do not add or replace auth config outside `WebAuthConfig`.
+- **Backend**: Java 21, Spring 5.3 (MVC, JDBC, Context, TX, ORM, Context Support for mail), Spring Security 5.7.14.
+- **Database**: PostgreSQL (runtime), HSQLDB (persistence tests). Baseline **`db/ryden_baseline.sql`** + **Flyway** on `classpath:db/migration/`.
+- **ORM**: Hibernate / JPA (`EntityManager`, `LocalContainerEntityManagerFactoryBean` in `WebConfig`).
+- **Web UI**: JSP, Spring form tags, custom JSP tags under `WEB-INF/tags/`.
+- **Client scripts**: Shared JS in `webapp/src/main/webapp/js/` (e.g. **Flatpickr** for date/range pickers, CDN in `header.jsp` / `footer.jsp`).
+- **Email**: JavaMail, **Thymeleaf** HTML (`webapp/src/main/resources/mail/html/`), separate `ResourceBundleMessageSource` for mail copy (`mail/MailMessages` + locale variants).
+- **Build**: Maven. **Runtime**: Jetty (`jetty-maven-plugin` on the `webapp` module).
+
+## Database
+
+See **Building and running → Data source and schema (JPA)** for bootstrap and Flyway. Migration files live under `webapp/src/main/resources/db/migration/`.
 
 ## Internationalization (i18n)
 
-- **UI/errors**: `ReloadableResourceBundleMessageSource` with basenames `classpath:messages` and `classpath:exception-messages`. Default is English; Spanish uses `messages_es.properties` / `exception-messages_es.properties`.
-- **Locale resolution**: `AcceptHeaderLocaleResolver` in `WebConfig` — reads `Accept-Language` header; supported locales English and Spanish (`es`); defaults to English.
-- **`LocaleMessages`** (`webapp.util`): resolves message keys via `MessageSource` + `LocaleContextHolder`.
-- **Mail**: Separate bundle `mail/MailMessages.properties` (English) and `mail/MailMessages_es.properties`. Because `@Async` mail methods run on a different thread, they do NOT inherit `LocaleContextHolder` — the request locale must be captured on the synchronous thread and passed in (e.g. via `ReservationConfirmationPayload#getMessageLocale`).
-- **Exception message keys**: defined in `exception-messages.properties` and keyed via `ar.edu.itba.paw.exception.MessageKeys`.
+- **UI/errors**: `ReloadableResourceBundleMessageSource` with `classpath:messages` and `classpath:exception-messages`. Default **English**; Spanish: `messages_es.properties`, `exception-messages_es.properties`.
+- **Locale**: `AcceptHeaderLocaleResolver` in `WebConfig` — `Accept-Language`; supported **English** and **Spanish (`es`)**; defaults to English.
+- **`LocaleMessages`** (`webapp.util`): resolves keys via `MessageSource` + `LocaleContextHolder`.
+- **Mail**: `mail/MailMessages.properties` and `mail/MailMessages_es.properties`. `@Async` mail must not rely on `LocaleContextHolder` — capture locale on the request thread (e.g. mail payload builders).
+- **Exception keys**: `exception-messages.properties`, aligned with `ar.edu.itba.paw.exception.MessageKeys`.
 
-## Testing
+## Email
 
-- **Test method naming**: Every `@Test` method must be named **`testFunctionName`**: camelCase beginning with **`test`**, then a descriptive tail (e.g. `testRegistersUser()`, `testDaoWriteVisibleInJdbcTemplate()`). Do not use `should…`, BDD prose, snake_case, or names without the **`test`** prefix.
-- **One behavior per test**: each `@Test` exercises the class under test **once** and asserts one behavior. Splitting "returns the created entity" and "persists to the DB" into two methods is mandatory, not optional — do not combine a return-value assertion with a DB-state assertion in the same test.
-- **Unit tests**: JUnit 5 + Mockito in `services` and `models`.
-- **Persistence tests**: HSQLDB (`TestPersistenceConfig`), integration-style DAO tests under `persistence/src/test`. The test config wires both a `JdbcTemplate` and a `LocalContainerEntityManagerFactoryBean` over the same embedded HSQLDB `DataSource`, so tests can assert against the DB independently of the DAO under test.
-- **DAO integration tests** (`*HibernateDaoTest`, `DaoIntegrationTestSupport`): After a **write** (`create*`, `update*`, `delete*`), call `em.flush()` to force the SQL out, then assert with **`JdbcTemplate`** / `JdbcTestUtils` or SQL fixtures in arrange — **never** confirm persistence via a **second method on the same DAO** (e.g. `createCar` + `getCarById`). Do not assert via `em.find(...)` either — that reads from the persistence context, not the DB. Prefer `INSERT` via `JdbcTemplate` or SQL fixtures for setup when testing updates or deletes on that DAO. For ordered **read** results backed by SQL fixtures, optionally assert ordering against a matching `ORDER BY` query via `JdbcTemplate`.
-- **Strict Mockito**: Unused stubbings fail with `UnnecessaryStubbingException` — remove any `when(...)` that isn't exercised by the test.
-- **No interaction verification**: Do not use `Mockito.verify`, `verifyNoInteractions`, `verifyNoMoreInteractions`, `never()`, `times()`, `InOrder`, or captors to assert collaborator calls — tests assert outcomes (returns, models, state), not implementation wiring.
-- **Do not emulate `verify`**: Avoid counters, collector lists, or stubs used only to assert call count/order. Helpers like `doAnswer` are acceptable only when asserting contract-level outputs/effects (for example, generated message content), not collaborator wiring.
-- **Fixed literals in matchers**: Do not use `Mockito.anyLong()` (or `any*()`) as the value inside `when(...)` — use fixed literals so tests are deterministic and intention is clear.
+- Configured in `SpringMailConfig` (`mail/emailconfig.properties`, `mail/javamail.properties`).
+- HTML templates use keys such as `mail.reservationConfirmation.*`.
+- Async sending uses `mailTaskExecutor` from `WebConfig`.
+
+## Security
+
+Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`, `SecurityFilterChain`, `RydenAuthenticationProvider`, `RydenUserDetailsService`. Remember-me, session auth, CSRF. **Do not** add or replace auth configuration outside `WebAuthConfig`.
+
+## Dates and business rules (high level)
+
+- Listing availability and reservation datetimes use wall zone `AvailabilityPeriod.WALL_ZONE` (Argentina) when parsing server-side.
+- **Publishing**: valid date order; period start not before **today** in that zone (`ListingServiceImpl`).
+- **Reserving**: pickup day not before **today**; interval must fit published availability (`ReservationServiceImpl`).
+- **Flatpickr**: `minDate: 'today'` in `components.js` complements server validation.
+
+## Development conventions
+
+### Coding style
+
+- **DI**: Constructor `@Autowired` as in existing code.
+- **Service ↔ persistence**: Each `*ServiceImpl` injects its own DAOs. Cross-aggregate access goes through peer services (`UserService`, `ReservationService`, …). Use `@Lazy` on one constructor param when two services need each other to break cycles.
+- **Scheduling** (`services/.../scheduling`): `@Scheduled` beans call services only, not DAOs.
+- **Validation**: `ValidationWebConfig` registers `LocalValidatorFactoryBean` as the MVC validator.
+- **Javadoc**: Public contracts in `*-contracts` in **English**. Avoid HTML `<p>` in Javadoc; use extra `*` lines or `{@code}` / `{@link}`. Controllers: short **English** class summary where it helps.
+
+### Quality and security (recurring audit)
+
+- **Spring versions**: Root `pom.xml` (`spring.version`, `spring-security.version`).
+- **Controllers**: Call **services** only, not DAOs. No embedded business rules or direct mail sends; use service APIs. Prefer constructor injection and minimal visibility.
+- **Exceptions & UX**: Domain failures → `RydenException` + message keys; `UnhandledExceptionHandler` must not expose raw `Throwable#getMessage()` (i18n keys; escape dynamic text with JSTL `c:out` when shown).
+- **SQL / queries**: Use parameterized JQL or native SQL with **bound parameters** (named or positional); never concatenate user input into queries.
+- **Logging**: Production `logback/logback-prod.xml` (typically **INFO+** for `ar.edu.itba.paw`); local may use `logback-local.xml` with **DEBUG** or **TRACE** on persistence packages when diagnosing listing/reservation SQL. Use **SLF4J** with parameterized messages; prefer **DEBUG** (optionally SLF4J 2 **fluent** `atDebug().setMessage(...).addArgument(...).setCause(...).log()`) for swallowed parse/IO fallbacks where you still need traceability.
+- **Tests**: Arrange / exercise / assert outcomes, not wiring. **No `Mockito.verify`** (or call-count tricks). Skip tests that only mirror a one-line delegate.
+- **Style**: `final` where appropriate, private constructors on utility classes, immutable DTOs/criteria where practical; avoid magic numbers — read limits from `application.properties` (documented JVM fallbacks only where needed, e.g. `PaginationFallbackSizes`).
+- **Comments**: English only; remove obsolete chatty notes.
+
+### Dependency management
+
+- Versions in root `pom.xml` `<dependencyManagement>`; module POMs omit repeated versions.
+- Internal modules: `${project.version}` for siblings.
+
+### Testing
+
+- **Test method names**: **`testFunctionName`** — camelCase, must **start with `test`**, then descriptive tail (e.g. `testRegistersUser()`). No `should…`, BDD prose, snake_case, or names without the **`test`** prefix.
+- **One behavior per test**: Prefer a single clear behavior per `@Test`; when both return value and DB state matter, split into focused tests rather than asserting everything in one method.
+- **Unit tests**: JUnit 5 + Mockito (`services`, `models`).
+- **Persistence**: HSQLDB, DAO-style tests under `persistence/src/test`.
+- **DAO integration tests** (`*HibernateDaoTest`, `DaoIntegrationTestSupport`): After a **write** (`create*`, `update*`, `delete*`), call **`em.flush()`** when using JPA in the same transaction, then assert with **`JdbcTemplate`** / SQL fixtures — **never** verify persistence only via another method on the **same** DAO (e.g. `createCar` + `getCarById`) and avoid asserting writes solely with **`em.find`** (first-level cache). For ordered reads with fixtures, optional ground-truth `ORDER BY` via `JdbcTemplate`.
+- **No interaction verification**: No `verify`, `verifyNoInteractions`, `never()`, `times()`, `InOrder`, captors for call wiring.
+- **Do not emulate verify**: No counters or collector lists whose sole purpose is call counts.
+- **Matchers**: Do not use `Mockito.anyLong()` (or `any*()`) as the **value** inside `when(...)` — use fixed literals.
+- **Strict Mockito**: Remove unused stubbings (`UnnecessaryStubbingException`).
+
+### Message keys
+
+Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`), consistent with **`MessageKeys`**.
+
+### Application properties
+
+- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp`), uploads, validation, pagination, reservation timing, `app.scheduler.*` crons/zones.
+- **Profiles**: `application-local.properties`, `application-deployed.properties` (examples in folder); secrets not committed.
+- **Mail**: `mail/emailconfig.properties`, `mail/javamail.properties` under `webapp/src/main/resources/mail/`.
+
+### Directory structure (per module)
+
+- `src/main/java`, `src/main/resources`, `src/test/java` as usual.
+- `webapp/src/main/webapp`: JSPs, CSS, JS, `WEB-INF/web.xml`.
+
+### Key services and DAOs (orientation)
+
+- **User**: `UserService` / `UserDao`.
+- **Car & listing**: `CarService` / `CarDao`, `ListingService` / `ListingDao`.
+- **Reservation**: `ReservationService` / `ReservationDao`.
+- **Email & verification**: `EmailService`, `EmailVerificationService`, `PasswordResetService` and related DAOs.
+- **Images**: `ImageService` / `ImageDao`, `CarPictureService` / `CarPictureDao`.
+- **Session**: e.g. `PublishCarStashSessionListener` for publish-form stash cleanup.
 
 ## Logging
 
-Use SLF4J (never Log4j or `java.util.logging`). Declare the logger as:
+Use SLF4J (not Log4j or `java.util.logging`):
 
 ```java
 private static final Logger LOGGER = LoggerFactory.getLogger(ClassName.class);
 ```
 
-Always use parameterized logging to avoid string construction overhead:
+Use **parameterized** logging:
+
 ```java
 LOGGER.debug("Creating user with email {}", email); // correct
 LOGGER.debug("Creating user with email " + email);  // wrong
@@ -123,22 +207,21 @@ LOGGER.debug("Creating user with email " + email);  // wrong
 
 ## Transactions
 
-All service methods must be annotated with `@Transactional` (import: `org.springframework.transaction.annotation.Transactional`).
-Read-only methods must use `@Transactional(readOnly = true)` — this is also a hint for DB connection pool routing (primary/replica).
+All service methods need `@Transactional` (`org.springframework.transaction.annotation.Transactional`). Read-only methods: `@Transactional(readOnly = true)` (pool hint for primary/replica).
 
-With JPA the boundary is doubly important: dirty checking and auto-flush only happen inside a transaction. A `@Transactional(readOnly = true)` method that mutates an entity will not have those changes persisted on commit — make the method writable if you intend the mutation to land in the DB.
+With JPA, transactional boundaries also control **dirty checking** and **auto-flush**: a `@Transactional(readOnly = true)` method must not rely on persisted mutations from that method — use a writable transaction when the entity state should commit.
 
-**Critical proxy limitation**: `@Transactional` is applied via Spring proxy. Internal calls within the same class (e.g. `this.someMethod()`) bypass the proxy and will NOT be transactional, even if annotated. Only public interface methods get the transactional behavior. Annotate every method individually rather than relying on class-level annotations plus internal delegation.
+**Proxy limitation**: Internal `this.someMethod()` calls skip the proxy and ignore `@Transactional`. Only external calls through the proxy apply. Annotate public service methods individually; do not rely on class-level + internal delegation.
 
 ### PR checks (transactionality)
 
-- `services/src/main/java/.../*ServiceImpl.java`: every public method must have explicit `@Transactional`.
-- Pure reads or normalization/build helpers that only read data must use `@Transactional(readOnly = true)`.
-- Writes, state changes, and side effects (including mail dispatch orchestration) must use `@Transactional` without `readOnly = true`.
-- Private helpers are not transactional entry points; the rule applies to public service methods.
-- If a method in a `*ServiceImpl` is intentionally left without `@Transactional`, the PR must justify that exception explicitly.
+- Every **public** method in `services/.../*ServiceImpl.java` must have explicit `@Transactional`.
+- Pure reads / normalization: `readOnly = true`.
+- Writes, side effects, mail orchestration: `@Transactional` without `readOnly = true`.
+- Private helpers are not transactional entry points.
+- Any public method **without** `@Transactional` needs an explicit PR justification.
 
-Quick reviewer checks:
+Quick checks:
 
 ```text
 rg "public .*\\(" services/src/main/java/ar/edu/itba/paw/services | rg "ServiceImpl"
@@ -149,16 +232,13 @@ rg "this\\.[a-zA-Z0-9_]+\\(" services/src/main/java/ar/edu/itba/paw/services
 ## Controller cross-cutting concerns
 
 ### Shared model attributes
-Use the anottation `@ControllerAdvice` for exposing `@ModelAttribute's across all the controllers.
 
+Use `@ControllerAdvice` to expose `@ModelAttribute` beans across controllers.
 
-## Spring AOP annotations enabled in WebConfig
+## Spring AOP (enabled in `WebConfig`)
 
-- `@Async` — for fire-and-forget methods (e.g., sending emails). Methods must
-  receive locale and user as arguments; do NOT access `LocaleContextHolder` or
-  `SecurityContextHolder` inside an `@Async` method (different thread).
-- `@Scheduled` — for recurring background tasks.
-- `@Cacheable` — for caching expensive computations.
+- **`@Async`**: fire-and-forget (e.g. mail). Pass locale/user as arguments; **do not** use `LocaleContextHolder` or `SecurityContextHolder` inside `@Async` (different thread).
+- **`@Scheduled`**: recurring jobs.
+- **`@Cacheable`**: cache expensive work.
 
-These work via proxies (same limitation as `@Transactional`): they only apply
-to public interface methods called from outside the class.
+Same proxy rule as `@Transactional`: only applies to **public** methods invoked from outside the bean.

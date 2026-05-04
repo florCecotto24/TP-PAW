@@ -9,6 +9,9 @@ import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -55,6 +58,8 @@ import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 @Controller
 @RequestMapping("/profile")
 public final class ProfileController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ProfileController.class);
 
     private final UserService userService;
     private final LocaleMessages localeMessages;
@@ -176,7 +181,12 @@ public final class ProfileController {
                 final String pattern = locale.getLanguage().equals("es") ? "dd/MM/yyyy" : "MM/dd/yyyy";
                 model.addAttribute("profileBirthDateDisplay",
                         bd.format(DateTimeFormatter.ofPattern(pattern)));
-            } catch (final DateTimeParseException ignored) {
+            } catch (final DateTimeParseException e) {
+                LOG.atDebug()
+                        .setMessage("Could not format profile birth date for display [{}]")
+                        .addArgument(profileForm.getBirthDate())
+                        .setCause(e)
+                        .log();
                 model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
             }
         } else {
@@ -364,7 +374,13 @@ public final class ProfileController {
             if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
                 contentType = MediaType.parseMediaType(sf.getContentType());
             }
-        } catch (final IllegalArgumentException ignored) {
+        } catch (final IllegalArgumentException e) {
+            LOG.atDebug()
+                    .setMessage("Invalid stored Content-Type for profile document userId={} [{}]")
+                    .addArgument(me.getId())
+                    .addArgument(sf.getContentType())
+                    .setCause(e)
+                    .log();
             contentType = MediaType.APPLICATION_OCTET_STREAM;
         }
         final HttpHeaders headers = new HttpHeaders();
@@ -491,6 +507,11 @@ public final class ProfileController {
         try {
             return UserDocumentType.valueOf(raw.trim().toUpperCase());
         } catch (final IllegalArgumentException ex) {
+            LOG.atDebug()
+                    .setMessage("Invalid profile documentType query param [{}]")
+                    .addArgument(raw)
+                    .setCause(ex)
+                    .log();
             return null;
         }
     }

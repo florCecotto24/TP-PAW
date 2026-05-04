@@ -17,6 +17,9 @@ import java.util.Optional;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -43,6 +46,8 @@ import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
 // @Repository removed — replaced by ListingHibernateDao
 public class ListingJdbcDao implements ListingDao {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ListingJdbcDao.class);
 
     private static final String HOME_SECTION_CHEAPEST = "C";
     private static final String HOME_SECTION_RECENT = "R";
@@ -204,6 +209,11 @@ public class ListingJdbcDao implements ListingDao {
                             + "AND table_name = 'listings' AND column_name = 'start_point')",
                     Boolean.class));
         } catch (final DataAccessException e) {
+            LOGGER.atDebug()
+                    .setMessage("Could not probe listings legacy start_point column via information_schema; assuming absent: {}")
+                    .addArgument(e.toString())
+                    .setCause(e)
+                    .log();
             return false;
         }
     }
