@@ -6,6 +6,8 @@
   Local with console: -Dlogback.configurationFile=classpath:logback/logback-local.xml (e.g. mvn jetty:run in webapp/pom.xml).
 
   Log directory: -DLOG_DIR=... (default: ./logs under the process working directory).
+  Pampero HTTP logs: point LOG_DIR at the folder the server exposes as /logs/ so files match
+  http://pawserver.it.itba.edu.ar/logs/${DEPLOY_LOG_BASENAME}.yyyy-MM-dd.log (-DDEPLOY_LOG_BASENAME=... if needed).
 -->
 <configuration>
     <include resource="logback/logback-includes.xml"/>

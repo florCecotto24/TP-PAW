@@ -4,6 +4,7 @@
     <!-- Log directory: JVM -DLOG_DIR=... (default: logs/ under the process working directory). -->
     <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
     <property name="LOG_BASENAME" value="${LOG_BASENAME:-paw}"/>
+    <property name="DEPLOY_LOG_BASENAME" value="${DEPLOY_LOG_BASENAME:-paw-2026a-08-webapp}"/>
     <!-- Prefix in pattern only; do not repeat in log message text in Java. -->
     <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [PAW] [%thread] %-5level %logger{50} - %msg%n"/>
 
@@ -64,5 +65,18 @@
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>WARN</level>
         </filter>
+    </appender>
+
+    <!-- Daily file: ${DEPLOY_LOG_BASENAME}.yyyy-MM-dd.log (no &lt;file&gt;; active path comes from fileNamePattern). -->
+    <appender name="DEPLOY_DAILY" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/${DEPLOY_LOG_BASENAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>512MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
     </appender>
 </included>

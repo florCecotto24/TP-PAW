@@ -11,6 +11,7 @@
     <logger name="ar.edu.itba.paw" level="INFO" additivity="false">
         <appender-ref ref="APP_INFO"/>
         <appender-ref ref="APP_WARN"/>
+        <appender-ref ref="DEPLOY_DAILY"/>
     </logger>
 
     <!-- Optional: persistence layer in its own files (uncomment to enable package-specific files). -->
