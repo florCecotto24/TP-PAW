@@ -21,7 +21,7 @@
             <div class="counterparty-avatar">
                 <c:choose>
                     <c:when test="${profileImageId != null && profileImageId > 0}">
-                        <img src="${pageContext.request.contextPath}/image/${profileImageId}" alt="${forename} ${surname}" class="counterparty-avatar__img"/>
+                        <img src="${pageContext.request.contextPath}/image/${profileImageId}" alt="<c:out value='${forename} ${surname}'/>" class="counterparty-avatar__img"/>
                     </c:when>
                     <c:otherwise>
                         <div class="counterparty-avatar__placeholder">

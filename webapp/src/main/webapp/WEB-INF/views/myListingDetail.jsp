@@ -323,10 +323,10 @@
                                 <spring:message code="myListingDetail.pauseModal.confirm" var="pauseModalConfirm"/>
                                 <spring:message code="myListingDetail.pauseModal.back" var="pauseModalBack"/>
                                 <spring:message code="myListingDetail.actions.pause" var="pauseBtnLabel"/>
-                                <button type="button" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" data-modal-open="pauseListingModal" aria-label="${pauseBtnLabel}">
+                                <button type="button" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" data-modal-open="pauseListingModal" aria-label="<c:out value='${pauseBtnLabel}'/>">
                                     <c:out value="${pauseBtnLabel}"/>
                                 </button>
-                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="${finishBtnLabel}">
+                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
                                     <c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
@@ -337,7 +337,7 @@
                                         <spring:message code="myListingDetail.actions.activate"/>
                                     </button>
                                 </form>
-                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="${finishBtnLabel}">
+                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
                                     <c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
@@ -348,7 +348,7 @@
                                 <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
                                     <spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
                                 </a>
-                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="${finishBtnLabel}">
+                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
                                     <c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>

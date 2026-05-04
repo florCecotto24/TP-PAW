@@ -47,7 +47,7 @@
                         <spring:message code="carDetail.owner.profileImageAlt" var="ownerProfileImageAlt"/>
                         <img
                                 src="${ownerProfileImageUrl}"
-                                alt="${ownerProfileImageAlt}"
+                                alt="<c:out value='${ownerProfileImageAlt}'/>"
                                 class="rounded-circle border"
                                 style="width:40px; height:40px; object-fit:cover;"/>
                     </c:when>
@@ -60,7 +60,7 @@
                 </c:choose>
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <spring:message code="carDetail.owner.nameAriaLabel" var="ownerNameAriaLabel"/>
-                    <span class="fw-semibold" aria-label="${ownerNameAriaLabel}">
+                    <span class="fw-semibold" aria-label="<c:out value='${ownerNameAriaLabel}'/>">
                         <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
                     </span>
                     <c:url var="ownerProfileUrl" value="/counterparty-profile">

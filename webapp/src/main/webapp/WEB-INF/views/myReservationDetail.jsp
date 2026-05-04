@@ -377,7 +377,7 @@
                                         <c:url var="counterpartySummaryImageUrl" value="/image/${counterpartyProfileImageId}"/>
                                         <spring:message code="myReservationDetail.counterparty.profileImageAlt" var="counterpartySummaryImageAlt"/>
                                         <img src="${counterpartySummaryImageUrl}"
-                                             alt="${counterpartySummaryImageAlt}"
+                                             alt="<c:out value='${counterpartySummaryImageAlt}'/>"
                                              class="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"/>
                                     </c:when>
                                     <c:otherwise>

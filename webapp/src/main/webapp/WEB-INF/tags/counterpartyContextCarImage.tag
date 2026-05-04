@@ -7,7 +7,7 @@
 <div class="counterparty-context-image">
     <c:choose>
         <c:when test="${not empty imageUrl}">
-            <img src="${imageUrl}" alt="${altText}" class="counterparty-context-image__img"/>
+            <img src="<c:out value='${imageUrl}'/>" alt="<c:out value='${altText}'/>" class="counterparty-context-image__img"/>
         </c:when>
         <c:otherwise>
             <div class="counterparty-context-image__placeholder">

@@ -229,7 +229,7 @@
                                                      alt=""
                                                      src="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}"/>
                                                 <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 ryden-publish-remove-retained-btn"
-                                                        aria-label="${removeImageLabel}" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}/remove">
+                                                        aria-label="<c:out value='${removeImageLabel}'/>" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}/remove">
                                                     <i class="bi bi-trash" aria-hidden="true"></i>
                                                 </button>
                                             </div>
