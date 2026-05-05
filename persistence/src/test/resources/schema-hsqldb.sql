@@ -106,10 +106,14 @@ CREATE TABLE IF NOT EXISTS reservations (
     return_reminder_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
     return_checkout_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
     rider_review_invite_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_refund_required BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_refund_receipt_file_id BIGINT,
+    pending_refund_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE,
-    FOREIGN KEY (payment_receipt_file_id) REFERENCES stored_files(id) ON DELETE SET NULL
+    FOREIGN KEY (payment_receipt_file_id) REFERENCES stored_files(id) ON DELETE SET NULL,
+    FOREIGN KEY (payment_refund_receipt_file_id) REFERENCES stored_files(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS reviews (

@@ -183,6 +183,9 @@ CREATE TABLE IF NOT EXISTS reservations (
     return_checkout_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
     rider_review_invite_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
     pending_paymentproof_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_refund_required BOOLEAN NOT NULL DEFAULT FALSE,
+    payment_refund_receipt_file_id INTEGER REFERENCES stored_files(id),
+    pending_refund_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
