@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import java.math.BigDecimal;
 import java.sql.Time;
@@ -28,7 +29,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private ListingJdbcDao listingDao;
+    private ListingDao listingDao;
 
     @Test
     public void testCreateListingPersistsRow() {
@@ -332,8 +333,8 @@ public class ListingJdbcDaoTest extends DaoIntegrationTestSupport {
         insertUser(1L, "owner@mail.com", "Owner", "One");
         insertCar(10L, 1L, "P1", "Ford", "Fiesta", Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
 
-        // Exercise & Assert
-        Assertions.assertThrows(DataIntegrityViolationException.class,
+        // Exercise & Assert — Listing.builder() validates title eagerly with Objects.requireNonNull
+        Assertions.assertThrows(NullPointerException.class,
                 () -> listingDao.createListing(
                         10L,
                         null,

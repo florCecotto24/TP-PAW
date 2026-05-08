@@ -16,14 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.stereotype.Repository;
-
 import ar.edu.itba.paw.models.util.EmailNormalizer;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.security.UserRole;
 
-@Repository
+// @Repository removed — replaced by UserHibernateDao
 public final class UserJdbcDao implements UserDao {
 
     private static final String SELECT_COLUMNS =

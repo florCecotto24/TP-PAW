@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.ImageDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 
 import java.util.Map;
@@ -14,7 +15,7 @@ import ar.edu.itba.paw.models.domain.Image;
 public class ImageJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private ImageJdbcDao imageDao;
+    private ImageDao imageDao;
 
     @Test
     public void testCreateImagePersistsRow() {

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
@@ -15,7 +16,7 @@ import java.util.Map;
 public class CarJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private CarJdbcDao carDao;
+    private CarDao carDao;
 
     @Test
     public void testCreateCarPersistsRow() {

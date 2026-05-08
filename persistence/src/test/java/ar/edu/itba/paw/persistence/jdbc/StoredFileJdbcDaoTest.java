@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.StoredFileDao;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
@@ -15,7 +16,7 @@ import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 class StoredFileJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private StoredFileJdbcDao dao;
+    private StoredFileDao dao;
 
     private static final long UPLOADER_ID = 1L;
 

@@ -816,6 +816,10 @@ public final class ReservationServiceImpl implements ReservationService {
                 .addArgument(approved)
                 .addArgument(reservationId)
                 .log("Owner ownerUserId={} set payment receipt approved={} for reservation id={}");
+        if (approved && r.isCarReturned()) {
+            reservationDao.updateReservationStatus(reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
+            LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} transitioned to finished (payment approved + car already returned)");
+        }
     }
 
     @Override
@@ -914,6 +918,10 @@ public final class ReservationServiceImpl implements ReservationService {
                 .addArgument(ownerUserId)
                 .addArgument(reservationId)
                 .log("Owner ownerUserId={} marked car returned for reservation id={}");
+        if (r.isPaymentApproved()) {
+            reservationDao.updateReservationStatus(reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
+            LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} transitioned to finished (car returned + payment already approved)");
+        }
     }
 
     @Override

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -19,7 +20,7 @@ import ar.edu.itba.paw.models.domain.User;
 public class UserJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private UserJdbcDao userDao;
+    private UserDao userDao;
 
     @Test
     public void testCreateUserNormalizesEmailPersistsRow() {

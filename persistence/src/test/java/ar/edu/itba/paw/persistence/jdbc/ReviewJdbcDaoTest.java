@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.ReviewDao;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -22,7 +23,7 @@ import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 class ReviewJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private ReviewJdbcDao dao;
+    private ReviewDao dao;
 
     private static final long OWNER_ID = 1L;
     private static final long RIDER_ID = 2L;

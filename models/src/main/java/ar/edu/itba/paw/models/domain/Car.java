@@ -2,8 +2,20 @@ package ar.edu.itba.paw.models.domain;
 
 import java.util.Objects;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+
 /** Vehicle inventory row: owner, plate, brand/model, and category enums for search filters. */
-public final class Car {
+@Entity
+@Table(name = "cars")
+public class Car {
     public interface PrettyNamed {
         default String prettyName() {
             return ((Enum<?>) this).name().replace("_", " ").toLowerCase();
@@ -22,14 +34,38 @@ public final class Car {
         MANUAL, AUTOMATIC, SEMI_AUTOMATIC;
     }
 
-    private final long id;
-    private final long ownerId;
-    private final String plate;
-    private final String brand;
-    private final String model;
-    private final Type type;
-    private final Powertrain powertrain;
-    private final Transmission transmission;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cars_id_seq")
+    @SequenceGenerator(name = "cars_id_seq", sequenceName = "cars_id_seq", allocationSize = 1)
+    private long id;
+
+    @Column(name = "owner_id", nullable = false)
+    private long ownerId;
+
+    @Column(nullable = false, length = 50)
+    private String plate;
+
+    @Column(nullable = false, length = 50)
+    private String brand;
+
+    @Column(name = "model", nullable = false, length = 50)
+    private String model;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private Type type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private Powertrain powertrain;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50)
+    private Transmission transmission;
+
+    /* package */ Car() {
+        // For Hibernate
+    }
 
     private Car(final Builder b) {
         this.id = b.id;

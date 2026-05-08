@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
@@ -19,7 +20,7 @@ import java.util.Map;
 public class ListingAvailabilityJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private ListingAvailabilityJdbcDao listingAvailabilityDao;
+    private ListingAvailabilityDao listingAvailabilityDao;
 
     @Test
     public void testCreateListingAvailabilityPersistsRow() {

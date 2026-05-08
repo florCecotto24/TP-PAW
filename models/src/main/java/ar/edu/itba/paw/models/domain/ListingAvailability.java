@@ -3,15 +3,42 @@ package ar.edu.itba.paw.models.domain;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
-/** Wall-calendar inclusive availability segment for a {@link Listing} (publish and edit forms). */
-public final class ListingAvailability {
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
 
-    private final long id;
-    private final long listingId;
-    private final LocalDate startInclusive;
-    private final LocalDate endInclusive;
-    private final OffsetDateTime createdAt;
-    private final OffsetDateTime updatedAt;
+/** Wall-calendar inclusive availability segment for a {@link Listing} (publish and edit forms). */
+@Entity
+@Table(name = "listing_availability")
+public class ListingAvailability {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "listing_availability_id_seq")
+    @SequenceGenerator(name = "listing_availability_id_seq", sequenceName = "listing_availability_id_seq", allocationSize = 1)
+    private long id;
+
+    @Column(name = "listing_id", nullable = false)
+    private long listingId;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDate startInclusive;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDate endInclusive;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
+
+    /* package */ ListingAvailability() {
+        // For Hibernate
+    }
 
     public ListingAvailability(
             final long id,
@@ -21,6 +48,19 @@ public final class ListingAvailability {
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
         this.id = id;
+        this.listingId = listingId;
+        this.startInclusive = startInclusive;
+        this.endInclusive = endInclusive;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    public ListingAvailability(
+            final long listingId,
+            final LocalDate startInclusive,
+            final LocalDate endInclusive,
+            final OffsetDateTime createdAt,
+            final OffsetDateTime updatedAt) {
         this.listingId = listingId;
         this.startInclusive = startInclusive;
         this.endInclusive = endInclusive;

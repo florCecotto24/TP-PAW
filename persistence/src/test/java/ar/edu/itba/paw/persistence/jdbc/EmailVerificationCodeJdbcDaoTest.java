@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -14,7 +15,7 @@ import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 class EmailVerificationCodeJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private EmailVerificationCodeJdbcDao dao;
+    private EmailVerificationCodeDao dao;
 
     private static final long USER_ID = 1L;
 

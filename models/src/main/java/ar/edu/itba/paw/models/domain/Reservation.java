@@ -5,10 +5,23 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.persistence.AttributeConverter;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Converter;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+
 /**
  * Rental agreement between a rider and a listing: UTC interval, money total, payment proof state, and lifecycle status.
  */
-public final class Reservation {
+@Entity
+@Table(name = "reservations")
+public class Reservation {
 
     /**
      * Stored in lowercase with underscores ({@code pending}, {@code cancelled_by_rider}, …).
@@ -27,6 +40,18 @@ public final class Reservation {
         FINISHED
     }
 
+    @Converter
+    public static class StatusConverter implements AttributeConverter<Status, String> {
+        @Override
+        public String convertToDatabaseColumn(final Status attribute) {
+            return attribute == null ? null : attribute.name().toLowerCase();
+        }
+        @Override
+        public Status convertToEntityAttribute(final String dbData) {
+            return dbData == null ? null : Status.valueOf(dbData.toUpperCase());
+        }
+    }
+
     /**
      * Any terminal cancellation status, including legacy {@link Status#CANCELLED}.
      */
@@ -40,19 +65,51 @@ public final class Reservation {
         };
     }
 
-    private final long id;
-    private final long riderId;
-    private final long listingId;
-    private final OffsetDateTime startDate;
-    private final OffsetDateTime endDate;
-    private final Status status;
-    private final OffsetDateTime createdAt;
-    private final OffsetDateTime updatedAt;
-    private final BigDecimal totalPrice;
-    private final Long paymentReceiptFileId;
-    private final boolean paymentApproved;
-    private final OffsetDateTime paymentProofDeadlineAt;
-    private final boolean carReturned;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reservations_id_seq")
+    @SequenceGenerator(name = "reservations_id_seq", sequenceName = "reservations_id_seq", allocationSize = 1)
+    private long id;
+
+    @Column(name = "rider_id", nullable = false)
+    private long riderId;
+
+    @Column(name = "listing_id", nullable = false)
+    private long listingId;
+
+    @Column(name = "start_date", nullable = false)
+    private OffsetDateTime startDate;
+
+    @Column(name = "end_date", nullable = false)
+    private OffsetDateTime endDate;
+
+    @Convert(converter = StatusConverter.class)
+    @Column(nullable = false, length = 60)
+    private Status status;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
+
+    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalPrice;
+
+    @Column(name = "payment_receipt_file_id")
+    private Long paymentReceiptFileId;
+
+    @Column(name = "payment_approved", nullable = false)
+    private boolean paymentApproved;
+
+    @Column(name = "payment_proof_deadline_at")
+    private OffsetDateTime paymentProofDeadlineAt;
+
+    @Column(name = "car_returned", nullable = false)
+    private boolean carReturned;
+
+    /* package */ Reservation() {
+        // For Hibernate
+    }
 
     private Reservation(final Builder b) {
         this.id = b.id;

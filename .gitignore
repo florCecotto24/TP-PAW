@@ -49,6 +49,7 @@ out/
 
 # === VS CODE ===
 .vscode/
+context/
 
 # === MACOS ===
 .DS_Store

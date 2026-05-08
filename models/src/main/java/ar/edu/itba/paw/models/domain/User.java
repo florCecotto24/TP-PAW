@@ -4,30 +4,79 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+
 /**
  * Domain user. Prefer {@link #builder()} or {@link #identities(long, String, String, String)} over ad-hoc construction.
  */
-public final class User {
+@Entity
+@Table(name = "users")
+public class User {
 
-    private final long id;
-    private final String email;
-    private final String forename;
-    private final String surname;
-    private final String passwordHash;
-    private final Boolean emailValidated;
-    private final String phoneNumber;
-    private final LocalDate birthDate;
-    private final String about;
-    private final Long profilePictureId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_seq")
+    @SequenceGenerator(name = "users_id_seq", sequenceName = "users_id_seq", allocationSize = 1)
+    private long id;
+
+    @Column(nullable = false, unique = true, length = 50)
+    private String email;
+
+    @Column(nullable = false, length = 50)
+    private String forename;
+
+    @Column(nullable = false, length = 50)
+    private String surname;
+
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
+    @Column(name = "email_validated")
+    private Boolean emailValidated;
+
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Column(length = 500)
+    private String about;
+
+    @Column(name = "profile_picture_id")
+    private Long profilePictureId;
+
     /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
-    private final String latestLocaleTag;
+    @Column(name = "latest_locale", length = 32)
+    private String latestLocaleTag;
+
     /** Join date (wall calendar); used to show "member since" (month + year) in the UI. */
-    private final LocalDate memberSince;
-    private final String cbu;
-    private final Long licenseFileId;
-    private final Boolean licenseValidated;
-    private final Long identityFileId;
-    private final Boolean identityValidated;
+    @Column(name = "member_since", nullable = false)
+    private LocalDate memberSince;
+
+    @Column(length = 22)
+    private String cbu;
+
+    @Column(name = "license_file_id")
+    private Long licenseFileId;
+
+    @Column(name = "license_validated")
+    private Boolean licenseValidated;
+
+    @Column(name = "identity_file_id")
+    private Long identityFileId;
+
+    @Column(name = "identity_validated")
+    private Boolean identityValidated;
+
+    /* package */ User() {
+        // For Hibernate
+    }
 
     private User(final Builder b) {
         this.id = b.id;

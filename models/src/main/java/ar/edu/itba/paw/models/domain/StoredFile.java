@@ -2,14 +2,42 @@ package ar.edu.itba.paw.models.domain;
 
 import java.time.OffsetDateTime;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+
 /** User-uploaded binary blob with filename, MIME type, and creation timestamp. */
-public final class StoredFile {
-    private final long id;
-    private final long uploaderUserId;
-    private final String fileName;
-    private final String contentType;
-    private final byte[] data;
-    private final OffsetDateTime createdAt;
+@Entity
+@Table(name = "stored_files")
+public class StoredFile {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "stored_files_id_seq")
+    @SequenceGenerator(name = "stored_files_id_seq", sequenceName = "stored_files_id_seq", allocationSize = 1)
+    private long id;
+
+    @Column(name = "uploader_user_id", nullable = false)
+    private long uploaderUserId;
+
+    @Column(name = "file_name", nullable = false, length = 255)
+    private String fileName;
+
+    @Column(name = "content_type", nullable = false, length = 100)
+    private String contentType;
+
+    @Column(name = "byte_array", nullable = false)
+    private byte[] data;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    /* package */ StoredFile() {
+        // For Hibernate
+    }
 
     public StoredFile(
             final long id,
@@ -19,6 +47,19 @@ public final class StoredFile {
             final byte[] data,
             final OffsetDateTime createdAt) {
         this.id = id;
+        this.uploaderUserId = uploaderUserId;
+        this.fileName = fileName;
+        this.contentType = contentType;
+        this.data = data;
+        this.createdAt = createdAt;
+    }
+
+    public StoredFile(
+            final long uploaderUserId,
+            final String fileName,
+            final String contentType,
+            final byte[] data,
+            final OffsetDateTime createdAt) {
         this.uploaderUserId = uploaderUserId;
         this.fileName = fileName;
         this.contentType = contentType;

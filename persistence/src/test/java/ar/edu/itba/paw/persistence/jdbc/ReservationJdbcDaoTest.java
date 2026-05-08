@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
@@ -22,7 +23,7 @@ import java.util.Map;
 public class ReservationJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private ReservationJdbcDao reservationDao;
+    private ReservationDao reservationDao;
 
     @Test
     public void testCreateReservationPersistsRow() {

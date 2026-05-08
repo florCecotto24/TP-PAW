@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executor;
 
+import java.util.Properties;
+
+import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,7 +25,10 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.core.env.Environment;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -152,8 +158,24 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public PlatformTransactionManager transactionManager(final DataSource dataSource) {
-        return new DataSourceTransactionManager(dataSource);
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(final DataSource dataSource) {
+        final LocalContainerEntityManagerFactoryBean factoryBean = new LocalContainerEntityManagerFactoryBean();
+        factoryBean.setPackagesToScan("ar.edu.itba.paw.models");
+        factoryBean.setDataSource(dataSource);
+        final JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
+        factoryBean.setJpaVendorAdapter(vendorAdapter);
+        final Properties properties = new Properties();
+        properties.setProperty("hibernate.hbm2ddl.auto", "update");
+        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
+        properties.setProperty("hibernate.show_sql", "true");
+        properties.setProperty("format_sql", "true");
+        factoryBean.setJpaProperties(properties);
+        return factoryBean;
+    }
+
+    @Bean
+    public PlatformTransactionManager transactionManager(final EntityManagerFactory emf) {
+        return new JpaTransactionManager(emf);
     }
 
     @Bean(name = "mailTaskExecutor")

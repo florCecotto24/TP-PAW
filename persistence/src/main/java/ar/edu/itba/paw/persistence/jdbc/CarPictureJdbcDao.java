@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.stereotype.Repository;
+// @Repository removed — replaced by CarPictureHibernateDao
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@Repository
 public final class CarPictureJdbcDao implements CarPictureDao {
 
     private static final String SELECT_COLUMNS =

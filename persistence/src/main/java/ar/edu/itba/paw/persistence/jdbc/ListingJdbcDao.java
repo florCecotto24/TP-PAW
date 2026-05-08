@@ -25,8 +25,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.stereotype.Repository;
-
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
@@ -43,7 +41,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ListingDao;
 import ar.edu.itba.paw.persistence.util.JdbcDateTimeUtils;
 
-@Repository
+// @Repository removed — replaced by ListingHibernateDao
 public class ListingJdbcDao implements ListingDao {
 
     private static final String HOME_SECTION_CHEAPEST = "C";

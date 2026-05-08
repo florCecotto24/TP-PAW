@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.stereotype.Repository;
+// @Repository removed — replaced by ListingAvailabilityHibernateDao
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Repository
 public final class ListingAvailabilityJdbcDao implements ListingAvailabilityDao {
 
     private static final RowMapper<ListingAvailability> ROW_MAPPER = (rs, rowNum) -> new ListingAvailability(

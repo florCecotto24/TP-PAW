@@ -13,11 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.stereotype.Repository;
-
 import ar.edu.itba.paw.models.domain.StoredFile;
 
-@Repository
 public final class StoredFileJdbcDao implements StoredFileDao {
 
     private static final RowMapper<StoredFile> ROW_MAPPER = (rs, rowNum) -> new StoredFile(

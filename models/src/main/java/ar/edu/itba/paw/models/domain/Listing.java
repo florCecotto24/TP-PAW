@@ -6,10 +6,23 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.persistence.AttributeConverter;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Converter;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+
 /**
  * Published rental offer: links to {@link Car}, daily price, handover address, wall check-in/out times, status, and optional neighborhood and rating cache.
  */
-public final class Listing {
+@Entity
+@Table(name = "listings")
+public class Listing {
 
     /** Default pickup (check-in) wall time when the listing or form omits one (publish UI, JDBC fallback, availability math). */
     public static final LocalTime DEFAULT_CHECK_IN_TIME = LocalTime.of(10, 0);
@@ -21,20 +34,66 @@ public final class Listing {
         PAUSED_DUE_TO_LACK_OF_CBU
     }
 
-    private final long id;
-    private final String title;
-    private final long carId;
-    private final OffsetDateTime createdAt;
-    private final OffsetDateTime updatedAt;
-    private final Status status;
-    private final BigDecimal dayPrice;
-    private final String startPointStreet;
-    private final String startPointNumber;
-    private final String description;
-    private final LocalTime checkInTime;
-    private final LocalTime checkOutTime;
-    private final Long neighborhoodId;
-    private final BigDecimal ratingAvg;
+    @Converter
+    public static class StatusConverter implements AttributeConverter<Status, String> {
+        @Override
+        public String convertToDatabaseColumn(final Status attribute) {
+            return attribute == null ? null : attribute.name().toLowerCase();
+        }
+        @Override
+        public Status convertToEntityAttribute(final String dbData) {
+            return dbData == null ? null : Status.valueOf(dbData.toUpperCase());
+        }
+    }
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "listings_id_seq")
+    @SequenceGenerator(name = "listings_id_seq", sequenceName = "listings_id_seq", allocationSize = 1)
+    private long id;
+
+    @Column(nullable = false, length = 105)
+    private String title;
+
+    @Column(name = "car_id", nullable = false)
+    private long carId;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private OffsetDateTime updatedAt;
+
+    @Convert(converter = StatusConverter.class)
+    @Column(nullable = false, length = 40)
+    private Status status;
+
+    @Column(name = "day_price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal dayPrice;
+
+    @Column(name = "start_point_street", nullable = false, length = 50)
+    private String startPointStreet;
+
+    @Column(name = "start_point_number", length = 10)
+    private String startPointNumber;
+
+    @Column(nullable = false, length = 200)
+    private String description;
+
+    @Column(name = "check_in_time", nullable = false)
+    private LocalTime checkInTime;
+
+    @Column(name = "check_out_time", nullable = false)
+    private LocalTime checkOutTime;
+
+    @Column(name = "neighborhood_id")
+    private Long neighborhoodId;
+
+    @Column(name = "rating_avg", precision = 4, scale = 2)
+    private BigDecimal ratingAvg;
+
+    /* package */ Listing() {
+        // For Hibernate
+    }
 
     private Listing(final Builder b) {
         this.id = b.id;

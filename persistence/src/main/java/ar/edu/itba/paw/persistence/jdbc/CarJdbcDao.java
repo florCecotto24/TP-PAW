@@ -12,12 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.stereotype.Repository;
-
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.persistence.CarDao;
 
-@Repository
+// @Repository removed — replaced by CarHibernateDao
 public final class CarJdbcDao implements CarDao {
 
     private final static RowMapper<Car> CAR_ROW_MAPPER = (rs, rowNum) -> Car.builder()

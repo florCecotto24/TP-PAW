@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.jdbc;
 
+import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -14,7 +15,7 @@ import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 class PasswordResetCodeJdbcDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private PasswordResetCodeJdbcDao dao;
+    private PasswordResetCodeDao dao;
 
     private static final long USER_ID = 1L;
 
