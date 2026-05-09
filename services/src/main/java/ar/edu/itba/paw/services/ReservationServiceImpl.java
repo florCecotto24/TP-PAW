@@ -472,6 +472,16 @@ public final class ReservationServiceImpl implements ReservationService {
         if (!listingService.reservationIntervalFitsListingAvailability(listingId, availabilityId, startDate, endDate)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
         }
+        final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
+        if (listingOwnerOpt.isEmpty()) {
+            throw new RiderReservationException(MessageKeys.USER_ACCOUNT_NOT_FOUND);
+        }
+        if (listingOwnerOpt.get().getId() == rider.getId()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
+        }
+        if (!userService.hasUploadedLicenseAndIdentity(rider)) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DOCUMENTATION_REQUIRED);
+        }
         final OffsetDateTime proofDeadline = OffsetDateTime.ofInstant(
                 Instant.now().plus(reservationTimingPolicy.getPaymentProofDeadlineHours(), ChronoUnit.HOURS),
                 ZoneOffset.UTC);

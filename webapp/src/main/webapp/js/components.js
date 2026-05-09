@@ -1469,16 +1469,11 @@
             return;
         }
         var csrf = findCsrf(form);
-        if (!csrf) {
-            if (errEl) {
-                errEl.textContent = saveFailedMsg;
-                errEl.classList.remove("d-none");
-            }
-            return;
-        }
         var body = new URLSearchParams();
         body.set("cbu", v);
-        body.set(csrf.name, csrf.value);
+        if (csrf) {
+            body.set(csrf.name, csrf.value);
+        }
         fetch(quickUrl, {
             method: "POST",
             credentials: "same-origin",
@@ -1500,6 +1495,169 @@
                 }
                 if (errEl) {
                     errEl.textContent = res.status === 400 ? invalidMsg : saveFailedMsg;
+                    errEl.classList.remove("d-none");
+                }
+            })
+            .catch(function () {
+                if (errEl) {
+                    errEl.textContent = saveFailedMsg;
+                    errEl.classList.remove("d-none");
+                }
+            });
+    });
+})();
+
+/* Reservation: block submit until ID + license uploaded via modal when profile slots empty */
+(function () {
+    var form = document.getElementById("reservationFormEl");
+    if (!form || form.getAttribute("data-ryden-rider-has-booking-docs") === "true") {
+        return;
+    }
+    var needBothMsg = form.getAttribute("data-ryden-booking-docs-need-both") || "";
+    var needLicenseMsg = form.getAttribute("data-ryden-booking-docs-need-license") || "";
+    var needIdentityMsg = form.getAttribute("data-ryden-booking-docs-need-identity") || "";
+    var saveFailedMsg = form.getAttribute("data-ryden-booking-docs-save-failed") || "";
+    var quickUrl = form.getAttribute("data-ryden-booking-docs-url");
+    var modalOpenBtn = document.getElementById("rydenReservationMissingDocsModalOpen");
+    var saveBtn = document.getElementById("reservationMissingDocsSaveBtn");
+    var licenseInput = document.getElementById("reservationMissingDocsLicense");
+    var identityInput = document.getElementById("reservationMissingDocsIdentity");
+    var errEl = document.getElementById("reservationMissingDocsError");
+
+    var BOOKING_DOCS_MODAL_ID = "reservationMissingDocsModal";
+
+    function syncReservationMissingDocsModalSlots(formEl) {
+        var needL = formEl.getAttribute("data-ryden-needs-license") === "true";
+        var needI = formEl.getAttribute("data-ryden-needs-identity") === "true";
+        var licP = document.getElementById(BOOKING_DOCS_MODAL_ID + "-license-pending");
+        var licD = document.getElementById(BOOKING_DOCS_MODAL_ID + "-license-done");
+        var idP = document.getElementById(BOOKING_DOCS_MODAL_ID + "-identity-pending");
+        var idD = document.getElementById(BOOKING_DOCS_MODAL_ID + "-identity-done");
+        if (licP) {
+            licP.classList.toggle("d-none", !needL);
+        }
+        if (licD) {
+            licD.classList.toggle("d-none", needL);
+        }
+        if (idP) {
+            idP.classList.toggle("d-none", !needI);
+        }
+        if (idD) {
+            idD.classList.toggle("d-none", needI);
+        }
+        var licIn = document.getElementById("reservationMissingDocsLicense");
+        var idIn = document.getElementById("reservationMissingDocsIdentity");
+        if (licIn && !needL) {
+            licIn.value = "";
+        }
+        if (idIn && !needI) {
+            idIn.value = "";
+        }
+    }
+
+    function findCsrf(formEl) {
+        var inputs = formEl.querySelectorAll('input[type="hidden"]');
+        var i;
+        for (i = 0; i < inputs.length; i++) {
+            var n = inputs[i].name || "";
+            if (n.toLowerCase().indexOf("csrf") >= 0) {
+                return { name: inputs[i].name, value: inputs[i].value };
+            }
+        }
+        return null;
+    }
+
+    form.addEventListener(
+        "submit",
+        function (e) {
+            if (form.getAttribute("data-ryden-rider-has-booking-docs") === "true") {
+                return;
+            }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            if (modalOpenBtn) {
+                modalOpenBtn.click();
+            }
+        },
+        true
+    );
+
+    if (!saveBtn || !quickUrl || !licenseInput || !identityInput) {
+        return;
+    }
+
+    saveBtn.addEventListener("click", function () {
+        if (errEl) {
+            errEl.textContent = "";
+            errEl.classList.add("d-none");
+        }
+        var needLicense = form.getAttribute("data-ryden-needs-license") === "true";
+        var needIdentity = form.getAttribute("data-ryden-needs-identity") === "true";
+        var hasL = licenseInput.files && licenseInput.files.length > 0;
+        var hasI = identityInput.files && identityInput.files.length > 0;
+        if (needLicense && !hasL) {
+            if (errEl) {
+                errEl.textContent = needLicenseMsg;
+                errEl.classList.remove("d-none");
+            }
+            return;
+        }
+        if (needIdentity && !hasI) {
+            if (errEl) {
+                errEl.textContent = needIdentityMsg;
+                errEl.classList.remove("d-none");
+            }
+            return;
+        }
+        if (!hasL && !hasI) {
+            if (errEl) {
+                errEl.textContent = needBothMsg;
+                errEl.classList.remove("d-none");
+            }
+            return;
+        }
+        var csrf = findCsrf(form);
+        var data = new FormData();
+        if (hasL) {
+            data.append("licenseFile", licenseInput.files[0]);
+        }
+        if (hasI) {
+            data.append("identityFile", identityInput.files[0]);
+        }
+        if (csrf) {
+            data.append(csrf.name, csrf.value);
+        }
+        fetch(quickUrl, {
+            method: "POST",
+            credentials: "same-origin",
+            body: data,
+        })
+            .then(function (res) {
+                if (res.status === 204) {
+                    form.setAttribute("data-ryden-rider-has-booking-docs", "true");
+                    form.setAttribute("data-ryden-needs-license", "false");
+                    form.setAttribute("data-ryden-needs-identity", "false");
+                    var closeBtn = document.querySelector('[data-modal-close="reservationMissingDocsModal"]');
+                    if (closeBtn) {
+                        closeBtn.click();
+                    }
+                    form.submit();
+                    return;
+                }
+                if (res.status === 202) {
+                    var nl = res.headers.get("X-Ryden-Needs-License");
+                    var ni = res.headers.get("X-Ryden-Needs-Identity");
+                    if (nl !== null) {
+                        form.setAttribute("data-ryden-needs-license", nl === "true" ? "true" : "false");
+                    }
+                    if (ni !== null) {
+                        form.setAttribute("data-ryden-needs-identity", ni === "true" ? "true" : "false");
+                    }
+                    syncReservationMissingDocsModalSlots(form);
+                    return;
+                }
+                if (errEl) {
+                    errEl.textContent = saveFailedMsg;
                     errEl.classList.remove("d-none");
                 }
             })

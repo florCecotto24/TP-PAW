@@ -487,6 +487,15 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean hasUploadedLicenseAndIdentity(final User user) {
+        if (user == null) {
+            return false;
+        }
+        return user.getLicenseFileId().isPresent() && user.getIdentityFileId().isPresent();
+    }
+
+    @Override
     public boolean isValidCbuFormat(final String cbuRaw) {
         return CbuRules.isValidFormat(cbuRaw);
     }

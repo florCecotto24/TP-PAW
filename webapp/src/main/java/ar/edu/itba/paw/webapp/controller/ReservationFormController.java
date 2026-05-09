@@ -1,23 +1,14 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.reservation.ReservationException;
-import ar.edu.itba.paw.models.util.ArsMoneyFormat;
-import ar.edu.itba.paw.models.domain.Listing;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.ListingViewService;
-import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
-import ar.edu.itba.paw.webapp.form.ReservationForm;
-import ar.edu.itba.paw.webapp.util.LocaleMessages;
-import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
-import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import java.io.IOException;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -26,11 +17,29 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
-import java.util.Optional;
-
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.reservation.ReservationException;
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.util.ArsMoneyFormat;
+import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.ListingViewService;
+import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.webapp.form.ReservationForm;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
 /** Rider flow to create a reservation for a listing (GET form + POST submit). */
@@ -48,6 +57,7 @@ public final class ReservationFormController {
     private final LocaleMessages localeMessages;
     private final WallDateTimeUiFormatter wallDateTimeUiFormatter;
     private final UserService userService;
+    private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
 
     public ReservationFormController(
             final ListingService listingService,
@@ -56,7 +66,8 @@ public final class ReservationFormController {
             final ImageService imageService,
             final LocaleMessages localeMessages,
             final WallDateTimeUiFormatter wallDateTimeUiFormatter,
-            final UserService userService) {
+            final UserService userService,
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy) {
         this.listingService = listingService;
         this.listingViewService = listingViewService;
         this.reservationService = reservationService;
@@ -64,6 +75,7 @@ public final class ReservationFormController {
         this.localeMessages = localeMessages;
         this.wallDateTimeUiFormatter = wallDateTimeUiFormatter;
         this.userService = userService;
+        this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
     }
 
     @GetMapping("/new")
@@ -100,7 +112,49 @@ public final class ReservationFormController {
         addReservationPricingToModel(mav, listingId, fromDateTime, untilDateTime, reservationTotal);
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         addReservationPolicyHours(mav);
+        addReservationFormRiderDocs(mav, rider);
         return mav;
+    }
+
+    /**
+     * Saves identity/license from the reservation modal (same validation as profile); responds without a full page reload.
+     */
+    @PostMapping(value = "/booking-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> bookingDocuments(
+            @CurrentUser final User currentUser,
+            @RequestParam(name = "licenseFile", required = false) final MultipartFile licenseFile,
+            @RequestParam(name = "identityFile", required = false) final MultipartFile identityFile) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final long userId = me.getId();
+        try {
+            boolean uploadedSomething = false;
+            User fresh = userService.getUserById(userId).orElse(me);
+            if (!isMissingOrEmpty(licenseFile) && fresh.getLicenseFileId().isEmpty()) {
+                uploadBookingDocument(userId, UserDocumentType.LICENSE, licenseFile);
+                uploadedSomething = true;
+                fresh = userService.getUserById(userId).orElse(fresh);
+            }
+            if (!isMissingOrEmpty(identityFile) && fresh.getIdentityFileId().isEmpty()) {
+                uploadBookingDocument(userId, UserDocumentType.IDENTITY, identityFile);
+                uploadedSomething = true;
+                fresh = userService.getUserById(userId).orElse(fresh);
+            }
+            final User after = userService.getUserById(userId).orElse(fresh);
+            if (userService.hasUploadedLicenseAndIdentity(after)) {
+                return ResponseEntity.noContent().build();
+            }
+            if (!uploadedSomething) {
+                return ResponseEntity.badRequest().build();
+            }
+            final HttpHeaders headers = new HttpHeaders();
+            headers.add("X-Ryden-Needs-License", after.getLicenseFileId().isEmpty() ? "true" : "false");
+            headers.add("X-Ryden-Needs-Identity", after.getIdentityFileId().isEmpty() ? "true" : "false");
+            return new ResponseEntity<>(null, headers, HttpStatus.ACCEPTED);
+        } catch (final RydenException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (final IOException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PostMapping
@@ -131,6 +185,7 @@ public final class ReservationFormController {
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             addReservationPolicyHours(mav);
+            addReservationFormRiderDocs(mav, riderErr);
             return mav;
         }
 
@@ -145,6 +200,7 @@ public final class ReservationFormController {
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             addReservationPolicyHours(mav);
+            addReservationFormRiderDocs(mav, riderCar);
             return mav;
         }
 
@@ -177,6 +233,7 @@ public final class ReservationFormController {
             addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             addReservationPolicyHours(mav);
+            addReservationFormRiderDocs(mav, riderEx);
             return mav;
         }
 
@@ -223,5 +280,23 @@ public final class ReservationFormController {
 
     private ModelAndView redirectToSearch() {
         return new ModelAndView(new RedirectView("/search", true));
+    }
+
+    private void addReservationFormRiderDocs(final ModelAndView mav, final User riderPrincipal) {
+        final User riderRow = userService.getUserById(riderPrincipal.getId()).orElse(riderPrincipal);
+        mav.addObject("riderHasBookingDocuments", userService.hasUploadedLicenseAndIdentity(riderRow));
+        mav.addObject("riderMissingLicenseDocument", riderRow.getLicenseFileId().isEmpty());
+        mav.addObject("riderMissingIdentityDocument", riderRow.getIdentityFileId().isEmpty());
+        mav.addObject("uploadMaxProfileDocumentMegabytes", profileDocumentUploadPolicy.getMaxMegabytesRoundedUp());
+    }
+
+    private void uploadBookingDocument(
+            final long userId, final UserDocumentType documentType, final MultipartFile file) throws IOException {
+        userService.uploadValidatedProfileDocument(
+                userId, documentType, file.getOriginalFilename(), file.getContentType(), file.getBytes());
+    }
+
+    private static boolean isMissingOrEmpty(final MultipartFile file) {
+        return file == null || file.isEmpty();
     }
 }

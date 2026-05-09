@@ -135,6 +135,12 @@ public interface UserService {
     /** Whether {@code user} has a persisted CBU that satisfies {@link ar.edu.itba.paw.models.util.CbuRules}. */
     boolean hasValidCbu(User user);
 
+    /**
+     * Whether both profile verification documents are present (license and government ID file slots).
+     * Used to gate booking when riders must upload documentation first.
+     */
+    boolean hasUploadedLicenseAndIdentity(User user);
+
     /** Whether {@code cbuRaw} is acceptable as a CBU per {@link ar.edu.itba.paw.models.util.CbuRules}. */
     boolean isValidCbuFormat(String cbuRaw);
 

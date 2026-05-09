@@ -86,6 +86,14 @@ public class ReservationServiceImplTest {
         Mockito.when(reservationTimingPolicy.getMaxBillableDaysPerReservation()).thenReturn(365);
     }
 
+    /**
+     * Minimal timing stub when {@code submitRiderReservation} exits before proof deadline / {@code createReservation}
+     * (e.g. documentation or owner guard).
+     */
+    private void stubPickupLeadHoursOnlyForSubmitRiderFlow() {
+        Mockito.when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
+    }
+
     @Test
     public void testCreateReservationWhenNoOverlapReturnsCreatedReservation() {
         stubReservationTimingForReservationFlow();
@@ -247,6 +255,7 @@ public class ReservationServiceImplTest {
                 Mockito.any(OffsetDateTime.class))).thenReturn(true);
 
         Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(listingOwner));
+        Mockito.when(userService.hasUploadedLicenseAndIdentity(Mockito.any(User.class))).thenReturn(true);
         Mockito.when(userService.getUserCbu(ownerId)).thenReturn("0170200203000008777719");
 
         Mockito.when(reservationDao.hasActiveOverlap(
@@ -296,6 +305,40 @@ public class ReservationServiceImplTest {
     }
 
     @Test
+    public void testSubmitRiderReservationWhenDocumentationMissingThrowsRiderReservationException() {
+        stubPickupLeadHoursOnlyForSubmitRiderFlow();
+        final long listingId = 2L;
+        final long riderId = 42L;
+        final long ownerId = 7L;
+        final Listing listing = Mockito.mock(Listing.class);
+        final User rider = User.identities(riderId, "rider@test.com", "R", "Rider");
+        final User listingOwner = User.identities(ownerId, "owner@test.com", "O", "Owner");
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(rider));
+        Mockito.when(listingService.reservationIntervalFitsListingAvailability(
+                Mockito.eq(listingId),
+                Mockito.isNull(),
+                Mockito.any(OffsetDateTime.class),
+                Mockito.any(OffsetDateTime.class))).thenReturn(true);
+        Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(listingOwner));
+        Mockito.when(userService.hasUploadedLicenseAndIdentity(Mockito.any(User.class))).thenReturn(false);
+
+        final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(2);
+        final String fromWall = fromDay.atTime(10, 0).toString();
+        final String untilWall = fromDay.plusDays(2).atTime(18, 0).toString();
+
+        final RiderReservationException thrown = Assertions.assertThrows(RiderReservationException.class,
+                () -> reservationService.submitRiderReservation(
+                        riderId,
+                        listingId,
+                        null,
+                        fromWall,
+                        untilWall));
+
+        Assertions.assertEquals(MessageKeys.RESERVATION_RIDER_DOCUMENTATION_REQUIRED, thrown.getMessageCode());
+    }
+
+    @Test
     public void testSubmitRiderReservationWhenWallDatesBeforeTodayThrowsRiderReservationException() {
         // 1. Arrange
         final long listingId = 2L;
@@ -322,7 +365,7 @@ public class ReservationServiceImplTest {
 
     @Test
     public void testSubmitRiderReservationWhenRiderIsListingOwnerThrowsRiderReservationException() {
-        stubReservationTimingForSubmitRiderFlow();
+        stubPickupLeadHoursOnlyForSubmitRiderFlow();
         final long listingId = 2L;
         final long sameUserId = 5L;
         final String email = "owner@test.com";
@@ -337,10 +380,6 @@ public class ReservationServiceImplTest {
                 Mockito.any(OffsetDateTime.class))).thenReturn(true);
         Mockito.when(userService.getUserById(sameUserId)).thenReturn(Optional.of(ownerAndRider));
         Mockito.when(userService.getListingOwner(listingId)).thenReturn(Optional.of(ownerAndRider));
-        Mockito.when(reservationDao.hasActiveOverlap(
-                Mockito.eq(listingId),
-                Mockito.any(OffsetDateTime.class),
-                Mockito.any(OffsetDateTime.class))).thenReturn(false);
 
         final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(2);
         final String fromWall = fromDay.atTime(10, 0).toString();

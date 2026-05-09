@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
@@ -33,6 +34,11 @@
                         <div class="alert alert-danger" role="alert"><c:out value="${reservationError}"/></div>
                     </c:if>
 
+                    <spring:message code="reservationForm.missingDocs.needBoth" var="resMissingDocsNeedBothMsg" htmlEscape="false"/>
+                    <spring:message code="reservationForm.missingDocs.needLicense" var="resMissingDocsNeedLicenseMsg" htmlEscape="false"/>
+                    <spring:message code="reservationForm.missingDocs.needIdentity" var="resMissingDocsNeedIdentityMsg" htmlEscape="false"/>
+                    <spring:message code="reservationForm.missingDocs.saveFailed" var="resMissingDocsSaveFailedMsg" htmlEscape="false"/>
+
                     <div class="border rounded-3 p-3 bg-light-subtle mb-4 mt-1">
                         <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.summary.title"/></h2>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.car"/></strong> <c:out value="${reservationForm.carName}"/></p>
@@ -53,7 +59,16 @@
                         </c:if>
                     </div>
 
-                    <form:form action="${pageContext.request.contextPath}/reservation" method="post" modelAttribute="reservationForm" cssClass="d-flex flex-column gap-2">
+                    <form:form id="reservationFormEl"
+                               action="${pageContext.request.contextPath}/reservation" method="post" modelAttribute="reservationForm" cssClass="d-flex flex-column gap-2"
+                               data-ryden-rider-has-booking-docs="${riderHasBookingDocuments ? 'true' : 'false'}"
+                               data-ryden-booking-docs-url="${pageContext.request.contextPath}/reservation/booking-documents"
+                               data-ryden-needs-license="${riderMissingLicenseDocument ? 'true' : 'false'}"
+                               data-ryden-needs-identity="${riderMissingIdentityDocument ? 'true' : 'false'}"
+                               data-ryden-booking-docs-need-both="${fn:escapeXml(resMissingDocsNeedBothMsg)}"
+                               data-ryden-booking-docs-need-license="${fn:escapeXml(resMissingDocsNeedLicenseMsg)}"
+                               data-ryden-booking-docs-need-identity="${fn:escapeXml(resMissingDocsNeedIdentityMsg)}"
+                               data-ryden-booking-docs-save-failed="${fn:escapeXml(resMissingDocsSaveFailedMsg)}">
                         <form:errors path="fromDateTime" cssClass="text-danger d-block mb-2"/>
                         <form:hidden path="listingId"/>
                         <c:if test="${not empty availabilityId}">
@@ -92,6 +107,38 @@
                             <button type="submit" class="btn btn-primary w-50"><spring:message code="reservationForm.confirm"/></button>
                         </div>
                     </form:form>
+
+                    <c:if test="${not riderHasBookingDocuments}">
+                        <spring:message code="reservationForm.missingDocs.modalTitle" var="resMissingDocsTitle"/>
+                        <spring:message code="reservationForm.missingDocs.licenseLabel" var="resMissingDocsLicenseLabel"/>
+                        <spring:message code="reservationForm.missingDocs.identityLabel" var="resMissingDocsIdentityLabel"/>
+                        <spring:message code="reservationForm.missingDocs.uploadedOnFile" var="resMissingDocsUploadedOnFile"/>
+                        <spring:message code="reservationForm.missingDocs.save" var="resMissingDocsSave"/>
+                        <spring:message code="reservationForm.missingDocs.cancel" var="resMissingDocsCancel"/>
+                        <ryden:documentPromptModal
+                                id="reservationMissingDocsModal"
+                                title="${resMissingDocsTitle}"
+                                licenseInputId="reservationMissingDocsLicense"
+                                identityInputId="reservationMissingDocsIdentity"
+                                licenseLabel="${resMissingDocsLicenseLabel}"
+                                identityLabel="${resMissingDocsIdentityLabel}"
+                                uploadedSlotMessage="${resMissingDocsUploadedOnFile}"
+                                licensePending="${riderMissingLicenseDocument}"
+                                identityPending="${riderMissingIdentityDocument}"
+                                errorId="reservationMissingDocsError"
+                                confirmId="reservationMissingDocsSaveBtn"
+                                openButtonId="rydenReservationMissingDocsModalOpen"
+                                includeOpenTrigger="true"
+                                cancelLabel="${resMissingDocsCancel}"
+                                confirmLabel="${resMissingDocsSave}">
+                            <p class="mb-2 text-secondary text-center">
+                                <spring:message code="reservationForm.missingDocs.modalBody"/>
+                            </p>
+                            <p class="mb-3 text-secondary text-center">
+                                <spring:message code="reservationForm.missingDocs.modalBodyFormats" arguments="${uploadMaxProfileDocumentMegabytes}"/>
+                            </p>
+                        </ryden:documentPromptModal>
+                    </c:if>
                 </div>
             </div>
         </div>

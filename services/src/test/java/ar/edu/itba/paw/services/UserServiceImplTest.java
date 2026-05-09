@@ -356,4 +356,31 @@ public class UserServiceImplTest {
 
         Assertions.assertTrue(result.isEmpty());
     }
+
+    @Test
+    public void testHasUploadedLicenseAndIdentityWhenBothPresentReturnsTrue() {
+        final User user = User.builder()
+                .id(1L)
+                .email("a@test.com")
+                .forename("A")
+                .surname("B")
+                .licenseFileId(10L)
+                .identityFileId(20L)
+                .build();
+
+        Assertions.assertTrue(userService.hasUploadedLicenseAndIdentity(user));
+    }
+
+    @Test
+    public void testHasUploadedLicenseAndIdentityWhenIdentityMissingReturnsFalse() {
+        final User user = User.builder()
+                .id(1L)
+                .email("a@test.com")
+                .forename("A")
+                .surname("B")
+                .licenseFileId(10L)
+                .build();
+
+        Assertions.assertFalse(userService.hasUploadedLicenseAndIdentity(user));
+    }
 }
