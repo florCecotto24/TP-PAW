@@ -547,7 +547,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final Reservation.Status cancelledStatus) {
         reservationDao.updateReservationStatus(reservationId, cancelledStatus.name().toLowerCase(Locale.ROOT));
         final Optional<Reservation> reservationOpt = reservationDao.getReservationById(reservationId);
-        reservationOpt.ifPresent(r -> enqueueCancellationEmail(r));
+        reservationOpt.ifPresent(r -> enqueueCancellationEmail(r, true));
         return reservationOpt;
     }
 
@@ -588,7 +588,7 @@ public final class ReservationServiceImpl implements ReservationService {
                         reservationId, cancelledStatus.name().toLowerCase(Locale.ROOT), false, null);
                 final Optional<Reservation> cancelled = reservationDao.getReservationById(reservationId);
                 cancelled.ifPresent(res -> {
-                    enqueueCancellationEmail(res);
+                    enqueueCancellationEmail(res, true);
                     LOGGER.atInfo()
                             .addArgument(userId)
                             .addArgument(reservationId)
@@ -612,7 +612,7 @@ public final class ReservationServiceImpl implements ReservationService {
                         refundDeadline);
                 final Optional<Reservation> cancelled = reservationDao.getReservationById(reservationId);
                 cancelled.ifPresent(res -> {
-                    enqueueCancellationEmail(res);
+                    enqueueCancellationEmail(res, !refundRequired);
                     if (refundRequired) {
                         enqueueOwnerRefundProofObligationEmail(res, false);
                     }
@@ -635,7 +635,7 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
 
-    private void enqueueCancellationEmail(final Reservation reservation) {
+    private void enqueueCancellationEmail(final Reservation reservation, final boolean notifyOwnerCancellation) {
         try {
             final long riderId = reservation.getRiderId();
             final long listingId = reservation.getListingId();
@@ -683,6 +683,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final ReservationCancellationEmailPayload cancelPayload = ReservationCancellationEmailPayload.builder()
                     .mail(mail)
                     .cancellationStatus(reservation.getStatus())
+                    .notifyOwnerCancellation(notifyOwnerCancellation)
                     .build();
             LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                     .log("Queueing reservation cancellation email to {} for reservation id={}");

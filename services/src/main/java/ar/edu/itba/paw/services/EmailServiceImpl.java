@@ -443,9 +443,13 @@ public final class EmailServiceImpl implements EmailService {
 
         try {
             sendReservationCancellationToClient(mail, riderCtx, mail.getRecipientEmail());
-            sendReservationCancellationToOwner(mail, ownerCtx);
-            LOGGER.atInfo().addArgument(mail.getRecipientEmail()).addArgument(mail.getReservationId()).log("Reservation cancellation email sent to {} (reservation id={})");
-            LOGGER.atInfo().addArgument(mail.getOwnerEmail()).addArgument(mail.getReservationId()).log("Reservation cancellation email sent to {} (reservation id={})");
+            LOGGER.atInfo().addArgument(mail.getRecipientEmail()).addArgument(mail.getReservationId())
+                    .log("Reservation cancellation email sent to rider {} (reservation id={})");
+            if (payload.isNotifyOwnerCancellation()) {
+                sendReservationCancellationToOwner(mail, ownerCtx);
+                LOGGER.atInfo().addArgument(mail.getOwnerEmail()).addArgument(mail.getReservationId())
+                        .log("Reservation cancellation email sent to owner {} (reservation id={})");
+            }
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(mail.getReservationId())
                     .log("Failed to send reservation cancellation email (reservation id={})");
