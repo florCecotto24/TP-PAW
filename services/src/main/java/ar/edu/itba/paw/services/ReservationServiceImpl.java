@@ -40,6 +40,8 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
@@ -567,9 +569,6 @@ public final class ReservationServiceImpl implements ReservationService {
             return Optional.empty();
         }
         final Reservation r = opt.get();
-        if (r.getPaymentReceiptFileId().isPresent()) {
-            return Optional.empty();
-        }
         final boolean isRider = r.getRiderId() == userId;
         final boolean isOwner = userService.getListingOwner(r.getListingId())
                 .map(o -> o.getId() == userId)
@@ -579,15 +578,50 @@ public final class ReservationServiceImpl implements ReservationService {
         }
         final Reservation.Status cancelledStatus =
                 isRider ? Reservation.Status.CANCELLED_BY_RIDER : Reservation.Status.CANCELLED_BY_OWNER;
+        final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
         return switch (r.getStatus()) {
-            case PENDING, ACCEPTED -> {
-                final Optional<Reservation> cancelled = performCancellationAndNotify(reservationId, cancelledStatus);
-                cancelled.ifPresent(
-                        ignored -> LOGGER.atInfo()
-                                .addArgument(userId)
-                                .addArgument(reservationId)
-                                .addArgument(cancelledStatus)
-                                .log("Participant userId={} cancelled reservation id={} ({})"));
+            case PENDING -> {
+                if (r.getPaymentReceiptFileId().isPresent()) {
+                    yield Optional.empty();
+                }
+                reservationDao.updateParticipantCancellationWithRefundMeta(
+                        reservationId, cancelledStatus.name().toLowerCase(Locale.ROOT), false, null);
+                final Optional<Reservation> cancelled = reservationDao.getReservationById(reservationId);
+                cancelled.ifPresent(res -> {
+                    enqueueCancellationEmail(res);
+                    LOGGER.atInfo()
+                            .addArgument(userId)
+                            .addArgument(reservationId)
+                            .addArgument(cancelledStatus)
+                            .log("Participant userId={} cancelled reservation id={} ({})");
+                });
+                yield cancelled;
+            }
+            case ACCEPTED -> {
+                if (!nowUtc.isBefore(r.getStartDate())) {
+                    yield Optional.empty();
+                }
+                final boolean refundRequired = r.getPaymentReceiptFileId().isPresent();
+                final OffsetDateTime refundDeadline = refundRequired
+                        ? nowUtc.plusHours(reservationTimingPolicy.getPaymentProofDeadlineHours())
+                        : null;
+                reservationDao.updateParticipantCancellationWithRefundMeta(
+                        reservationId,
+                        cancelledStatus.name().toLowerCase(Locale.ROOT),
+                        refundRequired,
+                        refundDeadline);
+                final Optional<Reservation> cancelled = reservationDao.getReservationById(reservationId);
+                cancelled.ifPresent(res -> {
+                    enqueueCancellationEmail(res);
+                    if (refundRequired) {
+                        enqueueOwnerRefundProofObligationEmail(res, false);
+                    }
+                    LOGGER.atInfo()
+                            .addArgument(userId)
+                            .addArgument(reservationId)
+                            .addArgument(cancelledStatus)
+                            .log("Participant userId={} cancelled reservation id={} ({})");
+                });
                 yield cancelled;
             }
             default -> Optional.empty();
@@ -790,6 +824,79 @@ public final class ReservationServiceImpl implements ReservationService {
         }
     }
 
+    private void enqueueOwnerRefundProofObligationEmail(final Reservation reservation, final boolean dueReminder) {
+        try {
+            if (!reservation.isPaymentRefundRequired()) {
+                return;
+            }
+            final Optional<OffsetDateTime> deadlineOpt = reservation.getRefundProofDeadlineAt();
+            if (deadlineOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping owner refund-proof email: no deadline (reservation id={})");
+                return;
+            }
+            final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+            final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
+            if (listingOpt.isEmpty() || ownerOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping owner refund-proof email: missing listing or owner (reservation id={})");
+                return;
+            }
+            final Listing listing = listingOpt.get();
+            final User owner = ownerOpt.get();
+            final String ownerFullName = owner.getForename() + " " + owner.getSurname();
+            final OwnerRefundProofObligationEmailPayload mailPayload = OwnerRefundProofObligationEmailPayload.builder()
+                    .messageLocale(userService.resolveMailLocale(owner.getId()))
+                    .recipientEmail(owner.getEmail())
+                    .ownerFullName(ownerFullName)
+                    .vehicleLabel(listing.getTitle())
+                    .reservationId(reservation.getId())
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .refundProofDeadlineAt(deadlineOpt.get())
+                    .dueReminder(dueReminder)
+                    .build();
+            LOGGER.atInfo().addArgument(owner.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing owner refund-proof obligation email to {} (reservation id={})");
+            emailService.sendOwnerRefundProofObligationEmail(mailPayload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue owner refund-proof obligation email for reservation id={}");
+        }
+    }
+
+    private void notifyRiderRefundProofUploaded(final long reservationId, final Reservation reservation) {
+        try {
+            final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+            final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
+            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+            if (listingOpt.isEmpty() || ownerOpt.isEmpty() || riderOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservationId).log("Skipping rider refund-proof email: missing listing or owner or rider (reservation id={})");
+                return;
+            }
+            final Listing listing = listingOpt.get();
+            final User owner = ownerOpt.get();
+            final User rider = riderOpt.get();
+            final String ownerFullName = owner.getForename() + " " + owner.getSurname();
+            final String riderFullName = rider.getForename() + " " + rider.getSurname();
+            final RiderRefundProofReceivedEmailPayload mailPayload = RiderRefundProofReceivedEmailPayload.builder()
+                    .messageLocale(userService.resolveMailLocale(rider.getId()))
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(riderFullName)
+                    .ownerFullName(ownerFullName)
+                    .ownerEmail(owner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .vehicleLabel(listing.getTitle())
+                    .reservationId(reservationId)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .build();
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservationId).log("Queueing rider refund-proof email to {} (reservation id={})");
+            emailService.sendRiderRefundProofReceivedEmail(mailPayload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservationId).log("Could not enqueue rider refund-proof email for reservation id={}");
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public Optional<StoredFile> findPaymentReceiptForParticipant(final long userId, final long reservationId) {
@@ -824,7 +931,9 @@ public final class ReservationServiceImpl implements ReservationService {
             final boolean approved) {
         final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID));
-        if (r.getStatus() != Reservation.Status.ACCEPTED) {
+        if (r.getStatus() != Reservation.Status.ACCEPTED
+                && r.getStatus() != Reservation.Status.STARTED
+                && r.getStatus() != Reservation.Status.FINISHED) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
         }
         if (r.getPaymentReceiptFileId().isEmpty()) {
@@ -834,6 +943,7 @@ public final class ReservationServiceImpl implements ReservationService {
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
         }
+        syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
         LOGGER.atInfo()
                 .addArgument(ownerUserId)
                 .addArgument(approved)
@@ -843,6 +953,102 @@ public final class ReservationServiceImpl implements ReservationService {
             reservationDao.updateReservationStatus(reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
             LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} transitioned to finished (payment approved + car already returned)");
         }
+    }
+
+    @Override
+    @Transactional
+    public void attachRefundReceiptByOwner(
+            final long ownerUserId,
+            final long reservationId,
+            final String originalFilename,
+            final String contentType,
+            final byte[] data) {
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        if (!StoredFile.isAllowedPaymentReceiptContentType(contentType)) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        final int len = data == null ? 0 : data.length;
+        if (len == 0) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        if (len > paymentReceiptUploadPolicy.getMaxBytes()) {
+            throw new RiderReservationException(
+                    MessageKeys.RESERVATION_REFUND_RECEIPT_TOO_LARGE, paymentReceiptUploadPolicy.getMaxMegabytesRoundedUp());
+        }
+        final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID));
+        if (r.getStatus() != Reservation.Status.CANCELLED_BY_OWNER
+                && r.getStatus() != Reservation.Status.CANCELLED_BY_RIDER) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        if (!r.isPaymentRefundRequired()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        if (r.getPaymentRefundReceiptFileId().isPresent()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        final StoredFile file = storedFileService.create(ownerUserId, originalFilename, contentType, data);
+        final int updated = reservationDao.attachRefundReceipt(reservationId, ownerUserId, file.getId());
+        if (updated == 0) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_RECEIPT_INVALID);
+        }
+        final Reservation after = getOwnerReservationById(ownerUserId, reservationId).orElse(r);
+        notifyRiderRefundProofUploaded(reservationId, after);
+        LOGGER.atInfo()
+                .addArgument(ownerUserId)
+                .addArgument(reservationId)
+                .log("Owner ownerUserId={} attached refund receipt for reservation id={}");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<StoredFile> findRefundReceiptForParticipant(final long userId, final long reservationId) {
+        final Optional<Reservation> asRider = getRiderReservationById(userId, reservationId);
+        final Optional<Reservation> resOpt = asRider.isPresent()
+                ? asRider
+                : getOwnerReservationById(userId, reservationId);
+        if (resOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Reservation r = resOpt.get();
+        final Optional<Long> fileIdOpt = r.getPaymentRefundReceiptFileId();
+        if (fileIdOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Optional<StoredFile> fileOpt = storedFileService.findById(fileIdOpt.get());
+        if (fileOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final StoredFile sf = fileOpt.get();
+        final Optional<User> ownerOpt = userService.getListingOwner(r.getListingId());
+        if (ownerOpt.isEmpty() || sf.getUploaderUserId() != ownerOpt.get().getId()) {
+            return Optional.empty();
+        }
+        return fileOpt;
+    }
+
+    @Override
+    @Transactional
+    public void setPaymentRefundApprovalByRider(final long riderUserId, final long reservationId, final boolean approved) {
+        final Reservation r = getRiderReservationById(riderUserId, reservationId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID));
+        if (r.getStatus() != Reservation.Status.CANCELLED_BY_OWNER && r.getStatus() != Reservation.Status.CANCELLED_BY_RIDER) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID);
+        }
+        if (r.getPaymentRefundReceiptFileId().isEmpty()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID);
+        }
+        final int updated = reservationDao.updatePaymentRefundApproved(reservationId, riderUserId, approved);
+        if (updated == 0) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID);
+        }
+        LOGGER.atInfo()
+                .addArgument(riderUserId)
+                .addArgument(approved)
+                .addArgument(reservationId)
+                .log("Rider riderUserId={} set refund receipt approved={} for reservation id={}");
     }
 
     @Override
@@ -917,33 +1123,72 @@ public final class ReservationServiceImpl implements ReservationService {
                 ownerId, listingId, OffsetDateTime.now(ZoneOffset.UTC));
     }
 
+    /**
+     * Sets {@link Reservation.Status#FINISHED} when payment is approved and the car is marked returned; if status was
+     * {@code finished} and that is no longer true, reverts to {@link Reservation.Status#STARTED}.
+     */
+    private void syncFinishedStatusWithCarReturnedAndPaymentApproved(
+            final long ownerUserId,
+            final long reservationId) {
+        final Optional<Reservation> freshOpt = getOwnerReservationById(ownerUserId, reservationId);
+        if (freshOpt.isEmpty()) {
+            return;
+        }
+        final Reservation fresh = freshOpt.get();
+        final boolean both = fresh.isPaymentApproved() && fresh.isCarReturned();
+        if (both
+                && (fresh.getStatus() == Reservation.Status.ACCEPTED
+                        || fresh.getStatus() == Reservation.Status.STARTED)) {
+            reservationDao.updateReservationStatus(
+                    reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
+        } else if (!both && fresh.getStatus() == Reservation.Status.FINISHED) {
+            reservationDao.updateReservationStatus(
+                    reservationId, Reservation.Status.STARTED.name().toLowerCase(Locale.ROOT));
+        }
+    }
+
     @Override
     @Transactional
-    public void markCarReturnedByOwner(final long ownerUserId, final long reservationId) {
+    public void markCarReturnedByOwner(final long ownerUserId, final long reservationId, final boolean returned) {
         final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED));
-        if (r.getStatus() != Reservation.Status.ACCEPTED
-                && r.getStatus() != Reservation.Status.STARTED
-                && r.getStatus() != Reservation.Status.FINISHED) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
-        }
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
             throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
-        if (r.isCarReturned()) {
-            return;
-        }
-        final int updated = reservationDao.markCarReturned(reservationId, ownerUserId);
-        if (updated == 0) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
-        }
-        LOGGER.atInfo()
-                .addArgument(ownerUserId)
-                .addArgument(reservationId)
-                .log("Owner ownerUserId={} marked car returned for reservation id={}");
-        if (r.isPaymentApproved()) {
-            reservationDao.updateReservationStatus(reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
-            LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} transitioned to finished (car returned + payment already approved)");
+        if (returned) {
+            if (r.getStatus() != Reservation.Status.ACCEPTED && r.getStatus() != Reservation.Status.STARTED) {
+                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+            }
+            if (r.isCarReturned()) {
+                return;
+            }
+            final int updated = reservationDao.markCarReturned(reservationId, ownerUserId);
+            if (updated == 0) {
+                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+            }
+            syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
+            LOGGER.atInfo()
+                    .addArgument(ownerUserId)
+                    .addArgument(reservationId)
+                    .log("Owner ownerUserId={} marked car returned for reservation id={}");
+        } else {
+            if (!r.isCarReturned()) {
+                return;
+            }
+            if (r.getStatus() != Reservation.Status.ACCEPTED
+                    && r.getStatus() != Reservation.Status.STARTED
+                    && r.getStatus() != Reservation.Status.FINISHED) {
+                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+            }
+            final int updated = reservationDao.unmarkCarReturned(reservationId, ownerUserId);
+            if (updated == 0) {
+                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+            }
+            syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
+            LOGGER.atInfo()
+                    .addArgument(ownerUserId)
+                    .addArgument(reservationId)
+                    .log("Owner ownerUserId={} cleared car returned for reservation id={}");
         }
     }
 
@@ -1007,18 +1252,6 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public void finalizePastPeriodReservations() {
-        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        final int updated = reservationDao.finalizeAcceptedOrStartedPastEndUtc(now);
-        if (updated > 0) {
-            LOGGER.atInfo()
-                    .addArgument(updated)
-                    .log("Finalized {} past-period reservation(s) (accepted/started -> finished)");
-        }
-    }
-
-    @Override
-    @Transactional
     public void dispatchRiderReviewInviteEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationDao.findReservationsForRiderReviewInviteEmail(now);
@@ -1069,6 +1302,28 @@ public final class ReservationServiceImpl implements ReservationService {
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Due payment proof reminder run: queued {} email(s)");
+    }
+
+    @Override
+    @Transactional
+    public void dispatchDueRefundProofReminderEmails() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final List<Reservation> candidates = reservationDao.findReservationsWithDuePendingRefundProof(now);
+        LOGGER.atInfo().addArgument(candidates.size()).log("Due refund proof reminder run: {} candidate reservation(s)");
+        int queued = 0;
+        for (final Reservation reservation : candidates) {
+            if (reservationDao.claimPendingRefundEmailSent(reservation.getId()) == 0) {
+                continue;
+            }
+            try {
+                enqueueOwnerRefundProofObligationEmail(reservation, true);
+                queued++;
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to queue due refund proof reminder email (reservation id={})");
+            }
+        }
+        LOGGER.atInfo().addArgument(queued).log("Due refund proof reminder run: queued {} email(s)");
     }
 
     private Optional<ReservationMailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {

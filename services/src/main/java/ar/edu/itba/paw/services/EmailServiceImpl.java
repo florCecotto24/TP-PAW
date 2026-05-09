@@ -30,6 +30,8 @@ import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
@@ -72,6 +74,8 @@ public final class EmailServiceImpl implements EmailService {
     private static final String RIDER_REVIEW_INVITE_TEMPLATE = "html/rider-review-invite";
     private static final String OWNER_PAYMENT_PROOF_RECEIVED_TEMPLATE = "html/owner-payment-proof-received";
     private static final String RIDER_DUE_PAYMENT_PROOF_TEMPLATE = "html/reservation-due-payment-reminder-rider";
+    private static final String OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE = "html/owner-refund-proof-obligation";
+    private static final String RIDER_REFUND_PROOF_RECEIVED_TEMPLATE = "html/rider-refund-proof-received";
     private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/listing-paused-missing-cbu-owner";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
@@ -524,6 +528,80 @@ public final class EmailServiceImpl implements EmailService {
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
                     .log("Failed to queue owner payment-proof email (reservation id={})");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendOwnerRefundProofObligationEmail(final OwnerRefundProofObligationEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendOwnerRefundProofObligationEmail")) {
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("reservationTotal", payload.getReservationTotal());
+        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate(), mailLocale));
+        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate(), mailLocale));
+        ctx.setVariable("refundDeadlineFormatted", formatWallDateTime(payload.getRefundProofDeadlineAt(), mailLocale));
+        ctx.setVariable("dueReminder", payload.isDueReminder());
+        ctx.setVariable("dueRefundReminderHours", reservationTimingPolicy.getPaymentProofReminderLeadHours());
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId() + "?role=owner"));
+        final String to = payload.getRecipientEmail();
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE, ctx);
+                final String subjectKey = payload.isDueReminder()
+                        ? "mail.ownerRefundProof.subjectReminder"
+                        : "mail.ownerRefundProof.subjectInitial";
+                final String subject = emailMessageSource.getMessage(
+                        subjectKey,
+                        new Object[] { payload.getVehicleLabel() },
+                        mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).addArgument(payload.getReservationId()).log("Owner refund-proof email queued for {} (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
+                    .log("Failed to queue owner refund-proof email (reservation id={})");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendRiderRefundProofReceivedEmail(final RiderRefundProofReceivedEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendRiderRefundProofReceivedEmail")) {
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("riderFullName", payload.getRiderFullName());
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        ctx.setVariable("ownerEmail", nonBlankEmailForDisplay(payload.getOwnerEmail(), mailLocale));
+        ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("reservationTotal", payload.getReservationTotal());
+        ctx.setVariable("startDateFormatted", formatWallDateTime(payload.getStartDate(), mailLocale));
+        ctx.setVariable("endDateFormatted", formatWallDateTime(payload.getEndDate(), mailLocale));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId() + "?role=rider"));
+        final String to = payload.getRecipientEmail();
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(RIDER_REFUND_PROOF_RECEIVED_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.riderRefundProofReceived.subject",
+                        new Object[] { payload.getVehicleLabel() },
+                        mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).addArgument(payload.getReservationId()).log("Rider refund-proof email queued for {} (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
+                    .log("Failed to queue rider refund-proof email (reservation id={})");
         }
     }
 

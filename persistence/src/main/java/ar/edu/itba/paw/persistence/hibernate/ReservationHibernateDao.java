@@ -400,6 +400,20 @@ public class ReservationHibernateDao implements ReservationDao {
     }
 
     @Override
+    public int unmarkCarReturned(final long reservationId, final long ownerUserId) {
+        return em.createNativeQuery(
+                        "UPDATE reservations SET car_returned = FALSE, updated_at = :now WHERE id = :id "
+                                + "AND listing_id IN ("
+                                + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId) "
+                                + "AND car_returned = TRUE "
+                                + "AND LOWER(TRIM(status)) IN ('accepted', 'started', 'finished')")
+                .setParameter("now", new Timestamp(System.currentTimeMillis()))
+                .setParameter("id", reservationId)
+                .setParameter("ownerId", ownerUserId)
+                .executeUpdate();
+    }
+
+    @Override
     @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsForReturnReminderEmail(final OffsetDateTime now, final int hoursBeforeCheckout) {
         final OffsetDateTime windowEnd = now.plusHours(hoursBeforeCheckout);
@@ -494,6 +508,85 @@ public class ReservationHibernateDao implements ReservationDao {
         return em.createNativeQuery(
                         "UPDATE reservations SET pending_paymentproof_email_sent = TRUE, updated_at = :now "
                                 + "WHERE id = :id AND pending_paymentproof_email_sent = FALSE")
+                .setParameter("now", new Timestamp(System.currentTimeMillis()))
+                .setParameter("id", reservationId)
+                .executeUpdate();
+    }
+
+    @Override
+    public int updateParticipantCancellationWithRefundMeta(
+            final long reservationId,
+            final String statusLower,
+            final boolean paymentRefundRequired,
+            final OffsetDateTime refundProofDeadlineAtOrNull) {
+        return em.createNativeQuery(
+                        "UPDATE reservations SET status = :status, payment_refund_required = :refundRequired, "
+                                + "refund_proof_deadline_at = :refundDeadline, payment_refund_receipt_file_id = NULL, "
+                                + "payment_refund_approved = FALSE, pending_refund_email_sent = FALSE, updated_at = :now "
+                                + "WHERE id = :id")
+                .setParameter("status", statusLower)
+                .setParameter("refundRequired", paymentRefundRequired)
+                .setParameter(
+                        "refundDeadline",
+                        refundProofDeadlineAtOrNull != null ? toTimestamp(refundProofDeadlineAtOrNull) : null)
+                .setParameter("now", new Timestamp(System.currentTimeMillis()))
+                .setParameter("id", reservationId)
+                .executeUpdate();
+    }
+
+    @Override
+    public int attachRefundReceipt(final long reservationId, final long ownerUserId, final long storedFileId) {
+        return em.createNativeQuery(
+                        "UPDATE reservations SET payment_refund_receipt_file_id = :fileId, pending_refund_email_sent = TRUE, "
+                                + "updated_at = :now WHERE id = :id AND listing_id IN ("
+                                + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId) "
+                                + "AND payment_refund_required = TRUE "
+                                + "AND payment_refund_receipt_file_id IS NULL "
+                                + "AND LOWER(TRIM(status)) IN ('cancelled_by_owner', 'cancelled_by_rider')")
+                .setParameter("fileId", storedFileId)
+                .setParameter("now", new Timestamp(System.currentTimeMillis()))
+                .setParameter("id", reservationId)
+                .setParameter("ownerId", ownerUserId)
+                .executeUpdate();
+    }
+
+    @Override
+    public int updatePaymentRefundApproved(final long reservationId, final long riderUserId, final boolean approved) {
+        return em.createNativeQuery(
+                        "UPDATE reservations SET payment_refund_approved = :approved, updated_at = :now WHERE id = :id "
+                                + "AND rider_id = :riderId "
+                                + "AND payment_refund_required = TRUE AND payment_refund_receipt_file_id IS NOT NULL "
+                                + "AND LOWER(TRIM(status)) IN ('cancelled_by_owner', 'cancelled_by_rider')")
+                .setParameter("approved", approved)
+                .setParameter("now", new Timestamp(System.currentTimeMillis()))
+                .setParameter("id", reservationId)
+                .setParameter("riderId", riderUserId)
+                .executeUpdate();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<Reservation> findReservationsWithDuePendingRefundProof(final OffsetDateTime now) {
+        final int leadHours = Math.max(1, paymentProofReminderLeadHours);
+        final OffsetDateTime windowEnd = now.plusHours(leadHours);
+        return em.createNativeQuery(
+                        "SELECT * FROM reservations r "
+                                + "WHERE r.payment_refund_required = TRUE "
+                                + "AND r.payment_refund_receipt_file_id IS NULL "
+                                + "AND r.refund_proof_deadline_at IS NOT NULL "
+                                + "AND r.refund_proof_deadline_at <= :windowEnd "
+                                + "AND r.pending_refund_email_sent = FALSE "
+                                + "AND LOWER(TRIM(r.status)) IN ('cancelled_by_owner', 'cancelled_by_rider')",
+                        Reservation.class)
+                .setParameter("windowEnd", toTimestamp(windowEnd))
+                .getResultList();
+    }
+
+    @Override
+    public int claimPendingRefundEmailSent(final long reservationId) {
+        return em.createNativeQuery(
+                        "UPDATE reservations SET pending_refund_email_sent = TRUE, updated_at = :now "
+                                + "WHERE id = :id AND pending_refund_email_sent = FALSE")
                 .setParameter("now", new Timestamp(System.currentTimeMillis()))
                 .setParameter("id", reservationId)
                 .executeUpdate();

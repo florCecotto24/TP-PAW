@@ -108,8 +108,19 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final boolean periodEnded = nowUtc.isAfter(reservation.getEndDate());
         final boolean hasOwnerReview = reviewService.hasOwnerReview(reservation.getId());
         final boolean hasRiderReview = reviewService.hasRiderReview(reservation.getId());
+        final boolean canOwnerUnmarkCarReturned =
+                viewerIsOwner && periodEnded && reservation.isCarReturned() && !hasOwnerReview;
         final Optional<String> paymentProofDeadlineDisplay = reservation.getPaymentProofDeadlineAt()
                 .map(deadline -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(deadline, locale));
+        final boolean pickupNotYetStarted = nowUtc.isBefore(reservation.getStartDate());
+        final boolean canCancelReservation =
+                (reservation.getStatus() == Reservation.Status.PENDING
+                                && reservation.getPaymentReceiptFileId().isEmpty())
+                        || (reservation.getStatus() == Reservation.Status.ACCEPTED && pickupNotYetStarted);
+        final Optional<String> refundProofDeadlineDisplay = reservation.getRefundProofDeadlineAt()
+                .map(deadline -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(deadline, locale));
+        final boolean hasRefundReceipt = reservation.getPaymentRefundReceiptFileId().isPresent();
+        final boolean refundReceiptApproved = reservation.isPaymentRefundApproved();
         return Optional.of(new ReservationDetailPageModel(
                 reservation,
                 listing,
@@ -133,11 +144,16 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 reviewService.getReviewCommentMaxLength(),
                 periodEnded,
                 viewerIsOwner && periodEnded && !reservation.isCarReturned(),
+                canOwnerUnmarkCarReturned,
                 viewerIsOwner && reservation.isCarReturned() && !hasOwnerReview,
                 !viewerIsOwner && periodEnded && !hasRiderReview,
                 paymentProofDeadlineDisplay,
                 reservation.getPaymentReceiptFileId().isPresent(),
-                reservation.isPaymentApproved()));
+                reservation.isPaymentApproved(),
+                canCancelReservation,
+                hasRefundReceipt,
+                refundReceiptApproved,
+                refundProofDeadlineDisplay));
     }
 
     @Override

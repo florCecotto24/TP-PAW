@@ -26,7 +26,6 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
@@ -255,6 +254,94 @@ public final class MyReservationsController {
         return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
     }
 
+    @GetMapping("/my-reservations/{reservationId}/refund-receipt/view")
+    public ModelAndView viewRefundReceipt(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<StoredFile> fileOpt = reservationService.findRefundReceiptForParticipant(me.getId(), reservationId);
+        if (fileOpt.isEmpty()) {
+            return new ModelAndView("redirect:/my-reservations/" + reservationId);
+        }
+        final ModelAndView view = new ModelAndView("refund-receipt-view");
+        view.addObject("reservationId", reservationId);
+        view.addObject("receiptFileName", fileOpt.get().getFileName());
+        return view;
+    }
+
+    @GetMapping("/my-reservations/{reservationId}/refund-receipt/download")
+    public ResponseEntity<byte[]> downloadRefundReceipt(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<StoredFile> fileOpt = reservationService.findRefundReceiptForParticipant(me.getId(), reservationId);
+        if (fileOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        final StoredFile sf = fileOpt.get();
+        final HttpHeaders headers = new HttpHeaders();
+        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
+        if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
+            try {
+                contentType = MediaType.parseMediaType(sf.getContentType());
+            } catch (final IllegalArgumentException e) {
+                LOG.atDebug()
+                        .setMessage("Invalid refund receipt Content-Type reservationId={} [{}]")
+                        .addArgument(reservationId)
+                        .addArgument(sf.getContentType())
+                        .setCause(e)
+                        .log();
+                contentType = MediaType.APPLICATION_OCTET_STREAM;
+            }
+        }
+        headers.setContentType(contentType);
+        final String safeName = sanitizeDownloadFileName(sf.getFileName());
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeName + "\"");
+        return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
+    }
+
+    @PostMapping("/my-reservations/{reservationId}/refund-receipt/approval")
+    public ModelAndView setRefundReceiptApproval(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam("approved") final boolean approved,
+            @RequestParam(required = false) final Long fromListing,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        try {
+            reservationService.setPaymentRefundApprovalByRider(me.getId(), reservationId, approved);
+            redirectAttributes.addFlashAttribute(
+                    "refundApprovalMessage",
+                    localeMessages.msg("myReservationDetail.refund.approvalUpdated"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("refundReceiptError", localeMessages.msg(e));
+        }
+        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "rider", fromListing));
+    }
+
+    @PostMapping("/my-reservations/{reservationId}/refund-receipt")
+    public ModelAndView uploadRefundReceipt(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam("refundReceipt") final MultipartFile file,
+            @RequestParam(required = false) final Long fromListing,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        try {
+            reservationService.attachRefundReceiptByOwner(
+                    me.getId(),
+                    reservationId,
+                    file.getOriginalFilename(),
+                    file.getContentType(),
+                    file.getBytes());
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("refundReceiptError", localeMessages.msg(e));
+        } catch (final IOException e) {
+            redirectAttributes.addFlashAttribute("refundReceiptError", localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
+        }
+        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromListing));
+    }
+
     @PostMapping("/my-reservations/{reservationId}/payment-receipt/approval")
     public ModelAndView setPaymentReceiptApproval(
             @CurrentUser final User currentUser,
@@ -310,12 +397,16 @@ public final class MyReservationsController {
     public ModelAndView markCarReturned(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
+            @RequestParam(value = "returned", defaultValue = "true") final boolean returned,
             @RequestParam(required = false) final Long fromListing,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         try {
-            reservationService.markCarReturnedByOwner(me.getId(), reservationId);
-            redirectAttributes.addFlashAttribute("carReturnedMessage", localeMessages.msg("myReservationDetail.carReturned.success"));
+            reservationService.markCarReturnedByOwner(me.getId(), reservationId, returned);
+            redirectAttributes.addFlashAttribute(
+                    "carReturnedMessage",
+                    localeMessages.msg(
+                            returned ? "myReservationDetail.carReturned.success" : "myReservationDetail.carReturned.unmarkSuccess"));
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("carReturnedError", localeMessages.msg(e));
         }

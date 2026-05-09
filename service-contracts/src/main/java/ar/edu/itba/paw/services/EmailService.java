@@ -8,6 +8,8 @@ import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 
@@ -56,6 +58,12 @@ public interface EmailService {
 
     /** Rider reminded to upload payment proof before the deadline. */
     void sendRiderDuePaymentProofEmail(ReservationMailPayload payload);
+
+    /** Owner must upload refund transfer proof after cancelling a confirmed paid reservation (initial or reminder). */
+    void sendOwnerRefundProofObligationEmail(OwnerRefundProofObligationEmailPayload payload);
+
+    /** Rider notified that the host uploaded a refund receipt for a cancelled reservation. */
+    void sendRiderRefundProofReceivedEmail(RiderRefundProofReceivedEmailPayload payload);
 
     /** Owner notified when an active listing was paused because CBU was removed or invalid. */
     void sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload payload);

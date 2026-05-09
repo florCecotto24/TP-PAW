@@ -107,6 +107,18 @@ public class Reservation {
     @Column(name = "car_returned", nullable = false)
     private boolean carReturned;
 
+    @Column(name = "payment_refund_required", nullable = false)
+    private boolean paymentRefundRequired;
+
+    @Column(name = "payment_refund_receipt_file_id")
+    private Long paymentRefundReceiptFileId;
+
+    @Column(name = "payment_refund_approved", nullable = false)
+    private boolean paymentRefundApproved;
+
+    @Column(name = "refund_proof_deadline_at")
+    private OffsetDateTime refundProofDeadlineAt;
+
     /* package */ Reservation() {
         // For Hibernate
     }
@@ -125,6 +137,10 @@ public class Reservation {
         this.paymentApproved = b.paymentApproved;
         this.paymentProofDeadlineAt = b.paymentProofDeadlineAt;
         this.carReturned = b.carReturned;
+        this.paymentRefundRequired = b.paymentRefundRequired;
+        this.paymentRefundReceiptFileId = b.paymentRefundReceiptFileId;
+        this.paymentRefundApproved = b.paymentRefundApproved;
+        this.refundProofDeadlineAt = b.refundProofDeadlineAt;
     }
 
     public static Builder builder() {
@@ -145,6 +161,10 @@ public class Reservation {
         private boolean paymentApproved;
         private OffsetDateTime paymentProofDeadlineAt;
         private boolean carReturned;
+        private boolean paymentRefundRequired;
+        private Long paymentRefundReceiptFileId;
+        private boolean paymentRefundApproved;
+        private OffsetDateTime refundProofDeadlineAt;
 
         public Builder id(final long id) {
             this.id = id;
@@ -211,6 +231,26 @@ public class Reservation {
             return this;
         }
 
+        public Builder paymentRefundRequired(final boolean paymentRefundRequired) {
+            this.paymentRefundRequired = paymentRefundRequired;
+            return this;
+        }
+
+        public Builder paymentRefundReceiptFileId(final Long paymentRefundReceiptFileId) {
+            this.paymentRefundReceiptFileId = paymentRefundReceiptFileId;
+            return this;
+        }
+
+        public Builder paymentRefundApproved(final boolean paymentRefundApproved) {
+            this.paymentRefundApproved = paymentRefundApproved;
+            return this;
+        }
+
+        public Builder refundProofDeadlineAt(final OffsetDateTime refundProofDeadlineAt) {
+            this.refundProofDeadlineAt = refundProofDeadlineAt;
+            return this;
+        }
+
         public Reservation build() {
             Objects.requireNonNull(startDate, "startDate");
             Objects.requireNonNull(endDate, "endDate");
@@ -272,6 +312,22 @@ public class Reservation {
 
     public boolean isCarReturned() {
         return carReturned;
+    }
+
+    public boolean isPaymentRefundRequired() {
+        return paymentRefundRequired;
+    }
+
+    public Optional<Long> getPaymentRefundReceiptFileId() {
+        return Optional.ofNullable(paymentRefundReceiptFileId);
+    }
+
+    public boolean isPaymentRefundApproved() {
+        return paymentRefundApproved;
+    }
+
+    public Optional<OffsetDateTime> getRefundProofDeadlineAt() {
+        return Optional.ofNullable(refundProofDeadlineAt);
     }
 
     @Override

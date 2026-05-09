@@ -36,11 +36,16 @@ public final class ReservationDetailPageModel {
     private final int reviewCommentMaxLength;
     private final boolean reservationPeriodEnded;
     private final boolean canOwnerMarkCarReturned;
+    private final boolean canOwnerUnmarkCarReturned;
     private final boolean canOwnerReviewRider;
     private final boolean canRiderReviewOwner;
     private final Optional<String> paymentProofDeadlineDisplay;
     private final boolean hasPaymentReceipt;
     private final boolean paymentReceiptApproved;
+    private final boolean canCancelReservation;
+    private final boolean hasRefundReceipt;
+    private final boolean refundReceiptApproved;
+    private final Optional<String> refundProofDeadlineDisplay;
 
     public ReservationDetailPageModel(
             final Reservation reservation,
@@ -65,11 +70,16 @@ public final class ReservationDetailPageModel {
             final int reviewCommentMaxLength,
             final boolean reservationPeriodEnded,
             final boolean canOwnerMarkCarReturned,
+            final boolean canOwnerUnmarkCarReturned,
             final boolean canOwnerReviewRider,
             final boolean canRiderReviewOwner,
             final Optional<String> paymentProofDeadlineDisplay,
             final boolean hasPaymentReceipt,
-            final boolean paymentReceiptApproved) {
+            final boolean paymentReceiptApproved,
+            final boolean canCancelReservation,
+            final boolean hasRefundReceipt,
+            final boolean refundReceiptApproved,
+            final Optional<String> refundProofDeadlineDisplay) {
         this.reservation = reservation;
         this.listing = listing;
         this.reservationPickupLocationDisplay = reservationPickupLocationDisplay;
@@ -92,11 +102,16 @@ public final class ReservationDetailPageModel {
         this.reviewCommentMaxLength = reviewCommentMaxLength;
         this.reservationPeriodEnded = reservationPeriodEnded;
         this.canOwnerMarkCarReturned = canOwnerMarkCarReturned;
+        this.canOwnerUnmarkCarReturned = canOwnerUnmarkCarReturned;
         this.canOwnerReviewRider = canOwnerReviewRider;
         this.canRiderReviewOwner = canRiderReviewOwner;
         this.paymentProofDeadlineDisplay = paymentProofDeadlineDisplay;
         this.hasPaymentReceipt = hasPaymentReceipt;
         this.paymentReceiptApproved = paymentReceiptApproved;
+        this.canCancelReservation = canCancelReservation;
+        this.hasRefundReceipt = hasRefundReceipt;
+        this.refundReceiptApproved = refundReceiptApproved;
+        this.refundProofDeadlineDisplay = refundProofDeadlineDisplay;
     }
 
     /** Same as {@link Reservation#getListingId()}; exposed for navigation / breadcrumb context. */
@@ -127,10 +142,15 @@ public final class ReservationDetailPageModel {
         putObject.accept("reviewCommentMaxLength", reviewCommentMaxLength);
         putObject.accept("reservationPeriodEnded", reservationPeriodEnded);
         putObject.accept("canOwnerMarkCarReturned", canOwnerMarkCarReturned);
+        putObject.accept("canOwnerUnmarkCarReturned", canOwnerUnmarkCarReturned);
         putObject.accept("canOwnerReviewRider", canOwnerReviewRider);
         putObject.accept("canRiderReviewOwner", canRiderReviewOwner);
         paymentProofDeadlineDisplay.ifPresent(s -> putObject.accept("paymentProofDeadlineDisplay", s));
         putObject.accept("hasPaymentReceipt", hasPaymentReceipt);
         putObject.accept("paymentReceiptApproved", paymentReceiptApproved);
+        putObject.accept("canCancelReservation", canCancelReservation);
+        putObject.accept("hasRefundReceipt", hasRefundReceipt);
+        putObject.accept("refundReceiptApproved", refundReceiptApproved);
+        refundProofDeadlineDisplay.ifPresent(s -> putObject.accept("refundProofDeadlineDisplay", s));
     }
 }

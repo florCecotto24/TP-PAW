@@ -45,6 +45,12 @@
     <c:if test="${not empty paymentApprovalMessage}">
         <div class="alert alert-success" role="alert"><c:out value="${paymentApprovalMessage}"/></div>
     </c:if>
+    <c:if test="${not empty refundReceiptError}">
+        <div class="alert alert-danger" role="alert"><c:out value="${refundReceiptError}"/></div>
+    </c:if>
+    <c:if test="${not empty refundApprovalMessage}">
+        <div class="alert alert-success" role="alert"><c:out value="${refundApprovalMessage}"/></div>
+    </c:if>
     <c:if test="${not empty carReturnedMessage}">
         <div class="alert alert-success" role="alert"><c:out value="${carReturnedMessage}"/></div>
     </c:if>
@@ -128,7 +134,7 @@
                 </article>
             </c:if>
 
-            <c:if test="${reservationRole eq 'owner' and hasPaymentReceipt and statusKey eq 'accepted'}">
+            <c:if test="${reservationRole eq 'owner' and hasPaymentReceipt and (statusKey eq 'accepted' or statusKey eq 'started' or statusKey eq 'finished')}">
                 <article class="card border-0 shadow-sm rounded-4 mb-4">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
@@ -169,6 +175,121 @@
                 </article>
             </c:if>
 
+            <c:if test="${reservationRole eq 'owner' and reservation.paymentRefundRequired and not hasRefundReceipt and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 border-warning">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.refund.ownerTitle"/></h2>
+                        <p class="text-secondary mb-3"><spring:message code="myReservationDetail.refund.ownerIntro"/></p>
+                        <c:if test="${not empty refundProofDeadlineDisplay}">
+                            <p class="mb-3"><span class="fw-semibold"><spring:message code="myReservationDetail.refund.deadline"/></span>
+                                <c:out value="${refundProofDeadlineDisplay}"/></p>
+                        </c:if>
+                        <spring:message code="validation.paymentReceipt.fileTooLarge" arguments="${uploadMaxPaymentReceiptMegabytes}" var="refundReceiptTooLargeMsg"/>
+                        <spring:message code="myReservationDetail.refund.invalidFile" var="refundInvalidFileMsg"/>
+                        <spring:message code="myReservationDetail.refund.chooseHint" var="refundReceiptChooseHint"/>
+                        <spring:message code="myReservationDetail.refund.uploadAria" var="refundReceiptUploadAria"/>
+                        <form id="refundReceiptForm" method="post" enctype="multipart/form-data"
+                              action="${pageContext.request.contextPath}/my-reservations/${reservation.id}/refund-receipt"
+                              class="ryden-payment-receipt__form">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <%@ include file="includes/fromListingHubHidden.jspf" %>
+                            <div class="d-flex align-items-stretch gap-2">
+                                <label class="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
+                                    <span id="refundReceiptFileText" class="text-truncate text-muted pe-1 flex-grow-1 min-w-0"><c:out value="${refundReceiptChooseHint}"/></span>
+                                    <input type="file" class="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
+                                           id="refundReceipt" name="refundReceipt" required
+                                           accept="image/*,application/pdf"
+                                           aria-label="<c:out value='${refundReceiptChooseHint}'/>"
+                                           title="<c:out value='${refundReceiptChooseHint}'/>"
+                                           data-upload-max-image-bytes="<c:out value='${uploadMaxPaymentReceiptBytes}'/>"
+                                           data-upload-receipt-too-large="<c:out value='${refundReceiptTooLargeMsg}'/>"
+                                           data-invalid-file-msg="<c:out value='${refundInvalidFileMsg}'/>"/>
+                                </label>
+                                <button type="submit" id="refundReceiptSubmit"
+                                        class="btn btn-sm btn-primary flex-shrink-0 d-inline-flex align-items-center justify-content-center gap-1 px-2"
+                                        aria-label="<c:out value='${refundReceiptUploadAria}'/>"
+                                        title="<c:out value='${refundReceiptUploadAria}'/>"
+                                        disabled>
+                                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                                    <spring:message code="myReservationDetail.refund.submit"/>
+                                </button>
+                            </div>
+                            <div id="refundReceiptClientErr" class="text-danger small d-none mt-2" role="alert"></div>
+                        </form>
+                        <p class="small text-muted mt-2 mb-0"><spring:message code="myReservationDetail.refund.hint" arguments="${uploadMaxPaymentReceiptMegabytes}"/></p>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${reservationRole eq 'rider' and reservation.paymentRefundRequired and not hasRefundReceipt and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.refund.riderWaitingTitle"/></h2>
+                        <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.refund.riderWaitingIntro"/></p>
+                        <c:if test="${not empty refundProofDeadlineDisplay}">
+                            <p class="small text-muted mt-3 mb-0"><span class="fw-semibold"><spring:message code="myReservationDetail.refund.deadline"/></span>
+                                <c:out value="${refundProofDeadlineDisplay}"/></p>
+                        </c:if>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${reservationRole eq 'owner' and hasRefundReceipt and reservation.paymentRefundRequired and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h2 class="h6 fw-semibold mb-1"><spring:message code="myReservationDetail.refund.ownerUploadedTitle"/></h2>
+                            <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.refund.hint" arguments="${uploadMaxPaymentReceiptMegabytes}"/></p>
+                        </div>
+                        <c:url var="ownerRefundReceiptViewUrl" value="/my-reservations/${reservation.id}/refund-receipt/view"/>
+                        <a class="btn btn-outline-primary" href="<c:out value='${ownerRefundReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
+                            <spring:message code="myReservationDetail.refund.viewReceipt"/>
+                        </a>
+                    </div>
+                </article>
+            </c:if>
+
+            <c:if test="${reservationRole eq 'rider' and hasRefundReceipt and reservation.paymentRefundRequired and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.refund.riderTitle"/></h2>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.refund.riderIntro"/></p>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                            <c:url var="riderRefundViewUrl" value="/my-reservations/${reservation.id}/refund-receipt/view"/>
+                            <a class="btn btn-outline-primary" href="<c:out value='${riderRefundViewUrl}'/>" target="_blank" rel="noopener noreferrer">
+                                <spring:message code="myReservationDetail.refund.viewReceipt"/>
+                            </a>
+                            <c:if test="${refundReceiptApproved}">
+                                <span class="badge text-bg-success"><spring:message code="myReservationDetail.refund.reviewedBadge"/></span>
+                            </c:if>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <c:url var="refundApprovalUrl" value="/my-reservations/${reservation.id}/refund-receipt/approval"/>
+                            <c:if test="${not refundReceiptApproved}">
+                                <form method="post" action="<c:out value='${refundApprovalUrl}'/>" class="d-inline">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                    <input type="hidden" name="approved" value="true"/>
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <spring:message code="myReservationDetail.refund.markReviewed"/>
+                                    </button>
+                                </form>
+                            </c:if>
+                            <c:if test="${refundReceiptApproved}">
+                                <form method="post" action="<c:out value='${refundApprovalUrl}'/>" class="d-inline">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                    <input type="hidden" name="approved" value="false"/>
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                        <spring:message code="myReservationDetail.refund.clearReview"/>
+                                    </button>
+                                </form>
+                            </c:if>
+                        </div>
+                    </div>
+                </article>
+            </c:if>
+
             <c:if test="${canOwnerMarkCarReturned}">
                 <article class="card border-0 shadow-sm rounded-4 mb-4">
                     <div class="card-body p-4">
@@ -177,7 +298,24 @@
                         <c:url var="carReturnedUrl" value="/my-reservations/${reservation.id}/car-returned"/>
                         <form method="post" action="<c:out value='${carReturnedUrl}'/>">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <%@ include file="includes/fromListingHubHidden.jspf" %>
+                            <input type="hidden" name="returned" value="true"/>
                             <button type="submit" class="btn btn-primary"><spring:message code="myReservationDetail.carReturned.submit"/></button>
+                        </form>
+                    </div>
+                </article>
+            </c:if>
+            <c:if test="${canOwnerUnmarkCarReturned}">
+                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.carReturned.unmarkTitle"/></h2>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.carReturned.unmarkIntro"/></p>
+                        <c:url var="carUnreturnedUrl" value="/my-reservations/${reservation.id}/car-returned"/>
+                        <form method="post" action="<c:out value='${carUnreturnedUrl}'/>">
+                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                            <%@ include file="includes/fromListingHubHidden.jspf" %>
+                            <input type="hidden" name="returned" value="false"/>
+                            <button type="submit" class="btn btn-outline-secondary"><spring:message code="myReservationDetail.carReturned.unmarkSubmit"/></button>
                         </form>
                     </div>
                 </article>
@@ -319,8 +457,7 @@
                         <!-- <button type="button" class="btn btn-primary" disabled>
                             <spring:message code="myReservationDetail.actions.modify"/>
                         </button> -->
-                        <c:set var="canCancel"
-                               value="${(reservation.status.name() eq 'PENDING' || reservation.status.name() eq 'ACCEPTED') and not hasPaymentReceipt}"/>
+                        <c:set var="canCancel" value="${canCancelReservation}"/>
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
                         <c:choose>
                             <c:when test="${canCancel}">
@@ -474,6 +611,58 @@
         var err = document.getElementById('paymentReceiptClientErr');
         var fileText = document.getElementById('paymentReceiptFileText');
         var submitBtn = document.getElementById('paymentReceiptSubmit');
+        if (!form || !input) return;
+        var defaultHint = fileText ? (fileText.textContent || '').trim() : '';
+        function maxBytes() {
+            var raw = input.getAttribute('data-upload-max-image-bytes');
+            var n = raw ? parseInt(raw, 10) : NaN;
+            return isNaN(n) ? 0 : n;
+        }
+        function showErr(msg) {
+            if (!err) return;
+            err.textContent = msg || '';
+            err.classList.toggle('d-none', !msg);
+        }
+        function validateFile(file) {
+            if (!file) return '';
+            var t = (file.type || '').toLowerCase();
+            var okType = t.indexOf('image/') === 0 || t === 'application/pdf';
+            if (!okType) {
+                return input.getAttribute('data-invalid-file-msg') || '';
+            }
+            var mb = maxBytes();
+            if (mb > 0 && file.size > mb) {
+                return input.getAttribute('data-upload-receipt-too-large') || '';
+            }
+            return '';
+        }
+        input.addEventListener('change', function () {
+            showErr('');
+            var f = input.files && input.files[0];
+            if (f) {
+                if (fileText) { fileText.textContent = f.name; fileText.classList.remove('text-muted'); }
+                if (submitBtn) { submitBtn.disabled = false; }
+            } else {
+                if (fileText) { fileText.textContent = defaultHint; fileText.classList.add('text-muted'); }
+                if (submitBtn) { submitBtn.disabled = true; }
+            }
+        });
+        form.addEventListener('submit', function (e) {
+            showErr('');
+            var f = input.files && input.files[0];
+            var msg = validateFile(f);
+            if (msg) {
+                e.preventDefault();
+                showErr(msg);
+            }
+        });
+    })();
+    (function () {
+        var form = document.getElementById('refundReceiptForm');
+        var input = document.getElementById('refundReceipt');
+        var err = document.getElementById('refundReceiptClientErr');
+        var fileText = document.getElementById('refundReceiptFileText');
+        var submitBtn = document.getElementById('refundReceiptSubmit');
         if (!form || !input) return;
         var defaultHint = fileText ? (fileText.textContent || '').trim() : '';
         function maxBytes() {

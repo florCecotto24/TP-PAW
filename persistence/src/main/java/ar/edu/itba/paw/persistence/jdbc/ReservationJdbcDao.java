@@ -36,6 +36,8 @@ public class ReservationJdbcDao implements ReservationDao {
     private static Reservation mapReservation(final ResultSet rs, final int rowNum) throws SQLException {
         final long pr = rs.getLong("payment_receipt_file_id");
         final Long paymentReceiptId = rs.wasNull() ? null : pr;
+        final long prf = rs.getLong("payment_refund_receipt_file_id");
+        final Long paymentRefundReceiptId = rs.wasNull() ? null : prf;
         return Reservation.builder()
                 .id(rs.getLong("id"))
                 .riderId(rs.getLong("rider_id"))
@@ -50,6 +52,10 @@ public class ReservationJdbcDao implements ReservationDao {
                 .paymentApproved(rs.getBoolean("payment_approved"))
                 .paymentProofDeadlineAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "payment_proof_deadline_at"))
                 .carReturned(rs.getBoolean("car_returned"))
+                .paymentRefundRequired(rs.getBoolean("payment_refund_required"))
+                .paymentRefundReceiptFileId(paymentRefundReceiptId)
+                .paymentRefundApproved(rs.getBoolean("payment_refund_approved"))
+                .refundProofDeadlineAt(JdbcDateTimeUtils.readOffsetDateTime(rs, "refund_proof_deadline_at"))
                 .build();
     }
 
@@ -166,6 +172,9 @@ public class ReservationJdbcDao implements ReservationDao {
         values.put("return_checkout_email_sent", Boolean.FALSE);
         values.put("rider_review_invite_email_sent", Boolean.FALSE);
         values.put("pending_paymentproof_email_sent", Boolean.FALSE);
+        values.put("payment_refund_required", Boolean.FALSE);
+        values.put("pending_refund_email_sent", Boolean.FALSE);
+        values.put("payment_refund_approved", Boolean.FALSE);
         final Number id = jdbcInsert.executeAndReturnKey(values);
 
         return Reservation.builder()
@@ -207,12 +216,16 @@ public class ReservationJdbcDao implements ReservationDao {
     }
 
     @Override
-    public int updatePaymentApproved(final long reservationId, final long ownerUserId, final boolean approved) {
+    public int updatePaymentApproved(
+            final long reservationId,
+            final long ownerUserId,
+            final boolean approved) {
+        final Timestamp nowTs = JdbcDateTimeUtils.nowTimestamp();
         return jdbcTemplate.update(
                 "UPDATE reservations SET payment_approved = ?, updated_at = ? WHERE id = ? AND listing_id IN ("
                         + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?)",
                 approved,
-                JdbcDateTimeUtils.nowTimestamp(),
+                nowTs,
                 reservationId,
                 ownerUserId);
     }
@@ -544,24 +557,30 @@ public class ReservationJdbcDao implements ReservationDao {
 
     @Override
     public int markCarReturned(final long reservationId, final long ownerUserId) {
+        final Timestamp nowTs = JdbcDateTimeUtils.nowTimestamp();
         return jdbcTemplate.update(
-                "UPDATE reservations SET car_returned = TRUE, status = 'finished', updated_at = ? WHERE id = ? "
+                "UPDATE reservations SET car_returned = TRUE, updated_at = ? WHERE id = ? "
                         + "AND listing_id IN ("
                         + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?) "
-                        + "AND LOWER(status) IN ('accepted', 'started')",
-                JdbcDateTimeUtils.nowTimestamp(),
+                        + "AND car_returned = FALSE "
+                        + "AND LOWER(TRIM(status)) IN ('accepted', 'started')",
+                nowTs,
                 reservationId,
                 ownerUserId);
     }
 
     @Override
-    public int finalizeAcceptedOrStartedPastEndUtc(final OffsetDateTime nowUtc) {
-        final Timestamp nowTs = JdbcDateTimeUtils.toTimestamp(nowUtc);
+    public int unmarkCarReturned(final long reservationId, final long ownerUserId) {
+        final Timestamp nowTs = JdbcDateTimeUtils.nowTimestamp();
         return jdbcTemplate.update(
-                "UPDATE reservations SET status = 'finished', updated_at = ? "
-                        + "WHERE LOWER(status) IN ('accepted', 'started') AND end_date <= ?",
+                "UPDATE reservations SET car_returned = FALSE, updated_at = ? WHERE id = ? "
+                        + "AND listing_id IN ("
+                        + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?) "
+                        + "AND car_returned = TRUE "
+                        + "AND LOWER(TRIM(status)) IN ('accepted', 'started', 'finished')",
                 nowTs,
-                nowTs);
+                reservationId,
+                ownerUserId);
     }
 
     @Override
@@ -648,6 +667,76 @@ public class ReservationJdbcDao implements ReservationDao {
         return jdbcTemplate.update(
                 "UPDATE reservations SET pending_paymentproof_email_sent = TRUE, updated_at = ? "
                         + "WHERE id = ? AND pending_paymentproof_email_sent = FALSE",
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
+    }
+
+    @Override
+    public int updateParticipantCancellationWithRefundMeta(
+            final long reservationId,
+            final String statusLower,
+            final boolean paymentRefundRequired,
+            final OffsetDateTime refundProofDeadlineAtOrNull) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET status = ?, payment_refund_required = ?, "
+                        + "refund_proof_deadline_at = ?, payment_refund_receipt_file_id = NULL, "
+                        + "payment_refund_approved = FALSE, pending_refund_email_sent = FALSE, updated_at = ? "
+                        + "WHERE id = ?",
+                statusLower,
+                paymentRefundRequired,
+                refundProofDeadlineAtOrNull != null ? JdbcDateTimeUtils.toTimestamp(refundProofDeadlineAtOrNull) : null,
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId);
+    }
+
+    @Override
+    public int attachRefundReceipt(final long reservationId, final long ownerUserId, final long storedFileId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET payment_refund_receipt_file_id = ?, pending_refund_email_sent = TRUE, "
+                        + "updated_at = ? WHERE id = ? AND listing_id IN ("
+                        + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = ?) "
+                        + "AND payment_refund_required = TRUE "
+                        + "AND payment_refund_receipt_file_id IS NULL "
+                        + "AND LOWER(TRIM(status)) IN ('cancelled_by_owner', 'cancelled_by_rider')",
+                storedFileId,
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId,
+                ownerUserId);
+    }
+
+    @Override
+    public int updatePaymentRefundApproved(final long reservationId, final long riderUserId, final boolean approved) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET payment_refund_approved = ?, updated_at = ? WHERE id = ? AND rider_id = ? "
+                        + "AND payment_refund_required = TRUE AND payment_refund_receipt_file_id IS NOT NULL "
+                        + "AND LOWER(TRIM(status)) IN ('cancelled_by_owner', 'cancelled_by_rider')",
+                approved,
+                JdbcDateTimeUtils.nowTimestamp(),
+                reservationId,
+                riderUserId);
+    }
+
+    @Override
+    public List<Reservation> findReservationsWithDuePendingRefundProof(final OffsetDateTime now) {
+        final int leadHours = Math.max(1, paymentProofReminderLeadHours);
+        final OffsetDateTime windowEnd = now.plusHours(leadHours);
+        return jdbcTemplate.query(
+                "SELECT * FROM reservations r "
+                        + "WHERE r.payment_refund_required = TRUE "
+                        + "AND r.payment_refund_receipt_file_id IS NULL "
+                        + "AND r.refund_proof_deadline_at IS NOT NULL "
+                        + "AND r.refund_proof_deadline_at <= ? "
+                        + "AND r.pending_refund_email_sent = FALSE "
+                        + "AND LOWER(TRIM(r.status)) IN ('cancelled_by_owner', 'cancelled_by_rider')",
+                RESERVATION_ROW_MAPPER,
+                JdbcDateTimeUtils.toTimestamp(windowEnd));
+    }
+
+    @Override
+    public int claimPendingRefundEmailSent(final long reservationId) {
+        return jdbcTemplate.update(
+                "UPDATE reservations SET pending_refund_email_sent = TRUE, updated_at = ? "
+                        + "WHERE id = ? AND pending_refund_email_sent = FALSE",
                 JdbcDateTimeUtils.nowTimestamp(),
                 reservationId);
     }

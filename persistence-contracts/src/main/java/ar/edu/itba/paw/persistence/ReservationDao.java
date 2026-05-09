@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 
@@ -34,6 +34,7 @@ public interface ReservationDao {
 
     int attachPaymentReceiptAndAccept(long reservationId, long riderId, long storedFileId);
 
+    /** Sets {@code payment_approved} only; lifecycle status is owned by the service layer. */
     int updatePaymentApproved(long reservationId, long ownerUserId, boolean approved);
 
     Optional<Reservation> getReservationById(long id);
@@ -62,15 +63,14 @@ public interface ReservationDao {
 
     List<Reservation> findListingFinishedReservations(long ownerId, long listingId);
 
+    /**
+     * Sets {@code car_returned}; {@code status} becomes {@code finished} only if {@code payment_approved} is already
+     * true, otherwise unchanged.
+     */
     int markCarReturned(long reservationId, long ownerUserId);
 
-    /**
-     * Sets {@code status} to {@code finished} for {@code accepted} or {@code started} rows whose {@code end_date}
-     * is on or before {@code nowUtc}.
-     *
-     * @return number of rows updated
-     */
-    int finalizeAcceptedOrStartedPastEndUtc(OffsetDateTime nowUtc);
+    /** Clears {@code car_returned} for {@code accepted}/{@code started}/{@code finished} rows. Status is service-owned. */
+    int unmarkCarReturned(long reservationId, long ownerUserId);
 
     List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);
 
@@ -95,4 +95,21 @@ public interface ReservationDao {
 
     /** Sets {@code pending_paymentproof_email_sent} if still false; returns rows updated (0 or 1). */
     int claimPendingPaymentProofEmailSent(long reservationId);
+
+    /**
+     * Participant cancellation: status plus optional refund obligation (confirmed reservation with prior payment).
+     */
+    int updateParticipantCancellationWithRefundMeta(
+            long reservationId,
+            String statusLower,
+            boolean paymentRefundRequired,
+            OffsetDateTime refundProofDeadlineAtOrNull);
+
+    int attachRefundReceipt(long reservationId, long ownerUserId, long storedFileId);
+
+    int updatePaymentRefundApproved(long reservationId, long riderUserId, boolean approved);
+
+    List<Reservation> findReservationsWithDuePendingRefundProof(OffsetDateTime now);
+
+    int claimPendingRefundEmailSent(long reservationId);
 }

@@ -100,8 +100,9 @@ public interface ReservationService {
     Optional<Reservation> cancelReservation(long reservationId);
 
     /**
-     * Rider or owner may cancel {@code PENDING} while no payment receipt is attached, or either may cancel
-     * {@code ACCEPTED}. Other states are rejected; participants are verified (rider/owner) before applying rules.
+     * Rider or owner may cancel {@code PENDING} without payment receipt, or either may cancel {@code ACCEPTED}
+     * before pickup ({@code start_date}). Confirmed cancellations with a prior payment receipt require the owner to
+     * upload a refund proof (see refund columns). Other states are rejected.
      */
     Optional<Reservation> cancelReservationAsParticipant(long userId, long reservationId);
 
@@ -128,6 +129,15 @@ public interface ReservationService {
      * Set if the owner validated the payment proof (only accepted reservation with proof).
      */
     void setPaymentReceiptApprovalByOwner(long ownerUserId, long reservationId, boolean approved);
+
+    /** Owner uploads refund transfer proof for a cancelled confirmed reservation that requires refund documentation. */
+    void attachRefundReceiptByOwner(long ownerUserId, long reservationId, String originalFilename, String contentType, byte[] data);
+
+    /** Refund receipt file when the viewer is rider or owner on a cancelled reservation that has one. */
+    Optional<StoredFile> findRefundReceiptForParticipant(long userId, long reservationId);
+
+    /** Rider validates the refund transfer receipt uploaded by the host. */
+    void setPaymentRefundApprovalByRider(long riderUserId, long reservationId, boolean approved);
 
     /** Minimum hours between "now" and the pickup ({@code app.reservation.pickup-lead-hours}). */
     int getConfiguredPickupLeadHours();
@@ -160,9 +170,10 @@ public interface ReservationService {
     Optional<OffsetDateTime> getListingNextReservationDate(long ownerId, long listingId);
 
     /**
-     * Owner marks the vehicle returned for an in-progress rental; validates participant and state, may send mail.
+     * Owner marks or clears vehicle returned after checkout; when both return and payment approval hold,
+     * {@code status} becomes {@code finished}, otherwise {@code accepted}/{@code started}.
      */
-    void markCarReturnedByOwner(long ownerUserId, long reservationId);
+    void markCarReturnedByOwner(long ownerUserId, long reservationId, boolean returned);
 
     /** Hours before {@code end_date} to email the rider to return the vehicle ({@code app.reservation.return-reminder-hours-before-checkout}). */
     int getConfiguredReturnReminderHoursBeforeCheckout();
@@ -176,12 +187,6 @@ public interface ReservationService {
     /** Scheduled job: email at checkout if the car was not marked returned. */
     void dispatchReturnCheckoutEmails();
 
-    /**
-     * Scheduled job (run after checkout mail sweep): sets {@code finished} on {@code accepted} or {@code started}
-     * reservations whose {@code end_date} is on or before now (UTC).
-     */
-    void finalizePastPeriodReservations();
-
     /** Scheduled job: invite the rider to leave an optional review after the rental period. */
     void dispatchRiderReviewInviteEmails();
 
@@ -190,6 +195,12 @@ public interface ReservationService {
      * window ({@code app.reservation.payment-proof-reminder-lead-hours}).
      */
     void dispatchDuePaymentProofReminderEmails();
+
+    /**
+     * Scheduled job: reminds the host to upload refund transfer proof before the deadline (same lead window as payment
+     * proof reminders).
+     */
+    void dispatchDueRefundProofReminderEmails();
 
     /**
      * Reservations in {@code pending}, {@code accepted}, or {@code started} for one listing (availability overlap checks).
