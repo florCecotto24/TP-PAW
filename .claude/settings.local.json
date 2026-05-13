@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la /home/dorbaj/TP-PAW/AGENTS.md /home/dorbaj/TP-PAW/agents.md 2>&1 | head -20)",
+      "Read(//home/dorbaj/TP-PAW/**)",
+      "Bash(find / -maxdepth 4 -iname \"CLAUDE.md\" 2>/dev/null | head -5)",
+      "Read(///wsl.localhost/Ubuntu-22.04//**)"
+    ]
+  }
+}

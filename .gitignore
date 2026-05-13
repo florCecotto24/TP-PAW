@@ -83,3 +83,6 @@ node_modules/
 application-local.properties
 application-deployed.properties
 
+# context files
+jpa_hibernate.md
+claude/
