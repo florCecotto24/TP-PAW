@@ -295,6 +295,46 @@ public class Listing {
         return Optional.ofNullable(ratingAvg);
     }
 
+    public void setDayPrice(final BigDecimal dayPrice) {
+        this.dayPrice = dayPrice;
+    }
+
+    public void setStartPointStreet(final String startPointStreet) {
+        this.startPointStreet = startPointStreet;
+    }
+
+    public void setStartPointNumber(final String startPointNumber) {
+        this.startPointNumber = startPointNumber;
+    }
+
+    public void setDescription(final String description) {
+        this.description = description;
+    }
+
+    public void setCheckInTime(final LocalTime checkInTime) {
+        this.checkInTime = checkInTime;
+    }
+
+    public void setCheckOutTime(final LocalTime checkOutTime) {
+        this.checkOutTime = checkOutTime;
+    }
+
+    public void setNeighborhood(final Neighborhood neighborhood) {
+        this.neighborhood = neighborhood;
+    }
+
+    public void setStatus(final Status status) {
+        this.status = status;
+    }
+
+    public void setUpdatedAt(final OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public void setRatingAvg(final BigDecimal ratingAvg) {
+        this.ratingAvg = ratingAvg;
+    }
+
     public List<ListingAvailability> getAvailabilities() {
         return availabilities;
     }

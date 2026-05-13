@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models.domain;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -72,6 +73,12 @@ public class User {
 
     @Column(length = 22)
     private String cbu;
+
+    @Column(name = "rating_as_rider", precision = 4, scale = 2)
+    private BigDecimal ratingAsRider;
+
+    @Column(name = "rating_as_owner", precision = 4, scale = 2)
+    private BigDecimal ratingAsOwner;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "license_file_id")
@@ -328,6 +335,70 @@ public class User {
 
     public Set<String> getRoles() {
         return roles;
+    }
+
+    public void setForename(final String forename) {
+        this.forename = forename;
+    }
+
+    public void setSurname(final String surname) {
+        this.surname = surname;
+    }
+
+    public void setPasswordHash(final String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public void setEmailValidated(final Boolean emailValidated) {
+        this.emailValidated = emailValidated;
+    }
+
+    public void setPhoneNumber(final String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public void setBirthDate(final LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public void setAbout(final String about) {
+        this.about = about;
+    }
+
+    public void setProfilePicture(final Image profilePicture) {
+        this.profilePicture = profilePicture;
+    }
+
+    public void setLatestLocaleTag(final String latestLocaleTag) {
+        this.latestLocaleTag = latestLocaleTag;
+    }
+
+    public void setCbu(final String cbu) {
+        this.cbu = cbu;
+    }
+
+    public void setRatingAsRider(final BigDecimal ratingAsRider) {
+        this.ratingAsRider = ratingAsRider;
+    }
+
+    public void setRatingAsOwner(final BigDecimal ratingAsOwner) {
+        this.ratingAsOwner = ratingAsOwner;
+    }
+
+    public void setLicenseFile(final StoredFile licenseFile) {
+        this.licenseFile = licenseFile;
+    }
+
+    public void setLicenseValidated(final Boolean licenseValidated) {
+        this.licenseValidated = licenseValidated;
+    }
+
+    public void setIdentityFile(final StoredFile identityFile) {
+        this.identityFile = identityFile;
+    }
+
+    public void setIdentityValidated(final Boolean identityValidated) {
+        this.identityValidated = identityValidated;
     }
 
     public List<Car> getCars() {

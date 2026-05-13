@@ -126,6 +126,21 @@ public class Reservation {
     @Column(name = "refund_proof_deadline_at")
     private OffsetDateTime refundProofDeadlineAt;
 
+    @Column(name = "return_reminder_email_sent", nullable = false)
+    private boolean returnReminderEmailSent;
+
+    @Column(name = "return_checkout_email_sent", nullable = false)
+    private boolean returnCheckoutEmailSent;
+
+    @Column(name = "rider_review_invite_email_sent", nullable = false)
+    private boolean riderReviewInviteEmailSent;
+
+    @Column(name = "pending_paymentproof_email_sent", nullable = false)
+    private boolean pendingPaymentproofEmailSent;
+
+    @Column(name = "pending_refund_email_sent", nullable = false)
+    private boolean pendingRefundEmailSent;
+
     /* package */ Reservation() {
         // For Hibernate
     }
@@ -148,6 +163,11 @@ public class Reservation {
         this.paymentRefundReceiptFile = b.paymentRefundReceiptFile;
         this.paymentRefundApproved = b.paymentRefundApproved;
         this.refundProofDeadlineAt = b.refundProofDeadlineAt;
+        this.returnReminderEmailSent = b.returnReminderEmailSent;
+        this.returnCheckoutEmailSent = b.returnCheckoutEmailSent;
+        this.riderReviewInviteEmailSent = b.riderReviewInviteEmailSent;
+        this.pendingPaymentproofEmailSent = b.pendingPaymentproofEmailSent;
+        this.pendingRefundEmailSent = b.pendingRefundEmailSent;
     }
 
     public static Builder builder() {
@@ -172,6 +192,11 @@ public class Reservation {
         private StoredFile paymentRefundReceiptFile;
         private boolean paymentRefundApproved;
         private OffsetDateTime refundProofDeadlineAt;
+        private boolean returnReminderEmailSent;
+        private boolean returnCheckoutEmailSent;
+        private boolean riderReviewInviteEmailSent;
+        private boolean pendingPaymentproofEmailSent;
+        private boolean pendingRefundEmailSent;
 
         public Builder id(final long id) {
             this.id = id;
@@ -255,6 +280,31 @@ public class Reservation {
 
         public Builder refundProofDeadlineAt(final OffsetDateTime refundProofDeadlineAt) {
             this.refundProofDeadlineAt = refundProofDeadlineAt;
+            return this;
+        }
+
+        public Builder returnReminderEmailSent(final boolean returnReminderEmailSent) {
+            this.returnReminderEmailSent = returnReminderEmailSent;
+            return this;
+        }
+
+        public Builder returnCheckoutEmailSent(final boolean returnCheckoutEmailSent) {
+            this.returnCheckoutEmailSent = returnCheckoutEmailSent;
+            return this;
+        }
+
+        public Builder riderReviewInviteEmailSent(final boolean riderReviewInviteEmailSent) {
+            this.riderReviewInviteEmailSent = riderReviewInviteEmailSent;
+            return this;
+        }
+
+        public Builder pendingPaymentproofEmailSent(final boolean pendingPaymentproofEmailSent) {
+            this.pendingPaymentproofEmailSent = pendingPaymentproofEmailSent;
+            return this;
+        }
+
+        public Builder pendingRefundEmailSent(final boolean pendingRefundEmailSent) {
+            this.pendingRefundEmailSent = pendingRefundEmailSent;
             return this;
         }
 
@@ -357,6 +407,82 @@ public class Reservation {
 
     public Optional<OffsetDateTime> getRefundProofDeadlineAt() {
         return Optional.ofNullable(refundProofDeadlineAt);
+    }
+
+    public void setStatus(final Status status) {
+        this.status = status;
+    }
+
+    public void setUpdatedAt(final OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public void setPaymentReceiptFile(final StoredFile paymentReceiptFile) {
+        this.paymentReceiptFile = paymentReceiptFile;
+    }
+
+    public void setPaymentApproved(final boolean paymentApproved) {
+        this.paymentApproved = paymentApproved;
+    }
+
+    public void setCarReturned(final boolean carReturned) {
+        this.carReturned = carReturned;
+    }
+
+    public void setPaymentRefundRequired(final boolean paymentRefundRequired) {
+        this.paymentRefundRequired = paymentRefundRequired;
+    }
+
+    public void setPaymentRefundReceiptFile(final StoredFile paymentRefundReceiptFile) {
+        this.paymentRefundReceiptFile = paymentRefundReceiptFile;
+    }
+
+    public void setPaymentRefundApproved(final boolean paymentRefundApproved) {
+        this.paymentRefundApproved = paymentRefundApproved;
+    }
+
+    public void setRefundProofDeadlineAt(final OffsetDateTime refundProofDeadlineAt) {
+        this.refundProofDeadlineAt = refundProofDeadlineAt;
+    }
+
+    public void setReturnReminderEmailSent(final boolean returnReminderEmailSent) {
+        this.returnReminderEmailSent = returnReminderEmailSent;
+    }
+
+    public void setReturnCheckoutEmailSent(final boolean returnCheckoutEmailSent) {
+        this.returnCheckoutEmailSent = returnCheckoutEmailSent;
+    }
+
+    public void setRiderReviewInviteEmailSent(final boolean riderReviewInviteEmailSent) {
+        this.riderReviewInviteEmailSent = riderReviewInviteEmailSent;
+    }
+
+    public void setPendingPaymentproofEmailSent(final boolean pendingPaymentproofEmailSent) {
+        this.pendingPaymentproofEmailSent = pendingPaymentproofEmailSent;
+    }
+
+    public void setPendingRefundEmailSent(final boolean pendingRefundEmailSent) {
+        this.pendingRefundEmailSent = pendingRefundEmailSent;
+    }
+
+    public boolean isReturnReminderEmailSent() {
+        return returnReminderEmailSent;
+    }
+
+    public boolean isReturnCheckoutEmailSent() {
+        return returnCheckoutEmailSent;
+    }
+
+    public boolean isRiderReviewInviteEmailSent() {
+        return riderReviewInviteEmailSent;
+    }
+
+    public boolean isPendingPaymentproofEmailSent() {
+        return pendingPaymentproofEmailSent;
+    }
+
+    public boolean isPendingRefundEmailSent() {
+        return pendingRefundEmailSent;
     }
 
     @Override

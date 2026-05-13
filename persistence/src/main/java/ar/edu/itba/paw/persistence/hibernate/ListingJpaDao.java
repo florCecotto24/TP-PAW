@@ -140,40 +140,38 @@ public class ListingJpaDao implements ListingDao {
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
             final Long neighborhoodId) {
-        final int updated = em.createNativeQuery(
-                        "UPDATE listings l SET day_price = :dayPrice, start_point_street = :street, "
-                                + "start_point_number = :number, description = :description, "
-                                + "check_in_time = :checkIn, check_out_time = :checkOut, "
-                                + "neighborhood_id = :neighborhoodId, updated_at = :now "
-                                + "WHERE l.id = :listingId AND EXISTS ("
-                                + "SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = :ownerId)")
-                .setParameter("dayPrice", dayPrice)
-                .setParameter("street", startPointStreet)
-                .setParameter("number", startPointNumber)
-                .setParameter("description", description)
-                .setParameter("checkIn", checkInTime)
-                .setParameter("checkOut", checkOutTime)
-                .setParameter("neighborhoodId", neighborhoodId)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("listingId", listingId)
-                .setParameter("ownerId", ownerId)
-                .executeUpdate();
-        return updated > 0;
+        final Listing listing = em.find(Listing.class, listingId);
+        if (listing == null || listing.getCar().getOwner().getId() != ownerId) {
+            return false;
+        }
+        listing.setDayPrice(dayPrice);
+        listing.setStartPointStreet(startPointStreet);
+        listing.setStartPointNumber(startPointNumber);
+        listing.setDescription(description);
+        listing.setCheckInTime(checkInTime);
+        listing.setCheckOutTime(checkOutTime);
+        listing.setNeighborhood(
+                neighborhoodId != null ? em.getReference(Neighborhood.class, neighborhoodId) : null);
+        listing.setUpdatedAt(OffsetDateTime.now());
+        return true;
     }
 
     @Override
     public boolean toggleListingStatus(final long ownerId, final long listingId) {
-        final int updated = em.createNativeQuery(
-                        "UPDATE listings l SET status = CASE WHEN l.status = 'active' THEN 'paused' "
-                                + "WHEN l.status = 'paused' THEN 'active' ELSE l.status END, updated_at = :now "
-                                + "WHERE l.id = :listingId AND EXISTS ("
-                                + "SELECT 1 FROM cars c WHERE c.id = l.car_id AND c.owner_id = :ownerId) "
-                                + "AND l.status IN ('active','paused')")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("listingId", listingId)
-                .setParameter("ownerId", ownerId)
-                .executeUpdate();
-        return updated > 0;
+        final Listing listing = em.find(Listing.class, listingId);
+        if (listing == null || listing.getCar().getOwner().getId() != ownerId) {
+            return false;
+        }
+        final Listing.Status current = listing.getStatus();
+        if (current == Listing.Status.ACTIVE) {
+            listing.setStatus(Listing.Status.PAUSED);
+        } else if (current == Listing.Status.PAUSED) {
+            listing.setStatus(Listing.Status.ACTIVE);
+        } else {
+            return false;
+        }
+        listing.setUpdatedAt(OffsetDateTime.now());
+        return true;
     }
 
     @Override
@@ -184,15 +182,23 @@ public class ListingJpaDao implements ListingDao {
         if (allowedFrom.length == 0) {
             return false;
         }
-        final int updated = em.createQuery(
-                        "UPDATE Listing l SET l.status = :newStatus, l.updatedAt = :now "
-                                + "WHERE l.id = :listingId AND l.status IN :allowedFrom")
-                .setParameter("newStatus", newStatus)
-                .setParameter("now", OffsetDateTime.now())
-                .setParameter("listingId", listingId)
-                .setParameter("allowedFrom", Arrays.asList(allowedFrom))
-                .executeUpdate();
-        return updated > 0;
+        final Listing listing = em.find(Listing.class, listingId);
+        if (listing == null) {
+            return false;
+        }
+        boolean allowed = false;
+        for (final Listing.Status s : allowedFrom) {
+            if (s == listing.getStatus()) {
+                allowed = true;
+                break;
+            }
+        }
+        if (!allowed) {
+            return false;
+        }
+        listing.setStatus(newStatus);
+        listing.setUpdatedAt(OffsetDateTime.now());
+        return true;
     }
 
     @Override

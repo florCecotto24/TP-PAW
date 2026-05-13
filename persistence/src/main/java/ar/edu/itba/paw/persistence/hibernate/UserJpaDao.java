@@ -69,96 +69,107 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public void updateUserName(final long userId, final String forename, final String surname) {
-        em.createQuery("UPDATE User u SET u.forename = :forename, u.surname = :surname WHERE u.id = :id")
-                .setParameter("forename", forename)
-                .setParameter("surname", surname)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setForename(forename);
+        user.setSurname(surname);
     }
 
     @Override
     public void updatePhoneNumber(final long userId, final String phoneNumber) {
-        em.createQuery("UPDATE User u SET u.phoneNumber = :phoneNumber WHERE u.id = :id")
-                .setParameter("phoneNumber", phoneNumber)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setPhoneNumber(phoneNumber);
     }
 
     @Override
     public void updateBirthDate(final long userId, final LocalDate birthDate) {
-        em.createQuery("UPDATE User u SET u.birthDate = :birthDate WHERE u.id = :id")
-                .setParameter("birthDate", birthDate)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setBirthDate(birthDate);
     }
 
     @Override
     public void updateAbout(final long userId, final String about) {
-        em.createQuery("UPDATE User u SET u.about = :about WHERE u.id = :id")
-                .setParameter("about", about)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setAbout(about);
     }
 
     @Override
     public void updateProfilePictureId(final long userId, final Long profilePictureImageId) {
-        final Image pictureRef = profilePictureImageId != null
-                ? em.getReference(Image.class, profilePictureImageId)
-                : null;
-        em.createQuery("UPDATE User u SET u.profilePicture = :picture WHERE u.id = :id")
-                .setParameter("picture", pictureRef)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setProfilePicture(
+                profilePictureImageId != null ? em.getReference(Image.class, profilePictureImageId) : null);
     }
 
     @Override
     public void updateLicenseDocument(final long userId, final long fileId, final boolean validated) {
-        final StoredFile fileRef = em.getReference(StoredFile.class, fileId);
-        em.createQuery("UPDATE User u SET u.licenseFile = :file, u.licenseValidated = :validated WHERE u.id = :id")
-                .setParameter("file", fileRef)
-                .setParameter("validated", validated)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLicenseFile(em.getReference(StoredFile.class, fileId));
+        user.setLicenseValidated(validated);
     }
 
     @Override
     public void clearLicenseDocument(final long userId) {
-        em.createQuery("UPDATE User u SET u.licenseFile = null, u.licenseValidated = false WHERE u.id = :id")
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLicenseFile(null);
+        user.setLicenseValidated(false);
     }
 
     @Override
     public void updateIdentityDocument(final long userId, final long fileId, final boolean validated) {
-        final StoredFile fileRef = em.getReference(StoredFile.class, fileId);
-        em.createQuery("UPDATE User u SET u.identityFile = :file, u.identityValidated = :validated WHERE u.id = :id")
-                .setParameter("file", fileRef)
-                .setParameter("validated", validated)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setIdentityFile(em.getReference(StoredFile.class, fileId));
+        user.setIdentityValidated(validated);
     }
 
     @Override
     public void clearIdentityDocument(final long userId) {
-        em.createQuery("UPDATE User u SET u.identityFile = null, u.identityValidated = false WHERE u.id = :id")
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setIdentityFile(null);
+        user.setIdentityValidated(false);
     }
 
     @Override
     public void updateEmailValidated(final long userId, final boolean validated) {
-        em.createQuery("UPDATE User u SET u.emailValidated = :validated WHERE u.id = :id")
-                .setParameter("validated", validated)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setEmailValidated(validated);
     }
 
     @Override
     public void updatePasswordHash(final long userId, final String passwordHash) {
-        em.createQuery("UPDATE User u SET u.passwordHash = :passwordHash WHERE u.id = :id")
-                .setParameter("passwordHash", passwordHash)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setPasswordHash(passwordHash);
     }
 
     @Override
@@ -172,10 +183,11 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public void updateLatestLocale(final long userId, final String localeTag) {
-        em.createQuery("UPDATE User u SET u.latestLocaleTag = :localeTag WHERE u.id = :id")
-                .setParameter("localeTag", localeTag)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLatestLocaleTag(localeTag);
     }
 
     @Override
@@ -195,9 +207,10 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public void updateCbu(final long userId, final String cbu) {
-        em.createQuery("UPDATE User u SET u.cbu = :cbu WHERE u.id = :id")
-                .setParameter("cbu", cbu)
-                .setParameter("id", userId)
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setCbu(cbu);
     }
 }

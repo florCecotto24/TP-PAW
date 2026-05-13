@@ -10,10 +10,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
@@ -106,6 +109,13 @@ public class ReservationJpaDao implements ReservationDao {
                 .paymentProofDeadlineAt(paymentProofDeadlineAt)
                 .paymentApproved(false)
                 .carReturned(false)
+                .paymentRefundRequired(false)
+                .paymentRefundApproved(false)
+                .returnReminderEmailSent(false)
+                .returnCheckoutEmailSent(false)
+                .riderReviewInviteEmailSent(false)
+                .pendingPaymentproofEmailSent(false)
+                .pendingRefundEmailSent(false)
                 .build();
         em.persist(reservation);
         return reservation;
@@ -125,27 +135,25 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public int attachPaymentReceiptAndAccept(final long reservationId, final long riderId, final long storedFileId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET status = 'accepted', payment_receipt_file_id = :fileId, updated_at = :now "
-                                + "WHERE id = :id AND rider_id = :riderId AND LOWER(status) = 'pending'")
-                .setParameter("fileId", storedFileId)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .setParameter("riderId", riderId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.getRiderId() != riderId || r.getStatus() != Reservation.Status.PENDING) {
+            return 0;
+        }
+        r.setStatus(Reservation.Status.ACCEPTED);
+        r.setPaymentReceiptFile(em.getReference(StoredFile.class, storedFileId));
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
     public int updatePaymentApproved(final long reservationId, final long ownerUserId, final boolean approved) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET payment_approved = :approved, updated_at = :now "
-                                + "WHERE id = :id AND listing_id IN ("
-                                + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId)")
-                .setParameter("approved", approved)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .setParameter("ownerId", ownerUserId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null || r.getListing().getCar().getOwner().getId() != ownerUserId) {
+            return 0;
+        }
+        r.setPaymentApproved(approved);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -239,12 +247,13 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public int updateReservationStatus(final long reservationId, final String status) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET status = :status, updated_at = :now WHERE id = :id")
-                .setParameter("status", status)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null) {
+            return 0;
+        }
+        r.setStatus(Reservation.Status.valueOf(status.toUpperCase(Locale.ROOT)));
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -390,27 +399,31 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public int markCarReturned(final long reservationId, final long ownerUserId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET car_returned = TRUE, updated_at = :now WHERE id = :id AND listing_id IN ("
-                                + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId)")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .setParameter("ownerId", ownerUserId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null || r.getListing().getCar().getOwner().getId() != ownerUserId) {
+            return 0;
+        }
+        r.setCarReturned(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
     public int unmarkCarReturned(final long reservationId, final long ownerUserId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET car_returned = FALSE, updated_at = :now WHERE id = :id "
-                                + "AND listing_id IN ("
-                                + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId) "
-                                + "AND car_returned = TRUE "
-                                + "AND LOWER(TRIM(status)) IN ('accepted', 'started', 'finished')")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .setParameter("ownerId", ownerUserId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null || r.getListing().getCar().getOwner().getId() != ownerUserId) {
+            return 0;
+        }
+        if (!r.isCarReturned()) {
+            return 0;
+        }
+        final Reservation.Status s = r.getStatus();
+        if (s != Reservation.Status.ACCEPTED && s != Reservation.Status.STARTED && s != Reservation.Status.FINISHED) {
+            return 0;
+        }
+        r.setCarReturned(false);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -459,32 +472,35 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public int claimReturnReminderEmailSent(final long reservationId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET return_reminder_email_sent = TRUE, updated_at = :now "
-                                + "WHERE id = :id AND return_reminder_email_sent = FALSE")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.isReturnReminderEmailSent()) {
+            return 0;
+        }
+        r.setReturnReminderEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
     public int claimReturnCheckoutEmailSent(final long reservationId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET return_checkout_email_sent = TRUE, updated_at = :now "
-                                + "WHERE id = :id AND return_checkout_email_sent = FALSE")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.isReturnCheckoutEmailSent()) {
+            return 0;
+        }
+        r.setReturnCheckoutEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
     public int claimRiderReviewInviteEmailSent(final long reservationId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET rider_review_invite_email_sent = TRUE, updated_at = :now "
-                                + "WHERE id = :id AND rider_review_invite_email_sent = FALSE")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.isRiderReviewInviteEmailSent()) {
+            return 0;
+        }
+        r.setRiderReviewInviteEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -505,12 +521,13 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public int claimPendingPaymentProofEmailSent(final long reservationId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET pending_paymentproof_email_sent = TRUE, updated_at = :now "
-                                + "WHERE id = :id AND pending_paymentproof_email_sent = FALSE")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.isPendingPaymentproofEmailSent()) {
+            return 0;
+        }
+        r.setPendingPaymentproofEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -519,49 +536,55 @@ public class ReservationJpaDao implements ReservationDao {
             final String statusLower,
             final boolean paymentRefundRequired,
             final OffsetDateTime refundProofDeadlineAtOrNull) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET status = :status, payment_refund_required = :refundRequired, "
-                                + "refund_proof_deadline_at = :refundDeadline, payment_refund_receipt_file_id = NULL, "
-                                + "payment_refund_approved = FALSE, pending_refund_email_sent = FALSE, updated_at = :now "
-                                + "WHERE id = :id")
-                .setParameter("status", statusLower)
-                .setParameter("refundRequired", paymentRefundRequired)
-                .setParameter(
-                        "refundDeadline",
-                        refundProofDeadlineAtOrNull != null ? toTimestamp(refundProofDeadlineAtOrNull) : null)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null) {
+            return 0;
+        }
+        r.setStatus(Reservation.Status.valueOf(statusLower.toUpperCase(Locale.ROOT)));
+        r.setPaymentRefundRequired(paymentRefundRequired);
+        r.setRefundProofDeadlineAt(refundProofDeadlineAtOrNull);
+        r.setPaymentRefundReceiptFile(null);
+        r.setPaymentRefundApproved(false);
+        r.setPendingRefundEmailSent(false);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
     public int attachRefundReceipt(final long reservationId, final long ownerUserId, final long storedFileId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET payment_refund_receipt_file_id = :fileId, pending_refund_email_sent = TRUE, "
-                                + "updated_at = :now WHERE id = :id AND listing_id IN ("
-                                + "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId) "
-                                + "AND payment_refund_required = TRUE "
-                                + "AND payment_refund_receipt_file_id IS NULL "
-                                + "AND LOWER(TRIM(status)) IN ('cancelled_by_owner', 'cancelled_by_rider')")
-                .setParameter("fileId", storedFileId)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .setParameter("ownerId", ownerUserId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null
+                || r.getListing().getCar().getOwner().getId() != ownerUserId
+                || !r.isPaymentRefundRequired()
+                || r.getPaymentRefundReceiptFile().isPresent()) {
+            return 0;
+        }
+        final Reservation.Status s = r.getStatus();
+        if (s != Reservation.Status.CANCELLED_BY_OWNER && s != Reservation.Status.CANCELLED_BY_RIDER) {
+            return 0;
+        }
+        r.setPaymentRefundReceiptFile(em.getReference(StoredFile.class, storedFileId));
+        r.setPendingRefundEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
     public int updatePaymentRefundApproved(final long reservationId, final long riderUserId, final boolean approved) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET payment_refund_approved = :approved, updated_at = :now WHERE id = :id "
-                                + "AND rider_id = :riderId "
-                                + "AND payment_refund_required = TRUE AND payment_refund_receipt_file_id IS NOT NULL "
-                                + "AND LOWER(TRIM(status)) IN ('cancelled_by_owner', 'cancelled_by_rider')")
-                .setParameter("approved", approved)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .setParameter("riderId", riderUserId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId);
+        if (r == null
+                || r.getRiderId() != riderUserId
+                || !r.isPaymentRefundRequired()
+                || r.getPaymentRefundReceiptFile().isEmpty()) {
+            return 0;
+        }
+        final Reservation.Status s = r.getStatus();
+        if (s != Reservation.Status.CANCELLED_BY_OWNER && s != Reservation.Status.CANCELLED_BY_RIDER) {
+            return 0;
+        }
+        r.setPaymentRefundApproved(approved);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -584,12 +607,13 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public int claimPendingRefundEmailSent(final long reservationId) {
-        return em.createNativeQuery(
-                        "UPDATE reservations SET pending_refund_email_sent = TRUE, updated_at = :now "
-                                + "WHERE id = :id AND pending_refund_email_sent = FALSE")
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .setParameter("id", reservationId)
-                .executeUpdate();
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null || r.isPendingRefundEmailSent()) {
+            return 0;
+        }
+        r.setPendingRefundEmailSent(true);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     // ---- SQL helpers ----

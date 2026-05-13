@@ -56,8 +56,9 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
 
     @Override
     public void deleteByListingId(final long listingId) {
-        em.createQuery("DELETE FROM ListingAvailability la WHERE la.listing.id = :listingId")
-                .setParameter("listingId", listingId)
-                .executeUpdate();
+        final Listing listing = em.find(Listing.class, listingId);
+        if (listing != null) {
+            listing.getAvailabilities().clear();
+        }
     }
 }

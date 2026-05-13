@@ -13,6 +13,8 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
@@ -88,38 +90,51 @@ public class ReviewJpaDao implements ReviewDao {
 
     @Override
     public void refreshRiderAverageRating(final long riderUserId) {
-        em.createNativeQuery(
-                        "UPDATE users SET rating_as_rider = ("
-                                + "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+        final Object raw = em.createNativeQuery(
+                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
-                                + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId) WHERE id = :userId")
+                                + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId")
                 .setParameter("userId", riderUserId)
-                .executeUpdate();
+                .getSingleResult();
+        final User user = em.find(User.class, riderUserId);
+        if (user == null) {
+            return;
+        }
+        final java.math.BigDecimal avg = toBigDecimalOrNull(raw);
+        user.setRatingAsRider(avg);
     }
 
     @Override
     public void refreshOwnerAverageRating(final long ownerUserId) {
-        em.createNativeQuery(
-                        "UPDATE users SET rating_as_owner = ("
-                                + "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+        final Object raw = em.createNativeQuery(
+                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
                                 + "INNER JOIN listings l ON l.id = res.listing_id "
                                 + "INNER JOIN cars c ON c.id = l.car_id "
-                                + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId) WHERE id = :userId")
+                                + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId")
                 .setParameter("userId", ownerUserId)
-                .executeUpdate();
+                .getSingleResult();
+        final User user = em.find(User.class, ownerUserId);
+        if (user == null) {
+            return;
+        }
+        user.setRatingAsOwner(toBigDecimalOrNull(raw));
     }
 
     @Override
     public void refreshListingRatingAvg(final long listingId) {
-        em.createNativeQuery(
-                        "UPDATE listings SET rating_avg = ("
-                                + "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+        final Object raw = em.createNativeQuery(
+                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
-                                + "WHERE res.listing_id = :listingId), updated_at = :now WHERE id = :listingId")
+                                + "WHERE res.listing_id = :listingId")
                 .setParameter("listingId", listingId)
-                .setParameter("now", new Timestamp(System.currentTimeMillis()))
-                .executeUpdate();
+                .getSingleResult();
+        final Listing listing = em.find(Listing.class, listingId);
+        if (listing == null) {
+            return;
+        }
+        listing.setRatingAvg(toBigDecimalOrNull(raw));
+        listing.setUpdatedAt(OffsetDateTime.now());
     }
 
     @Override
@@ -205,5 +220,15 @@ public class ReviewJpaDao implements ReviewDao {
             return ((Timestamp) o).toInstant().atOffset(ZoneOffset.UTC);
         }
         return OffsetDateTime.parse(o.toString());
+    }
+
+    private static BigDecimal toBigDecimalOrNull(final Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof BigDecimal) {
+            return (BigDecimal) raw;
+        }
+        return new BigDecimal(raw.toString());
     }
 }
