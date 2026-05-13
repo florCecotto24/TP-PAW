@@ -13,7 +13,7 @@ import ar.edu.itba.paw.persistence.ImageDao;
 
 @Transactional
 @Repository
-public class ImageHibernateDao implements ImageDao {
+public class ImageJpaDao implements ImageDao {
 
     @PersistenceContext
     private EntityManager em;

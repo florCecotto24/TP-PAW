@@ -3,6 +3,8 @@ package ar.edu.itba.paw.models.domain;
 import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -11,9 +13,13 @@ import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Converter;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -54,8 +60,9 @@ public class Listing {
     @Column(nullable = false, length = 105)
     private String title;
 
-    @Column(name = "car_id", nullable = false)
-    private long carId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_id", nullable = false)
+    private Car car;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
@@ -85,11 +92,18 @@ public class Listing {
     @Column(name = "check_out_time", nullable = false)
     private LocalTime checkOutTime;
 
-    @Column(name = "neighborhood_id")
-    private Long neighborhoodId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "neighborhood_id", nullable = true)
+    private Neighborhood neighborhood;
 
     @Column(name = "rating_avg", precision = 4, scale = 2)
     private BigDecimal ratingAvg;
+
+    @OneToMany(mappedBy = "listing", fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<ListingAvailability> availabilities = new ArrayList<>();
+
+    @OneToMany(mappedBy = "listing", fetch = FetchType.LAZY)
+    private List<Reservation> reservations = new ArrayList<>();
 
     /* package */ Listing() {
         // For Hibernate
@@ -98,7 +112,7 @@ public class Listing {
     private Listing(final Builder b) {
         this.id = b.id;
         this.title = b.title;
-        this.carId = b.carId;
+        this.car = b.car;
         this.createdAt = b.createdAt;
         this.updatedAt = b.updatedAt;
         this.status = b.status;
@@ -108,7 +122,7 @@ public class Listing {
         this.description = b.description;
         this.checkInTime = b.checkInTime;
         this.checkOutTime = b.checkOutTime;
-        this.neighborhoodId = b.neighborhoodId;
+        this.neighborhood = b.neighborhood;
         this.ratingAvg = b.ratingAvg;
     }
 
@@ -119,7 +133,7 @@ public class Listing {
     public static final class Builder {
         private long id;
         private String title;
-        private long carId;
+        private Car car;
         private OffsetDateTime createdAt;
         private OffsetDateTime updatedAt;
         private Status status;
@@ -129,7 +143,7 @@ public class Listing {
         private String description;
         private LocalTime checkInTime;
         private LocalTime checkOutTime;
-        private Long neighborhoodId;
+        private Neighborhood neighborhood;
         private BigDecimal ratingAvg;
 
         public Builder id(final long id) {
@@ -142,8 +156,8 @@ public class Listing {
             return this;
         }
 
-        public Builder carId(final long carId) {
-            this.carId = carId;
+        public Builder car(final Car car) {
+            this.car = car;
             return this;
         }
 
@@ -192,8 +206,8 @@ public class Listing {
             return this;
         }
 
-        public Builder neighborhoodId(final Long neighborhoodId) {
-            this.neighborhoodId = neighborhoodId;
+        public Builder neighborhood(final Neighborhood neighborhood) {
+            this.neighborhood = neighborhood;
             return this;
         }
 
@@ -204,6 +218,7 @@ public class Listing {
 
         public Listing build() {
             Objects.requireNonNull(title, "title");
+            Objects.requireNonNull(car, "car");
             Objects.requireNonNull(createdAt, "createdAt");
             Objects.requireNonNull(updatedAt, "updatedAt");
             Objects.requireNonNull(status, "status");
@@ -222,8 +237,13 @@ public class Listing {
         return title;
     }
 
+    public Car getCar() {
+        return car;
+    }
+
+    /** Convenience accessor — returns {@code car.getId()}. */
     public long getCarId() {
-        return carId;
+        return car.getId();
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -262,12 +282,25 @@ public class Listing {
         return checkOutTime;
     }
 
+    public Neighborhood getNeighborhood() {
+        return neighborhood;
+    }
+
+    /** Convenience accessor — returns the neighborhood id, or empty if no neighborhood is set. */
     public Optional<Long> getNeighborhoodId() {
-        return Optional.ofNullable(neighborhoodId);
+        return neighborhood == null ? Optional.empty() : Optional.of(neighborhood.getId());
     }
 
     public Optional<BigDecimal> getRatingAvg() {
         return Optional.ofNullable(ratingAvg);
+    }
+
+    public List<ListingAvailability> getAvailabilities() {
+        return availabilities;
+    }
+
+    public List<Reservation> getReservations() {
+        return reservations;
     }
 
     /** Street + number (trimmed), for email or full-detail views. */
@@ -291,7 +324,7 @@ public class Listing {
         return "Listing{" +
                 "id=" + id +
                 ", title='" + title + '\'' +
-                ", carId=" + carId +
+                ", carId=" + car.getId() +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 ", status=" + status +

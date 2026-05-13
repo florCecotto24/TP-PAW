@@ -17,7 +17,9 @@ import org.mockito.quality.Strictness;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReviewDao;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 
@@ -51,10 +53,12 @@ class ReviewServiceImplTest {
     }
 
     private static Reservation reservation(final boolean carReturned, final OffsetDateTime endDate) {
+        final Listing listingRef = Mockito.mock(Listing.class);
+        Mockito.when(listingRef.getId()).thenReturn(LISTING_ID);
         return Reservation.builder()
                 .id(RESERVATION_ID)
-                .riderId(RIDER_ID)
-                .listingId(LISTING_ID)
+                .rider(User.identities(RIDER_ID, "r@test.com", "R", "Rider"))
+                .listing(listingRef)
                 .startDate(OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC))
                 .endDate(endDate)
                 .status(Reservation.Status.FINISHED)
@@ -77,8 +81,9 @@ class ReviewServiceImplTest {
     @Test
     void testSubmitOwnerReviewOfRiderPersistOmitWhenRatingNullAndCommentBlank() {
         // 1.Arrange
+        final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
 
         // 2.Exercise & 3. Assert
@@ -89,8 +94,9 @@ class ReviewServiceImplTest {
     void testSubmitRiderReviewOfOwnerPersistOmitWhenRatingNullAndCommentBlank() {
         // 1.Arrange
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
+        final Reservation res = reservation(true, past);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, past)));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
         Mockito.when(userService.getListingOwner(LISTING_ID)).thenReturn(Optional.empty());
 
@@ -150,8 +156,9 @@ class ReviewServiceImplTest {
     @Test
     void testSubmitOwnerReviewOfRiderThrowsNotAllowedWhenCarNotReturned() {
         // 1.Arrange
+        final Reservation res = reservation(false, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(false, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))));
+                .thenReturn(Optional.of(res));
 
         // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
@@ -164,8 +171,9 @@ class ReviewServiceImplTest {
     @Test
     void testSubmitOwnerReviewOfRiderThrowsAlreadySubmittedWhenReviewExists() {
         // 1.Arrange
+        final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(true);
 
         // 2.Exercise
@@ -179,8 +187,9 @@ class ReviewServiceImplTest {
     @Test
     void testSubmitOwnerReviewOfRiderInsertsReviewWithTrimmedComment() {
         // 1.Arrange
+        final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
         final String[] insertedComment = new String[1];
         Mockito.doAnswer(inv -> {
@@ -199,8 +208,9 @@ class ReviewServiceImplTest {
     @Test
     void testSubmitOwnerReviewOfRiderTreatsBlankCommentAsNull() {
         // 1.Arrange
+        final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
         final Object[] capturedComment = new Object[]{"sentinel"};
         Mockito.doAnswer(inv -> {
@@ -232,8 +242,9 @@ class ReviewServiceImplTest {
     void testSubmitRiderReviewOfOwnerThrowsWhenEndDateInFuture() {
         // 1.Arrange
         final OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusDays(7);
+        final Reservation res = reservation(true, future);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, future)));
+                .thenReturn(Optional.of(res));
 
         // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
@@ -247,8 +258,9 @@ class ReviewServiceImplTest {
     void testSubmitRiderReviewOfOwnerThrowsAlreadySubmittedWhenReviewExists() {
         // 1.Arrange
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
+        final Reservation res = reservation(true, past);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, past)));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(true);
 
         // 2.Exercise
@@ -263,8 +275,9 @@ class ReviewServiceImplTest {
     void testSubmitRiderReviewOfOwnerCompletesOnHappyPath() {
         // 1.Arrange
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
+        final Reservation res = reservation(true, past);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(reservation(true, past)));
+                .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
         Mockito.when(userService.getListingOwner(LISTING_ID)).thenReturn(Optional.empty());
 

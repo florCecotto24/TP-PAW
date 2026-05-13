@@ -8,33 +8,35 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.sql.DataSource;
+import javax.annotation.PostConstruct;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 import org.springframework.context.annotation.Primary;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.persistence.LocationDao;
 
 /**
- * Neighborhood catalog in memory: a single {@code SELECT} when creating the bean (Spring context startup).
+ * Neighborhood catalog in memory: a single query on bean init (Spring context startup).
  * The data comes from the {@code neighborhoods} table.
  */
 @Component
 @Primary
 public final class CabaNeighborhoodCatalog implements LocationDao {
 
-    private static final String LOAD_SQL = "SELECT id, name FROM neighborhoods ORDER BY id";
+    @PersistenceContext
+    private EntityManager em;
 
-    private final List<Neighborhood> allSortedByName;
-    private final Map<Long, Neighborhood> byId;
+    private List<Neighborhood> allSortedByName;
+    private Map<Long, Neighborhood> byId;
 
-    public CabaNeighborhoodCatalog(final DataSource dataSource) {
-        final JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        final List<Neighborhood> rows = jdbcTemplate.query(
-                LOAD_SQL,
-                (rs, rowNum) -> new Neighborhood(rs.getLong("id"), rs.getString("name")));
+    @PostConstruct
+    private void load() {
+        final List<Neighborhood> rows = em.createQuery(
+                "SELECT n FROM Neighborhood n ORDER BY n.id", Neighborhood.class)
+                .getResultList();
         if (rows.isEmpty()) {
             throw new IllegalStateException(
                     "Neighborhoods table is empty; verify Flyway migrations and the seed of the database.");

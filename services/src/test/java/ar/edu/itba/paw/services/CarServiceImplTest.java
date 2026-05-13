@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +40,7 @@ public class CarServiceImplTest {
         final Car.Transmission transmission = Car.Transmission.MANUAL;
         final Car car = Car.builder()
                 .id(carId)
-                .ownerId(ownerId)
+                .owner(User.identities(ownerId, "o@test.com", "O", "O"))
                 .plate(plate)
                 .brand(brand)
                 .model(model)
@@ -78,7 +79,7 @@ public class CarServiceImplTest {
         final Car.Transmission transmission = Car.Transmission.AUTOMATIC;
         final Car car = Car.builder()
                 .id(carId)
-                .ownerId(ownerId)
+                .owner(User.identities(ownerId, "o@test.com", "O", "O"))
                 .plate(plate)
                 .brand(brand)
                 .model(model)
@@ -114,7 +115,7 @@ public class CarServiceImplTest {
         // 1. Arrange
         final Car car1 = Car.builder()
                 .id(10L)
-                .ownerId(1L)
+                .owner(User.identities(1L, "o@test.com", "O", "O"))
                 .plate("plateTestOne")
                 .brand("brandTestOne")
                 .model("modelTestOne")
@@ -124,7 +125,7 @@ public class CarServiceImplTest {
                 .build();
         final Car car2 = Car.builder()
                 .id(11L)
-                .ownerId(2L)
+                .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("plateTestTwo")
                 .brand("brandTestTwo")
                 .model("modelTestTwo")
@@ -162,7 +163,7 @@ public class CarServiceImplTest {
         // 1. Arrange
         final Car car1 = Car.builder()
                 .id(20L)
-                .ownerId(3L)
+                .owner(User.identities(3L, "o@test.com", "O", "O"))
                 .plate("plateTestOne")
                 .brand("brandTestOne")
                 .model("modelTestOne")
@@ -172,7 +173,7 @@ public class CarServiceImplTest {
                 .build();
         final Car car2 = Car.builder()
                 .id(21L)
-                .ownerId(4L)
+                .owner(User.identities(4L, "o@test.com", "O", "O"))
                 .plate("plateTestTwo")
                 .brand("brandTestTwo")
                 .model("modelTestTwo")

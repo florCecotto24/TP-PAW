@@ -20,7 +20,7 @@ import ar.edu.itba.paw.persistence.ReviewDao;
 
 @Transactional
 @Repository
-public class ReviewHibernateDao implements ReviewDao {
+public class ReviewJpaDao implements ReviewDao {
 
     @PersistenceContext
     private EntityManager em;

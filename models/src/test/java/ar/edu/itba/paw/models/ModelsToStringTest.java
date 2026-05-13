@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.domain.User;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class ModelsToStringTest {
 
@@ -23,7 +24,7 @@ class ModelsToStringTest {
         // Arrange
         final Car car = Car.builder()
                 .id(1L)
-                .ownerId(2L)
+                .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("AA123BB")
                 .brand("Toyota")
                 .model("Yaris")
@@ -53,10 +54,12 @@ class ModelsToStringTest {
     @Test
     void testListingToStringIncludesAllFields() {
         // Arrange
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(9L);
         final Listing listing = Listing.builder()
                 .id(3L)
                 .title("Trip")
-                .carId(9L)
+                .car(carRef)
                 .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
                 .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
                 .status(Listing.Status.ACTIVE)
@@ -78,10 +81,12 @@ class ModelsToStringTest {
     @Test
     void testReservationToStringIncludesAllFields() {
         // Arrange
+        final Listing listingRef = Mockito.mock(Listing.class);
+        Mockito.when(listingRef.getId()).thenReturn(11L);
         final Reservation reservation = Reservation.builder()
                 .id(5L)
-                .riderId(7L)
-                .listingId(11L)
+                .rider(User.identities(7L, "r@test.com", "R", "R"))
+                .listing(listingRef)
                 .startDate(OffsetDateTime.parse("2026-04-10T08:00:00Z"))
                 .endDate(OffsetDateTime.parse("2026-04-12T08:00:00Z"))
                 .status(Reservation.Status.ACCEPTED)
@@ -100,9 +105,11 @@ class ModelsToStringTest {
     @Test
     void testListingAvailabilityToStringIncludesAllFields() {
         // Arrange
+        final Listing laListingRef = Mockito.mock(Listing.class);
+        Mockito.when(laListingRef.getId()).thenReturn(11L);
         final ListingAvailability availability = new ListingAvailability(
                 8L,
-                11L,
+                laListingRef,
                 LocalDate.of(2026, 4, 20),
                 LocalDate.of(2026, 4, 25),
                 OffsetDateTime.parse("2026-04-05T09:00:00Z"),
@@ -118,10 +125,12 @@ class ModelsToStringTest {
     @Test
     void testCarPictureToStringIncludesAllFields() {
         // Arrange
+        final Car cpCarRef = Mockito.mock(Car.class);
+        Mockito.when(cpCarRef.getId()).thenReturn(2L);
         final CarPicture picture = new CarPicture(
                 1L,
-                2L,
-                3L,
+                cpCarRef,
+                new Image(3L, "img.jpg", "image/jpeg", new byte[0]),
                 0,
                 OffsetDateTime.parse("2026-04-05T10:00:00Z"),
                 OffsetDateTime.parse("2026-04-05T10:05:00Z"));

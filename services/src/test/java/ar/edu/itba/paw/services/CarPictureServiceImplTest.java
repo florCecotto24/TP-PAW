@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.CarPictureDao;
@@ -42,7 +43,7 @@ public class CarPictureServiceImplTest {
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
         final byte[] data = {0x01, 0x02};
         final Image image = new Image(imageId, "photo.jpg", "image/jpeg", data);
-        final CarPicture carPicture = new CarPicture(10L, carId, imageId, displayOrder, createdAt, updatedAt);
+        final CarPicture carPicture = new CarPicture(10L, Mockito.mock(Car.class), image, displayOrder, createdAt, updatedAt);
 
         Mockito.when(imageService.getImageById(imageId)).thenReturn(Optional.of(image));
         Mockito.when(carPictureDao.createCarPicture(carId, imageId, displayOrder)).thenReturn(carPicture);
@@ -93,7 +94,7 @@ public class CarPictureServiceImplTest {
         final int displayOrder = 1;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
-        final CarPicture carPicture = new CarPicture(pictureId, carId, imageId, displayOrder, createdAt, updatedAt);
+        final CarPicture carPicture = new CarPicture(pictureId, Mockito.mock(Car.class), new Image(imageId, "img.jpg", "image/jpeg", new byte[0]), displayOrder, createdAt, updatedAt);
         Mockito.when(carPictureDao.getCarPictureById(pictureId)).thenReturn(Optional.of(carPicture));
 
         // 2. Execute
@@ -123,8 +124,8 @@ public class CarPictureServiceImplTest {
         final long carId = 7L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-04-01T08:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-04-02T08:00:00Z");
-        final CarPicture p1 = new CarPicture(100L, carId, 20L, 1, createdAt, updatedAt);
-        final CarPicture p2 = new CarPicture(101L, carId, 21L, 2, createdAt, updatedAt);
+        final CarPicture p1 = new CarPicture(100L, Mockito.mock(Car.class), new Image(20L, "img.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
+        final CarPicture p2 = new CarPicture(101L, Mockito.mock(Car.class), new Image(21L, "img.jpg", "image/jpeg", new byte[0]), 2, createdAt, updatedAt);
         final List<CarPicture> pictures = new ArrayList<>();
         pictures.add(p1);
         pictures.add(p2);

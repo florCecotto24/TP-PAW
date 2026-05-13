@@ -5,9 +5,12 @@ import java.time.OffsetDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -21,8 +24,9 @@ public class ListingAvailability {
     @SequenceGenerator(name = "listing_availability_id_seq", sequenceName = "listing_availability_id_seq", allocationSize = 1)
     private long id;
 
-    @Column(name = "listing_id", nullable = false)
-    private long listingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "listing_id", nullable = false)
+    private Listing listing;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startInclusive;
@@ -42,13 +46,13 @@ public class ListingAvailability {
 
     public ListingAvailability(
             final long id,
-            final long listingId,
+            final Listing listing,
             final LocalDate startInclusive,
             final LocalDate endInclusive,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
         this.id = id;
-        this.listingId = listingId;
+        this.listing = listing;
         this.startInclusive = startInclusive;
         this.endInclusive = endInclusive;
         this.createdAt = createdAt;
@@ -56,12 +60,12 @@ public class ListingAvailability {
     }
 
     public ListingAvailability(
-            final long listingId,
+            final Listing listing,
             final LocalDate startInclusive,
             final LocalDate endInclusive,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
-        this.listingId = listingId;
+        this.listing = listing;
         this.startInclusive = startInclusive;
         this.endInclusive = endInclusive;
         this.createdAt = createdAt;
@@ -72,8 +76,13 @@ public class ListingAvailability {
         return id;
     }
 
+    public Listing getListing() {
+        return listing;
+    }
+
+    /** Convenience accessor — returns {@code listing.getId()}. */
     public long getListingId() {
-        return listingId;
+        return listing.getId();
     }
 
     public LocalDate getStartInclusive() {
@@ -96,7 +105,7 @@ public class ListingAvailability {
     public String toString() {
         return "ListingAvailability{"
                 + "id=" + id
-                + ", listingId=" + listingId
+                + ", listingId=" + listing.getId()
                 + ", startInclusive=" + startInclusive
                 + ", endInclusive=" + endInclusive
                 + ", createdAt=" + createdAt

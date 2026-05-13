@@ -10,9 +10,12 @@ import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Converter;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -70,11 +73,13 @@ public class Reservation {
     @SequenceGenerator(name = "reservations_id_seq", sequenceName = "reservations_id_seq", allocationSize = 1)
     private long id;
 
-    @Column(name = "rider_id", nullable = false)
-    private long riderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rider_id", nullable = false)
+    private User rider;
 
-    @Column(name = "listing_id", nullable = false)
-    private long listingId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "listing_id", nullable = false)
+    private Listing listing;
 
     @Column(name = "start_date", nullable = false)
     private OffsetDateTime startDate;
@@ -95,8 +100,9 @@ public class Reservation {
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
-    @Column(name = "payment_receipt_file_id")
-    private Long paymentReceiptFileId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_receipt_file_id", nullable = true)
+    private StoredFile paymentReceiptFile;
 
     @Column(name = "payment_approved", nullable = false)
     private boolean paymentApproved;
@@ -110,8 +116,9 @@ public class Reservation {
     @Column(name = "payment_refund_required", nullable = false)
     private boolean paymentRefundRequired;
 
-    @Column(name = "payment_refund_receipt_file_id")
-    private Long paymentRefundReceiptFileId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_refund_receipt_file_id", nullable = true)
+    private StoredFile paymentRefundReceiptFile;
 
     @Column(name = "payment_refund_approved", nullable = false)
     private boolean paymentRefundApproved;
@@ -125,20 +132,20 @@ public class Reservation {
 
     private Reservation(final Builder b) {
         this.id = b.id;
-        this.riderId = b.riderId;
-        this.listingId = b.listingId;
+        this.rider = b.rider;
+        this.listing = b.listing;
         this.startDate = b.startDate;
         this.endDate = b.endDate;
         this.status = b.status;
         this.createdAt = b.createdAt;
         this.updatedAt = b.updatedAt;
         this.totalPrice = b.totalPrice;
-        this.paymentReceiptFileId = b.paymentReceiptFileId;
+        this.paymentReceiptFile = b.paymentReceiptFile;
         this.paymentApproved = b.paymentApproved;
         this.paymentProofDeadlineAt = b.paymentProofDeadlineAt;
         this.carReturned = b.carReturned;
         this.paymentRefundRequired = b.paymentRefundRequired;
-        this.paymentRefundReceiptFileId = b.paymentRefundReceiptFileId;
+        this.paymentRefundReceiptFile = b.paymentRefundReceiptFile;
         this.paymentRefundApproved = b.paymentRefundApproved;
         this.refundProofDeadlineAt = b.refundProofDeadlineAt;
     }
@@ -149,20 +156,20 @@ public class Reservation {
 
     public static final class Builder {
         private long id;
-        private long riderId;
-        private long listingId;
+        private User rider;
+        private Listing listing;
         private OffsetDateTime startDate;
         private OffsetDateTime endDate;
         private Status status;
         private OffsetDateTime createdAt;
         private OffsetDateTime updatedAt;
         private BigDecimal totalPrice;
-        private Long paymentReceiptFileId;
+        private StoredFile paymentReceiptFile;
         private boolean paymentApproved;
         private OffsetDateTime paymentProofDeadlineAt;
         private boolean carReturned;
         private boolean paymentRefundRequired;
-        private Long paymentRefundReceiptFileId;
+        private StoredFile paymentRefundReceiptFile;
         private boolean paymentRefundApproved;
         private OffsetDateTime refundProofDeadlineAt;
 
@@ -171,13 +178,13 @@ public class Reservation {
             return this;
         }
 
-        public Builder riderId(final long riderId) {
-            this.riderId = riderId;
+        public Builder rider(final User rider) {
+            this.rider = rider;
             return this;
         }
 
-        public Builder listingId(final long listingId) {
-            this.listingId = listingId;
+        public Builder listing(final Listing listing) {
+            this.listing = listing;
             return this;
         }
 
@@ -211,8 +218,8 @@ public class Reservation {
             return this;
         }
 
-        public Builder paymentReceiptFileId(final Long paymentReceiptFileId) {
-            this.paymentReceiptFileId = paymentReceiptFileId;
+        public Builder paymentReceiptFile(final StoredFile paymentReceiptFile) {
+            this.paymentReceiptFile = paymentReceiptFile;
             return this;
         }
 
@@ -236,8 +243,8 @@ public class Reservation {
             return this;
         }
 
-        public Builder paymentRefundReceiptFileId(final Long paymentRefundReceiptFileId) {
-            this.paymentRefundReceiptFileId = paymentRefundReceiptFileId;
+        public Builder paymentRefundReceiptFile(final StoredFile paymentRefundReceiptFile) {
+            this.paymentRefundReceiptFile = paymentRefundReceiptFile;
             return this;
         }
 
@@ -252,6 +259,8 @@ public class Reservation {
         }
 
         public Reservation build() {
+            Objects.requireNonNull(rider, "rider");
+            Objects.requireNonNull(listing, "listing");
             Objects.requireNonNull(startDate, "startDate");
             Objects.requireNonNull(endDate, "endDate");
             Objects.requireNonNull(status, "status");
@@ -266,12 +275,22 @@ public class Reservation {
         return id;
     }
 
-    public long getRiderId() {
-        return riderId;
+    public User getRider() {
+        return rider;
     }
 
+    /** Convenience accessor — returns {@code rider.getId()}. */
+    public long getRiderId() {
+        return rider.getId();
+    }
+
+    public Listing getListing() {
+        return listing;
+    }
+
+    /** Convenience accessor — returns {@code listing.getId()}. */
     public long getListingId() {
-        return listingId;
+        return listing.getId();
     }
 
     public OffsetDateTime getStartDate() {
@@ -298,8 +317,13 @@ public class Reservation {
         return totalPrice;
     }
 
+    public Optional<StoredFile> getPaymentReceiptFile() {
+        return Optional.ofNullable(paymentReceiptFile);
+    }
+
+    /** Convenience accessor — returns the payment receipt file id, or empty if no file is set. */
     public Optional<Long> getPaymentReceiptFileId() {
-        return Optional.ofNullable(paymentReceiptFileId);
+        return paymentReceiptFile == null ? Optional.empty() : Optional.of(paymentReceiptFile.getId());
     }
 
     public boolean isPaymentApproved() {
@@ -318,8 +342,13 @@ public class Reservation {
         return paymentRefundRequired;
     }
 
+    public Optional<StoredFile> getPaymentRefundReceiptFile() {
+        return Optional.ofNullable(paymentRefundReceiptFile);
+    }
+
+    /** Convenience accessor — returns the refund receipt file id, or empty if no file is set. */
     public Optional<Long> getPaymentRefundReceiptFileId() {
-        return Optional.ofNullable(paymentRefundReceiptFileId);
+        return paymentRefundReceiptFile == null ? Optional.empty() : Optional.of(paymentRefundReceiptFile.getId());
     }
 
     public boolean isPaymentRefundApproved() {
@@ -334,8 +363,8 @@ public class Reservation {
     public String toString() {
         return "Reservation{" +
                 "id=" + id +
-                ", riderId=" + riderId +
-                ", listingId=" + listingId +
+                ", riderId=" + rider.getId() +
+                ", listingId=" + listing.getId() +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", status=" + status +

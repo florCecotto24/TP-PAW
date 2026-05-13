@@ -12,26 +12,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @Transactional
 @Repository
-public class CarHibernateDao implements CarDao {
+public class CarJpaDao implements CarDao {
 
     @PersistenceContext
     private EntityManager em;
 
     private final int carCatalogLimit;
 
-    public CarHibernateDao(@Value("${app.listing.car-catalog-limit:8}") final int carCatalogLimit) {
+    public CarJpaDao(@Value("${app.listing.car-catalog-limit:8}") final int carCatalogLimit) {
         this.carCatalogLimit = Math.max(1, carCatalogLimit);
     }
 
     @Override
     public Car createCar(final long ownerId, final String plate, final String brand, final String model,
                          final Car.Type type, final Car.Powertrain powertrain, final Car.Transmission transmission) {
+        final User ownerRef = em.getReference(User.class, ownerId);
         final Car car = Car.builder()
-                .ownerId(ownerId)
+                .owner(ownerRef)
                 .plate(plate)
                 .brand(brand)
                 .model(model)
@@ -51,7 +53,7 @@ public class CarHibernateDao implements CarDao {
     @Override
     public List<Car> getCheapestCars() {
         return em.createQuery(
-                        "SELECT c FROM Car c, Listing l WHERE l.carId = c.id AND l.status = :status ORDER BY l.dayPrice ASC",
+                        "SELECT c FROM Car c JOIN c.listings l WHERE l.status = :status ORDER BY l.dayPrice ASC",
                         Car.class)
                 .setParameter("status", Listing.Status.ACTIVE)
                 .setMaxResults(carCatalogLimit)
@@ -61,7 +63,7 @@ public class CarHibernateDao implements CarDao {
     @Override
     public List<Car> getMostRecentCars() {
         return em.createQuery(
-                        "SELECT c FROM Car c, Listing l WHERE l.carId = c.id AND l.status = :status ORDER BY l.createdAt DESC",
+                        "SELECT c FROM Car c JOIN c.listings l WHERE l.status = :status ORDER BY l.createdAt DESC",
                         Car.class)
                 .setParameter("status", Listing.Status.ACTIVE)
                 .setMaxResults(carCatalogLimit)

@@ -257,13 +257,7 @@ public class UserServiceImplTest {
     @Test
     public void testUpdateProfilePictureWhenUserExistsDoesNotThrow() {
         // 1. Arrange
-        final User user = User.builder()
-                .id(1L)
-                .email("u@mail.com")
-                .forename("A")
-                .surname("B")
-                .profilePictureId(9L)
-                .build();
+        final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         final Image created = new Image(20L, "p.png", "image/png", new byte[] {1, 2});
         Mockito.when(imageService.createImage(Mockito.eq("p.png"), Mockito.eq("image/png"), Mockito.any()))
@@ -299,7 +293,7 @@ public class UserServiceImplTest {
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
         Mockito.when(storedFileService.create(1L, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}))
-                .thenReturn(new StoredFile(10L, 1L, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}, null));
+                .thenReturn(new StoredFile(10L, User.identities(1L, "u@test.com", "U", "U"), "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}, null));
 
         Assertions.assertDoesNotThrow(() -> userService.uploadValidatedProfileDocument(
                 1L, UserDocumentType.LICENSE, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}));
@@ -364,8 +358,8 @@ public class UserServiceImplTest {
                 .email("a@test.com")
                 .forename("A")
                 .surname("B")
-                .licenseFileId(10L)
-                .identityFileId(20L)
+                .licenseFile(Mockito.mock(StoredFile.class))
+                .identityFile(Mockito.mock(StoredFile.class))
                 .build();
 
         Assertions.assertTrue(userService.hasUploadedLicenseAndIdentity(user));
@@ -378,7 +372,7 @@ public class UserServiceImplTest {
                 .email("a@test.com")
                 .forename("A")
                 .surname("B")
-                .licenseFileId(10L)
+                .licenseFile(Mockito.mock(StoredFile.class))
                 .build();
 
         Assertions.assertFalse(userService.hasUploadedLicenseAndIdentity(user));

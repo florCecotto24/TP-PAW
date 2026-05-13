@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 
@@ -31,7 +32,9 @@ public class ListingAvailabilityServiceImplTest {
         final LocalDate end = LocalDate.of(2026, 6, 30);
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-05-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-05-01T10:05:00Z");
-        final ListingAvailability row = new ListingAvailability(900L, listingId, start, end, createdAt, updatedAt);
+        final Listing listingRef = Mockito.mock(Listing.class);
+        Mockito.when(listingRef.getId()).thenReturn(listingId);
+        final ListingAvailability row = new ListingAvailability(900L, listingRef, start, end, createdAt, updatedAt);
         Mockito.when(listingAvailabilityDao.create(listingId, start, end)).thenReturn(row);
 
         final ListingAvailability result = listingAvailabilityService.create(listingId, start, end);
@@ -47,8 +50,9 @@ public class ListingAvailabilityServiceImplTest {
     public void testFindByListingIdReturnsListFromDao() {
         final long listingId = 7L;
         final OffsetDateTime t = OffsetDateTime.parse("2026-04-01T12:00:00Z");
-        final ListingAvailability a = new ListingAvailability(1L, listingId, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10), t, t);
-        final ListingAvailability b = new ListingAvailability(2L, listingId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), t, t);
+        final Listing listingRef = Mockito.mock(Listing.class);
+        final ListingAvailability a = new ListingAvailability(1L, listingRef, LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10), t, t);
+        final ListingAvailability b = new ListingAvailability(2L, listingRef, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), t, t);
         Mockito.when(listingAvailabilityDao.findByListingId(listingId)).thenReturn(List.of(a, b));
 
         final List<ListingAvailability> result = listingAvailabilityService.findByListingId(listingId);
@@ -64,7 +68,7 @@ public class ListingAvailabilityServiceImplTest {
         final LocalDate minEnd = LocalDate.of(2026, 7, 1);
         final OffsetDateTime t = OffsetDateTime.parse("2026-05-02T08:00:00Z");
         final ListingAvailability row =
-                new ListingAvailability(3L, 10L, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 1), t, t);
+                new ListingAvailability(3L, Mockito.mock(Listing.class), LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 1), t, t);
         Mockito.when(listingAvailabilityDao.findByListingIdsEndingOnOrAfter(ids, minEnd)).thenReturn(List.of(row));
 
         final List<ListingAvailability> result =

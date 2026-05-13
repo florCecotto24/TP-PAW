@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.persistence.EntityManager;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
@@ -17,7 +20,7 @@ import ar.edu.itba.paw.persistence.UserDao;
 
 @Transactional
 @Repository
-public class UserHibernateDao implements UserDao {
+public class UserJpaDao implements UserDao {
 
     @PersistenceContext
     private EntityManager em;
@@ -41,9 +44,8 @@ public class UserHibernateDao implements UserDao {
                 .licenseValidated(Boolean.FALSE)
                 .identityValidated(Boolean.FALSE)
                 .build();
+        user.getRoles().add(UserRole.USER.persistenceName());
         em.persist(user);
-        em.flush();
-        insertUserRole(user.getId(), UserRole.USER);
         return user;
     }
 
@@ -100,16 +102,20 @@ public class UserHibernateDao implements UserDao {
 
     @Override
     public void updateProfilePictureId(final long userId, final Long profilePictureImageId) {
-        em.createQuery("UPDATE User u SET u.profilePictureId = :pictureId WHERE u.id = :id")
-                .setParameter("pictureId", profilePictureImageId)
+        final Image pictureRef = profilePictureImageId != null
+                ? em.getReference(Image.class, profilePictureImageId)
+                : null;
+        em.createQuery("UPDATE User u SET u.profilePicture = :picture WHERE u.id = :id")
+                .setParameter("picture", pictureRef)
                 .setParameter("id", userId)
                 .executeUpdate();
     }
 
     @Override
     public void updateLicenseDocument(final long userId, final long fileId, final boolean validated) {
-        em.createQuery("UPDATE User u SET u.licenseFileId = :fileId, u.licenseValidated = :validated WHERE u.id = :id")
-                .setParameter("fileId", fileId)
+        final StoredFile fileRef = em.getReference(StoredFile.class, fileId);
+        em.createQuery("UPDATE User u SET u.licenseFile = :file, u.licenseValidated = :validated WHERE u.id = :id")
+                .setParameter("file", fileRef)
                 .setParameter("validated", validated)
                 .setParameter("id", userId)
                 .executeUpdate();
@@ -117,15 +123,16 @@ public class UserHibernateDao implements UserDao {
 
     @Override
     public void clearLicenseDocument(final long userId) {
-        em.createQuery("UPDATE User u SET u.licenseFileId = null, u.licenseValidated = false WHERE u.id = :id")
+        em.createQuery("UPDATE User u SET u.licenseFile = null, u.licenseValidated = false WHERE u.id = :id")
                 .setParameter("id", userId)
                 .executeUpdate();
     }
 
     @Override
     public void updateIdentityDocument(final long userId, final long fileId, final boolean validated) {
-        em.createQuery("UPDATE User u SET u.identityFileId = :fileId, u.identityValidated = :validated WHERE u.id = :id")
-                .setParameter("fileId", fileId)
+        final StoredFile fileRef = em.getReference(StoredFile.class, fileId);
+        em.createQuery("UPDATE User u SET u.identityFile = :file, u.identityValidated = :validated WHERE u.id = :id")
+                .setParameter("file", fileRef)
                 .setParameter("validated", validated)
                 .setParameter("id", userId)
                 .executeUpdate();
@@ -133,7 +140,7 @@ public class UserHibernateDao implements UserDao {
 
     @Override
     public void clearIdentityDocument(final long userId) {
-        em.createQuery("UPDATE User u SET u.identityFileId = null, u.identityValidated = false WHERE u.id = :id")
+        em.createQuery("UPDATE User u SET u.identityFile = null, u.identityValidated = false WHERE u.id = :id")
                 .setParameter("id", userId)
                 .executeUpdate();
     }
@@ -157,7 +164,7 @@ public class UserHibernateDao implements UserDao {
     @Override
     public Optional<User> getListingOwner(final long listingId) {
         return em.createQuery(
-                        "SELECT u FROM User u, Car c, Listing l WHERE c.ownerId = u.id AND l.carId = c.id AND l.id = :listingId",
+                        "SELECT l.car.owner FROM Listing l WHERE l.id = :listingId",
                         User.class)
                 .setParameter("listingId", listingId)
                 .getResultList().stream().findAny();
@@ -171,21 +178,19 @@ public class UserHibernateDao implements UserDao {
                 .executeUpdate();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<String> findRoleNamesForUser(final long userId) {
-        return (List<String>) em.createNativeQuery(
-                        "SELECT role FROM user_roles WHERE user_id = :userId ORDER BY role")
-                .setParameter("userId", userId)
-                .getResultList();
+        return getUserById(userId)
+                .map(u -> new ArrayList<>(u.getRoles()))
+                .orElse(new ArrayList<>());
     }
 
     @Override
     public void insertUserRole(final long userId, final UserRole role) {
-        em.createNativeQuery("INSERT INTO user_roles (user_id, role) VALUES (:userId, :role)")
-                .setParameter("userId", userId)
-                .setParameter("role", role.persistenceName())
-                .executeUpdate();
+        final User user = em.find(User.class, userId);
+        if (user != null) {
+            user.getRoles().add(role.persistenceName());
+        }
     }
 
     @Override

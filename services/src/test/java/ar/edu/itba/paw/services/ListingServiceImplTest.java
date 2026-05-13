@@ -140,7 +140,7 @@ public class ListingServiceImplTest {
         final Listing listing = Listing.builder()
                 .id(listingId)
                 .title(title)
-                .carId(carId)
+                .car(Mockito.mock(Car.class))
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .status(Listing.Status.ACTIVE)
@@ -181,10 +181,11 @@ public class ListingServiceImplTest {
         final long ownerId = 7L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-06-02T12:00:00Z");
+        final User owner = User.identities(ownerId, "owner@test.com", "O", "User");
         final Listing listing = Listing.builder()
                 .id(listingId)
                 .title("Detail title")
-                .carId(carId)
+                .car(Mockito.mock(Car.class))
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .status(Listing.Status.ACTIVE)
@@ -196,7 +197,7 @@ public class ListingServiceImplTest {
                 .build();
         final Car car = Car.builder()
                 .id(carId)
-                .ownerId(ownerId)
+                .owner(owner)
                 .plate("ABC")
                 .brand("Brand")
                 .model("Model")
@@ -204,7 +205,6 @@ public class ListingServiceImplTest {
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();
-        final User owner = User.identities(ownerId, "owner@test.com", "O", "User");
         final ListingDetail detail = new ListingDetail(listing, car, owner, List.of(), List.of());
         Mockito.when(listingDao.getListingDetailById(listingId)).thenReturn(Optional.of(detail));
 
@@ -238,7 +238,8 @@ public class ListingServiceImplTest {
         final LocalDate rangeEnd = LocalDate.of(2026, 1, 5);
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
-        final ListingAvailability la = new ListingAvailability(availabilityId, listingId, rangeStart, rangeEnd, createdAt, updatedAt);
+        final Listing laListingRef = Mockito.mock(Listing.class);
+        final ListingAvailability la = new ListingAvailability(availabilityId, laListingRef, rangeStart, rangeEnd, createdAt, updatedAt);
         final List<ListingAvailability> list = new ArrayList<>();
         list.add(la);
         Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(list);
@@ -259,7 +260,7 @@ public class ListingServiceImplTest {
         final LocalDate availEnd = LocalDate.of(2026, 1, 3);
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
-        final ListingAvailability la = new ListingAvailability(availabilityId, listingId, availStart, availEnd, createdAt, updatedAt);
+        final ListingAvailability la = new ListingAvailability(availabilityId, Mockito.mock(Listing.class), availStart, availEnd, createdAt, updatedAt);
         Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(List.of(la));
         Mockito.when(reservationService.findBlockingReservationsByListingId(listingId)).thenReturn(Collections.emptyList());
 
@@ -284,12 +285,12 @@ public class ListingServiceImplTest {
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
-        final ListingAvailability la = new ListingAvailability(availabilityId, listingId, availStart, availEnd, createdAt, updatedAt);
+        final ListingAvailability la = new ListingAvailability(availabilityId, Mockito.mock(Listing.class), availStart, availEnd, createdAt, updatedAt);
         Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(List.of(la));
         final Reservation blocking = Reservation.builder()
                 .id(reservationId)
-                .riderId(riderId)
-                .listingId(listingId)
+                .rider(User.identities(riderId, "r@test.com", "R", "Rider"))
+                .listing(Mockito.mock(Listing.class))
                 .startDate(LocalDateTime.of(2026, 1, 2, 10, 0).atZone(wall).toOffsetDateTime())
                 .endDate(LocalDateTime.of(2026, 1, 2, 20, 0).atZone(wall).toOffsetDateTime())
                 .status(Reservation.Status.ACCEPTED)
@@ -334,7 +335,7 @@ public class ListingServiceImplTest {
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
-        final ListingAvailability la = new ListingAvailability(availabilityId, listingId, availStart, availEnd, createdAt, updatedAt);
+        final ListingAvailability la = new ListingAvailability(availabilityId, Mockito.mock(Listing.class), availStart, availEnd, createdAt, updatedAt);
         Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(List.of(la));
         Mockito.when(reservationService.findBlockingReservationsByListingId(listingId)).thenReturn(Collections.emptyList());
         final OffsetDateTime pickup = LocalDateTime.of(2026, 2, 5, 10, 0).atZone(wall).toOffsetDateTime();
@@ -357,7 +358,7 @@ public class ListingServiceImplTest {
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
-        final ListingAvailability la = new ListingAvailability(availabilityId, listingId, availStart, availEnd, createdAt, updatedAt);
+        final ListingAvailability la = new ListingAvailability(availabilityId, Mockito.mock(Listing.class), availStart, availEnd, createdAt, updatedAt);
         Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(List.of(la));
         Mockito.when(reservationService.findBlockingReservationsByListingId(listingId)).thenReturn(Collections.emptyList());
         final OffsetDateTime pickup = LocalDateTime.of(2026, 3, 4, 10, 0).atZone(wall).toOffsetDateTime();
@@ -418,7 +419,7 @@ public class ListingServiceImplTest {
         final Listing first = Listing.builder()
                 .id(firstId)
                 .title(title1)
-                .carId(carId1)
+                .car(Mockito.mock(Car.class))
                 .createdAt(createdAt1)
                 .updatedAt(updatedAt1)
                 .status(Listing.Status.ACTIVE)
@@ -431,7 +432,7 @@ public class ListingServiceImplTest {
         final Listing second = Listing.builder()
                 .id(secondId)
                 .title(title2)
-                .carId(carId2)
+                .car(Mockito.mock(Car.class))
                 .createdAt(createdAt2)
                 .updatedAt(updatedAt2)
                 .status(Listing.Status.PAUSED)
@@ -518,9 +519,16 @@ public class ListingServiceImplTest {
         final long neighborhoodId = 1L;
 
         final Image image = new Image(imageId, imageName, imageType, imageData);
+        final User user = User.builder()
+                .id(ownerId)
+                .email("owner@test.com")
+                .forename("ownerName")
+                .surname("ownerSurname")
+                .cbu("1234567890123456789012")
+                .build();
         final Car car = Car.builder()
                 .id(carId)
-                .ownerId(ownerId)
+                .owner(user)
                 .plate(plate)
                 .brand(brand)
                 .model(model)
@@ -531,7 +539,7 @@ public class ListingServiceImplTest {
         final Listing listing = Listing.builder()
                 .id(listingId)
                 .title(expectedTitle)
-                .carId(carId)
+                .car(car)
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .status(status)
@@ -541,16 +549,9 @@ public class ListingServiceImplTest {
                 .description(description)
                 .checkInTime(checkInTime)
                 .checkOutTime(checkOutTime)
-                .neighborhoodId(neighborhoodId)
+                .neighborhood(new Neighborhood(neighborhoodId, "Palermo"))
                 .build();
-        final User user = User.builder()
-                .id(ownerId)
-                .email("owner@test.com")
-                .forename("ownerName")
-                .surname("ownerSurname")
-                .cbu("1234567890123456789012")
-                .build();
-        final CarPicture carPicture = new CarPicture(carPictureId, carId, imageId, 1, createdAt, updatedAt);
+        final CarPicture carPicture = new CarPicture(carPictureId, car, image, 1, createdAt, updatedAt);
         final List<AvailabilityPeriod> periods = List.of(new AvailabilityPeriod(startDate, endDate));
         final List<ImageUpload> uploads = List.of(new ImageUpload(imageName, imageType, imageData));
 
@@ -572,7 +573,7 @@ public class ListingServiceImplTest {
                 checkOutTime,
                 neighborhoodId)).thenReturn(listing);
         Mockito.when(listingAvailabilityService.create(listingId, startDate, endDate))
-                .thenReturn(new ListingAvailability(10L, listingId, startDate, endDate, createdAt, updatedAt));
+                .thenReturn(new ListingAvailability(10L, listing, startDate, endDate, createdAt, updatedAt));
         Mockito.when(imageService.createImage(imageName, imageType, imageData)).thenReturn(image);
         Mockito.when(carPictureService.createCarPicture(carId, image.getId(), 1)).thenReturn(carPicture);
 

@@ -4,13 +4,16 @@ import java.time.OffsetDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-/** Ordered gallery link between a {@link Car} and an {@link Image} id for listing photos. */
+/** Ordered gallery link between a {@link Car} and an {@link Image} for listing photos. */
 @Entity
 @Table(name = "car_pictures")
 public class CarPicture {
@@ -20,11 +23,13 @@ public class CarPicture {
     @SequenceGenerator(name = "car_pictures_id_seq", sequenceName = "car_pictures_id_seq", allocationSize = 1)
     private long id;
 
-    @Column(name = "car_id", nullable = false)
-    private long carId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_id", nullable = false)
+    private Car car;
 
-    @Column(name = "image_id", nullable = false)
-    private long imageId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "image_id", nullable = false)
+    private Image image;
 
     @Column(name = "display_order", nullable = false)
     private int displayOrder;
@@ -41,27 +46,27 @@ public class CarPicture {
 
     public CarPicture(
             final long id,
-            final long carId,
-            final long imageId,
+            final Car car,
+            final Image image,
             final int displayOrder,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
         this.id = id;
-        this.carId = carId;
-        this.imageId = imageId;
+        this.car = car;
+        this.image = image;
         this.displayOrder = displayOrder;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
     public CarPicture(
-            final long carId,
-            final long imageId,
+            final Car car,
+            final Image image,
             final int displayOrder,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
-        this.carId = carId;
-        this.imageId = imageId;
+        this.car = car;
+        this.image = image;
         this.displayOrder = displayOrder;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -71,12 +76,22 @@ public class CarPicture {
         return id;
     }
 
-    public long getCarId() {
-        return carId;
+    public Car getCar() {
+        return car;
     }
 
+    /** Convenience accessor — returns {@code car.getId()}. */
+    public long getCarId() {
+        return car.getId();
+    }
+
+    public Image getImage() {
+        return image;
+    }
+
+    /** Convenience accessor — returns {@code image.getId()}. */
     public long getImageId() {
-        return imageId;
+        return image.getId();
     }
 
     public int getDisplayOrder() {
@@ -95,8 +110,8 @@ public class CarPicture {
     public String toString() {
         return "CarPicture{" +
                 "id=" + id +
-                ", carId=" + carId +
-                ", imageId=" + imageId +
+                ", carId=" + car.getId() +
+                ", imageId=" + image.getId() +
                 ", displayOrder=" + displayOrder +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +

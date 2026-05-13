@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -31,7 +32,7 @@ public class ListingAddressFormatterTest {
         return Listing.builder()
                 .id(1L)
                 .title("T")
-                .carId(2L)
+                .car(Mockito.mock(Car.class))
                 .createdAt(OffsetDateTime.parse("2026-01-01T12:00:00Z"))
                 .updatedAt(OffsetDateTime.parse("2026-01-01T12:00:00Z"))
                 .status(Listing.Status.ACTIVE)
@@ -45,7 +46,7 @@ public class ListingAddressFormatterTest {
     public void testFormatPublicPickupLocationJoinsStreetAndNeighborhoodName() {
         final Listing listing = baseListing()
                 .startPointStreet("  Corrientes  ")
-                .neighborhoodId(9L)
+                .neighborhood(new Neighborhood(9L, ""))
                 .build();
         Mockito.when(locationService.findNeighborhoodById(9L))
                 .thenReturn(Optional.of(new Neighborhood(9L, "Palermo")));
@@ -57,7 +58,7 @@ public class ListingAddressFormatterTest {
     public void testFormatPublicPickupLocationWhenNeighborhoodMissingReturnsStreetOnly() {
         final Listing listing = baseListing()
                 .startPointStreet("Solo")
-                .neighborhoodId(99L)
+                .neighborhood(new Neighborhood(99L, ""))
                 .build();
         Mockito.when(locationService.findNeighborhoodById(99L)).thenReturn(Optional.empty());
 
@@ -69,7 +70,7 @@ public class ListingAddressFormatterTest {
         final Listing listing = baseListing()
                 .startPointStreet("X")
                 .startPointNumber("123")
-                .neighborhoodId(1L)
+                .neighborhood(new Neighborhood(1L, ""))
                 .build();
         Mockito.when(locationService.findNeighborhoodById(1L))
                 .thenReturn(Optional.of(new Neighborhood(1L, "N")));

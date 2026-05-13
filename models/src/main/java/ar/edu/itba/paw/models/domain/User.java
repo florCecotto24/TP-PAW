@@ -1,14 +1,24 @@
 package ar.edu.itba.paw.models.domain;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -48,8 +58,9 @@ public class User {
     @Column(length = 500)
     private String about;
 
-    @Column(name = "profile_picture_id")
-    private Long profilePictureId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_picture_id")
+    private Image profilePicture;
 
     /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
     @Column(name = "latest_locale", length = 32)
@@ -62,17 +73,30 @@ public class User {
     @Column(length = 22)
     private String cbu;
 
-    @Column(name = "license_file_id")
-    private Long licenseFileId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "license_file_id")
+    private StoredFile licenseFile;
 
     @Column(name = "license_validated")
     private Boolean licenseValidated;
 
-    @Column(name = "identity_file_id")
-    private Long identityFileId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "identity_file_id")
+    private StoredFile identityFile;
 
     @Column(name = "identity_validated")
     private Boolean identityValidated;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "role")
+    private Set<String> roles = new HashSet<>();
+
+    @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
+    private List<Car> cars = new ArrayList<>();
+
+    @OneToMany(mappedBy = "rider", fetch = FetchType.LAZY)
+    private List<Reservation> reservationsAsRider = new ArrayList<>();
 
     /* package */ User() {
         // For Hibernate
@@ -88,13 +112,13 @@ public class User {
         this.phoneNumber = b.phoneNumber;
         this.birthDate = b.birthDate;
         this.about = b.about;
-        this.profilePictureId = b.profilePictureId;
+        this.profilePicture = b.profilePicture;
         this.latestLocaleTag = b.latestLocaleTag;
         this.memberSince = b.memberSince;
         this.cbu = b.cbu;
-        this.licenseFileId = b.licenseFileId;
+        this.licenseFile = b.licenseFile;
         this.licenseValidated = b.licenseValidated;
-        this.identityFileId = b.identityFileId;
+        this.identityFile = b.identityFile;
         this.identityValidated = b.identityValidated;
     }
 
@@ -117,13 +141,13 @@ public class User {
         private String phoneNumber;
         private LocalDate birthDate;
         private String about;
-        private Long profilePictureId;
+        private Image profilePicture;
         private String latestLocaleTag;
         private LocalDate memberSince;
         private String cbu;
-        private Long licenseFileId;
+        private StoredFile licenseFile;
         private Boolean licenseValidated;
-        private Long identityFileId;
+        private StoredFile identityFile;
         private Boolean identityValidated;
 
         public Builder id(final long id) {
@@ -171,8 +195,8 @@ public class User {
             return this;
         }
 
-        public Builder profilePictureId(final Long profilePictureId) {
-            this.profilePictureId = profilePictureId;
+        public Builder profilePicture(final Image profilePicture) {
+            this.profilePicture = profilePicture;
             return this;
         }
 
@@ -191,8 +215,8 @@ public class User {
             return this;
         }
 
-        public Builder licenseFileId(final Long licenseFileId) {
-            this.licenseFileId = licenseFileId;
+        public Builder licenseFile(final StoredFile licenseFile) {
+            this.licenseFile = licenseFile;
             return this;
         }
 
@@ -201,8 +225,8 @@ public class User {
             return this;
         }
 
-        public Builder identityFileId(final Long identityFileId) {
-            this.identityFileId = identityFileId;
+        public Builder identityFile(final StoredFile identityFile) {
+            this.identityFile = identityFile;
             return this;
         }
 
@@ -255,8 +279,13 @@ public class User {
         return Optional.ofNullable(about);
     }
 
+    public Optional<Image> getProfilePicture() {
+        return Optional.ofNullable(profilePicture);
+    }
+
+    /** Convenience accessor — returns the profile picture id, or empty if no picture is set. */
     public Optional<Long> getProfilePictureId() {
-        return Optional.ofNullable(profilePictureId);
+        return profilePicture == null ? Optional.empty() : Optional.of(profilePicture.getId());
     }
 
     public Optional<String> getLatestLocaleTag() {
@@ -271,20 +300,42 @@ public class User {
         return Optional.ofNullable(cbu);
     }
 
+    public Optional<StoredFile> getLicenseFile() {
+        return Optional.ofNullable(licenseFile);
+    }
+
+    /** Convenience accessor — returns the license file id, or empty if no file is set. */
     public Optional<Long> getLicenseFileId() {
-        return Optional.ofNullable(licenseFileId);
+        return licenseFile == null ? Optional.empty() : Optional.of(licenseFile.getId());
     }
 
     public boolean isLicenseValidated() {
         return Boolean.TRUE.equals(licenseValidated);
     }
 
+    public Optional<StoredFile> getIdentityFile() {
+        return Optional.ofNullable(identityFile);
+    }
+
+    /** Convenience accessor — returns the identity file id, or empty if no file is set. */
     public Optional<Long> getIdentityFileId() {
-        return Optional.ofNullable(identityFileId);
+        return identityFile == null ? Optional.empty() : Optional.of(identityFile.getId());
     }
 
     public boolean isIdentityValidated() {
         return Boolean.TRUE.equals(identityValidated);
+    }
+
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    public List<Car> getCars() {
+        return cars;
+    }
+
+    public List<Reservation> getReservationsAsRider() {
+        return reservationsAsRider;
     }
 
     /**

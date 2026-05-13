@@ -9,9 +9,11 @@ import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.User;
@@ -22,10 +24,11 @@ class ListingDetailTest {
     @Test
     void testConstructorCreatesDefensiveUnmodifiableCopiesOfLists() {
         // Arrange
+        final Car carForListing = Mockito.mock(Car.class);
         final Listing listing = Listing.builder()
                 .id(1L)
                 .title("Weekend car")
-                .carId(2L)
+                .car(carForListing)
                 .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
                 .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
                 .status(Listing.Status.ACTIVE)
@@ -38,7 +41,7 @@ class ListingDetailTest {
 
         final Car car = Car.builder()
                 .id(2L)
-                .ownerId(3L)
+                .owner(User.identities(3L, "o@test.com", "O", "O"))
                 .plate("AA123BB")
                 .brand("Toyota")
                 .model("Yaris")
@@ -49,12 +52,12 @@ class ListingDetailTest {
         final User owner = User.identities(3L, "owner@example.com", "Owner", "Surname");
 
         final List<CarPicture> pictures = new ArrayList<>(List.of(
-                new CarPicture(10L, 2L, 100L, 0,
+                new CarPicture(10L, Mockito.mock(Car.class), new Image(100L, "img.jpg", "image/jpeg", new byte[0]), 0,
                         OffsetDateTime.parse("2026-04-05T10:00:00Z"),
                         OffsetDateTime.parse("2026-04-05T10:10:00Z"))));
 
         final List<ListingAvailability> availabilities = new ArrayList<>(List.of(
-                new ListingAvailability(20L, 1L,
+                new ListingAvailability(20L, Mockito.mock(Listing.class),
                         LocalDate.of(2026, 4, 10),
                         LocalDate.of(2026, 4, 12),
                         OffsetDateTime.parse("2026-04-05T10:00:00Z"),
@@ -63,7 +66,7 @@ class ListingDetailTest {
         final ListingDetail detail = new ListingDetail(listing, car, owner, pictures, availabilities);
 
         // Exercise
-        pictures.add(new CarPicture(11L, 2L, 101L, 1,
+        pictures.add(new CarPicture(11L, Mockito.mock(Car.class), new Image(101L, "img.jpg", "image/jpeg", new byte[0]), 1,
                 OffsetDateTime.parse("2026-04-05T10:20:00Z"),
                 OffsetDateTime.parse("2026-04-05T10:30:00Z")));
         availabilities.clear();

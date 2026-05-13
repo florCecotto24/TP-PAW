@@ -21,7 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
@@ -29,7 +31,7 @@ import ar.edu.itba.paw.persistence.ReservationDao;
 
 @Transactional
 @Repository
-public class ReservationHibernateDao implements ReservationDao {
+public class ReservationJpaDao implements ReservationDao {
 
     private static final List<Reservation.Status> BLOCKING_STATUSES = Arrays.asList(
             Reservation.Status.PENDING, Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
@@ -44,7 +46,7 @@ public class ReservationHibernateDao implements ReservationDao {
     public boolean hasActiveOverlap(final long listingId, final OffsetDateTime startDate, final OffsetDateTime endDate) {
         final Number count = (Number) em.createQuery(
                         "SELECT COUNT(r) FROM Reservation r "
-                                + "WHERE r.listingId = :listingId "
+                                + "WHERE r.listing.id = :listingId "
                                 + "AND r.status IN :statuses "
                                 + "AND r.startDate < :endDate "
                                 + "AND r.endDate > :startDate")
@@ -59,7 +61,7 @@ public class ReservationHibernateDao implements ReservationDao {
     @Override
     public List<Reservation> findBlockingByListingId(final long listingId) {
         return em.createQuery(
-                        "FROM Reservation r WHERE r.listingId = :listingId AND r.status IN :statuses ORDER BY r.startDate ASC",
+                        "FROM Reservation r WHERE r.listing.id = :listingId AND r.status IN :statuses ORDER BY r.startDate ASC",
                         Reservation.class)
                 .setParameter("listingId", listingId)
                 .setParameter("statuses", BLOCKING_STATUSES)
@@ -72,8 +74,8 @@ public class ReservationHibernateDao implements ReservationDao {
             return List.of();
         }
         return em.createQuery(
-                        "FROM Reservation r WHERE r.listingId IN :listingIds AND r.status IN :statuses "
-                                + "ORDER BY r.listingId ASC, r.startDate ASC",
+                        "FROM Reservation r WHERE r.listing.id IN :listingIds AND r.status IN :statuses "
+                                + "ORDER BY r.listing.id ASC, r.startDate ASC",
                         Reservation.class)
                 .setParameter("listingIds", listingIds)
                 .setParameter("statuses", BLOCKING_STATUSES)
@@ -89,10 +91,12 @@ public class ReservationHibernateDao implements ReservationDao {
             final Reservation.Status status,
             final BigDecimal totalPrice,
             final OffsetDateTime paymentProofDeadlineAt) {
+        final User riderRef = em.getReference(User.class, riderId);
+        final Listing listingRef = em.getReference(Listing.class, listingId);
         final OffsetDateTime now = OffsetDateTime.now();
         final Reservation reservation = Reservation.builder()
-                .riderId(riderId)
-                .listingId(listingId)
+                .rider(riderRef)
+                .listing(listingRef)
                 .startDate(startDate)
                 .endDate(endDate)
                 .status(status)
@@ -152,9 +156,8 @@ public class ReservationHibernateDao implements ReservationDao {
     @Override
     public Optional<Reservation> getOwnerReservationById(final long ownerId, final long reservationId) {
         return em.createQuery(
-                        "SELECT r FROM Reservation r, Listing l, Car c "
-                                + "WHERE l.id = r.listingId AND c.id = l.carId "
-                                + "AND r.id = :reservationId AND c.ownerId = :ownerId",
+                        "SELECT r FROM Reservation r "
+                                + "WHERE r.id = :reservationId AND r.listing.car.owner.id = :ownerId",
                         Reservation.class)
                 .setParameter("reservationId", reservationId)
                 .setParameter("ownerId", ownerId)
@@ -247,7 +250,7 @@ public class ReservationHibernateDao implements ReservationDao {
     @Override
     public List<Reservation> getListingActiveReservations(final long listingId) {
         return em.createQuery(
-                        "FROM Reservation r WHERE r.listingId = :listingId AND r.status IN :statuses ORDER BY r.startDate ASC",
+                        "FROM Reservation r WHERE r.listing.id = :listingId AND r.status IN :statuses ORDER BY r.startDate ASC",
                         Reservation.class)
                 .setParameter("listingId", listingId)
                 .setParameter("statuses", BLOCKING_STATUSES)
@@ -344,9 +347,8 @@ public class ReservationHibernateDao implements ReservationDao {
     public long countListingReservationsCreatedBetween(
             final long ownerId, final long listingId, final OffsetDateTime from, final OffsetDateTime until) {
         final Number count = (Number) em.createQuery(
-                        "SELECT COUNT(r) FROM Reservation r, Listing l, Car c "
-                                + "WHERE l.id = r.listingId AND c.id = l.carId "
-                                + "AND c.ownerId = :ownerId AND r.listingId = :listingId "
+                        "SELECT COUNT(r) FROM Reservation r "
+                                + "WHERE r.listing.car.owner.id = :ownerId AND r.listing.id = :listingId "
                                 + "AND r.createdAt >= :from AND r.createdAt < :until")
                 .setParameter("ownerId", ownerId)
                 .setParameter("listingId", listingId)
@@ -360,9 +362,8 @@ public class ReservationHibernateDao implements ReservationDao {
     public Optional<OffsetDateTime> findListingNextActiveReservationDate(
             final long ownerId, final long listingId, final OffsetDateTime after) {
         return em.createQuery(
-                        "SELECT r.startDate FROM Reservation r, Listing l, Car c "
-                                + "WHERE l.id = r.listingId AND c.id = l.carId "
-                                + "AND c.ownerId = :ownerId AND r.listingId = :listingId "
+                        "SELECT r.startDate FROM Reservation r "
+                                + "WHERE r.listing.car.owner.id = :ownerId AND r.listing.id = :listingId "
                                 + "AND r.status IN :statuses AND r.startDate > :after "
                                 + "ORDER BY r.startDate ASC",
                         OffsetDateTime.class)
@@ -377,9 +378,8 @@ public class ReservationHibernateDao implements ReservationDao {
     @Override
     public List<Reservation> findListingFinishedReservations(final long ownerId, final long listingId) {
         return em.createQuery(
-                        "SELECT r FROM Reservation r, Listing l, Car c "
-                                + "WHERE l.id = r.listingId AND c.id = l.carId "
-                                + "AND c.ownerId = :ownerId AND r.listingId = :listingId "
+                        "SELECT r FROM Reservation r "
+                                + "WHERE r.listing.car.owner.id = :ownerId AND r.listing.id = :listingId "
                                 + "AND r.status = :status",
                         Reservation.class)
                 .setParameter("ownerId", ownerId)

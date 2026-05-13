@@ -4,9 +4,12 @@ import java.time.OffsetDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -20,8 +23,9 @@ public class StoredFile {
     @SequenceGenerator(name = "stored_files_id_seq", sequenceName = "stored_files_id_seq", allocationSize = 1)
     private long id;
 
-    @Column(name = "uploader_user_id", nullable = false)
-    private long uploaderUserId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploader_user_id", nullable = false)
+    private User uploader;
 
     @Column(name = "file_name", nullable = false, length = 255)
     private String fileName;
@@ -41,13 +45,13 @@ public class StoredFile {
 
     public StoredFile(
             final long id,
-            final long uploaderUserId,
+            final User uploader,
             final String fileName,
             final String contentType,
             final byte[] data,
             final OffsetDateTime createdAt) {
         this.id = id;
-        this.uploaderUserId = uploaderUserId;
+        this.uploader = uploader;
         this.fileName = fileName;
         this.contentType = contentType;
         this.data = data;
@@ -55,12 +59,12 @@ public class StoredFile {
     }
 
     public StoredFile(
-            final long uploaderUserId,
+            final User uploader,
             final String fileName,
             final String contentType,
             final byte[] data,
             final OffsetDateTime createdAt) {
-        this.uploaderUserId = uploaderUserId;
+        this.uploader = uploader;
         this.fileName = fileName;
         this.contentType = contentType;
         this.data = data;
@@ -71,8 +75,13 @@ public class StoredFile {
         return id;
     }
 
+    public User getUploader() {
+        return uploader;
+    }
+
+    /** Convenience accessor — returns {@code uploader.getId()}. */
     public long getUploaderUserId() {
-        return uploaderUserId;
+        return uploader.getId();
     }
 
     public String getFileName() {

@@ -14,7 +14,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
@@ -98,10 +100,12 @@ public class ReservationViewServiceImplTest {
 
     @Test
     public void testLoadMyReservationDetailForViewerWhenListingDetailMissingReturnsEmpty() {
+        final Listing listingRef = Mockito.mock(Listing.class);
+        Mockito.when(listingRef.getId()).thenReturn(2L);
         final Reservation res = Reservation.builder()
                 .id(5L)
-                .riderId(1L)
-                .listingId(2L)
+                .rider(User.identities(1L, "r@test.com", "R", "R"))
+                .listing(listingRef)
                 .startDate(START)
                 .endDate(END)
                 .status(Reservation.Status.ACCEPTED)

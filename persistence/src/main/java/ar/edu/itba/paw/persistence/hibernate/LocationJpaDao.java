@@ -14,7 +14,7 @@ import ar.edu.itba.paw.persistence.LocationDao;
 
 @Transactional
 @Repository
-public class LocationHibernateDao implements LocationDao {
+public class LocationJpaDao implements LocationDao {
 
     @PersistenceContext
     private EntityManager em;

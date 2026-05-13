@@ -1,14 +1,20 @@
 package ar.edu.itba.paw.models.domain;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -39,8 +45,9 @@ public class Car {
     @SequenceGenerator(name = "cars_id_seq", sequenceName = "cars_id_seq", allocationSize = 1)
     private long id;
 
-    @Column(name = "owner_id", nullable = false)
-    private long ownerId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
 
     @Column(nullable = false, length = 50)
     private String plate;
@@ -63,13 +70,19 @@ public class Car {
     @Column(nullable = false, length = 50)
     private Transmission transmission;
 
+    @OneToMany(mappedBy = "car", fetch = FetchType.LAZY)
+    private List<Listing> listings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "car", fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<CarPicture> pictures = new ArrayList<>();
+
     /* package */ Car() {
         // For Hibernate
     }
 
     private Car(final Builder b) {
         this.id = b.id;
-        this.ownerId = b.ownerId;
+        this.owner = b.owner;
         this.plate = b.plate;
         this.brand = b.brand;
         this.model = b.model;
@@ -84,7 +97,7 @@ public class Car {
 
     public static final class Builder {
         private long id;
-        private long ownerId;
+        private User owner;
         private String plate;
         private String brand;
         private String model;
@@ -97,8 +110,8 @@ public class Car {
             return this;
         }
 
-        public Builder ownerId(final long ownerId) {
-            this.ownerId = ownerId;
+        public Builder owner(final User owner) {
+            this.owner = owner;
             return this;
         }
 
@@ -133,6 +146,7 @@ public class Car {
         }
 
         public Car build() {
+            Objects.requireNonNull(owner, "owner");
             Objects.requireNonNull(plate, "plate");
             Objects.requireNonNull(brand, "brand");
             Objects.requireNonNull(model, "model");
@@ -147,8 +161,13 @@ public class Car {
         return id;
     }
 
+    public User getOwner() {
+        return owner;
+    }
+
+    /** Convenience accessor — returns {@code owner.getId()}. */
     public long getOwnerId() {
-        return ownerId;
+        return owner.getId();
     }
 
     public String getPlate() {
@@ -175,11 +194,19 @@ public class Car {
         return transmission;
     }
 
+    public List<Listing> getListings() {
+        return listings;
+    }
+
+    public List<CarPicture> getPictures() {
+        return pictures;
+    }
+
     @Override
     public String toString() {
         return "Car{" +
                 "id=" + id +
-                ", ownerId=" + ownerId +
+                ", ownerId=" + owner.getId() +
                 ", plate='" + plate + '\'' +
                 ", brand='" + brand + '\'' +
                 ", model='" + model + '\'' +

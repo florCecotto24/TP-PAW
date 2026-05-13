@@ -9,18 +9,18 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
+import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 
 @Transactional
 @Repository
-public class PasswordResetCodeHibernateDao implements PasswordResetCodeDao {
+public class EmailVerificationCodeJpaDao implements EmailVerificationCodeDao {
 
     @PersistenceContext
     private EntityManager em;
 
     @Override
     public void deleteForUser(final long userId) {
-        em.createNativeQuery("DELETE FROM password_reset_codes WHERE user_id = :userId")
+        em.createNativeQuery("DELETE FROM email_verification_codes WHERE user_id = :userId")
                 .setParameter("userId", userId)
                 .executeUpdate();
     }
@@ -28,7 +28,7 @@ public class PasswordResetCodeHibernateDao implements PasswordResetCodeDao {
     @Override
     public void insert(final long userId, final String code, final Instant expiresAt, final Instant createdAt) {
         em.createNativeQuery(
-                        "INSERT INTO password_reset_codes (user_id, code, expires_at, created_at) VALUES (:userId, :code, :expiresAt, :createdAt)")
+                        "INSERT INTO email_verification_codes (user_id, code, expires_at, created_at) VALUES (:userId, :code, :expiresAt, :createdAt)")
                 .setParameter("userId", userId)
                 .setParameter("code", code)
                 .setParameter("expiresAt", Timestamp.from(expiresAt))
@@ -39,7 +39,7 @@ public class PasswordResetCodeHibernateDao implements PasswordResetCodeDao {
     @Override
     public boolean deleteIfValid(final long userId, final String code, final Instant now) {
         final int n = em.createNativeQuery(
-                        "DELETE FROM password_reset_codes WHERE user_id = :userId AND code = :code AND expires_at > :now")
+                        "DELETE FROM email_verification_codes WHERE user_id = :userId AND code = :code AND expires_at > :now")
                 .setParameter("userId", userId)
                 .setParameter("code", code.trim())
                 .setParameter("now", Timestamp.from(now))
@@ -50,7 +50,7 @@ public class PasswordResetCodeHibernateDao implements PasswordResetCodeDao {
     @Override
     public boolean hasActiveCode(final long userId, final Instant now) {
         final Number n = (Number) em.createNativeQuery(
-                        "SELECT COUNT(*) FROM password_reset_codes WHERE user_id = :userId AND expires_at > :now")
+                        "SELECT COUNT(*) FROM email_verification_codes WHERE user_id = :userId AND expires_at > :now")
                 .setParameter("userId", userId)
                 .setParameter("now", Timestamp.from(now))
                 .getSingleResult();

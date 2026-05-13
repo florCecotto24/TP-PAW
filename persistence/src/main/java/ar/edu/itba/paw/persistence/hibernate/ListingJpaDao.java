@@ -28,6 +28,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
@@ -40,7 +41,7 @@ import ar.edu.itba.paw.persistence.ListingDao;
 
 @Transactional
 @Repository
-public class ListingHibernateDao implements ListingDao {
+public class ListingJpaDao implements ListingDao {
 
     private static final Map<String, String> SORT_COLUMNS = Map.of(
             "price",  "l.day_price",
@@ -64,9 +65,13 @@ public class ListingHibernateDao implements ListingDao {
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
             final Long neighborhoodId) {
+        final Car carRef = em.getReference(Car.class, carId);
+        final Neighborhood neighborhoodRef = neighborhoodId != null
+                ? em.getReference(Neighborhood.class, neighborhoodId)
+                : null;
         final OffsetDateTime now = OffsetDateTime.now();
         final Listing listing = Listing.builder()
-                .carId(carId)
+                .car(carRef)
                 .title(title)
                 .status(status)
                 .dayPrice(dayPrice)
@@ -75,7 +80,7 @@ public class ListingHibernateDao implements ListingDao {
                 .description(description)
                 .checkInTime(checkInTime)
                 .checkOutTime(checkOutTime)
-                .neighborhoodId(neighborhoodId)
+                .neighborhood(neighborhoodRef)
                 .createdAt(now)
                 .updatedAt(now)
                 .ratingAvg(null)
@@ -109,15 +114,15 @@ public class ListingHibernateDao implements ListingDao {
         if (listing == null) {
             return Optional.empty();
         }
-        final Car car = em.find(Car.class, listing.getCarId());
-        final User owner = em.find(User.class, car.getOwnerId());
+        final Car car = listing.getCar();
+        final User owner = car.getOwner();
         final List<CarPicture> pictures = em.createQuery(
-                        "FROM CarPicture cp WHERE cp.carId = :carId ORDER BY cp.displayOrder ASC",
+                        "FROM CarPicture cp WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
                         CarPicture.class)
                 .setParameter("carId", car.getId())
                 .getResultList();
         final List<ListingAvailability> availabilities = em.createQuery(
-                        "FROM ListingAvailability la WHERE la.listingId = :listingId ORDER BY la.startInclusive ASC",
+                        "FROM ListingAvailability la WHERE la.listing.id = :listingId ORDER BY la.startInclusive ASC",
                         ListingAvailability.class)
                 .setParameter("listingId", id)
                 .getResultList();
@@ -241,7 +246,7 @@ public class ListingHibernateDao implements ListingDao {
     @Override
     public List<Listing> findListingsByOwnerIdAndStatus(final long ownerId, final Listing.Status status) {
         return em.createQuery(
-                        "SELECT l FROM Listing l, Car c WHERE l.carId = c.id AND c.ownerId = :ownerId AND l.status = :status",
+                        "SELECT l FROM Listing l WHERE l.car.owner.id = :ownerId AND l.status = :status",
                         Listing.class)
                 .setParameter("ownerId", ownerId)
                 .setParameter("status", status)
@@ -320,7 +325,7 @@ public class ListingHibernateDao implements ListingDao {
     @Override
     public boolean hasListingsByOwner(final long ownerId) {
         final Long count = (Long) em.createQuery(
-                        "SELECT COUNT(l) FROM Listing l, Car c WHERE l.carId = c.id AND c.ownerId = :ownerId")
+                        "SELECT COUNT(l) FROM Listing l WHERE l.car.owner.id = :ownerId")
                 .setParameter("ownerId", ownerId)
                 .getSingleResult();
         return count != null && count > 0;

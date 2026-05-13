@@ -101,10 +101,12 @@ public class ReservationServiceImplTest {
         final long riderId = 1L;
         final long listingId = 2L;
         final Listing listing = Mockito.mock(Listing.class);
+        final Listing listingRef = Mockito.mock(Listing.class);
+        Mockito.when(listingRef.getId()).thenReturn(listingId);
         final Reservation created = Reservation.builder()
                 .id(10L)
-                .riderId(riderId)
-                .listingId(listingId)
+                .rider(User.identities(riderId, "r@test.com", "R", "Rider"))
+                .listing(listingRef)
                 .startDate(START)
                 .endDate(END)
                 .status(Reservation.Status.ACCEPTED)
@@ -237,6 +239,7 @@ public class ReservationServiceImplTest {
         final User createdRider = User.identities(riderId, riderEmail, riderName, riderSurname);
         final User listingOwner = User.identities(ownerId, ownerEmail, ownerName, ownerSurname);
 
+        Mockito.when(listing.getId()).thenReturn(listingId);
         Mockito.when(listing.getTitle()).thenReturn("Test vehicle");
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
 
@@ -273,8 +276,8 @@ public class ReservationServiceImplTest {
                 Mockito.any(OffsetDateTime.class)))
                 .thenAnswer(inv -> Reservation.builder()
                         .id(reservationId)
-                        .riderId(createdRider.getId())
-                        .listingId(listingId)
+                        .rider(createdRider)
+                        .listing(listing)
                         .startDate(inv.getArgument(2, OffsetDateTime.class))
                         .endDate(inv.getArgument(3, OffsetDateTime.class))
                         .status(Reservation.Status.PENDING)
@@ -401,8 +404,8 @@ public class ReservationServiceImplTest {
         // 1. Arrange
         final Reservation reservation = Reservation.builder()
                 .id(1L)
-                .riderId(1L)
-                .listingId(1L)
+                .rider(User.identities(1L, "r@test.com", "R", "Rider"))
+                .listing(Mockito.mock(Listing.class))
                 .startDate(START)
                 .endDate(END)
                 .status(Reservation.Status.ACCEPTED)
@@ -442,8 +445,8 @@ public class ReservationServiceImplTest {
         final List<Reservation> expected = List.of(
                 Reservation.builder()
                         .id(7L)
-                        .riderId(1L)
-                        .listingId(2L)
+                        .rider(User.identities(1L, "r@test.com", "R", "Rider"))
+                        .listing(Mockito.mock(Listing.class))
                         .startDate(from)
                         .endDate(END)
                         .status(Reservation.Status.ACCEPTED)

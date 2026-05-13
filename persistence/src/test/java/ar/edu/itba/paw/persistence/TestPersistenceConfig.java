@@ -8,9 +8,7 @@ import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -20,22 +18,17 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
+@ComponentScan(basePackages = "ar.edu.itba.paw.persistence")
 @EnableTransactionManagement
-@ComponentScan("ar.edu.itba.paw.persistence")
 public class TestPersistenceConfig {
 
     @Bean
     public DataSource dataSource() {
-        final EmbeddedDatabase db = new EmbeddedDatabaseBuilder()
+        return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.HSQL)
-                .addScript("schema-hsqldb.sql")
+                .addScript("classpath:schema-hsqldb.sql")
+                .addScript("classpath:seed-neighborhoods.sql")
                 .build();
-        return db;
-    }
-
-    @Bean
-    public JdbcTemplate jdbcTemplate(final DataSource dataSource) {
-        return new JdbcTemplate(dataSource);
     }
 
     @Bean
@@ -44,10 +37,10 @@ public class TestPersistenceConfig {
         factoryBean.setPackagesToScan("ar.edu.itba.paw.models");
         factoryBean.setDataSource(dataSource);
         factoryBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        final Properties props = new Properties();
-        props.setProperty("hibernate.hbm2ddl.auto", "none");
-        props.setProperty("hibernate.dialect", "org.hibernate.dialect.HSQLDialect");
-        factoryBean.setJpaProperties(props);
+        final Properties properties = new Properties();
+        properties.setProperty("hibernate.hbm2ddl.auto", "none");
+        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.HSQLDialect");
+        factoryBean.setJpaProperties(properties);
         return factoryBean;
     }
 
@@ -57,7 +50,7 @@ public class TestPersistenceConfig {
     }
 
     @Bean
-    public PersistenceExceptionTranslationPostProcessor exceptionTranslation() {
-        return new PersistenceExceptionTranslationPostProcessor();
+    public JdbcTemplate jdbcTemplate(final DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
     }
 }
