@@ -16,9 +16,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
+
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -202,13 +203,13 @@ public class ListingJpaDao implements ListingDao {
     }
 
     @Override
-    public List<Long> findListingIdsWithStatuses(final Listing.Status... statuses) {
+    public List<Listing> findListingsWithStatuses(final Listing.Status... statuses) {
         if (statuses.length == 0) {
             return List.of();
         }
         return em.createQuery(
-                        "SELECT l.id FROM Listing l WHERE l.status IN :statuses ORDER BY l.id",
-                        Long.class)
+                        "FROM Listing l WHERE l.status IN :statuses ORDER BY l.id",
+                        Listing.class)
                 .setParameter("statuses", Arrays.asList(statuses))
                 .getResultList();
     }
@@ -252,7 +253,7 @@ public class ListingJpaDao implements ListingDao {
     @Override
     public List<Listing> findListingsByOwnerIdAndStatus(final long ownerId, final Listing.Status status) {
         return em.createQuery(
-                        "SELECT l FROM Listing l WHERE l.car.owner.id = :ownerId AND l.status = :status",
+                        "FROM Listing l WHERE l.car.owner.id = :ownerId AND l.status = :status",
                         Listing.class)
                 .setParameter("ownerId", ownerId)
                 .setParameter("status", status)
@@ -681,11 +682,6 @@ public class ListingJpaDao implements ListingDao {
         final Listing.Status status = statusStr == null ? null : Listing.Status.valueOf(statusStr.toUpperCase());
         final long reviewCount = ((Number) row[offset + 7]).longValue();
         return new ListingCard(listingId, brand, model, dayPrice, imageId, ratingAvg, status, reviewCount);
-    }
-
-    private static Query bindParams(final Query q, final Map<String, Object> params) {
-        params.forEach(q::setParameter);
-        return q;
     }
 
     // ---- availability coverage filtering (ported from JDBC version) ----

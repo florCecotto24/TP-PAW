@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
-import java.sql.Timestamp;
 import java.time.Instant;
 
 import javax.persistence.EntityManager;
@@ -9,6 +8,7 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.models.domain.PasswordResetCode;
 import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
 
 @Transactional
@@ -20,39 +20,34 @@ public class PasswordResetCodeJpaDao implements PasswordResetCodeDao {
 
     @Override
     public void deleteForUser(final long userId) {
-        em.createNativeQuery("DELETE FROM password_reset_codes WHERE user_id = :userId")
+        em.createQuery("DELETE FROM PasswordResetCode p WHERE p.userId = :userId")
                 .setParameter("userId", userId)
                 .executeUpdate();
     }
 
     @Override
     public void insert(final long userId, final String code, final Instant expiresAt, final Instant createdAt) {
-        em.createNativeQuery(
-                        "INSERT INTO password_reset_codes (user_id, code, expires_at, created_at) VALUES (:userId, :code, :expiresAt, :createdAt)")
-                .setParameter("userId", userId)
-                .setParameter("code", code)
-                .setParameter("expiresAt", Timestamp.from(expiresAt))
-                .setParameter("createdAt", Timestamp.from(createdAt))
-                .executeUpdate();
+        em.persist(new PasswordResetCode(userId, code, expiresAt, createdAt));
     }
 
     @Override
     public boolean deleteIfValid(final long userId, final String code, final Instant now) {
-        final int n = em.createNativeQuery(
-                        "DELETE FROM password_reset_codes WHERE user_id = :userId AND code = :code AND expires_at > :now")
+        final int n = em.createQuery(
+                        "DELETE FROM PasswordResetCode p "
+                                + "WHERE p.userId = :userId AND p.code = :code AND p.expiresAt > :now")
                 .setParameter("userId", userId)
                 .setParameter("code", code.trim())
-                .setParameter("now", Timestamp.from(now))
+                .setParameter("now", now)
                 .executeUpdate();
         return n > 0;
     }
 
     @Override
     public boolean hasActiveCode(final long userId, final Instant now) {
-        final Number n = (Number) em.createNativeQuery(
-                        "SELECT COUNT(*) FROM password_reset_codes WHERE user_id = :userId AND expires_at > :now")
+        final Number n = (Number) em.createQuery(
+                        "SELECT COUNT(p) FROM PasswordResetCode p WHERE p.userId = :userId AND p.expiresAt > :now")
                 .setParameter("userId", userId)
-                .setParameter("now", Timestamp.from(now))
+                .setParameter("now", now)
                 .getSingleResult();
         return n != null && n.longValue() > 0;
     }

@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.persistence.LocationDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class LocationJpaDao implements LocationDao {
 

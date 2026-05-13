@@ -436,14 +436,15 @@ public final class ListingServiceImpl implements ListingService {
     @Override
     @Transactional
     public void refreshExhaustedListingsToFinished() {
-        final List<Long> ids = listingDao.findListingIdsWithStatuses(Listing.Status.ACTIVE);
-        if (ids.isEmpty()) {
+        final List<Listing> activeListings = listingDao.findListingsWithStatuses(Listing.Status.ACTIVE);
+        if (activeListings.isEmpty()) {
             LOGGER.atInfo().log("Listing exhaustion sweep: no active listings");
             return;
         }
         final LocalDate wall = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         final int batch = 200;
         int pausedExhausted = 0;
+        final List<Long> ids = activeListings.stream().map(Listing::getId).collect(Collectors.toList());
         for (int i = 0; i < ids.size(); i += batch) {
             final List<Long> slice = ids.subList(i, Math.min(i + batch, ids.size()));
             final Set<Long> bookable = listingIdsWithAtLeastOneBookableWallDay(slice, wall);

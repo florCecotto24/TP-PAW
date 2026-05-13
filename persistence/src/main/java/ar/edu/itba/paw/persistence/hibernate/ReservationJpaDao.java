@@ -14,10 +14,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
+
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
@@ -720,11 +721,6 @@ public class ReservationJpaDao implements ReservationDao {
         final Object rawImageId = row[8];
         final long imageId = rawImageId == null ? 0L : ((Number) rawImageId).longValue();
         return new ReservationCard(reservationId, listingId, brand, model, dayPrice, imageId, startDate, endDate, status);
-    }
-
-    private static Query bindParams(final Query q, final Map<String, Object> params) {
-        params.forEach(q::setParameter);
-        return q;
     }
 
     private static Timestamp toTimestamp(final OffsetDateTime odt) {

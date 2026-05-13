@@ -60,7 +60,10 @@ public interface ListingDao {
      */
     boolean updateListingStatus(long listingId, Listing.Status newStatus, Listing.Status... allowedFrom);
 
-    List<Long> findListingIdsWithStatuses(Listing.Status... statuses);
+    /**
+     * Listings whose status is one of the given values, ordered by id (e.g. batch maintenance sweeps).
+     */
+    List<Listing> findListingsWithStatuses(Listing.Status... statuses);
 
     List<Listing> getAllListings();
 

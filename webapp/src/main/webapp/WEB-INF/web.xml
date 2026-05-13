@@ -55,6 +55,16 @@
     <url-pattern>/*</url-pattern>
   </filter-mapping>
 
+  <!-- Keeps JPA EntityManager open for the full request (including JSP rendering); Spring 5.3: org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter -->
+  <filter>
+    <filter-name>openEntityManagerInViewFilter</filter-name>
+    <filter-class>org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>openEntityManagerInViewFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
   <!--
     Before Spring Security: for enctype="multipart/form-data", CsrfFilter must read the body
     after it is parsed to obtain _csrf; otherwise it returns 403 even for authenticated users.
