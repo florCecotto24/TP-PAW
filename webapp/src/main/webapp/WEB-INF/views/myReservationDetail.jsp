@@ -16,16 +16,16 @@
 <main class="container pt-5 pb-4">
     <c:choose>
         <c:when test="${not empty reservationDetailOwnerListingHubId}">
-            <spring:message code="navbar.myListings" var="bcHomeLabel"/>
+            <spring:message code="myListings.tab.reservations" var="bcHomeLabel"/>
             <spring:message code="myListingReservations.heading" var="bcMidLabel"/>
-            <spring:message code="myReservationDetail.heading" var="bcCurrentLabel"/>
             <c:url var="bcMidHref" value="/my-listings/${reservationDetailOwnerListingHubId}/reservations"/>
+            <c:url var="bcHomeHref" value="/my-listings">
+                <c:param name="tab" value="reservations"/>
+            </c:url>
             <ryden:breadcrumbTrail
                     homeLabel="${bcHomeLabel}"
-                    homeHref="${pageContext.request.contextPath}/my-listings"
-                    midLabel="${bcMidLabel}"
-                    midHref="${bcMidHref}"
-                    currentLabel="${bcCurrentLabel}"/>
+                    homeHref="${bcHomeHref}"
+                    currentLabel="${listing.title}"/>
         </c:when>
         <c:otherwise>
             <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
