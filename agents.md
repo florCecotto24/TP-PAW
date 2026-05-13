@@ -73,7 +73,7 @@ webapp → services → persistence → models
 ### Key conventions
 
 - **Dependency injection**: Constructor injection with `@Autowired`.
-- **Persistence**: JPA via Hibernate. DAOs use `@PersistenceContext EntityManager em` with `em.find`, `em.persist`, JQL (`em.createQuery("FROM …", …)`), and **`em.createNativeQuery`** for DTO projections (`Object[]`) or bulk updates. Prefer **named parameters** (`:name`) in native SQL for clarity and safe binding. `*HibernateDao` classes are `@Repository` and `@Transactional` where appropriate; `EntityManagerFactory` and `JpaTransactionManager` are wired in `WebConfig` (runtime) and `TestPersistenceConfig` (tests). Entities are scanned from `ar.edu.itba.paw.models`.
+- **Persistence**: JPA via Hibernate. DAOs use `@PersistenceContext EntityManager em` with `em.find`, `em.persist`, JQL (`em.createQuery("FROM …", …)`), and **`em.createNativeQuery`** for DTO projections (`Object[]`) and read-only reporting. For **writable** work, prefer mutating **managed entities** (dirty checking at flush) over bulk JPQL `UPDATE`/`DELETE` or native `executeUpdate()` on entity-mapped tables unless the PR documents a justified exception. Prefer **named parameters** (`:name`) in native SQL for clarity and safe binding. `*HibernateDao` classes are `@Repository` and `@Transactional` where appropriate; `EntityManagerFactory` and `JpaTransactionManager` are wired in `WebConfig` (runtime) and `TestPersistenceConfig` (tests). Entities are scanned from `ar.edu.itba.paw.models`.
 - **Entity mapping**: Foreign keys are often modeled as scalar `long` fields (`listingId`, `riderId`, …) with explicit JQL joins (`FROM Reservation r, Listing l WHERE l.id = r.listingId …`). If you add `@ManyToOne` / `@OneToMany`, prefer `FetchType.LAZY` and consider `OpenEntityManagerInViewFilter` for JSP navigation.
 - **Enum persistence**: taxonomy enums (`Car.Type`, …) may use `@Enumerated(EnumType.STRING)`; lifecycle enums (`Listing.Status`, `Reservation.Status`) use **`AttributeConverter`** implementations that persist **lowercase** names to match legacy SQL and `LOWER(status)` filters.
 - **IDs**: sequences use `@GeneratedValue(strategy = GenerationType.SEQUENCE, …)` with `@SequenceGenerator(…, allocationSize = 1)` aligned with PostgreSQL sequences.
@@ -219,6 +219,8 @@ All service methods need `@Transactional` (`org.springframework.transaction.anno
 
 With JPA, transactional boundaries also control **dirty checking** and **auto-flush**: a `@Transactional(readOnly = true)` method must not rely on persisted mutations from that method — use a writable transaction when the entity state should commit.
 
+**Dirty checking for writable transactions**: Any Spring `@Transactional` method that is **not** `readOnly = true` and that **writes or updates JPA-mapped domain rows** must persist those changes through Hibernate **dirty checking** (or entity lifecycle): load managed entities (`em.find`, navigable associations, or results of managed queries), mutate fields or collections (or use `em.persist` / `em.remove` for inserts and deletes), and rely on flush at commit. Do **not** use bulk JPQL `UPDATE`/`DELETE` or native `executeUpdate()` against entity-backed tables as the default way to change domain state; deviations require an explicit **PR justification**. Service beans stay free of `EntityManager` — they satisfy this rule by delegating to DAOs whose writable operations follow it. Methods with writable `@Transactional` that perform **no JPA persistence** (e.g. mail-only `@Async` senders) are exempt.
+
 **Proxy limitation**: Internal `this.someMethod()` calls skip the proxy and ignore `@Transactional`. Only external calls through the proxy apply. Annotate public service methods individually; do not rely on class-level + internal delegation.
 
 ### PR checks (transactionality)
@@ -226,6 +228,7 @@ With JPA, transactional boundaries also control **dirty checking** and **auto-fl
 - Every **public** method in `services/.../*ServiceImpl.java` must have explicit `@Transactional`.
 - Pure reads / normalization: `readOnly = true`.
 - Writes, side effects, mail orchestration: `@Transactional` without `readOnly = true`.
+- Writable transactions that touch JPA domain state: follow **dirty checking** (see **Dirty checking for writable transactions** above); DAO implementations must not silently reintroduce bulk DML for those rows without PR justification.
 - Private helpers are not transactional entry points.
 - Any public method **without** `@Transactional` needs an explicit PR justification.
 
