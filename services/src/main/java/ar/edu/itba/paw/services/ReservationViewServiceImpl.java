@@ -189,7 +189,9 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         if (counterpartyOpt.isEmpty()) {
             return Optional.empty();
         }
-        final User counterparty = counterpartyOpt.get();
+        final User counterpartyMinimal = counterpartyOpt.get();
+        final User counterparty =
+                userService.getUserById(counterpartyMinimal.getId()).orElse(counterpartyMinimal);
         final String counterpartyDisplayName = counterparty.getForename() + " " + counterparty.getSurname();
         return Optional.of(new ReservationChatPageModel(
                 reservation.getId(),
@@ -197,6 +199,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 listing.getTitle(),
                 role,
                 counterpartyDisplayName,
+                counterparty.getProfilePictureId().orElse(null),
                 viewerUserId,
                 reservationMessageService.getMessageBodyMaxLength()));
     }

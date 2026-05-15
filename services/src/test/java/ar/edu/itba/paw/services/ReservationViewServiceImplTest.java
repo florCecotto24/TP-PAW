@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
@@ -162,15 +163,18 @@ public class ReservationViewServiceImplTest {
                 .totalPrice(TOTAL_PRICE)
                 .build();
         final User owner = User.identities(9L, "o@test.com", "Owner", "One");
+        owner.setProfilePicture(new Image(42L, "avatar.png", "image/png", new byte[] {1}));
         Mockito.when(reservationService.getRiderReservationById(1L, 5L)).thenReturn(Optional.of(res));
         Mockito.when(reservationMessageService.isChatAvailable(res)).thenReturn(true);
         Mockito.when(listingService.getListingById(2L)).thenReturn(Optional.of(listingRef));
         Mockito.when(userService.getListingOwner(2L)).thenReturn(Optional.of(owner));
+        Mockito.when(userService.getUserById(9L)).thenReturn(Optional.of(owner));
         Mockito.when(reservationMessageService.getMessageBodyMaxLength()).thenReturn(1000);
         final Optional<ReservationChatPageModel> got =
                 reservationViewService.loadReservationChatForParticipant(1L, 5L, "rider", Locale.ENGLISH);
         Assertions.assertTrue(got.isPresent());
         Assertions.assertEquals(5L, got.get().getReservationId());
         Assertions.assertEquals(2L, got.get().getListingId());
+        Assertions.assertEquals(42L, got.get().getCounterpartyProfileImageId());
     }
 }

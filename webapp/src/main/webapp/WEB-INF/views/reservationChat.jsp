@@ -8,21 +8,31 @@
     <title><spring:message code="reservationChat.pageTitle"/> — <spring:message code="app.title"/></title>
     <%@include file="header.jsp"%>
 </head>
-<body class="has-fixed-navbar bg-light">
+<body class="has-fixed-navbar bg-light reservation-chat-body">
 <ryden:navbar/>
 
-<main class="container pt-5 pb-4">
+<main class="container-xl reservation-chat-main pt-3 pb-0">
     <spring:message code="reservationChat.pageTitle" var="chatPageTitle"/>
-    <spring:message code="reservationChat.withCounterparty" arguments="${counterpartyDisplayName}" var="chatSubtitle"/>
     <spring:message code="myReservationDetail.chat.send" var="chatSendLabel"/>
     <spring:message code="myReservationDetail.chat.placeholder" var="chatPlaceholder"/>
     <spring:message code="myReservationDetail.chat.empty" var="chatEmptyLabel"/>
     <spring:message code="reservationChat.error.load" var="chatErrorLoad"/>
     <spring:message code="reservationChat.error.connection" var="chatErrorConnection"/>
+    <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
 
     <c:url var="detailUrl" value="/my-reservations/${reservationId}">
         <c:param name="role" value="${reservationRole}"/>
         <c:if test="${not empty fromListing}">
+            <c:param name="fromListing" value="${fromListing}"/>
+        </c:if>
+    </c:url>
+
+    <c:url var="counterpartyProfileUrl" value="/my-reservations/${reservationId}/counterparty-profile">
+        <c:param name="role" value="${reservationRole}"/>
+        <c:if test="${not empty reservationDetailOwnerListingHubId}">
+            <c:param name="fromListing" value="${reservationDetailOwnerListingHubId}"/>
+        </c:if>
+        <c:if test="${empty reservationDetailOwnerListingHubId and not empty fromListing}">
             <c:param name="fromListing" value="${fromListing}"/>
         </c:if>
     </c:url>
@@ -51,15 +61,10 @@
         </c:otherwise>
     </c:choose>
 
-    <header class="reservation-management-header mb-4">
-        <h1 class="h3 fw-bold mb-1"><c:out value="${chatPageTitle}"/></h1>
-        <p class="text-muted mb-0"><c:out value="${chatSubtitle}"/></p>
-    </header>
-
-    <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-body p-4">
+    <div class="card border-0 shadow-sm rounded-4 reservation-chat-card flex-grow-1 min-h-0 mt-2">
+        <div class="card-body p-0 d-flex flex-column min-h-0 h-100">
             <div id="reservationChatRoot"
-                 class="reservation-chat reservation-chat-page"
+                 class="reservation-chat reservation-chat-page reservation-chat-shell"
                  data-context-path="<c:out value='${pageContext.request.contextPath}'/>"
                  data-reservation-id="<c:out value='${reservationId}'/>"
                  data-viewer-user-id="<c:out value='${chatViewerUserId}'/>"
@@ -67,21 +72,44 @@
                  data-empty-label="<c:out value='${chatEmptyLabel}'/>"
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
                  data-error-connection="<c:out value='${chatErrorConnection}'/>">
+                <header class="reservation-chat-header">
+                    <a href="<c:out value='${counterpartyProfileUrl}'/>"
+                       class="reservation-chat-header__link text-decoration-none text-reset d-flex align-items-center gap-2 min-w-0"
+                       aria-label="<c:out value='${counterpartyProfileLinkAria}'/>">
+                        <c:choose>
+                            <c:when test="${counterpartyProfileImageId != null}">
+                                <c:url var="counterpartyChatAvatarUrl" value="/image/${counterpartyProfileImageId}"/>
+                                <img src="${counterpartyChatAvatarUrl}"
+                                     alt=""
+                                     class="reservation-chat-header__avatar rounded-circle flex-shrink-0"/>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="reservation-chat-header__avatar reservation-chat-header__avatar--placeholder rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                                      aria-hidden="true">
+                                    <i class="bi bi-person-fill"></i>
+                                </span>
+                            </c:otherwise>
+                        </c:choose>
+                        <span class="reservation-chat-header__name text-break">
+                            <c:out value="${counterpartyDisplayName}"/>
+                        </span>
+                    </a>
+                </header>
                 <div id="reservationChatMessages"
-                     class="reservation-chat__messages reservation-chat-page__messages border rounded-3 p-3 mb-3 bg-light"
+                     class="reservation-chat__messages reservation-chat-page__messages"
                      role="log"
                      aria-live="polite">
                     <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
                 </div>
                 <div class="reservation-chat__composer reservation-chat-page__composer d-flex gap-2 align-items-end">
                     <label class="visually-hidden" for="reservationChatInput"><c:out value="${chatPlaceholder}"/></label>
-                    <textarea id="reservationChatInput" class="form-control" rows="3" maxlength="${chatMessageMaxLength}"
+                    <textarea id="reservationChatInput" class="form-control reservation-chat-page__input" rows="1" maxlength="${chatMessageMaxLength}"
                               placeholder="<c:out value='${chatPlaceholder}'/>"></textarea>
                     <button type="button" id="reservationChatSend" class="btn btn-primary flex-shrink-0">
                         <c:out value="${chatSendLabel}"/>
                     </button>
                 </div>
-                <div id="reservationChatError" class="text-danger small mt-2 d-none" role="alert"></div>
+                <div id="reservationChatError" class="reservation-chat-page__error text-danger small d-none" role="alert"></div>
             </div>
         </div>
     </div>
@@ -90,7 +118,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" crossorigin="anonymous"></script>
 <script src="${pageContext.request.contextPath}/js/reservation-chat.js"></script>
-
-<%@include file="footer.jsp"%>
+<%@ include file="includes/footerScripts.jspf" %>
 </body>
 </html>

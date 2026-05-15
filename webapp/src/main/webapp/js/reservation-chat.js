@@ -93,7 +93,7 @@
         meta.className = 'small text-muted mb-1';
         meta.textContent = escapeText(dto.senderDisplayName) + ' · ' + formatTimestamp(dto.createdAt);
         var body = document.createElement('div');
-        body.className = 'd-inline-block px-3 py-2 rounded-3 ' + (isMine ? 'bg-primary text-white' : 'bg-white border');
+        body.className = 'reservation-chat__bubble ' + (isMine ? 'reservation-chat__bubble--mine' : 'reservation-chat__bubble--theirs');
         body.textContent = dto.body;
         item.appendChild(meta);
         item.appendChild(body);
