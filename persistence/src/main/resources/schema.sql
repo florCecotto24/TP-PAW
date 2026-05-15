@@ -22,6 +22,19 @@ CREATE TABLE IF NOT EXISTS users(
     member_since DATE
 );
 
+CREATE TABLE IF NOT EXISTS car_brands (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS car_models (
+    id SERIAL PRIMARY KEY,
+    brand_id INTEGER NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    validated BOOLEAN NOT NULL DEFAULT FALSE,
+    FOREIGN KEY (brand_id) REFERENCES car_brands(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS cars (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -31,8 +44,14 @@ CREATE TABLE IF NOT EXISTS cars (
     type VARCHAR(50) NOT NULL,
     transmission VARCHAR(50) NOT NULL,
     powertrain VARCHAR(50) NOT NULL,
+    new_model INTEGER,
+    insurance_file_id INTEGER,
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused_due_to_lack_of_insurance')),
 
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+    UNIQUE (owner_id, plate),
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (new_model) REFERENCES car_models(id) ON UPDATE CASCADE,
+    CHECK (powertrain IN ('GASOLINE', 'DIESEL', 'ELECTRIC', 'HYBRID', 'CNG'))
 );
 
 CREATE TABLE IF NOT EXISTS neighborhoods (
@@ -116,6 +135,12 @@ CREATE TABLE IF NOT EXISTS listings (
     FOREIGN KEY (neighborhood_id) REFERENCES neighborhoods(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS saved_listings (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, listing_id)
+);
+
 CREATE TABLE IF NOT EXISTS listing_availability(
     id SERIAL PRIMARY KEY,
     listing_id INTEGER NOT NULL,
@@ -188,6 +213,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     pending_refund_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
     refund_proof_deadline_at TIMESTAMPTZ,
     payment_refund_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    review_deadline TIMESTAMPTZ,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
@@ -208,6 +234,9 @@ ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_identity_file_id;
 ALTER TABLE users ADD CONSTRAINT fk_users_profile_picture_id FOREIGN KEY (profile_picture_id) REFERENCES images(id) ON DELETE SET NULL;
 ALTER TABLE users ADD CONSTRAINT fk_users_license_file_id FOREIGN KEY (license_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
 ALTER TABLE users ADD CONSTRAINT fk_users_identity_file_id FOREIGN KEY (identity_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+
+ALTER TABLE cars DROP CONSTRAINT IF EXISTS fk_cars_insurance_file_id;
+ALTER TABLE cars ADD CONSTRAINT fk_cars_insurance_file_id FOREIGN KEY (insurance_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS email_verification_codes (
     id SERIAL PRIMARY KEY,
@@ -232,5 +261,6 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_co
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL,
+    assigned_by INTEGER REFERENCES users (id) ON DELETE SET NULL,
     PRIMARY KEY (user_id, role)
 );

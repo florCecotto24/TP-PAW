@@ -33,7 +33,7 @@ public class Car {
     }
 
     public enum Powertrain implements PrettyNamed {
-        GASOLINE, DIESEL, ELECTRIC, HYBRID
+        GASOLINE, DIESEL, ELECTRIC, HYBRID, CNG
     }
 
     public enum Transmission implements PrettyNamed {
