@@ -36,7 +36,7 @@ class MailPublicUrlsTest {
         final String url = mailPublicUrls.absolutePath("/login");
 
         // 3.Assert
-        Assertions.assertEquals("http://localhost:8080/webapp/login", url);
+        Assertions.assertEquals("http://localhost:8080/login", url);
     }
 
     @Test

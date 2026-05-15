@@ -179,8 +179,10 @@
         <artifactId>jetty-maven-plugin</artifactId>
         <configuration>
           <scanIntervalSeconds>10</scanIntervalSeconds>
-          <port>8080</port>
           <useTestScope>true</useTestScope>
+          <httpConnector>
+            <port>8080</port>
+          </httpConnector>
           <!-- dev: PAW log files + Logback console -->
           <jvmArgs>-Dspring.profiles.active=local -Dlogback.configurationFile=classpath:logback/logback-local.xml -Dfile.encoding=UTF-8 --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED</jvmArgs>
         </configuration>

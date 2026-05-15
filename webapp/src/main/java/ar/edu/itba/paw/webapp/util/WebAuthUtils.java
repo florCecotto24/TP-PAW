@@ -64,6 +64,13 @@ public final class WebAuthUtils {
         } else if (!inApp.startsWith("/")) {
             inApp = "/" + inApp;
         }
+        if (contextPath.isEmpty()) {
+            if (inApp.startsWith("/webapp/")) {
+                inApp = inApp.substring("/webapp".length());
+            } else if ("/webapp".equals(inApp)) {
+                inApp = "/";
+            }
+        }
         if (uri.getRawQuery() != null && !uri.getRawQuery().isEmpty()) {
             inApp = inApp + "?" + uri.getRawQuery();
         }

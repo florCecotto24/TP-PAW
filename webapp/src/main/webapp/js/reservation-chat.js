@@ -42,18 +42,33 @@
         return span.textContent;
     }
 
-    function formatTimestamp(iso) {
-        if (!iso) {
+    function parseTimestamp(value) {
+        if (value == null || value === '') {
+            return null;
+        }
+        if (typeof value === 'number' && isFinite(value)) {
+            // Jackson may emit epoch seconds; JavaScript Date expects milliseconds.
+            return new Date(value < 1e12 ? value * 1000 : value);
+        }
+        if (typeof value === 'string') {
+            var parsed = Date.parse(value);
+            return isNaN(parsed) ? null : new Date(parsed);
+        }
+        return null;
+    }
+
+    function formatTimestamp(value) {
+        var date = parseTimestamp(value);
+        if (!date || isNaN(date.getTime())) {
             return '';
         }
         try {
-            var date = new Date(iso);
             return new Intl.DateTimeFormat(undefined, {
                 dateStyle: 'short',
                 timeStyle: 'short'
             }).format(date);
         } catch (e) {
-            return iso;
+            return '';
         }
     }
 
@@ -114,12 +129,17 @@
             });
     }
 
+    function markDisconnected() {
+        connected = false;
+    }
+
     function connectStomp() {
         if (connected && stompClient && stompClient.connected) {
             return Promise.resolve();
         }
         return new Promise(function (resolve, reject) {
             var socket = new SockJS(contextPath + '/ws');
+            socket.onclose = markDisconnected;
             stompClient = Stomp.over(socket);
             stompClient.debug = null;
             stompClient.connect(
@@ -127,12 +147,17 @@
                 function () {
                     connected = true;
                     stompClient.subscribe('/topic/reservations/' + reservationId, function (frame) {
-                        var dto = JSON.parse(frame.body);
-                        appendMessage(dto);
+                        try {
+                            var dto = JSON.parse(frame.body);
+                            appendMessage(dto);
+                        } catch (e) {
+                            showError(errorLoadLabel);
+                        }
                     });
                     resolve();
                 },
                 function () {
+                    markDisconnected();
                     reject(new Error('stomp'));
                 }
             );
@@ -152,12 +177,17 @@
             showError(errorConnectionLabel);
             return;
         }
-        stompClient.send(
-            '/app/reservations/' + reservationId + '/messages',
-            {},
-            JSON.stringify({ body: body })
-        );
-        inputEl.value = '';
+        try {
+            stompClient.send(
+                '/app/reservations/' + reservationId + '/messages',
+                {},
+                JSON.stringify({ body: body })
+            );
+            inputEl.value = '';
+        } catch (e) {
+            markDisconnected();
+            showError(errorConnectionLabel);
+        }
     }
 
     function initChat() {

@@ -19,7 +19,7 @@ public final class MailPublicUrls {
     }
 
     public String absolutePath(final String pathFromContextRoot) {
-        final String base = environment.getProperty("mail.app.base.url", "http://localhost:8080/webapp").replaceAll("/+$", "");
+        final String base = environment.getProperty("mail.app.base.url", "http://localhost:8080").replaceAll("/+$", "");
         if (pathFromContextRoot == null || pathFromContextRoot.isBlank()) {
             return base;
         }

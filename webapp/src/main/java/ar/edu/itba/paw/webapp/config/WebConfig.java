@@ -34,6 +34,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
@@ -50,6 +52,8 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import ar.edu.itba.paw.services.policy.ReservationChatPolicy;
 import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
@@ -57,6 +61,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
+import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
 import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 
 /**
@@ -69,6 +74,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 @EnableTransactionManagement
 @Configuration
 @Import({
+    JacksonConfig.class,
     LocalApplicationEnvironmentConfig.class,
     DeployedApplicationEnvironmentConfig.class,
     SpringMailConfig.class,
@@ -91,14 +97,20 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 public class WebConfig implements WebMvcConfigurer {
 
     private final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor;
+    private final ObjectProvider<NoCacheHtmlInterceptor> noCacheHtmlInterceptor;
+    private final ObjectMapper objectMapper;
 
     /**
      * Defer resolution until {@link #addInterceptors}: avoids a context cycle and avoids {@code @Lazy} (CGLIB cannot
-     * proxy {@link LatestLocaleSaveInterceptor} because it is final).
+     * proxy interceptors because they are final).
      */
     public WebConfig(
-            final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor) {
+            final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor,
+            final ObjectProvider<NoCacheHtmlInterceptor> noCacheHtmlInterceptor,
+            final ObjectMapper objectMapper) {
         this.latestLocaleSaveInterceptor = latestLocaleSaveInterceptor;
+        this.noCacheHtmlInterceptor = noCacheHtmlInterceptor;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -251,8 +263,20 @@ public class WebConfig implements WebMvcConfigurer {
         configurer.enable();
     }
 
+    /** Ensures REST chat history returns ISO-8601 {@code createdAt} strings, not numeric epoch seconds. */
+    @Override
+    public void extendMessageConverters(final List<HttpMessageConverter<?>> converters) {
+        for (int i = 0; i < converters.size(); i++) {
+            if (converters.get(i) instanceof MappingJackson2HttpMessageConverter) {
+                converters.set(i, new MappingJackson2HttpMessageConverter(objectMapper));
+                return;
+            }
+        }
+    }
+
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
+        registry.addInterceptor(noCacheHtmlInterceptor.getObject()).addPathPatterns("/**");
         registry.addInterceptor(latestLocaleSaveInterceptor.getObject()).addPathPatterns("/**");
     }
 

@@ -14,6 +14,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.RememberMeAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
@@ -103,6 +104,7 @@ public class WebAuthConfig {
             final ReservationWebAuthorization reservationWebAuthorization,
             final ProfileWebAuthorization profileWebAuthorization) throws Exception {
         http
+                .headers(headers -> headers.cacheControl(Customizer.withDefaults()))
                 .csrf(csrf -> csrf.disable())
                 .authenticationManager(authenticationManager)
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
@@ -256,18 +258,24 @@ public class WebAuthConfig {
             final HttpServletRequest request,
             final HttpServletResponse response,
             @SuppressWarnings("unused") final Authentication authentication) {
-        final String path = request.getContextPath() != null && !request.getContextPath().isEmpty()
-                ? request.getContextPath()
-                : "/";
-        for (final String name : new String[] {"remember-me", "JSESSIONID"}) {
-            final Cookie c = new Cookie(name, null);
-            c.setPath(path);
-            c.setMaxAge(0);
-            c.setHttpOnly(true);
-            if (request.isSecure()) {
-                c.setSecure(true);
+        final String contextPath = request.getContextPath() != null ? request.getContextPath() : "";
+        final String[] paths;
+        if (contextPath.isEmpty() || "/".equals(contextPath)) {
+            paths = new String[] {"/", "/webapp"};
+        } else {
+            paths = new String[] {contextPath};
+        }
+        for (final String path : paths) {
+            for (final String name : new String[] {"remember-me", "JSESSIONID"}) {
+                final Cookie c = new Cookie(name, null);
+                c.setPath(path);
+                c.setMaxAge(0);
+                c.setHttpOnly(true);
+                if (request.isSecure()) {
+                    c.setSecure(true);
+                }
+                response.addCookie(c);
             }
-            response.addCookie(c);
         }
     }
 

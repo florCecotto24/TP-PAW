@@ -142,11 +142,14 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     }
 
     private ReservationMessageDto toDto(final ReservationMessage message) {
-        final User sender = message.getSender();
+        final long senderUserId = message.getSenderUserId();
+        final User sender = userService
+                .getUserById(senderUserId)
+                .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
         return new ReservationMessageDto(
                 message.getId(),
                 message.getReservationId(),
-                message.getSenderUserId(),
+                senderUserId,
                 formatDisplayName(sender),
                 message.getBody(),
                 message.getCreatedAt());
