@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.config.properties;
 
 import org.springframework.core.env.Environment;
 
+import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 
@@ -17,7 +18,8 @@ public record AppValidationProperties(
         int profilePhoneMaxLength,
         int profileAboutMaxLength,
         String profilePhonePattern,
-        int reviewCommentMaxLength) {
+        int reviewCommentMaxLength,
+        int reservationMessageMaxLength) {
 
     private static final String REGISTRATION_PASSWORD_MIN_LENGTH = "app.validation.registration-password-min-length";
     private static final String REGISTRATION_PASSWORD_MAX_LENGTH = "app.validation.registration-password-max-length";
@@ -27,6 +29,7 @@ public record AppValidationProperties(
     private static final String PROFILE_ABOUT_MAX_LENGTH = "app.validation.profile-about-max-length";
     private static final String PROFILE_PHONE_PATTERN = "app.validation.profile-phone-pattern";
     private static final String REVIEW_COMMENT_MAX_LENGTH = "app.validation.review-comment-max-length";
+    private static final String RESERVATION_MESSAGE_MAX_LENGTH = "app.validation.reservation-message-max-length";
 
     public static AppValidationProperties fromEnvironment(final Environment environment) {
         return new AppValidationProperties(
@@ -37,7 +40,8 @@ public record AppValidationProperties(
                 environment.getProperty(PROFILE_PHONE_MAX_LENGTH, Integer.class, 20),
                 environment.getProperty(PROFILE_ABOUT_MAX_LENGTH, Integer.class, 500),
                 environment.getProperty(PROFILE_PHONE_PATTERN, "^[0-9+]+$"),
-                environment.getProperty(REVIEW_COMMENT_MAX_LENGTH, Integer.class, 200));
+                environment.getProperty(REVIEW_COMMENT_MAX_LENGTH, Integer.class, 200),
+                environment.getProperty(RESERVATION_MESSAGE_MAX_LENGTH, Integer.class, 1000));
     }
 
     public UserValidationPolicy toUserValidationPolicy() {
@@ -53,5 +57,9 @@ public record AppValidationProperties(
 
     public ReviewValidationPolicy toReviewValidationPolicy() {
         return ReviewValidationPolicy.fromValidatedCommentMaxLength(reviewCommentMaxLength);
+    }
+
+    public ReservationMessageValidationPolicy toReservationMessageValidationPolicy() {
+        return ReservationMessageValidationPolicy.fromValidatedBodyMaxLength(reservationMessageMaxLength);
     }
 }

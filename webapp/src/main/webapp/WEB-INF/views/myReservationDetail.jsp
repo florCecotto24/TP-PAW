@@ -454,6 +454,12 @@
                     </div>
 
                     <div class="d-grid gap-2">
+                        <c:if test="${chatAvailable}">
+                            <spring:message code="myReservationDetail.chat.open" var="chatOpenLabel"/>
+                            <button type="button" class="btn btn-primary" data-modal-open="reservationChatModal">
+                                <c:out value="${chatOpenLabel}"/>
+                            </button>
+                        </c:if>
                         <!-- <button type="button" class="btn btn-primary" disabled>
                             <spring:message code="myReservationDetail.actions.modify"/>
                         </button> -->
@@ -710,6 +716,38 @@
         });
     })();
 </script>
+
+<c:if test="${chatAvailable}">
+    <spring:message code="myReservationDetail.chat.modalTitle" var="chatModalTitle"/>
+    <spring:message code="myReservationDetail.chat.send" var="chatSendLabel"/>
+    <spring:message code="myReservationDetail.chat.placeholder" var="chatPlaceholder"/>
+    <spring:message code="myReservationDetail.chat.empty" var="chatEmptyLabel"/>
+    <ryden:modal id="reservationChatModal" title="${chatModalTitle}" size="lg" showFooter="false">
+        <div id="reservationChatRoot"
+             class="reservation-chat"
+             data-context-path="<c:out value='${pageContext.request.contextPath}'/>"
+             data-reservation-id="<c:out value='${reservation.id}'/>"
+             data-viewer-user-id="<c:out value='${chatViewerUserId}'/>"
+             data-max-length="<c:out value='${chatMessageMaxLength}'/>"
+             data-empty-label="<c:out value='${chatEmptyLabel}'/>">
+            <div id="reservationChatMessages" class="reservation-chat__messages border rounded-3 p-3 mb-3 bg-light" role="log" aria-live="polite" style="max-height:320px;overflow-y:auto;">
+                <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
+            </div>
+            <div class="reservation-chat__composer d-flex gap-2 align-items-end">
+                <label class="visually-hidden" for="reservationChatInput"><c:out value="${chatPlaceholder}"/></label>
+                <textarea id="reservationChatInput" class="form-control" rows="2" maxlength="${chatMessageMaxLength}"
+                          placeholder="<c:out value='${chatPlaceholder}'/>"></textarea>
+                <button type="button" id="reservationChatSend" class="btn btn-primary flex-shrink-0">
+                    <c:out value="${chatSendLabel}"/>
+                </button>
+            </div>
+            <div id="reservationChatError" class="text-danger small mt-2 d-none" role="alert"></div>
+        </div>
+    </ryden:modal>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" crossorigin="anonymous"></script>
+    <script src="${pageContext.request.contextPath}/js/reservation-chat.js"></script>
+</c:if>
 
 <%@include file="footer.jsp"%>
 </body>

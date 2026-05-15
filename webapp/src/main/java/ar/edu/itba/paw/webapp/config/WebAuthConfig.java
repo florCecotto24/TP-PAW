@@ -122,6 +122,13 @@ public class WebAuthConfig {
                                 mvc(handlerMappingIntrospector, "/my-listings/{listingId}/**"))
                         .access(listingWebAuthorization.ownerAccess())
                         .antMatchers("/my-reservations").authenticated()
+                        .antMatchers("/ws", "/ws/**").authenticated()
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/messages"))
+                        .access(reservationWebAuthorization.participantAccess())
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,

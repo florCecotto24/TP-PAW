@@ -45,6 +45,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
     private final PresentationLimitsPolicy presentationLimitsPolicy;
+    private final ReservationMessageService reservationMessageService;
 
     @Autowired
     public ReservationViewServiceImpl(
@@ -55,7 +56,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             final ImageService imageService,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             @Lazy final ReviewService reviewService,
-            final PresentationLimitsPolicy presentationLimitsPolicy) {
+            final PresentationLimitsPolicy presentationLimitsPolicy,
+            final ReservationMessageService reservationMessageService) {
         this.reservationService = reservationService;
         this.listingService = listingService;
         this.listingViewService = listingViewService;
@@ -64,6 +66,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
         this.presentationLimitsPolicy = presentationLimitsPolicy;
+        this.reservationMessageService = reservationMessageService;
     }
 
     @Override
@@ -153,7 +156,10 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 canCancelReservation,
                 hasRefundReceipt,
                 refundReceiptApproved,
-                refundProofDeadlineDisplay));
+                refundProofDeadlineDisplay,
+                reservationMessageService.isChatAvailable(reservation),
+                reservationMessageService.getMessageBodyMaxLength(),
+                viewerUserId));
     }
 
     @Override
