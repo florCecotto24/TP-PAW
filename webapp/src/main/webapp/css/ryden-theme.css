@@ -1,0 +1,1286 @@
+/* ================================================================
+   ryden-theme.css — Ryden
+   Estética "modern outdoor luxury marketplace" — Light mode
+   Fondo: #FAF9F7 (crema cálido, igual que Claude)
+   Primario: #6E8DB8 (azul grisáceo)
+   Inspiración: Outdoorsy · Airbnb · Linear · Stripe
+   ================================================================ */
+
+/* ------------------------------------------------------------------
+   1. CSS VARIABLES
+   ------------------------------------------------------------------ */
+:root {
+    /* Brand */
+    --color-primary:          #6E8DB8;   /* azul grisáceo */
+    --color-primary-dark:     #4E6F99;
+    --color-primary-soft:     rgba(110, 141, 184, 0.09);
+    --color-primary-glow:     rgba(110, 141, 184, 0.18);
+
+    /* Backgrounds */
+    --color-bg:               #FAF9F7;   /* crema cálido (= Claude) */
+    --color-surface:          #FFFFFF;
+    --color-surface-elevated: #F5F4F0;
+
+    /* Text */
+    --color-text:             #1C1B1A;
+    --color-text-muted:       #6B6B6B;
+    --color-text-tertiary:    #9B9B9B;
+
+    /* Borders & shadows */
+    --color-border:           rgba(0, 0, 0, 0.07);
+    --color-overlay:          rgba(0, 0, 0, 0.75);
+    --shadow-soft:            0 8px 32px rgba(0, 0, 0, 0.08);
+    --shadow-button:          0 6px 20px rgba(110, 141, 184, 0.28);
+    --shadow-card:            0 2px 12px rgba(0, 0, 0, 0.055);
+
+    /* Radii */
+    --radius-card:  12px;
+    --radius-btn:   10px;
+    --radius-modal: 16px;
+    --radius-pill:  999px;
+
+    /* Transitions */
+    --transition-base: 0.3s ease-out;
+    --transition-slow: 0.6s ease-out;
+
+    /* ── Bootstrap token overrides ─────────────────────────────── */
+    --bs-body-bg:                    #FAF9F7;
+    --bs-body-color:                 #1C1B1A;
+    --bs-body-color-rgb:             28, 27, 26;
+    --bs-emphasis-color:             #0A0A0A;
+    --bs-secondary-color:            rgba(107, 107, 107, 0.9);
+    --bs-secondary-color-rgb:        107, 107, 107;
+    --bs-tertiary-color:             rgba(155, 155, 155, 0.85);
+    --bs-secondary-bg:               #F5F4F0;
+    --bs-tertiary-bg:                #EEEDE8;
+    --bs-border-color:               rgba(0, 0, 0, 0.08);
+    --bs-border-color-translucent:   rgba(0, 0, 0, 0.05);
+    --bs-secondary-border-subtle:    rgba(0, 0, 0, 0.1);
+    --bs-primary-border-subtle:      rgba(110, 141, 184, 0.3);
+    --bs-link-color:                 #4E6F99;
+    --bs-link-hover-color:           #3A5580;
+    --bs-link-color-rgb:             78, 111, 153;
+    --bs-link-hover-color-rgb:       58, 85, 128;
+    --bs-primary:                    #6E8DB8;
+    --bs-primary-rgb:                110, 141, 184;
+    --bs-primary-text-emphasis:      #3A5580;
+    --bs-primary-bg-subtle:          rgba(110, 141, 184, 0.09);
+    --bs-card-bg:                    #FFFFFF;
+    --bs-card-cap-bg:                rgba(0, 0, 0, 0.02);
+    --bs-card-border-color:          rgba(0, 0, 0, 0.07);
+    --bs-dropdown-bg:                #FFFFFF;
+    --bs-dropdown-border-color:      rgba(0, 0, 0, 0.08);
+    --bs-dropdown-link-color:        #1C1B1A;
+    --bs-dropdown-link-hover-color:  #0A0A0A;
+    --bs-dropdown-link-hover-bg:     rgba(110, 141, 184, 0.08);
+    --bs-dropdown-divider-bg:        rgba(0, 0, 0, 0.07);
+    --bs-modal-bg:                   #FFFFFF;
+    --bs-modal-content-bg:           #FFFFFF;
+    --bs-modal-header-border-color:  rgba(0, 0, 0, 0.07);
+    --bs-modal-footer-border-color:  rgba(0, 0, 0, 0.07);
+}
+
+/* ------------------------------------------------------------------
+   2. GLOBAL / TYPOGRAPHY
+   ------------------------------------------------------------------ */
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--color-bg) !important;
+    color: var(--color-text) !important;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Override Bootstrap's bg-light on body so every page uses the cream */
+body.bg-light {
+    background-color: var(--color-bg) !important;
+}
+
+/* Internal elements with bg-light get the warm elevated surface instead of Bootstrap grey */
+:not(body).bg-light {
+    background-color: var(--color-surface-elevated) !important;
+}
+
+h1, h2, h3, h4, h5, h6, .navbar-brand {
+    font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, sans-serif;
+}
+
+h1 { letter-spacing: -0.03em; }
+h2 { letter-spacing: -0.02em; }
+h3 { letter-spacing: -0.015em; }
+
+/* Scrollbar cálido */
+::-webkit-scrollbar              { width: 8px; height: 8px; }
+::-webkit-scrollbar-track        { background: #F0EFE9; }
+::-webkit-scrollbar-thumb        { background: rgba(0,0,0,0.18); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover  { background: rgba(0,0,0,0.3); }
+
+/* ------------------------------------------------------------------
+   3. NAVBAR — translúcida sobre fondo crema
+   ------------------------------------------------------------------ */
+.navbar {
+    background: rgba(250, 249, 247, 0.88) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+    transition: background var(--transition-base), box-shadow var(--transition-base) !important;
+}
+
+.navbar--scrolled {
+    background: rgba(250, 249, 247, 0.97) !important;
+    border-bottom-color: rgba(0, 0, 0, 0.09) !important;
+    box-shadow: 0 1px 16px rgba(0, 0, 0, 0.07) !important;
+}
+
+.navbar-brand {
+    color: #1C1B1A !important;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.nav-link {
+    --bs-nav-link-color: #6B6B6B;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    transition: color var(--transition-base) !important;
+}
+
+.nav-link:hover {
+    --bs-nav-link-hover-color: #1C1B1A;
+}
+
+.navbar-nav .nav-link.active {
+    --bs-navbar-active-color: #1C1B1A;
+    --bs-nav-pills-link-active-color: var(--color-primary);
+    --bs-nav-pills-link-active-bg: rgba(110, 141, 184, 0.10);
+}
+
+.navbar-user-menu-toggle {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: var(--color-text) !important;
+    transition: background var(--transition-base) !important;
+}
+
+.navbar-user-menu-toggle:hover {
+    background: rgba(0, 0, 0, 0.09) !important;
+}
+
+.navbar-user-menu-toggle .fw-semibold {
+    color: var(--color-primary) !important;
+}
+
+.my-dropdown-button {
+    --bs-btn-border-color: rgba(0, 0, 0, 0.1);
+    --bs-btn-bg:           rgba(0, 0, 0, 0.04);
+    --bs-btn-color:        #1C1B1A;
+    --bs-btn-hover-bg:     rgba(0, 0, 0, 0.08);
+}
+
+/* Bootstrap dropdown */
+.dropdown-menu {
+    background-color: #FFFFFF !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.13) !important;
+}
+
+.dropdown-item {
+    color: #1C1B1A !important;
+    border-radius: 6px;
+    transition: background var(--transition-base);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background: rgba(110, 141, 184, 0.09) !important;
+    color: #0A0A0A !important;
+}
+
+.dropdown-item.active {
+    background: rgba(110, 141, 184, 0.12) !important;
+    color: var(--color-primary) !important;
+}
+
+.dropdown-item.text-danger {
+    color: #dc2626 !important;
+}
+
+.dropdown-item.text-danger:hover {
+    background: rgba(220, 38, 38, 0.07) !important;
+}
+
+.dropdown-divider {
+    border-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+/* ------------------------------------------------------------------
+   4. HERO — cinematográfico, texto izquierda (foto + overlay oscuro)
+   ------------------------------------------------------------------ */
+.hero-section {
+    min-height: 580px;
+    display: flex;
+    align-items: stretch;
+    background-position: center calc(50% + var(--parallax-y, 0px));
+    will-change: background-position;
+}
+
+.hero-overlay {
+    flex: 1;
+    background: linear-gradient(
+        135deg,
+        rgba(0, 0, 0, 0.88) 0%,
+        rgba(0, 0, 0, 0.60) 45%,
+        rgba(0, 0, 0, 0.25) 100%
+    ) !important;
+    width: 100%;
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start !important;
+    justify-content: center;
+    padding: 5rem clamp(1.5rem, 6vw, 5rem) !important;
+    min-height: 580px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ambient glow */
+.hero-overlay::after {
+    content: '';
+    position: absolute;
+    bottom: -25%;
+    left: -5%;
+    width: 55%;
+    height: 80%;
+    background: radial-gradient(ellipse, rgba(110, 141, 184, 0.08) 0%, transparent 65%);
+    pointer-events: none;
+    animation: hero-ambient 10s ease-in-out infinite;
+}
+
+@keyframes hero-ambient {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+.hero-text {
+    text-align: left !important;
+    max-width: 700px;
+    margin-top: 0 !important;
+    position: relative;
+    z-index: 1;
+}
+
+.hero-text h1 {
+    font-size: clamp(2.2rem, 4.5vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+    color: #FFFFFF;
+    animation: hero-fade-up 0.9s ease-out both;
+}
+
+.hero-text .lead {
+    font-size: clamp(1rem, 1.4vw, 1.15rem);
+    color: rgba(255, 255, 255, 0.75);
+    margin-top: 1rem;
+    max-width: 520px;
+    line-height: 1.65;
+    animation: hero-fade-up 0.9s 0.2s ease-out both;
+}
+
+.hero-text .small {
+    color: rgba(255, 255, 255, 0.48);
+    animation: hero-fade-up 0.9s 0.38s ease-out both;
+}
+
+@keyframes hero-fade-up {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------------------------------------------------------
+   5. SEARCH MENU / STICKY BAR
+   ------------------------------------------------------------------ */
+.search-menu {
+    background-color: var(--color-bg) !important;
+}
+
+/* ------------------------------------------------------------------
+   6. CAR CARDS
+   ------------------------------------------------------------------ */
+.carcard {
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-card) !important;
+    box-shadow: var(--shadow-card) !important;
+    transition: transform 0.35s ease-out, box-shadow 0.35s ease-out, border-color 0.35s ease-out !important;
+}
+
+.carcard:hover,
+.carcard:focus-within {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.12) !important;
+    border-color: rgba(110, 141, 184, 0.28) !important;
+}
+
+.carcard-image {
+    background-color: var(--color-surface-elevated) !important;
+    border-radius: var(--radius-card) var(--radius-card) 0 0 !important;
+    overflow: hidden;
+}
+
+.carcard-image img {
+    transition: transform 0.6s ease-out !important;
+}
+
+.carcard:hover .carcard-image img,
+.carcard:focus-within .carcard-image img {
+    transform: scale(1.06) !important;
+}
+
+.no-image-badge {
+    color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.carcard-model {
+    color: var(--color-text-muted) !important;
+}
+
+.carcard-price-amount {
+    color: var(--color-primary) !important;
+}
+
+.carcard-price * {
+    color: var(--color-text-muted) !important;
+}
+
+/* ------------------------------------------------------------------
+   7. BUTTONS
+   ------------------------------------------------------------------ */
+.btn-primary {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    border-radius: var(--radius-btn) !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    transition: background-color var(--transition-base),
+                border-color var(--transition-base),
+                transform var(--transition-base),
+                box-shadow var(--transition-base) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+    background-color: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-button) !important;
+    color: #FFFFFF !important;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5 !important;
+    transform: none !important;
+}
+
+.btn-outline-primary {
+    color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    border-radius: var(--radius-btn) !important;
+    background: transparent !important;
+    font-weight: 600 !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus-visible {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px);
+}
+
+.btn-light,
+.btn-light.border {
+    background-color: var(--color-surface-elevated) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: var(--color-text) !important;
+    border-radius: var(--radius-btn) !important;
+}
+
+.btn-light:hover,
+.btn-light.border:hover {
+    background-color: #ECEAE4 !important;
+    border-color: rgba(0, 0, 0, 0.14) !important;
+}
+
+.btn-secondary {
+    background-color: var(--color-surface-elevated) !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: var(--color-text) !important;
+    border-radius: var(--radius-btn) !important;
+}
+
+.btn-secondary:hover {
+    background-color: #ECEAE4 !important;
+}
+
+.btn-outline-secondary {
+    color: var(--color-text-muted) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    border-radius: var(--radius-btn) !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: var(--color-text) !important;
+}
+
+.btn-danger {
+    border-radius: var(--radius-btn) !important;
+}
+
+/* ------------------------------------------------------------------
+   8. FORM CONTROLS
+   ------------------------------------------------------------------ */
+.form-control,
+.form-select {
+    background-color: var(--color-surface) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: var(--color-text) !important;
+    border-radius: 8px !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-text) !important;
+    box-shadow: 0 0 0 3px rgba(110, 141, 184, 0.15) !important;
+}
+
+.form-control::placeholder {
+    color: var(--color-text-tertiary) !important;
+}
+
+.form-control:disabled {
+    background-color: var(--color-surface-elevated) !important;
+    color: var(--color-text-muted) !important;
+    border-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+.input-group-text {
+    background-color: var(--color-surface-elevated) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: var(--color-text-muted) !important;
+}
+
+.custom-input {
+    background-color: var(--color-surface) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+    color: var(--color-text) !important;
+}
+
+.custom-input:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px rgba(110, 141, 184, 0.15) !important;
+}
+
+.custom-input::placeholder {
+    color: var(--color-text-tertiary) !important;
+}
+
+.custom-label,
+.form-label {
+    color: var(--color-text-muted) !important;
+    font-weight: 500 !important;
+}
+
+/* ------------------------------------------------------------------
+   9. MODALS (custom .modal-overlay + Bootstrap .modal)
+   ------------------------------------------------------------------ */
+.modal__content {
+    background: var(--color-surface) !important;
+    color: var(--color-text);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14) !important;
+    border-radius: var(--radius-modal) !important;
+}
+
+.modal__close {
+    background: rgba(0, 0, 0, 0.06) !important;
+    color: var(--color-text-muted) !important;
+}
+
+.modal__close:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+    color: var(--color-text) !important;
+}
+
+.modal__title {
+    color: var(--color-text) !important;
+}
+
+.modal__message,
+.modal__supporting-text {
+    color: var(--color-text-muted) !important;
+}
+
+/* Bootstrap native modal */
+.modal-content {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-modal) !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.14) !important;
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--color-border) !important;
+}
+
+/* ------------------------------------------------------------------
+   10. CAR DETAIL PAGE
+   ------------------------------------------------------------------ */
+.host-profile-bar {
+    background: var(--color-surface-elevated) !important;
+    border-color: var(--color-border) !important;
+}
+
+.spec-card {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+.pickup-map-placeholder {
+    background: var(--color-surface-elevated) !important;
+}
+
+.detail-price-amount {
+    color: var(--color-primary) !important;
+}
+
+.detail-total-amount {
+    color: var(--color-primary) !important;
+}
+
+.similarVehiclesSeeAll {
+    color: var(--color-primary) !important;
+}
+
+.similarVehiclesSeeAll:hover {
+    color: var(--color-primary-dark) !important;
+}
+
+/* ------------------------------------------------------------------
+   11. RESERVATION CARDS & BADGES
+   ------------------------------------------------------------------ */
+.reservation-card__surface {
+    border: 1px solid var(--color-border) !important;
+    background: var(--color-surface) !important;
+    border-radius: 1rem !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+.reservation-card__media--placeholder {
+    background: var(--color-surface-elevated) !important;
+}
+
+.reservation-card__meta-label {
+    color: var(--color-text-tertiary) !important;
+}
+
+.reservation-status-badge--pending {
+    background: rgba(202, 138, 4, 0.1) !important;
+    color: #92400e !important;
+}
+
+.reservation-status-badge--accepted {
+    background: rgba(22, 163, 74, 0.1) !important;
+    color: #166534 !important;
+}
+
+.reservation-status-badge--started {
+    background: rgba(110, 141, 184, 0.1) !important;
+    color: #3A5580 !important;
+}
+
+.reservation-status-badge--cancelled {
+    background: rgba(220, 38, 38, 0.1) !important;
+    color: #991b1b !important;
+}
+
+.reservation-status-badge--finished {
+    background: rgba(107, 107, 107, 0.1) !important;
+    color: #4B5563 !important;
+}
+
+/* ------------------------------------------------------------------
+   12. PROFILE PAGE
+   ------------------------------------------------------------------ */
+.profile-card {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+.profile-card__divider {
+    border-color: var(--color-border) !important;
+}
+
+.profile-card__avatar-placeholder {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%) !important;
+    border-color: transparent !important;
+}
+
+.profile-card__avatar-edit-btn {
+    background: var(--color-surface) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
+}
+
+.profile-card__avatar-edit-btn:hover {
+    background: var(--color-primary) !important;
+    color: #FFFFFF !important;
+}
+
+.profile-avatar-menu {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+}
+
+.profile-avatar-menu__item:hover {
+    background: rgba(110, 141, 184, 0.08) !important;
+}
+
+.profile-card__badge {
+    background: rgba(22, 163, 74, 0.1) !important;
+    color: #166534 !important;
+}
+
+/* ------------------------------------------------------------------
+   13. FEATURES SECTION — heading underline + icon hover
+   ------------------------------------------------------------------ */
+.features-section h2 {
+    position: relative;
+    display: inline-block;
+}
+
+.features-section h2::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 2px;
+    background: var(--color-primary);
+    margin: 0.65rem auto 0;
+    border-radius: 2px;
+    transition: width 0.85s ease-out;
+}
+
+.features-section.is-visible h2::after {
+    width: 52px;
+}
+
+.feature-icon-wrap {
+    cursor: default;
+}
+
+/* ------------------------------------------------------------------
+   14. CTA BANNER — sección oscura contrastante
+   ------------------------------------------------------------------ */
+.cta-banner {
+    background: linear-gradient(135deg, #1a2535 0%, #1e2f48 60%, #1a2535 100%) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 35% 50%, rgba(110, 141, 184, 0.13) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+@keyframes cta-pulse {
+    0%, 100% { box-shadow: 0 0 0 0   rgba(110, 141, 184, 0); }
+    50%       { box-shadow: 0 0 0 10px rgba(110, 141, 184, 0.11); }
+}
+
+.cta-banner .btn {
+    animation: cta-pulse 3.2s ease-in-out infinite;
+    border-radius: var(--radius-btn) !important;
+}
+
+/* ------------------------------------------------------------------
+   15. FOOTER
+   ------------------------------------------------------------------ */
+footer {
+    background-color: var(--color-bg);
+}
+
+footer .border-bottom {
+    border-color: var(--color-border) !important;
+}
+
+/* ------------------------------------------------------------------
+   16. SCROLL ANIMATION UTILITIES
+   ------------------------------------------------------------------ */
+.animate-on-scroll {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.75s ease-out, transform 0.75s ease-out;
+}
+
+.animate-on-scroll.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.animate-stagger-child {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.animate-stagger-child.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ------------------------------------------------------------------
+   17. BOOTSTRAP COMPONENT OVERRIDES
+   ------------------------------------------------------------------ */
+.alert-project {
+    background-color: rgba(110, 141, 184, 0.08) !important;
+    border-color: rgba(110, 141, 184, 0.28) !important;
+    color: var(--color-text) !important;
+}
+
+hr {
+    border-color: var(--color-border) !important;
+    opacity: 1 !important;
+}
+
+.page-link {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-muted) !important;
+}
+
+.page-link:hover {
+    background-color: var(--color-surface-elevated) !important;
+    color: var(--color-text) !important;
+}
+
+.page-item.active .page-link {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #FFFFFF !important;
+}
+
+.page-item.disabled .page-link {
+    background-color: var(--color-surface) !important;
+    color: var(--color-text-tertiary) !important;
+}
+
+.counterparty-summary-card {
+    border-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+}
+
+.neighborhood-picker__menu .dropdown-item:hover,
+.neighborhood-picker__menu .dropdown-item:focus {
+    background-color: var(--color-primary) !important;
+    color: #FFFFFF !important;
+}
+
+/* ------------------------------------------------------------------
+   18. COUNTERPARTY PROFILE PAGE
+   ------------------------------------------------------------------ */
+.counterparty-header-card,
+.counterparty-reviews-card {
+    border-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+.counterparty-badge {
+    background: rgba(110, 141, 184, 0.1) !important;
+    color: var(--color-primary-dark) !important;
+}
+
+.counterparty-rating-progress {
+    background: rgba(0, 0, 0, 0.08) !important;
+}
+
+.counterparty-link {
+    color: var(--color-primary) !important;
+}
+
+.counterparty-link:hover {
+    color: var(--color-primary-dark) !important;
+}
+
+.counterparty-context-card {
+    border-color: var(--color-border) !important;
+    background: var(--color-surface) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+.counterparty-tag {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    background: var(--color-surface-elevated) !important;
+}
+
+.counterparty-price-chip {
+    background: rgba(110, 141, 184, 0.1) !important;
+    color: var(--color-primary-dark) !important;
+}
+
+.counterparty-profile-page .btn-primary {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+.counterparty-profile-page .btn-primary:hover {
+    background-color: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+}
+
+/* ------------------------------------------------------------------
+   19. FLATPICKR — tema claro coordinado
+   ------------------------------------------------------------------ */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #FFFFFF !important;
+}
+
+.flatpickr-day.today {
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
+}
+
+.flatpickr-day.today:hover {
+    background: var(--color-primary) !important;
+    color: #FFFFFF !important;
+}
+
+.flatpickr-day:hover {
+    background: rgba(110, 141, 184, 0.1) !important;
+}
+
+.flatpickr-day.inRange {
+    background: rgba(110, 141, 184, 0.1) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-profile-clear-btn {
+    color: var(--color-primary) !important;
+}
+
+.flatpickr-profile-clear-btn:hover {
+    background: rgba(110, 141, 184, 0.08) !important;
+}
+
+/* ------------------------------------------------------------------
+   20. SEARCH BAR CONTAINER — surface + refined pill shadow
+   ------------------------------------------------------------------ */
+.search-menu .bg-white,
+.search-menu [class*="rounded-4"] {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07) !important;
+}
+
+.search-menu .vr {
+    background-color: rgba(0, 0, 0, 0.1);
+    opacity: 1;
+}
+
+.search-menu .form-control.border-0 {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 0.9rem;
+}
+
+.search-menu .form-label.small {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary) !important;
+}
+
+.search-menu .border-top {
+    border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ------------------------------------------------------------------
+   21. FILTER DROPDOWNS — refined pill chips
+   ------------------------------------------------------------------ */
+.explore-filter-dropdown .btn.dropdown-toggle {
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    padding: 5px 14px !important;
+    border-radius: var(--radius-pill) !important;
+    border-color: rgba(0, 0, 0, 0.11) !important;
+    background: var(--color-surface) !important;
+    color: var(--color-text-muted) !important;
+    transition: background var(--transition-base), border-color var(--transition-base), color var(--transition-base) !important;
+}
+
+.explore-filter-dropdown .btn.dropdown-toggle:hover {
+    background: var(--color-primary-soft) !important;
+    border-color: rgba(110, 141, 184, 0.4) !important;
+    color: var(--color-primary) !important;
+}
+
+.explore-filter-dropdown .btn.dropdown-toggle[aria-expanded="true"] {
+    background: var(--color-primary-soft) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
+}
+
+.explore-filter-dropdown__panel {
+    border-radius: 12px !important;
+    border-color: var(--color-border) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+    overflow: hidden;
+}
+
+.explore-filter-dropdown .form-check-input:checked {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+/* Price filter pill */
+.search-menu .dropdown > .btn.dropdown-toggle {
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    padding: 5px 14px !important;
+    border-radius: var(--radius-pill) !important;
+    border-color: rgba(0, 0, 0, 0.11) !important;
+    background: var(--color-surface) !important;
+    color: var(--color-text-muted) !important;
+}
+
+/* ------------------------------------------------------------------
+   22. CAROUSEL — let card shadows bleed outside the track
+   ------------------------------------------------------------------ */
+.carousel-inner {
+    overflow: visible;
+}
+
+/* ------------------------------------------------------------------
+   22b. CAROUSEL HEADER — editorial title + round nav buttons
+   ------------------------------------------------------------------ */
+.carouselHeader h4 {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: var(--color-text) !important;
+}
+
+.carouselHeader .text-secondary {
+    font-size: 0.82rem !important;
+    color: var(--color-text-muted) !important;
+}
+
+.carouselHeader .btn-outline-secondary,
+.carouselHeader .btn-outline-primary {
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    font-size: 0.8rem !important;
+}
+
+/* ------------------------------------------------------------------
+   23. SPEC CARD — hover glow + icon color shift
+   ------------------------------------------------------------------ */
+.spec-card {
+}
+
+/* ------------------------------------------------------------------
+   24. HOST PROFILE BAR — elevated card with hover lift
+   ------------------------------------------------------------------ */
+.host-profile-bar {
+    border: 1px solid var(--color-border) !important;
+    box-shadow: var(--shadow-card) !important;
+    transition: box-shadow 0.3s ease, transform 0.3s ease !important;
+}
+
+.host-profile-bar:hover {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ------------------------------------------------------------------
+   25. REVIEW CARDS — left accent + hover lift
+   ------------------------------------------------------------------ */
+.listing-review-card {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    border-left: 3px solid rgba(110, 141, 184, 0.22) !important;
+    box-shadow: var(--shadow-card) !important;
+}
+
+/* ------------------------------------------------------------------
+   26. HOW IT WORKS SECTION
+   ------------------------------------------------------------------ */
+.how-it-works-step {
+    position: relative;
+    padding: 2rem 1.75rem;
+    border-radius: 14px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+    cursor: default;
+}
+
+.how-it-works-step__number {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+    display: block;
+    opacity: 0.8;
+}
+
+.how-it-works-step__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+    font-size: 1.5rem;
+}
+
+@keyframes how-it-works-icon-pop {
+    0%   { transform: scale(0.55) rotate(-10deg); opacity: 0; }
+    65%  { transform: scale(1.15) rotate(4deg);  opacity: 1; }
+    82%  { transform: scale(0.94) rotate(-1deg); }
+    100% { transform: scale(1)    rotate(0deg);  }
+}
+
+@keyframes how-it-works-card-rise {
+    0%   { transform: translateY(8px); box-shadow: var(--shadow-card); }
+    100% { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(110, 141, 184, 0.18); border-color: rgba(110, 141, 184, 0.35); }
+}
+
+.animate-stagger-child.is-visible .how-it-works-step {
+    animation: how-it-works-card-rise 0.55s cubic-bezier(0.34, 1.3, 0.64, 1) 0.25s both;
+}
+
+.animate-stagger-child.is-visible .how-it-works-step__icon {
+    animation: how-it-works-icon-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both;
+}
+
+.how-it-works-step__title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.6rem;
+    color: var(--color-text);
+}
+
+.how-it-works-step__desc {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.65;
+    margin: 0;
+}
+
+/* ------------------------------------------------------------------
+   27. CAR CARD VIEW CHIP — Airbnb-style overlay on hover
+   ------------------------------------------------------------------ */
+.carcard-image {
+    position: relative !important;
+}
+
+/* Dark gradient that rises from the bottom of the image */
+.carcard--clickable .carcard-image::before {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 55%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.52), transparent);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.carcard--clickable:hover .carcard-image::before,
+.carcard--clickable:focus-within .carcard-image::before {
+    opacity: 1;
+}
+
+.carcard-view-chip {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-text);
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 6px 18px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease,
+                transform 0.35s cubic-bezier(0.34, 1.2, 0.64, 1);
+    pointer-events: none;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.carcard--clickable:hover .carcard-view-chip,
+.carcard--clickable:focus-within .carcard-view-chip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ------------------------------------------------------------------
+   28. REVIEWER AVATAR — colored initials circle
+   ------------------------------------------------------------------ */
+.reviewer-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+    flex-shrink: 0;
+    background-color: var(--color-primary);
+    letter-spacing: 0.02em;
+    user-select: none;
+}
+
+/* ------------------------------------------------------------------
+   29. ANIMATED SEARCH PLACEHOLDER
+   ------------------------------------------------------------------ */
+/* Float the label up and shift input padding so animated text doesn't overlap */
+.form-floating.placeholder-anim > .form-control ~ label {
+    opacity: 0.65 !important;
+    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem) !important;
+}
+.form-floating.placeholder-anim > .form-control {
+    padding-top: 1.625rem !important;
+    padding-bottom: 0.625rem !important;
+}
+
+/* ------------------------------------------------------------------
+   30. NAVBAR SLIDING ACTIVE INDICATOR — replaces pill bg
+   ------------------------------------------------------------------ */
+.navbar-nav .nav-link.active {
+    --bs-nav-pills-link-active-bg: transparent !important;
+    background: transparent !important;
+}
+
+.nav-active-pill {
+    position: absolute;
+    bottom: -1px;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 2px;
+    transition: left 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* ------------------------------------------------------------------
+   31. SKELETON SHIMMER — image loading state
+   ------------------------------------------------------------------ */
+@keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+}
+
+.carcard-image.img-loading {
+    background: linear-gradient(
+        90deg,
+        var(--color-surface-elevated) 25%,
+        rgba(255, 255, 255, 0.65)     50%,
+        var(--color-surface-elevated) 75%
+    ) !important;
+    background-size: 200% 100% !important;
+    animation: shimmer 1.4s ease-in-out infinite !important;
+}
+
+.carcard-image img.img-loading-state {
+    opacity: 0;
+    transition: opacity 0.4s ease !important;
+}
+
+.carcard-image img.img-loaded {
+    opacity: 1;
+}
+
+/* ------------------------------------------------------------------
+   32. PUBLISH WIZARD BAR
+   ------------------------------------------------------------------ */
+.wizard-progress-track {
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.wizard-progress-fill {
+    height: 100%;
+    width: 25%;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wizard-step-title {
+    color: var(--color-text);
+    font-size: 1.05rem;
+}
+
+.wizard-label {
+    font-size: 0.7rem;
+    color: var(--color-text-tertiary);
+    font-weight: 500;
+    transition: color 0.3s ease, font-weight 0.3s ease;
+    text-align: center;
+}
+
+.wizard-label--active {
+    color: var(--color-primary) !important;
+    font-weight: 700 !important;
+}
+
+.wizard-label--done {
+    color: var(--color-primary) !important;
+}

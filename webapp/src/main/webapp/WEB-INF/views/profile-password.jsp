@@ -29,9 +29,9 @@
 
         <div class="mb-3">
             <label for="currentPassword" class="form-label"><spring:message code="profile.password.current"/></label>
-            <div class="input-group">
-                <form:password path="currentPassword" id="currentPassword" cssClass="form-control" autocomplete="current-password"/>
-                <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
+            <div class="position-relative ryden-pw-wrap">
+                <form:password path="currentPassword" id="currentPassword" cssClass="form-control pe-5" autocomplete="current-password"/>
+                <button type="button" class="btn btn-sm border-0 bg-transparent text-secondary position-absolute top-50 end-0 translate-middle-y me-1 ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">
                     <i class="bi bi-eye" aria-hidden="true"></i>
@@ -41,9 +41,9 @@
         </div>
         <div class="mb-3">
             <label for="password" class="form-label"><spring:message code="profile.password.new"/></label>
-            <div class="input-group">
-                <form:password path="password" id="password" cssClass="form-control" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}"/>
-                <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
+            <div class="position-relative ryden-pw-wrap">
+                <form:password path="password" id="password" cssClass="form-control pe-5" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}"/>
+                <button type="button" class="btn btn-sm border-0 bg-transparent text-secondary position-absolute top-50 end-0 translate-middle-y me-1 ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">
                     <i class="bi bi-eye" aria-hidden="true"></i>
@@ -54,9 +54,9 @@
         </div>
         <div class="mb-4">
             <label for="passwordConfirm" class="form-label"><spring:message code="profile.password.newConfirm"/></label>
-            <div class="input-group">
-                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}"/>
-                <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
+            <div class="position-relative ryden-pw-wrap">
+                <form:password path="passwordConfirm" id="passwordConfirm" cssClass="form-control pe-5" autocomplete="new-password" maxlength="${registrationPasswordMaxLength}"/>
+                <button type="button" class="btn btn-sm border-0 bg-transparent text-secondary position-absolute top-50 end-0 translate-middle-y me-1 ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">
                     <i class="bi bi-eye" aria-hidden="true"></i>
