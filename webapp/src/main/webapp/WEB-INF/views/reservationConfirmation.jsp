@@ -34,13 +34,12 @@
                         </p>
 
                         <div class="small text-secondary mx-auto reservation-confirmation__intro" style="max-width: 32rem;">
-                            <p class="mb-2"><spring:message code="reservationConfirmation.paymentProofNotice" arguments="${paymentProofUploadDeadlineHours}"/></p>
-                            <p class="mb-0"><spring:message code="reservationConfirmation.viewReservation.hint"/></p>
+                            <p class="mb-0"><spring:message code="reservationConfirmation.paymentProofNotice" arguments="${paymentProofUploadDeadlineHours}"/></p>
                         </div>
                     </div>
 
-                    <section class="reservation-confirmation__payment border rounded-3 p-3 p-md-4 bg-light-subtle mx-auto mb-4">
-                        <h2 class="h6 fw-semibold mb-3 text-center"><spring:message code="myReservationDetail.payment.title"/></h2>
+                    <section class="reservation-confirmation__payment border border-warning rounded-3 p-3 p-md-4 bg-warning-subtle mx-auto mb-4">
+                        <h2 class="h6 fw-semibold mb-3 text-center"><i class="bi bi-clock text-primary me-1" aria-hidden="true"></i><spring:message code="myReservationDetail.payment.title"/></h2>
                         <spring:message code="validation.paymentReceipt.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="paymentReceiptTooLargeMsg"/>
                         <spring:message code="myReservationDetail.payment.invalidFile" var="paymentInvalidFileMsg"/>
                         <spring:message code="reservationConfirmation.paymentReceipt.chooseHint" var="paymentReceiptChooseHint"/>

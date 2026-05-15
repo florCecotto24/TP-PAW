@@ -72,9 +72,9 @@
     <div class="row g-4 align-items-start">
         <div class="col-lg-8">
             <c:if test="${statusKey eq 'pending' and reservationRole eq 'rider'}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4 border-warning">
+                <article class="card border border-warning shadow-sm rounded-4 mb-4 bg-warning-subtle">
                     <div class="card-body p-4">
-                        <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.payment.title"/></h2>
+                        <h2 class="h5 fw-semibold mb-3"><i class="bi bi-clock text-primary me-1" aria-hidden="true"></i><spring:message code="myReservationDetail.payment.title"/></h2>
                         <p class="text-secondary mb-3"><spring:message code="myReservationDetail.payment.intro"/></p>
                         <p class="mb-3"><span class="fw-semibold"><spring:message code="myReservationDetail.payment.cbu"/></span>
                             <c:out value="${cbu}"/></p>

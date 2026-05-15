@@ -1739,6 +1739,118 @@
     }
 })();
 
+/* ── Reviewer avatar: color from name hash ─────────────────────────── */
+(function () {
+    var PALETTE = [
+        '#6E8DB8', '#8E6EB8', '#B8896E', '#6EB8A8',
+        '#8B9E6E', '#B86E8E', '#B8A86E', '#6E9EB8'
+    ];
+    function hashName(str) {
+        var h = 0;
+        for (var i = 0; i < str.length; i++) {
+            h = (str.charCodeAt(i) + ((h << 5) - h)) | 0;
+        }
+        return Math.abs(h);
+    }
+    function initAvatars() {
+        document.querySelectorAll('.reviewer-avatar').forEach(function (el) {
+            var f = (el.dataset.forename || '').trim();
+            var s = (el.dataset.surname  || '').trim();
+            var initials = (f.charAt(0) + s.charAt(0)).toUpperCase();
+            el.textContent = initials || '?';
+            el.style.backgroundColor = PALETTE[hashName(f + s) % PALETTE.length];
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAvatars);
+    } else {
+        initAvatars();
+    }
+})();
+
+/* ── Animated search placeholder ───────────────────────────────────── */
+(function () {
+    var EXAMPLES = [
+        'BMW X5...', 'Volkswagen Golf...', 'Toyota Corolla...',
+        'Ford Ranger...', 'Chevrolet Onix...', 'Honda Civic...'
+    ];
+    function setupAnimPlaceholder(input) {
+        var parent = input.closest('.form-floating');
+        if (!parent) return;
+        var idx = 0;
+        var timer = null;
+        function start() {
+            if (input.value) return;
+            parent.classList.add('placeholder-anim');
+            input.placeholder = EXAMPLES[idx];
+            timer = setInterval(function () {
+                if (document.activeElement === input || input.value) return;
+                idx = (idx + 1) % EXAMPLES.length;
+                input.placeholder = EXAMPLES[idx];
+            }, 2800);
+        }
+        function stop() {
+            clearInterval(timer);
+            timer = null;
+            parent.classList.remove('placeholder-anim');
+            input.placeholder = ' ';
+        }
+        input.addEventListener('focus', stop);
+        input.addEventListener('blur', function () { if (!input.value) start(); });
+        input.addEventListener('input', function () {
+            if (input.value) stop(); else start();
+        });
+        start();
+    }
+    function initAnimPlaceholder() {
+        /* target main search query inputs from searchWithFilters and searchBar tags */
+        document.querySelectorAll(
+            '#search_query, [id^="search_query_"]'
+        ).forEach(function (input) {
+            if (!input.value) setupAnimPlaceholder(input);
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAnimPlaceholder);
+    } else {
+        initAnimPlaceholder();
+    }
+})();
+
+/* ── Navbar sliding active indicator ───────────────────────────────── */
+(function () {
+    function initNavPill() {
+        var activeLink = document.querySelector('.navbar-nav .nav-link.active');
+        if (!activeLink) return;
+        var navList = activeLink.closest('.navbar-nav');
+        if (!navList) return;
+
+        navList.style.position = 'relative';
+        var pill = document.createElement('span');
+        pill.className = 'nav-active-pill';
+        navList.appendChild(pill);
+
+        function moveTo(link) {
+            var nr = navList.getBoundingClientRect();
+            var lr = link.getBoundingClientRect();
+            pill.style.left  = (lr.left - nr.left) + 'px';
+            pill.style.width = lr.width + 'px';
+        }
+
+        moveTo(activeLink);
+
+        document.querySelectorAll('.navbar-nav .nav-link').forEach(function (link) {
+            link.addEventListener('mouseenter', function () { moveTo(link); });
+            link.addEventListener('mouseleave', function () { moveTo(activeLink); });
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initNavPill);
+    } else {
+        initNavPill();
+    }
+})();
+
 /*
  * Listing day price: match server @Digits(integer=8, fraction=2). maxlength is ignored on type=number;
  * clamp so users cannot type more than 8 + '.' + 2 characters (e.g. 99999999.99).
