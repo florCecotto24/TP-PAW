@@ -50,8 +50,11 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+import ar.edu.itba.paw.services.policy.ReservationChatPolicy;
+import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
 import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
@@ -129,6 +132,23 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public ReviewValidationPolicy reviewValidationPolicy(final AppValidationProperties appValidationProperties) {
         return appValidationProperties.toReviewValidationPolicy();
+    }
+
+    @Bean
+    public AppReservationChatProperties appReservationChatProperties(final Environment environment) {
+        return AppReservationChatProperties.fromEnvironment(environment);
+    }
+
+    @Bean
+    public ReservationMessageValidationPolicy reservationMessageValidationPolicy(
+            final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toReservationMessageValidationPolicy();
+    }
+
+    @Bean
+    public ReservationChatPolicy reservationChatPolicy(
+            final AppReservationChatProperties appReservationChatProperties) {
+        return appReservationChatProperties.toReservationChatPolicy();
     }
 
     @Bean

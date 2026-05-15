@@ -35,6 +35,7 @@ import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationChatMessageEmailPayload;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 
@@ -77,6 +78,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE = "html/owner-refund-proof-obligation";
     private static final String RIDER_REFUND_PROOF_RECEIVED_TEMPLATE = "html/rider-refund-proof-received";
     private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/listing-paused-missing-cbu-owner";
+    private static final String RESERVATION_CHAT_MESSAGE_TEMPLATE = "html/reservation-chat-message";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
@@ -771,6 +773,47 @@ public final class EmailServiceImpl implements EmailService {
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(listingId)
                     .log("Failed to send listing paused (missing CBU) email (listing id={})");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendReservationChatMessageNotification(final ReservationChatMessageEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendReservationChatMessageNotification")) {
+            return;
+        }
+        final String to = payload.getRecipientEmail();
+        if (to == null || to.isBlank()) {
+            LOGGER.atError().log("sendReservationChatMessageNotification: missing recipient email");
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("recipientFullName", payload.getRecipientFullName());
+        ctx.setVariable("senderFullName", payload.getSenderFullName());
+        ctx.setVariable("messagePreview", payload.getMessagePreview());
+        ctx.setVariable("vehicleLabel", payload.getVehicleLabel());
+        ctx.setVariable("detailUrl", payload.getDetailUrl());
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(RESERVATION_CHAT_MESSAGE_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.reservationChatMessage.subject",
+                        new Object[] { payload.getSenderFullName(), payload.getVehicleLabel() },
+                        mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo()
+                    .addArgument(to)
+                    .addArgument(payload.getReservationId())
+                    .log("Reservation chat message email sent to {} (reservation id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError()
+                    .setCause(e)
+                    .addArgument(payload.getReservationId())
+                    .log("Failed to send reservation chat message email (reservation id={})");
         }
     }
 

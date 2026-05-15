@@ -56,6 +56,9 @@ public class ReservationViewServiceImplTest {
     @Mock
     private PresentationLimitsPolicy presentationLimitsPolicy;
 
+    @Mock
+    private ReservationMessageService reservationMessageService;
+
     @InjectMocks
     private ReservationViewServiceImpl reservationViewService;
 

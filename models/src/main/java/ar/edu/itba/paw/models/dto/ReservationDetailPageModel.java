@@ -46,6 +46,9 @@ public final class ReservationDetailPageModel {
     private final boolean hasRefundReceipt;
     private final boolean refundReceiptApproved;
     private final Optional<String> refundProofDeadlineDisplay;
+    private final boolean chatAvailable;
+    private final int chatMessageMaxLength;
+    private final long chatViewerUserId;
 
     public ReservationDetailPageModel(
             final Reservation reservation,
@@ -79,7 +82,10 @@ public final class ReservationDetailPageModel {
             final boolean canCancelReservation,
             final boolean hasRefundReceipt,
             final boolean refundReceiptApproved,
-            final Optional<String> refundProofDeadlineDisplay) {
+            final Optional<String> refundProofDeadlineDisplay,
+            final boolean chatAvailable,
+            final int chatMessageMaxLength,
+            final long chatViewerUserId) {
         this.reservation = reservation;
         this.listing = listing;
         this.reservationPickupLocationDisplay = reservationPickupLocationDisplay;
@@ -112,6 +118,9 @@ public final class ReservationDetailPageModel {
         this.hasRefundReceipt = hasRefundReceipt;
         this.refundReceiptApproved = refundReceiptApproved;
         this.refundProofDeadlineDisplay = refundProofDeadlineDisplay;
+        this.chatAvailable = chatAvailable;
+        this.chatMessageMaxLength = chatMessageMaxLength;
+        this.chatViewerUserId = chatViewerUserId;
     }
 
     /** Same as {@link Reservation#getListingId()}; exposed for navigation / breadcrumb context. */
@@ -152,5 +161,8 @@ public final class ReservationDetailPageModel {
         putObject.accept("hasRefundReceipt", hasRefundReceipt);
         putObject.accept("refundReceiptApproved", refundReceiptApproved);
         refundProofDeadlineDisplay.ifPresent(s -> putObject.accept("refundProofDeadlineDisplay", s));
+        putObject.accept("chatAvailable", chatAvailable);
+        putObject.accept("chatMessageMaxLength", chatMessageMaxLength);
+        putObject.accept("chatViewerUserId", chatViewerUserId);
     }
 }

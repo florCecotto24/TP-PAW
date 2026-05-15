@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationChatMessageEmailPayload;
 
 /**
  * HTML mail dispatch (implementation is typically asynchronous). Callers supply fully-built payloads; this layer
@@ -67,4 +68,7 @@ public interface EmailService {
 
     /** Owner notified when an active listing was paused because CBU was removed or invalid. */
     void sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload payload);
+
+    /** Counterparty notified when a new reservation chat message is received. */
+    void sendReservationChatMessageNotification(ReservationChatMessageEmailPayload payload);
 }
