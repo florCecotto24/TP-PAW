@@ -267,8 +267,9 @@
                         <c:otherwise>
                             <div class="d-flex flex-column gap-2">
                                 <c:forEach var="availability" items="${availabilities}">
-                                    <div class="p-2 border rounded-3 bg-body-tertiary small">
-                                        <c:out value="${availability.startInclusive}"/> - <c:out value="${availability.endInclusive}"/>
+                                    <div class="p-3 border rounded-3 bg-white d-flex align-items-center gap-2">
+                                        <i class="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true"></i>
+                                        <span class="fw-medium"><c:out value="${availability.startInclusive}"/> &ndash; <c:out value="${availability.endInclusive}"/></span>
                                     </div>
                                 </c:forEach>
                             </div>
@@ -379,7 +380,7 @@
             <%-- Row 1: status stats --%>
             <div class="row g-2 mb-4">
                 <div class="col-6 col-sm-4 col-lg-2">
-                    <div class="p-3 rounded-3 text-center bg-body-tertiary border">
+                    <div class="p-3 rounded-3 text-center bg-white border">
                         <div class="fw-bold fs-4 mb-0"><c:out value="${reservationTotal}"/></div>
                         <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.total"/></div>
                     </div>
@@ -420,7 +421,7 @@
             <div class="row g-3 pt-2 border-top">
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">
-                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingReservations.dashboard.earnings.total"/>
                         </span>
                         <span class="fw-bold fs-5 text-primary"><c:out value="${listingTotalEarnings}"/></span>
@@ -428,7 +429,7 @@
                 </div>
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">
-                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingReservations.dashboard.earnings.pending"/>
                         </span>
                         <span class="fw-bold fs-5 text-warning-emphasis"><c:out value="${listingPendingEarnings}"/></span>
@@ -436,7 +437,7 @@
                 </div>
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">
-                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingReservations.dashboard.daysRented"/>
                         </span>
                         <span class="fw-bold fs-5"><c:out value="${listingTotalDaysRented}"/></span>
@@ -444,7 +445,7 @@
                 </div>
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">
-                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingReservations.dashboard.thisMonth"/>
                         </span>
                         <span class="fw-bold fs-5"><c:out value="${listingReservationsThisMonth}"/></span>
@@ -452,7 +453,7 @@
                 </div>
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">
-                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingReservations.dashboard.cancellationRate"/>
                         </span>
                         <span class="fw-bold fs-5"><c:out value="${listingCancellationRate}"/></span>
@@ -460,7 +461,7 @@
                 </div>
                 <div class="col-sm-6 col-md-4">
                     <div class="d-flex flex-column gap-1">
-                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em; font-size:.7rem;">
+                        <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingReservations.dashboard.nextReservation"/>
                         </span>
                         <c:choose>

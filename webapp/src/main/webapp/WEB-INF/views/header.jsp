@@ -18,7 +18,7 @@
 
 <%--  Our CSS  --%>
 <link rel="stylesheet" href="${pageContext.request.contextPath}/css/components.css">
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/dark-theme.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/ryden-theme.css">
 
 <%--  Bootstrap icons CDN  --%>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">

@@ -1670,7 +1670,7 @@
     });
 })();
 
-/* Show / hide password (.ryden-password-toggle button inside .input-group) */
+/* Show / hide password (.ryden-password-toggle button inside .ryden-pw-wrap or .input-group) */
 (function () {
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll(".ryden-password-toggle").forEach(function (btn) {
@@ -1679,7 +1679,7 @@
             }
             btn.setAttribute("data-ryden-bound", "1");
             btn.addEventListener("click", function () {
-                var group = btn.closest(".input-group");
+                var group = btn.closest(".ryden-pw-wrap, .input-group");
                 if (!group) {
                     return;
                 }

@@ -53,9 +53,9 @@
         </div>
         <div class="mb-3">
             <label for="password" class="form-label"><spring:message code="login.password"/></label>
-            <div class="input-group">
-                <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required/>
-                <button type="button" class="btn btn-outline-secondary ryden-password-toggle" aria-pressed="false"
+            <div class="position-relative ryden-pw-wrap">
+                <input type="password" class="form-control pe-5" id="password" name="password" autocomplete="current-password" required/>
+                <button type="button" class="btn btn-sm border-0 bg-transparent text-secondary position-absolute top-50 end-0 translate-middle-y me-1 ryden-password-toggle" aria-pressed="false"
                         data-label-show="<c:out value='${lblPwShow}'/>" data-label-hide="<c:out value='${lblPwHide}'/>"
                         aria-label="<c:out value='${lblPwShow}'/>">
                     <i class="bi bi-eye" aria-hidden="true"></i>
