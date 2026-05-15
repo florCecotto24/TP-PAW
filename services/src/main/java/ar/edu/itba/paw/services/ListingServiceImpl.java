@@ -35,6 +35,7 @@ import ar.edu.itba.paw.dto.CarPublicationResult;
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
+import ar.edu.itba.paw.exception.listing.DuplicatePlateException;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
@@ -191,6 +192,9 @@ public final class ListingServiceImpl implements ListingService {
         if (!userService.hasValidCbu(publisher)) {
             throw new ListingValidationException(
                     MessageKeys.LISTING_PUBLISH_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
+        }
+        if (carService.existsByOwnerAndPlate(ownerId, plate)) {
+            throw new DuplicatePlateException(plate);
         }
         final Car car = carService.createCar(
                 publisher.getId(),

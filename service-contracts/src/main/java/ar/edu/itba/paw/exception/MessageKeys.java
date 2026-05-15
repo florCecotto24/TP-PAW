@@ -74,6 +74,9 @@ public final class MessageKeys {
     public static final String USER_PROFILE_DOCUMENT_ALREADY_UPLOADED = "user.profile.document.alreadyUploaded";
     public static final String USER_PROFILE_CBU_INVALID = "user.profile.cbuInvalid";
 
+    // car
+    public static final String CAR_PLATE_ALREADY_EXISTS = "car.plate.alreadyExists";
+
     // listing
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";

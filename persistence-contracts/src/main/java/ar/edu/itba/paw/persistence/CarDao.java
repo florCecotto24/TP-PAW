@@ -9,6 +9,8 @@ import java.util.Optional;
 public interface CarDao {
     Car createCar(long ownerId, String plate, String brand, String model, Car.Type type, Car.Powertrain powertrain, Car.Transmission transmission);
 
+    boolean existsByOwnerAndPlate(long ownerId, String plate);
+
     Optional<Car> getCarById(final long id);
 
     /** Active listings ordered by ascending day price; row count capped by {@code app.listing.car-catalog-limit}. */

@@ -91,7 +91,7 @@ public class ReviewJpaDao implements ReviewDao {
     @Override
     public void refreshRiderAverageRating(final long riderUserId) {
         final Object raw = em.createNativeQuery(
-                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+                        "SELECT ROUND(CAST(AVG(r.rating) AS numeric), 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
                                 + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId")
                 .setParameter("userId", riderUserId)
@@ -107,7 +107,7 @@ public class ReviewJpaDao implements ReviewDao {
     @Override
     public void refreshOwnerAverageRating(final long ownerUserId) {
         final Object raw = em.createNativeQuery(
-                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+                        "SELECT ROUND(CAST(AVG(r.rating) AS numeric), 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
                                 + "INNER JOIN listings l ON l.id = res.listing_id "
                                 + "INNER JOIN cars c ON c.id = l.car_id "
@@ -124,7 +124,7 @@ public class ReviewJpaDao implements ReviewDao {
     @Override
     public void refreshListingRatingAvg(final long listingId) {
         final Object raw = em.createNativeQuery(
-                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+                        "SELECT ROUND(CAST(AVG(r.rating) AS numeric), 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
                                 + "WHERE res.listing_id = :listingId")
                 .setParameter("listingId", listingId)
@@ -151,7 +151,7 @@ public class ReviewJpaDao implements ReviewDao {
     @Override
     public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final Object result = em.createNativeQuery(
-                        "SELECT ROUND(AVG(r.rating)::numeric, 2) FROM reviews r "
+                        "SELECT ROUND(CAST(AVG(r.rating) AS numeric), 2) FROM reviews r "
                                 + "INNER JOIN reservations res ON res.id = r.reservation_id "
                                 + "INNER JOIN listings l ON l.id = res.listing_id "
                                 + "INNER JOIN cars c ON c.id = l.car_id "
@@ -213,6 +213,9 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     private static OffsetDateTime toOffsetDateTime(final Object o) {
+        if (o == null) {
+            return null;
+        }
         if (o instanceof OffsetDateTime) {
             return ((OffsetDateTime) o).withOffsetSameInstant(ZoneOffset.UTC);
         }

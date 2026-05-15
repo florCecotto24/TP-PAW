@@ -21,6 +21,9 @@ public interface CarService {
             final Car.Powertrain powertrain,
             final Car.Transmission transmission);
 
+    /** Returns true if the owner already has a car registered with the given plate. */
+    boolean existsByOwnerAndPlate(long ownerId, String plate);
+
     /** Loads a car by primary key when present. */
     Optional<Car> getCarById(final long id);
 

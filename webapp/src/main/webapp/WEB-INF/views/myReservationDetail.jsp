@@ -120,7 +120,7 @@
             </c:if>
 
             <c:if test="${reservationRole eq 'rider' and hasPaymentReceipt}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
                             <h2 class="h6 fw-semibold mb-1"><spring:message code="myReservationDetail.payment.viewReceipt"/></h2>
@@ -135,48 +135,52 @@
             </c:if>
 
             <c:if test="${reservationRole eq 'owner' and hasPaymentReceipt and (statusKey eq 'accepted' or statusKey eq 'started' or statusKey eq 'finished')}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.payment.ownerIntro"/></p>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                            <c:url var="ownerReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
-                            <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
-                                <spring:message code="myReservationDetail.payment.viewReceipt"/>
-                            </a>
-                            <c:if test="${paymentReceiptApproved}">
-                                <span class="badge text-bg-success"><spring:message code="myReservationDetail.payment.reviewedBadge"/></span>
-                            </c:if>
+                        <c:url var="ownerReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
+                        <c:url var="approvalUrl" value="/my-reservations/${reservation.id}/payment-receipt/approval"/>
+                        <div class="row g-2">
+                            <div class="col">
+                                <a class="btn btn-outline-primary w-100" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
+                                    <spring:message code="myReservationDetail.payment.viewReceipt"/>
+                                </a>
+                            </div>
+                            <div class="col">
+                                <c:choose>
+                                    <c:when test="${not paymentReceiptApproved}">
+                                        <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
+                                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                            <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                            <input type="hidden" name="approved" value="true"/>
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <spring:message code="myReservationDetail.payment.markReviewed"/>
+                                            </button>
+                                        </form>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
+                                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                            <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                            <input type="hidden" name="approved" value="false"/>
+                                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                                <spring:message code="myReservationDetail.payment.clearReview"/>
+                                            </button>
+                                        </form>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
                         </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <c:url var="approvalUrl" value="/my-reservations/${reservation.id}/payment-receipt/approval"/>
-                            <c:if test="${not paymentReceiptApproved}">
-                                <form method="post" action="<c:out value='${approvalUrl}'/>" class="d-inline">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                    <input type="hidden" name="approved" value="true"/>
-                                    <button type="submit" class="btn btn-primary btn-sm">
-                                        <spring:message code="myReservationDetail.payment.markReviewed"/>
-                                    </button>
-                                </form>
-                            </c:if>
-                            <c:if test="${paymentReceiptApproved}">
-                                <form method="post" action="<c:out value='${approvalUrl}'/>" class="d-inline">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                    <input type="hidden" name="approved" value="false"/>
-                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                        <spring:message code="myReservationDetail.payment.clearReview"/>
-                                    </button>
-                                </form>
-                            </c:if>
-                        </div>
+                        <c:if test="${paymentReceiptApproved}">
+                            <span class="badge text-bg-success mt-2"><spring:message code="myReservationDetail.payment.reviewedBadge"/></span>
+                        </c:if>
                     </div>
                 </article>
             </c:if>
 
             <c:if test="${reservationRole eq 'owner' and reservation.paymentRefundRequired and not hasRefundReceipt and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4 border-warning">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 border-warning bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.refund.ownerTitle"/></h2>
                         <p class="text-secondary mb-3"><spring:message code="myReservationDetail.refund.ownerIntro"/></p>
@@ -222,7 +226,7 @@
             </c:if>
 
             <c:if test="${reservationRole eq 'rider' and reservation.paymentRefundRequired and not hasRefundReceipt and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.refund.riderWaitingTitle"/></h2>
                         <p class="text-secondary small mb-0"><spring:message code="myReservationDetail.refund.riderWaitingIntro"/></p>
@@ -235,7 +239,7 @@
             </c:if>
 
             <c:if test="${reservationRole eq 'owner' and hasRefundReceipt and reservation.paymentRefundRequired and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div>
                             <h2 class="h6 fw-semibold mb-1"><spring:message code="myReservationDetail.refund.ownerUploadedTitle"/></h2>
@@ -250,7 +254,7 @@
             </c:if>
 
             <c:if test="${reservationRole eq 'rider' and hasRefundReceipt and reservation.paymentRefundRequired and (statusKey eq 'cancelled_by_owner' or statusKey eq 'cancelled_by_rider')}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.refund.riderTitle"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.refund.riderIntro"/></p>
@@ -291,7 +295,7 @@
             </c:if>
 
             <c:if test="${canOwnerMarkCarReturned}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.carReturned.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.carReturned.intro"/></p>
@@ -306,7 +310,7 @@
                 </article>
             </c:if>
             <c:if test="${canOwnerUnmarkCarReturned}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.carReturned.unmarkTitle"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.carReturned.unmarkIntro"/></p>
@@ -322,7 +326,7 @@
             </c:if>
 
             <c:if test="${canOwnerReviewRider}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewOwner.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewOwner.intro"/></p>
@@ -356,7 +360,7 @@
             </c:if>
 
             <c:if test="${canRiderReviewOwner}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4" id="rider-review-owner">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="rider-review-owner">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewRider.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewRider.intro"/></p>
@@ -389,7 +393,7 @@
                 </article>
             </c:if>
 
-            <article class="card border-0 shadow-sm rounded-4 mb-4">
+            <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.carSummary.title"/></h2>
                     <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
@@ -420,7 +424,7 @@
                 </div>
             </article>
 
-            <article class="card border-0 shadow-sm rounded-4 mb-4">
+            <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationDetail.details.title"/></h2>
                     <div class="row g-3">
@@ -446,7 +450,7 @@
         </div>
 
         <div class="col-lg-4">
-            <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky">
+            <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky bg-white">
                 <div class="card-body p-4">
                     <div class="reservation-price-compact mb-3">
                         <span class="reservation-card__meta-label mb-0"><spring:message code="myReservationDetail.totalPrice"/></span>
@@ -538,7 +542,7 @@
                         </c:if>
                     </c:url>
                     <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
-                    <section class="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card" aria-labelledby="counterparty-summary-heading">
+                    <section class="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card bg-white" aria-labelledby="counterparty-summary-heading">
                         <div class="card-body p-4">
                             <h2 id="counterparty-summary-heading" class="h6 fw-semibold mb-3">
                                 <c:choose>

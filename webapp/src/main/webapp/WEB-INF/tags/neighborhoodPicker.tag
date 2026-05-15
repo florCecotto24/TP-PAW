@@ -164,7 +164,6 @@
                 </div>
             </div>
             <c:if test="${nbSpringBoundSingle}">
-                <div id="nb_err_<c:out value='${pickerId}'/>" class="small text-danger mt-1 d-none" role="alert"></div>
             </c:if>
         </c:when>
         <c:otherwise>
@@ -226,9 +225,6 @@
             <span data-nid="<c:out value='${nb.id}'/>" data-name="<c:out value='${nb.name}'/>"></span>
         </c:forEach>
     </div>
-    <c:if test="${not empty springPath and (mode eq 'spring' or mode eq 'get')}">
-        <form:errors path="${springPath}" cssClass="text-danger d-block mt-1"/>
-    </c:if>
 </div>
 
 <c:if test="${empty requestScope['rydenNeighborhoodPickerLib']}">
@@ -469,13 +465,8 @@
                     nbList.querySelectorAll('.js-neighborhood-pick').forEach(function (rb) {
                         rb.addEventListener('change', function () {
                             syncSingleListUi();
-                            var errElCh = document.getElementById('nb_err_' + pickerId);
                             if (nbDdBtn) {
                                 nbDdBtn.classList.remove('is-invalid');
-                            }
-                            if (errElCh) {
-                                errElCh.classList.add('d-none');
-                                errElCh.textContent = '';
                             }
                             if (nbDdBtn && window.bootstrap && bootstrap.Dropdown) {
                                 var inst = bootstrap.Dropdown.getInstance(nbDdBtn);
@@ -526,14 +517,6 @@
                                 var v = (pickedSubmit && String(pickedSubmit.value || '').trim()) || (nbHid ? String(nbHid.value || '').trim() : '');
                                 if (!v) {
                                     ev.preventDefault();
-                                    var pickerRoot = nbDdWrap ? nbDdWrap.closest('.neighborhood-picker') : null;
-                                    var reqSingle = (pickerRoot && pickerRoot.getAttribute('data-ryden-nb-required'))
-                                        || formElSingle.getAttribute('data-ryden-nb-required') || '';
-                                    var errEl = document.getElementById('nb_err_' + pickerId);
-                                    if (errEl) {
-                                        errEl.textContent = reqSingle || '';
-                                        errEl.classList.toggle('d-none', !reqSingle);
-                                    }
                                     if (nbDdBtn) {
                                         nbDdBtn.classList.add('is-invalid');
                                         nbDdBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -547,10 +530,6 @@
                                 }
                                 if (nbDdBtn) {
                                     nbDdBtn.classList.remove('is-invalid');
-                                }
-                                var errElOk = document.getElementById('nb_err_' + pickerId);
-                                if (errElOk) {
-                                    errElOk.classList.add('d-none');
                                 }
                                 var okSingle = allNb.some(function (n) { return n.id === v; });
                                 if (!okSingle) {

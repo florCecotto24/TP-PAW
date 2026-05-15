@@ -49,17 +49,15 @@
         <c:set var="showRiderClear" value="${hasActiveRiderFilters or (not empty param.sort and param.sort ne 'date,desc')}"/>
         <form id="myReservationsRiderFilterForm" class="mb-3" method="get" action="${pageContext.request.contextPath}/my-reservations">
             <div class="d-flex justify-content-center mb-3">
-                <div class="d-flex align-items-end gap-2 w-100" style="max-width:600px">
-                    <div class="flex-grow-1">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-secondary"><i class="bi bi-search"></i></span>
-                            <input type="search" class="form-control border-start-0" id="myReservations_q" name="q" value="<c:out value='${param.q}'/>"
-                                   placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
-                        </div>
+                <div class="d-flex align-items-center gap-2 w-100" style="max-width:600px">
+                    <div class="d-flex align-items-center ryden-search-pill rounded-4 px-3 py-1 flex-grow-1 gap-2">
+                        <i class="bi bi-search text-secondary flex-shrink-0" aria-hidden="true"></i>
+                        <input type="search" class="form-control" id="myReservations_q" name="q" value="<c:out value='${param.q}'/>"
+                               placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
                     </div>
-                    <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                    <button type="submit" class="btn btn-primary rounded-3 flex-shrink-0"><spring:message code="myListings.filter.search"/></button>
                     <c:if test="${showRiderClear}">
-                        <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                        <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary flex-shrink-0"><spring:message code="search.filters.clear"/></a>
                     </c:if>
                 </div>
             </div>

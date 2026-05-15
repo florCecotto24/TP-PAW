@@ -36,6 +36,12 @@ public final class CarServiceImpl implements CarService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean existsByOwnerAndPlate(final long ownerId, final String plate) {
+        return carDao.existsByOwnerAndPlate(ownerId, plate);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<Car> getCarById(final long id) {
         return carDao.getCarById(id);
     }

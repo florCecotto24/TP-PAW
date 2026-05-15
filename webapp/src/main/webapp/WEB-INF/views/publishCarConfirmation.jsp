@@ -17,7 +17,7 @@
   <ryden:breadcrumbTrail currentLabel="${publishConfirmLabel}"/>
   <div class="row justify-content-center">
     <div class="col-md-9 col-lg-7">
-      <div class="card border-0 shadow-sm rounded-4">
+      <div class="card border-0 shadow-sm rounded-4 bg-white">
         <div class="card-body p-4 p-md-5 text-center">
           <h1 class="h3 fw-bold mb-3"><spring:message code="publishCar.confirmation.title"/></h1>
           <p class="mb-2">
@@ -28,7 +28,7 @@
             <spring:message code="publishCar.confirmation.message.before"/> <strong><c:out value="${listing.title}"/></strong> <spring:message code="publishCar.confirmation.message.after"/>
           </p>
           <p class="text-secondary"><spring:message code="publishCar.confirmation.details"/></p>
-          <div class="card mb-3 mt-3">
+          <div class="card mb-3 mt-3 bg-cream border-0">
             <div class="card-body text-start">
               <p><strong><spring:message code="publishCar.confirmation.brand"/></strong> <c:out value="${car.brand}"/></p>
               <p><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/> </p>
