@@ -171,7 +171,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             final boolean recipientIsOwner = counterpartyId != reservation.getRiderId();
             final String roleParam = recipientIsOwner ? "owner" : "rider";
             final String detailPath =
-                    "/my-reservations/" + reservation.getId() + "?role=" + roleParam;
+                    "/my-reservations/" + reservation.getId() + "/chat?role=" + roleParam;
             final Locale mailLocale = userService.resolveMailLocale(counterpartyId);
             final ReservationChatMessageEmailPayload payload = ReservationChatMessageEmailPayload.builder()
                     .messageLocale(mailLocale)

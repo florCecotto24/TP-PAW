@@ -951,6 +951,22 @@ select.form-select.ryden-car-spec-select option {
     }
 }
 
+.reservation-chat-page__messages {
+    min-height: 50vh;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+}
+
+.reservation-chat-page__composer {
+    flex-wrap: wrap;
+}
+
+@media (min-width: 576px) {
+    .reservation-chat-page__composer {
+        flex-wrap: nowrap;
+    }
+}
+
 /* Profile page styles */
 .profile-container {
     max-width: 720px;

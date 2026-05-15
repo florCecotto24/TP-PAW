@@ -43,6 +43,7 @@
     <logback.version>1.5.6</logback.version>
     <org.hibernate.version>5.6.15.Final</org.hibernate.version>
     <jaxb.version>2.3.1</jaxb.version>
+    <jackson.version>2.14.2</jackson.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -95,6 +96,11 @@
         <groupId>org.springframework</groupId>
         <artifactId>spring-messaging</artifactId>
         <version>${spring.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.datatype</groupId>
+        <artifactId>jackson-datatype-jsr310</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.springframework</groupId>

@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.util.MyHubSortSanitizer;
 import ar.edu.itba.paw.models.domain.StoredFile;
@@ -183,6 +184,36 @@ public final class MyReservationsController {
                 new ReservationReviewForm(),
                 null,
                 hub);
+    }
+
+    @GetMapping("/my-reservations/{reservationId}/chat")
+    public ModelAndView reservationChat(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam final String role,
+            @RequestParam(required = false) final Long fromListing) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        if (!"owner".equals(role) && !"rider".equals(role)) {
+            return new ModelAndView(new RedirectView("/my-reservations/" + reservationId, true));
+        }
+        final Optional<ReservationChatPageModel> chatOpt = reservationViewService.loadReservationChatForParticipant(
+                me.getId(), reservationId, role, LocaleContextHolder.getLocale());
+        if (chatOpt.isEmpty()) {
+            return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromListing));
+        }
+        final ReservationChatPageModel chat = chatOpt.get();
+        final ModelAndView mav = new ModelAndView("reservationChat");
+        chat.populateModel(mav::addObject);
+        mav.addObject("activeTab", "my-reservations");
+        if (fromListing != null) {
+            mav.addObject("fromListing", fromListing);
+        }
+        final Long hub = MyReservationDetailModelFactory.ownerListingHubIfValid(
+                fromListing, role, chat.getListingId());
+        if (hub != null) {
+            mav.addObject("reservationDetailOwnerListingHubId", hub);
+        }
+        return mav;
     }
 
     @GetMapping("/my-reservations/{reservationId}/counterparty-profile")

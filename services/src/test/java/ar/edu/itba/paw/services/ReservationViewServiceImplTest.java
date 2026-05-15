@@ -18,6 +18,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
@@ -121,5 +122,55 @@ public class ReservationViewServiceImplTest {
         final Optional<ReservationDetailPageModel> got =
                 reservationViewService.loadMyReservationDetailForViewer(1L, 5L, "rider", Locale.ENGLISH);
         Assertions.assertTrue(got.isEmpty());
+    }
+
+    @Test
+    public void testLoadReservationChatForParticipantWhenChatUnavailableReturnsEmpty() {
+        final Listing listingRef = Mockito.mock(Listing.class);
+        final Reservation res = Reservation.builder()
+                .id(5L)
+                .rider(User.identities(1L, "r@test.com", "R", "R"))
+                .listing(listingRef)
+                .startDate(START)
+                .endDate(END)
+                .status(Reservation.Status.PENDING)
+                .createdAt(CREATED_AT)
+                .updatedAt(UPDATED_AT)
+                .totalPrice(TOTAL_PRICE)
+                .build();
+        Mockito.when(reservationService.getRiderReservationById(1L, 5L)).thenReturn(Optional.of(res));
+        Mockito.when(reservationMessageService.isChatAvailable(res)).thenReturn(false);
+        final Optional<ReservationChatPageModel> got =
+                reservationViewService.loadReservationChatForParticipant(1L, 5L, "rider", Locale.ENGLISH);
+        Assertions.assertTrue(got.isEmpty());
+    }
+
+    @Test
+    public void testLoadReservationChatForParticipantWhenChatAvailableReturnsModel() {
+        final Listing listingRef = Mockito.mock(Listing.class);
+        Mockito.when(listingRef.getId()).thenReturn(2L);
+        Mockito.when(listingRef.getTitle()).thenReturn("VW Gol");
+        final Reservation res = Reservation.builder()
+                .id(5L)
+                .rider(User.identities(1L, "r@test.com", "R", "R"))
+                .listing(listingRef)
+                .startDate(START)
+                .endDate(END)
+                .status(Reservation.Status.ACCEPTED)
+                .createdAt(CREATED_AT)
+                .updatedAt(UPDATED_AT)
+                .totalPrice(TOTAL_PRICE)
+                .build();
+        final User owner = User.identities(9L, "o@test.com", "Owner", "One");
+        Mockito.when(reservationService.getRiderReservationById(1L, 5L)).thenReturn(Optional.of(res));
+        Mockito.when(reservationMessageService.isChatAvailable(res)).thenReturn(true);
+        Mockito.when(listingService.getListingById(2L)).thenReturn(Optional.of(listingRef));
+        Mockito.when(userService.getListingOwner(2L)).thenReturn(Optional.of(owner));
+        Mockito.when(reservationMessageService.getMessageBodyMaxLength()).thenReturn(1000);
+        final Optional<ReservationChatPageModel> got =
+                reservationViewService.loadReservationChatForParticipant(1L, 5L, "rider", Locale.ENGLISH);
+        Assertions.assertTrue(got.isPresent());
+        Assertions.assertEquals(5L, got.get().getReservationId());
+        Assertions.assertEquals(2L, got.get().getListingId());
     }
 }

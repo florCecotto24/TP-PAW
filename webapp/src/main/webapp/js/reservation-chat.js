@@ -11,12 +11,13 @@
     var viewerUserId = Number(root.getAttribute('data-viewer-user-id'));
     var maxLength = Number(root.getAttribute('data-max-length')) || 1000;
     var emptyLabel = root.getAttribute('data-empty-label') || '';
+    var errorLoadLabel = root.getAttribute('data-error-load') || 'Could not load chat. Try again later.';
+    var errorConnectionLabel = root.getAttribute('data-error-connection') || 'Connection lost. Refresh the page.';
 
     var messagesEl = document.getElementById('reservationChatMessages');
     var inputEl = document.getElementById('reservationChatInput');
     var sendBtn = document.getElementById('reservationChatSend');
     var errorEl = document.getElementById('reservationChatError');
-    var modalEl = document.getElementById('reservationChatModal');
 
     var stompClient = null;
     var historyLoaded = false;
@@ -148,7 +149,7 @@
             body = body.substring(0, maxLength);
         }
         if (!stompClient || !stompClient.connected) {
-            showError('Connection lost. Close and reopen the chat.');
+            showError(errorConnectionLabel);
             return;
         }
         stompClient.send(
@@ -159,10 +160,10 @@
         inputEl.value = '';
     }
 
-    function onModalOpen() {
+    function initChat() {
         showError('');
         Promise.all([loadHistory(), connectStomp()]).catch(function () {
-            showError('Could not load chat. Try again later.');
+            showError(errorLoadLabel);
         });
     }
 
@@ -178,15 +179,5 @@
         });
     }
 
-    if (modalEl) {
-        modalEl.addEventListener('click', function (e) {
-            var opener = e.target.closest('[data-modal-open="reservationChatModal"]');
-            if (opener) {
-                onModalOpen();
-            }
-        });
-        document.querySelectorAll('[data-modal-open="reservationChatModal"]').forEach(function (btn) {
-            btn.addEventListener('click', onModalOpen);
-        });
-    }
+    initChat();
 })();

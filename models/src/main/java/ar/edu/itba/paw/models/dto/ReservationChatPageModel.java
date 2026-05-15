@@ -1,0 +1,53 @@
+package ar.edu.itba.paw.models.dto;
+
+import java.util.function.BiConsumer;
+
+/**
+ * Model attributes for the {@code reservationChat} JSP; built in the service layer and applied via
+ * {@link #populateModel(BiConsumer)}.
+ */
+public final class ReservationChatPageModel {
+
+    private final long reservationId;
+    private final long listingId;
+    private final String listingTitle;
+    private final String reservationRole;
+    private final String counterpartyDisplayName;
+    private final long chatViewerUserId;
+    private final int chatMessageMaxLength;
+
+    public ReservationChatPageModel(
+            final long reservationId,
+            final long listingId,
+            final String listingTitle,
+            final String reservationRole,
+            final String counterpartyDisplayName,
+            final long chatViewerUserId,
+            final int chatMessageMaxLength) {
+        this.reservationId = reservationId;
+        this.listingId = listingId;
+        this.listingTitle = listingTitle;
+        this.reservationRole = reservationRole;
+        this.counterpartyDisplayName = counterpartyDisplayName;
+        this.chatViewerUserId = chatViewerUserId;
+        this.chatMessageMaxLength = chatMessageMaxLength;
+    }
+
+    public long getReservationId() {
+        return reservationId;
+    }
+
+    public long getListingId() {
+        return listingId;
+    }
+
+    public final void populateModel(final BiConsumer<String, Object> putObject) {
+        putObject.accept("reservationId", reservationId);
+        putObject.accept("listingId", listingId);
+        putObject.accept("listingTitle", listingTitle);
+        putObject.accept("reservationRole", reservationRole);
+        putObject.accept("counterpartyDisplayName", counterpartyDisplayName);
+        putObject.accept("chatViewerUserId", chatViewerUserId);
+        putObject.accept("chatMessageMaxLength", chatMessageMaxLength);
+    }
+}

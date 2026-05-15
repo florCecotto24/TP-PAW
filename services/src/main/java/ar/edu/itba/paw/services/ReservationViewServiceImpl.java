@@ -23,6 +23,7 @@ import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingCardRow;
@@ -157,9 +158,47 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 hasRefundReceipt,
                 refundReceiptApproved,
                 refundProofDeadlineDisplay,
-                reservationMessageService.isChatAvailable(reservation),
-                reservationMessageService.getMessageBodyMaxLength(),
-                viewerUserId));
+                reservationMessageService.isChatAvailable(reservation)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReservationChatPageModel> loadReservationChatForParticipant(
+            final long viewerUserId,
+            final long reservationId,
+            final String role,
+            final Locale locale) {
+        final Optional<Reservation> reservationOpt = "owner".equals(role)
+                ? reservationService.getOwnerReservationById(viewerUserId, reservationId)
+                : reservationService.getRiderReservationById(viewerUserId, reservationId);
+        if (reservationOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Reservation reservation = reservationOpt.get();
+        if (!reservationMessageService.isChatAvailable(reservation)) {
+            return Optional.empty();
+        }
+        final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
+        if (listingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Listing listing = listingOpt.get();
+        final Optional<User> counterpartyOpt = "owner".equals(role)
+                ? userService.getUserById(reservation.getRiderId())
+                : userService.getListingOwner(reservation.getListingId());
+        if (counterpartyOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User counterparty = counterpartyOpt.get();
+        final String counterpartyDisplayName = counterparty.getForename() + " " + counterparty.getSurname();
+        return Optional.of(new ReservationChatPageModel(
+                reservation.getId(),
+                listing.getId(),
+                listing.getTitle(),
+                role,
+                counterpartyDisplayName,
+                viewerUserId,
+                reservationMessageService.getMessageBodyMaxLength()));
     }
 
     @Override

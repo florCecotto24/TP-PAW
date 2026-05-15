@@ -211,6 +211,12 @@ public class WebAuthConfig {
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/chat"))
+                        .access(reservationWebAuthorization.participantAccess())
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
                                         "/my-reservations/{reservationId}"))
                         .access(reservationWebAuthorization.participantAccess())
                         .antMatchers("/reservation", "/reservation/**").authenticated()

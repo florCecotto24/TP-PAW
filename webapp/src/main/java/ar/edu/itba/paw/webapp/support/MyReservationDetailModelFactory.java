@@ -80,7 +80,12 @@ public final class MyReservationDetailModelFactory {
             final Long fromListing,
             final String viewerRole,
             final ReservationDetailPageModel detail) {
-        if (fromListing == null || !"owner".equals(viewerRole) || fromListing.longValue() != detail.getListingId()) {
+        return ownerListingHubIfValid(fromListing, viewerRole, detail.getListingId());
+    }
+
+    public static Long ownerListingHubIfValid(
+            final Long fromListing, final String viewerRole, final long reservationListingId) {
+        if (fromListing == null || !"owner".equals(viewerRole) || fromListing.longValue() != reservationListingId) {
             return null;
         }
         return fromListing;

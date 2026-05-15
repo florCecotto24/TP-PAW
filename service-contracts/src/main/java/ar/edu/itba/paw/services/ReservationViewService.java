@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 
@@ -38,6 +39,18 @@ public interface ReservationViewService {
      * @return profile projection when allowed; otherwise empty
      */
     Optional<CounterpartyProfilePageModel> loadCounterpartyProfileForReservationParticipant(
+            long viewerUserId, long reservationId, String role, Locale locale);
+
+    /**
+     * Loads the reservation chat page when the viewer is a participant and chat is available for the reservation.
+     *
+     * @param viewerUserId id of the logged-in user
+     * @param reservationId reservation primary key
+     * @param role {@code "rider"} or {@code "owner"}: viewer role for access checks
+     * @param locale locale for formatted fields (reserved for future labels)
+     * @return chat page projection when allowed and chat is open; otherwise empty
+     */
+    Optional<ReservationChatPageModel> loadReservationChatForParticipant(
             long viewerUserId, long reservationId, String role, Locale locale);
 
     /**
