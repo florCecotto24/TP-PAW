@@ -137,44 +137,41 @@
             <c:if test="${reservationRole eq 'owner' and hasPaymentReceipt and (statusKey eq 'accepted' or statusKey eq 'started' or statusKey eq 'finished')}">
                 <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
-                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
-                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.payment.ownerIntro"/></p>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <h2 class="h5 fw-semibold mb-0"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
+                            <c:if test="${paymentReceiptApproved}">
+                                <span class="badge text-bg-success"><spring:message code="myReservationDetail.payment.reviewedBadge"/></span>
+                            </c:if>
+                        </div>
                         <c:url var="ownerReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
                         <c:url var="approvalUrl" value="/my-reservations/${reservation.id}/payment-receipt/approval"/>
-                        <div class="row g-2">
-                            <div class="col">
-                                <a class="btn btn-outline-primary w-100" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
-                                    <spring:message code="myReservationDetail.payment.viewReceipt"/>
-                                </a>
-                            </div>
-                            <div class="col">
-                                <c:choose>
-                                    <c:when test="${not paymentReceiptApproved}">
-                                        <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
-                                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                            <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                            <input type="hidden" name="approved" value="true"/>
-                                            <button type="submit" class="btn btn-primary w-100">
-                                                <spring:message code="myReservationDetail.payment.markReviewed"/>
-                                            </button>
-                                        </form>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
-                                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                            <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                            <input type="hidden" name="approved" value="false"/>
-                                            <button type="submit" class="btn btn-outline-secondary w-100">
-                                                <spring:message code="myReservationDetail.payment.clearReview"/>
-                                            </button>
-                                        </form>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <c:choose>
+                                <c:when test="${not paymentReceiptApproved}">
+                                    <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
+                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                        <input type="hidden" name="approved" value="true"/>
+                                        <button type="submit" class="btn btn-primary">
+                                            <spring:message code="myReservationDetail.payment.markReviewed"/>
+                                        </button>
+                                    </form>
+                                </c:when>
+                                <c:otherwise>
+                                    <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
+                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                        <input type="hidden" name="approved" value="false"/>
+                                        <button type="submit" class="btn btn-outline-secondary">
+                                            <spring:message code="myReservationDetail.payment.clearReview"/>
+                                        </button>
+                                    </form>
+                                </c:otherwise>
+                            </c:choose>
+                            <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
+                                <spring:message code="myReservationDetail.payment.viewReceipt"/>
+                            </a>
                         </div>
-                        <c:if test="${paymentReceiptApproved}">
-                            <span class="badge text-bg-success mt-2"><spring:message code="myReservationDetail.payment.reviewedBadge"/></span>
-                        </c:if>
                     </div>
                 </article>
             </c:if>
@@ -457,84 +454,19 @@
                         <span class="h2 fw-bold text-primary mb-0"><c:out value="${totalPrice}"/></span>
                     </div>
 
-                    <div class="d-grid gap-2">
-                        <c:if test="${chatAvailable}">
-                            <spring:message code="myReservationDetail.chat.open" var="chatOpenLabel"/>
-                            <c:url var="chatUrl" value="/my-reservations/${reservation.id}/chat">
-                                <c:param name="role" value="${reservationRole}"/>
-                                <c:if test="${not empty reservationDetailOwnerListingHubId}">
-                                    <c:param name="fromListing" value="${reservationDetailOwnerListingHubId}"/>
-                                </c:if>
-                            </c:url>
-                            <a href="<c:out value='${chatUrl}'/>" class="btn btn-primary">
-                                <c:out value="${chatOpenLabel}"/>
-                            </a>
-                        </c:if>
-                        <!-- <button type="button" class="btn btn-primary" disabled>
-                            <spring:message code="myReservationDetail.actions.modify"/>
-                        </button> -->
-                        <c:set var="canCancel" value="${canCancelReservation}"/>
-                        <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
-                        <c:choose>
-                            <c:when test="${canCancel}">
-                                <spring:message code="myReservationDetail.actions.cancel" var="cancelBtnLabel"/>
-                                <spring:message code="myReservationDetail.cancelModal.title" var="cancelModalTitle"/>
-                                <spring:message code="myReservationDetail.cancelModal.message" var="cancelModalMessage"/>
-                                <spring:message code="myReservationDetail.cancelModal.confirm" var="cancelModalConfirm"/>
-                                <spring:message code="myReservationDetail.cancelModal.back" var="cancelModalBack"/>
-                                <button type="button" class="btn btn-outline-danger" data-modal-open="cancelReservationModal">
-                                    <c:out value="${cancelBtnLabel}"/>
-                                </button>
-                                <ryden:modal
-                                    id="cancelReservationModal"
-                                    title="${cancelModalTitle}"
-                                    message="${cancelModalMessage}"
-                                    variant="danger">
-                                    <form:form method="post" action="${cancelUrl}">
-                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-                                        <input type="hidden" name="role" value="${reservationRole}"/>
-                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                        <div class="d-flex justify-content-end gap-2 mt-3">
-                                            <button type="button" class="btn btn-secondary" data-modal-close="cancelReservationModal">
-                                                <c:out value="${cancelModalBack}"/>
-                                            </button>
-                                            <button type="submit" class="btn btn-danger">
-                                                <c:out value="${cancelModalConfirm}"/>
-                                            </button>
-                                        </div>
-                                    </form:form>
-                                </ryden:modal>
-                            </c:when>
-                            <c:otherwise>
-                                <c:if test="${(statusKey eq 'pending' and reservationRole eq 'owner') or fn:startsWith(statusKey, 'cancelled') or statusKey eq 'started' or statusKey eq 'finished'}">
-                                    <div class="alert alert-info mb-0" role="alert">
-                                        <c:choose>
-                                            <c:when test="${statusKey eq 'pending' and reservationRole eq 'owner'}">
-                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.pendingPaymentOwner"/></p>
-                                            </c:when>
-                                            <c:when test="${fn:startsWith(statusKey, 'cancelled')}">
-                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.cancelled"/></p>
-                                            </c:when>
-                                            <c:when test="${statusKey eq 'started'}">
-                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.inProgress"/></p>
-                                            </c:when>
-                                            <c:when test="${statusKey eq 'finished'}">
-                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.finished"/></p>
-                                            </c:when>
-                                        </c:choose>
-                                    </div>
-                                </c:if>
-                            </c:otherwise>
-                        </c:choose>
-                        <!-- <c:if test="${not empty owner.email}">
-                            <spring:message code="myReservationDetail.actions.contactOwner" var="contactOwnerLabel"/>
-                            <a href="mailto:<c:out value='${owner.email}'/>" class="btn btn-outline-secondary">
-                                <c:out value="${contactOwnerLabel}"/>
-                            </a>
-                        </c:if> -->
-                    </div>
+                    <c:if test="${chatAvailable}">
+                        <spring:message code="myReservationDetail.chat.open" var="chatOpenLabel"/>
+                        <c:url var="chatUrl" value="/my-reservations/${reservation.id}/chat">
+                            <c:param name="role" value="${reservationRole}"/>
+                            <c:if test="${not empty reservationDetailOwnerListingHubId}">
+                                <c:param name="fromListing" value="${reservationDetailOwnerListingHubId}"/>
+                            </c:if>
+                        </c:url>
+                        <a href="<c:out value='${chatUrl}'/>" class="btn btn-primary w-100 mb-3">
+                            <c:out value="${chatOpenLabel}"/>
+                        </a>
+                    </c:if>
 
-                    <hr class="my-4">
                     <c:url var="counterpartyProfileUrl" value="/my-reservations/${reservation.id}/counterparty-profile">
                         <c:param name="role"><c:out value="${reservationRole}"/></c:param>
                         <c:if test="${not empty reservationDetailOwnerListingHubId}">
@@ -542,7 +474,7 @@
                         </c:if>
                     </c:url>
                     <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
-                    <section class="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card bg-white" aria-labelledby="counterparty-summary-heading">
+                    <section class="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card" aria-labelledby="counterparty-summary-heading">
                         <div class="card-body p-4">
                             <h2 id="counterparty-summary-heading" class="h6 fw-semibold mb-3">
                                 <c:choose>
@@ -612,9 +544,64 @@
                     <c:url var="listingUrl" value="/car-detail">
                         <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
                     </c:url>
-                    <a href="<c:out value='${listingUrl}'/>" class="btn btn-light border w-100">
-                        <spring:message code="myReservationDetail.actions.viewListing"/>
-                    </a>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
+                            <i class="bi bi-eye me-2"></i><spring:message code="myReservationDetail.actions.viewListing"/>
+                        </a>
+                        <c:set var="canCancel" value="${canCancelReservation}"/>
+                        <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
+                        <c:choose>
+                            <c:when test="${canCancel}">
+                                <spring:message code="myReservationDetail.actions.cancel" var="cancelBtnLabel"/>
+                                <spring:message code="myReservationDetail.cancelModal.title" var="cancelModalTitle"/>
+                                <spring:message code="myReservationDetail.cancelModal.message" var="cancelModalMessage"/>
+                                <spring:message code="myReservationDetail.cancelModal.confirm" var="cancelModalConfirm"/>
+                                <spring:message code="myReservationDetail.cancelModal.back" var="cancelModalBack"/>
+                                <button type="button" class="btn btn-outline-danger w-100" data-modal-open="cancelReservationModal">
+                                    <i class="bi bi-x-circle me-2"></i><c:out value="${cancelBtnLabel}"/>
+                                </button>
+                                <ryden:modal
+                                    id="cancelReservationModal"
+                                    title="${cancelModalTitle}"
+                                    message="${cancelModalMessage}"
+                                    variant="danger">
+                                    <form:form method="post" action="${cancelUrl}">
+                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                                        <input type="hidden" name="role" value="${reservationRole}"/>
+                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                        <div class="d-flex justify-content-end gap-2 mt-3">
+                                            <button type="button" class="btn btn-secondary" data-modal-close="cancelReservationModal">
+                                                <c:out value="${cancelModalBack}"/>
+                                            </button>
+                                            <button type="submit" class="btn btn-danger">
+                                                <c:out value="${cancelModalConfirm}"/>
+                                            </button>
+                                        </div>
+                                    </form:form>
+                                </ryden:modal>
+                            </c:when>
+                            <c:otherwise>
+                                <c:if test="${(statusKey eq 'pending' and reservationRole eq 'owner') or fn:startsWith(statusKey, 'cancelled') or statusKey eq 'started' or statusKey eq 'finished'}">
+                                    <div class="alert alert-info mb-0" role="alert">
+                                        <c:choose>
+                                            <c:when test="${statusKey eq 'pending' and reservationRole eq 'owner'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.pendingPaymentOwner"/></p>
+                                            </c:when>
+                                            <c:when test="${fn:startsWith(statusKey, 'cancelled')}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.cancelled"/></p>
+                                            </c:when>
+                                            <c:when test="${statusKey eq 'started'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.inProgress"/></p>
+                                            </c:when>
+                                            <c:when test="${statusKey eq 'finished'}">
+                                                <p class="mb-0"><spring:message code="myReservationDetail.alert.finished"/></p>
+                                            </c:when>
+                                        </c:choose>
+                                    </div>
+                                </c:if>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
                 </div>
             </article>
         </div>

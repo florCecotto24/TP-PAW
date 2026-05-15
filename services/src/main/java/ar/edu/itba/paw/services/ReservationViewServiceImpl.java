@@ -278,10 +278,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                                 1,
                                 ownerListingsPageSize)
                         : CounterpartyActiveListingsLoadMore.none();
-        final List<String> recentReviewComments = recentReviewItems.stream()
-                .map(item -> item.getComment().orElse("").trim())
-                .filter(comment -> !comment.isEmpty())
-                .toList();
         return Optional.of(
                 new CounterpartyProfilePageModel(
                         headerDto.getForename(),
@@ -292,7 +288,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                         headerDto.getAverageRating(),
                         counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent(),
                         counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent(),
-                        recentReviewComments,
+                        recentReviewItems,
                         counterpartyIsOwner,
                         activeRows,
                         counterpartyActiveListingsLoadMore));

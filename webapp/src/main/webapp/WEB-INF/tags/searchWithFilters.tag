@@ -205,6 +205,18 @@
                 });
             });
             </c:if>
+
+            form.addEventListener('submit', function () {
+                var btn = form.querySelector('button[type="submit"]');
+                if (!btn) return;
+                var icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'spinner-border spinner-border-sm';
+                    icon.setAttribute('role', 'status');
+                }
+                btn.setAttribute('aria-busy', 'true');
+                btn.disabled = true;
+            });
         })();
     </script>
 </c:if>

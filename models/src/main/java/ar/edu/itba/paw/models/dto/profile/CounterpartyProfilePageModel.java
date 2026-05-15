@@ -15,7 +15,7 @@ public final class CounterpartyProfilePageModel {
     private final BigDecimal counterpartyAverageRating;
     private final boolean counterpartyLicenseValidated;
     private final boolean counterpartyIdentityValidated;
-    private final List<String> recentReviewComments;
+    private final List<ReviewItemDto> recentReviewComments;
     private final boolean showCounterpartyActiveListings;
     private final List<CounterpartyActiveListingCardRow> counterpartyActiveListings;
     private final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore;
@@ -29,7 +29,7 @@ public final class CounterpartyProfilePageModel {
             final BigDecimal counterpartyAverageRating,
             final boolean counterpartyLicenseValidated,
             final boolean counterpartyIdentityValidated,
-            final List<String> recentReviewComments,
+            final List<ReviewItemDto> recentReviewComments,
             final boolean showCounterpartyActiveListings,
             final List<CounterpartyActiveListingCardRow> counterpartyActiveListings,
             final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore) {

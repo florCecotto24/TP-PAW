@@ -9,10 +9,18 @@
     <title><spring:message code="app.title"/> — <spring:message code="login.title"/></title>
     <%@include file="header.jsp" %>
 </head>
-<body>
+<body class="has-fixed-navbar">
 <ryden:navbar/>
-<div class="container" style="max-width: 420px; margin-top: 6rem;">
-    <h1 class="h3 mb-4"><spring:message code="login.heading"/></h1>
+<div style="min-height: calc(100vh - var(--navbar-height, 65px)); display: flex; flex-direction: column; padding: 0 1rem;">
+    <div class="text-center" style="padding-top: 3.5rem; padding-bottom: 2.5rem;">
+        <a href="<c:url value='/'/>" class="text-decoration-none">
+            <span class="fw-bold" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 3rem; color: var(--color-text); letter-spacing: -0.04em;">Ryden</span>
+        </a>
+    </div>
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding-bottom: 3rem;">
+<div style="width: 100%; max-width: 420px;">
+    <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
+    <h1 class="h4 mb-4"><spring:message code="login.heading"/></h1>
 
     <c:if test="${param.error != null && param.error != 'emailNotValidated'}">
         <div class="alert alert-danger" role="alert">
@@ -52,7 +60,10 @@
             <input type="email" class="form-control" id="email" name="email" autocomplete="username" required/>
         </div>
         <div class="mb-3">
-            <label for="password" class="form-label"><spring:message code="login.password"/></label>
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+                <label for="password" class="form-label mb-0"><spring:message code="login.password"/></label>
+                <a href="<c:url value='/forgot-password'/>" class="small text-muted"><spring:message code="login.forgotPassword"/></a>
+            </div>
             <div class="position-relative ryden-pw-wrap">
                 <input type="password" class="form-control pe-5" id="password" name="password" autocomplete="current-password" required/>
                 <button type="button" class="btn btn-sm border-0 bg-transparent text-secondary position-absolute top-50 end-0 translate-middle-y me-1 ryden-password-toggle" aria-pressed="false"
@@ -68,16 +79,16 @@
         </div>
         <button type="submit" class="btn btn-primary w-100"><spring:message code="login.submit"/></button>
     </form>
-    <p class="text-center small mt-2 mb-1">
-        <a href="<c:url value='/forgot-password'/>"><spring:message code="login.forgotPassword"/></a>
-    </p>
-    <p class="text-center text-muted small mt-3 mb-1">
+    <p class="text-center text-muted small mt-4 mb-0">
         <spring:message code="login.createAccountPrompt"/>
         <a href="<c:url value='/register'/>"><spring:message code="login.createAccountLink"/></a>
     </p>
-    <p class="text-center small">
-        <a href="<c:url value='/verify-email'/>"><spring:message code="login.verifyEmailLink"/></a>
+    <p class="text-center mt-2">
+        <a href="<c:url value='/verify-email'/>" class="text-muted small"><spring:message code="login.verifyEmailLink"/></a>
     </p>
+    </div>
+</div>
+</div>
 </div>
 <%@ include file="includes/footerScripts.jspf" %>
 </body>

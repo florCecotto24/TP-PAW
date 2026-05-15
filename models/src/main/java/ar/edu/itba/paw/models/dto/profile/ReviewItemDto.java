@@ -51,5 +51,9 @@ public final class ReviewItemDto {
     public Optional<String> getComment() {
         return Optional.ofNullable(comment);
     }
+
+    public String getCommentText() {
+        return comment != null ? comment : "";
+    }
 }
 

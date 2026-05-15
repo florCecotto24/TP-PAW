@@ -32,16 +32,6 @@
         <p class="text-secondary small mb-0"><c:out value="${subtitle}"/></p>
     </div>
     <div class="d-flex gap-2 align-items-center">
-        <%-- Server-side previous page --%>
-        <c:if test="${not empty prevPageHref}">
-            <a href="<c:out value='${prevPageHref}'/>"
-               class="btn btn-sm btn-outline-primary"
-               title="<c:out value='${prevPageLabel}'/>">
-                <i class="bi bi-chevron-double-left"></i>
-            </a>
-        </c:if>
-
-        <%-- Bootstrap carousel slide prev/next --%>
         <button class="btn btn-sm btn-outline-secondary" type="button"
                 data-bs-target="#<c:out value='${id}'/>" data-bs-slide="prev">
             <i class="bi bi-chevron-left"></i>
@@ -50,14 +40,5 @@
                 data-bs-target="#<c:out value='${id}'/>" data-bs-slide="next">
             <i class="bi bi-chevron-right"></i>
         </button>
-
-        <%-- Server-side next page --%>
-        <c:if test="${not empty nextPageHref}">
-            <a href="<c:out value='${nextPageHref}'/>"
-               class="btn btn-sm btn-outline-primary"
-               title="<c:out value='${nextPageLabel}'/>">
-                <i class="bi bi-chevron-double-right"></i>
-            </a>
-        </c:if>
     </div>
 </div>

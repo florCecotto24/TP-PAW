@@ -96,9 +96,6 @@
                                         <a href="${resetSearchUrl}" class="btn btn-primary btn-action btn-action-md">
                                             <spring:message code="search.empty.reset"/>
                                         </a>
-                                        <a href="${publishCarUrl}" class="btn btn-outline-secondary btn-action btn-action-md">
-                                            <spring:message code="home.cta.button"/>
-                                        </a>
                                     </div>
                                 </c:when>
                                 <c:otherwise>
@@ -107,8 +104,8 @@
                                         <spring:message code="search.empty.noListings.description"/>
                                     </p>
                                     <div class="search-empty-state__actions mt-4">
-                                        <a href="${publishCarUrl}" class="btn btn-primary btn-action btn-action-md">
-                                            <spring:message code="home.cta.button"/>
+                                        <a href="${resetSearchUrl}" class="btn btn-primary btn-action btn-action-md">
+                                            <spring:message code="search.empty.noListings.cta"/>
                                         </a>
                                     </div>
                                 </c:otherwise>

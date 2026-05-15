@@ -21,29 +21,53 @@
                 <div class="card-body p-4 p-md-5">
 
                     <%-- Wizard progress bar --%>
+                    <spring:message code="publishWizard.step1.label" var="wStep1Label"/>
+                    <spring:message code="publishWizard.step2.label" var="wStep2Label"/>
+                    <spring:message code="publishWizard.step3.label" var="wStep3Label"/>
+                    <spring:message code="publishWizard.step4.label" var="wStep4Label"/>
+                    <spring:message code="publishWizard.step1.title" var="wStep1Title"/>
+                    <spring:message code="publishWizard.step2.title" var="wStep2Title"/>
+                    <spring:message code="publishWizard.step3.title" var="wStep3Title"/>
+                    <spring:message code="publishWizard.step4.title" var="wStep4Title"/>
+                    <spring:message code="publishWizard.nav.next"    var="wNavNext"/>
+                    <spring:message code="publishWizard.nav.prev"    var="wNavPrev"/>
                     <div id="publishWizardProgress" class="mb-4">
-                        <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
                             <h5 class="wizard-step-title mb-0 fw-semibold" id="wizardStepTitle"></h5>
                             <span class="text-muted small" id="wizardStepCounter" style="font-variant-numeric: tabular-nums;"></span>
                         </div>
-                        <div class="wizard-progress-track">
-                            <div class="wizard-progress-fill" id="wizardProgressFill"></div>
-                        </div>
-                        <div class="d-flex justify-content-between mt-2">
-                            <spring:message code="publishWizard.step1.label" var="wStep1Label"/>
-                            <spring:message code="publishWizard.step2.label" var="wStep2Label"/>
-                            <spring:message code="publishWizard.step3.label" var="wStep3Label"/>
-                            <spring:message code="publishWizard.step4.label" var="wStep4Label"/>
-                            <spring:message code="publishWizard.step1.title" var="wStep1Title"/>
-                            <spring:message code="publishWizard.step2.title" var="wStep2Title"/>
-                            <spring:message code="publishWizard.step3.title" var="wStep3Title"/>
-                            <spring:message code="publishWizard.step4.title" var="wStep4Title"/>
-                            <spring:message code="publishWizard.nav.next"    var="wNavNext"/>
-                            <spring:message code="publishWizard.nav.prev"    var="wNavPrev"/>
-                            <span class="wizard-label" data-step="1" data-title="<c:out value='${wStep1Title}'/>"><c:out value="${wStep1Label}"/></span>
-                            <span class="wizard-label" data-step="2" data-title="<c:out value='${wStep2Title}'/>"><c:out value="${wStep2Label}"/></span>
-                            <span class="wizard-label" data-step="3" data-title="<c:out value='${wStep3Title}'/>"><c:out value="${wStep3Label}"/></span>
-                            <span class="wizard-label" data-step="4" data-title="<c:out value='${wStep4Title}'/>"><c:out value="${wStep4Label}"/></span>
+                        <div class="wizard-steps-track">
+                            <div class="wizard-step-node" data-step="1">
+                                <div class="wizard-node-circle">
+                                    <span class="wizard-node-num">1</span>
+                                    <i class="bi bi-check2 wizard-node-check" aria-hidden="true"></i>
+                                </div>
+                                <span class="wizard-node-label" data-title="<c:out value='${wStep1Title}'/>"><c:out value="${wStep1Label}"/></span>
+                            </div>
+                            <div class="wizard-connector" data-connector="1"></div>
+                            <div class="wizard-step-node" data-step="2">
+                                <div class="wizard-node-circle">
+                                    <span class="wizard-node-num">2</span>
+                                    <i class="bi bi-check2 wizard-node-check" aria-hidden="true"></i>
+                                </div>
+                                <span class="wizard-node-label" data-title="<c:out value='${wStep2Title}'/>"><c:out value="${wStep2Label}"/></span>
+                            </div>
+                            <div class="wizard-connector" data-connector="2"></div>
+                            <div class="wizard-step-node" data-step="3">
+                                <div class="wizard-node-circle">
+                                    <span class="wizard-node-num">3</span>
+                                    <i class="bi bi-check2 wizard-node-check" aria-hidden="true"></i>
+                                </div>
+                                <span class="wizard-node-label" data-title="<c:out value='${wStep3Title}'/>"><c:out value="${wStep3Label}"/></span>
+                            </div>
+                            <div class="wizard-connector" data-connector="3"></div>
+                            <div class="wizard-step-node" data-step="4">
+                                <div class="wizard-node-circle">
+                                    <span class="wizard-node-num">4</span>
+                                    <i class="bi bi-check2 wizard-node-check" aria-hidden="true"></i>
+                                </div>
+                                <span class="wizard-node-label" data-title="<c:out value='${wStep4Title}'/>"><c:out value="${wStep4Label}"/></span>
+                            </div>
                         </div>
                     </div>
 
@@ -99,30 +123,159 @@
                             <spring:message code="publishCar.form.type.placeholder" var="typePlaceholder"/>
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.type"/></label>
-                                <form:select cssClass="form-select ryden-car-spec-select" path="type" htmlEscape="true" required="required">
-                                    <form:option value="" label="${typePlaceholder}" />
-                                    <form:options items="${carTypeOptions}"/>
-                                </form:select>
+                                <input type="hidden" id="publishTypeHidden" name="type"
+                                       value="<c:out value='${publishCarForm.type}'/>"
+                                       data-ryden-required="true"
+                                       data-ryden-dd-btn-id="publishTypeBtn"/>
+                                <c:set var="currentTypeLabel" value="${typePlaceholder}"/>
+                                <c:forEach var="entry" items="${carTypeOptions}">
+                                    <c:if test="${not empty publishCarForm.type and entry.key eq publishCarForm.type}">
+                                        <c:set var="currentTypeLabel" value="${entry.value}"/>
+                                    </c:if>
+                                </c:forEach>
+                                <div class="dropdown">
+                                    <button type="button" id="publishTypeBtn"
+                                            class="form-select dropdown-toggle ryden-select-btn text-start w-100"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="true"
+                                            aria-expanded="false">
+                                        <span id="publishTypeLbl"><c:out value="${currentTypeLabel}"/></span>
+                                    </button>
+                                    <ul class="dropdown-menu shadow ryden-select-menu p-1 w-100">
+                                        <c:set var="isAct" value="${empty publishCarForm.type}"/>
+                                        <li>
+                                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                                    data-ryden-select-val=""
+                                                    data-ryden-select-text="<c:out value='${typePlaceholder}'/>"
+                                                    data-ryden-target-id="publishTypeHidden"
+                                                    data-ryden-label-id="publishTypeLbl"
+                                                    data-ryden-dd-btn-id="publishTypeBtn">
+                                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                                <c:out value="${typePlaceholder}"/>
+                                            </button>
+                                        </li>
+                                        <c:forEach var="entry" items="${carTypeOptions}">
+                                            <c:set var="isAct" value="${not empty publishCarForm.type and entry.key eq publishCarForm.type}"/>
+                                            <li>
+                                                <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                                        data-ryden-select-val="<c:out value='${entry.key}'/>"
+                                                        data-ryden-select-text="<c:out value='${entry.value}'/>"
+                                                        data-ryden-target-id="publishTypeHidden"
+                                                        data-ryden-label-id="publishTypeLbl"
+                                                        data-ryden-dd-btn-id="publishTypeBtn">
+                                                    <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                                    <c:out value="${entry.value}"/>
+                                                </button>
+                                            </li>
+                                        </c:forEach>
+                                    </ul>
+                                </div>
                                 <form:errors path="type" cssClass="text-danger d-block"/>
                             </div>
 
                             <spring:message code="publishCar.form.powertrain.placeholder" var="powertrainPlaceholder"/>
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.powertrain"/></label>
-                                <form:select cssClass="form-select ryden-car-spec-select" path="powertrain" htmlEscape="true" required="required">
-                                    <form:option value="" label="${powertrainPlaceholder}"/>
-                                    <form:options items="${powertrainOptions}"/>
-                                </form:select>
+                                <input type="hidden" id="publishPowertrainHidden" name="powertrain"
+                                       value="<c:out value='${publishCarForm.powertrain}'/>"
+                                       data-ryden-required="true"
+                                       data-ryden-dd-btn-id="publishPowertrainBtn"/>
+                                <c:set var="currentPowertrainLabel" value="${powertrainPlaceholder}"/>
+                                <c:forEach var="entry" items="${powertrainOptions}">
+                                    <c:if test="${not empty publishCarForm.powertrain and entry.key eq publishCarForm.powertrain}">
+                                        <c:set var="currentPowertrainLabel" value="${entry.value}"/>
+                                    </c:if>
+                                </c:forEach>
+                                <div class="dropdown">
+                                    <button type="button" id="publishPowertrainBtn"
+                                            class="form-select dropdown-toggle ryden-select-btn text-start w-100"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="true"
+                                            aria-expanded="false">
+                                        <span id="publishPowertrainLbl"><c:out value="${currentPowertrainLabel}"/></span>
+                                    </button>
+                                    <ul class="dropdown-menu shadow ryden-select-menu p-1 w-100">
+                                        <c:set var="isAct" value="${empty publishCarForm.powertrain}"/>
+                                        <li>
+                                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                                    data-ryden-select-val=""
+                                                    data-ryden-select-text="<c:out value='${powertrainPlaceholder}'/>"
+                                                    data-ryden-target-id="publishPowertrainHidden"
+                                                    data-ryden-label-id="publishPowertrainLbl"
+                                                    data-ryden-dd-btn-id="publishPowertrainBtn">
+                                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                                <c:out value="${powertrainPlaceholder}"/>
+                                            </button>
+                                        </li>
+                                        <c:forEach var="entry" items="${powertrainOptions}">
+                                            <c:set var="isAct" value="${not empty publishCarForm.powertrain and entry.key eq publishCarForm.powertrain}"/>
+                                            <li>
+                                                <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                                        data-ryden-select-val="<c:out value='${entry.key}'/>"
+                                                        data-ryden-select-text="<c:out value='${entry.value}'/>"
+                                                        data-ryden-target-id="publishPowertrainHidden"
+                                                        data-ryden-label-id="publishPowertrainLbl"
+                                                        data-ryden-dd-btn-id="publishPowertrainBtn">
+                                                    <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                                    <c:out value="${entry.value}"/>
+                                                </button>
+                                            </li>
+                                        </c:forEach>
+                                    </ul>
+                                </div>
                                 <form:errors path="powertrain" cssClass="text-danger d-block"/>
                             </div>
 
                             <spring:message code="publishCar.form.transmission.placeholder" var="transmissionPlaceholder"/>
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.transmission"/></label>
-                                <form:select cssClass="form-select ryden-car-spec-select" path="transmission" htmlEscape="true" required="required">
-                                    <form:option value="" label="${transmissionPlaceholder}"/>
-                                    <form:options items="${transmissionOptions}"/>
-                                </form:select>
+                                <input type="hidden" id="publishTransmissionHidden" name="transmission"
+                                       value="<c:out value='${publishCarForm.transmission}'/>"
+                                       data-ryden-required="true"
+                                       data-ryden-dd-btn-id="publishTransmissionBtn"/>
+                                <c:set var="currentTransmissionLabel" value="${transmissionPlaceholder}"/>
+                                <c:forEach var="entry" items="${transmissionOptions}">
+                                    <c:if test="${not empty publishCarForm.transmission and entry.key eq publishCarForm.transmission}">
+                                        <c:set var="currentTransmissionLabel" value="${entry.value}"/>
+                                    </c:if>
+                                </c:forEach>
+                                <div class="dropdown">
+                                    <button type="button" id="publishTransmissionBtn"
+                                            class="form-select dropdown-toggle ryden-select-btn text-start w-100"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="true"
+                                            aria-expanded="false">
+                                        <span id="publishTransmissionLbl"><c:out value="${currentTransmissionLabel}"/></span>
+                                    </button>
+                                    <ul class="dropdown-menu shadow ryden-select-menu p-1 w-100">
+                                        <c:set var="isAct" value="${empty publishCarForm.transmission}"/>
+                                        <li>
+                                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                                    data-ryden-select-val=""
+                                                    data-ryden-select-text="<c:out value='${transmissionPlaceholder}'/>"
+                                                    data-ryden-target-id="publishTransmissionHidden"
+                                                    data-ryden-label-id="publishTransmissionLbl"
+                                                    data-ryden-dd-btn-id="publishTransmissionBtn">
+                                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                                <c:out value="${transmissionPlaceholder}"/>
+                                            </button>
+                                        </li>
+                                        <c:forEach var="entry" items="${transmissionOptions}">
+                                            <c:set var="isAct" value="${not empty publishCarForm.transmission and entry.key eq publishCarForm.transmission}"/>
+                                            <li>
+                                                <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                                        data-ryden-select-val="<c:out value='${entry.key}'/>"
+                                                        data-ryden-select-text="<c:out value='${entry.value}'/>"
+                                                        data-ryden-target-id="publishTransmissionHidden"
+                                                        data-ryden-label-id="publishTransmissionLbl"
+                                                        data-ryden-dd-btn-id="publishTransmissionBtn">
+                                                    <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                                    <c:out value="${entry.value}"/>
+                                                </button>
+                                            </li>
+                                        </c:forEach>
+                                    </ul>
+                                </div>
                                 <form:errors path="transmission" cssClass="text-danger d-block"/>
                             </div>
 

@@ -1739,6 +1739,46 @@
     }
 })();
 
+/* Custom select dropdowns: update hidden input + button label + active state + close on click */
+(function () {
+    document.addEventListener('click', function (e) {
+        var item = e.target.closest('[data-ryden-select-val]');
+        if (!item) { return; }
+        var val = item.getAttribute('data-ryden-select-val') || '';
+        var text = item.getAttribute('data-ryden-select-text') || '';
+        var targetId = item.getAttribute('data-ryden-target-id');
+        var labelId = item.getAttribute('data-ryden-label-id');
+        var ddBtnId = item.getAttribute('data-ryden-dd-btn-id');
+        if (targetId) {
+            var target = document.getElementById(targetId);
+            if (target) { target.value = val; }
+        }
+        if (labelId) {
+            var labelEl = document.getElementById(labelId);
+            if (labelEl) { labelEl.textContent = text; }
+        }
+        var menu = item.closest('.dropdown-menu');
+        if (menu) {
+            menu.querySelectorAll('[data-ryden-select-val]').forEach(function (sib) {
+                var active = sib === item;
+                sib.classList.toggle('ryden-select-item--active', active);
+                var ck = sib.querySelector('.ryden-sel-check');
+                if (ck) { ck.classList.toggle('invisible', !active); }
+            });
+        }
+        if (ddBtnId) {
+            var ddBtn = document.getElementById(ddBtnId);
+            if (ddBtn) {
+                ddBtn.classList.remove('is-invalid');
+                if (window.bootstrap) {
+                    var dd = window.bootstrap.Dropdown.getInstance(ddBtn);
+                    if (dd) { dd.hide(); }
+                }
+            }
+        }
+    });
+})();
+
 /* ── Reviewer avatar: color from name hash ─────────────────────────── */
 (function () {
     var PALETTE = [

@@ -4,12 +4,12 @@
         var steps = Array.from(document.querySelectorAll('.publish-wizard-step'));
         if (!steps.length) return;
 
-        var totalSteps   = steps.length;
-        var currentStep  = 1;
-        var progressFill = document.getElementById('wizardProgressFill');
-        var stepTitle    = document.getElementById('wizardStepTitle');
-        var stepCounter  = document.getElementById('wizardStepCounter');
-        var labelEls     = Array.from(document.querySelectorAll('.wizard-label[data-step]'));
+        var totalSteps    = steps.length;
+        var currentStep   = 1;
+        var stepTitle     = document.getElementById('wizardStepTitle');
+        var stepCounter   = document.getElementById('wizardStepCounter');
+        var nodeEls       = Array.from(document.querySelectorAll('.wizard-step-node[data-step]'));
+        var connectorEls  = Array.from(document.querySelectorAll('.wizard-connector[data-connector]'));
 
         function showStep(n) {
             currentStep = n;
@@ -17,20 +17,24 @@
                 step.style.display = (i + 1 === n) ? '' : 'none';
             });
 
-            var pct = Math.round((n / totalSteps) * 100);
-            if (progressFill) progressFill.style.width = pct + '%';
-            if (stepCounter)  stepCounter.textContent  = n + ' / ' + totalSteps;
+            if (stepCounter) stepCounter.textContent = n + ' / ' + totalSteps;
 
-            var activeLbl = labelEls.find(function (el) {
-                return parseInt(el.dataset.step, 10) === n;
+            nodeEls.forEach(function (node) {
+                var s = parseInt(node.dataset.step, 10);
+                node.classList.toggle('wizard-step-node--active', s === n);
+                node.classList.toggle('wizard-step-node--done',   s < n);
             });
-            if (stepTitle && activeLbl) stepTitle.textContent = activeLbl.dataset.title || '';
 
-            labelEls.forEach(function (lbl) {
-                var s = parseInt(lbl.dataset.step, 10);
-                lbl.classList.toggle('wizard-label--active', s === n);
-                lbl.classList.toggle('wizard-label--done',   s < n);
+            connectorEls.forEach(function (conn) {
+                var after = parseInt(conn.dataset.connector, 10);
+                conn.classList.toggle('wizard-connector--done', after < n);
             });
+
+            var activeNode = nodeEls.find(function (node) {
+                return parseInt(node.dataset.step, 10) === n;
+            });
+            var lbl = activeNode && activeNode.querySelector('.wizard-node-label');
+            if (stepTitle && lbl) stepTitle.textContent = lbl.dataset.title || '';
 
             var bar = document.getElementById('publishWizardProgress');
             if (bar) bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -45,6 +49,15 @@
                 var empty = !field.value || !field.value.trim();
                 field.classList.toggle('is-invalid', empty);
                 if (empty) valid = false;
+            });
+
+            /* Custom select dropdowns: hidden inputs with data-ryden-required */
+            stepEl.querySelectorAll('input[data-ryden-required]').forEach(function (field) {
+                var empty = !field.value || !field.value.trim();
+                var ddBtnId = field.getAttribute('data-ryden-dd-btn-id');
+                var ddBtn = ddBtnId ? document.getElementById(ddBtnId) : null;
+                if (ddBtn) { ddBtn.classList.toggle('is-invalid', empty); }
+                if (empty) { valid = false; }
             });
 
             /* Step 2: neighborhood — uses the picker's built-in error element */

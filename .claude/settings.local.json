@@ -4,7 +4,11 @@
       "Bash(ls -la /home/dorbaj/TP-PAW/AGENTS.md /home/dorbaj/TP-PAW/agents.md 2>&1 | head -20)",
       "Read(//home/dorbaj/TP-PAW/**)",
       "Bash(find / -maxdepth 4 -iname \"CLAUDE.md\" 2>/dev/null | head -5)",
-      "Read(///wsl.localhost/Ubuntu-22.04//**)"
+      "Read(///wsl.localhost/Ubuntu-22.04//**)",
+      "Read(//mnt/wsl/instances/Ubuntu-22.04/home/dorbaj/TP-PAW/webapp/src/main/webapp/css/**)",
+      "Read(///wsl.localhost/Ubuntu-22.04/mnt/wsl/instances/Ubuntu-22.04/home/dorbaj/TP-PAW/webapp/src/main/webapp/css/**)",
+      "Bash(grep -n \"search.empty\\\\|login\\\\.\\\\|home\\\\.cta\\\\|navbar\\\\.explore\" \"\\\\\\\\wsl.localhost\\\\Ubuntu-22.04\\\\home\\\\dorbaj\\\\TP-PAW\\\\webapp\\\\src\\\\main\\\\resources\\\\messages\\\\messages_es.properties\")",
+      "Bash(cd \"\\\\\\\\wsl.localhost\\\\Ubuntu-22.04\\\\home\\\\dorbaj\\\\TP-PAW\")"
     ]
   }
 }

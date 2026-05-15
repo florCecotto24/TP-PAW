@@ -38,15 +38,105 @@
               action="${pageContext.request.contextPath}/my-listings/${listing.id}/reservations"
               data-ryden-dropdown-invalid="<c:out value='${listingResDropdownInvalid}'/>">
             <div class="col-md-5 col-lg-4">
-                <label class="form-label small text-secondary mb-1" for="listingRes_status"><spring:message code="myReservations.filter.status"/></label>
-                <select class="form-select" id="listingRes_status" name="reservationStatus">
-                    <option value="" ${empty statusFilter ? 'selected="selected"' : ''}><spring:message code="myReservations.filter.status.any"/></option>
-                    <option value="pending" ${statusFilter eq 'pending' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.pending"/></option>
-                    <option value="accepted" ${statusFilter eq 'accepted' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.accepted"/></option>
-                    <option value="started" ${statusFilter eq 'started' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.started"/></option>
-                    <option value="cancelled" ${statusFilter eq 'cancelled' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.cancelled"/></option>
-                    <option value="finished" ${statusFilter eq 'finished' ? 'selected="selected"' : ''}><spring:message code="enum.reservation.status.finished"/></option>
-                </select>
+                <spring:message code="myReservations.filter.status.any"    var="rsAny"/>
+                <spring:message code="enum.reservation.status.pending"     var="rsPending"/>
+                <spring:message code="enum.reservation.status.accepted"    var="rsAccepted"/>
+                <spring:message code="enum.reservation.status.started"     var="rsStarted"/>
+                <spring:message code="enum.reservation.status.cancelled"   var="rsCancelled"/>
+                <spring:message code="enum.reservation.status.finished"    var="rsFinished"/>
+                <c:choose>
+                    <c:when test="${statusFilter eq 'pending'}">  <c:set var="rsActiveLabel" value="${rsPending}"/></c:when>
+                    <c:when test="${statusFilter eq 'accepted'}"> <c:set var="rsActiveLabel" value="${rsAccepted}"/></c:when>
+                    <c:when test="${statusFilter eq 'started'}">  <c:set var="rsActiveLabel" value="${rsStarted}"/></c:when>
+                    <c:when test="${statusFilter eq 'cancelled'}"><c:set var="rsActiveLabel" value="${rsCancelled}"/></c:when>
+                    <c:when test="${statusFilter eq 'finished'}"> <c:set var="rsActiveLabel" value="${rsFinished}"/></c:when>
+                    <c:otherwise><c:set var="rsActiveLabel" value="${rsAny}"/></c:otherwise>
+                </c:choose>
+                <input type="hidden" id="listingRes_status" name="reservationStatus" value="<c:out value='${statusFilter}'/>"/>
+                <label class="form-label small text-secondary mb-1"><spring:message code="myReservations.filter.status"/></label>
+                <div class="dropdown">
+                    <button type="button" id="listingResStatusBtn"
+                            class="form-select dropdown-toggle ryden-select-btn text-start w-100"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="true"
+                            aria-expanded="false">
+                        <span id="listingResStatusLbl"><c:out value="${rsActiveLabel}"/></span>
+                    </button>
+                    <ul class="dropdown-menu shadow ryden-select-menu p-1 w-100">
+                        <c:set var="isAct" value="${empty statusFilter}"/>
+                        <li>
+                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                    data-ryden-select-val=""
+                                    data-ryden-select-text="<c:out value='${rsAny}'/>"
+                                    data-ryden-target-id="listingRes_status"
+                                    data-ryden-label-id="listingResStatusLbl"
+                                    data-ryden-dd-btn-id="listingResStatusBtn">
+                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                <c:out value="${rsAny}"/>
+                            </button>
+                        </li>
+                        <c:set var="isAct" value="${statusFilter eq 'pending'}"/>
+                        <li>
+                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                    data-ryden-select-val="pending"
+                                    data-ryden-select-text="<c:out value='${rsPending}'/>"
+                                    data-ryden-target-id="listingRes_status"
+                                    data-ryden-label-id="listingResStatusLbl"
+                                    data-ryden-dd-btn-id="listingResStatusBtn">
+                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                <c:out value="${rsPending}"/>
+                            </button>
+                        </li>
+                        <c:set var="isAct" value="${statusFilter eq 'accepted'}"/>
+                        <li>
+                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                    data-ryden-select-val="accepted"
+                                    data-ryden-select-text="<c:out value='${rsAccepted}'/>"
+                                    data-ryden-target-id="listingRes_status"
+                                    data-ryden-label-id="listingResStatusLbl"
+                                    data-ryden-dd-btn-id="listingResStatusBtn">
+                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                <c:out value="${rsAccepted}"/>
+                            </button>
+                        </li>
+                        <c:set var="isAct" value="${statusFilter eq 'started'}"/>
+                        <li>
+                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                    data-ryden-select-val="started"
+                                    data-ryden-select-text="<c:out value='${rsStarted}'/>"
+                                    data-ryden-target-id="listingRes_status"
+                                    data-ryden-label-id="listingResStatusLbl"
+                                    data-ryden-dd-btn-id="listingResStatusBtn">
+                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                <c:out value="${rsStarted}"/>
+                            </button>
+                        </li>
+                        <c:set var="isAct" value="${statusFilter eq 'cancelled'}"/>
+                        <li>
+                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                    data-ryden-select-val="cancelled"
+                                    data-ryden-select-text="<c:out value='${rsCancelled}'/>"
+                                    data-ryden-target-id="listingRes_status"
+                                    data-ryden-label-id="listingResStatusLbl"
+                                    data-ryden-dd-btn-id="listingResStatusBtn">
+                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                <c:out value="${rsCancelled}"/>
+                            </button>
+                        </li>
+                        <c:set var="isAct" value="${statusFilter eq 'finished'}"/>
+                        <li>
+                            <button type="button" class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
+                                    data-ryden-select-val="finished"
+                                    data-ryden-select-text="<c:out value='${rsFinished}'/>"
+                                    data-ryden-target-id="listingRes_status"
+                                    data-ryden-label-id="listingResStatusLbl"
+                                    data-ryden-dd-btn-id="listingResStatusBtn">
+                                <i class="bi bi-check2 ryden-sel-check${isAct ? '' : ' invisible'}" aria-hidden="true"></i>
+                                <c:out value="${rsFinished}"/>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
                 <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>

@@ -51,8 +51,8 @@
             <c:choose>
                 <c:when test="${not empty ratingAvg and reviewCount > 0}">
                     <p class="carcard-rating small text-secondary mb-0 mt-1">
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                         <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                         <c:choose>
                             <c:when test="${reviewCount == 1}">
                                 <span class="text-secondary">(<c:out value="${reviewCount}"/> <spring:message code="carCard.review"/>)</span>
@@ -65,8 +65,8 @@
                 </c:when>
                 <c:when test="${not empty ratingAvg and (reviewCount == null or reviewCount == 0)}">
                     <p class="carcard-rating small text-secondary mb-0 mt-1">
-                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                         <span class="fw-semibold text-dark"><fmt:formatNumber value="${ratingAvg}" maxFractionDigits="1" minFractionDigits="1"/></span>
+                        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
                     </p>
                 </c:when>
                 <c:when test="${(reviewCount == null or reviewCount == 0) and empty ratingAvg}">

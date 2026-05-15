@@ -14,7 +14,7 @@
             <c:when test="${not empty reviews}">
                 <ul class="list-group list-group-flush">
                     <c:forEach var="review" items="${reviews}">
-                        <c:if test="${not empty review.comment.orElse('')}">
+                        <c:if test="${not empty review.commentText}">
                             <li class="list-group-item px-0 py-3 bg-transparent">
                                 <div class="d-flex flex-column gap-2">
                                     <div class="d-flex align-items-center justify-content-between">
@@ -35,7 +35,7 @@
                                         </div>
                                         <span class="text-secondary small"><c:out value="${review.reviewDate}"/></span>
                                     </div>
-                                    <p class="mb-0 text-secondary ryden-multiline-plaintext"><c:out value="${review.comment.orElse('')}"/></p>
+                                    <p class="mb-0 text-secondary ryden-multiline-plaintext"><c:out value="${review.commentText}"/></p>
                                 </div>
                             </li>
                         </c:if>

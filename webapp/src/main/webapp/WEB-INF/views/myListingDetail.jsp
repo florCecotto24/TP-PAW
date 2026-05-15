@@ -71,8 +71,8 @@
                             <div class="d-flex flex-wrap gap-2 mb-2">
                                 <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                 <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
-                                <span class="badge text-bg-light border"><c:out value="${carTransmissionLabel}"/></span>
-                                <span class="badge text-bg-light border"><c:out value="${carPowertrainLabel}"/></span>
+                                <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTransmissionLabel}"/></span>
+                                <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
                             </div>
                             <p class="mb-2 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
@@ -307,8 +307,8 @@
                         <c:url var="listingUrl" value="/car-detail">
                             <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
                         </c:url>
-                        <a href="<c:out value='${listingUrl}'/>" class="btn btn-light border w-100">
-                            <spring:message code="myListingDetail.actions.viewListing"/>
+                        <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
+                            <i class="bi bi-eye me-2"></i><spring:message code="myListingDetail.actions.viewListing"/>
                         </a>
 
                         <spring:message code="myListingDetail.actions.finish" var="finishBtnLabel"/>
@@ -324,22 +324,22 @@
                                 <spring:message code="myListingDetail.pauseModal.confirm" var="pauseModalConfirm"/>
                                 <spring:message code="myListingDetail.pauseModal.back" var="pauseModalBack"/>
                                 <spring:message code="myListingDetail.actions.pause" var="pauseBtnLabel"/>
-                                <button type="button" class="btn w-100" style="background-color:#e4960b; color:#ffffff; border-color:rgb(228 150 11);" data-modal-open="pauseListingModal" aria-label="<c:out value='${pauseBtnLabel}'/>">
-                                    <c:out value="${pauseBtnLabel}"/>
+                                <button type="button" class="btn btn-pause w-100" data-modal-open="pauseListingModal" aria-label="<c:out value='${pauseBtnLabel}'/>">
+                                    <i class="bi bi-pause-fill me-2"></i><c:out value="${pauseBtnLabel}"/>
                                 </button>
-                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
-                                    <c:out value="${finishBtnLabel}"/>
+                                <button type="button" class="btn btn-outline-danger w-100" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
+                                    <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
                             <c:when test="${statusKey == 'PAUSED'}">
                                 <form method="post" action="<c:out value='${toggleListingUrl}'/>">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                                     <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myListingDetail.actions.activate'/>">
-                                        <spring:message code="myListingDetail.actions.activate"/>
+                                        <i class="bi bi-play-fill me-2"></i><spring:message code="myListingDetail.actions.activate"/>
                                     </button>
                                 </form>
-                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
-                                    <c:out value="${finishBtnLabel}"/>
+                                <button type="button" class="btn btn-outline-danger w-100" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
+                                    <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
                             <c:when test="${statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
@@ -347,10 +347,10 @@
                                     <spring:message code="myListingDetail.status.pausedMissingCbuHint" arguments="${cbuRequiredDigits}"/>
                                 </p>
                                 <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
-                                    <spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
+                                    <i class="bi bi-person-fill me-2"></i><spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
                                 </a>
-                                <button type="button" class="btn btn-outline-danger w-100 mt-1" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
-                                    <c:out value="${finishBtnLabel}"/>
+                                <button type="button" class="btn btn-outline-danger w-100" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
+                                    <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
                             <c:when test="${statusKey == 'FINISHED'}">

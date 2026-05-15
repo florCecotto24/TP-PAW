@@ -167,6 +167,8 @@ h3 { letter-spacing: -0.015em; }
     border-color: rgba(0, 0, 0, 0.1) !important;
     color: var(--color-text) !important;
     transition: background var(--transition-base) !important;
+    border-radius: 50% !important;
+    overflow: hidden !important;
 }
 
 .navbar-user-menu-toggle:hover {
@@ -352,12 +354,12 @@ h3 { letter-spacing: -0.015em; }
     color: var(--color-text-muted) !important;
 }
 
-.carcard-price-amount {
-    color: var(--color-primary) !important;
-}
-
 .carcard-price * {
     color: var(--color-text-muted) !important;
+}
+
+.carcard-price .carcard-price-amount {
+    color: var(--color-primary) !important;
 }
 
 /* ------------------------------------------------------------------
@@ -419,6 +421,18 @@ h3 { letter-spacing: -0.015em; }
     border-color: rgba(0, 0, 0, 0.14) !important;
 }
 
+.btn-outline-warm {
+    background-color: #fff !important;
+    border-color: #ECEAE4 !important;
+    color: var(--color-text) !important;
+    border-radius: var(--radius-btn) !important;
+}
+.btn-outline-warm:hover,
+.btn-outline-warm:focus-visible {
+    background-color: var(--color-surface-elevated) !important;
+    border-color: #ECEAE4 !important;
+}
+
 .btn-secondary {
     background-color: var(--color-surface-elevated) !important;
     border-color: rgba(0, 0, 0, 0.1) !important;
@@ -428,6 +442,24 @@ h3 { letter-spacing: -0.015em; }
 
 .btn-secondary:hover {
     background-color: #ECEAE4 !important;
+}
+
+.btn-pause {
+    background-color: transparent;
+    border-color: #e4960b;
+    color: #e4960b;
+    border-radius: var(--radius-btn);
+}
+.btn-pause:hover,
+.btn-pause:focus-visible {
+    background-color: rgba(228, 150, 11, 0.08);
+    border-color: #c97f09;
+    color: #c97f09;
+}
+.btn-pause:active {
+    background-color: rgba(228, 150, 11, 0.15);
+    border-color: #b57108;
+    color: #b57108;
 }
 
 .btn-outline-secondary {
@@ -441,7 +473,8 @@ h3 { letter-spacing: -0.015em; }
     color: var(--color-text) !important;
 }
 
-.btn-danger {
+.btn-danger,
+.btn-outline-danger {
     border-radius: var(--radius-btn) !important;
 }
 
@@ -497,7 +530,7 @@ h3 { letter-spacing: -0.015em; }
 
 .custom-label,
 .form-label {
-    color: var(--color-text-muted) !important;
+    color: var(--color-text) !important;
     font-weight: 500 !important;
 }
 
@@ -794,7 +827,7 @@ hr {
 
 .counterparty-summary-card {
     border-color: var(--color-border) !important;
-    background: var(--color-surface) !important;
+    background: var(--color-surface-elevated) !important;
 }
 
 .neighborhood-picker__menu .dropdown-item:hover,
@@ -1286,39 +1319,146 @@ hr {
 /* ------------------------------------------------------------------
    32. PUBLISH WIZARD BAR
    ------------------------------------------------------------------ */
-.wizard-progress-track {
-    height: 4px;
-    background: var(--color-border);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.wizard-progress-fill {
-    height: 100%;
-    width: 25%;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
-    border-radius: 4px;
-    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 .wizard-step-title {
     color: var(--color-text);
     font-size: 1.05rem;
 }
 
-.wizard-label {
+.wizard-steps-track {
+    display: flex;
+    align-items: flex-start;
+}
+
+.wizard-step-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.wizard-node-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.35s ease, background 0.35s ease;
+}
+
+.wizard-node-num {
     font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-text-tertiary);
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.wizard-node-check {
+    display: none;
+    font-size: 0.75rem;
+    color: #fff;
+}
+
+.wizard-step-node--active .wizard-node-circle {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+}
+
+.wizard-step-node--active .wizard-node-num {
+    color: #fff;
+}
+
+.wizard-step-node--done .wizard-node-circle {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+}
+
+.wizard-step-node--done .wizard-node-num {
+    display: none;
+}
+
+.wizard-step-node--done .wizard-node-check {
+    display: inline-block;
+}
+
+.wizard-node-label {
+    font-size: 0.68rem;
     color: var(--color-text-tertiary);
     font-weight: 500;
-    transition: color 0.3s ease, font-weight 0.3s ease;
+    margin-top: 6px;
     text-align: center;
+    white-space: nowrap;
+    transition: color 0.3s ease, font-weight 0.3s ease;
 }
 
-.wizard-label--active {
+.wizard-step-node--active .wizard-node-label {
+    color: var(--color-primary);
+    font-weight: 700;
+}
+
+.wizard-step-node--done .wizard-node-label {
+    color: var(--color-primary);
+}
+
+.wizard-connector {
+    flex: 1;
+    height: 2px;
+    background: var(--color-border);
+    margin-top: 13px;
+    min-width: 0;
+    transition: background 0.4s ease;
+}
+
+.wizard-connector--done {
+    background: var(--color-primary);
+}
+
+/* ------------------------------------------------------------------
+   33. CUSTOM SELECT DROPDOWNS — themed alternatives to native <select>
+   ------------------------------------------------------------------ */
+.ryden-select-btn.dropdown-toggle::after {
+    display: none; /* form-select background-image provides the caret */
+}
+
+.ryden-select-menu {
+    border-radius: 12px !important;
+    border-color: var(--color-border) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+    overflow: hidden;
+}
+
+.ryden-select-item {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 8px !important;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.625rem !important;
+    cursor: pointer;
+    color: var(--color-text) !important;
+    transition: background var(--transition-base);
+    background: none;
+    border: none;
+    text-align: left;
+    width: 100%;
+}
+
+.ryden-select-item:hover,
+.ryden-select-item:focus {
+    background-color: var(--color-primary-soft) !important;
+    color: var(--color-text) !important;
+}
+
+.ryden-select-item--active {
     color: var(--color-primary) !important;
-    font-weight: 700 !important;
+    font-weight: 600;
 }
 
-.wizard-label--done {
+.ryden-select-item--active:hover,
+.ryden-select-item--active:focus {
+    background-color: rgba(110, 141, 184, 0.12) !important;
     color: var(--color-primary) !important;
 }
