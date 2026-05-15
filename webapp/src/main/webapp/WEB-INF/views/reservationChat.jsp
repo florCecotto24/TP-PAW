@@ -18,6 +18,8 @@
     <spring:message code="myReservationDetail.chat.empty" var="chatEmptyLabel"/>
     <spring:message code="reservationChat.error.load" var="chatErrorLoad"/>
     <spring:message code="reservationChat.error.connection" var="chatErrorConnection"/>
+    <spring:message code="reservationChat.date.today" var="chatDateToday"/>
+    <spring:message code="reservationChat.date.yesterday" var="chatDateYesterday"/>
     <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
 
     <c:url var="detailUrl" value="/my-reservations/${reservationId}">
@@ -71,7 +73,9 @@
                  data-max-length="<c:out value='${chatMessageMaxLength}'/>"
                  data-empty-label="<c:out value='${chatEmptyLabel}'/>"
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
-                 data-error-connection="<c:out value='${chatErrorConnection}'/>">
+                 data-error-connection="<c:out value='${chatErrorConnection}'/>"
+                 data-label-today="<c:out value='${chatDateToday}'/>"
+                 data-label-yesterday="<c:out value='${chatDateYesterday}'/>">
                 <header class="reservation-chat-header">
                     <a href="<c:out value='${counterpartyProfileUrl}'/>"
                        class="reservation-chat-header__link text-decoration-none text-reset d-flex align-items-center gap-2 min-w-0"
@@ -99,6 +103,9 @@
                      class="reservation-chat__messages reservation-chat-page__messages"
                      role="log"
                      aria-live="polite">
+                    <div id="reservationChatDayBar" class="reservation-chat-day-bar d-none" aria-live="polite">
+                        <span id="reservationChatDayLabel" class="reservation-chat__day-pill reservation-chat-day-bar__label"></span>
+                    </div>
                     <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
                 </div>
                 <div class="reservation-chat__composer reservation-chat-page__composer d-flex gap-2 align-items-end">
