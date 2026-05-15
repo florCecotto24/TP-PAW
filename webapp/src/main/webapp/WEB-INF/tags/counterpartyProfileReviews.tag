@@ -15,7 +15,7 @@
                 <ul class="list-group list-group-flush">
                     <c:forEach var="review" items="${reviews}">
                         <c:if test="${not empty review.comment.orElse('')}">
-                            <li class="list-group-item px-0 py-3">
+                            <li class="list-group-item px-0 py-3 bg-transparent">
                                 <div class="d-flex flex-column gap-2">
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div>

@@ -17,7 +17,7 @@
     <ryden:breadcrumbTrail currentLabel="${publishFormTitle}"/>
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <div class="card border-0 shadow-sm rounded-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white">
                 <div class="card-body p-4 p-md-5">
 
                     <%-- Wizard progress bar --%>
@@ -79,19 +79,19 @@
 
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.brand"/></label>
-                                <form:input path="brand" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                                <form:input path="brand" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                                 <form:errors path="brand" cssClass="text-danger d-block"/>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.model"/></label>
-                                <form:input path="model" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                                <form:input path="model" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                                 <form:errors path="model" cssClass="text-danger d-block"/>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.plate"/></label>
-                                <form:input path="plate" cssClass="form-control" cssErrorClass="form-control is-invalid"
+                                <form:input path="plate" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"
                                             maxlength="10" data-ryden-plate="true" data-ryden-no-punctuation="true" style="text-transform:uppercase"/>
                                 <form:errors path="plate" cssClass="text-danger d-block"/>
                             </div>
@@ -137,7 +137,7 @@
                         <div class="publish-wizard-step" data-step="2">
                             <div class="mb-3">
                                 <label class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                                <form:input path="pricePerDay" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2"/>
+                                <form:input path="pricePerDay" required="required" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2"/>
                                 <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                             </div>
 
@@ -167,13 +167,13 @@
                             <div class="row g-3 mb-1">
                                 <div class="col-md-8">
                                     <label class="form-label required-label" for="publish_start_point_street"><spring:message code="publishCar.form.pickupStreet"/></label>
-                                    <form:input path="startPointStreet" id="publish_start_point_street" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                                    <form:input path="startPointStreet" id="publish_start_point_street" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                                     <form:errors path="startPointStreet" cssClass="text-danger d-block"/>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label required-label" for="publish_start_point_number"><spring:message code="publishCar.form.pickupStreetNumber"/></label>
                                     <form:input path="startPointNumber" id="publish_start_point_number" maxlength="10" inputmode="numeric" autocomplete="off"
-                                                data-ryden-digits-only="true" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                                                required="required" data-ryden-digits-only="true" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                                     <form:errors path="startPointNumber" cssClass="text-danger d-block"/>
                                 </div>
                             </div>
@@ -200,12 +200,12 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label required-label" for="checkInTime"><spring:message code="publishCar.form.checkInTime"/></label>
-                                    <form:input path="checkInTime" type="time" cssClass="form-control" cssErrorClass="form-control is-invalid" id="checkInTime" step="60"/>
+                                    <form:input path="checkInTime" type="time" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid" id="checkInTime" step="60"/>
                                     <form:errors path="checkInTime" cssClass="text-danger d-block"/>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label required-label" for="checkOutTime"><spring:message code="publishCar.form.checkOutTime"/></label>
-                                    <form:input path="checkOutTime" type="time" cssClass="form-control" cssErrorClass="form-control is-invalid" id="checkOutTime" step="60"/>
+                                    <form:input path="checkOutTime" type="time" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid" id="checkOutTime" step="60"/>
                                     <form:errors path="checkOutTime" cssClass="text-danger d-block"/>
                                 </div>
                             </div>
@@ -214,7 +214,9 @@
                             <spring:message code="publishCar.form.remove" var="removeLabel"/>
                             <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
                             <spring:message code="listing.availability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonClientErrMsg" htmlEscape="true"/>
+                            <spring:message code="listing.availability.required" var="availRequiredClientMsg" htmlEscape="true"/>
                             <div class="mb-4" id="publishAvailabilitySection"
+                                 data-publish-avail-required="<c:out value='${availRequiredClientMsg}'/>"
                                  data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>"
                                  data-publish-max-avail-wall-ymd="<c:out value='${publishMaxAvailabilityWallInclusive}'/>"
                                  data-publish-availability-beyond-msg="<c:out value='${beyondHorizonClientErrMsg}'/>">
@@ -237,6 +239,7 @@
                                         </div>
                                     </c:forEach>
                                 </div>
+                                <div id="publishClientAvailError" class="text-danger small d-none mb-1" role="alert"></div>
                                 <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="publish_avail_add">
                                     <i class="bi bi-plus-lg" aria-hidden="true"></i> <spring:message code="publishCar.form.addPeriod"/>
                                 </button>

@@ -21,7 +21,7 @@
     <ryden:breadcrumbTrail midLabel="${reservationForm.carName}" midHref="${carDetailBreadcrumbUrl}" currentLabel="${reservationFormLabel}"/>
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-            <div class="card border-0 shadow-sm rounded-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white">
                 <div class="card-body p-4 p-md-5">
                     <h1 class="h4 fw-bold mb-2"><spring:message code="reservationForm.heading"/></h1>
                     <spring:message code="reservationForm.description.before"/> <strong><c:out value="${reservationForm.carName}"/></strong><spring:message code="reservationForm.description.after"/>
@@ -39,7 +39,7 @@
                     <spring:message code="reservationForm.missingDocs.needIdentity" var="resMissingDocsNeedIdentityMsg" htmlEscape="false"/>
                     <spring:message code="reservationForm.missingDocs.saveFailed" var="resMissingDocsSaveFailedMsg" htmlEscape="false"/>
 
-                    <div class="border rounded-3 p-3 bg-light-subtle mb-4 mt-1">
+                    <div class="border rounded-3 p-3 bg-cream mb-4 mt-1">
                         <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.summary.title"/></h2>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.car"/></strong> <c:out value="${reservationForm.carName}"/></p>
                         <p class="mb-1"><strong><spring:message code="reservationForm.summary.pickupReturn"/></strong>
@@ -83,7 +83,7 @@
                             <input type="hidden" name="reservationTotal" value="<c:out value='${clientReservationTotal}'/>"/>
                         </c:if>
 
-                        <div class="border rounded-3 p-3 bg-light-subtle mb-3">
+                        <div class="border rounded-3 p-3 bg-cream mb-3">
                             <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.account.title"/></h2>
                             <p class="mb-1">
                                 <strong><spring:message code="reservationForm.account.name"/></strong>

@@ -95,6 +95,8 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+.bg-cream { background-color: var(--color-bg) !important; }
+
 /* Override Bootstrap's bg-light on body so every page uses the cream */
 body.bg-light {
     background-color: var(--color-bg) !important;
@@ -879,10 +881,20 @@ hr {
     background: rgba(110, 141, 184, 0.1) !important;
 }
 
+/* Keep selected/range days readable on hover */
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+    background: var(--color-primary-dark, #2a5ab8) !important;
+    color: #FFFFFF !important;
+}
+
+/* Continuous strip: box-shadow bridges the gap between adjacent cells */
 .flatpickr-day.inRange {
-    background: rgba(110, 141, 184, 0.1) !important;
+    background: rgba(110, 141, 184, 0.12) !important;
     border-color: transparent !important;
-    box-shadow: none !important;
+    border-radius: 0 !important;
+    box-shadow: -5px 0 0 rgba(110, 141, 184, 0.12), 5px 0 0 rgba(110, 141, 184, 0.12) !important;
 }
 
 .flatpickr-profile-clear-btn {
@@ -925,6 +937,32 @@ hr {
 
 .search-menu .border-top {
     border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Inline pill search bar — My Listings / My Reservations */
+.ryden-search-pill {
+    background: var(--color-surface) !important;
+    border: 1px solid var(--color-border) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07) !important;
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.ryden-search-pill:focus-within {
+    border-color: rgba(110, 141, 184, 0.45) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 0 0 3px rgba(110, 141, 184, 0.12) !important;
+}
+
+.ryden-search-pill .form-control {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 0.9rem;
+}
+
+.ryden-search-pill .form-control:focus {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* ------------------------------------------------------------------

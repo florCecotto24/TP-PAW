@@ -32,6 +32,7 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
+import ar.edu.itba.paw.exception.listing.DuplicatePlateException;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
@@ -285,6 +286,14 @@ public final class PublishCarFormController {
             mav.addObject("listing", result.getListing());
             mav.addObject("publisher", result.getPublisher());
             return mav;
+        } catch (final DuplicatePlateException e) {
+            errors.rejectValue(
+                    "plate",
+                    e.getMessageCode(),
+                    e.getMessageArgs(),
+                    localeMessages.msg(e));
+            pictureStash.trySyncFromForm(form, session, errors);
+            return publishCarFormView(currentUser, session, form);
         } catch (final RydenException e) {
             final String detail = localeMessages.msg(e);
             errors.reject(

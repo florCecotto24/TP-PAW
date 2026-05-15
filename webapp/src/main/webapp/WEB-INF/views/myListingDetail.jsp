@@ -39,7 +39,7 @@
 
     <div class="row g-4 align-items-start">
         <div class="col-lg-8">
-            <article class="card border-0 shadow-sm rounded-4 mb-4">
+            <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingDetail.carSummary.title"/></h2>
@@ -99,7 +99,7 @@
             </article>
 
             <c:if test="${statusKey != 'FINISHED'}">
-            <article class="card border-0 shadow-sm rounded-4 mb-4" id="editListingSection"
+            <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="editListingSection"
                      style="${hasEditErrors ? '' : 'display:none;'}">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
@@ -256,7 +256,7 @@
             </article>
             </c:if>
 
-            <article class="card border-0 shadow-sm rounded-4 mb-4" id="availabilityDisplaySection"
+            <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="availabilityDisplaySection"
                      style="${hasEditErrors ? 'display:none;' : ''}">
                 <div class="card-body p-4">
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.availability.title"/></h2>
@@ -280,7 +280,7 @@
         </div>
 
         <div class="col-lg-4">
-            <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky">
+            <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky bg-white">
                 <div class="card-body p-4">
                     <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
                     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -366,7 +366,7 @@
     </div>
 
     <c:url var="listingReservationsUrl" value="/my-listings/${listing.id}/reservations"/>
-    <article class="card border-0 shadow-sm rounded-4 mt-4">
+    <article class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
         <div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
                 <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingReservations.dashboard.title"/></h2>

@@ -55,6 +55,16 @@ public class CarJpaDao implements CarDao {
     }
 
     @Override
+    public boolean existsByOwnerAndPlate(final long ownerId, final String plate) {
+        final Long count = (Long) em.createQuery(
+                        "SELECT COUNT(c) FROM Car c WHERE c.owner.id = :ownerId AND c.plate = :plate")
+                .setParameter("ownerId", ownerId)
+                .setParameter("plate", plate)
+                .getSingleResult();
+        return count > 0;
+    }
+
+    @Override
     public Optional<Car> getCarById(final long id) {
         return Optional.ofNullable(em.find(Car.class, id));
     }

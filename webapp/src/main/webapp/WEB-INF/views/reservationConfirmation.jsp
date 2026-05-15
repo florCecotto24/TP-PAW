@@ -17,7 +17,7 @@
     <ryden:breadcrumbTrail homeLabel="${myReservationsLabel}" homeHref="${pageContext.request.contextPath}/my-reservations" currentLabel="${reservationConfirmLabel}"/>
     <div class="row justify-content-center">
         <div class="col-md-9 col-lg-7">
-            <div class="card border-0 shadow-sm rounded-4">
+            <div class="card border-0 shadow-sm rounded-4 bg-white">
                 <div class="card-body p-4 p-md-5">
                     <div class="text-center mb-4">
                         <h1 class="h3 fw-bold mb-3"><spring:message code="reservationConfirmation.heading"/></h1>
