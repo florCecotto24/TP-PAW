@@ -39,6 +39,10 @@
                 <img src="<c:out value='${image}'/>" alt="<c:out value='${brand} ${model}'/>">
             </c:otherwise>
         </c:choose>
+        <c:if test="${not empty href}">
+            <spring:message code="carCard.viewChip" var="viewChipText"/>
+            <span class="carcard-view-chip" aria-hidden="true"><c:out value="${viewChipText}"/></span>
+        </c:if>
     </div>
     <div class="carcard-info">
         <div class="carcard-info-text text">

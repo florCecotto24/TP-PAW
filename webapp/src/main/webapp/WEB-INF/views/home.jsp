@@ -25,7 +25,7 @@
             </div>
 
 
-            <div class="sticky-top w-100 pt-2" style="top: 55px; z-index: 1020; background-color: #f9fbff;">
+            <div class="sticky-top w-100 pt-2" style="top: 55px; z-index: 1020; background-color: var(--color-bg, #1E1E1E);">
                 <c:url var="homeSearchFiltersClearHref" value="/"/>
                 <c:set var="hasActiveSearchFilters"
                        value="${not empty param.query or not empty param.from or not empty param.until or not empty searchSanitizedNeighborhoodIds or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
@@ -44,7 +44,7 @@
 
 
             <div class="container mt-5">
-                <section class="carouselSection" id="cheapestVehiclesSection">
+                <section class="carouselSection animate-on-scroll" id="cheapestVehiclesSection">
                     <spring:message code="home.cheapest.title" var="cheapestTitle"/>
                     <spring:message code="home.cheapest.subtitle" var="cheapestSubtitle"/>
 
@@ -69,7 +69,7 @@
                                          prevPageHref="${cheapestPrevHref}" nextPageHref="${cheapestNextHref}"/>
                 </section>
 
-                <section class="carouselSection mt-5 pt-5 border-top border-secondary-subtle"
+                <section class="carouselSection mt-5 pt-5 border-top border-secondary-subtle animate-on-scroll"
                             id="mostRecentVehiclesSection">
                     <spring:message code="home.recent.title" var="recentTitle"/>
                     <spring:message code="home.recent.subtitle" var="recentSubtitle"/>
@@ -95,32 +95,69 @@
                                 prevPageHref="${recentPrevHref}" nextPageHref="${recentNextHref}"/>
                 </section>
 
-                <section class="features-section mt-5 pt-5 pb-5 border-top border-secondary-subtle text-center" id="whyChooseUsSection">
+                <section class="how-it-works-section mt-5 pt-5 border-top border-secondary-subtle animate-on-scroll" id="howItWorksSection">
+                    <h2 class="fw-semibold mb-2 text-center"><spring:message code="home.howItWorks.title"/></h2>
+                    <p class="text-center mb-5" style="color: var(--color-text-muted); font-size: 0.95rem;"><spring:message code="home.howItWorks.subtitle"/></p>
+                    <div class="row g-4 animate-stagger-parent">
+                        <div class="col-12 col-md-4 animate-stagger-child">
+                            <div class="how-it-works-step h-100">
+                                <span class="how-it-works-step__number"><spring:message code="home.howItWorks.step1.label"/></span>
+                                <div class="how-it-works-step__icon">
+                                    <i class="bi bi-search" aria-hidden="true"></i>
+                                </div>
+                                <h5 class="how-it-works-step__title"><spring:message code="home.howItWorks.step1.title"/></h5>
+                                <p class="how-it-works-step__desc"><spring:message code="home.howItWorks.step1.desc"/></p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 animate-stagger-child">
+                            <div class="how-it-works-step h-100">
+                                <span class="how-it-works-step__number"><spring:message code="home.howItWorks.step2.label"/></span>
+                                <div class="how-it-works-step__icon">
+                                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                                </div>
+                                <h5 class="how-it-works-step__title"><spring:message code="home.howItWorks.step2.title"/></h5>
+                                <p class="how-it-works-step__desc"><spring:message code="home.howItWorks.step2.desc"/></p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 animate-stagger-child">
+                            <div class="how-it-works-step h-100">
+                                <span class="how-it-works-step__number"><spring:message code="home.howItWorks.step3.label"/></span>
+                                <div class="how-it-works-step__icon">
+                                    <i class="bi bi-car-front" aria-hidden="true"></i>
+                                </div>
+                                <h5 class="how-it-works-step__title"><spring:message code="home.howItWorks.step3.title"/></h5>
+                                <p class="how-it-works-step__desc"><spring:message code="home.howItWorks.step3.desc"/></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="features-section mt-5 pt-5 pb-5 border-top border-secondary-subtle text-center animate-on-scroll" id="whyChooseUsSection">
                     <h2 class="mb-5 fw-semibold"><spring:message code="home.features.title"/></h2>
-                    <div class="row g-4">
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                    <div class="row g-4 animate-stagger-parent">
+                        <div class="col-12 col-md-6 col-lg-3 feature-item animate-stagger-child">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle feature-icon-wrap" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
                                 <i class="bi bi-shield fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.safe.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.safe.desc"/></p>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                        <div class="col-12 col-md-6 col-lg-3 feature-item animate-stagger-child">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle feature-icon-wrap" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
                                 <i class="bi bi-cash-coin fs-2" aria-hidden="true"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.price.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.price.desc"/></p>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                        <div class="col-12 col-md-6 col-lg-3 feature-item animate-stagger-child">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle feature-icon-wrap" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
                                 <i class="bi bi-clock fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.hours.title"/></h5>
                             <p class="text-muted small px-3"><spring:message code="home.features.hours.desc"/></p>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
+                        <div class="col-12 col-md-6 col-lg-3 feature-item animate-stagger-child">
+                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle feature-icon-wrap" style="width: 72px; height: 72px; background-color: var(--color-primary-soft, #eef4ff); color: var(--color-primary, #3b7be0);">
                                 <i class="bi bi-star fs-2"></i>
                             </div>
                             <h5 class="fw-semibold fs-6"><spring:message code="home.features.premium.title"/></h5>
@@ -130,7 +167,7 @@
                 </section>
             </div>
 
-            <section class="cta-banner text-center text-white py-5 w-100" style="background-color: var(--color-primary, #3b7be0);">
+            <section class="cta-banner animate-on-scroll text-center text-white py-5 w-100" style="background-color: var(--color-primary, #3b7be0);">
                 <div class="container py-4 my-2">
                     <h2 class="fw-bold mb-3"><spring:message code="home.cta.title"/></h2>
                     <p class="lead mb-4" style="font-size: 1.1rem; opacity: 0.9;"><spring:message code="home.cta.desc"/></p>
@@ -141,6 +178,7 @@
         </div>
 
         <%@ include file="footer.jsp" %>
+        <script src="${pageContext.request.contextPath}/js/home-animations.js"></script>
     </body>
 
 </html>

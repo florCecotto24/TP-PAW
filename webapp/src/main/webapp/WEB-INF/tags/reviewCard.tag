@@ -11,11 +11,17 @@
 <article class="card border-0 shadow-sm rounded-4 h-100 listing-review-card">
     <div class="card-body p-4 d-flex flex-column gap-2">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
-            <div>
-                <p class="fw-semibold mb-0">
-                    <c:out value="${forename}"/> <c:out value="${surname}"/>
-                </p>
-                <p class="text-secondary small mb-0"><c:out value="${dateLabel}"/></p>
+            <div class="d-flex align-items-center gap-3">
+                <div class="reviewer-avatar"
+                     data-forename="<c:out value='${forename}'/>"
+                     data-surname="<c:out value='${surname}'/>"
+                     aria-hidden="true"></div>
+                <div>
+                    <p class="fw-semibold mb-0">
+                        <c:out value="${forename}"/> <c:out value="${surname}"/>
+                    </p>
+                    <p class="text-secondary small mb-0"><c:out value="${dateLabel}"/></p>
+                </div>
             </div>
             <div class="d-inline-flex align-items-center gap-1 text-secondary" aria-label="Rating">
                 <c:forEach begin="1" end="5" var="star">
