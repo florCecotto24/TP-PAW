@@ -5,26 +5,10 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Column;
-import javax.persistence.Convert;
-import javax.persistence.Converter;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.SequenceGenerator;
-import javax.persistence.Table;
-
 /**
  * Rental agreement between a rider and a listing: UTC interval, money total, payment proof state, and lifecycle status.
  */
-@Entity
-@Table(name = "reservations")
-public class Reservation {
+public final class Reservation {
 
     /**
      * Stored in lowercase with underscores ({@code pending}, {@code cancelled_by_rider}, …).
@@ -43,18 +27,6 @@ public class Reservation {
         FINISHED
     }
 
-    @Converter
-    public static class StatusConverter implements AttributeConverter<Status, String> {
-        @Override
-        public String convertToDatabaseColumn(final Status attribute) {
-            return attribute == null ? null : attribute.name().toLowerCase();
-        }
-        @Override
-        public Status convertToEntityAttribute(final String dbData) {
-            return dbData == null ? null : Status.valueOf(dbData.toUpperCase());
-        }
-    }
-
     /**
      * Any terminal cancellation status, including legacy {@link Status#CANCELLED}.
      */
@@ -68,106 +40,42 @@ public class Reservation {
         };
     }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reservations_id_seq")
-    @SequenceGenerator(name = "reservations_id_seq", sequenceName = "reservations_id_seq", allocationSize = 1)
-    private long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rider_id", nullable = false)
-    private User rider;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = false)
-    private Listing listing;
-
-    @Column(name = "start_date", nullable = false)
-    private OffsetDateTime startDate;
-
-    @Column(name = "end_date", nullable = false)
-    private OffsetDateTime endDate;
-
-    @Convert(converter = StatusConverter.class)
-    @Column(nullable = false, length = 60)
-    private Status status;
-
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private OffsetDateTime updatedAt;
-
-    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalPrice;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_receipt_file_id", nullable = true)
-    private StoredFile paymentReceiptFile;
-
-    @Column(name = "payment_approved", nullable = false)
-    private boolean paymentApproved;
-
-    @Column(name = "payment_proof_deadline_at")
-    private OffsetDateTime paymentProofDeadlineAt;
-
-    @Column(name = "car_returned", nullable = false)
-    private boolean carReturned;
-
-    @Column(name = "payment_refund_required", nullable = false)
-    private boolean paymentRefundRequired;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_refund_receipt_file_id", nullable = true)
-    private StoredFile paymentRefundReceiptFile;
-
-    @Column(name = "payment_refund_approved", nullable = false)
-    private boolean paymentRefundApproved;
-
-    @Column(name = "refund_proof_deadline_at")
-    private OffsetDateTime refundProofDeadlineAt;
-
-    @Column(name = "return_reminder_email_sent", nullable = false)
-    private boolean returnReminderEmailSent;
-
-    @Column(name = "return_checkout_email_sent", nullable = false)
-    private boolean returnCheckoutEmailSent;
-
-    @Column(name = "rider_review_invite_email_sent", nullable = false)
-    private boolean riderReviewInviteEmailSent;
-
-    @Column(name = "pending_paymentproof_email_sent", nullable = false)
-    private boolean pendingPaymentproofEmailSent;
-
-    @Column(name = "pending_refund_email_sent", nullable = false)
-    private boolean pendingRefundEmailSent;
-
-    /* package */ Reservation() {
-        // For Hibernate
-    }
+    private final long id;
+    private final long riderId;
+    private final long listingId;
+    private final OffsetDateTime startDate;
+    private final OffsetDateTime endDate;
+    private final Status status;
+    private final OffsetDateTime createdAt;
+    private final OffsetDateTime updatedAt;
+    private final BigDecimal totalPrice;
+    private final Long paymentReceiptFileId;
+    private final boolean paymentApproved;
+    private final OffsetDateTime paymentProofDeadlineAt;
+    private final boolean carReturned;
+    private final boolean paymentRefundRequired;
+    private final Long paymentRefundReceiptFileId;
+    private final boolean paymentRefundApproved;
+    private final OffsetDateTime refundProofDeadlineAt;
 
     private Reservation(final Builder b) {
         this.id = b.id;
-        this.rider = b.rider;
-        this.listing = b.listing;
+        this.riderId = b.riderId;
+        this.listingId = b.listingId;
         this.startDate = b.startDate;
         this.endDate = b.endDate;
         this.status = b.status;
         this.createdAt = b.createdAt;
         this.updatedAt = b.updatedAt;
         this.totalPrice = b.totalPrice;
-        this.paymentReceiptFile = b.paymentReceiptFile;
+        this.paymentReceiptFileId = b.paymentReceiptFileId;
         this.paymentApproved = b.paymentApproved;
         this.paymentProofDeadlineAt = b.paymentProofDeadlineAt;
         this.carReturned = b.carReturned;
         this.paymentRefundRequired = b.paymentRefundRequired;
-        this.paymentRefundReceiptFile = b.paymentRefundReceiptFile;
+        this.paymentRefundReceiptFileId = b.paymentRefundReceiptFileId;
         this.paymentRefundApproved = b.paymentRefundApproved;
         this.refundProofDeadlineAt = b.refundProofDeadlineAt;
-        this.returnReminderEmailSent = b.returnReminderEmailSent;
-        this.returnCheckoutEmailSent = b.returnCheckoutEmailSent;
-        this.riderReviewInviteEmailSent = b.riderReviewInviteEmailSent;
-        this.pendingPaymentproofEmailSent = b.pendingPaymentproofEmailSent;
-        this.pendingRefundEmailSent = b.pendingRefundEmailSent;
     }
 
     public static Builder builder() {
@@ -176,40 +84,35 @@ public class Reservation {
 
     public static final class Builder {
         private long id;
-        private User rider;
-        private Listing listing;
+        private long riderId;
+        private long listingId;
         private OffsetDateTime startDate;
         private OffsetDateTime endDate;
         private Status status;
         private OffsetDateTime createdAt;
         private OffsetDateTime updatedAt;
         private BigDecimal totalPrice;
-        private StoredFile paymentReceiptFile;
+        private Long paymentReceiptFileId;
         private boolean paymentApproved;
         private OffsetDateTime paymentProofDeadlineAt;
         private boolean carReturned;
         private boolean paymentRefundRequired;
-        private StoredFile paymentRefundReceiptFile;
+        private Long paymentRefundReceiptFileId;
         private boolean paymentRefundApproved;
         private OffsetDateTime refundProofDeadlineAt;
-        private boolean returnReminderEmailSent;
-        private boolean returnCheckoutEmailSent;
-        private boolean riderReviewInviteEmailSent;
-        private boolean pendingPaymentproofEmailSent;
-        private boolean pendingRefundEmailSent;
 
         public Builder id(final long id) {
             this.id = id;
             return this;
         }
 
-        public Builder rider(final User rider) {
-            this.rider = rider;
+        public Builder riderId(final long riderId) {
+            this.riderId = riderId;
             return this;
         }
 
-        public Builder listing(final Listing listing) {
-            this.listing = listing;
+        public Builder listingId(final long listingId) {
+            this.listingId = listingId;
             return this;
         }
 
@@ -243,8 +146,8 @@ public class Reservation {
             return this;
         }
 
-        public Builder paymentReceiptFile(final StoredFile paymentReceiptFile) {
-            this.paymentReceiptFile = paymentReceiptFile;
+        public Builder paymentReceiptFileId(final Long paymentReceiptFileId) {
+            this.paymentReceiptFileId = paymentReceiptFileId;
             return this;
         }
 
@@ -268,8 +171,8 @@ public class Reservation {
             return this;
         }
 
-        public Builder paymentRefundReceiptFile(final StoredFile paymentRefundReceiptFile) {
-            this.paymentRefundReceiptFile = paymentRefundReceiptFile;
+        public Builder paymentRefundReceiptFileId(final Long paymentRefundReceiptFileId) {
+            this.paymentRefundReceiptFileId = paymentRefundReceiptFileId;
             return this;
         }
 
@@ -283,34 +186,7 @@ public class Reservation {
             return this;
         }
 
-        public Builder returnReminderEmailSent(final boolean returnReminderEmailSent) {
-            this.returnReminderEmailSent = returnReminderEmailSent;
-            return this;
-        }
-
-        public Builder returnCheckoutEmailSent(final boolean returnCheckoutEmailSent) {
-            this.returnCheckoutEmailSent = returnCheckoutEmailSent;
-            return this;
-        }
-
-        public Builder riderReviewInviteEmailSent(final boolean riderReviewInviteEmailSent) {
-            this.riderReviewInviteEmailSent = riderReviewInviteEmailSent;
-            return this;
-        }
-
-        public Builder pendingPaymentproofEmailSent(final boolean pendingPaymentproofEmailSent) {
-            this.pendingPaymentproofEmailSent = pendingPaymentproofEmailSent;
-            return this;
-        }
-
-        public Builder pendingRefundEmailSent(final boolean pendingRefundEmailSent) {
-            this.pendingRefundEmailSent = pendingRefundEmailSent;
-            return this;
-        }
-
         public Reservation build() {
-            Objects.requireNonNull(rider, "rider");
-            Objects.requireNonNull(listing, "listing");
             Objects.requireNonNull(startDate, "startDate");
             Objects.requireNonNull(endDate, "endDate");
             Objects.requireNonNull(status, "status");
@@ -325,22 +201,12 @@ public class Reservation {
         return id;
     }
 
-    public User getRider() {
-        return rider;
-    }
-
-    /** Convenience accessor — returns {@code rider.getId()}. */
     public long getRiderId() {
-        return rider.getId();
+        return riderId;
     }
 
-    public Listing getListing() {
-        return listing;
-    }
-
-    /** Convenience accessor — returns {@code listing.getId()}. */
     public long getListingId() {
-        return listing.getId();
+        return listingId;
     }
 
     public OffsetDateTime getStartDate() {
@@ -367,13 +233,8 @@ public class Reservation {
         return totalPrice;
     }
 
-    public Optional<StoredFile> getPaymentReceiptFile() {
-        return Optional.ofNullable(paymentReceiptFile);
-    }
-
-    /** Convenience accessor — returns the payment receipt file id, or empty if no file is set. */
     public Optional<Long> getPaymentReceiptFileId() {
-        return paymentReceiptFile == null ? Optional.empty() : Optional.of(paymentReceiptFile.getId());
+        return Optional.ofNullable(paymentReceiptFileId);
     }
 
     public boolean isPaymentApproved() {
@@ -392,13 +253,8 @@ public class Reservation {
         return paymentRefundRequired;
     }
 
-    public Optional<StoredFile> getPaymentRefundReceiptFile() {
-        return Optional.ofNullable(paymentRefundReceiptFile);
-    }
-
-    /** Convenience accessor — returns the refund receipt file id, or empty if no file is set. */
     public Optional<Long> getPaymentRefundReceiptFileId() {
-        return paymentRefundReceiptFile == null ? Optional.empty() : Optional.of(paymentRefundReceiptFile.getId());
+        return Optional.ofNullable(paymentRefundReceiptFileId);
     }
 
     public boolean isPaymentRefundApproved() {
@@ -409,88 +265,12 @@ public class Reservation {
         return Optional.ofNullable(refundProofDeadlineAt);
     }
 
-    public void setStatus(final Status status) {
-        this.status = status;
-    }
-
-    public void setUpdatedAt(final OffsetDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public void setPaymentReceiptFile(final StoredFile paymentReceiptFile) {
-        this.paymentReceiptFile = paymentReceiptFile;
-    }
-
-    public void setPaymentApproved(final boolean paymentApproved) {
-        this.paymentApproved = paymentApproved;
-    }
-
-    public void setCarReturned(final boolean carReturned) {
-        this.carReturned = carReturned;
-    }
-
-    public void setPaymentRefundRequired(final boolean paymentRefundRequired) {
-        this.paymentRefundRequired = paymentRefundRequired;
-    }
-
-    public void setPaymentRefundReceiptFile(final StoredFile paymentRefundReceiptFile) {
-        this.paymentRefundReceiptFile = paymentRefundReceiptFile;
-    }
-
-    public void setPaymentRefundApproved(final boolean paymentRefundApproved) {
-        this.paymentRefundApproved = paymentRefundApproved;
-    }
-
-    public void setRefundProofDeadlineAt(final OffsetDateTime refundProofDeadlineAt) {
-        this.refundProofDeadlineAt = refundProofDeadlineAt;
-    }
-
-    public void setReturnReminderEmailSent(final boolean returnReminderEmailSent) {
-        this.returnReminderEmailSent = returnReminderEmailSent;
-    }
-
-    public void setReturnCheckoutEmailSent(final boolean returnCheckoutEmailSent) {
-        this.returnCheckoutEmailSent = returnCheckoutEmailSent;
-    }
-
-    public void setRiderReviewInviteEmailSent(final boolean riderReviewInviteEmailSent) {
-        this.riderReviewInviteEmailSent = riderReviewInviteEmailSent;
-    }
-
-    public void setPendingPaymentproofEmailSent(final boolean pendingPaymentproofEmailSent) {
-        this.pendingPaymentproofEmailSent = pendingPaymentproofEmailSent;
-    }
-
-    public void setPendingRefundEmailSent(final boolean pendingRefundEmailSent) {
-        this.pendingRefundEmailSent = pendingRefundEmailSent;
-    }
-
-    public boolean isReturnReminderEmailSent() {
-        return returnReminderEmailSent;
-    }
-
-    public boolean isReturnCheckoutEmailSent() {
-        return returnCheckoutEmailSent;
-    }
-
-    public boolean isRiderReviewInviteEmailSent() {
-        return riderReviewInviteEmailSent;
-    }
-
-    public boolean isPendingPaymentproofEmailSent() {
-        return pendingPaymentproofEmailSent;
-    }
-
-    public boolean isPendingRefundEmailSent() {
-        return pendingRefundEmailSent;
-    }
-
     @Override
     public String toString() {
         return "Reservation{" +
                 "id=" + id +
-                ", riderId=" + rider.getId() +
-                ", listingId=" + listing.getId() +
+                ", riderId=" + riderId +
+                ", listingId=" + listingId +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", status=" + status +
