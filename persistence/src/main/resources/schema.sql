@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS car_models (
     brand_id INTEGER NOT NULL,
     name VARCHAR(50) NOT NULL,
     validated BOOLEAN NOT NULL DEFAULT FALSE,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('SEDAN', 'HATCHBACK', 'SUV', 'COUPE', 'CONVERTIBLE', 'WAGON', 'VAN', 'PICKUP')),
     FOREIGN KEY (brand_id) REFERENCES car_brands(id) ON DELETE CASCADE
 );
 
@@ -148,6 +149,7 @@ CREATE TABLE IF NOT EXISTS listing_availability(
     end_date DATE NOT NULL CHECK (end_date >= start_date),
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
+    day_price DECIMAL(10, 2),
 
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );
