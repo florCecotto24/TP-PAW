@@ -126,9 +126,9 @@ public interface ReservationService {
     Optional<StoredFile> findPaymentReceiptForParticipant(long userId, long reservationId);
 
     /**
-     * Set if the owner validated the payment proof (only accepted reservation with proof).
+     * Owner validates the payment proof (only accepted/started/finished reservation with proof); irreversible.
      */
-    void setPaymentReceiptApprovalByOwner(long ownerUserId, long reservationId, boolean approved);
+    void approvePaymentReceiptByOwner(long ownerUserId, long reservationId);
 
     /** Owner uploads refund transfer proof for a cancelled confirmed reservation that requires refund documentation. */
     void attachRefundReceiptByOwner(long ownerUserId, long reservationId, String originalFilename, String contentType, byte[] data);
@@ -170,10 +170,10 @@ public interface ReservationService {
     Optional<OffsetDateTime> getListingNextReservationDate(long ownerId, long listingId);
 
     /**
-     * Owner marks or clears vehicle returned after checkout; when both return and payment approval hold,
+     * Owner confirms vehicle returned after checkout; irreversible. When both return and payment approval hold,
      * {@code status} becomes {@code finished}, otherwise {@code accepted}/{@code started}.
      */
-    void markCarReturnedByOwner(long ownerUserId, long reservationId, boolean returned);
+    void markCarReturnedByOwner(long ownerUserId, long reservationId);
 
     /** Hours before {@code end_date} to email the rider to return the vehicle ({@code app.reservation.return-reminder-hours-before-checkout}). */
     int getConfiguredReturnReminderHoursBeforeCheckout();

@@ -410,24 +410,6 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    public int unmarkCarReturned(final long reservationId, final long ownerUserId) {
-        final Reservation r = em.find(Reservation.class, reservationId);
-        if (r == null || r.getListing().getCar().getOwner().getId() != ownerUserId) {
-            return 0;
-        }
-        if (!r.isCarReturned()) {
-            return 0;
-        }
-        final Reservation.Status s = r.getStatus();
-        if (s != Reservation.Status.ACCEPTED && s != Reservation.Status.STARTED && s != Reservation.Status.FINISHED) {
-            return 0;
-        }
-        r.setCarReturned(false);
-        r.setUpdatedAt(OffsetDateTime.now());
-        return 1;
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsForReturnReminderEmail(final OffsetDateTime now, final int hoursBeforeCheckout) {
         final OffsetDateTime windowEnd = now.plusHours(hoursBeforeCheckout);

@@ -36,7 +36,6 @@ public final class ReservationDetailPageModel {
     private final int reviewCommentMaxLength;
     private final boolean reservationPeriodEnded;
     private final boolean canOwnerMarkCarReturned;
-    private final boolean canOwnerUnmarkCarReturned;
     private final boolean canOwnerReviewRider;
     private final boolean canRiderReviewOwner;
     private final Optional<String> paymentProofDeadlineDisplay;
@@ -71,7 +70,6 @@ public final class ReservationDetailPageModel {
             final int reviewCommentMaxLength,
             final boolean reservationPeriodEnded,
             final boolean canOwnerMarkCarReturned,
-            final boolean canOwnerUnmarkCarReturned,
             final boolean canOwnerReviewRider,
             final boolean canRiderReviewOwner,
             final Optional<String> paymentProofDeadlineDisplay,
@@ -104,7 +102,6 @@ public final class ReservationDetailPageModel {
         this.reviewCommentMaxLength = reviewCommentMaxLength;
         this.reservationPeriodEnded = reservationPeriodEnded;
         this.canOwnerMarkCarReturned = canOwnerMarkCarReturned;
-        this.canOwnerUnmarkCarReturned = canOwnerUnmarkCarReturned;
         this.canOwnerReviewRider = canOwnerReviewRider;
         this.canRiderReviewOwner = canRiderReviewOwner;
         this.paymentProofDeadlineDisplay = paymentProofDeadlineDisplay;
@@ -145,7 +142,6 @@ public final class ReservationDetailPageModel {
         putObject.accept("reviewCommentMaxLength", reviewCommentMaxLength);
         putObject.accept("reservationPeriodEnded", reservationPeriodEnded);
         putObject.accept("canOwnerMarkCarReturned", canOwnerMarkCarReturned);
-        putObject.accept("canOwnerUnmarkCarReturned", canOwnerUnmarkCarReturned);
         putObject.accept("canOwnerReviewRider", canOwnerReviewRider);
         putObject.accept("canRiderReviewOwner", canRiderReviewOwner);
         paymentProofDeadlineDisplay.ifPresent(s -> putObject.accept("paymentProofDeadlineDisplay", s));

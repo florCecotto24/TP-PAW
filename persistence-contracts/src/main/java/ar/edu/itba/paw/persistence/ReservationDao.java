@@ -69,9 +69,6 @@ public interface ReservationDao {
      */
     int markCarReturned(long reservationId, long ownerUserId);
 
-    /** Clears {@code car_returned} for {@code accepted}/{@code started}/{@code finished} rows. Status is service-owned. */
-    int unmarkCarReturned(long reservationId, long ownerUserId);
-
     List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);
 
     List<Reservation> findReservationsForReturnCheckoutEmail(OffsetDateTime now);

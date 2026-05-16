@@ -936,10 +936,7 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public void setPaymentReceiptApprovalByOwner(
-            final long ownerUserId,
-            final long reservationId,
-            final boolean approved) {
+    public void approvePaymentReceiptByOwner(final long ownerUserId, final long reservationId) {
         final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID));
         if (r.getStatus() != Reservation.Status.ACCEPTED
@@ -950,17 +947,19 @@ public final class ReservationServiceImpl implements ReservationService {
         if (r.getPaymentReceiptFileId().isEmpty()) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
         }
-        final int updated = reservationDao.updatePaymentApproved(reservationId, ownerUserId, approved);
+        if (r.isPaymentApproved()) {
+            return;
+        }
+        final int updated = reservationDao.updatePaymentApproved(reservationId, ownerUserId, true);
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
         }
         syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
         LOGGER.atInfo()
                 .addArgument(ownerUserId)
-                .addArgument(approved)
                 .addArgument(reservationId)
-                .log("Owner ownerUserId={} set payment receipt approved={} for reservation id={}");
-        if (approved && r.isCarReturned()) {
+                .log("Owner ownerUserId={} approved payment receipt for reservation id={}");
+        if (r.isCarReturned()) {
             reservationDao.updateReservationStatus(reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
             LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} transitioned to finished (payment approved + car already returned)");
         }
@@ -1160,47 +1159,27 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public void markCarReturnedByOwner(final long ownerUserId, final long reservationId, final boolean returned) {
+    public void markCarReturnedByOwner(final long ownerUserId, final long reservationId) {
         final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED));
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
             throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
-        if (returned) {
-            if (r.getStatus() != Reservation.Status.ACCEPTED && r.getStatus() != Reservation.Status.STARTED) {
-                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
-            }
-            if (r.isCarReturned()) {
-                return;
-            }
-            final int updated = reservationDao.markCarReturned(reservationId, ownerUserId);
-            if (updated == 0) {
-                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
-            }
-            syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
-            LOGGER.atInfo()
-                    .addArgument(ownerUserId)
-                    .addArgument(reservationId)
-                    .log("Owner ownerUserId={} marked car returned for reservation id={}");
-        } else {
-            if (!r.isCarReturned()) {
-                return;
-            }
-            if (r.getStatus() != Reservation.Status.ACCEPTED
-                    && r.getStatus() != Reservation.Status.STARTED
-                    && r.getStatus() != Reservation.Status.FINISHED) {
-                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
-            }
-            final int updated = reservationDao.unmarkCarReturned(reservationId, ownerUserId);
-            if (updated == 0) {
-                throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
-            }
-            syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
-            LOGGER.atInfo()
-                    .addArgument(ownerUserId)
-                    .addArgument(reservationId)
-                    .log("Owner ownerUserId={} cleared car returned for reservation id={}");
+        if (r.getStatus() != Reservation.Status.ACCEPTED && r.getStatus() != Reservation.Status.STARTED) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
+        if (r.isCarReturned()) {
+            return;
+        }
+        final int updated = reservationDao.markCarReturned(reservationId, ownerUserId);
+        if (updated == 0) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
+        }
+        syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
+        LOGGER.atInfo()
+                .addArgument(ownerUserId)
+                .addArgument(reservationId)
+                .log("Owner ownerUserId={} marked car returned for reservation id={}");
     }
 
     @Override

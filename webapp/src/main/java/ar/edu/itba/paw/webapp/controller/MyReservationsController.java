@@ -374,15 +374,14 @@ public final class MyReservationsController {
     }
 
     @PostMapping("/my-reservations/{reservationId}/payment-receipt/approval")
-    public ModelAndView setPaymentReceiptApproval(
+    public ModelAndView approvePaymentReceipt(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam("approved") final boolean approved,
             @RequestParam(required = false) final Long fromListing,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         try {
-            reservationService.setPaymentReceiptApprovalByOwner(me.getId(), reservationId, approved);
+            reservationService.approvePaymentReceiptByOwner(me.getId(), reservationId);
             redirectAttributes.addFlashAttribute(
                     "paymentApprovalMessage",
                     localeMessages.msg("myReservationDetail.payment.approvalUpdated"));
@@ -428,16 +427,13 @@ public final class MyReservationsController {
     public ModelAndView markCarReturned(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam(value = "returned", defaultValue = "true") final boolean returned,
             @RequestParam(required = false) final Long fromListing,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         try {
-            reservationService.markCarReturnedByOwner(me.getId(), reservationId, returned);
+            reservationService.markCarReturnedByOwner(me.getId(), reservationId);
             redirectAttributes.addFlashAttribute(
-                    "carReturnedMessage",
-                    localeMessages.msg(
-                            returned ? "myReservationDetail.carReturned.success" : "myReservationDetail.carReturned.unmarkSuccess"));
+                    "carReturnedMessage", localeMessages.msg("myReservationDetail.carReturned.success"));
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("carReturnedError", localeMessages.msg(e));
         }

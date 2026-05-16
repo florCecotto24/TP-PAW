@@ -146,28 +146,26 @@
                         <c:url var="ownerReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
                         <c:url var="approvalUrl" value="/my-reservations/${reservation.id}/payment-receipt/approval"/>
                         <div class="d-flex gap-2 flex-wrap">
-                            <c:choose>
-                                <c:when test="${not paymentReceiptApproved}">
-                                    <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
-                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                        <input type="hidden" name="approved" value="true"/>
-                                        <button type="submit" class="btn btn-primary">
-                                            <spring:message code="myReservationDetail.payment.markReviewed"/>
-                                        </button>
-                                    </form>
-                                </c:when>
-                                <c:otherwise>
-                                    <form method="post" action="<c:out value='${approvalUrl}'/>" class="h-100">
-                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                        <input type="hidden" name="approved" value="false"/>
-                                        <button type="submit" class="btn btn-outline-secondary">
-                                            <spring:message code="myReservationDetail.payment.clearReview"/>
-                                        </button>
-                                    </form>
-                                </c:otherwise>
-                            </c:choose>
+                            <c:if test="${not paymentReceiptApproved}">
+                                <spring:message code="myReservationDetail.payment.markReviewed" var="paymentApproveBtnLabel"/>
+                                <spring:message code="myReservationDetail.payment.modal.title" var="paymentApproveModalTitle"/>
+                                <spring:message code="myReservationDetail.payment.modal.message" var="paymentApproveModalMessage"/>
+                                <spring:message code="myReservationDetail.payment.modal.confirm" var="paymentApproveModalConfirm"/>
+                                <spring:message code="myReservationDetail.payment.modal.back" var="paymentApproveModalBack"/>
+                                <ryden:confirmModal
+                                        id="paymentReceiptApprovalModal"
+                                        title="${paymentApproveModalTitle}"
+                                        message="${paymentApproveModalMessage}"
+                                        action="${approvalUrl}"
+                                        cancelLabel="${paymentApproveModalBack}"
+                                        confirmLabel="${paymentApproveModalConfirm}"
+                                        triggerLabel="${paymentApproveBtnLabel}"
+                                        triggerClass="btn btn-primary"
+                                        confirmButtonClass="btn btn-primary">
+                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                </ryden:confirmModal>
+                            </c:if>
                             <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
                                 <spring:message code="myReservationDetail.payment.viewReceipt"/>
                             </a>
@@ -296,32 +294,28 @@
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.carReturned.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.carReturned.intro"/></p>
+                        <spring:message code="myReservationDetail.carReturned.submit" var="carReturnedBtnLabel"/>
+                        <spring:message code="myReservationDetail.carReturned.modal.title" var="carReturnedModalTitle"/>
+                        <spring:message code="myReservationDetail.carReturned.modal.message" var="carReturnedModalMessage"/>
+                        <spring:message code="myReservationDetail.carReturned.modal.confirm" var="carReturnedModalConfirm"/>
+                        <spring:message code="myReservationDetail.carReturned.modal.back" var="carReturnedModalBack"/>
                         <c:url var="carReturnedUrl" value="/my-reservations/${reservation.id}/car-returned"/>
-                        <form method="post" action="<c:out value='${carReturnedUrl}'/>">
+                        <ryden:confirmModal
+                                id="carReturnedModal"
+                                title="${carReturnedModalTitle}"
+                                message="${carReturnedModalMessage}"
+                                action="${carReturnedUrl}"
+                                cancelLabel="${carReturnedModalBack}"
+                                confirmLabel="${carReturnedModalConfirm}"
+                                triggerLabel="${carReturnedBtnLabel}"
+                                triggerClass="btn btn-primary"
+                                confirmButtonClass="btn btn-primary">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                             <%@ include file="includes/fromListingHubHidden.jspf" %>
-                            <input type="hidden" name="returned" value="true"/>
-                            <button type="submit" class="btn btn-primary"><spring:message code="myReservationDetail.carReturned.submit"/></button>
-                        </form>
+                        </ryden:confirmModal>
                     </div>
                 </article>
             </c:if>
-            <c:if test="${canOwnerUnmarkCarReturned}">
-                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
-                    <div class="card-body p-4">
-                        <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.carReturned.unmarkTitle"/></h2>
-                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.carReturned.unmarkIntro"/></p>
-                        <c:url var="carUnreturnedUrl" value="/my-reservations/${reservation.id}/car-returned"/>
-                        <form method="post" action="<c:out value='${carUnreturnedUrl}'/>">
-                            <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <%@ include file="includes/fromListingHubHidden.jspf" %>
-                            <input type="hidden" name="returned" value="false"/>
-                            <button type="submit" class="btn btn-outline-secondary"><spring:message code="myReservationDetail.carReturned.unmarkSubmit"/></button>
-                        </form>
-                    </div>
-                </article>
-            </c:if>
-
             <c:if test="${canOwnerReviewRider}">
                 <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
@@ -560,25 +554,19 @@
                                 <button type="button" class="btn btn-outline-danger w-100" data-modal-open="cancelReservationModal">
                                     <i class="bi bi-x-circle me-2"></i><c:out value="${cancelBtnLabel}"/>
                                 </button>
-                                <ryden:modal
-                                    id="cancelReservationModal"
-                                    title="${cancelModalTitle}"
-                                    message="${cancelModalMessage}"
-                                    variant="danger">
-                                    <form:form method="post" action="${cancelUrl}">
-                                        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-                                        <input type="hidden" name="role" value="${reservationRole}"/>
-                                        <%@ include file="includes/fromListingHubHidden.jspf" %>
-                                        <div class="d-flex justify-content-end gap-2 mt-3">
-                                            <button type="button" class="btn btn-secondary" data-modal-close="cancelReservationModal">
-                                                <c:out value="${cancelModalBack}"/>
-                                            </button>
-                                            <button type="submit" class="btn btn-danger">
-                                                <c:out value="${cancelModalConfirm}"/>
-                                            </button>
-                                        </div>
-                                    </form:form>
-                                </ryden:modal>
+                                <ryden:confirmModal
+                                        id="cancelReservationModal"
+                                        title="${cancelModalTitle}"
+                                        message="${cancelModalMessage}"
+                                        action="${cancelUrl}"
+                                        cancelLabel="${cancelModalBack}"
+                                        confirmLabel="${cancelModalConfirm}"
+                                        variant="danger"
+                                        confirmButtonClass="btn btn-danger">
+                                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                                    <input type="hidden" name="role" value="${reservationRole}"/>
+                                    <%@ include file="includes/fromListingHubHidden.jspf" %>
+                                </ryden:confirmModal>
                             </c:when>
                             <c:otherwise>
                                 <c:if test="${(statusKey eq 'pending' and reservationRole eq 'owner') or fn:startsWith(statusKey, 'cancelled') or statusKey eq 'started' or statusKey eq 'finished'}">
