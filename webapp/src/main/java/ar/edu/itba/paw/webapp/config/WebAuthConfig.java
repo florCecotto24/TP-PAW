@@ -110,21 +110,21 @@ public class WebAuthConfig {
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
                 .requestCache(rc -> rc.requestCache(requestCache))
                 .authorizeHttpRequests(auth -> auth
-                        .antMatchers("/css/**", "/js/**", "/assets/**").permitAll()
-                        .antMatchers("/error").permitAll()
-                        .antMatchers("/search", "/car-detail").permitAll()
-                        .antMatchers("/image/**").permitAll()
-                        .antMatchers(
+                        .requestMatchers("/css/**", "/js/**", "/assets/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/search", "/car-detail").permitAll()
+                        .requestMatchers("/image/**").permitAll()
+                        .requestMatchers(
                                 "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
-                        .antMatchers("/publish-car", "/publish-car/**").authenticated()
-                        .antMatchers("/my-listings").authenticated()
+                        .requestMatchers("/publish-car", "/publish-car/**").authenticated()
+                        .requestMatchers("/my-listings").authenticated()
                         .requestMatchers(
                                 mvc(handlerMappingIntrospector, "/my-listings/{listingId}"),
                                 mvc(handlerMappingIntrospector, "/my-listings/{listingId}/**"))
                         .access(listingWebAuthorization.ownerAccess())
-                        .antMatchers("/my-reservations").authenticated()
-                        .antMatchers("/ws", "/ws/**").authenticated()
+                        .requestMatchers("/my-reservations").authenticated()
+                        .requestMatchers("/ws", "/ws/**").authenticated()
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
@@ -221,10 +221,10 @@ public class WebAuthConfig {
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}"))
                         .access(reservationWebAuthorization.participantAccess())
-                        .antMatchers("/reservation", "/reservation/**").authenticated()
-                        .antMatchers("/login").permitAll()
-                        .antMatchers("/logout").authenticated()
-                        .antMatchers("/profile", "/profile/**")
+                        .requestMatchers("/reservation", "/reservation/**").authenticated()
+                        .requestMatchers("/login").permitAll()
+                        .requestMatchers("/logout").authenticated()
+                        .requestMatchers("/profile", "/profile/**")
                         .access(profileWebAuthorization.selfProfileAccess())
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
