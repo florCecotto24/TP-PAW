@@ -9,10 +9,13 @@
     <title><spring:message code="verifyEmail.title"/> — <spring:message code="app.title"/></title>
     <%@include file="header.jsp" %>
 </head>
-<body>
+<body class="has-fixed-navbar auth-page">
 <ryden:navbar/>
-<div class="container" style="max-width: 440px; margin-top: 5rem;">
-    <h1 class="h3 mb-3"><spring:message code="verifyEmail.heading"/></h1>
+<div class="auth-page__shell auth-page__shell--simple auth-page__shell--tall-form">
+    <div class="auth-page__main">
+        <div class="auth-page__card-wrap auth-page__card-wrap--wide">
+            <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
+    <h1 class="h4 mb-3"><spring:message code="verifyEmail.heading"/></h1>
     <p class="text-muted small mb-4"><spring:message code="verifyEmail.intro"/></p>
 
     <c:if test="${not empty verifyErrorMessage}">
@@ -58,6 +61,9 @@
         <span class="text-muted"><spring:message code="verifyEmail.alreadyVerified"/></span>
         <a class="ms-1" href="<c:url value='/login'/>"><spring:message code="navbar.login"/></a>
     </p>
+            </div>
+        </div>
+    </div>
 </div>
 <%@ include file="includes/footerScripts.jspf" %>
 </body>

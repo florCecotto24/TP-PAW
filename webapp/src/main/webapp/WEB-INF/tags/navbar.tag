@@ -39,7 +39,7 @@
                     <li class="nav-item px-1 dropdown">
                         <spring:message code="navbar.userMenu.ariaLabel" var="userMenuAria"/>
                         <button type="button"
-                                class="btn btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center navbar-user-menu-toggle overflow-hidden"
+                                class="navbar-user-menu-toggle rounded-circle p-0 d-inline-flex align-items-center justify-content-center flex-shrink-0"
                                 style="width:40px;height:40px;"
                                 id="navbarUserMenuToggle"
                                 data-bs-toggle="dropdown"
@@ -51,7 +51,7 @@
                                 <c:when test="${not empty navProfilePictureImageId}">
                                     <c:url var="navAvatarImgUrl" value="/image/${navProfilePictureImageId}"/>
                                     <spring:message code="navbar.avatar.alt" var="navAvatarAlt"/>
-                                    <img src="<c:out value='${navAvatarImgUrl}'/>" alt="<c:out value='${navAvatarAlt}'/>" width="40" height="40" class="rounded-circle" style="object-fit:cover;">
+                                    <img src="<c:out value='${navAvatarImgUrl}'/>" alt="<c:out value='${navAvatarAlt}'/>" width="40" height="40" class="navbar-user-menu-toggle__img">
                                 </c:when>
                                 <c:otherwise>
                                     <c:set var="navInitialA" value="${not empty navUserForename and fn:length(navUserForename) > 0 ? fn:toUpperCase(fn:substring(navUserForename, 0, 1)) : ''}"/>

@@ -9,16 +9,16 @@
     <title><spring:message code="app.title"/> — <spring:message code="login.title"/></title>
     <%@include file="header.jsp" %>
 </head>
-<body class="has-fixed-navbar">
+<body class="has-fixed-navbar auth-page">
 <ryden:navbar/>
-<div style="min-height: calc(100vh - var(--navbar-height, 65px)); display: flex; flex-direction: column; padding: 0 1rem;">
-    <div class="text-center" style="padding-top: 3.5rem; padding-bottom: 2.5rem;">
+<div class="auth-page__shell">
+    <div class="auth-page__brand">
         <a href="<c:url value='/'/>" class="text-decoration-none">
-            <span class="fw-bold" style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 3rem; color: var(--color-text); letter-spacing: -0.04em;">Ryden</span>
+            <span class="auth-page__logo">Ryden</span>
         </a>
     </div>
-    <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding-bottom: 3rem;">
-<div style="width: 100%; max-width: 420px;">
+    <div class="auth-page__main">
+        <div class="auth-page__card-wrap">
     <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
     <h1 class="h4 mb-4"><spring:message code="login.heading"/></h1>
 
@@ -87,8 +87,8 @@
         <a href="<c:url value='/verify-email'/>" class="text-muted small"><spring:message code="login.verifyEmailLink"/></a>
     </p>
     </div>
-</div>
-</div>
+        </div>
+    </div>
 </div>
 <%@ include file="includes/footerScripts.jspf" %>
 </body>
