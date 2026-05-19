@@ -90,6 +90,12 @@ public interface ListingDao {
 
     Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
 
+    /** Returns the most recent non-finished listing for the given car, if any. */
+    Optional<Listing> findActiveOrPausedListingByCar(long carId);
+
+    /** Returns the most recent listing for the given car regardless of status, if any. */
+    Optional<Listing> findMostRecentListingByCar(long carId);
+
     boolean hasListingsByOwner(long ownerId);
 
     HomeListingCards getHomeListingCards(int limit, LocalDate browseWallDate, Long excludeOwnerUserId);

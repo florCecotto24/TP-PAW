@@ -17,7 +17,7 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
 
 /**
- * Authorization helpers for {@code /my-listings/**} (used with {@link AuthorizationManager} in security config).
+ * Authorization helpers for {@code /my-cars/**} (used with {@link AuthorizationManager} in security config).
  */
 @Component("listingWebAuth")
 public final class ListingWebAuthorization {
@@ -33,7 +33,7 @@ public final class ListingWebAuthorization {
         if (userId == null) {
             return false;
         }
-        final OptionalLong listingIdOpt = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, "/my-listings/");
+        final OptionalLong listingIdOpt = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, "/my-cars/");
         if (!listingIdOpt.isPresent()) {
             return false;
         }

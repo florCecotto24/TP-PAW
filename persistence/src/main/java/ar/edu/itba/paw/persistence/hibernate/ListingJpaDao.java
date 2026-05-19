@@ -9,7 +9,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +48,6 @@ public class ListingJpaDao implements ListingDao {
             "date",   "l.created_at",
             "rating", "l.rating_avg"
     );
-    private static final String DEFAULT_ORDER_BY = "l.created_at DESC";
 
     @PersistenceContext
     private EntityManager em;
@@ -327,6 +325,31 @@ public class ListingJpaDao implements ListingDao {
                .append(" LIMIT :limit OFFSET :offset");
         final List<ListingCard> content = runListingCardNativeQuery(listSql.toString(), listParams);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Listing> findActiveOrPausedListingByCar(final long carId) {
+        return em.createQuery(
+                        "FROM Listing l WHERE l.car.id = :carId AND l.status <> :finished ORDER BY l.id DESC",
+                        Listing.class)
+                .setParameter("carId", carId)
+                .setParameter("finished", Listing.Status.FINISHED)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Listing> findMostRecentListingByCar(final long carId) {
+        return em.createQuery(
+                        "FROM Listing l WHERE l.car.id = :carId ORDER BY l.id DESC",
+                        Listing.class)
+                .setParameter("carId", carId)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 
     @Override
@@ -713,15 +736,17 @@ public class ListingJpaDao implements ListingDao {
         if (listingIds.isEmpty()) {
             return Map.of();
         }
-        final List<Object[]> rows = em.createNativeQuery(
+        final Map<String, Object> params = new HashMap<>();
+        params.put("listingIds", listingIds);
+        params.put("untilDay", java.sql.Date.valueOf(untilDay));
+        params.put("fromDay", java.sql.Date.valueOf(fromDay));
+        final List<Object[]> rows = bindParams(em.createNativeQuery(
                         "SELECT listing_id, start_date, end_date FROM listing_availability "
                                 + "WHERE listing_id IN (:listingIds) "
                                 + "AND start_date <= :untilDay "
                                 + "AND end_date >= :fromDay "
-                                + "ORDER BY listing_id ASC, start_date ASC, end_date ASC")
-                .setParameter("listingIds", listingIds)
-                .setParameter("untilDay", java.sql.Date.valueOf(untilDay))
-                .setParameter("fromDay", java.sql.Date.valueOf(fromDay))
+                                + "ORDER BY listing_id ASC, start_date ASC, end_date ASC"),
+                params)
                 .getResultList();
         final Map<Long, List<DateRange>> result = new HashMap<>();
         for (final Object[] row : rows) {

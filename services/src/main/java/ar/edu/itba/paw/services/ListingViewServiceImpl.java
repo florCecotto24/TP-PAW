@@ -5,9 +5,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,17 +33,20 @@ public final class ListingViewServiceImpl implements ListingViewService {
     private final LocationService locationService;
     private final ListingAvailabilityPolicy listingAvailabilityPolicy;
     private final ListingAddressFormatter listingAddressFormatter;
+    private final ListingService listingService;
 
     @Autowired
     public ListingViewServiceImpl(
             final ReservationService reservationService,
             final LocationService locationService,
             final ListingAvailabilityPolicy listingAvailabilityPolicy,
-            final ListingAddressFormatter listingAddressFormatter) {
+            final ListingAddressFormatter listingAddressFormatter,
+            @Lazy final ListingService listingService) {
         this.reservationService = reservationService;
         this.locationService = locationService;
         this.listingAvailabilityPolicy = listingAvailabilityPolicy;
         this.listingAddressFormatter = listingAddressFormatter;
+        this.listingService = listingService;
     }
 
     @Override
@@ -105,6 +110,14 @@ public final class ListingViewServiceImpl implements ListingViewService {
                 editPastAvailabilities,
                 wallToday.plusDays(forwardDays).toString(),
                 wallToday);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<OwnerListingDetailPageModel> buildOwnerCarDetailPageModel(final long carId, final Locale locale) {
+        return listingService.findMostRecentListingByCar(carId)
+                .flatMap(l -> listingService.getListingDetailById(l.getId()))
+                .map(detail -> buildOwnerListingDetailPageModel(detail, locale));
     }
 
     @Override

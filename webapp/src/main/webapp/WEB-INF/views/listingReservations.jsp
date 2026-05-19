@@ -16,7 +16,7 @@
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
-            homeHref="${pageContext.request.contextPath}/my-listings"
+            homeHref="${pageContext.request.contextPath}/my-cars"
             currentLabel="${listing.title}"/>
 
     <section class="reservation-management-header mt-4 pt-5 mb-4">
@@ -26,7 +26,7 @@
         </p>
     </section>
 
-    <c:url var="listingReservationsPaginationBaseUrl" value="/my-listings/${listing.id}/reservations">
+    <c:url var="listingReservationsPaginationBaseUrl" value="/my-cars/${listing.id}/reservations">
         <c:if test="${not empty statusFilter}">
             <c:param name="reservationStatus" value="${statusFilter}"/>
         </c:if>
@@ -35,7 +35,7 @@
     <c:if test="${not empty reservations or not empty statusFilter}">
         <spring:message code="validation.dropdown.invalid" var="listingResDropdownInvalid" htmlEscape="true"/>
         <form id="listingResFilterForm" class="row g-2 align-items-end mb-3" method="get"
-              action="${pageContext.request.contextPath}/my-listings/${listing.id}/reservations"
+              action="${pageContext.request.contextPath}/my-cars/${listing.id}/reservations"
               data-ryden-dropdown-invalid="<c:out value='${listingResDropdownInvalid}'/>">
             <div class="col-md-5 col-lg-4">
                 <spring:message code="myReservations.filter.status.any"    var="rsAny"/>
@@ -140,7 +140,7 @@
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
                 <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                <a href="${pageContext.request.contextPath}/my-listings/${listing.id}/reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                <a href="${pageContext.request.contextPath}/my-cars/${listing.id}/reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
             </div>
         </form>
 
@@ -160,7 +160,7 @@
     </c:if>
 
     <div class="mb-3 d-flex justify-content-end">
-        <a href="${pageContext.request.contextPath}/my-listings/${listing.id}" class="btn btn-outline-secondary btn-sm">
+        <a href="${pageContext.request.contextPath}/my-cars/${listing.id}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
             <spring:message code="common.back"/>
         </a>
@@ -175,7 +175,7 @@
                             <spring:message code="myListingReservations.noResults.title"/>
                         </h2>
                         <div class="search-empty-state__actions mt-4">
-                            <a href="${pageContext.request.contextPath}/my-listings/${listing.id}/reservations" class="btn btn-outline-secondary">
+                            <a href="${pageContext.request.contextPath}/my-cars/${listing.id}/reservations" class="btn btn-outline-secondary">
                                 <spring:message code="search.filters.clear"/>
                             </a>
                         </div>

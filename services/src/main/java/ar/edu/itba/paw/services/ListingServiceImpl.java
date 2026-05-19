@@ -768,6 +768,18 @@ public final class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Listing> findActiveOrPausedListingByCar(final long carId) {
+        return listingDao.findActiveOrPausedListingByCar(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Listing> findMostRecentListingByCar(final long carId) {
+        return listingDao.findMostRecentListingByCar(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
             final long ownerId,
             final List<String> category,

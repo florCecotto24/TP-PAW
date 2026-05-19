@@ -205,6 +205,12 @@ public interface ListingService {
     /** Owner dashboard: paginated cards for one owner with filters and sort. */
     Page<ListingCard> getOwnerListingCards(OwnerListingSearchCriteria criteria);
 
+    /** Returns the most recent non-finished listing for the given car, if any. */
+    Optional<Listing> findActiveOrPausedListingByCar(long carId);
+
+    /** Returns the most recent listing for the given car regardless of status, if any. */
+    Optional<Listing> findMostRecentListingByCar(long carId);
+
     /**
      * {@code sort} argument for {@link #buildOwnerListingSearchCriteria} when loading the counterparty profile
      * “other active listings” grid (initial page and load-more): higher average rating first, then newer listing.

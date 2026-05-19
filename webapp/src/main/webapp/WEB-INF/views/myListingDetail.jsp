@@ -7,7 +7,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="myListingDetail.pageTitle" arguments="${listing.title}"/></title>
+    <c:choose>
+        <c:when test="${listing != null}">
+            <title><spring:message code="myListingDetail.pageTitle" arguments="${listing.title}"/></title>
+        </c:when>
+        <c:otherwise>
+            <title><c:out value="${car.brand} ${car.model}"/> - Ryden</title>
+        </c:otherwise>
+    </c:choose>
     <%@include file="header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
@@ -15,14 +22,16 @@
 
 <main class="container pt-5 pb-4">
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
-    <c:url var="editListingUrl" value="/my-listings/${listing.id}/edit"/>
-    <c:url var="toggleListingUrl" value="/my-listings/${listing.id}/toggle"/>
-    <c:url var="finishListingUrl" value="/my-listings/${listing.id}/finish"/>
+    <c:choose>
+    <c:when test="${listing != null}">
+    <c:url var="editListingUrl" value="/my-cars/${listing.id}/edit"/>
+    <c:url var="toggleListingUrl" value="/my-cars/${listing.id}/toggle"/>
+    <c:url var="finishListingUrl" value="/my-cars/${listing.id}/finish"/>
     <c:set var="editBindingResult" value="${requestScope['org.springframework.validation.BindingResult.editForm']}"/>
     <c:set var="hasEditErrors" value="${editBindingResult != null and editBindingResult.errorCount > 0}"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
-            homeHref="${pageContext.request.contextPath}/my-listings"
+            homeHref="${pageContext.request.contextPath}/my-cars"
             currentLabel="${listing.title}"/>
 
     <section class="reservation-management-header mb-4">
@@ -74,9 +83,9 @@
                                 <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTransmissionLabel}"/></span>
                                 <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
                             </div>
-                            <p class="mb-2 text-secondary small">
+                            <!-- <p class="mb-2 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
-                            </p>
+                            </p> -->
                             <c:if test="${not empty listing.startPointStreet}">
                                 <div class="mb-2 small text-secondary">
                                     <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
@@ -390,7 +399,7 @@
         </div>
     </div>
 
-    <c:url var="listingReservationsUrl" value="/my-listings/${listing.id}/reservations"/>
+    <c:url var="listingReservationsUrl" value="/my-cars/${listing.id}/reservations"/>
     <article class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
         <div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
@@ -538,9 +547,68 @@
             </form>
         </ryden:modal>
     </c:if>
+    </c:when>
+    <c:otherwise>
+        <%-- ====== NO LISTING: car info + create listing CTA ====== --%>
+        <c:set var="carLabel"><c:out value="${car.brand} ${car.model}"/></c:set>
+        <ryden:breadcrumbTrail
+                homeLabel="${myListingsLabel}"
+                homeHref="${pageContext.request.contextPath}/my-cars"
+                currentLabel="${carLabel}"/>
+        <section class="reservation-management-header mb-4">
+            <h1 class="h3 fw-bold mb-2"><c:out value="${car.brand} ${car.model}"/></h1>
+            <p class="text-secondary mb-0"><spring:message code="myListings.empty.description"/></p>
+        </section>
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-8">
+                <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                    <div class="card-body p-4">
+                        <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.carSummary.title"/></h2>
+                        <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
+                            <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
+                                <c:choose>
+                                    <c:when test="${carImageId > 0}">
+                                        <c:url var="noListingCarImageUrl" value="/image/${carImageId}"/>
+                                        <img src="<c:out value='${noListingCarImageUrl}'/>" alt="<c:out value='${car.brand} ${car.model}'/>" class="w-100 h-100" style="object-fit:cover;">
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div class="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                                            <i class="bi bi-car-front fs-1" aria-hidden="true"></i>
+                                        </div>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
+                                    <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
+                                    <span class="badge text-bg-light border"><c:out value="${carTransmissionLabel}"/></span>
+                                    <span class="badge text-bg-light border"><c:out value="${carPowertrainLabel}"/></span>
+                                </div>
+                                <span class="badge text-bg-secondary"><spring:message code="myCars.noListing.badge"/></span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <div class="col-lg-4">
+                <article class="card border-0 shadow-sm rounded-4 bg-white">
+                    <div class="card-body p-4 d-flex flex-column gap-3">
+                        <c:url var="createListingUrl" value="/my-cars/car/${car.id}/create"/>
+                        <a href="<c:out value='${createListingUrl}'/>" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-lg me-2"></i><spring:message code="publishCar.confirmation.createListingCta"/>
+                        </a>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </c:otherwise>
+    </c:choose>
 </main>
 <%@include file="footer.jsp"%>
 
+<c:if test="${listing != null}">
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var hasEditErrors = ${hasEditErrors ? 'true' : 'false'};
@@ -565,5 +633,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+</c:if>
 </body>
 </html>

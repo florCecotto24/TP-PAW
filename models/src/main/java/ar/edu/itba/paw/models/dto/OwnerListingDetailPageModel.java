@@ -84,6 +84,14 @@ public final class OwnerListingDetailPageModel {
         this.editAvailWallToday = editAvailWallToday;
     }
 
+    public Listing getListing() {
+        return listing;
+    }
+
+    public List<ListingAvailability> getAvailabilities() {
+        return availabilities;
+    }
+
     public final void populateModel(final BiConsumer<String, Object> putObject) {
         putObject.accept("allNeighborhoods", allNeighborhoods);
         putObject.accept("listingNeighborhoodName", listingNeighborhoodName);

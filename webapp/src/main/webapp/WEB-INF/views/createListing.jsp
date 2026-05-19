@@ -17,7 +17,7 @@
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
-            homeHref="${pageContext.request.contextPath}/my-listings"
+            homeHref="${pageContext.request.contextPath}/my-cars"
             currentLabel="${createListingTitle}"/>
     <div class="row justify-content-center">
         <div class="col-md-9 col-lg-7">
@@ -48,14 +48,14 @@
                     <spring:message code="listing.availability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonClientErrMsg" htmlEscape="true"/>
 
                     <form:form id="publishCarFormEl"
-                               action="${pageContext.request.contextPath}/my-listings/car/${car.id}/create"
+                               action="${pageContext.request.contextPath}/my-cars/car/${car.id}/create"
                                method="POST"
                                modelAttribute="createListingForm"
                                htmlEscape="true"
                                novalidate="novalidate"
                                data-ryden-user-has-cbu="${userHasCbu ? 'true' : 'false'}"
                                data-ryden-context-path="${pageContext.request.contextPath}"
-                               data-ryden-quick-cbu-url="${pageContext.request.contextPath}/my-listings/quick-cbu"
+                               data-ryden-quick-cbu-url="${pageContext.request.contextPath}/my-cars/quick-cbu"
                                data-ryden-cbu-invalid="${fn:escapeXml(createMissingCbuInvalidMsg)}"
                                data-ryden-cbu-save-failed="${fn:escapeXml(createMissingCbuSaveFailedMsg)}"
                                data-ryden-nb-invalid="${fn:escapeXml(createNbInvalidMsg)}"
@@ -242,7 +242,7 @@
     </ryden:dataPromptModal>
 </c:if>
 
-<script>window.rydenPublishAvailMinFromUrl = '<c:url value="/my-listings/car/${car.id}/availability-min-from"/>';</script>
+<script>window.rydenPublishAvailMinFromUrl = '<c:url value="/my-cars/car/${car.id}/availability-min-from"/>';</script>
 <%@include file="footer.jsp" %>
 </body>
 </html>

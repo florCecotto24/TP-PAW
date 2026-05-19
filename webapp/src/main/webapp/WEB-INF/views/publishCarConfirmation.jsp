@@ -45,7 +45,7 @@
           </div>
 
           <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="<c:url value='/my-listings/car/${car.id}/create'/>" class="btn btn-primary btn-lg">
+            <a href="<c:url value='/my-cars/car/${car.id}/create'/>" class="btn btn-primary btn-lg">
               <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
               <spring:message code="publishCar.confirmation.createListingCta"/>
             </a>

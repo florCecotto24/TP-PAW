@@ -7,6 +7,7 @@
 <%@ attribute name="sortParamName" required="false" type="java.lang.String" %>
 <%@ attribute name="pageParamName" required="false" type="java.lang.String" %>
 <%@ attribute name="wrapperClass"  required="false" type="java.lang.String" %>
+<%@ attribute name="dateOnly"      required="false" type="java.lang.Boolean" %>
 
 <c:set var="sep" value="${fn:contains(baseUrl, '?') ? '&amp;' : '?'}"/>
 <c:set var="sp" value="${empty sortParamName ? 'sort' : sortParamName}"/>
@@ -59,6 +60,7 @@
                     <c:out value="${lblDateAsc}"/>
                 </a>
             </li>
+            <c:if test="${!dateOnly}">
             <c:set var="isAct" value="${currentSort == 'price,asc'}"/>
             <li>
                 <a class="dropdown-item ryden-select-item${isAct ? ' ryden-select-item--active' : ''}"
@@ -91,6 +93,7 @@
                     <c:out value="${lblRatingAsc}"/>
                 </a>
             </li>
+            </c:if>
         </ul>
     </div>
 </div>

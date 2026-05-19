@@ -11,6 +11,9 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.listing.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @Service
@@ -97,5 +100,11 @@ public final class CarServiceImpl implements CarService {
     @Transactional(readOnly = true)
     public List<Car> getMostRecentCars() {
         return carDao.getMostRecentCars();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CarCard> getOwnerCarCards(final OwnerListingSearchCriteria criteria) {
+        return carDao.getOwnerCarCards(criteria);
     }
 }

@@ -2,6 +2,9 @@ package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,4 +50,7 @@ public interface CarService {
 
     /** Cars with an {@code active} listing, ordered by listing creation time descending (row cap {@code app.listing.car-catalog-limit}). */
     List<Car> getMostRecentCars();
+
+    /** All cars for the owner (with or without an active/paused listing), paginated and filtered. */
+    Page<CarCard> getOwnerCarCards(OwnerListingSearchCriteria criteria);
 }

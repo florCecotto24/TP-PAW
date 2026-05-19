@@ -18,8 +18,8 @@
         <c:when test="${not empty reservationDetailOwnerListingHubId}">
             <spring:message code="myListings.tab.reservations" var="bcHomeLabel"/>
             <spring:message code="myListingReservations.heading" var="bcMidLabel"/>
-            <c:url var="bcMidHref" value="/my-listings/${reservationDetailOwnerListingHubId}/reservations"/>
-            <c:url var="bcHomeHref" value="/my-listings">
+            <c:url var="bcMidHref" value="/my-cars/${reservationDetailOwnerListingHubId}/reservations"/>
+            <c:url var="bcHomeHref" value="/my-cars">
                 <c:param name="tab" value="reservations"/>
             </c:url>
             <ryden:breadcrumbTrail

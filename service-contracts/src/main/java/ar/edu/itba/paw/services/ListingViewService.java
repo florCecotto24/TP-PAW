@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
 import java.util.Locale;
+import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
@@ -26,6 +27,12 @@ public interface ListingViewService {
      * @return model ready to expose to the view layer; not {@code null}
      */
     OwnerListingDetailPageModel buildOwnerListingDetailPageModel(ListingDetail detail, Locale locale);
+
+    /**
+     * Finds the active or paused listing for the given car and builds the owner detail page model.
+     * Returns empty when the car has no active or paused listing.
+     */
+    Optional<OwnerListingDetailPageModel> buildOwnerCarDetailPageModel(long carId, Locale locale);
 
     /**
      * Returns the minimum effective day price across all non-expired availability periods.
