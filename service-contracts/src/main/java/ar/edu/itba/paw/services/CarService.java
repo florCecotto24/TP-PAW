@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.domain.Car;
 
 import java.util.List;
@@ -20,6 +21,20 @@ public interface CarService {
             final Car.Type type,
             final Car.Powertrain powertrain,
             final Car.Transmission transmission);
+
+    /**
+     * Creates a car and saves its pictures in one transaction (step 1 of the two-step publish flow).
+     * Duplicate plate check is performed here. CBU is NOT checked — that belongs to step 2.
+     */
+    Car publishCar(
+            long ownerId,
+            String plate,
+            String brand,
+            String model,
+            Car.Type type,
+            Car.Powertrain powertrain,
+            Car.Transmission transmission,
+            List<ImageUpload> images);
 
     /** Returns true if the owner already has a car registered with the given plate. */
     boolean existsByOwnerAndPlate(long ownerId, String plate);

@@ -118,7 +118,7 @@ public class WebAuthConfig {
                                 "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
                         .requestMatchers("/publish-car", "/publish-car/**").authenticated()
-                        .requestMatchers("/my-listings").authenticated()
+                        .requestMatchers("/my-listings", "/my-listings/car/**").authenticated()
                         .requestMatchers(
                                 mvc(handlerMappingIntrospector, "/my-listings/{listingId}"),
                                 mvc(handlerMappingIntrospector, "/my-listings/{listingId}/**"))

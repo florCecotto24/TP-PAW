@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -24,10 +25,12 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
     private EntityManager em;
 
     @Override
-    public ListingAvailability create(final long listingId, final LocalDate startInclusive, final LocalDate endInclusive) {
+    public ListingAvailability create(final long listingId, final LocalDate startInclusive,
+            final LocalDate endInclusive, final BigDecimal dayPrice) {
         final Listing listingRef = em.getReference(Listing.class, listingId);
         final OffsetDateTime now = OffsetDateTime.now();
-        final ListingAvailability availability = new ListingAvailability(listingRef, startInclusive, endInclusive, now, now);
+        final ListingAvailability availability =
+                new ListingAvailability(listingRef, startInclusive, endInclusive, dayPrice, now, now);
         em.persist(availability);
         return availability;
     }
@@ -56,9 +59,13 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
 
     @Override
     public void deleteByListingId(final long listingId) {
-        final Listing listing = em.find(Listing.class, listingId);
-        if (listing != null) {
-            listing.getAvailabilities().clear();
+        final List<ListingAvailability> toRemove = em.createQuery(
+                        "FROM ListingAvailability la WHERE la.listing.id = :listingId",
+                        ListingAvailability.class)
+                .setParameter("listingId", listingId)
+                .getResultList();
+        for (final ListingAvailability la : toRemove) {
+            em.remove(la);
         }
     }
 }

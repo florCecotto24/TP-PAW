@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.models.domain;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -34,6 +36,9 @@ public class ListingAvailability {
     @Column(name = "end_date", nullable = false)
     private LocalDate endInclusive;
 
+    @Column(name = "day_price")
+    private BigDecimal dayPrice;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -63,11 +68,13 @@ public class ListingAvailability {
             final Listing listing,
             final LocalDate startInclusive,
             final LocalDate endInclusive,
+            final BigDecimal dayPrice,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
         this.listing = listing;
         this.startInclusive = startInclusive;
         this.endInclusive = endInclusive;
+        this.dayPrice = dayPrice;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -91,6 +98,14 @@ public class ListingAvailability {
 
     public LocalDate getEndInclusive() {
         return endInclusive;
+    }
+
+    public Optional<BigDecimal> getDayPrice() {
+        return Optional.ofNullable(dayPrice);
+    }
+
+    public BigDecimal getDayPriceValue() {
+        return dayPrice;
     }
 
     public OffsetDateTime getCreatedAt() {

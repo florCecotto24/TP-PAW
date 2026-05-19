@@ -45,13 +45,9 @@ public interface ListingService {
             Long neighborhoodId);
 
     /**
-     * Publishes a car with listing, availability windows, and images (full publish flow).
-     * Runs in a single transaction: if any step fails after inserts begin, the whole operation rolls back
-     * (no orphan car or listing). The owner must have a valid CBU before any row is written; otherwise
-     * {@link ar.edu.itba.paw.exception.listing.ListingValidationException} is thrown immediately.
-     * The web UI blocks submit until CBU is saved ({@code /publish-car/quick-cbu}); cancelling the modal
-     * means no POST to this flow, so nothing is persisted.
+     * @deprecated Use {@link CarService#publishCar} (step 1) + {@link #createListingForCar} (step 2).
      */
+    @Deprecated
     CarPublicationResult publish(
             long ownerId,
             String plate,
@@ -77,7 +73,27 @@ public interface ListingService {
     Optional<ListingDetail> getListingDetailById(long id);
 
     /**
+     * Step 2 of the two-step publish flow: creates a listing and its availability rows for an already-persisted car.
+     * Validates CBU. Each {@code periodPrices.get(i)} is the optional day price for {@code periods.get(i)};
+     * {@code null} means use the listing-level {@code pricePerDay} as fallback.
+     */
+    Listing createListingForCar(
+            long carId,
+            long ownerId,
+            BigDecimal pricePerDay,
+            String startPointStreet,
+            String startPointNumber,
+            String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime,
+            List<AvailabilityPeriod> periods,
+            List<BigDecimal> periodPrices,
+            Long neighborhoodId);
+
+    /**
      * Updates an owned listing’s core fields and replaces availability rows.
+     * {@code periodPrices} is a parallel list (same size as {@code availabilityPeriods}); each element
+     * is the optional day price for that period, or {@code null} to use the listing-level price.
      *
      * @return {@code true} when the listing existed, belonged to {@code ownerId}, and was updated
      */
@@ -91,7 +107,23 @@ public interface ListingService {
             LocalTime checkInTime,
             LocalTime checkOutTime,
             List<AvailabilityPeriod> availabilityPeriods,
+            List<BigDecimal> periodPrices,
             Long neighborhoodId);
+
+    default boolean updateOwnerListing(
+            long ownerId,
+            long listingId,
+            BigDecimal dayPrice,
+            String startPointStreet,
+            String startPointNumber,
+            String description,
+            LocalTime checkInTime,
+            LocalTime checkOutTime,
+            List<AvailabilityPeriod> availabilityPeriods,
+            Long neighborhoodId) {
+        return updateOwnerListing(ownerId, listingId, dayPrice, startPointStreet, startPointNumber,
+                description, checkInTime, checkOutTime, availabilityPeriods, null, neighborhoodId);
+    }
 
     /**
      * Toggles active/inactive for an owned listing when business rules allow.

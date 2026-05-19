@@ -150,7 +150,8 @@
             <div class="detail-reservation-sticky">
                 <ryden:detailReservationPanel
                         listingId="${listing.id}"
-                        dailyPrice="${listing.dayPrice}"
+                        dailyPrice="${listingMinEffectiveDayPrice}"
+                        priceFrom="${listingPriceIsVariable}"
                         deliveryLocation="${listingPublicLocation}"
                         fromDateTimeValue="${reservationFromDefault}"
                         untilDateTimeValue="${reservationUntilDefault}"

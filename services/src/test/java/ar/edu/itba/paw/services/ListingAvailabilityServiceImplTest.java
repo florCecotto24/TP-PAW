@@ -35,7 +35,7 @@ public class ListingAvailabilityServiceImplTest {
         final Listing listingRef = Mockito.mock(Listing.class);
         Mockito.when(listingRef.getId()).thenReturn(listingId);
         final ListingAvailability row = new ListingAvailability(900L, listingRef, start, end, createdAt, updatedAt);
-        Mockito.when(listingAvailabilityDao.create(listingId, start, end)).thenReturn(row);
+        Mockito.when(listingAvailabilityDao.create(listingId, start, end, null)).thenReturn(row);
 
         final ListingAvailability result = listingAvailabilityService.create(listingId, start, end);
 

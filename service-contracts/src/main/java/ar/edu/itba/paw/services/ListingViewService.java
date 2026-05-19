@@ -1,8 +1,10 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
 import java.util.Locale;
 
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.OwnerListingDetailPageModel;
@@ -24,6 +26,19 @@ public interface ListingViewService {
      * @return model ready to expose to the view layer; not {@code null}
      */
     OwnerListingDetailPageModel buildOwnerListingDetailPageModel(ListingDetail detail, Locale locale);
+
+    /**
+     * Returns the minimum effective day price across all non-expired availability periods.
+     * If a period overrides the listing price, that price is considered; otherwise the listing default is used.
+     * Returns the listing-level day price when no future periods have a period-specific price.
+     */
+    BigDecimal resolveMinEffectiveDayPrice(ListingDetail detail);
+
+    /**
+     * Returns {@code true} when at least one non-expired availability period has a per-period price
+     * that differs from the listing's default day price.
+     */
+    boolean isListingPriceVariable(ListingDetail detail);
 
     /**
      * Same address as pickup (street + neighborhood, no door number), for public views.

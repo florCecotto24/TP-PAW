@@ -4,6 +4,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="listingId" required="true" type="java.lang.Long" %>
 <%@ attribute name="dailyPrice" required="true" type="java.lang.Number" %>
+<%@ attribute name="priceFrom" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
 <%@ attribute name="fromDateTimeValue" required="false" type="java.lang.String" %>
 <%@ attribute name="untilDateTimeValue" required="false" type="java.lang.String" %>
@@ -30,6 +31,7 @@
 
     <div class="d-flex align-items-baseline gap-2 mb-3">
         <fmt:setLocale value="es_AR"/>
+        <c:if test="${priceFrom}"><span class="text-secondary small me-1"><spring:message code="detailReservationPanel.priceFrom"/></span></c:if>
         <span class="detail-price-amount fw-bold"><fmt:formatNumber value="${dailyPrice}" type="currency" currencyCode="ARS"/></span>
         <span class="text-secondary"><spring:message code="detailReservationPanel.perDay"/></span>
     </div>

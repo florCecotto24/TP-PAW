@@ -174,6 +174,8 @@
                         <spring:message code="publishCar.form.period" var="editPeriodLabel"/>
                         <spring:message code="publishCar.form.remove" var="editRemoveLabel"/>
                         <spring:message code="publishCar.form.dateRange.placeholder" var="editDateRangePh"/>
+                        <spring:message code="createListing.availabilityRow.dayPrice" var="editDayPriceLabel" htmlEscape="true"/>
+                        <spring:message code="createListing.availabilityRow.dayPrice.placeholder" var="editDayPricePh" htmlEscape="true"/>
                         <div class="col-12 mb-2" id="publishAvailabilitySection"
                              data-publish-min-avail-ymd="<c:out value='${editAvailWallToday}'/>"
                              data-publish-max-avail-wall-ymd="<c:out value='${editAvailMaxYmd}'/>">
@@ -217,6 +219,15 @@
                                         <form:hidden path="availabilityRows[${st.index}].until" cssClass="ryden-avail-until"/>
                                         <form:errors path="availabilityRows[${st.index}].from" cssClass="text-danger d-block"/>
                                         <form:errors path="availabilityRows[${st.index}].until" cssClass="text-danger d-block"/>
+                                        <div class="mt-2">
+                                            <label class="form-label small mb-1"><c:out value="${editDayPriceLabel}"/></label>
+                                            <form:input path="availabilityRows[${st.index}].dayPrice" type="number" step="0.01" max="99999999.99"
+                                                        data-max-int="8" data-max-frac="2"
+                                                        cssClass="form-control form-control-sm js-no-number-wheel-step js-listing-price-decimal"
+                                                        cssErrorClass="form-control form-control-sm is-invalid js-no-number-wheel-step js-listing-price-decimal"
+                                                        placeholder="${editDayPricePh}"/>
+                                            <form:errors path="availabilityRows[${st.index}].dayPrice" cssClass="text-danger d-block"/>
+                                        </div>
                                     </div>
                                 </c:forEach>
                             </div>
@@ -240,6 +251,14 @@
                                        placeholder="<c:out value='${editDateRangePh}'/>" aria-label="Availability date range"/>
                                 <input type="hidden" class="ryden-avail-from" name="availabilityRows[__IDX__].from" value=""/>
                                 <input type="hidden" class="ryden-avail-until" name="availabilityRows[__IDX__].until" value=""/>
+                                <div class="mt-2">
+                                    <label class="form-label small mb-1"><c:out value="${editDayPriceLabel}"/></label>
+                                    <input type="number" step="0.01" max="99999999.99"
+                                           data-max-int="8" data-max-frac="2"
+                                           class="form-control form-control-sm js-no-number-wheel-step js-listing-price-decimal ryden-avail-day-price"
+                                           name="availabilityRows[__IDX__].dayPrice"
+                                           placeholder="<c:out value='${editDayPricePh}'/>"/>
+                                </div>
                             </div>
                         </template>
 
@@ -267,9 +286,15 @@
                         <c:otherwise>
                             <div class="d-flex flex-column gap-2">
                                 <c:forEach var="availability" items="${availabilities}">
-                                    <div class="p-3 border rounded-3 bg-white d-flex align-items-center gap-2">
-                                        <i class="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true"></i>
-                                        <span class="fw-medium"><c:out value="${availability.startInclusive}"/> &ndash; <c:out value="${availability.endInclusive}"/></span>
+                                    <div class="p-3 border rounded-3 bg-white d-flex align-items-center justify-content-between gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true"></i>
+                                            <span class="fw-medium"><c:out value="${availability.startInclusive}"/> &ndash; <c:out value="${availability.endInclusive}"/></span>
+                                        </div>
+                                        <c:if test="${availability.dayPriceValue != null}">
+                                            <fmt:setLocale value="es_AR"/>
+                                            <span class="text-secondary small text-nowrap"><fmt:formatNumber value="${availability.dayPriceValue}" type="currency" currencyCode="ARS"/></span>
+                                        </c:if>
                                     </div>
                                 </c:forEach>
                             </div>

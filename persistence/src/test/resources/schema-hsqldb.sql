@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS listing_availability(
     end_date DATE NOT NULL CHECK (end_date >= start_date),
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
+    day_price DECIMAL(10, 2),
 
     FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );

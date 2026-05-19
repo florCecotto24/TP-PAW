@@ -1,13 +1,13 @@
 package ar.edu.itba.paw.webapp.validation;
 
 import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.webapp.form.CreateListingForm;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
-import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
-/** Spring {@link Validator} ensuring publish/edit neighborhood id exists in {@link LocationService}. */
+/** Spring {@link Validator} ensuring create/edit neighborhood id exists in {@link LocationService}. */
 @Component
 public final class ListingNeighborhoodFormValidator implements Validator {
 
@@ -19,14 +19,14 @@ public final class ListingNeighborhoodFormValidator implements Validator {
 
     @Override
     public boolean supports(final Class<?> clazz) {
-        return PublishCarForm.class.isAssignableFrom(clazz) || ListingEditForm.class.isAssignableFrom(clazz);
+        return CreateListingForm.class.isAssignableFrom(clazz) || ListingEditForm.class.isAssignableFrom(clazz);
     }
 
     @Override
     public void validate(final Object target, final Errors errors) {
         final Long neighborhoodId;
-        if (target instanceof PublishCarForm) {
-            neighborhoodId = ((PublishCarForm) target).getNeighborhoodId();
+        if (target instanceof CreateListingForm) {
+            neighborhoodId = ((CreateListingForm) target).getNeighborhoodId();
         } else if (target instanceof ListingEditForm) {
             neighborhoodId = ((ListingEditForm) target).getNeighborhoodId();
         } else {

@@ -133,6 +133,7 @@ public final class ListingEditForm implements ListingTimeWindow {
                     final AvailabilityRow row = new AvailabilityRow();
                     row.setFrom(la.getStartInclusive());
                     row.setUntil(la.getEndInclusive());
+                    row.setDayPrice(la.getDayPrice().orElse(null));
                     availabilityRows.add(row);
                 }
             }
@@ -147,6 +148,14 @@ public final class ListingEditForm implements ListingTimeWindow {
         return result;
     }
 
+    public List<BigDecimal> toPeriodPrices() {
+        final List<BigDecimal> prices = new ArrayList<>();
+        for (final AvailabilityRow row : availabilityRows) {
+            prices.add(row.getDayPrice());
+        }
+        return prices;
+    }
+
     public static final class AvailabilityRow {
 
         @NotNull(message = "{validation.availabilityRow.from.notNull}",
@@ -158,6 +167,12 @@ public final class ListingEditForm implements ListingTimeWindow {
                  groups = ValidationGroups.OnListingEdit.class)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
+
+        @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}",
+                    groups = ValidationGroups.OnListingEdit.class)
+        @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}",
+                groups = ValidationGroups.OnListingEdit.class)
+        private BigDecimal dayPrice;
 
         public LocalDate getFrom() {
             return from;
@@ -173,6 +188,14 @@ public final class ListingEditForm implements ListingTimeWindow {
 
         public void setUntil(final LocalDate until) {
             this.until = until;
+        }
+
+        public BigDecimal getDayPrice() {
+            return dayPrice;
+        }
+
+        public void setDayPrice(final BigDecimal dayPrice) {
+            this.dayPrice = dayPrice;
         }
     }
 }

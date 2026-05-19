@@ -23,6 +23,7 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
+import java.util.Collections;
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
@@ -65,6 +66,9 @@ public class ReservationServiceImplTest {
 
     @Mock
     private PaginationPolicy paginationPolicy;
+
+    @Mock
+    private ListingAvailabilityService listingAvailabilityService;
 
     @InjectMocks
     private ReservationServiceImpl reservationService;
@@ -121,6 +125,7 @@ public class ReservationServiceImplTest {
         Mockito.when(userService.getUserCbu(99L)).thenReturn("0170200203000008777719");
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(Collections.emptyList());
         Mockito.when(listingViewService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
         Mockito.when(listingViewService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
@@ -244,6 +249,7 @@ public class ReservationServiceImplTest {
         Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(Collections.emptyList());
         Mockito.when(listingViewService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
         Mockito.when(listingViewService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
@@ -490,6 +496,7 @@ public class ReservationServiceImplTest {
 
         Mockito.when(listing.getDayPrice()).thenReturn(BigDecimal.valueOf(150L));
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
+        Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(Collections.emptyList());
 
         final Optional<BigDecimal> total = reservationService.calculateTotal(listingId, startDate, endDate);
 

@@ -51,6 +51,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
@@ -69,6 +70,7 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private final ReservationDao reservationDao;
     private final ListingService listingService;
+    private final ListingAvailabilityService listingAvailabilityService;
     private final ListingViewService listingViewService;
     private final UserService userService;
     private final EmailService emailService;
@@ -81,6 +83,7 @@ public final class ReservationServiceImpl implements ReservationService {
     public ReservationServiceImpl(
             final ReservationDao reservationDao,
             final ListingService listingService,
+            final ListingAvailabilityService listingAvailabilityService,
             @Lazy final ListingViewService listingViewService,
             final UserService userService,
             final EmailService emailService,
@@ -90,6 +93,7 @@ public final class ReservationServiceImpl implements ReservationService {
             final PaginationPolicy paginationPolicy) {
         this.reservationDao = reservationDao;
         this.listingService = listingService;
+        this.listingAvailabilityService = listingAvailabilityService;
         this.listingViewService = listingViewService;
         this.userService = userService;
         this.emailService = emailService;
@@ -504,9 +508,26 @@ public final class ReservationServiceImpl implements ReservationService {
         if (billableDays <= 0) {
             return Optional.empty();
         }
-        return listingService.getListingById(listingId)
-                .map(Listing::getDayPrice)
-                .map(dayPrice -> dayPrice.multiply(BigDecimal.valueOf(billableDays)));
+        final Optional<Listing> listingOpt = listingService.getListingById(listingId);
+        if (listingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final BigDecimal effectiveDayPrice = resolveEffectiveDayPrice(listingId, startDate, endDate, listingOpt.get().getDayPrice());
+        return Optional.of(effectiveDayPrice.multiply(BigDecimal.valueOf(billableDays)));
+    }
+
+    private BigDecimal resolveEffectiveDayPrice(
+            final long listingId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate,
+            final BigDecimal listingFallbackPrice) {
+        final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate returnDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        return listingAvailabilityService.findByListingId(listingId).stream()
+                .filter(la -> !la.getStartInclusive().isAfter(pickupDay) && !la.getEndInclusive().isBefore(returnDay))
+                .findFirst()
+                .flatMap(ListingAvailability::getDayPrice)
+                .orElse(listingFallbackPrice);
     }
 
     @Override

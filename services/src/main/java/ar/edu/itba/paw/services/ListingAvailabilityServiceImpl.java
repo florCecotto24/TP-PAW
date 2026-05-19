@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -23,8 +24,9 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
 
     @Override
     @Transactional
-    public ListingAvailability create(final long listingId, final LocalDate startInclusive, final LocalDate endInclusive) {
-        return listingAvailabilityDao.create(listingId, startInclusive, endInclusive);
+    public ListingAvailability create(final long listingId, final LocalDate startInclusive,
+            final LocalDate endInclusive, final BigDecimal dayPrice) {
+        return listingAvailabilityDao.create(listingId, startInclusive, endInclusive, dayPrice);
     }
 
     @Override

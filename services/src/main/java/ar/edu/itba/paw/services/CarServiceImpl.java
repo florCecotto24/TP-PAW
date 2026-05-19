@@ -7,18 +7,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.exception.listing.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.CarDao;
 
-/** Pass-through to {@link CarDao}. */
 @Service
 public final class CarServiceImpl implements CarService {
 
     private final CarDao carDao;
+    private final ImageService imageService;
+    private final CarPictureService carPictureService;
 
     @Autowired
-    public CarServiceImpl(final CarDao carDao) {
+    public CarServiceImpl(
+            final CarDao carDao,
+            final ImageService imageService,
+            final CarPictureService carPictureService) {
         this.carDao = carDao;
+        this.imageService = imageService;
+        this.carPictureService = carPictureService;
     }
 
     @Override
@@ -32,6 +41,38 @@ public final class CarServiceImpl implements CarService {
             final Car.Powertrain powertrain,
             final Car.Transmission transmission) {
         return carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission);
+    }
+
+    @Override
+    @Transactional
+    public Car publishCar(
+            final long ownerId,
+            final String plate,
+            final String brand,
+            final String model,
+            final Car.Type type,
+            final Car.Powertrain powertrain,
+            final Car.Transmission transmission,
+            final List<ImageUpload> images) {
+        if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
+            throw new DuplicatePlateException(plate);
+        }
+        final Car car = carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission);
+        int displayOrder = 1;
+        if (images != null) {
+            for (final ImageUpload picture : images) {
+                if (picture.getData() == null || picture.getData().length == 0) {
+                    continue;
+                }
+                final Image image = imageService.createImage(
+                        picture.getFilename(),
+                        picture.getContentType(),
+                        picture.getData());
+                carPictureService.createCarPicture(car.getId(), image.getId(), displayOrder);
+                displayOrder++;
+            }
+        }
+        return car;
     }
 
     @Override

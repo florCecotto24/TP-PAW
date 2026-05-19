@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
@@ -11,19 +13,27 @@ import ar.edu.itba.paw.models.util.MyHubSortSanitizer;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.OwnerHubListingCardRow;
 import ar.edu.itba.paw.models.dto.OwnerListingDetailPageModel;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ListingViewService;
+import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
+import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.form.CreateListingForm;
 import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -37,6 +47,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -44,8 +55,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import javax.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -64,6 +80,9 @@ public final class MyListingsController {
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
     private final PaginationPolicy paginationPolicy;
     private final LocaleMessages localeMessages;
+    private final CarService carService;
+    private final LocationService locationService;
+    private final UserService userService;
 
     public MyListingsController(
             final ListingService listingService,
@@ -72,7 +91,10 @@ public final class MyListingsController {
             final ReservationViewService reservationViewService,
             final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
             final PaginationPolicy paginationPolicy,
-            final LocaleMessages localeMessages) {
+            final LocaleMessages localeMessages,
+            final CarService carService,
+            final LocationService locationService,
+            final UserService userService) {
         this.listingService = listingService;
         this.listingViewService = listingViewService;
         this.reservationService = reservationService;
@@ -80,10 +102,18 @@ public final class MyListingsController {
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
         this.paginationPolicy = paginationPolicy;
         this.localeMessages = localeMessages;
+        this.carService = carService;
+        this.locationService = locationService;
+        this.userService = userService;
     }
 
     @InitBinder("editForm")
     public void initEditFormBinder(final WebDataBinder binder) {
+        binder.addValidators(listingNeighborhoodFormValidator);
+    }
+
+    @InitBinder("createListingForm")
+    public void initCreateListingFormBinder(final WebDataBinder binder) {
         binder.addValidators(listingNeighborhoodFormValidator);
     }
 
@@ -180,7 +210,7 @@ public final class MyListingsController {
         final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
         if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
-            return new ModelAndView(new RedirectView("/my-listings", true));
+            return new ModelAndView(redirectTo("/my-listings"));
         }
 
         return buildDetailModelAndView(listingDetailOpt.get(), new ListingEditForm());
@@ -195,10 +225,10 @@ public final class MyListingsController {
         final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
         if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
-            return new ModelAndView(new RedirectView("/my-listings", true));
+            return new ModelAndView(redirectTo("/my-listings"));
         }
         if (listingDetailOpt.get().getListing().getStatus() == Listing.Status.FINISHED) {
-            return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
+            return new ModelAndView(redirectTo("/my-listings/" + listingId));
         }
         if (errors.hasErrors()) {
             return buildDetailModelAndView(listingDetailOpt.get(), editForm);
@@ -214,8 +244,9 @@ public final class MyListingsController {
                 editForm.getCheckInTime(),
                 editForm.getCheckOutTime(),
                 editForm.toAvailabilityPeriods(),
+                editForm.toPeriodPrices(),
                 editForm.getNeighborhoodId());
-        return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
+        return new ModelAndView(redirectTo("/my-listings/" + listingId));
     }
 
     @PostMapping("/{listingId}/finish")
@@ -224,7 +255,7 @@ public final class MyListingsController {
             @PathVariable("listingId") final long listingId) {
         final User me = WebAuthUtils.requireUser(currentUser);
         listingService.finishListing(me.getId(), listingId);
-        return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
+        return new ModelAndView(redirectTo("/my-listings/" + listingId));
     }
 
     @PostMapping("/{listingId}/toggle")
@@ -238,7 +269,7 @@ public final class MyListingsController {
         } catch (final ListingValidationException e) {
             redirectAttributes.addFlashAttribute("listingToggleErrorMessage", localeMessages.msg(e));
         }
-        return new ModelAndView(new RedirectView("/my-listings/" + listingId, true));
+        return new ModelAndView(redirectTo("/my-listings/" + listingId));
     }
 
     @GetMapping("/{listingId}/reservations")
@@ -251,7 +282,7 @@ public final class MyListingsController {
         final User me = WebAuthUtils.requireUser(currentUser);
         final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
         if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
-            return new ModelAndView(new RedirectView("/my-listings", true));
+            return new ModelAndView(redirectTo("/my-listings"));
         }
         page = Math.max(0, page);
         final String statusFilter = reservationViewService.normalizeReservationStatusQueryParam(reservationStatus);
@@ -280,6 +311,140 @@ public final class MyListingsController {
         mav.addObject("reservations", reservations);
         mav.addObject("listingReservationsPage", resultPage);
         mav.addObject("statusFilter", statusFilter);
+        mav.addObject("activeTab", "my-listings");
+        return mav;
+    }
+
+    @GetMapping("/car/{carId}/create")
+    public ModelAndView createListingForm(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-listings"));
+        }
+        return buildCreateListingView(carOpt.get(), new CreateListingForm(), me);
+    }
+
+    @PostMapping("/car/{carId}/create")
+    public ModelAndView createListing(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createListingForm") final CreateListingForm form,
+            final BindingResult errors) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-listings"));
+        }
+        if (errors.hasErrors()) {
+            return buildCreateListingView(carOpt.get(), form, me);
+        }
+        final User freshUser = userService.getUserById(me.getId()).orElse(me);
+        if (!userService.hasValidCbu(freshUser)) {
+            errors.reject(MessageKeys.LISTING_PUBLISH_CBU_REQUIRED, localeMessages.msg(MessageKeys.LISTING_PUBLISH_CBU_REQUIRED));
+            return buildCreateListingView(carOpt.get(), form, freshUser);
+        }
+        if (!errors.hasErrors()) {
+            try {
+                listingService.validatePublicationAvailabilityRiderLead(
+                        form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now());
+            } catch (final AvailabilityRiderLeadViolationException e) {
+                errors.rejectValue(
+                        "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
+                        e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            }
+        }
+        if (!errors.hasErrors()) {
+            try {
+                listingService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
+            } catch (final ListingValidationException e) {
+                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            }
+        }
+        if (errors.hasErrors()) {
+            return buildCreateListingView(carOpt.get(), form, freshUser);
+        }
+        try {
+            final Listing listing = listingService.createListingForCar(
+                    carId,
+                    me.getId(),
+                    form.getPricePerDay(),
+                    form.getStartPointStreet(),
+                    form.getStartPointNumber(),
+                    form.getDescription(),
+                    form.getCheckInTime(),
+                    form.getCheckOutTime(),
+                    form.toAvailabilityPeriods(),
+                    form.toPeriodPrices(),
+                    form.getNeighborhoodId());
+            return new ModelAndView(redirectTo("/my-listings/" + listing.getId()));
+        } catch (final ListingValidationException e) {
+            errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return buildCreateListingView(carOpt.get(), form, freshUser);
+        }
+    }
+
+    @GetMapping(value = "/car/{carId}/availability-min-from", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Map<String, String> availabilityMinFrom(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @RequestParam(name = "checkIn", required = false) final String checkInRaw) {
+        WebAuthUtils.requireUser(currentUser);
+        final LocalTime lt = parseCheckInParam(checkInRaw);
+        final LocalDate minFrom = listingService.getPublicationMinAvailabilityFirstWallDay(lt, Instant.now());
+        return Map.of("minFrom", minFrom.toString());
+    }
+
+    @PostMapping(value = "/quick-cbu", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<Void> quickCbu(
+            @CurrentUser final User currentUser,
+            @RequestParam("cbu") final String cbuRaw) {
+        WebAuthUtils.requireUser(currentUser);
+        final String trimmed = cbuRaw == null ? "" : cbuRaw.trim();
+        if (!userService.isValidCbuFormat(cbuRaw)) {
+            return ResponseEntity.badRequest().build();
+        }
+        userService.updateCbu(currentUser.getId(), trimmed);
+        return ResponseEntity.noContent().build();
+    }
+
+    private static RedirectView redirectTo(final String url) {
+        final RedirectView rv = new RedirectView(url, true);
+        rv.setExposeModelAttributes(false);
+        return rv;
+    }
+
+    private static LocalTime parseCheckInParam(final String checkInRaw) {
+        if (checkInRaw == null || checkInRaw.isBlank()) {
+            return Listing.DEFAULT_CHECK_IN_TIME;
+        }
+        try {
+            return LocalTime.parse(checkInRaw.trim());
+        } catch (final DateTimeParseException ignored) {
+            return Listing.DEFAULT_CHECK_IN_TIME;
+        }
+    }
+
+    private ModelAndView buildCreateListingView(final Car car, final CreateListingForm form, final User user) {
+        final User freshUser = userService.getUserById(user.getId()).orElse(user);
+        final boolean userHasCbu = userService.hasValidCbu(freshUser);
+        final ModelAndView mav = new ModelAndView("createListing");
+        mav.addObject("car", car);
+        mav.addObject("createListingForm", form);
+        mav.addObject("userHasCbu", userHasCbu);
+        mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
+        final LocalDate minAvail = listingService.getPublicationMinAvailabilityFirstWallDay(
+                form.getCheckInTime(), Instant.now());
+        mav.addObject("publishMinAvailabilityFrom", minAvail.toString());
+        mav.addObject("pickupLeadHours", listingService.getConfiguredPickupLeadHours());
+        final int forwardDays = listingService.getConfiguredMaxAvailabilityForwardWallDays();
+        mav.addObject("maxAvailabilityForwardWallDays", forwardDays);
+        final LocalDate wallToday = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        mav.addObject("publishMaxAvailabilityWallInclusive", wallToday.plusDays(forwardDays).toString());
+        mav.addObject("publisherEmail", freshUser.getEmail());
         mav.addObject("activeTab", "my-listings");
         return mav;
     }

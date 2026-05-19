@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -158,5 +159,40 @@ public final class ListingViewServiceImpl implements ListingViewService {
     @Transactional(readOnly = true)
     public String formatOwnerReservationHandoverSummary(final Listing listing) {
         return listingAddressFormatter.formatOwnerReservationHandoverSummary(listing);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal resolveMinEffectiveDayPrice(final ListingDetail detail) {
+        final BigDecimal listingPrice = detail.getListing().getDayPrice();
+        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        BigDecimal min = listingPrice;
+        for (final ListingAvailability la : detail.getListingAvailabilities()) {
+            if (la.getEndInclusive().isBefore(today)) {
+                continue;
+            }
+            final BigDecimal periodPrice = la.getDayPriceValue();
+            if (periodPrice != null && periodPrice.compareTo(min) < 0) {
+                min = periodPrice;
+            }
+        }
+        return min;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isListingPriceVariable(final ListingDetail detail) {
+        final BigDecimal listingPrice = detail.getListing().getDayPrice();
+        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        for (final ListingAvailability la : detail.getListingAvailabilities()) {
+            if (la.getEndInclusive().isBefore(today)) {
+                continue;
+            }
+            final BigDecimal periodPrice = la.getDayPriceValue();
+            if (periodPrice != null && periodPrice.compareTo(listingPrice) != 0) {
+                return true;
+            }
+        }
+        return false;
     }
 }

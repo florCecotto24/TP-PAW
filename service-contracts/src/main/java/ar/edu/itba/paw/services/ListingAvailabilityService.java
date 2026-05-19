@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -15,14 +16,19 @@ import ar.edu.itba.paw.models.domain.ListingAvailability;
 public interface ListingAvailabilityService {
 
     /**
-     * Inserts one contiguous availability window for {@code listingId}.
+     * Inserts one contiguous availability window for {@code listingId} with an optional per-period price.
      *
      * @param listingId        owning listing primary key
      * @param startInclusive   first bookable wall-calendar day (inclusive)
      * @param endInclusive     last bookable wall-calendar day (inclusive)
+     * @param dayPrice         optional price per day for this period; {@code null} means use the listing-level price
      * @return persisted row including generated id and timestamps
      */
-    ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive);
+    ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive, BigDecimal dayPrice);
+
+    default ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive) {
+        return create(listingId, startInclusive, endInclusive, null);
+    }
 
     /**
      * All segments for {@code listingId}, typically ordered by start date ascending in the JDBC implementation.

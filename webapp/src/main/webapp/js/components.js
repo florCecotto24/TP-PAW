@@ -1226,11 +1226,15 @@
             });
             var fromH = row.querySelector('.ryden-avail-from');
             var untilH = row.querySelector('.ryden-avail-until');
+            var dayPriceH = row.querySelector('.ryden-avail-day-price');
             if (fromH) {
                 fromH.name = 'availabilityRows[' + i + '].from';
             }
             if (untilH) {
                 untilH.name = 'availabilityRows[' + i + '].until';
+            }
+            if (dayPriceH) {
+                dayPriceH.name = 'availabilityRows[' + i + '].dayPrice';
             }
         });
     }

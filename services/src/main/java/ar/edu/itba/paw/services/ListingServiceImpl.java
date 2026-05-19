@@ -163,10 +163,8 @@ public final class ListingServiceImpl implements ListingService {
         return listing;
     }
 
-    /**
-     * Car, listing, availability rows and pictures are persisted in one transaction (default propagation
-     * on delegated services joins this boundary). CBU is validated before {@code createCar}.
-     */
+    /** @deprecated Use {@link CarService#publishCar} (step 1) + {@link #createListingForCar} (step 2) instead. */
+    @Deprecated
     @Override
     @Transactional
     public CarPublicationResult publish(
@@ -232,6 +230,56 @@ public final class ListingServiceImpl implements ListingService {
         }
 
         return new CarPublicationResult(publisher, car, listing);
+    }
+
+    @Override
+    @Transactional
+    public Listing createListingForCar(
+            final long carId,
+            final long ownerId,
+            final BigDecimal pricePerDay,
+            final String startPointStreet,
+            final String startPointNumber,
+            final String description,
+            final LocalTime checkInTime,
+            final LocalTime checkOutTime,
+            final List<AvailabilityPeriod> periods,
+            final List<BigDecimal> periodPrices,
+            final Long neighborhoodId) {
+        validatePickupAddress(neighborhoodId, startPointStreet, startPointNumber);
+        final User owner = userService.getUserById(ownerId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!userService.hasValidCbu(owner)) {
+            throw new ListingValidationException(
+                    MessageKeys.LISTING_PUBLISH_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
+        }
+        final Car car = carService.getCarById(carId)
+                .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_CAR_NOT_FOUND, carId));
+        if (car.getOwnerId() != ownerId) {
+            throw new ListingValidationException(MessageKeys.LISTING_CAR_NOT_OWNED);
+        }
+        if (periods == null || periods.isEmpty()) {
+            throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_REQUIRED);
+        }
+        validateListingCheckOutAfterCheckIn(checkInTime, checkOutTime);
+        for (final AvailabilityPeriod period : periods) {
+            if (!period.isValidOrder()) {
+                throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_INVALID_ORDER);
+            }
+        }
+        listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
+                LocalDate.now(AvailabilityPeriod.WALL_ZONE), periods);
+        validateAvailabilityIncludesNoDatesBeforeToday(periods);
+        final String title = car.getBrand() + " " + car.getModel();
+        final Listing listing = listingDao.createListing(
+                carId, title, Listing.Status.ACTIVE, pricePerDay,
+                startPointStreet, startPointNumber, description, checkInTime, checkOutTime, neighborhoodId);
+        for (int i = 0; i < periods.size(); i++) {
+            final AvailabilityPeriod p = periods.get(i);
+            final BigDecimal periodPrice = (periodPrices != null && i < periodPrices.size()) ? periodPrices.get(i) : null;
+            listingAvailabilityService.create(listing.getId(), p.getStartInclusive(), p.getEndInclusive(), periodPrice);
+        }
+        return listing;
     }
 
     private void validatePickupAddress(
@@ -356,6 +404,7 @@ public final class ListingServiceImpl implements ListingService {
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
             final List<AvailabilityPeriod> availabilityPeriods,
+            final List<BigDecimal> periodPrices,
             final Long neighborhoodId) {
         validateListingCheckOutAfterCheckIn(checkInTime, checkOutTime);
         if (availabilityPeriods != null && !availabilityPeriods.isEmpty()) {
@@ -397,17 +446,18 @@ public final class ListingServiceImpl implements ListingService {
                 effNeighborhoodId);
         if (updated && availabilityPeriods != null) {
             final List<ListingAvailability> existing = listingAvailabilityService.findByListingId(listingId);
-            if (!availabilityMatchesExisting(availabilityPeriods, existing)) {
-                listingAvailabilityService.deleteByListingId(listingId);
-                final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
-                for (final ListingAvailability la : existing) {
-                    if (la.getEndInclusive().isBefore(today)) {
-                        listingAvailabilityService.create(listingId, la.getStartInclusive(), la.getEndInclusive());
-                    }
+            listingAvailabilityService.deleteByListingId(listingId);
+            final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+            for (final ListingAvailability la : existing) {
+                if (la.getEndInclusive().isBefore(today)) {
+                    listingAvailabilityService.create(listingId, la.getStartInclusive(), la.getEndInclusive(),
+                            la.getDayPrice().orElse(null));
                 }
-                for (final AvailabilityPeriod p : availabilityPeriods) {
-                    listingAvailabilityService.create(listingId, p.getStartInclusive(), p.getEndInclusive());
-                }
+            }
+            for (int i = 0; i < availabilityPeriods.size(); i++) {
+                final AvailabilityPeriod p = availabilityPeriods.get(i);
+                final BigDecimal periodPrice = (periodPrices != null && i < periodPrices.size()) ? periodPrices.get(i) : null;
+                listingAvailabilityService.create(listingId, p.getStartInclusive(), p.getEndInclusive(), periodPrice);
             }
         }
         if (updated) {

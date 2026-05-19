@@ -89,6 +89,7 @@ public final class MessageKeys {
     public static final String LISTING_CHECKOUT_NOT_AFTER_CHECKIN = "listing.times.checkOutNotAfterCheckIn";
     public static final String LISTING_CHECKINOUT_MIN_GAP = "listing.times.minGapHours";
     public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";
+    public static final String LISTING_CAR_NOT_OWNED = "listing.carNotOwned";
     public static final String LISTING_LIMIT_POSITIVE = "listing.limit.positive";
     public static final String LISTING_PICKUP_LOCATION_REQUIRED = "listing.pickupLocation.required";
     public static final String LISTING_PICKUP_STREET_NUMBER_DIGITS_ONLY = "listing.pickupStreetNumber.digitsOnly";
