@@ -45,9 +45,6 @@
     var labelTooLarge = root.getAttribute('data-too-large-label') || 'File must be at most {0} MB.';
     var labelInvalidType = root.getAttribute('data-invalid-type-label') || 'This file type is not allowed.';
     var labelCancel = root.getAttribute('data-cancel-label') || 'Cancel';
-    var labelVideoFallback =
-        root.getAttribute('data-video-fallback-label') ||
-        'Your browser cannot play this video. Open or download the file.';
 
     var messagesEl = document.getElementById('reservationChatMessages');
     var dayBarEl = document.getElementById('reservationChatDayBar');
@@ -561,6 +558,13 @@
         bubble.appendChild(card);
     }
 
+    function appendVisualMedia(bubble, mediaEl) {
+        var wrap = document.createElement('div');
+        wrap.className = 'reservation-chat__attachment-media';
+        wrap.appendChild(mediaEl);
+        bubble.appendChild(wrap);
+    }
+
     function renderAttachment(bubble, att) {
         if (!att) {
             return;
@@ -577,7 +581,7 @@
             img.addEventListener('click', function () {
                 window.open(viewUrl, '_blank', 'noopener,noreferrer');
             });
-            bubble.appendChild(img);
+            appendVisualMedia(bubble, img);
             return;
         }
         if (kind === 'VIDEO') {
@@ -586,14 +590,7 @@
             video.controls = true;
             video.preload = 'metadata';
             video.src = downloadUrl;
-            bubble.appendChild(video);
-            var fallback = document.createElement('a');
-            fallback.className = 'reservation-chat__video-fallback';
-            fallback.href = viewUrl;
-            fallback.target = '_blank';
-            fallback.rel = 'noopener noreferrer';
-            fallback.textContent = labelVideoFallback;
-            bubble.appendChild(fallback);
+            appendVisualMedia(bubble, video);
             return;
         }
         if (kind === 'PDF') {
@@ -619,26 +616,45 @@
         var group = getOrCreateDayGroup(dayKey);
         var isMine = Number(dto.senderUserId) === viewerUserId;
         var item = document.createElement('div');
-        item.className = 'reservation-chat__message mb-2' + (isMine ? ' text-end' : '');
+        item.className =
+            'reservation-chat__message mb-2' + (isMine ? ' reservation-chat__message--mine' : '');
         var bubble = document.createElement('div');
         bubble.className =
             'reservation-chat__bubble ' +
             (isMine ? 'reservation-chat__bubble--mine' : 'reservation-chat__bubble--theirs');
+        var bodyText = dto.body == null ? '' : String(dto.body).trim();
+        var attachmentKind = dto.attachment ? String(dto.attachment.kind || 'GENERIC').toUpperCase() : '';
         if (dto.attachment) {
+            bubble.classList.add('reservation-chat__bubble--has-attachment');
+            if (!bodyText) {
+                bubble.classList.add('reservation-chat__bubble--media-only');
+                if (attachmentKind === 'IMAGE' || attachmentKind === 'VIDEO') {
+                    bubble.classList.add('reservation-chat__bubble--visual-only');
+                }
+            }
             renderAttachment(bubble, dto.attachment);
         }
-        var bodyText = dto.body == null ? '' : String(dto.body).trim();
+        var time = document.createElement('span');
+        time.className = 'reservation-chat__time';
+        time.textContent = formatMessageTime(dto.createdAt);
         if (bodyText) {
             var text = document.createElement('span');
             text.className =
                 'reservation-chat__bubble-text' + (dto.attachment ? ' reservation-chat__attachment-caption' : '');
             text.textContent = bodyText;
-            bubble.appendChild(text);
+            if (dto.attachment) {
+                var footer = document.createElement('div');
+                footer.className = 'reservation-chat__bubble-footer';
+                footer.appendChild(text);
+                footer.appendChild(time);
+                bubble.appendChild(footer);
+            } else {
+                bubble.appendChild(text);
+                bubble.appendChild(time);
+            }
+        } else {
+            bubble.appendChild(time);
         }
-        var time = document.createElement('span');
-        time.className = 'reservation-chat__time';
-        time.textContent = formatMessageTime(dto.createdAt);
-        bubble.appendChild(time);
         item.appendChild(bubble);
         group.appendChild(item);
     }

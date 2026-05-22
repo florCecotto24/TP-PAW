@@ -27,7 +27,6 @@
     <spring:message code="reservationChat.attach.invalidType" var="chatInvalidTypeLabel"/>
     <spring:message code="reservationChat.attach.cancel" var="chatCancelLabel"/>
     <spring:message code="reservationChat.attach.sendFile" var="chatSendFileLabel"/>
-    <spring:message code="reservationChat.attach.videoFallback" var="chatVideoFallbackLabel"/>
     <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
 
     <c:url var="detailUrl" value="/my-reservations/${reservationId}">
@@ -87,7 +86,6 @@
                  data-invalid-type-label="<c:out value='${chatInvalidTypeLabel}'/>"
                  data-cancel-label="<c:out value='${chatCancelLabel}'/>"
                  data-send-file-label="<c:out value='${chatSendFileLabel}'/>"
-                 data-video-fallback-label="<c:out value='${chatVideoFallbackLabel}'/>"
                  data-empty-label="<c:out value='${chatEmptyLabel}'/>"
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
                  data-error-connection="<c:out value='${chatErrorConnection}'/>"
