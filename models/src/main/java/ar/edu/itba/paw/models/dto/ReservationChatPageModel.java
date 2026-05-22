@@ -16,6 +16,7 @@ public final class ReservationChatPageModel {
     private final Long counterpartyProfileImageId;
     private final long chatViewerUserId;
     private final int chatMessageMaxLength;
+    private final int chatMaxAttachmentMegabytes;
 
     public ReservationChatPageModel(
             final long reservationId,
@@ -25,7 +26,8 @@ public final class ReservationChatPageModel {
             final String counterpartyDisplayName,
             final Long counterpartyProfileImageId,
             final long chatViewerUserId,
-            final int chatMessageMaxLength) {
+            final int chatMessageMaxLength,
+            final int chatMaxAttachmentMegabytes) {
         this.reservationId = reservationId;
         this.listingId = listingId;
         this.listingTitle = listingTitle;
@@ -34,6 +36,7 @@ public final class ReservationChatPageModel {
         this.counterpartyProfileImageId = counterpartyProfileImageId;
         this.chatViewerUserId = chatViewerUserId;
         this.chatMessageMaxLength = chatMessageMaxLength;
+        this.chatMaxAttachmentMegabytes = chatMaxAttachmentMegabytes;
     }
 
     public long getReservationId() {
@@ -57,5 +60,6 @@ public final class ReservationChatPageModel {
         putObject.accept("counterpartyProfileImageId", counterpartyProfileImageId);
         putObject.accept("chatViewerUserId", chatViewerUserId);
         putObject.accept("chatMessageMaxLength", chatMessageMaxLength);
+        putObject.accept("chatMaxAttachmentMegabytes", chatMaxAttachmentMegabytes);
     }
 }

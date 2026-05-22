@@ -18,6 +18,18 @@ public final class RydenDataSourceFactory {
 
     public static DataSource createWithSchemaAndMigrations(
             final String url, final String username, final String password) {
+        return createWithSchemaAndMigrations(url, username, password, false);
+    }
+
+    /**
+     * @param repairFlywayOnStartup when {@code true}, runs {@link Flyway#repair()} before {@link Flyway#migrate()}
+     *                              (local dev only: realigns checksums after a migration file was edited post-apply).
+     */
+    public static DataSource createWithSchemaAndMigrations(
+            final String url,
+            final String username,
+            final String password,
+            final boolean repairFlywayOnStartup) {
         final SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
         dataSource.setDriverClass(org.postgresql.Driver.class);
         dataSource.setUrl(url);
@@ -26,14 +38,17 @@ public final class RydenDataSourceFactory {
 
         applyBaselineScript(dataSource);
 
-        Flyway.configure()
+        final Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(true)
                 .baselineVersion("1")
                 .failOnMissingLocations(true)
-                .load()
-                .migrate();
+                .load();
+        if (repairFlywayOnStartup) {
+            flyway.repair();
+        }
+        flyway.migrate();
         return dataSource;
     }
 

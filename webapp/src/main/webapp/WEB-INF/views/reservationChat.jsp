@@ -20,6 +20,16 @@
     <spring:message code="reservationChat.error.connection" var="chatErrorConnection"/>
     <spring:message code="reservationChat.date.today" var="chatDateToday"/>
     <spring:message code="reservationChat.date.yesterday" var="chatDateYesterday"/>
+    <spring:message code="reservationChat.attach.button" var="chatAttachLabel"/>
+    <spring:message code="reservationChat.attach.dropHint" var="chatDropHint"/>
+    <spring:message code="reservationChat.attach.uploading" var="chatUploadingLabel"/>
+    <spring:message code="reservationChat.attach.tooLarge" var="chatTooLargeLabel"/>
+    <spring:message code="reservationChat.attach.invalidType" var="chatInvalidTypeLabel"/>
+    <spring:message code="reservationChat.attach.open" var="chatOpenLabel"/>
+    <spring:message code="reservationChat.attach.download" var="chatDownloadLabel"/>
+    <spring:message code="reservationChat.attach.cancel" var="chatCancelLabel"/>
+    <spring:message code="reservationChat.attach.sendFile" var="chatSendFileLabel"/>
+    <spring:message code="reservationChat.attach.videoFallback" var="chatVideoFallbackLabel"/>
     <spring:message code="myReservationDetail.counterparty.viewFullProfile" var="counterpartyProfileLinkAria"/>
 
     <c:url var="detailUrl" value="/my-reservations/${reservationId}">
@@ -71,6 +81,17 @@
                  data-reservation-id="<c:out value='${reservationId}'/>"
                  data-viewer-user-id="<c:out value='${chatViewerUserId}'/>"
                  data-max-length="<c:out value='${chatMessageMaxLength}'/>"
+                 data-max-attachment-mb="<c:out value='${chatMaxAttachmentMegabytes}'/>"
+                 data-attach-label="<c:out value='${chatAttachLabel}'/>"
+                 data-drop-hint="<c:out value='${chatDropHint}'/>"
+                 data-uploading-label="<c:out value='${chatUploadingLabel}'/>"
+                 data-too-large-label="<c:out value='${chatTooLargeLabel}'/>"
+                 data-invalid-type-label="<c:out value='${chatInvalidTypeLabel}'/>"
+                 data-open-label="<c:out value='${chatOpenLabel}'/>"
+                 data-download-label="<c:out value='${chatDownloadLabel}'/>"
+                 data-cancel-label="<c:out value='${chatCancelLabel}'/>"
+                 data-send-file-label="<c:out value='${chatSendFileLabel}'/>"
+                 data-video-fallback-label="<c:out value='${chatVideoFallbackLabel}'/>"
                  data-empty-label="<c:out value='${chatEmptyLabel}'/>"
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
                  data-error-connection="<c:out value='${chatErrorConnection}'/>"
@@ -103,12 +124,26 @@
                      class="reservation-chat__messages reservation-chat-page__messages"
                      role="log"
                      aria-live="polite">
+                    <div id="reservationChatDropOverlay" class="reservation-chat__drop-overlay d-none" aria-hidden="true">
+                        <span class="reservation-chat__drop-overlay-text"><c:out value="${chatDropHint}"/></span>
+                    </div>
                     <div id="reservationChatDayBar" class="reservation-chat-day-bar d-none" aria-live="polite">
                         <span id="reservationChatDayLabel" class="reservation-chat__day-pill reservation-chat-day-bar__label"></span>
                     </div>
                     <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
                 </div>
+                <div id="reservationChatPending" class="reservation-chat__pending d-none" aria-live="polite"></div>
+                <div id="reservationChatUploadProgress" class="reservation-chat__upload-progress d-none" role="progressbar"
+                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="reservationChatUploadProgressBar" class="reservation-chat__upload-progress-bar"></div>
+                </div>
                 <div class="reservation-chat__composer reservation-chat-page__composer d-flex gap-2 align-items-end">
+                    <input type="file" id="reservationChatFileInput" class="visually-hidden"
+                           accept="image/*,application/pdf,.doc,.docx,video/mp4,video/webm,video/quicktime,.txt,.zip,.xls,.xlsx,.ppt,.pptx"/>
+                    <button type="button" id="reservationChatAttach" class="btn btn-outline-secondary flex-shrink-0"
+                            title="<c:out value='${chatAttachLabel}'/>" aria-label="<c:out value='${chatAttachLabel}'/>">
+                        <i class="bi bi-paperclip" aria-hidden="true"></i>
+                    </button>
                     <label class="visually-hidden" for="reservationChatInput"><c:out value="${chatPlaceholder}"/></label>
                     <textarea id="reservationChatInput" class="form-control reservation-chat-page__input" rows="1" maxlength="${chatMessageMaxLength}"
                               placeholder="<c:out value='${chatPlaceholder}'/>"></textarea>

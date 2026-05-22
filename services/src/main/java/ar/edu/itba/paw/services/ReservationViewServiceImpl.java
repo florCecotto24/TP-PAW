@@ -198,7 +198,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 counterpartyDisplayName,
                 counterparty.getProfilePictureId().orElse(null),
                 viewerUserId,
-                reservationMessageService.getMessageBodyMaxLength()));
+                reservationMessageService.getMessageBodyMaxLength(),
+                reservationMessageService.getMaxChatAttachmentMegabytes()));
     }
 
     @Override

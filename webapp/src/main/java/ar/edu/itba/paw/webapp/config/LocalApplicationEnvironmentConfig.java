@@ -15,7 +15,9 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Configuration
 @Profile("local")
-@PropertySource("classpath:application/application-local.properties")
+@PropertySource(
+        value = "classpath:application/application-local.properties",
+        ignoreResourceNotFound = true)
 public class LocalApplicationEnvironmentConfig {
 
     @Bean
@@ -23,6 +25,6 @@ public class LocalApplicationEnvironmentConfig {
             @Value("${spring.datasource.url}") final String url,
             @Value("${spring.datasource.username}") final String username,
             @Value("${spring.datasource.password}") final String password) {
-        return RydenDataSourceFactory.createWithSchemaAndMigrations(url, username, password);
+        return RydenDataSourceFactory.createWithSchemaAndMigrations(url, username, password, true);
     }
 }

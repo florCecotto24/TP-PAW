@@ -37,6 +37,10 @@ public class ReservationMessage {
     @Column(name = "body", nullable = false)
     private String body;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attachment_file_id")
+    private StoredFile attachment;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -49,9 +53,19 @@ public class ReservationMessage {
             final User sender,
             final String body,
             final OffsetDateTime createdAt) {
+        this(reservation, sender, body, null, createdAt);
+    }
+
+    public ReservationMessage(
+            final Reservation reservation,
+            final User sender,
+            final String body,
+            final StoredFile attachment,
+            final OffsetDateTime createdAt) {
         this.reservation = reservation;
         this.sender = sender;
         this.body = body;
+        this.attachment = attachment;
         this.createdAt = createdAt;
     }
 
@@ -77,6 +91,14 @@ public class ReservationMessage {
 
     public String getBody() {
         return body;
+    }
+
+    public StoredFile getAttachment() {
+        return attachment;
+    }
+
+    public Long getAttachmentFileId() {
+        return attachment == null ? null : attachment.getId();
     }
 
     public OffsetDateTime getCreatedAt() {

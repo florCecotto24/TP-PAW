@@ -28,7 +28,8 @@
     <javax.persistence-api.version>2.2</javax.persistence-api.version>
     <javax.validation-api.version>2.0.1.Final</javax.validation-api.version>
     <jaxb.version>2.3.1</jaxb.version>
-    <jetty.maven.version>9.4.58.v20250814</jetty.maven.version>
+    <!-- 10.x: Servlet 4.0 runtime required by Spring Security 5.8 MvcRequestMatcher (Jetty 9 = Servlet 3.1). -->
+    <jetty.maven.version>10.0.25</jetty.maven.version>
     <junit.jupiter.version>5.11.0</junit.jupiter.version>
     <logback.version>1.5.6</logback.version>
     <maven-clean-plugin.version>3.4.0</maven-clean-plugin.version>

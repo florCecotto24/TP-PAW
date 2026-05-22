@@ -12,6 +12,7 @@ public final class ReservationMessageDto {
     private final String senderDisplayName;
     private final String body;
     private final OffsetDateTime createdAt;
+    private final ReservationMessageAttachmentDto attachment;
 
     public ReservationMessageDto(
             final long id,
@@ -20,12 +21,24 @@ public final class ReservationMessageDto {
             final String senderDisplayName,
             final String body,
             final OffsetDateTime createdAt) {
+        this(id, reservationId, senderUserId, senderDisplayName, body, createdAt, null);
+    }
+
+    public ReservationMessageDto(
+            final long id,
+            final long reservationId,
+            final long senderUserId,
+            final String senderDisplayName,
+            final String body,
+            final OffsetDateTime createdAt,
+            final ReservationMessageAttachmentDto attachment) {
         this.id = id;
         this.reservationId = reservationId;
         this.senderUserId = senderUserId;
         this.senderDisplayName = Objects.requireNonNull(senderDisplayName, "senderDisplayName");
-        this.body = Objects.requireNonNull(body, "body");
+        this.body = body == null ? "" : body;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
+        this.attachment = attachment;
     }
 
     public long getId() {
@@ -50,5 +63,9 @@ public final class ReservationMessageDto {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public ReservationMessageAttachmentDto getAttachment() {
+        return attachment;
     }
 }

@@ -16,7 +16,9 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Configuration
 @Profile("!local")
-@PropertySource("classpath:application/application-deployed.properties")
+@PropertySource(
+        value = "classpath:application/application-deployed.properties",
+        ignoreResourceNotFound = true)
 public class DeployedApplicationEnvironmentConfig {
 
     @Bean

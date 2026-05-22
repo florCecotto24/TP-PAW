@@ -32,6 +32,10 @@ public final class MessageKeys {
     public static final String RESERVATION_CHAT_BODY_EMPTY = "reservation.chat.bodyEmpty";
     public static final String RESERVATION_CHAT_BODY_TOO_LONG = "reservation.chat.bodyTooLong";
     public static final String RESERVATION_CHAT_NOT_PARTICIPANT = "reservation.chat.notParticipant";
+    public static final String RESERVATION_CHAT_ATTACHMENT_REQUIRED = "reservation.chat.attachmentRequired";
+    public static final String RESERVATION_CHAT_ATTACHMENT_INVALID = "reservation.chat.attachmentInvalidType";
+    public static final String RESERVATION_CHAT_ATTACHMENT_TOO_LARGE = "reservation.chat.attachmentTooLarge";
+    public static final String RESERVATION_CHAT_ATTACHMENT_NOT_FOUND = "reservation.chat.attachmentNotFound";
 
     public static final String REVIEW_NOT_ALLOWED = "review.notAllowed";
     public static final String REVIEW_ALREADY_SUBMITTED = "review.alreadySubmitted";

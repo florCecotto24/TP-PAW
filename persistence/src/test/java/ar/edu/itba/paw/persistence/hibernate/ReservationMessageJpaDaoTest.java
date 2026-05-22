@@ -121,4 +121,31 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals("First", messages.get(0).getBody());
         Assertions.assertEquals("Second", messages.get(1).getBody());
     }
+
+    @Test
+    void testCreateWithAttachmentPersistsForeignKey() {
+        // 1.Arrange
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                riderId,
+                "photo.png",
+                "image/png",
+                new byte[] {1, 2, 3},
+                now);
+        final long fileId =
+                jdbcTemplate.queryForObject("SELECT id FROM stored_files WHERE file_name = ?", Long.class, "photo.png");
+
+        // 2.Exercise
+        final ReservationMessage created = dao.create(reservationId, riderId, "", fileId);
+        em.flush();
+
+        // 3.Assert
+        final Long attachmentId = jdbcTemplate.queryForObject(
+                "SELECT attachment_file_id FROM reservation_messages WHERE id = ?",
+                Long.class,
+                created.getId());
+        Assertions.assertEquals(fileId, attachmentId.longValue());
+    }
 }

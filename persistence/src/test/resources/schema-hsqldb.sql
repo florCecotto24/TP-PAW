@@ -138,9 +138,11 @@ CREATE TABLE IF NOT EXISTS reservation_messages (
     reservation_id BIGINT NOT NULL,
     sender_user_id BIGINT NOT NULL,
     body VARCHAR(1000) NOT NULL,
+    attachment_file_id BIGINT NULL,
     created_at TIMESTAMP NOT NULL,
     FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE,
-    FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (attachment_file_id) REFERENCES stored_files(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS images (

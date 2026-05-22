@@ -135,6 +135,18 @@ public class WebAuthConfig {
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/messages"))
+                        .access(reservationWebAuthorization.participantAccess())
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/messages/{messageId}/attachment"))
+                        .access(reservationWebAuthorization.participantAccess())
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
                                         "/my-reservations/{reservationId}/payment-receipt/approval"))
                         .access(reservationWebAuthorization.ownerAccess())
                         .requestMatchers(
