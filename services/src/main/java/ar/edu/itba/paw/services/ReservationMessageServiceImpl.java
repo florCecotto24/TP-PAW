@@ -247,7 +247,8 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         }
         final long reservationId = message.getReservationId();
         final long messageId = message.getId();
-        final String url = "/my-reservations/" + reservationId + "/messages/" + messageId + "/attachment";
+        final String url =
+                "/my-reservations/" + reservationId + "/messages/" + messageId + "/attachment/download";
         return new ReservationMessageAttachmentDto(
                 attachment.getId(),
                 attachment.getFileName(),

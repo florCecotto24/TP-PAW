@@ -44,8 +44,6 @@
     var labelUploading = root.getAttribute('data-uploading-label') || 'Uploading…';
     var labelTooLarge = root.getAttribute('data-too-large-label') || 'File must be at most {0} MB.';
     var labelInvalidType = root.getAttribute('data-invalid-type-label') || 'This file type is not allowed.';
-    var labelOpen = root.getAttribute('data-open-label') || 'Open';
-    var labelDownload = root.getAttribute('data-download-label') || 'Download';
     var labelCancel = root.getAttribute('data-cancel-label') || 'Cancel';
     var labelVideoFallback =
         root.getAttribute('data-video-fallback-label') ||
@@ -59,6 +57,7 @@
     var attachBtn = document.getElementById('reservationChatAttach');
     var fileInputEl = document.getElementById('reservationChatFileInput');
     var errorEl = document.getElementById('reservationChatError');
+    var dropZoneEl = document.getElementById('reservationChatDropZone');
     var dropOverlayEl = document.getElementById('reservationChatDropOverlay');
     var pendingEl = document.getElementById('reservationChatPending');
     var uploadProgressEl = document.getElementById('reservationChatUploadProgress');
@@ -74,7 +73,6 @@
     var lastStickyDayKey = null;
     var pendingFile = null;
     var uploading = false;
-    var dragDepth = 0;
 
     function showError(msg) {
         if (!errorEl) {
@@ -175,6 +173,28 @@
         return contextPath + relativeUrl;
     }
 
+    function attachmentDownloadUrl(relativeUrl) {
+        var full = attachmentFullUrl(relativeUrl);
+        if (!full) {
+            return '';
+        }
+        if (full.indexOf('/attachment/download') >= 0) {
+            return full;
+        }
+        if (full.slice(-'/attachment'.length) === '/attachment') {
+            return full + '/download';
+        }
+        return full;
+    }
+
+    function attachmentViewUrl(relativeUrl) {
+        var download = attachmentDownloadUrl(relativeUrl);
+        if (!download) {
+            return '';
+        }
+        return download.replace(/\/attachment\/download$/, '/attachment/view');
+    }
+
     function setUploadProgress(percent) {
         if (!uploadProgressEl || !uploadProgressBarEl) {
             return;
@@ -233,8 +253,10 @@
         }
         if (visible) {
             dropOverlayEl.classList.remove('d-none');
+            dropOverlayEl.setAttribute('aria-hidden', 'false');
         } else {
             dropOverlayEl.classList.add('d-none');
+            dropOverlayEl.setAttribute('aria-hidden', 'true');
         }
     }
 
@@ -515,10 +537,9 @@
     }
 
     function appendFileCard(bubble, att, iconClass, iconExtraClass) {
-        var url = attachmentFullUrl(att.url);
         var card = document.createElement('a');
         card.className = 'reservation-chat__file-card';
-        card.href = url;
+        card.href = attachmentViewUrl(att.url);
         card.target = '_blank';
         card.rel = 'noopener noreferrer';
         var icon = document.createElement('i');
@@ -530,11 +551,10 @@
         body.className = 'reservation-chat__file-card-body';
         var nameEl = document.createElement('span');
         nameEl.className = 'reservation-chat__file-card-name';
-        nameEl.textContent = att.fileName || labelDownload;
+        nameEl.textContent = att.fileName || '';
         var metaEl = document.createElement('span');
         metaEl.className = 'reservation-chat__file-card-meta';
-        metaEl.textContent =
-            formatFileSize(att.sizeBytes) + ' · ' + labelOpen + ' / ' + labelDownload;
+        metaEl.textContent = formatFileSize(att.sizeBytes);
         body.appendChild(nameEl);
         body.appendChild(metaEl);
         card.appendChild(body);
@@ -546,15 +566,16 @@
             return;
         }
         var kind = (att.kind || 'GENERIC').toUpperCase();
-        var url = attachmentFullUrl(att.url);
+        var downloadUrl = attachmentDownloadUrl(att.url);
+        var viewUrl = attachmentViewUrl(att.url);
         if (kind === 'IMAGE') {
             var img = document.createElement('img');
             img.className = 'reservation-chat__attachment-image';
-            img.src = url;
+            img.src = downloadUrl;
             img.alt = att.fileName || '';
             img.loading = 'lazy';
             img.addEventListener('click', function () {
-                window.open(url, '_blank', 'noopener,noreferrer');
+                window.open(viewUrl, '_blank', 'noopener,noreferrer');
             });
             bubble.appendChild(img);
             return;
@@ -564,11 +585,11 @@
             video.className = 'reservation-chat__attachment-video';
             video.controls = true;
             video.preload = 'metadata';
-            video.src = url;
+            video.src = downloadUrl;
             bubble.appendChild(video);
             var fallback = document.createElement('a');
             fallback.className = 'reservation-chat__video-fallback';
-            fallback.href = url;
+            fallback.href = viewUrl;
             fallback.target = '_blank';
             fallback.rel = 'noopener noreferrer';
             fallback.textContent = labelVideoFallback;
@@ -819,43 +840,47 @@
     }
 
     function initDragDrop() {
-        if (!messagesEl) {
+        if (!dropZoneEl) {
             return;
+        }
+        function isInsideDropZone(node) {
+            return node && dropZoneEl.contains(node);
         }
         function onDragEnter(e) {
             e.preventDefault();
-            dragDepth++;
+            e.stopPropagation();
+            if (isInsideDropZone(e.relatedTarget)) {
+                return;
+            }
             showDropOverlay(true);
         }
         function onDragLeave(e) {
             e.preventDefault();
-            dragDepth--;
-            if (dragDepth <= 0) {
-                dragDepth = 0;
-                showDropOverlay(false);
+            e.stopPropagation();
+            if (isInsideDropZone(e.relatedTarget)) {
+                return;
             }
+            showDropOverlay(false);
         }
         function onDragOver(e) {
             e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'copy';
+            }
         }
         function onDrop(e) {
             e.preventDefault();
-            dragDepth = 0;
+            e.stopPropagation();
             showDropOverlay(false);
             if (e.dataTransfer && e.dataTransfer.files) {
                 handleFilesFromDrop(e.dataTransfer.files);
             }
         }
-        messagesEl.addEventListener('dragenter', onDragEnter);
-        messagesEl.addEventListener('dragleave', onDragLeave);
-        messagesEl.addEventListener('dragover', onDragOver);
-        messagesEl.addEventListener('drop', onDrop);
-        if (root) {
-            root.addEventListener('dragenter', onDragEnter);
-            root.addEventListener('dragleave', onDragLeave);
-            root.addEventListener('dragover', onDragOver);
-            root.addEventListener('drop', onDrop);
-        }
+        dropZoneEl.addEventListener('dragenter', onDragEnter);
+        dropZoneEl.addEventListener('dragleave', onDragLeave);
+        dropZoneEl.addEventListener('dragover', onDragOver);
+        dropZoneEl.addEventListener('drop', onDrop);
     }
 
     function initChat() {

@@ -25,8 +25,6 @@
     <spring:message code="reservationChat.attach.uploading" var="chatUploadingLabel"/>
     <spring:message code="reservationChat.attach.tooLarge" var="chatTooLargeLabel"/>
     <spring:message code="reservationChat.attach.invalidType" var="chatInvalidTypeLabel"/>
-    <spring:message code="reservationChat.attach.open" var="chatOpenLabel"/>
-    <spring:message code="reservationChat.attach.download" var="chatDownloadLabel"/>
     <spring:message code="reservationChat.attach.cancel" var="chatCancelLabel"/>
     <spring:message code="reservationChat.attach.sendFile" var="chatSendFileLabel"/>
     <spring:message code="reservationChat.attach.videoFallback" var="chatVideoFallbackLabel"/>
@@ -87,8 +85,6 @@
                  data-uploading-label="<c:out value='${chatUploadingLabel}'/>"
                  data-too-large-label="<c:out value='${chatTooLargeLabel}'/>"
                  data-invalid-type-label="<c:out value='${chatInvalidTypeLabel}'/>"
-                 data-open-label="<c:out value='${chatOpenLabel}'/>"
-                 data-download-label="<c:out value='${chatDownloadLabel}'/>"
                  data-cancel-label="<c:out value='${chatCancelLabel}'/>"
                  data-send-file-label="<c:out value='${chatSendFileLabel}'/>"
                  data-video-fallback-label="<c:out value='${chatVideoFallbackLabel}'/>"
@@ -97,6 +93,10 @@
                  data-error-connection="<c:out value='${chatErrorConnection}'/>"
                  data-label-today="<c:out value='${chatDateToday}'/>"
                  data-label-yesterday="<c:out value='${chatDateYesterday}'/>">
+                <div id="reservationChatDropZone" class="reservation-chat__drop-zone d-flex flex-column flex-grow-1 min-h-0">
+                    <div id="reservationChatDropOverlay" class="reservation-chat__drop-overlay d-none" aria-hidden="true">
+                        <span class="reservation-chat__drop-overlay-text"><c:out value="${chatDropHint}"/></span>
+                    </div>
                 <header class="reservation-chat-header">
                     <a href="<c:out value='${counterpartyProfileUrl}'/>"
                        class="reservation-chat-header__link text-decoration-none text-reset d-flex align-items-center gap-2 min-w-0"
@@ -124,13 +124,11 @@
                      class="reservation-chat__messages reservation-chat-page__messages"
                      role="log"
                      aria-live="polite">
-                    <div id="reservationChatDropOverlay" class="reservation-chat__drop-overlay d-none" aria-hidden="true">
-                        <span class="reservation-chat__drop-overlay-text"><c:out value="${chatDropHint}"/></span>
-                    </div>
                     <div id="reservationChatDayBar" class="reservation-chat-day-bar d-none" aria-live="polite">
                         <span id="reservationChatDayLabel" class="reservation-chat__day-pill reservation-chat-day-bar__label"></span>
                     </div>
                     <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
+                </div>
                 </div>
                 <div id="reservationChatPending" class="reservation-chat__pending d-none" aria-live="polite"></div>
                 <div id="reservationChatUploadProgress" class="reservation-chat__upload-progress d-none" role="progressbar"

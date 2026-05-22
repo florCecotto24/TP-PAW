@@ -141,7 +141,13 @@ public class WebAuthConfig {
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
-                                        "/my-reservations/{reservationId}/messages/{messageId}/attachment"))
+                                        "/my-reservations/{reservationId}/messages/{messageId}/attachment/download"))
+                        .access(reservationWebAuthorization.participantAccess())
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/messages/{messageId}/attachment/view"))
                         .access(reservationWebAuthorization.participantAccess())
                         .requestMatchers(
                                 mvc(

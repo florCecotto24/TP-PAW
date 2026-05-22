@@ -82,7 +82,7 @@ public final class ReservationMessageController {
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
-    @GetMapping("/my-reservations/{reservationId}/messages/{messageId}/attachment")
+    @GetMapping("/my-reservations/{reservationId}/messages/{messageId}/attachment/download")
     public ResponseEntity<byte[]> downloadMessageAttachment(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
