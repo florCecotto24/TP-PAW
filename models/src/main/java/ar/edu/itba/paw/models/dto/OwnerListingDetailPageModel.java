@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
@@ -38,6 +39,7 @@ public final class OwnerListingDetailPageModel {
     private final List<ListingAvailability> editPastAvailabilities;
     private final String editAvailMaxYmd;
     private final LocalDate editAvailWallToday;
+    private final ListingPriceMarketInsight priceMarketInsight;
 
     public OwnerListingDetailPageModel(
             final List<Neighborhood> allNeighborhoods,
@@ -60,7 +62,8 @@ public final class OwnerListingDetailPageModel {
             final String listingNextReservationDisplay,
             final List<ListingAvailability> editPastAvailabilities,
             final String editAvailMaxYmd,
-            final LocalDate editAvailWallToday) {
+            final LocalDate editAvailWallToday,
+            final ListingPriceMarketInsight priceMarketInsight) {
         this.allNeighborhoods = List.copyOf(allNeighborhoods);
         this.listingNeighborhoodName = listingNeighborhoodName;
         this.listingStreetNumber = listingStreetNumber;
@@ -82,6 +85,11 @@ public final class OwnerListingDetailPageModel {
         this.editPastAvailabilities = List.copyOf(editPastAvailabilities);
         this.editAvailMaxYmd = editAvailMaxYmd;
         this.editAvailWallToday = editAvailWallToday;
+        this.priceMarketInsight = priceMarketInsight;
+    }
+
+    public ListingPriceMarketInsight getPriceMarketInsight() {
+        return priceMarketInsight;
     }
 
     public Listing getListing() {
@@ -114,5 +122,8 @@ public final class OwnerListingDetailPageModel {
         putObject.accept("editPastAvailabilities", editPastAvailabilities);
         putObject.accept("editAvailMaxYmd", editAvailMaxYmd);
         putObject.accept("editAvailWallToday", editAvailWallToday);
+        if (priceMarketInsight != null) {
+            putObject.accept("priceMarketInsight", priceMarketInsight);
+        }
     }
 }

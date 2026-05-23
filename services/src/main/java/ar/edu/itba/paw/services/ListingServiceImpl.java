@@ -46,6 +46,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
 import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.models.util.CbuRules;
@@ -1210,5 +1211,22 @@ public final class ListingServiceImpl implements ListingService {
         for (final Listing li : toResume) {
             listingDao.updateListingStatus(li.getId(), Listing.Status.ACTIVE, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ListingPriceMarketInsight> getPriceMarketInsightForCar(
+            final Car car,
+            final Long excludeListingId) {
+        if (car == null) {
+            return Optional.empty();
+        }
+        final String brand = car.getBrand();
+        final String model = car.getModel();
+        if (brand == null || brand.isBlank() || model == null || model.isBlank()) {
+            return Optional.empty();
+        }
+        return listingDao.findActiveDayPriceMarketInsightByBrandAndModel(
+                brand.trim(), model.trim(), excludeListingId);
     }
 }

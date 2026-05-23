@@ -32,6 +32,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
@@ -599,5 +600,75 @@ public class ListingServiceImplTest {
         Assertions.assertEquals(user, result.getPublisher());
         Assertions.assertEquals(car, result.getCar());
         Assertions.assertEquals(listing, result.getListing());
+    }
+
+    @Test
+    void getPriceMarketInsightForCar_returnsEmptyWhenCarIsNull() {
+        Assertions.assertTrue(listingService.getPriceMarketInsightForCar(null, null).isEmpty());
+    }
+
+    @Test
+    void getPriceMarketInsightForCar_returnsEmptyWhenBrandOrModelBlank() {
+        final User owner = Mockito.mock(User.class);
+        final Car car = Car.builder()
+                .id(1L)
+                .owner(owner)
+                .plate("ABC123")
+                .brand("  ")
+                .model("Gol")
+                .type(Car.Type.SEDAN)
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .build();
+
+        Assertions.assertTrue(listingService.getPriceMarketInsightForCar(car, null).isEmpty());
+        Mockito.verifyNoInteractions(listingDao);
+    }
+
+    @Test
+    void getPriceMarketInsightForCar_delegatesToDaoWithTrimmedBrandAndModel() {
+        final User owner = Mockito.mock(User.class);
+        final Car car = Car.builder()
+                .id(1L)
+                .owner(owner)
+                .plate("ABC123")
+                .brand("  Toyota ")
+                .model(" Corolla ")
+                .type(Car.Type.SEDAN)
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .build();
+        final ListingPriceMarketInsight insight = new ListingPriceMarketInsight(
+                new BigDecimal("10000.00"),
+                new BigDecimal("15000.00"),
+                new BigDecimal("12500.50"),
+                3L);
+        Mockito.when(listingDao.findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 42L))
+                .thenReturn(Optional.of(insight));
+
+        final Optional<ListingPriceMarketInsight> result = listingService.getPriceMarketInsightForCar(car, 42L);
+
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertEquals(insight, result.get());
+        Mockito.verify(listingDao).findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 42L);
+    }
+
+    @Test
+    void getPriceMarketInsightForCar_returnsEmptyWhenDaoHasNoData() {
+        final User owner = Mockito.mock(User.class);
+        final Car car = Car.builder()
+                .id(1L)
+                .owner(owner)
+                .plate("ABC123")
+                .brand("Ford")
+                .model("Ka")
+                .type(Car.Type.HATCHBACK)
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .build();
+        Mockito.when(listingDao.findActiveDayPriceMarketInsightByBrandAndModel("Ford", "Ka", null))
+                .thenReturn(Optional.empty());
+
+        Assertions.assertTrue(listingService.getPriceMarketInsightForCar(car, null).isEmpty());
     }
 }

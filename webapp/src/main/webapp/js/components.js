@@ -1936,6 +1936,7 @@
             if (next !== el.value) {
                 el.value = next;
             }
+            el.dispatchEvent(new CustomEvent("ryden-listing-price-input", { bubbles: true }));
         }
 
         el.addEventListener("beforeinput", function (e) {

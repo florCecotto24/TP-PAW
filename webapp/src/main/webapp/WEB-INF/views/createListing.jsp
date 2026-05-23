@@ -65,12 +65,14 @@
 
                         <%-- Price per day --%>
                         <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" required="required" type="number" step="0.01" max="99999999.99"
-                                        data-max-int="8" data-max-frac="2"
-                                        cssClass="form-control js-no-number-wheel-step js-listing-price-decimal"
-                                        cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
-                            <small class="text-muted"><spring:message code="createListing.form.pricePerDayHint"/></small>
+                            <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
+                                                          initialUserPrice="${createListingForm.pricePerDay}"
+                                                          showDefaultPriceHint="true">
+                                <form:input path="pricePerDay" id="pricePerDay" required="required" type="number" step="0.01" max="99999999.99"
+                                            data-max-int="8" data-max-frac="2"
+                                            cssClass="form-control js-no-number-wheel-step js-listing-price-decimal"
+                                            cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
+                            </ryden:priceMarketInsightCard>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
 

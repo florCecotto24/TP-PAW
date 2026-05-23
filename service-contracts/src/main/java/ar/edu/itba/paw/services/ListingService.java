@@ -18,6 +18,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
@@ -310,4 +311,10 @@ public interface ListingService {
      * Re-activates listings that were paused only for missing CBU, after a valid CBU is stored.
      */
     void resumeListingsPausedDueToMissingCbuForOwner(long ownerId);
+
+    /**
+     * Market price stats (min / max / average) for active listings with the same car brand and model.
+     * {@code excludeListingId} omits one listing when editing (typically the current one).
+     */
+    Optional<ListingPriceMarketInsight> getPriceMarketInsightForCar(Car car, Long excludeListingId);
 }

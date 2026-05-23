@@ -12,6 +12,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
@@ -109,4 +110,11 @@ public interface ListingDao {
     List<ListingCard> findSimilarListingCards(long listingId, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
 
     long countBrowseEligibleActiveListings(LocalDate browseWallDate, Long excludeOwnerUserId);
+
+    /**
+     * Min, max, and average {@code day_price} of active listings whose car matches {@code brand} and
+     * {@code model} (case-insensitive, trimmed). Optionally excludes one listing (e.g. the one being edited).
+     */
+    Optional<ListingPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
+            String brand, String model, Long excludeListingId);
 }

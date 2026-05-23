@@ -471,6 +471,8 @@ public final class MyListingsController {
         mav.addObject("publishMaxAvailabilityWallInclusive", wallToday.plusDays(forwardDays).toString());
         mav.addObject("publisherEmail", freshUser.getEmail());
         mav.addObject("activeTab", "my-cars");
+        listingService.getPriceMarketInsightForCar(car, null)
+                .ifPresent(insight -> mav.addObject("priceMarketInsight", insight));
         return mav;
     }
 

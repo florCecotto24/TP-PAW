@@ -33,6 +33,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
 import ar.edu.itba.paw.models.util.ListingSearchCriteria;
@@ -468,6 +469,46 @@ public class ListingJpaDao implements ListingDao {
                 + "ORDER BY l.created_at DESC "
                 + "LIMIT :similarLimit";
         return runListingCardNativeQuery(sql, params);
+    }
+
+    @Override
+    public Optional<ListingPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
+            final String brand,
+            final String model,
+            final Long excludeListingId) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("brand", brand);
+        params.put("model", model);
+        final StringBuilder sql = new StringBuilder(
+                "SELECT MIN(l.day_price), MAX(l.day_price), AVG(l.day_price), COUNT(*) "
+                + "FROM listings l "
+                + "JOIN cars c ON c.id = l.car_id "
+                + "WHERE l.status = 'active' "
+                + "AND LOWER(TRIM(c.brand)) = LOWER(TRIM(:brand)) "
+                + "AND LOWER(TRIM(c.model)) = LOWER(TRIM(:model)) ");
+        if (excludeListingId != null) {
+            sql.append("AND l.id <> :excludeListingId ");
+            params.put("excludeListingId", excludeListingId);
+        }
+        final Object[] row = (Object[]) bindParams(em.createNativeQuery(sql.toString()), params).getSingleResult();
+        if (row == null || row[0] == null || row[1] == null || row[2] == null) {
+            return Optional.empty();
+        }
+        final long count = ((Number) row[3]).longValue();
+        if (count == 0L) {
+            return Optional.empty();
+        }
+        final BigDecimal min = toBigDecimal(row[0]);
+        final BigDecimal max = toBigDecimal(row[1]);
+        final BigDecimal avg = toBigDecimal(row[2]);
+        return Optional.of(new ListingPriceMarketInsight(min, max, avg, count));
+    }
+
+    private static BigDecimal toBigDecimal(final Object value) {
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+        return new BigDecimal(value.toString());
     }
 
     @Override

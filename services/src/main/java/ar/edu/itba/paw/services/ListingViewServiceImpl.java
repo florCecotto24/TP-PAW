@@ -14,11 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.ListingPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.OwnerListingDetailPageModel;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
@@ -88,6 +90,10 @@ public final class ListingViewServiceImpl implements ListingViewService {
                 .collect(Collectors.toList());
         final String listingCreatedAtDisplay =
                 WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(listing.getCreatedAt(), locale);
+        final Car car = detail.getCar();
+        final ListingPriceMarketInsight priceMarketInsight = listingService
+                .getPriceMarketInsightForCar(car, listingId)
+                .orElse(null);
         return new OwnerListingDetailPageModel(
                 allNeighborhoods,
                 listingNeighborhoodName,
@@ -109,7 +115,8 @@ public final class ListingViewServiceImpl implements ListingViewService {
                 nextReservationDisplay,
                 editPastAvailabilities,
                 wallToday.plusDays(forwardDays).toString(),
-                wallToday);
+                wallToday,
+                priceMarketInsight);
     }
 
     @Override

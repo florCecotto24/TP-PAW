@@ -1900,3 +1900,169 @@ body.reservation-chat-body {
     word-break: break-word;
 }
 
+/* Price market insight card (owner publish / edit listing) */
+.ryden-price-insight {
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent !important;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 255, 255, 1) 55%);
+}
+
+.ryden-price-insight--zone-red {
+    border-color: rgba(220, 53, 69, 0.5) !important;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.12) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.ryden-price-insight--zone-yellow {
+    border-color: rgba(255, 193, 7, 0.55) !important;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.16) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.ryden-price-insight--zone-green {
+    border-color: rgba(25, 135, 84, 0.5) !important;
+    background: linear-gradient(135deg, rgba(25, 135, 84, 0.12) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.ryden-price-insight__bar-wrap {
+    padding: 0.35rem 0 2.1rem;
+}
+
+.ryden-price-insight__bar-track {
+    position: relative;
+    height: 0.75rem;
+    border-radius: 999px;
+    overflow: visible;
+    --avg-pct: 50%;
+    --fade-width: 18%;
+    touch-action: none;
+}
+
+.ryden-price-insight__bar-hit {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -0.85rem;
+    bottom: -1.35rem;
+    z-index: 3;
+    cursor: pointer;
+    background: transparent;
+}
+
+.ryden-price-insight__bar-gradient {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    /* Red extremes, green at average, yellow fade between */
+    background: linear-gradient(
+        90deg,
+        #dc3545 0%,
+        #ffc107 calc(var(--avg-pct) - var(--fade-width)),
+        #198754 var(--avg-pct),
+        #ffc107 calc(var(--avg-pct) + var(--fade-width)),
+        #dc3545 100%
+    );
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.ryden-price-insight__marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    gap: 0.2rem;
+}
+
+.ryden-price-insight__marker-dot {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.ryden-price-insight__marker-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: #0d6efd;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.ryden-price-insight__marker--bound {
+    z-index: 4;
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.ryden-price-insight__marker--bound:focus-visible .ryden-price-insight__marker-dot {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.ryden-price-insight__marker--min .ryden-price-insight__marker-dot,
+.ryden-price-insight__marker--max .ryden-price-insight__marker-dot {
+    background-color: #dc3545;
+}
+
+.ryden-price-insight__marker--avg .ryden-price-insight__marker-dot {
+    background-color: #198754;
+    width: 1rem;
+    height: 1rem;
+}
+
+.ryden-price-insight__marker--user {
+    top: 50%;
+    transform: translateX(-50%);
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    z-index: 5;
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ryden-price-insight__marker--user.ryden-price-insight__marker--animate {
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ryden-price-insight__marker--user.ryden-price-insight__marker--dragging,
+.ryden-price-insight--drag-active .ryden-price-insight__marker--user {
+    transition: none;
+    cursor: grabbing;
+}
+
+.ryden-price-insight__marker--user .ryden-price-insight__marker-dot {
+    transform: translateY(-50%);
+    background-color: #0d6efd;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-width: 3px;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
+    cursor: inherit;
+}
+
+.ryden-price-insight--drag-active {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ryden-price-insight__marker--user .ryden-price-insight__marker-label {
+    margin-top: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: #0d6efd;
+}

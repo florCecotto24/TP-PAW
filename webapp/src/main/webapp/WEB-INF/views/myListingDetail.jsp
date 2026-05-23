@@ -125,8 +125,11 @@
                         <form:hidden path="neighborhoodId" id="nb_hid_editListing"/>
 
                         <div class="col-sm-6">
-                            <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                            <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
+                            <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
+                                                          initialUserPrice="${not empty editForm.pricePerDay ? editForm.pricePerDay : listing.dayPrice}"
+                                                          showDefaultPriceHint="true">
+                                <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
+                            </ryden:priceMarketInsightCard>
                             <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                         </div>
                         <spring:message code="publishCar.form.neighborhood.placeholder" var="editNbPh"/>
