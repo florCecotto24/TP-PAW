@@ -80,12 +80,19 @@ public final class MessageKeys {
 
     // car
     public static final String CAR_PLATE_ALREADY_EXISTS = "car.plate.alreadyExists";
+    public static final String CAR_NOT_FOUND = "car.notFound";
+    public static final String CAR_INVALID_STATUS_TRANSITION = "car.invalidStatusTransition";
 
     // listing
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";
     public static final String LISTING_AVAILABILITY_INCLUDES_PAST_DATES = "listing.availability.includesPastDates";
     public static final String LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON = "listing.availability.beyondPublishHorizon";
+    public static final String LISTING_AVAILABILITY_EDIT_CONFLICT = "listing.availability.editConflict";
+    public static final String LISTING_AVAILABILITY_WITHDRAW_CONFLICT = "listing.availability.withdrawConflict";
+    public static final String LISTING_AVAILABILITY_NOT_FOUND = "listing.availability.notFound";
+    public static final String LISTING_AVAILABILITY_NOT_OWNED = "listing.availability.notOwned";
+    public static final String LISTING_AVAILABILITY_NOT_OFFERED = "listing.availability.notOffered";
     public static final String LISTING_CHECKOUT_NOT_AFTER_CHECKIN = "listing.times.checkOutNotAfterCheckIn";
     public static final String LISTING_CHECKINOUT_MIN_GAP = "listing.times.minGapHours";
     public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";

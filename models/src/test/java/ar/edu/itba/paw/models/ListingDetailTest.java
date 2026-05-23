@@ -43,8 +43,6 @@ class ListingDetailTest {
                 .id(2L)
                 .owner(User.identities(3L, "o@test.com", "O", "O"))
                 .plate("AA123BB")
-                .brand("Toyota")
-                .model("Yaris")
                 .type(Car.Type.HATCHBACK)
                 .powertrain(Car.Powertrain.HYBRID)
                 .transmission(Car.Transmission.AUTOMATIC)

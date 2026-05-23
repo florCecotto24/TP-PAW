@@ -12,7 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
 
@@ -22,10 +22,10 @@ import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
 @Component("listingWebAuth")
 public final class ListingWebAuthorization {
 
-    private final ListingService listingService;
+    private final CarService carService;
 
-    public ListingWebAuthorization(final ListingService listingService) {
-        this.listingService = listingService;
+    public ListingWebAuthorization(final CarService carService) {
+        this.carService = carService;
     }
 
     public boolean isOwner(final Authentication authentication, final HttpServletRequest request) {
@@ -33,14 +33,22 @@ public final class ListingWebAuthorization {
         if (userId == null) {
             return false;
         }
-        final OptionalLong listingIdOpt = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, "/my-cars/");
-        if (!listingIdOpt.isPresent()) {
-            return false;
+        // New car-centric path: /my-cars/car/{carId}/...
+        final String path = request.getServletPath() != null ? request.getServletPath() : request.getRequestURI();
+        final OptionalLong carIdOpt = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, "/my-cars/car/");
+        if (carIdOpt.isPresent()) {
+            return carService.getCarById(carIdOpt.getAsLong())
+                    .map(c -> c.getOwnerId() == userId)
+                    .orElse(false);
         }
-        final long listingId = listingIdOpt.getAsLong();
-        return listingService.getListingDetailById(listingId)
-                .map(d -> d.getOwner().getId() == userId)
-                .orElse(false);
+        // Legacy path: /my-cars/{listingId}/... (still supported during Phase 7d transition)
+        final OptionalLong legacyIdOpt = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, "/my-cars/");
+        if (legacyIdOpt.isPresent()) {
+            return carService.getCarById(legacyIdOpt.getAsLong())
+                    .map(c -> c.getOwnerId() == userId)
+                    .orElse(false);
+        }
+        return false;
     }
 
     public AuthorizationManager<RequestAuthorizationContext> ownerAccess() {

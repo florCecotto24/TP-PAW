@@ -34,13 +34,14 @@ import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 
 /**
  * User rows via {@link UserDao}; blobs, mail, verification, and listing side effects use peer services.
- * {@code @Lazy} breaks cycles with {@link EmailVerificationService} and {@link ListingService}.
+ * {@code @Lazy} breaks cycles with {@link EmailVerificationService} and {@link CarService}.
  */
 @Service
 public final class UserServiceImpl implements UserService {
@@ -53,6 +54,7 @@ public final class UserServiceImpl implements UserService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserDao userDao;
+    private final CarDao carDao;
     private final ImageService imageService;
     private final StoredFileService storedFileService;
     private final EmailService emailService;
@@ -60,11 +62,12 @@ public final class UserServiceImpl implements UserService {
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final UserValidationPolicy validationPolicy;
     private final EmailVerificationService emailVerificationService;
-    private final ListingService listingService;
+    private final CarService carService;
 
     @Autowired
     public UserServiceImpl(
             final UserDao userDao,
+            final CarDao carDao,
             final ImageService imageService,
             final StoredFileService storedFileService,
             final EmailService emailService,
@@ -72,8 +75,9 @@ public final class UserServiceImpl implements UserService {
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final UserValidationPolicy validationPolicy,
             @Lazy final EmailVerificationService emailVerificationService,
-            @Lazy final ListingService listingService) {
+            @Lazy final CarService carService) {
         this.userDao = userDao;
+        this.carDao = carDao;
         this.imageService = imageService;
         this.storedFileService = storedFileService;
         this.emailService = emailService;
@@ -81,7 +85,7 @@ public final class UserServiceImpl implements UserService {
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.validationPolicy = validationPolicy;
         this.emailVerificationService = emailVerificationService;
-        this.listingService = listingService;
+        this.carService = carService;
     }
 
     @Override
@@ -395,6 +399,29 @@ public final class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> findOwnerCbuForCar(final long carId) {
+        final Optional<Long> ownerIdOpt = carDao.getCarById(carId)
+                .map(ar.edu.itba.paw.models.domain.Car::getOwner)
+                .map(User::getId);
+        if (ownerIdOpt.isEmpty()) {
+            LOGGER.atWarn().addArgument(carId).log("Car owner missing when resolving CBU for car (carId={})");
+            return Optional.empty();
+        }
+        final long ownerId = ownerIdOpt.get();
+        try {
+            return Optional.of(getUserCbu(ownerId));
+        } catch (final UserNotFoundException | CBUNotFoundException e) {
+            LOGGER.atWarn()
+                    .setCause(e)
+                    .addArgument(carId)
+                    .addArgument(ownerId)
+                    .log("Owner CBU unavailable for car (carId={}, ownerId={})");
+            return Optional.empty();
+        }
+    }
+
     private void assertNewPasswordPair(final String password, final String passwordConfirm) {
         if (password == null || passwordConfirm == null || !password.equals(passwordConfirm)) {
             throw new RegistrationPasswordException(MessageKeys.USER_REGISTRATION_PASSWORD_MISMATCH);
@@ -507,14 +534,14 @@ public final class UserServiceImpl implements UserService {
         final String normalized = cbu == null ? "" : cbu.trim();
         if (normalized.isEmpty()) {
             userDao.updateCbu(userId, null);
-            listingService.pauseActiveListingsDueToMissingCbuForOwnerAndNotify(userId);
+            carService.pauseActiveCarsDueToMissingCbuForOwnerAndNotify(userId);
             return;
         }
         if (!CbuRules.isValidFormat(normalized)) {
             throw new InvalidCbuFormatException(CbuRules.REQUIRED_DIGIT_LENGTH);
         }
         userDao.updateCbu(userId, normalized);
-        listingService.resumeListingsPausedDueToMissingCbuForOwner(userId);
+        carService.resumeCarsPausedDueToMissingCbuForOwner(userId);
     }
 
     @Override

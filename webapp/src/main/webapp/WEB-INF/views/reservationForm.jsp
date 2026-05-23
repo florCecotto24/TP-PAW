@@ -16,7 +16,7 @@
 <main class="container py-5">
     <spring:message code="reservationForm.title" var="reservationFormLabel"/>
     <c:url var="carDetailBreadcrumbUrl" value="/car-detail">
-        <c:param name="listingId" value="${reservationForm.listingId}"/>
+        <c:param name="carId" value="${reservationForm.carId}"/>
     </c:url>
     <ryden:breadcrumbTrail midLabel="${reservationForm.carName}" midHref="${carDetailBreadcrumbUrl}" currentLabel="${reservationFormLabel}"/>
     <div class="row justify-content-center">
@@ -70,7 +70,7 @@
                                data-ryden-booking-docs-need-identity="${fn:escapeXml(resMissingDocsNeedIdentityMsg)}"
                                data-ryden-booking-docs-save-failed="${fn:escapeXml(resMissingDocsSaveFailedMsg)}">
                         <form:errors path="fromDateTime" cssClass="text-danger d-block mb-2"/>
-                        <form:hidden path="listingId"/>
+                        <form:hidden path="carId"/>
                         <c:if test="${not empty availabilityId}">
                             <input type="hidden" name="availabilityId" value="<c:out value='${availabilityId}'/>"/>
                         </c:if>
@@ -97,8 +97,8 @@
 
                         <div class="d-flex gap-2 mt-2">
                             <c:choose>
-                                <c:when test="${not empty reservationForm.listingId}">
-                                    <a href="<c:url value='/car-detail'><c:param name='listingId' value='${reservationForm.listingId}'/></c:url>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
+                                <c:when test="${not empty reservationForm.carId}">
+                                    <a href="<c:url value='/car-detail'><c:param name='carId' value='${reservationForm.carId}'/></c:url>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
                                 </c:when>
                                 <c:otherwise>
                                     <a href="<c:url value='/car-detail'/>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>

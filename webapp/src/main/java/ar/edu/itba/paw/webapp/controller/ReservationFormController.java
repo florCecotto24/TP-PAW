@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -24,14 +25,15 @@ import org.springframework.web.servlet.view.RedirectView;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.reservation.ReservationException;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.ListingViewService;
+import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
@@ -42,16 +44,15 @@ import ar.edu.itba.paw.webapp.util.WallDateTimeUiFormatter;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
-/** Rider flow to create a reservation for a listing (GET form + POST submit). */
+/** Rider flow to create a reservation for a car (GET form + POST submit). */
 @Controller
 @RequestMapping("/reservation")
 public final class ReservationFormController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationFormController.class);
 
-
-    private final ListingService listingService;
-    private final ListingViewService listingViewService;
+    private final CarService carService;
+    private final ListingAvailabilityService listingAvailabilityService;
     private final ReservationService reservationService;
     private final ImageService imageService;
     private final LocaleMessages localeMessages;
@@ -60,16 +61,16 @@ public final class ReservationFormController {
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
 
     public ReservationFormController(
-            final ListingService listingService,
-            final ListingViewService listingViewService,
+            final CarService carService,
+            final ListingAvailabilityService listingAvailabilityService,
             final ReservationService reservationService,
             final ImageService imageService,
             final LocaleMessages localeMessages,
             final WallDateTimeUiFormatter wallDateTimeUiFormatter,
             final UserService userService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy) {
-        this.listingService = listingService;
-        this.listingViewService = listingViewService;
+        this.carService = carService;
+        this.listingAvailabilityService = listingAvailabilityService;
         this.reservationService = reservationService;
         this.imageService = imageService;
         this.localeMessages = localeMessages;
@@ -81,24 +82,21 @@ public final class ReservationFormController {
     @GetMapping("/new")
     public ModelAndView index(
             @CurrentUser final User currentUser,
-            @RequestParam(name = "listingId") final long listingId,
+            @RequestParam(name = "carId") final long carId,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "carName", required = false) final String carName,
             @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
             @RequestParam(value = "untilDateTime", required = false) final String untilDateTime,
             @RequestParam(value = "reservationTotal", required = false) final String reservationTotal,
             @ModelAttribute("reservationForm") final ReservationForm form) {
-        final Optional<Listing> listingOpt = listingService.getListingById(listingId);
-        if (listingOpt.isEmpty()) {
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty()) {
             return redirectToSearch();
         }
-        final Listing listing = listingOpt.get();
-        form.setListingId(listingId);
-        form.setCarName(carName != null && !carName.isBlank() ? carName : listing.getTitle());
-        String loc = listingViewService.formatPublicPickupLocation(listing);
-        if (loc == null || loc.isBlank()) {
-            loc = listing.getStartPointStreet();
-        }
+        final Car car = carOpt.get();
+        form.setCarId(carId);
+        form.setCarName(carName != null && !carName.isBlank() ? carName : car.getBrand() + " " + car.getModel());
+        final String loc = resolveCarHandoverLocation(carId);
         form.setDeliveryLocation(loc);
         form.setFromDateTime(fromDateTime);
         form.setUntilDateTime(untilDateTime);
@@ -109,7 +107,7 @@ public final class ReservationFormController {
         mav.addObject("riderForename", rider.getForename());
         mav.addObject("riderSurname", rider.getSurname());
         mav.addObject("riderEmail", rider.getEmail());
-        addReservationPricingToModel(mav, listingId, fromDateTime, untilDateTime, reservationTotal);
+        addReservationPricingToModel(mav, carId, fromDateTime, untilDateTime, reservationTotal);
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         addReservationPolicyHours(mav);
         addReservationFormRiderDocs(mav, rider);
@@ -165,13 +163,13 @@ public final class ReservationFormController {
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {
 
-        if (form.getListingId() == null) {
+        if (form.getCarId() == null) {
             return redirectToSearch();
         }
-        final long listingId = form.getListingId();
+        final long carId = form.getCarId();
 
-        final Optional<Listing> listingOpt = listingService.getListingById(listingId);
-        if (listingOpt.isEmpty()) {
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty()) {
             return redirectToSearch();
         }
 
@@ -182,7 +180,7 @@ public final class ReservationFormController {
             mav.addObject("riderForename", riderErr.getForename());
             mav.addObject("riderSurname", riderErr.getSurname());
             mav.addObject("riderEmail", riderErr.getEmail());
-            addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+            addReservationPricingToModel(mav, carId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             addReservationPolicyHours(mav);
             addReservationFormRiderDocs(mav, riderErr);
@@ -197,7 +195,7 @@ public final class ReservationFormController {
             mav.addObject("riderForename", riderCar.getForename());
             mav.addObject("riderSurname", riderCar.getSurname());
             mav.addObject("riderEmail", riderCar.getEmail());
-            addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+            addReservationPricingToModel(mav, carId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             addReservationPolicyHours(mav);
             addReservationFormRiderDocs(mav, riderCar);
@@ -210,15 +208,15 @@ public final class ReservationFormController {
 
             LOGGER.atInfo()
                     .addArgument(riderId)
-                    .addArgument(listingId)
+                    .addArgument(carId)
                     .addArgument(availabilityId)
                     .addArgument(form.getFromDateTime())
                     .addArgument(form.getUntilDateTime())
-                    .log("Submitting reservation for riderId={}, listingId={}, availabilityId={}, fromDateTime={}, untilDateTime={}");
+                    .log("Submitting reservation for riderId={}, carId={}, availabilityId={}, fromDateTime={}, untilDateTime={}");
 
-            reservation = reservationService.submitRiderReservation(
+            reservation = reservationService.submitRiderReservationByCar(
                     riderId,
-                    listingId,
+                    carId,
                     availabilityId,
                     form.getFromDateTime(),
                     form.getUntilDateTime());
@@ -230,7 +228,7 @@ public final class ReservationFormController {
             mav.addObject("riderForename", riderEx.getForename());
             mav.addObject("riderSurname", riderEx.getSurname());
             mav.addObject("riderEmail", riderEx.getEmail());
-            addReservationPricingToModel(mav, listingId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
+            addReservationPricingToModel(mav, carId, form.getFromDateTime(), form.getUntilDateTime(), reservationTotal);
             wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
             addReservationPolicyHours(mav);
             addReservationFormRiderDocs(mav, riderEx);
@@ -245,18 +243,28 @@ public final class ReservationFormController {
         mav.addObject("email", riderDone.getEmail());
         mav.addObject("fromDateTime", form.getFromDateTime());
         mav.addObject("untilDateTime", form.getUntilDateTime());
-        final String confirmLoc = listingViewService.formatRiderReservationHandoverSummary(listingOpt.get(), reservation);
+        final String confirmLoc = resolveCarHandoverLocation(carId);
         mav.addObject("deliveryLocation", confirmLoc == null || confirmLoc.isBlank() ? "" : confirmLoc);
         mav.addObject("reservationId", reservation.getId());
-        mav.addObject("listingId", listingId);
+        mav.addObject("carId", carId);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("reservationTotal", ArsMoneyFormat.format(reservation.getTotalPrice()));
-        mav.addObject("ownerCbu", userService.findOwnerCbuForListing(listingId).orElse(""));
+        mav.addObject("ownerCbu", userService.findOwnerCbuForCar(carId).orElse(""));
         wallDateTimeUiFormatter.addReservationFormDateDisplays(mav, form);
         addReservationPolicyHours(mav);
         mav.addObject("uploadMaxImageBytes", imageService.getMaxImageBytes());
         mav.addObject("uploadMaxImageMegabytes", imageService.getMaxImageMegabytesRoundedUp());
         return mav;
+    }
+
+    private String resolveCarHandoverLocation(final long carId) {
+        return listingAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.now())
+                .map(av -> {
+                    final StringBuilder sb = new StringBuilder(av.getStartPointStreet());
+                    av.getStartPointNumber().ifPresent(n -> sb.append(" ").append(n));
+                    return sb.toString().trim();
+                })
+                .orElse("");
     }
 
     private void addReservationPolicyHours(final ModelAndView mav) {
@@ -266,7 +274,7 @@ public final class ReservationFormController {
 
     private void addReservationPricingToModel(
             final ModelAndView mav,
-            final long listingId,
+            final long carId,
             final String fromDateTime,
             final String untilDateTime,
             final String reservationTotal) {
@@ -275,7 +283,7 @@ public final class ReservationFormController {
                 reservationService.normalizeClientReservationTotal(reservationTotal).orElse(null));
         mav.addObject(
                 "reservationTotal",
-                reservationService.reservationTotalDisplay(listingId, fromDateTime, untilDateTime).orElse(null));
+                reservationService.reservationTotalDisplayByCar(carId, fromDateTime, untilDateTime).orElse(null));
     }
 
     private ModelAndView redirectToSearch() {

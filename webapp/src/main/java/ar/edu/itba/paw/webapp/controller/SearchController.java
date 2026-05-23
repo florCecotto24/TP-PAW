@@ -1,10 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
-import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -31,11 +31,11 @@ public final class SearchController {
     private static final Set<String> VALID_SORTS = Set.of(
             "date,desc", "date,asc", "price,asc", "price,desc", "rating,asc", "rating,desc");
 
-    private final ListingService listingService;
+    private final CarService carService;
     private final LocationService locationService;
 
-    public SearchController(final ListingService listingService, final LocationService locationService) {
-        this.listingService = listingService;
+    public SearchController(final CarService carService, final LocationService locationService) {
+        this.carService = carService;
         this.locationService = locationService;
     }
 
@@ -62,9 +62,9 @@ public final class SearchController {
         final User viewer = currentUser;
 
         final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
-        final var criteria = listingService.buildSearchCriteria(
+        final var criteria = carService.buildSearchCriteria(
                 query, category, transmission, powertrain, priceMin, priceMax, rating, from, until, page, sort, viewer, neighborhoodIds);
-        final Page<ListingCard> resultPage = listingService.searchListingCards(criteria);
+        final Page<CarCard> resultPage = carService.searchCarCards(criteria);
 
         final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
         if (safePage != page) {
@@ -78,7 +78,7 @@ public final class SearchController {
             return new ModelAndView(redirectView);
         }
         final List<VehicleCardView> results = resultPage.getContent().stream()
-                .map(VehicleCardView::fromListingCard)
+                .map(VehicleCardView::fromCarCard)
                 .collect(Collectors.toList());
 
         final String safeSort = sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;

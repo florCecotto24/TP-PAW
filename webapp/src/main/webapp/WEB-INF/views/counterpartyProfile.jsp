@@ -57,7 +57,7 @@
                                                     </c:otherwise>
                                                 </c:choose>
                                                 <c:url var="counterpartyListingHref" value="/car-detail">
-                                                    <c:param name="listingId"><c:out value="${car.listingId}"/></c:param>
+                                                    <c:param name="carId"><c:out value="${car.carId}"/></c:param>
                                                 </c:url>
                                                 <ryden:carCard
                                                         model="${car.model}"
@@ -78,7 +78,7 @@
                                                     class="btn btn-outline-primary"
                                                     id="counterpartyListingsLoadMoreBtn"
                                                     data-owner-user-id="${counterpartyActiveListingsLoadMore.ownerUserId}"
-                                                    data-exclude-listing-id="<c:out value='${counterpartyActiveListingsLoadMore.excludeListingId}'/>"
+                                                    data-exclude-car-id="<c:out value='${counterpartyActiveListingsLoadMore.excludeCarId}'/>"
                                                     data-next-page="${counterpartyActiveListingsLoadMore.nextPageToLoad}"
                                                     data-default-label="<c:out value='${counterpartyViewMoreListingsLabel}'/>">
                                                 <spring:message code="counterpartyProfile.activeListings.viewMore"/>

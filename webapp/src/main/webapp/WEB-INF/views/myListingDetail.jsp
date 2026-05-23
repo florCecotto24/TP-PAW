@@ -8,8 +8,8 @@
 <html lang="en">
 <head>
     <c:choose>
-        <c:when test="${listing != null}">
-            <title><spring:message code="myListingDetail.pageTitle" arguments="${listing.title}"/></title>
+        <c:when test="${hasPublishedAvailability}">
+            <title><spring:message code="myListingDetail.pageTitle" arguments="${listingTitle}"/></title>
         </c:when>
         <c:otherwise>
             <title><c:out value="${car.brand} ${car.model}"/> - Ryden</title>
@@ -23,16 +23,16 @@
 <main class="container pt-5 pb-4">
     <spring:message code="navbar.myListings" var="myListingsLabel"/>
     <c:choose>
-    <c:when test="${listing != null}">
-    <c:url var="editListingUrl" value="/my-cars/${listing.id}/edit"/>
-    <c:url var="toggleListingUrl" value="/my-cars/${listing.id}/toggle"/>
-    <c:url var="finishListingUrl" value="/my-cars/${listing.id}/finish"/>
+    <c:when test="${hasPublishedAvailability}">
+    <c:url var="editListingUrl" value="/my-cars/car/${car.id}/edit"/>
+    <c:url var="toggleListingUrl" value="/my-cars/car/${car.id}/toggle"/>
+    <c:url var="deactivateCarUrl" value="/my-cars/car/${car.id}/deactivate"/>
     <c:set var="editBindingResult" value="${requestScope['org.springframework.validation.BindingResult.editForm']}"/>
     <c:set var="hasEditErrors" value="${editBindingResult != null and editBindingResult.errorCount > 0}"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
             homeHref="${pageContext.request.contextPath}/my-cars"
-            currentLabel="${listing.title}"/>
+            currentLabel="${listingTitle}"/>
 
     <section class="reservation-management-header mb-4">
         <h1 class="h3 fw-bold mb-2"><spring:message code="myListingDetail.heading"/></h1>
@@ -52,7 +52,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingDetail.carSummary.title"/></h2>
-                        <c:if test="${statusKey != 'FINISHED'}">
+                        <c:if test="${statusKey != 'DEACTIVATED'}">
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm"
                                 id="toggleEditBtn">
@@ -86,11 +86,11 @@
                             <!-- <p class="mb-2 text-secondary small">
                                 <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
                             </p> -->
-                            <c:if test="${not empty listing.startPointStreet}">
+                            <c:if test="${not empty listingStreetName}">
                                 <div class="mb-2 small text-secondary">
                                     <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
                                     <c:if test="${not empty listingNeighborhoodName}"><c:out value="${listingNeighborhoodName}"/>, </c:if>
-                                    <c:out value="${listing.startPointStreet}"/>
+                                    <c:out value="${listingStreetName}"/>
                                     <c:if test="${not empty listingStreetNumber}"> <c:out value="${listingStreetNumber}"/></c:if>
                                 </div>
                             </c:if>
@@ -99,7 +99,7 @@
                                     <spring:message code="myListingDetail.pricePerDay"/>
                                 </span>
                                 <fmt:setLocale value="es_AR"/>
-                                <span class="h4 fw-bold text-primary mb-0"><fmt:formatNumber value="${listing.dayPrice}" type="currency" currencyCode="ARS"/></span>
+                                <span class="h4 fw-bold text-primary mb-0"><fmt:formatNumber value="${listingDayPrice}" type="currency" currencyCode="ARS"/></span>
                             </div>
                         </div>
                     </div>
@@ -107,7 +107,7 @@
                 </div>
             </article>
 
-            <c:if test="${statusKey != 'FINISHED'}">
+            <c:if test="${statusKey != 'DEACTIVATED'}">
             <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="editListingSection"
                      style="${hasEditErrors ? '' : 'display:none;'}">
                 <div class="card-body p-4">
@@ -125,8 +125,9 @@
                         <form:hidden path="neighborhoodId" id="nb_hid_editListing"/>
 
                         <div class="col-sm-6">
+                            <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
                             <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
-                                                          initialUserPrice="${not empty editForm.pricePerDay ? editForm.pricePerDay : listing.dayPrice}"
+                                                          initialUserPrice="${not empty editForm.pricePerDay ? editForm.pricePerDay : listingDayPrice}"
                                                           showDefaultPriceHint="true">
                                 <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
                             </ryden:priceMarketInsightCard>
@@ -319,7 +320,7 @@
         <div class="col-lg-4">
             <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky bg-white">
                 <div class="card-body p-4">
-                    <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
+                    <spring:message code="enum.car.status.${statusKey}" var="listingStatusLabel"/>
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
                             <spring:message code="myListingDetail.status.label"/>
@@ -328,10 +329,10 @@
                             <c:when test="${statusKey == 'ACTIVE'}">
                                 <span class="badge text-bg-success fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
                             </c:when>
-                            <c:when test="${statusKey == 'PAUSED' || statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
+                            <c:when test="${statusKey == 'PAUSED' || statusKey == 'LACK_DOC' || statusKey == 'ADMIN_PAUSED'}">
                                 <span class="badge text-bg-warning text-dark fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
                             </c:when>
-                            <c:when test="${statusKey == 'FINISHED'}">
+                            <c:when test="${statusKey == 'DEACTIVATED' || statusKey == 'UNAVAILABLE'}">
                                 <span class="badge text-bg-secondary fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
                             </c:when>
                             <c:otherwise>
@@ -342,7 +343,7 @@
 
                     <div class="d-flex flex-column gap-3 px-2">
                         <c:url var="listingUrl" value="/car-detail">
-                            <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
+                            <c:param name="carId"><c:out value="${car.id}"/></c:param>
                         </c:url>
                         <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
                             <i class="bi bi-eye me-2"></i><spring:message code="myListingDetail.actions.viewListing"/>
@@ -379,7 +380,7 @@
                                     <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
-                            <c:when test="${statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
+                            <c:when test="${statusKey == 'LACK_DOC'}">
                                 <p class="text-secondary small mb-2">
                                     <spring:message code="myListingDetail.status.pausedMissingCbuHint" arguments="${cbuRequiredDigits}"/>
                                 </p>
@@ -390,7 +391,12 @@
                                     <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                 </button>
                             </c:when>
-                            <c:when test="${statusKey == 'FINISHED'}">
+                            <c:when test="${statusKey == 'ADMIN_PAUSED' || statusKey == 'UNAVAILABLE'}">
+                                <p class="text-secondary small mb-0">
+                                    <spring:message code="myListingDetail.status.adminPausedHint"/>
+                                </p>
+                            </c:when>
+                            <c:when test="${statusKey == 'DEACTIVATED'}">
                                 <p class="text-secondary small mb-0">
                                     <spring:message code="myListingDetail.status.finishedHint"/>
                                 </p>
@@ -402,7 +408,7 @@
         </div>
     </div>
 
-    <c:url var="listingReservationsUrl" value="/my-cars/${listing.id}/reservations"/>
+    <c:url var="listingReservationsUrl" value="/my-cars/car/${car.id}/reservations"/>
     <article class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
         <div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
@@ -531,13 +537,13 @@
             </div>
         </form>
     </ryden:modal>
-    <c:if test="${statusKey != 'FINISHED'}">
+    <c:if test="${statusKey != 'DEACTIVATED'}">
         <ryden:modal
                 id="finishListingModal"
                 title="${finishModalTitle}"
                 message="${finishModalMessage}"
                 variant="danger">
-            <form method="post" action="<c:out value='${finishListingUrl}'/>">
+            <form method="post" action="<c:out value='${deactivateCarUrl}'/>">
                 <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <button type="button" class="btn btn-secondary" data-modal-close="finishListingModal">

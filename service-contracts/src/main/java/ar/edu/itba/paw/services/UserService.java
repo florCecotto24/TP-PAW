@@ -132,6 +132,8 @@ public interface UserService {
      */
     Optional<String> findOwnerCbuForListing(long listingId);
 
+    Optional<String> findOwnerCbuForCar(long carId);
+
     /** Whether {@code user} has a persisted CBU that satisfies {@link ar.edu.itba.paw.models.util.CbuRules}. */
     boolean hasValidCbu(User user);
 

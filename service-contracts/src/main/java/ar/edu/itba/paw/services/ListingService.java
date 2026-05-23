@@ -253,6 +253,25 @@ public interface ListingService {
             int pageSizeOrZero,
             Long excludeListingId);
 
+    /**
+     * Same as the above but also accepts {@code excludeCarId} for car-centric grids that want to exclude by car.
+     */
+    OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
+            long ownerId,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            List<String> listingStatus,
+            List<String> rating,
+            String textQuery,
+            int page,
+            String sort,
+            int pageSizeOrZero,
+            Long excludeListingId,
+            Long excludeCarId);
+
     /** Whether the owner has at least one listing row. */
     boolean hasListingsByOwner(long ownerId);
 

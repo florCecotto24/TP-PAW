@@ -13,6 +13,12 @@ import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 /** Step 1 of the two-step publish flow: vehicle attributes and pictures only. */
 public final class PublishCarForm {
 
+    /** Catalog brand ID selected by the picker; {@code 0} = "Other" (free-text). */
+    private Long brandId;
+
+    /** Catalog model ID selected by the picker; {@code 0} = "Other" (free-text). */
+    private Long modelId;
+
     @NotBlank(message = "{validation.brand.notBlank}", groups = ValidationGroups.OnPublishCar.class)
     @Size(message = "{validation.brand.size}", min = 2, max = 50, groups = ValidationGroups.OnPublishCar.class)
     private String brand;
@@ -46,12 +52,28 @@ public final class PublishCarForm {
         this.brand = brand;
     }
 
+    public Long getBrandId() {
+        return brandId;
+    }
+
+    public void setBrandId(final Long brandId) {
+        this.brandId = brandId;
+    }
+
     public String getModel() {
         return model;
     }
 
     public void setModel(final String model) {
         this.model = model;
+    }
+
+    public Long getModelId() {
+        return modelId;
+    }
+
+    public void setModelId(final Long modelId) {
+        this.modelId = modelId;
     }
 
     public String getPlate() {

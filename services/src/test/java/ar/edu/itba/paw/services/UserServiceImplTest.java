@@ -27,6 +27,7 @@ import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
@@ -37,6 +38,9 @@ public class UserServiceImplTest {
 
     @Mock
     private UserDao userDao;
+
+    @Mock
+    private CarDao carDao;
 
     @Mock
     private ImageService imageService;
@@ -54,7 +58,7 @@ public class UserServiceImplTest {
     private EmailVerificationService emailVerificationService;
 
     @Mock
-    private ListingService listingService;
+    private CarService carService;
 
     private UserServiceImpl userService;
     private ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
@@ -67,6 +71,7 @@ public class UserServiceImplTest {
         profileDocumentUploadPolicy = new ProfileDocumentUploadPolicy(environment);
         userService = new UserServiceImpl(
                 userDao,
+                carDao,
                 imageService,
                 storedFileService,
                 emailService,
@@ -74,7 +79,7 @@ public class UserServiceImplTest {
                 profileDocumentUploadPolicy,
                 UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"),
                 emailVerificationService,
-                listingService);
+                carService);
     }
 
     @Test

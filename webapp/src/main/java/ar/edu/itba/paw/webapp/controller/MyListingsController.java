@@ -5,7 +5,6 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.ListingDetail;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
@@ -15,6 +14,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.OwnerListingDetailPageModel;
 import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ListingService;
 import ar.edu.itba.paw.services.ListingViewService;
 import ar.edu.itba.paw.services.LocationService;
@@ -22,6 +22,7 @@ import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.listing.ListingValidationException;
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -74,7 +75,6 @@ public final class MyListingsController {
     private static final String TAB_LISTINGS = "listings";
     private static final String TAB_RESERVATIONS = "reservations";
 
-    private final ListingService listingService;
     private final ListingViewService listingViewService;
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
@@ -85,9 +85,11 @@ public final class MyListingsController {
     private final CarPictureService carPictureService;
     private final LocationService locationService;
     private final UserService userService;
+    private final ListingAvailabilityService listingAvailabilityService;
+    private final ReservationTimingPolicy reservationTimingPolicy;
+    private final ListingService listingService;
 
     public MyListingsController(
-            final ListingService listingService,
             final ListingViewService listingViewService,
             final ReservationService reservationService,
             final ReservationViewService reservationViewService,
@@ -97,8 +99,10 @@ public final class MyListingsController {
             final CarService carService,
             final CarPictureService carPictureService,
             final LocationService locationService,
-            final UserService userService) {
-        this.listingService = listingService;
+            final UserService userService,
+            final ListingAvailabilityService listingAvailabilityService,
+            final ReservationTimingPolicy reservationTimingPolicy,
+            final ListingService listingService) {
         this.listingViewService = listingViewService;
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
@@ -109,6 +113,9 @@ public final class MyListingsController {
         this.carPictureService = carPictureService;
         this.locationService = locationService;
         this.userService = userService;
+        this.listingAvailabilityService = listingAvailabilityService;
+        this.reservationTimingPolicy = reservationTimingPolicy;
+        this.listingService = listingService;
     }
 
     @InitBinder("editForm")
@@ -156,7 +163,7 @@ public final class MyListingsController {
         final String listingsSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final String ownerResSort = MyHubSortSanitizer.sanitize(ownerSort, DEFAULT_SORT);
         // Cars tab data
-        final var listingsCriteria = listingService.buildOwnerListingSearchCriteria(
+        final var listingsCriteria = carService.buildOwnerCarSearchCriteria(
                 me.getId(), category, transmission, powertrain, priceMin, priceMax,
                 listingStatus, rating, q, page, listingsSort);
         final Page<CarCard> resultPage = carService.getOwnerCarCards(listingsCriteria);
@@ -205,92 +212,144 @@ public final class MyListingsController {
         return mav;
     }
 
-    @GetMapping("/{listingId}")
+    @GetMapping("/{listingOrCarId}")
     public ModelAndView listingDetail(
             @CurrentUser final User currentUser,
-            @PathVariable("listingId") final long listingId) {
+            @PathVariable("listingOrCarId") final long id) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
-        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
-            return new ModelAndView(redirectTo("/my-cars"));
+        final Optional<Car> directCar = carService.getCarById(id);
+        if (directCar.isPresent() && directCar.get().getOwnerId() == me.getId()) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + id));
         }
-
-        return buildDetailModelAndView(listingDetailOpt.get(), new ListingEditForm());
+        return new ModelAndView(redirectTo("/my-cars"));
     }
 
-    @PostMapping("/{listingId}/edit")
-    public ModelAndView editListing(
+    @PostMapping("/car/{carId}/edit")
+    public ModelAndView editCar(
             @CurrentUser final User currentUser,
-            @PathVariable("listingId") final long listingId,
+            @PathVariable("carId") final long carId,
             @Validated(ValidationGroups.OnListingEdit.class) @ModelAttribute("editForm") final ListingEditForm editForm,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
-        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
-        if (listingDetailOpt.get().getListing().getStatus() == Listing.Status.FINISHED) {
-            return new ModelAndView(redirectTo("/my-cars/" + listingId));
+        if (carOpt.get().getStatus() == Car.Status.DEACTIVATED) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         if (errors.hasErrors()) {
-            return buildDetailModelAndView(listingDetailOpt.get(), editForm);
+            final Optional<OwnerListingDetailPageModel> pmOpt =
+                    listingViewService.buildOwnerCarDetailPageModelFromCar(carId, LocaleContextHolder.getLocale());
+            if (pmOpt.isPresent()) {
+                final ModelAndView mav = new ModelAndView("myListingDetail");
+                pmOpt.get().populateModel(mav::addObject);
+                mav.addObject("editForm", editForm);
+                mav.addObject("activeTab", "my-cars");
+                return mav;
+            }
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
-
-        listingService.updateOwnerListing(
-                me.getId(),
-                listingId,
-                editForm.getPricePerDay(),
-                editForm.getStartPointStreet(),
-                editForm.getStartPointNumber(),
-                editForm.getDescription(),
-                editForm.getCheckInTime(),
-                editForm.getCheckOutTime(),
-                editForm.toAvailabilityPeriods(),
-                editForm.toPeriodPrices(),
-                editForm.getNeighborhoodId());
-        return new ModelAndView(redirectTo("/my-cars/" + listingId));
+        final List<ListingAvailability> existing = listingAvailabilityService.findByCarId(carId);
+        final List<AvailabilityPeriod> newPeriods = editForm.toAvailabilityPeriods();
+        final List<BigDecimal> newPeriodPrices = editForm.toPeriodPrices();
+        if (newPeriods.isEmpty()) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        }
+        if (existing.isEmpty()) {
+            try {
+                listingAvailabilityService.createCarAvailabilityPeriods(
+                        carId,
+                        editForm.getPricePerDay(),
+                        editForm.getStartPointStreet(),
+                        editForm.getStartPointNumber(),
+                        editForm.getNeighborhoodId(),
+                        editForm.getCheckInTime(),
+                        editForm.getCheckOutTime(),
+                        newPeriods,
+                        newPeriodPrices);
+            } catch (final ListingValidationException e) {
+                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+                final Optional<OwnerListingDetailPageModel> pmOpt =
+                        listingViewService.buildOwnerCarDetailPageModelFromCar(carId, LocaleContextHolder.getLocale());
+                if (pmOpt.isPresent()) {
+                    final ModelAndView mav = new ModelAndView("myListingDetail");
+                    pmOpt.get().populateModel(mav::addObject);
+                    mav.addObject("editForm", editForm);
+                    mav.addObject("activeTab", "my-cars");
+                    return mav;
+                }
+            }
+        } else {
+            final ListingAvailability mostRecent = existing.stream()
+                    .max(java.util.Comparator.comparing(ListingAvailability::getCreatedAt))
+                    .get();
+            try {
+                for (int i = 0; i < newPeriods.size(); i++) {
+                    final AvailabilityPeriod np = newPeriods.get(i);
+                    final BigDecimal price = (i < newPeriodPrices.size() && newPeriodPrices.get(i) != null)
+                            ? newPeriodPrices.get(i)
+                            : editForm.getPricePerDay();
+                    listingAvailabilityService.applyOwnerEditByCar(
+                            carId,
+                            mostRecent.getStartInclusive(),
+                            mostRecent.getEndInclusive(),
+                            np.getStartInclusive(),
+                            np.getEndInclusive(),
+                            price,
+                            editForm.getStartPointStreet(),
+                            editForm.getStartPointNumber(),
+                            editForm.getNeighborhoodId(),
+                            editForm.getCheckInTime(),
+                            editForm.getCheckOutTime());
+                }
+            } catch (final ListingValidationException e) {
+                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            }
+        }
+        return new ModelAndView(redirectTo("/my-cars/car/" + carId));
     }
 
-    @PostMapping("/{listingId}/finish")
-    public ModelAndView finishListing(
+    @PostMapping("/car/{carId}/deactivate")
+    public ModelAndView deactivateCar(
             @CurrentUser final User currentUser,
-            @PathVariable("listingId") final long listingId) {
+            @PathVariable("carId") final long carId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        listingService.finishListing(me.getId(), listingId);
-        return new ModelAndView(redirectTo("/my-cars/" + listingId));
+        carService.deactivateCar(me.getId(), carId);
+        return new ModelAndView(redirectTo("/my-cars/car/" + carId));
     }
 
-    @PostMapping("/{listingId}/toggle")
-    public ModelAndView toggleListing(
+    @PostMapping("/car/{carId}/toggle")
+    public ModelAndView toggleCar(
             @CurrentUser final User currentUser,
-            @PathVariable("listingId") final long listingId,
+            @PathVariable("carId") final long carId,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         try {
-            listingService.toggleListingStatus(me.getId(), listingId);
+            carService.toggleCarStatus(me.getId(), carId);
         } catch (final ListingValidationException e) {
             redirectAttributes.addFlashAttribute("listingToggleErrorMessage", localeMessages.msg(e));
         }
-        return new ModelAndView(redirectTo("/my-cars/" + listingId));
+        return new ModelAndView(redirectTo("/my-cars/car/" + carId));
     }
 
-    @GetMapping("/{listingId}/reservations")
-    public ModelAndView listingReservations(
+    @GetMapping("/car/{carId}/reservations")
+    public ModelAndView carReservations(
             @CurrentUser final User currentUser,
-            @PathVariable("listingId") final long listingId,
+            @PathVariable("carId") final long carId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String reservationStatus,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(listingId);
-        if (listingDetailOpt.isEmpty() || listingDetailOpt.get().getOwner().getId() != me.getId()) {
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
         page = Math.max(0, page);
         final String statusFilter = reservationViewService.normalizeReservationStatusQueryParam(reservationStatus);
         final Page<ReservationCard> resultPage =
-                reservationService.getListingReservationCards(
-                        me.getId(), listingId, page, paginationPolicy.getDefaultPageSize(), statusFilter);
+                reservationService.getCarReservationCards(
+                        me.getId(), carId, page, paginationPolicy.getDefaultPageSize(), statusFilter);
         final int safeReservationsPage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
         if (safeReservationsPage != page) {
             final RedirectView redirectView = new RedirectView(
@@ -306,10 +365,9 @@ public final class MyListingsController {
                 .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
                 .collect(Collectors.toList());
 
-        final ListingDetail detail = listingDetailOpt.get();
+        final Car car = carOpt.get();
         final ModelAndView mav = new ModelAndView("listingReservations");
-        mav.addObject("listing", detail.getListing());
-        mav.addObject("car", detail.getCar());
+        mav.addObject("car", car);
         mav.addObject("reservations", reservations);
         mav.addObject("listingReservationsPage", resultPage);
         mav.addObject("statusFilter", statusFilter);
@@ -326,16 +384,23 @@ public final class MyListingsController {
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
-        final Optional<ListingDetail> detailOpt = listingService.findMostRecentListingByCar(carId)
-                .flatMap(l -> listingService.getListingDetailById(l.getId()));
-        if (detailOpt.isPresent()) {
-            return buildDetailModelAndView(detailOpt.get(), new ListingEditForm());
+        final Optional<OwnerListingDetailPageModel> pmOpt =
+                listingViewService.buildOwnerCarDetailPageModelFromCar(carId, LocaleContextHolder.getLocale());
+        final ListingEditForm editForm = new ListingEditForm();
+        if (pmOpt.isPresent()) {
+            applyEditFormDefaultsFromAvailabilities(editForm, pmOpt.get().getAvailabilities());
+            final ModelAndView mav = new ModelAndView("myListingDetail");
+            pmOpt.get().populateModel(mav::addObject);
+            mav.addObject("editForm", editForm);
+            mav.addObject("activeTab", "my-cars");
+            return mav;
         }
         final long carImageId = carPictureService.getCarPicturesByCarId(carOpt.get().getId()).stream()
                 .findFirst().map(p -> p.getImageId()).orElse(0L);
         final ModelAndView mav = new ModelAndView("myListingDetail");
         mav.addObject("car", carOpt.get());
         mav.addObject("carImageId", carImageId);
+        mav.addObject("hasPublishedAvailability", false);
         mav.addObject("activeTab", "my-cars");
         return mav;
     }
@@ -373,7 +438,7 @@ public final class MyListingsController {
         }
         if (!errors.hasErrors()) {
             try {
-                listingService.validatePublicationAvailabilityRiderLead(
+                listingAvailabilityService.validatePublicationAvailabilityRiderLead(
                         form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now());
             } catch (final AvailabilityRiderLeadViolationException e) {
                 errors.rejectValue(
@@ -383,7 +448,7 @@ public final class MyListingsController {
         }
         if (!errors.hasErrors()) {
             try {
-                listingService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
+                listingAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
             } catch (final ListingValidationException e) {
                 errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             }
@@ -392,19 +457,17 @@ public final class MyListingsController {
             return buildCreateListingView(carOpt.get(), form, freshUser);
         }
         try {
-            final Listing listing = listingService.createListingForCar(
+            listingAvailabilityService.createCarAvailabilityPeriods(
                     carId,
-                    me.getId(),
                     form.getPricePerDay(),
                     form.getStartPointStreet(),
                     form.getStartPointNumber(),
-                    form.getDescription(),
+                    form.getNeighborhoodId(),
                     form.getCheckInTime(),
                     form.getCheckOutTime(),
                     form.toAvailabilityPeriods(),
-                    form.toPeriodPrices(),
-                    form.getNeighborhoodId());
-            return new ModelAndView(redirectTo("/my-cars/" + listing.getId()));
+                    form.toPeriodPrices());
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         } catch (final ListingValidationException e) {
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             return buildCreateListingView(carOpt.get(), form, freshUser);
@@ -419,7 +482,7 @@ public final class MyListingsController {
             @RequestParam(name = "checkIn", required = false) final String checkInRaw) {
         WebAuthUtils.requireUser(currentUser);
         final LocalTime lt = parseCheckInParam(checkInRaw);
-        final LocalDate minFrom = listingService.getPublicationMinAvailabilityFirstWallDay(lt, Instant.now());
+        final LocalDate minFrom = listingAvailabilityService.getPublicationMinAvailabilityFirstWallDay(lt, Instant.now());
         return Map.of("minFrom", minFrom.toString());
     }
 
@@ -461,11 +524,11 @@ public final class MyListingsController {
         mav.addObject("createListingForm", form);
         mav.addObject("userHasCbu", userHasCbu);
         mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
-        final LocalDate minAvail = listingService.getPublicationMinAvailabilityFirstWallDay(
+        final LocalDate minAvail = listingAvailabilityService.getPublicationMinAvailabilityFirstWallDay(
                 form.getCheckInTime(), Instant.now());
         mav.addObject("publishMinAvailabilityFrom", minAvail.toString());
-        mav.addObject("pickupLeadHours", listingService.getConfiguredPickupLeadHours());
-        final int forwardDays = listingService.getConfiguredMaxAvailabilityForwardWallDays();
+        mav.addObject("pickupLeadHours", reservationTimingPolicy.getPickupLeadHours());
+        final int forwardDays = listingAvailabilityService.getConfiguredMaxAvailabilityForwardWallDays();
         mav.addObject("maxAvailabilityForwardWallDays", forwardDays);
         final LocalDate wallToday = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
         mav.addObject("publishMaxAvailabilityWallInclusive", wallToday.plusDays(forwardDays).toString());
@@ -476,41 +539,32 @@ public final class MyListingsController {
         return mav;
     }
 
-    private ModelAndView buildDetailModelAndView(final ListingDetail detail, final ListingEditForm editForm) {
-        applyEditFormDefaults(editForm, detail.getListing(), detail.getListingAvailabilities());
-        final OwnerListingDetailPageModel pageModel =
-                listingViewService.buildOwnerListingDetailPageModel(detail, LocaleContextHolder.getLocale());
-        final ModelAndView mav = new ModelAndView("myListingDetail");
-        pageModel.populateModel(mav::addObject);
-        mav.addObject("editForm", editForm);
-        mav.addObject("activeTab", "my-cars");
-        return mav;
-    }
-
-    private static void applyEditFormDefaults(
+    private static void applyEditFormDefaultsFromAvailabilities(
             final ListingEditForm editForm,
-            final Listing listing,
             final List<ListingAvailability> availabilities) {
+        if (availabilities == null || availabilities.isEmpty()) {
+            return;
+        }
+        final ListingAvailability mostRecent = availabilities.stream()
+                .max(java.util.Comparator.comparing(ListingAvailability::getCreatedAt))
+                .get();
         if (editForm.getPricePerDay() == null) {
-            editForm.setPricePerDay(listing.getDayPrice());
+            editForm.setPricePerDay(mostRecent.getDayPriceValue());
         }
         if (editForm.getStartPointStreet() == null) {
-            editForm.setStartPointStreet(listing.getStartPointStreet());
+            editForm.setStartPointStreet(mostRecent.getStartPointStreet());
         }
         if (editForm.getStartPointNumber() == null) {
-            editForm.setStartPointNumber(listing.getStartPointNumber().orElse(null));
-        }
-        if (editForm.getDescription() == null) {
-            editForm.setDescription(listing.getDescription());
+            editForm.setStartPointNumber(mostRecent.getStartPointNumber().orElse(null));
         }
         if (editForm.getCheckInTime() == null) {
-            editForm.setCheckInTime(listing.getCheckInTime());
+            editForm.setCheckInTime(mostRecent.getCheckInTime());
         }
         if (editForm.getCheckOutTime() == null) {
-            editForm.setCheckOutTime(listing.getCheckOutTime());
+            editForm.setCheckOutTime(mostRecent.getCheckOutTime());
         }
         if (editForm.getNeighborhoodId() == null) {
-            editForm.setNeighborhoodId(listing.getNeighborhoodId().orElse(null));
+            editForm.setNeighborhoodId(mostRecent.getNeighborhoodId().orElse(null));
         }
         editForm.populateDefaultAvailability(availabilities);
     }

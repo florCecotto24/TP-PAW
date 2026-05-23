@@ -314,7 +314,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 : "-";
         return new ReservationCardDisplayRow(
                 card.getReservationId(),
-                card.getListingId(),
+                card.getCarId(),
                 card.getImageId(),
                 card.getBrand(),
                 card.getModel(),

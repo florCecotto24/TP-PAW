@@ -59,6 +59,18 @@ public final class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<ListingPublicReview> getCarPublicReviews(final long carId, final int page, final int pageSize) {
+        return reviewDao.findCarPublicReviews(carId, page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countReviewsForCar(final long carId) {
+        return reviewDao.countReviewsForCar(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean hasOwnerReview(final long reservationId) {
         return reviewDao.existsReview(reservationId, false);
     }

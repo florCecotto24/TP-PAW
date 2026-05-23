@@ -1,25 +1,29 @@
 package ar.edu.itba.paw.models.dto.profile;
 
 /**
- * Paging state for the counterparty profile “other active listings” grid and its load-more control.
+ * Paging state for the counterparty profile "other active listings" grid and its load-more control.
  */
 public final class CounterpartyActiveListingsLoadMore {
 
     private final boolean hasNext;
     private final long ownerUserId;
+    /** @deprecated Use {@link #excludeCarId} */
+    @Deprecated
     private final Long excludeListingId;
+    private final Long excludeCarId;
     private final int nextPageToLoad;
     private final int pageSize;
 
     private CounterpartyActiveListingsLoadMore(
             final boolean hasNext,
             final long ownerUserId,
-            final Long excludeListingId,
+            final Long excludeCarId,
             final int nextPageToLoad,
             final int pageSize) {
         this.hasNext = hasNext;
         this.ownerUserId = ownerUserId;
-        this.excludeListingId = excludeListingId;
+        this.excludeListingId = excludeCarId;
+        this.excludeCarId = excludeCarId;
         this.nextPageToLoad = nextPageToLoad;
         this.pageSize = pageSize;
     }
@@ -32,10 +36,10 @@ public final class CounterpartyActiveListingsLoadMore {
     public static CounterpartyActiveListingsLoadMore of(
             final boolean hasNext,
             final long ownerUserId,
-            final Long excludeListingId,
+            final Long excludeCarId,
             final int nextPageToLoad,
             final int pageSize) {
-        return new CounterpartyActiveListingsLoadMore(hasNext, ownerUserId, excludeListingId, nextPageToLoad, pageSize);
+        return new CounterpartyActiveListingsLoadMore(hasNext, ownerUserId, excludeCarId, nextPageToLoad, pageSize);
     }
 
     public boolean isHasNext() {
@@ -46,8 +50,14 @@ public final class CounterpartyActiveListingsLoadMore {
         return ownerUserId;
     }
 
+    /** @deprecated Use {@link #getExcludeCarId()} */
+    @Deprecated
     public Long getExcludeListingId() {
         return excludeListingId;
+    }
+
+    public Long getExcludeCarId() {
+        return excludeCarId;
     }
 
     public int getNextPageToLoad() {

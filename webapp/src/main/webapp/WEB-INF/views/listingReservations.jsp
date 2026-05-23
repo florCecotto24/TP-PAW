@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="myListingReservations.pageTitle" arguments="${listing.title}"/></title>
+    <title><spring:message code="myListingReservations.pageTitle" arguments="${car.brand} ${car.model}"/></title>
     <%@include file="header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
@@ -17,16 +17,16 @@
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
             homeHref="${pageContext.request.contextPath}/my-cars"
-            currentLabel="${listing.title}"/>
+            currentLabel="${car.brand} ${car.model}"/>
 
     <section class="reservation-management-header mt-4 pt-5 mb-4">
         <h1 class="h3 fw-bold mb-2"><spring:message code="myListingReservations.heading"/></h1>
         <p class="text-secondary mb-0">
-            <c:out value="${car.brand} ${car.model}"/> &mdash; <c:out value="${listing.title}"/>
+            <c:out value="${car.brand} ${car.model}"/>
         </p>
     </section>
 
-    <c:url var="listingReservationsPaginationBaseUrl" value="/my-cars/${listing.id}/reservations">
+    <c:url var="listingReservationsPaginationBaseUrl" value="/my-cars/car/${car.id}/reservations">
         <c:if test="${not empty statusFilter}">
             <c:param name="reservationStatus" value="${statusFilter}"/>
         </c:if>
@@ -35,7 +35,7 @@
     <c:if test="${not empty reservations or not empty statusFilter}">
         <spring:message code="validation.dropdown.invalid" var="listingResDropdownInvalid" htmlEscape="true"/>
         <form id="listingResFilterForm" class="row g-2 align-items-end mb-3" method="get"
-              action="${pageContext.request.contextPath}/my-cars/${listing.id}/reservations"
+              action="${pageContext.request.contextPath}/my-cars/car/${car.id}/reservations"
               data-ryden-dropdown-invalid="<c:out value='${listingResDropdownInvalid}'/>">
             <div class="col-md-5 col-lg-4">
                 <spring:message code="myReservations.filter.status.any"    var="rsAny"/>
@@ -140,7 +140,7 @@
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
                 <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
-                <a href="${pageContext.request.contextPath}/my-cars/${listing.id}/reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
+                <a href="${pageContext.request.contextPath}/my-cars/car/${car.id}/reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
             </div>
         </form>
 
@@ -160,7 +160,7 @@
     </c:if>
 
     <div class="mb-3 d-flex justify-content-end">
-        <a href="${pageContext.request.contextPath}/my-cars/${listing.id}" class="btn btn-outline-secondary btn-sm">
+        <a href="${pageContext.request.contextPath}/my-cars/car/${car.id}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
             <spring:message code="common.back"/>
         </a>
@@ -175,7 +175,7 @@
                             <spring:message code="myListingReservations.noResults.title"/>
                         </h2>
                         <div class="search-empty-state__actions mt-4">
-                            <a href="${pageContext.request.contextPath}/my-cars/${listing.id}/reservations" class="btn btn-outline-secondary">
+                            <a href="${pageContext.request.contextPath}/my-cars/car/${car.id}/reservations" class="btn btn-outline-secondary">
                                 <spring:message code="search.filters.clear"/>
                             </a>
                         </div>
@@ -198,7 +198,7 @@
                 <c:forEach var="reservation" items="${reservations}">
                     <c:url var="reservationDetailUrl" value="/my-reservations/${reservation.reservationId}">
                         <c:param name="role" value="owner"/>
-                        <c:param name="fromListing" value="${listing.id}"/>
+                        <c:param name="fromCar" value="${car.id}"/>
                     </c:url>
                     <a href="<c:out value='${reservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">

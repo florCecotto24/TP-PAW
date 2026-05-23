@@ -5,11 +5,11 @@ import java.time.OffsetDateTime;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 
-/** Reservation with listing vehicle summary and UTC dates for “my reservations” service queries. */
+/** Reservation with car vehicle summary and UTC dates for “my reservations” service queries. */
 public final class ReservationCard {
 
     private final long reservationId;
-    private final long listingId;
+    private final long carId;
     private final String brand;
     private final String model;
     private final BigDecimal dayPrice;
@@ -20,7 +20,7 @@ public final class ReservationCard {
 
     public ReservationCard(
             final long reservationId,
-            final long listingId,
+            final long carId,
             final String brand,
             final String model,
             final BigDecimal dayPrice,
@@ -29,7 +29,7 @@ public final class ReservationCard {
             final OffsetDateTime endDate,
             final Reservation.Status status) {
         this.reservationId = reservationId;
-        this.listingId = listingId;
+        this.carId = carId;
         this.brand = brand;
         this.model = model;
         this.dayPrice = dayPrice;
@@ -43,8 +43,8 @@ public final class ReservationCard {
         return reservationId;
     }
 
-    public long getListingId() {
-        return listingId;
+    public long getCarId() {
+        return carId;
     }
 
     public String getBrand() {

@@ -7,7 +7,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="myReservationDetail.pageTitle" arguments="${listing.title}"/></title>
+    <title><spring:message code="myReservationDetail.pageTitle" arguments="${listingTitle}"/></title>
     <%@include file="header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
@@ -25,14 +25,14 @@
             <ryden:breadcrumbTrail
                     homeLabel="${bcHomeLabel}"
                     homeHref="${bcHomeHref}"
-                    currentLabel="${listing.title}"/>
+                    currentLabel="${listingTitle}"/>
         </c:when>
         <c:otherwise>
             <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
             <ryden:breadcrumbTrail
                     homeLabel="${myReservationsLabel}"
                     homeHref="${pageContext.request.contextPath}/my-reservations"
-                    currentLabel="${listing.title}"/>
+                    currentLabel="${listingTitle}"/>
         </c:otherwise>
     </c:choose>
 
@@ -403,7 +403,7 @@
                         </div>
                         <div>
                             <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                            <p class="text-secondary mb-2"><c:out value="${listing.title}"/></p>
+                            <p class="text-secondary mb-2"><c:out value="${listingTitle}"/></p>
                             <div class="d-flex flex-wrap gap-2">
                                 <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                 <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
@@ -536,7 +536,7 @@
                         </div>
                     </section>
                     <c:url var="listingUrl" value="/car-detail">
-                        <c:param name="listingId"><c:out value="${listing.id}"/></c:param>
+                        <c:param name="carId"><c:out value="${reservation.carId}"/></c:param>
                     </c:url>
                     <div class="d-flex flex-column gap-2">
                         <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">

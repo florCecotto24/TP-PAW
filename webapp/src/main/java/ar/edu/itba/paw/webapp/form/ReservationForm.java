@@ -5,12 +5,12 @@ import javax.validation.constraints.NotNull;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
-/** Rider reservation request: listing, wall-local pickup/return strings, handover labels, and vehicle label for display. */
+/** Rider reservation request: car, wall-local pickup/return strings, handover labels, and vehicle label for display. */
 @ReservationWithinMaxBillableDays(groups = ValidationGroups.OnReservationSubmit.class)
 public final class ReservationForm {
 
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
-    private Long listingId;
+    private Long carId;
 
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String fromDateTime;
@@ -24,12 +24,12 @@ public final class ReservationForm {
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String carName;
 
-    public Long getListingId() {
-        return listingId;
+    public Long getCarId() {
+        return carId;
     }
 
-    public void setListingId(Long listingId) {
-        this.listingId = listingId;
+    public void setCarId(Long carId) {
+        this.carId = carId;
     }
 
     public String getFromDateTime() {

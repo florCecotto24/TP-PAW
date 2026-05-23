@@ -10,22 +10,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.ListingCard;
+import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.services.ListingService;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 
-/** Home page: cheapest and most-recent listing cards with guest-aware browse exclusions. */
+/** Home page: cheapest and most-recent car cards with guest-aware browse exclusions. */
 @Controller
 public final class HomeController {
 
-    private final ListingService listingService;
+    private final CarService carService;
     private final PaginationPolicy paginationPolicy;
 
-    public HomeController(final ListingService listingService, final PaginationPolicy paginationPolicy) {
-        this.listingService = listingService;
+    public HomeController(final CarService carService, final PaginationPolicy paginationPolicy) {
+        this.carService = carService;
         this.paginationPolicy = paginationPolicy;
     }
 
@@ -42,10 +42,10 @@ public final class HomeController {
         final User viewer = currentUser;
 
         final int uiPageSize = paginationPolicy.getUiPageSize();
-        final Page<ListingCard> cheapestRaw =
-                listingService.getCheapestListingCards(cheapestPage, uiPageSize, viewer);
-        final Page<ListingCard> recentRaw =
-                listingService.getMostRecentListingCards(recentPage, uiPageSize, viewer);
+        final Page<CarCard> cheapestRaw =
+                carService.getCheapestCarCards(cheapestPage, uiPageSize, viewer);
+        final Page<CarCard> recentRaw =
+                carService.getMostRecentCarCards(recentPage, uiPageSize, viewer);
 
         final Page<VehicleCardView> cheapestCarsPage = mapPage(cheapestRaw);
         final Page<VehicleCardView> recentCarsPage   = mapPage(recentRaw);
@@ -57,9 +57,9 @@ public final class HomeController {
         return mav;
     }
 
-    private static Page<VehicleCardView> mapPage(final Page<ListingCard> source) {
+    private static Page<VehicleCardView> mapPage(final Page<CarCard> source) {
         final List<VehicleCardView> views = source.getContent().stream()
-                .map(VehicleCardView::fromListingCard)
+                .map(VehicleCardView::fromCarCard)
                 .collect(Collectors.toList());
         return new Page<>(views, source.getCurrentPage(), source.getPageSize(), source.getTotalItems());
     }

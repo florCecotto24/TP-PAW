@@ -35,15 +35,160 @@
 
                         <form:errors element="div" cssClass="alert alert-danger mb-3"/>
 
+                        <%-- ── Brand picker ────────────────────────────────────────────────────── --%>
+                        <spring:message code="publishCar.form.brand.placeholder" var="brandPickerPlaceholder"/>
+                        <spring:message code="publishCar.form.search" var="brandSearchPlaceholder"/>
+                        <spring:message code="publishCar.form.other" var="otherLabel"/>
+                        <spring:message code="publishCar.form.brand.otherPlaceholder" var="brandOtherPlaceholder"/>
+                        <c:set var="brandIsOther" value="${not empty publishCarForm.brandId and publishCarForm.brandId eq 0}"/>
+                        <%-- Determine current button label --%>
+                        <c:set var="currentBrandLabel" value="${brandPickerPlaceholder}"/>
+                        <c:if test="${brandIsOther}">
+                            <c:set var="currentBrandLabel" value="${otherLabel}"/>
+                        </c:if>
+                        <c:if test="${not empty publishCarForm.brandId and publishCarForm.brandId gt 0}">
+                            <c:forEach var="b" items="${allBrands}">
+                                <c:if test="${b.id eq publishCarForm.brandId}">
+                                    <c:set var="currentBrandLabel" value="${b.name}"/>
+                                </c:if>
+                            </c:forEach>
+                        </c:if>
                         <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.brand"/></label>
-                            <form:input path="brand" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <label class="form-label required-label" for="publishBrandBtn">
+                                <spring:message code="publishCar.form.brand"/>
+                            </label>
+                            <%-- Spring-bound hidden: carries the string value for validation + dual-write --%>
+                            <form:hidden path="brand" id="publishBrandHidden"/>
+                            <%-- Plain hidden: carries the catalog ID (0 = other) --%>
+                            <input type="hidden" id="publishBrandIdHidden" name="brandId"
+                                   value="<c:out value='${publishCarForm.brandId}'/>"/>
+                            <div class="dropdown" id="publishBrandDd">
+                                <button type="button" id="publishBrandBtn"
+                                        class="form-select dropdown-toggle ryden-select-btn text-start w-100"
+                                        data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                        aria-expanded="false" aria-haspopup="true">
+                                    <span id="publishBrandLbl" class="text-truncate"><c:out value="${currentBrandLabel}"/></span>
+                                </button>
+                                <div class="dropdown-menu shadow p-0 w-100" style="min-width:0"
+                                     aria-labelledby="publishBrandBtn">
+                                    <div class="px-3 pt-2 pb-1">
+                                        <input type="search" id="publishBrandFilter"
+                                               class="form-control form-control-sm" autocomplete="off"
+                                               placeholder="<c:out value='${brandSearchPlaceholder}'/>"/>
+                                    </div>
+                                    <div class="ryden-catalog-scroll px-2 pb-2" style="max-height:220px;overflow-y:auto">
+                                        <ul class="list-unstyled mb-0" id="publishBrandList">
+                                            <c:forEach var="b" items="${allBrands}">
+                                                <li data-catlookup="${fn:toLowerCase(b.name)}">
+                                                    <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
+                                                        <input type="radio" class="form-check-input flex-shrink-0 js-brand-pick mt-0"
+                                                               name="_brandPick" value="${b.id}"
+                                                               data-catname="<c:out value='${b.name}'/>"
+                                                               <c:if test="${not empty publishCarForm.brandId and publishCarForm.brandId eq b.id}">checked="checked"</c:if>/>
+                                                        <span class="small"><c:out value="${b.name}"/></span>
+                                                    </label>
+                                                </li>
+                                            </c:forEach>
+                                            <li>
+                                                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
+                                                    <input type="radio" class="form-check-input flex-shrink-0 js-brand-pick mt-0"
+                                                           name="_brandPick" value="0"
+                                                           data-catname=""
+                                                           <c:if test="${brandIsOther}">checked="checked"</c:if>/>
+                                                    <span class="small"><c:out value="${otherLabel}"/></span>
+                                                </label>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <%-- "Other" text input: visible when brandId == 0 --%>
+                            <div id="publishBrandOtherRow" class="mt-2<c:if test="${not brandIsOther}"> d-none</c:if>">
+                                <input type="text" id="publishBrandOtherInput"
+                                       class="form-control" maxlength="50"
+                                       placeholder="<c:out value='${brandOtherPlaceholder}'/>"
+                                       value="<c:if test='${brandIsOther}'><c:out value='${publishCarForm.brand}'/></c:if>"/>
+                            </div>
                             <form:errors path="brand" cssClass="text-danger d-block"/>
                         </div>
 
+                        <%-- ── Model picker ────────────────────────────────────────────────────── --%>
+                        <spring:message code="publishCar.form.model.placeholder" var="modelPickerPlaceholder"/>
+                        <spring:message code="publishCar.form.model.selectBrandFirst" var="modelSelectBrandFirst"/>
+                        <spring:message code="publishCar.form.model.otherPlaceholder" var="modelOtherPlaceholder"/>
+                        <c:set var="modelIsOther" value="${not empty publishCarForm.modelId and publishCarForm.modelId eq 0}"/>
+                        <c:set var="currentModelLabel" value="${modelPickerPlaceholder}"/>
+                        <c:if test="${modelIsOther}">
+                            <c:set var="currentModelLabel" value="${otherLabel}"/>
+                        </c:if>
+                        <c:if test="${not empty publishCarForm.modelId and publishCarForm.modelId gt 0}">
+                            <c:forEach var="m" items="${allModels}">
+                                <c:if test="${m.id eq publishCarForm.modelId}">
+                                    <c:set var="currentModelLabel" value="${m.name}"/>
+                                </c:if>
+                            </c:forEach>
+                        </c:if>
                         <div class="mb-3">
-                            <label class="form-label required-label"><spring:message code="publishCar.form.model"/></label>
-                            <form:input path="model" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <label class="form-label required-label" for="publishModelBtn">
+                                <spring:message code="publishCar.form.model"/>
+                            </label>
+                            <form:hidden path="model" id="publishModelHidden"/>
+                            <input type="hidden" id="publishModelIdHidden" name="modelId"
+                                   value="<c:out value='${publishCarForm.modelId}'/>"/>
+                            <div class="dropdown" id="publishModelDd">
+                                <button type="button" id="publishModelBtn"
+                                        class="form-select dropdown-toggle ryden-select-btn text-start w-100"
+                                        data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                        aria-expanded="false" aria-haspopup="true"
+                                        <c:if test="${empty publishCarForm.brandId}">disabled="disabled"</c:if>>
+                                    <span id="publishModelLbl" class="text-truncate">
+                                        <c:choose>
+                                            <c:when test="${empty publishCarForm.brandId}"><c:out value="${modelSelectBrandFirst}"/></c:when>
+                                            <c:otherwise><c:out value="${currentModelLabel}"/></c:otherwise>
+                                        </c:choose>
+                                    </span>
+                                </button>
+                                <div class="dropdown-menu shadow p-0 w-100" style="min-width:0"
+                                     aria-labelledby="publishModelBtn">
+                                    <div class="px-3 pt-2 pb-1">
+                                        <input type="search" id="publishModelFilter"
+                                               class="form-control form-control-sm" autocomplete="off"
+                                               placeholder="<c:out value='${brandSearchPlaceholder}'/>"/>
+                                    </div>
+                                    <div class="ryden-catalog-scroll px-2 pb-2" style="max-height:220px;overflow-y:auto">
+                                        <ul class="list-unstyled mb-0" id="publishModelList">
+                                            <c:forEach var="m" items="${allModels}">
+                                                <li data-catlookup="${fn:toLowerCase(m.name)}"
+                                                    data-brandid="${m.brandId}">
+                                                    <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
+                                                        <input type="radio" class="form-check-input flex-shrink-0 js-model-pick mt-0"
+                                                               name="_modelPick" value="${m.id}"
+                                                               data-catname="<c:out value='${m.name}'/>"
+                                                               <c:if test="${not empty publishCarForm.modelId and publishCarForm.modelId eq m.id}">checked="checked"</c:if>/>
+                                                        <span class="small"><c:out value="${m.name}"/></span>
+                                                    </label>
+                                                </li>
+                                            </c:forEach>
+                                            <li id="publishModelOtherLi">
+                                                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
+                                                    <input type="radio" class="form-check-input flex-shrink-0 js-model-pick mt-0"
+                                                           name="_modelPick" value="0"
+                                                           data-catname=""
+                                                           <c:if test="${modelIsOther}">checked="checked"</c:if>/>
+                                                    <span class="small"><c:out value="${otherLabel}"/></span>
+                                                </label>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <%-- "Other" model text input --%>
+                            <div id="publishModelOtherRow" class="mt-2<c:if test="${not modelIsOther}"> d-none</c:if>">
+                                <input type="text" id="publishModelOtherInput"
+                                       class="form-control" maxlength="50"
+                                       placeholder="<c:out value='${modelOtherPlaceholder}'/>"
+                                       value="<c:if test='${modelIsOther}'><c:out value='${publishCarForm.model}'/></c:if>"/>
+                            </div>
                             <form:errors path="model" cssClass="text-danger d-block"/>
                         </div>
 
@@ -269,5 +414,223 @@
     </div>
 </main>
 <%@include file="footer.jsp" %>
+<script>
+(function () {
+    'use strict';
+
+    /* ── Helpers ─────────────────────────────────────────────────────────── */
+    function levenshtein(a, b) {
+        if (!a.length) { return b.length; }
+        if (!b.length) { return a.length; }
+        var row = [];
+        for (var j = 0; j <= b.length; j++) { row[j] = j; }
+        for (var i = 1; i <= a.length; i++) {
+            var prev = row[0];
+            row[0] = i;
+            for (var j2 = 1; j2 <= b.length; j2++) {
+                var cur = row[j2];
+                row[j2] = Math.min(prev + (a[i-1] === b[j2-1] ? 0 : 1), row[j2] + 1, row[j2-1] + 1);
+                prev = cur;
+            }
+        }
+        return row[b.length];
+    }
+    function nameMatches(q, nameLower) {
+        if (!q) { return true; }
+        if (nameLower.indexOf(q) !== -1) { return true; }
+        return levenshtein(q, nameLower) <= 2;
+    }
+
+    /* ── Brand picker ────────────────────────────────────────────────────── */
+    var brandHid    = document.getElementById('publishBrandHidden');
+    var brandIdHid  = document.getElementById('publishBrandIdHidden');
+    var brandBtn    = document.getElementById('publishBrandBtn');
+    var brandLbl    = document.getElementById('publishBrandLbl');
+    var brandList   = document.getElementById('publishBrandList');
+    var brandFilter = document.getElementById('publishBrandFilter');
+    var brandOtherRow   = document.getElementById('publishBrandOtherRow');
+    var brandOtherInput = document.getElementById('publishBrandOtherInput');
+
+    /* ── Model picker ────────────────────────────────────────────────────── */
+    var modelHid    = document.getElementById('publishModelHidden');
+    var modelIdHid  = document.getElementById('publishModelIdHidden');
+    var modelBtn    = document.getElementById('publishModelBtn');
+    var modelLbl    = document.getElementById('publishModelLbl');
+    var modelList   = document.getElementById('publishModelList');
+    var modelFilter = document.getElementById('publishModelFilter');
+    var modelOtherRow   = document.getElementById('publishModelOtherRow');
+    var modelOtherInput = document.getElementById('publishModelOtherInput');
+
+    var brandSelectBrandFirst = modelBtn ? (modelBtn.getAttribute('data-select-brand-first') || '') : '';
+
+    /* ── Brand filter ─────────────────────────────────────────────────────── */
+    function applyBrandFilter() {
+        if (!brandList || !brandFilter) { return; }
+        var q = brandFilter.value.trim().toLowerCase();
+        brandList.querySelectorAll('li[data-catlookup]').forEach(function (li) {
+            var key = li.getAttribute('data-catlookup') || '';
+            li.classList.toggle('d-none', !!q && !nameMatches(q, key));
+        });
+    }
+    if (brandFilter) {
+        brandFilter.addEventListener('input', applyBrandFilter);
+        document.getElementById('publishBrandDd') && document.getElementById('publishBrandDd')
+            .addEventListener('shown.bs.dropdown', function () { brandFilter.focus(); });
+    }
+
+    /* ── Brand selection ─────────────────────────────────────────────────── */
+    function getCurrentBrandId() {
+        return brandIdHid ? (brandIdHid.value || '') : '';
+    }
+
+    function onBrandPicked(radio) {
+        var id   = radio.value;
+        var name = radio.getAttribute('data-catname') || '';
+        if (brandIdHid) { brandIdHid.value = id; }
+        if (brandLbl)   { brandLbl.textContent = id === '0' ? brandOtherInput.closest('label') ? '' : '' : name; }
+        // determine button label
+        var lbl = '';
+        if (id === '0') {
+            // get the "other" span text from the radio's parent label
+            var otherLi = radio.closest('li');
+            var otherSpan = otherLi ? otherLi.querySelector('span.small') : null;
+            lbl = otherSpan ? otherSpan.textContent.trim() : name;
+        } else {
+            lbl = name;
+        }
+        if (brandLbl) { brandLbl.textContent = lbl; }
+        // sync brand string field
+        if (id === '0') {
+            // "Other" selected: clear brand string (will be filled by text input)
+            if (brandHid) { brandHid.value = brandOtherInput ? brandOtherInput.value : ''; }
+            if (brandOtherRow) { brandOtherRow.classList.remove('d-none'); }
+            if (brandOtherInput) { brandOtherInput.focus(); }
+        } else {
+            if (brandHid) { brandHid.value = name; }
+            if (brandOtherRow) { brandOtherRow.classList.add('d-none'); }
+            if (brandOtherInput) { brandOtherInput.value = ''; }
+        }
+        // Reset model picker when brand changes
+        resetModelPicker(id);
+        // close dropdown
+        if (brandBtn && window.bootstrap && bootstrap.Dropdown) {
+            var inst = bootstrap.Dropdown.getInstance(brandBtn);
+            if (inst) { inst.hide(); }
+        }
+    }
+
+    if (brandList) {
+        brandList.querySelectorAll('.js-brand-pick').forEach(function (rb) {
+            rb.addEventListener('change', function () { onBrandPicked(this); });
+        });
+    }
+    if (brandOtherInput) {
+        brandOtherInput.addEventListener('input', function () {
+            if (brandHid) { brandHid.value = this.value; }
+        });
+    }
+
+    /* ── Model filter ─────────────────────────────────────────────────────── */
+    function applyModelFilter() {
+        if (!modelList || !modelFilter) { return; }
+        var q   = modelFilter.value.trim().toLowerCase();
+        var bid = getCurrentBrandId();
+        modelList.querySelectorAll('li[data-catlookup]').forEach(function (li) {
+            var lisBrand = li.getAttribute('data-brandid') || '';
+            var key = li.getAttribute('data-catlookup') || '';
+            // Show only catalog models matching the selected brand.
+            // When bid is empty (no brand yet) or bid='0' (other), hide all catalog items.
+            var brandMatch = !!bid && bid !== '0' && lisBrand === bid;
+            li.classList.toggle('d-none', !brandMatch || (!!q && !nameMatches(q, key)));
+        });
+    }
+    if (modelFilter) {
+        modelFilter.addEventListener('input', applyModelFilter);
+        document.getElementById('publishModelDd') && document.getElementById('publishModelDd')
+            .addEventListener('shown.bs.dropdown', function () { modelFilter.focus(); });
+    }
+
+    /* ── Model selection ─────────────────────────────────────────────────── */
+    function onModelPicked(radio) {
+        var id   = radio.value;
+        var name = radio.getAttribute('data-catname') || '';
+        if (modelIdHid) { modelIdHid.value = id; }
+        var lbl = '';
+        if (id === '0') {
+            var otherLi = radio.closest('li');
+            var otherSpan = otherLi ? otherLi.querySelector('span.small') : null;
+            lbl = otherSpan ? otherSpan.textContent.trim() : name;
+        } else {
+            lbl = name;
+        }
+        if (modelLbl) { modelLbl.textContent = lbl; }
+        if (id === '0') {
+            if (modelHid) { modelHid.value = modelOtherInput ? modelOtherInput.value : ''; }
+            if (modelOtherRow) { modelOtherRow.classList.remove('d-none'); }
+            if (modelOtherInput) { modelOtherInput.focus(); }
+        } else {
+            if (modelHid) { modelHid.value = name; }
+            if (modelOtherRow) { modelOtherRow.classList.add('d-none'); }
+            if (modelOtherInput) { modelOtherInput.value = ''; }
+        }
+        if (modelBtn && window.bootstrap && bootstrap.Dropdown) {
+            var inst = bootstrap.Dropdown.getInstance(modelBtn);
+            if (inst) { inst.hide(); }
+        }
+    }
+
+    if (modelList) {
+        modelList.querySelectorAll('.js-model-pick').forEach(function (rb) {
+            rb.addEventListener('change', function () { onModelPicked(this); });
+        });
+    }
+    if (modelOtherInput) {
+        modelOtherInput.addEventListener('input', function () {
+            if (modelHid) { modelHid.value = this.value; }
+        });
+    }
+
+    /* ── Reset model picker (called when brand changes) ──────────────────── */
+    function resetModelPicker(newBrandId) {
+        // Uncheck all model radios
+        if (modelList) {
+            modelList.querySelectorAll('.js-model-pick').forEach(function (rb) { rb.checked = false; });
+        }
+        if (modelIdHid) { modelIdHid.value = ''; }
+        if (modelHid)   { modelHid.value = ''; }
+        if (modelOtherRow) { modelOtherRow.classList.add('d-none'); }
+        if (modelOtherInput) { modelOtherInput.value = ''; }
+        if (modelFilter) { modelFilter.value = ''; }
+        // Enable model button once brand is set
+        if (modelBtn) {
+            var hasValidBrand = newBrandId && newBrandId !== '';
+            modelBtn.disabled = !hasValidBrand;
+            if (modelLbl) {
+                modelLbl.textContent = hasValidBrand
+                    ? modelBtn.getAttribute('data-placeholder') || ''
+                    : (modelBtn.getAttribute('data-select-brand-first') || '');
+            }
+        }
+        applyModelFilter();
+    }
+
+    /* ── Store placeholder texts on the model button for JS reuse ────────── */
+    if (modelBtn) {
+        modelBtn.setAttribute('data-placeholder', modelLbl ? modelLbl.textContent.trim() : '');
+        modelBtn.setAttribute('data-select-brand-first', '${fn:escapeXml(modelSelectBrandFirst)}');
+    }
+
+    /* ── Initial model filter (page load with pre-selected brand) ─────────── */
+    (function initFilters() {
+        applyModelFilter();
+        // On page re-display after a validation error, reconstruct model button label
+        var bid = getCurrentBrandId();
+        if (modelBtn && bid && bid !== '') {
+            modelBtn.disabled = false;
+        }
+    }());
+
+})();
+</script>
 </body>
 </html>

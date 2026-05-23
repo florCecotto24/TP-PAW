@@ -17,6 +17,12 @@ public interface ReviewDao {
 
     Page<ListingPublicReview> findListingPublicReviews(long listingId, int page, int pageSize);
 
+    /** Like {@link #findListingPublicReviews} but resolves by {@code car_id} (Phase 7d+). */
+    Page<ListingPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
+
+    /** Like {@link #countReviewsForListing} but resolves by {@code car_id} (Phase 7d+). */
+    long countReviewsForCar(long carId);
+
     void refreshRiderAverageRating(long riderUserId);
 
     void refreshOwnerAverageRating(long ownerUserId);

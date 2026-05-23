@@ -15,7 +15,7 @@ import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.CarPictureDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class CarPictureJpaDao implements CarPictureDao {
 
@@ -23,6 +23,7 @@ public class CarPictureJpaDao implements CarPictureDao {
     private EntityManager em;
 
     @Override
+    @Transactional
     public CarPicture createCarPicture(final long carId, final long imageId, final int displayOrder) {
         final Car carRef = em.getReference(Car.class, carId);
         final Image imageRef = em.getReference(Image.class, imageId);

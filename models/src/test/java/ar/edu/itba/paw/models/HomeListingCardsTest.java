@@ -15,7 +15,7 @@ class HomeListingCardsTest {
     @Test
     void testRecordProvidesEqualsHashCodeAndToString() {
         // Arrange
-        final ListingCard card = new ListingCard(1L, "Toyota", "Yaris", new BigDecimal("100.00"), 10L);
+        final ListingCard card = new ListingCard(1L, 1L, "Toyota", "Yaris", new BigDecimal("100.00"), 10L);
         final HomeListingCards first = new HomeListingCards(List.of(card), List.of(card));
         final HomeListingCards second = new HomeListingCards(List.of(card), List.of(card));
         // Exercise & Assert
@@ -35,7 +35,7 @@ class HomeListingCardsTest {
         final List<ListingCard> mostRecent = new ArrayList<>();
         final HomeListingCards cards = new HomeListingCards(cheapest, mostRecent);
         // Exercise
-        cheapest.add(new ListingCard(1L, "Ford", "Focus", new BigDecimal("80.00"), 11L));
+        cheapest.add(new ListingCard(1L, 1L, "Ford", "Focus", new BigDecimal("80.00"), 11L));
         // Assert
         Assertions.assertSame(cheapest, cards.cheapest());
         Assertions.assertSame(mostRecent, cards.mostRecent());

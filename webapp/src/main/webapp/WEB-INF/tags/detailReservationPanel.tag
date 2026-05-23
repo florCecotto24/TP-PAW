@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<%@ attribute name="listingId" required="true" type="java.lang.Long" %>
+<%@ attribute name="carId" required="true" type="java.lang.Long" %>
 <%@ attribute name="dailyPrice" required="true" type="java.lang.Number" %>
 <%@ attribute name="priceFrom" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
@@ -25,7 +25,7 @@
           data-return-time="<c:out value='${returnTime}'/>"
           data-max-billable-days="<c:out value='${maxBillableDays}'/>"
           data-max-billable-exceeded-msg="<c:out value='${maxBillableExceededMsg}'/>">
-    <input type="hidden" name="listingId" value="<c:out value='${listingId}'/>" />
+    <input type="hidden" name="carId" value="<c:out value='${carId}'/>" />
     <input type="hidden" name="carName" value="<c:out value='${carName}'/>" />
     <input type="hidden" name="reservationTotal" id="detail_reservation_total_hint" value="" />
 

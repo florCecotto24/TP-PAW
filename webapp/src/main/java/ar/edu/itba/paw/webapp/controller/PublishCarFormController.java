@@ -25,7 +25,11 @@ import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.listing.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarBrand;
+import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.services.CarBrandService;
+import ar.edu.itba.paw.services.CarModelService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
@@ -46,6 +50,8 @@ public final class PublishCarFormController {
     private static final Logger LOG = LoggerFactory.getLogger(PublishCarFormController.class);
 
     private final CarService carService;
+    private final CarBrandService carBrandService;
+    private final CarModelService carModelService;
     private final LocaleMessages localeMessages;
     private final ImageService imageService;
     private final MultipartImageValidation multipartImageValidation;
@@ -54,17 +60,31 @@ public final class PublishCarFormController {
 
     public PublishCarFormController(
             final CarService carService,
+            final CarBrandService carBrandService,
+            final CarModelService carModelService,
             final LocaleMessages localeMessages,
             final ImageService imageService,
             final MultipartImageValidation multipartImageValidation,
             final PublishCarPictureSessionStash pictureStash,
             final CarEnumOptions carEnumOptions) {
         this.carService = carService;
+        this.carBrandService = carBrandService;
+        this.carModelService = carModelService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
         this.multipartImageValidation = multipartImageValidation;
         this.pictureStash = pictureStash;
         this.carEnumOptions = carEnumOptions;
+    }
+
+    @ModelAttribute("allBrands")
+    public List<CarBrand> allBrands() {
+        return carBrandService.findAllOrdered();
+    }
+
+    @ModelAttribute("allModels")
+    public List<CarModel> allModels() {
+        return carModelService.findAllOrderedGroupedByBrand();
     }
 
     @ModelAttribute("carTypeOptions")
@@ -190,11 +210,18 @@ public final class PublishCarFormController {
 
         try {
             final long ownerId = WebAuthUtils.requireUser(currentUser).getId();
+
+            // Resolve brand/model strings (validated non-blank by JSR-303) to a catalog CarModel
+            final CarBrand resolvedBrand = carBrandService.findOrCreateUnvalidated(form.getBrand())
+                    .orElseThrow(() -> new IllegalStateException("Could not resolve brand: " + form.getBrand()));
+            final CarModel resolvedModel = carModelService.findOrCreateUnvalidated(
+                            resolvedBrand.getId(), form.getModel(), form.getType())
+                    .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + form.getModel()));
+
             final Car car = carService.publishCar(
                     ownerId,
                     form.getPlate(),
-                    form.getBrand(),
-                    form.getModel(),
+                    resolvedModel.getId(),
                     form.getType(),
                     form.getPowertrain(),
                     form.getTransmission(),

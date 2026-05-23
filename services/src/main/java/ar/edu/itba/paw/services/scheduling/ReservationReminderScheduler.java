@@ -1,10 +1,11 @@
 package ar.edu.itba.paw.services.scheduling;
 
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.EmailService;
-import ar.edu.itba.paw.services.ListingService;
-import ar.edu.itba.paw.services.ListingViewService;
+import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -17,7 +18,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
@@ -33,21 +35,24 @@ public final class ReservationReminderScheduler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationReminderScheduler.class);
 
     private final ReservationService reservationService;
-    private final ListingService listingService;
-    private final ListingViewService listingViewService;
+    private final ListingAvailabilityService listingAvailabilityService;
+    private final ListingAddressFormatter listingAddressFormatter;
+    private final CarService carService;
     private final UserService userService;
     private final EmailService emailService;
 
     @Autowired
     public ReservationReminderScheduler(
             final ReservationService reservationService,
-            final ListingService listingService,
-            final ListingViewService listingViewService,
+            final ListingAvailabilityService listingAvailabilityService,
+            final ListingAddressFormatter listingAddressFormatter,
+            final CarService carService,
             final UserService userService,
             final EmailService emailService) {
         this.reservationService = reservationService;
-        this.listingService = listingService;
-        this.listingViewService = listingViewService;
+        this.listingAvailabilityService = listingAvailabilityService;
+        this.listingAddressFormatter = listingAddressFormatter;
+        this.carService = carService;
         this.userService = userService;
         this.emailService = emailService;
     }
@@ -70,32 +75,38 @@ public final class ReservationReminderScheduler {
         for (final Reservation reservation : reservations) {
             try {
                 final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
-                final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
                 if (riderOpt.isEmpty()) {
                     LOGGER.atWarn().addArgument(reservation.getRiderId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: user not found for riderId={} reservationId={}");
                     continue;
                 }
-                if (listingOpt.isEmpty()) {
-                    LOGGER.atWarn().addArgument(reservation.getListingId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: listing not found for listingId={} reservationId={}");
+
+                final Car car = reservation.getCar();
+                final Optional<User> ownerOpt = Optional.ofNullable(car).map(Car::getOwner);
+
+                if (ownerOpt.isEmpty()) {
+                    LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping reservation reminder email: owner not found for reservationId={}");
                     continue;
                 }
 
                 final User rider = riderOpt.get();
-                final Listing listing = listingOpt.get();
-                final Optional<User> ownerOpt = userService.getListingOwner(reservation.getListingId());
-                if (ownerOpt.isEmpty()) {
-                    LOGGER.atWarn().addArgument(reservation.getListingId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: listing owner not found for listingId={} reservationId={}");
-                    continue;
-                }
                 final User listingOwner = ownerOpt.get();
-                final String riderLoc = listingViewService.formatRiderReservationHandoverSummary(listing, reservation);
-                final String ownerLoc = listingViewService.formatOwnerReservationHandoverSummary(listing);
+                final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
+                        + " "
+                        + (car.getModel() != null ? car.getModel() : "");
+                final Optional<ListingAvailability> mostRecentAv =
+                        listingAvailabilityService.findMostRecentByCarId(car.getId());
+                final String riderLoc = mostRecentAv
+                        .map(a -> listingAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))
+                        .orElse(null);
+                final String ownerLoc = mostRecentAv
+                        .map(listingAddressFormatter::formatOwnerReservationHandoverSummary)
+                        .orElse(null);
                 final ReservationMailPayload payload = ReservationMailPayload.builder()
                         .recipientEmail(rider.getEmail())
                         .riderFullName(rider.getForename() + " " + rider.getSurname())
                         .reservationId(reservation.getId())
-                        .listingId(reservation.getListingId())
-                        .vehicleLabel(listing.getTitle())
+                        .listingId(car.getId())
+                        .vehicleLabel(vehicleLabel.trim())
                         .startDate(reservation.getStartDate())
                         .endDate(reservation.getEndDate())
                         .riderHandoverLocation(riderLoc)
@@ -115,4 +126,3 @@ public final class ReservationReminderScheduler {
         }
     }
 }
-

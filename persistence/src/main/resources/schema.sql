@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS users(
 
 CREATE TABLE IF NOT EXISTS car_brands (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL
+    name VARCHAR(50) NOT NULL,
+    validated BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS car_models (
@@ -40,18 +41,23 @@ CREATE TABLE IF NOT EXISTS cars (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     plate VARCHAR(50) NOT NULL,
-    brand VARCHAR(50) NOT NULL,
-    model VARCHAR(50) NOT NULL,
+    brand VARCHAR(50),
+    model VARCHAR(50),
     type VARCHAR(50) NOT NULL,
     transmission VARCHAR(50) NOT NULL,
     powertrain VARCHAR(50) NOT NULL,
-    new_model INTEGER,
+    model_id INTEGER,
     insurance_file_id INTEGER,
-    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused_due_to_lack_of_insurance')),
+    status VARCHAR(40) NOT NULL DEFAULT 'active'
+        CHECK (status IN ('active', 'paused', 'admin_paused', 'lack_doc', 'unavailable', 'deactivated')),
+    description VARCHAR(200),
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    rating_avg DECIMAL(4, 2),
 
     UNIQUE (owner_id, plate),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (new_model) REFERENCES car_models(id) ON UPDATE CASCADE,
+    FOREIGN KEY (model_id) REFERENCES car_models(id),
     CHECK (powertrain IN ('GASOLINE', 'DIESEL', 'ELECTRIC', 'HYBRID', 'CNG'))
 );
 
@@ -139,20 +145,37 @@ CREATE TABLE IF NOT EXISTS listings (
 CREATE TABLE IF NOT EXISTS saved_listings (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    car_id INTEGER NOT NULL REFERENCES cars(id),
     PRIMARY KEY (user_id, listing_id)
 );
 
+CREATE INDEX IF NOT EXISTS saved_listings_car_id_idx ON saved_listings (car_id);
+
 CREATE TABLE IF NOT EXISTS listing_availability(
     id SERIAL PRIMARY KEY,
-    listing_id INTEGER NOT NULL,
+    listing_id INTEGER,
+    car_id INTEGER NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL CHECK (end_date >= start_date),
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
-    day_price DECIMAL(10, 2),
+    day_price DECIMAL(10, 2) NOT NULL,
+    start_point_street VARCHAR(50) NOT NULL,
+    start_point_number VARCHAR(10),
+    neighborhood_id INTEGER REFERENCES neighborhoods(id) ON DELETE SET NULL,
+    check_in_time TIME NOT NULL,
+    check_out_time TIME NOT NULL,
+    kind VARCHAR(20) NOT NULL DEFAULT 'offered' CHECK (kind IN ('offered', 'withdrawn')),
 
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE SET NULL,
+    FOREIGN KEY (car_id) REFERENCES cars(id)
 );
+
+CREATE INDEX IF NOT EXISTS listing_availability_lookup
+    ON listing_availability (listing_id, start_date, end_date, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS listing_availability_car_id_lookup
+    ON listing_availability (car_id, start_date, end_date, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
@@ -186,7 +209,8 @@ CREATE TABLE IF NOT EXISTS stored_files (
 CREATE TABLE IF NOT EXISTS reservations (
     id SERIAL PRIMARY KEY,
     rider_id INTEGER NOT NULL,
-    listing_id INTEGER NOT NULL,
+    listing_id INTEGER,
+    car_id INTEGER NOT NULL,
     start_date TIMESTAMPTZ NOT NULL,
     end_date TIMESTAMPTZ NOT NULL,
     status VARCHAR(40) NOT NULL CHECK (status IN (
@@ -218,17 +242,37 @@ CREATE TABLE IF NOT EXISTS reservations (
     review_deadline TIMESTAMPTZ,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE SET NULL,
+    FOREIGN KEY (car_id) REFERENCES cars(id)
 );
+
+CREATE INDEX IF NOT EXISTS reservations_car_id_idx ON reservations (car_id);
+
+CREATE TABLE IF NOT EXISTS reservations_availabilities (
+    reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    availability_id INTEGER NOT NULL REFERENCES listing_availability(id),
+    covered_start_date DATE NOT NULL,
+    covered_end_date DATE NOT NULL CHECK (covered_end_date >= covered_start_date),
+    PRIMARY KEY (reservation_id, availability_id, covered_start_date)
+);
+
+CREATE INDEX IF NOT EXISTS reservations_availabilities_reservation_id_idx
+    ON reservations_availabilities (reservation_id);
+
+CREATE INDEX IF NOT EXISTS reservations_availabilities_availability_id_idx
+    ON reservations_availabilities (availability_id);
 
 CREATE TABLE IF NOT EXISTS reviews (
     reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
     made_by_rider BOOLEAN NOT NULL,
+    car_id INTEGER NOT NULL REFERENCES cars(id),
     created_at TIMESTAMPTZ NOT NULL,
     rating INTEGER CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
     comment TEXT,
     PRIMARY KEY (reservation_id, made_by_rider)
 );
+
+CREATE INDEX IF NOT EXISTS reviews_car_id_idx ON reviews (car_id);
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_profile_picture_id;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_license_file_id;
@@ -239,6 +283,8 @@ ALTER TABLE users ADD CONSTRAINT fk_users_identity_file_id FOREIGN KEY (identity
 
 ALTER TABLE cars DROP CONSTRAINT IF EXISTS fk_cars_insurance_file_id;
 ALTER TABLE cars ADD CONSTRAINT fk_cars_insurance_file_id FOREIGN KEY (insurance_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS cars_model_id_idx ON cars (model_id);
 
 CREATE TABLE IF NOT EXISTS email_verification_codes (
     id SERIAL PRIMARY KEY,

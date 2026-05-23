@@ -35,6 +35,13 @@ public interface ListingViewService {
     Optional<OwnerListingDetailPageModel> buildOwnerCarDetailPageModel(long carId, Locale locale);
 
     /**
+     * Car-centric variant that does not require a {@link Listing}. Loads the car's availability rows
+     * from {@code ListingAvailabilityService} and builds the page model using the most-recent row as
+     * the source for pricing/location/check-in defaults. Returns empty when the car cannot be found.
+     */
+    Optional<OwnerListingDetailPageModel> buildOwnerCarDetailPageModelFromCar(long carId, Locale locale);
+
+    /**
      * Returns the minimum effective day price across all non-expired availability periods.
      * If a period overrides the listing price, that price is considered; otherwise the listing default is used.
      * Returns the listing-level day price when no future periods have a period-specific price.

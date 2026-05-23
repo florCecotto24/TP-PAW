@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -10,9 +9,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
@@ -29,6 +31,8 @@ import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.Review;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.HomeListingCards;
 import ar.edu.itba.paw.models.dto.ListingCard;
@@ -40,20 +44,51 @@ import ar.edu.itba.paw.models.util.ListingSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.persistence.ListingDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class ListingJpaDao implements ListingDao {
 
-    private static final Map<String, String> SORT_COLUMNS = Map.of(
+    private static final Map<String, String> NATIVE_SORT_COLUMNS = Map.of(
             "price",  "l.day_price",
             "date",   "l.created_at",
             "rating", "l.rating_avg"
     );
 
+    private static final Map<String, String> JPQL_SORT_PROPERTIES = Map.of(
+            "price",  "l.dayPrice",
+            "date",   "l.createdAt",
+            "rating", "l.ratingAvg"
+    );
+
+    /** Public browse: only cars whose catalog brand and model are validated. */
+    private static final String JPQL_VALIDATED_CAR_MODEL =
+            " AND l.car.carModel IS NOT NULL"
+            + " AND l.car.carModel.validated = TRUE"
+            + " AND l.car.carModel.brand.validated = TRUE";
+
+    /**
+     * Native JOIN used only in paginated ID queries (1+1 pattern, step 1).
+     * Filters to validated catalog entries for public-facing listings.
+     */
+    private static final String VALIDATED_MODEL_JOIN =
+            "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
+            + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE ";
+
+    /** Native LEFT JOIN for owner listing ID pagination (legacy brand/model columns may still exist in DB). */
+    private static final String OWNER_MODEL_JOIN =
+            "LEFT JOIN car_models cm ON cm.id = c.model_id "
+            + "LEFT JOIN car_brands cb ON cb.id = cm.brand_id ";
+
+    private static final List<Reservation.Status> BLOCKING_RESERVATION_STATUSES = List.of(
+            Reservation.Status.PENDING,
+            Reservation.Status.ACCEPTED,
+            Reservation.Status.STARTED);
+
     @PersistenceContext
     private EntityManager em;
 
     @Override
+    @Transactional
     public Listing createListing(
             final long carId,
             final String title,
@@ -130,6 +165,7 @@ public class ListingJpaDao implements ListingDao {
     }
 
     @Override
+    @Transactional
     public boolean updateOwnerListing(
             final long ownerId,
             final long listingId,
@@ -157,6 +193,7 @@ public class ListingJpaDao implements ListingDao {
     }
 
     @Override
+    @Transactional
     public boolean toggleListingStatus(final long ownerId, final long listingId) {
         final Listing listing = em.find(Listing.class, listingId);
         if (listing == null || listing.getCar().getOwner().getId() != ownerId) {
@@ -175,6 +212,7 @@ public class ListingJpaDao implements ListingDao {
     }
 
     @Override
+    @Transactional
     public boolean updateListingStatus(
             final long listingId,
             final Listing.Status newStatus,
@@ -220,19 +258,27 @@ public class ListingJpaDao implements ListingDao {
 
     @Override
     public List<Listing> searchListings(final ListingSearchCriteria criteria) {
-        final StringBuilder sql = new StringBuilder(
-                "SELECT DISTINCT l.* FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
         final Map<String, Object> params = new HashMap<>();
-        appendSearchFilters(sql, params, criteria);
-        sql.append("ORDER BY l.created_at DESC");
-        final List<Listing> result = runEntityNativeQuery(sql.toString(), params, Listing.class);
+        params.put("activeStatus", Listing.Status.ACTIVE);
+        final StringBuilder jpql = new StringBuilder(
+                "SELECT DISTINCT l FROM Listing l WHERE l.status = :activeStatus");
+        jpql.append(JPQL_VALIDATED_CAR_MODEL);
+        appendJpqlSearchFilters(jpql, params, criteria);
+        jpql.append(" ORDER BY l.createdAt DESC");
+        @SuppressWarnings("unchecked")
+        final List<Listing> result = bindParams(em.createQuery(jpql.toString(), Listing.class), params)
+                .getResultList();
         return filterByAvailabilityCoverage(criteria, result, Listing::getId);
     }
 
     @Override
     public List<Listing> getCheapestListings(final int limit) {
         return em.createQuery(
-                        "FROM Listing l WHERE l.status = :status ORDER BY l.dayPrice ASC",
+                        "FROM Listing l WHERE l.status = :status"
+                        + " AND l.car.carModel IS NOT NULL"
+                        + " AND l.car.carModel.validated = TRUE"
+                        + " AND l.car.carModel.brand.validated = TRUE"
+                        + " ORDER BY l.dayPrice ASC",
                         Listing.class)
                 .setParameter("status", Listing.Status.ACTIVE)
                 .setMaxResults(limit)
@@ -242,7 +288,11 @@ public class ListingJpaDao implements ListingDao {
     @Override
     public List<Listing> getMostRecentListings(final int limit) {
         return em.createQuery(
-                        "FROM Listing l WHERE l.status = :status ORDER BY l.createdAt DESC",
+                        "FROM Listing l WHERE l.status = :status"
+                        + " AND l.car.carModel IS NOT NULL"
+                        + " AND l.car.carModel.validated = TRUE"
+                        + " AND l.car.carModel.brand.validated = TRUE"
+                        + " ORDER BY l.createdAt DESC",
                         Listing.class)
                 .setParameter("status", Listing.Status.ACTIVE)
                 .setMaxResults(limit)
@@ -265,17 +315,13 @@ public class ListingJpaDao implements ListingDao {
             final int limit,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
-        final Map<String, Object> params = new HashMap<>();
-        params.put("limit", limit);
-        params.put("offset", offset);
-        appendPublicBrowseFilterParams(params, browseWallDate, excludeOwnerUserId);
-        final String sql = listingCardSelectPrefix()
-                + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                + "WHERE l.status = 'active' "
-                + publicBrowseAvailabilitySql(browseWallDate)
-                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
-                + "ORDER BY l.day_price ASC LIMIT :limit OFFSET :offset";
-        return runListingCardNativeQuery(sql, params);
+        return listingCardsFromOrderedIds(loadPublicListingIdsPage(
+                "l.day_price ASC",
+                offset,
+                limit,
+                browseWallDate,
+                excludeOwnerUserId,
+                null));
     }
 
     @Override
@@ -284,17 +330,13 @@ public class ListingJpaDao implements ListingDao {
             final int limit,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
-        final Map<String, Object> params = new HashMap<>();
-        params.put("limit", limit);
-        params.put("offset", offset);
-        appendPublicBrowseFilterParams(params, browseWallDate, excludeOwnerUserId);
-        final String sql = listingCardSelectPrefix()
-                + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                + "WHERE l.status = 'active' "
-                + publicBrowseAvailabilitySql(browseWallDate)
-                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
-                + "ORDER BY l.created_at DESC LIMIT :limit OFFSET :offset";
-        return runListingCardNativeQuery(sql, params);
+        return listingCardsFromOrderedIds(loadPublicListingIdsPage(
+                "l.created_at DESC",
+                offset,
+                limit,
+                browseWallDate,
+                excludeOwnerUserId,
+                null));
     }
 
     @Override
@@ -304,32 +346,30 @@ public class ListingJpaDao implements ListingDao {
 
         final Map<String, Object> countParams = new HashMap<>();
         countParams.put("ownerId", criteria.getOwnerId());
-        final StringBuilder countSql = new StringBuilder(
-                "SELECT COUNT(*) FROM listings l JOIN cars c ON c.id = l.car_id WHERE c.owner_id = :ownerId ");
-        appendOwnerListingFilters(countSql, countParams, criteria);
-        final Number total = (Number) bindParams(em.createNativeQuery(countSql.toString()), countParams).getSingleResult();
+        final StringBuilder countJpql = new StringBuilder(
+                "SELECT COUNT(l) FROM Listing l WHERE l.car.owner.id = :ownerId");
+        appendJpqlOwnerListingFilters(countJpql, countParams, criteria);
+        final Long total = (Long) bindParams(em.createQuery(countJpql.toString(), Long.class), countParams)
+                .getSingleResult();
 
         final int offset = page * pageSize;
-        final Map<String, Object> listParams = new HashMap<>();
-        listParams.put("ownerId", criteria.getOwnerId());
-        listParams.put("limit", pageSize);
-        listParams.put("offset", offset);
-        final StringBuilder listSql = new StringBuilder(
-                "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, "
-                        + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                        + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.rating_avg, l.status AS listing_status, "
-                        + buildReviewCountSql() + " AS review_count "
-                        + "FROM listings l JOIN cars c ON c.id = l.car_id "
-                        + "WHERE c.owner_id = :ownerId ");
-        appendOwnerListingFilters(listSql, listParams, criteria);
-        listSql.append("ORDER BY ").append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
-               .append(" LIMIT :limit OFFSET :offset");
-        final List<ListingCard> content = runListingCardNativeQuery(listSql.toString(), listParams);
-        return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
+        final Map<String, Object> idParams = new HashMap<>();
+        idParams.put("ownerId", criteria.getOwnerId());
+        idParams.put("limit", pageSize);
+        idParams.put("offset", offset);
+        final StringBuilder idSql = new StringBuilder(
+                "SELECT l.id FROM listings l JOIN cars c ON c.id = l.car_id "
+                + OWNER_MODEL_JOIN
+                + "WHERE c.owner_id = :ownerId ");
+        appendNativeOwnerListingFilters(idSql, idParams, criteria);
+        idSql.append("ORDER BY ")
+                .append(buildNativeOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+                .append(" LIMIT :limit OFFSET :offset");
+        final List<ListingCard> content = listingCardsFromOrderedIds(runListingIdNativeQuery(idSql.toString(), idParams));
+        return new Page<>(content, page, pageSize, total != null ? total : 0L);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Listing> findActiveOrPausedListingByCar(final long carId) {
         return em.createQuery(
                         "FROM Listing l WHERE l.car.id = :carId AND l.status <> :finished ORDER BY l.id DESC",
@@ -342,7 +382,6 @@ public class ListingJpaDao implements ListingDao {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Optional<Listing> findMostRecentListingByCar(final long carId) {
         return em.createQuery(
                         "FROM Listing l WHERE l.car.id = :carId ORDER BY l.id DESC",
@@ -367,41 +406,10 @@ public class ListingJpaDao implements ListingDao {
             final int limit,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
-        final Map<String, Object> params = new HashMap<>();
-        params.put("homeLimit", limit);
-        appendPublicBrowseFilterParams(params, browseWallDate, excludeOwnerUserId);
-
-        final String cheapestSelect = "SELECT CAST('C' AS VARCHAR(1)) AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
-                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.rating_avg, l.status AS listing_status, "
-                + buildReviewCountSql() + " AS review_count "
-                + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
-                + publicBrowseAvailabilitySql(browseWallDate)
-                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
-                + "ORDER BY l.day_price ASC LIMIT :homeLimit";
-        final String recentSelect = "SELECT CAST('R' AS VARCHAR(1)) AS home_section, l.id AS listing_id, c.brand, c.model, l.day_price, "
-                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.rating_avg, l.status AS listing_status, "
-                + buildReviewCountSql() + " AS review_count "
-                + "FROM listings l JOIN cars c ON c.id = l.car_id WHERE l.status = 'active' "
-                + publicBrowseAvailabilitySql(browseWallDate)
-                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
-                + "ORDER BY l.created_at DESC LIMIT :homeLimit";
-        final String sql = "(" + cheapestSelect + ") UNION ALL (" + recentSelect + ")";
-
-        @SuppressWarnings("unchecked")
-        final List<Object[]> rows = bindParams(em.createNativeQuery(sql), params).getResultList();
-        final List<ListingCard> cheapest = new ArrayList<>();
-        final List<ListingCard> mostRecent = new ArrayList<>();
-        for (final Object[] row : rows) {
-            final ListingCard card = mapListingCard(row, 1);
-            final String section = String.valueOf(row[0]);
-            if ("C".equals(section)) {
-                cheapest.add(card);
-            } else {
-                mostRecent.add(card);
-            }
-        }
+        final List<ListingCard> cheapest = loadPublicListingCardsByJpql(
+                "l.dayPrice ASC", limit, browseWallDate, excludeOwnerUserId);
+        final List<ListingCard> mostRecent = loadPublicListingCardsByJpql(
+                "l.createdAt DESC", limit, browseWallDate, excludeOwnerUserId);
         return new HomeListingCards(List.copyOf(cheapest), List.copyOf(mostRecent));
     }
 
@@ -411,10 +419,16 @@ public class ListingJpaDao implements ListingDao {
                 criteria.getPage(), criteria.getUiPageSize(), criteria.getDbFetchSize());
         if (criteria.hasAvailabilityRange()) {
             final Map<String, Object> params = new HashMap<>();
-            final StringBuilder sql = new StringBuilder(listingCardSearchSelectClause());
-            appendListingCardSearchFromWhere(sql, params, criteria);
-            sql.append("ORDER BY ").append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()));
-            List<ListingCard> result = runListingCardNativeQuery(sql.toString(), params);
+            params.put("activeStatus", Listing.Status.ACTIVE);
+            final StringBuilder jpql = new StringBuilder(
+                    "SELECT DISTINCT l.id FROM Listing l WHERE l.status = :activeStatus");
+            jpql.append(JPQL_VALIDATED_CAR_MODEL);
+            appendJpqlSearchFilters(jpql, params, criteria);
+            jpql.append(" ORDER BY ").append(buildJpqlOrderBy(criteria.getSortBy(), criteria.getSortDirection()));
+            @SuppressWarnings("unchecked")
+            final List<Long> listingIds = bindParams(em.createQuery(jpql.toString(), Long.class), params)
+                    .getResultList();
+            List<ListingCard> result = listingCardsFromOrderedIds(listingIds);
             result = filterByAvailabilityCoverage(criteria, result, ListingCard::getListingId);
             final long total = result.size();
             final List<ListingCard> slice = DualLayerPageWindow.sliceGlobalOrdered(result, w);
@@ -422,21 +436,23 @@ public class ListingJpaDao implements ListingDao {
         }
 
         final Map<String, Object> countParams = new HashMap<>();
-        final StringBuilder countFromWhere = new StringBuilder();
-        appendListingCardSearchFromWhere(countFromWhere, countParams, criteria);
-        final Number totalObj = (Number) bindParams(
-                em.createNativeQuery("SELECT COUNT(*) " + countFromWhere), countParams).getSingleResult();
-        final long total = totalObj != null ? totalObj.longValue() : 0L;
+        countParams.put("activeStatus", Listing.Status.ACTIVE);
+        final StringBuilder countJpql = new StringBuilder(
+                "SELECT COUNT(DISTINCT l) FROM Listing l WHERE l.status = :activeStatus");
+        countJpql.append(JPQL_VALIDATED_CAR_MODEL);
+        appendJpqlSearchFilters(countJpql, countParams, criteria);
+        final Long totalObj = (Long) bindParams(em.createQuery(countJpql.toString(), Long.class), countParams)
+                .getSingleResult();
+        final long total = totalObj != null ? totalObj : 0L;
 
-        final Map<String, Object> listParams = new HashMap<>(countParams);
-        listParams.put("limit", w.sqlLimit());
-        listParams.put("offset", w.sqlOffset());
-        final StringBuilder listSql = new StringBuilder(listingCardSearchSelectClause());
-        appendListingCardSearchFromWhere(listSql, listParams, criteria);
-        listSql.append("ORDER BY ")
-                .append(buildOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
-                .append(" LIMIT :limit OFFSET :offset");
-        final List<ListingCard> batch = runListingCardNativeQuery(listSql.toString(), listParams);
+        final List<Long> pageIds = loadPublicListingIdsPage(
+                buildNativeOrderBy(criteria.getSortBy(), criteria.getSortDirection()),
+                w.sqlOffset(),
+                w.sqlLimit(),
+                criteria.getBrowseWallDate(),
+                criteria.getExcludeOwnerUserId(),
+                criteria);
+        final List<ListingCard> batch = listingCardsFromOrderedIds(pageIds);
         final List<ListingCard> slice = DualLayerPageWindow.sliceBatch(batch, w);
         return new Page<>(slice, w.uiPage(), w.uiPageSize(), total);
     }
@@ -447,28 +463,36 @@ public class ListingJpaDao implements ListingDao {
             final int limit,
             final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
+        final Optional<Listing> anchor = getListingById(listingId);
+        if (anchor.isEmpty()) {
+            return List.of();
+        }
+        final Car refCar = anchor.get().getCar();
         final Map<String, Object> params = new HashMap<>();
+        params.put("activeStatus", Listing.Status.ACTIVE);
         params.put("listingId", listingId);
-        params.put("similarLimit", limit);
-        appendPublicBrowseFilterParams(params, browseWallDate, excludeOwnerUserId);
-        final String sql = "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, "
-                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.rating_avg, l.status AS listing_status, "
-                + buildReviewCountSql() + " AS review_count "
-                + "FROM listings l "
-                + "INNER JOIN cars c ON l.car_id = c.id "
-                + "INNER JOIN listings la ON la.id = :listingId "
-                + "INNER JOIN cars ca ON ca.id = la.car_id "
-                + "WHERE l.status = 'active' "
+        params.put("refType", refCar.getType());
+        params.put("refPowertrain", refCar.getPowertrain());
+        params.put("refTransmission", refCar.getTransmission());
+        if (browseWallDate != null) {
+            params.put("browseWallDate", browseWallDate);
+        }
+        if (excludeOwnerUserId != null) {
+            params.put("excludeOwnerUserId", excludeOwnerUserId);
+        }
+        final StringBuilder jpql = new StringBuilder(
+                "SELECT l.id FROM Listing l WHERE l.status = :activeStatus "
                 + "AND l.id <> :listingId "
-                + "AND c.type = ca.type "
-                + "AND c.powertrain = ca.powertrain "
-                + "AND c.transmission = ca.transmission "
-                + publicBrowseAvailabilitySql(browseWallDate)
-                + publicBrowseExcludeOwnerSql(excludeOwnerUserId)
-                + "ORDER BY l.created_at DESC "
-                + "LIMIT :similarLimit";
-        return runListingCardNativeQuery(sql, params);
+                + "AND l.car.type = :refType AND l.car.powertrain = :refPowertrain "
+                + "AND l.car.transmission = :refTransmission");
+        jpql.append(JPQL_VALIDATED_CAR_MODEL);
+        appendJpqlPublicBrowseFilters(jpql, browseWallDate, excludeOwnerUserId);
+        jpql.append(" ORDER BY l.createdAt DESC");
+        @SuppressWarnings("unchecked")
+        final List<Long> ids = bindParams(em.createQuery(jpql.toString(), Long.class), params)
+                .setMaxResults(limit)
+                .getResultList();
+        return listingCardsFromOrderedIds(ids);
     }
 
     @Override
@@ -513,60 +537,247 @@ public class ListingJpaDao implements ListingDao {
 
     @Override
     public long countBrowseEligibleActiveListings(final LocalDate browseWallDate, final Long excludeOwnerUserId) {
-        if (browseWallDate == null && excludeOwnerUserId == null) {
-            final Long count = (Long) em.createQuery(
-                            "SELECT COUNT(l) FROM Listing l WHERE l.status = :status")
-                    .setParameter("status", Listing.Status.ACTIVE)
-                    .getSingleResult();
-            return count != null ? count : 0L;
-        }
         final Map<String, Object> params = new HashMap<>();
+        params.put("activeStatus", Listing.Status.ACTIVE);
+        final StringBuilder jpql = new StringBuilder(
+                "SELECT COUNT(DISTINCT l) FROM Listing l WHERE l.status = :activeStatus");
+        jpql.append(JPQL_VALIDATED_CAR_MODEL);
+        appendJpqlPublicBrowseFilters(jpql, browseWallDate, excludeOwnerUserId);
+        if (browseWallDate != null) {
+            params.put("browseWallDate", browseWallDate);
+        }
+        if (excludeOwnerUserId != null) {
+            params.put("excludeOwnerUserId", excludeOwnerUserId);
+        }
+        final Long count = (Long) bindParams(em.createQuery(jpql.toString(), Long.class), params).getSingleResult();
+        return count != null ? count : 0L;
+    }
+
+    // ---- query helpers ----
+
+    /** Step 1 of 1+1: native SQL returns listing IDs only (filter + sort + page). */
+    private List<Long> loadPublicListingIdsPage(
+            final String nativeOrderBy,
+            final int offset,
+            final int limit,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId,
+            final ListingSearchCriteria searchCriteria) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("limit", limit);
+        params.put("offset", offset);
         appendPublicBrowseFilterParams(params, browseWallDate, excludeOwnerUserId);
-        final String sql = "SELECT COUNT(DISTINCT l.id) FROM listings l INNER JOIN cars c ON c.id = l.car_id "
-                + "WHERE l.status = 'active' "
-                + publicBrowseAvailabilitySql(browseWallDate)
-                + publicBrowseExcludeOwnerSql(excludeOwnerUserId);
-        final Number count = (Number) bindParams(em.createNativeQuery(sql), params).getSingleResult();
-        return count != null ? count.longValue() : 0L;
+        final StringBuilder sql = new StringBuilder(
+                "SELECT l.id FROM listings l INNER JOIN cars c ON l.car_id = c.id "
+                + VALIDATED_MODEL_JOIN
+                + "WHERE l.status = 'active' ");
+        if (searchCriteria != null) {
+            appendNativeSearchFilters(sql, params, searchCriteria);
+        } else {
+            sql.append(publicBrowseAvailabilitySql(browseWallDate));
+            sql.append(publicBrowseExcludeOwnerSql(excludeOwnerUserId));
+        }
+        sql.append(" ORDER BY ").append(nativeOrderBy).append(" LIMIT :limit OFFSET :offset");
+        return runListingIdNativeQuery(sql.toString(), params);
     }
 
-    // ---- SQL helpers ----
-
-    private static String listingCardSelectPrefix() {
-        return "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, "
-                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.rating_avg, l.status AS listing_status, "
-                + buildReviewCountSql() + " AS review_count ";
+    /** Non-paginated public browse slices (home sections): pure JPQL + setMaxResults. */
+    private List<ListingCard> loadPublicListingCardsByJpql(
+            final String jpqlOrderBy,
+            final int limit,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("activeStatus", Listing.Status.ACTIVE);
+        if (browseWallDate != null) {
+            params.put("browseWallDate", browseWallDate);
+        }
+        if (excludeOwnerUserId != null) {
+            params.put("excludeOwnerUserId", excludeOwnerUserId);
+        }
+        final StringBuilder jpql = new StringBuilder(
+                "SELECT l.id FROM Listing l WHERE l.status = :activeStatus");
+        jpql.append(JPQL_VALIDATED_CAR_MODEL);
+        appendJpqlPublicBrowseFilters(jpql, browseWallDate, excludeOwnerUserId);
+        jpql.append(" ORDER BY ").append(jpqlOrderBy);
+        @SuppressWarnings("unchecked")
+        final List<Long> ids = bindParams(em.createQuery(jpql.toString(), Long.class), params)
+                .setMaxResults(limit)
+                .getResultList();
+        return listingCardsFromOrderedIds(ids);
     }
 
-    private static String listingCardSearchSelectClause() {
-        return "SELECT l.id AS listing_id, c.brand, c.model, l.day_price, "
-                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                + "ORDER BY cp.display_order ASC LIMIT 1) AS image_id, l.rating_avg, l.status AS listing_status, "
-                + buildReviewCountSql() + " AS review_count ";
+    /** Step 2 of 1+1: JPQL loads listings and assembles {@link ListingCard}s preserving ID order. */
+    private List<ListingCard> listingCardsFromOrderedIds(final List<Long> orderedListingIds) {
+        if (orderedListingIds.isEmpty()) {
+            return List.of();
+        }
+        final List<Listing> listings = loadListingsForCardsByIds(orderedListingIds);
+        final Map<Long, Listing> byId = listings.stream()
+                .collect(Collectors.toMap(Listing::getId, Function.identity(), (a, b) -> a));
+        final List<Long> carIds = listings.stream()
+                .map(l -> l.getCar().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        final Map<Long, Long> imageByCarId = loadCoverImageIdByCarIds(carIds);
+        final Map<Long, Long> reviewsByListingId = loadReviewCountsByListingIds(orderedListingIds);
+        return orderedListingIds.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(l -> toListingCard(
+                        l,
+                        imageByCarId.getOrDefault(l.getCar().getId(), 0L),
+                        reviewsByListingId.getOrDefault(l.getId(), 0L)))
+                .collect(Collectors.toList());
     }
 
-    private static String buildReviewCountSql() {
-        return "(SELECT COUNT(*) FROM reservations r "
-                + "INNER JOIN reviews rv ON r.id = rv.reservation_id AND rv.rating IS NOT NULL "
-                + "WHERE r.listing_id = l.id)";
+    private List<Listing> loadListingsForCardsByIds(final List<Long> listingIds) {
+        @SuppressWarnings("unchecked")
+        final List<Listing> listings = bindParams(
+                em.createQuery(
+                        "SELECT DISTINCT l FROM Listing l "
+                                + "JOIN FETCH l.car c "
+                                + "LEFT JOIN FETCH c.carModel m "
+                                + "LEFT JOIN FETCH m.brand "
+                                + "WHERE l.id IN :ids",
+                        Listing.class),
+                Map.of("ids", listingIds))
+                .getResultList();
+        return listings;
     }
 
-    private static void appendListingCardSearchFromWhere(
-            final StringBuilder sql,
+    @SuppressWarnings("unchecked")
+    private Map<Long, Long> loadReviewCountsByListingIds(final Collection<Long> listingIds) {
+        if (listingIds.isEmpty()) {
+            return Map.of();
+        }
+        final List<Object[]> rows = bindParams(
+                em.createQuery(
+                        "SELECT r.reservation.listing.id, COUNT(r) FROM Review r "
+                                + "WHERE r.reservation.listing.id IN :listingIds AND r.rating IS NOT NULL "
+                                + "GROUP BY r.reservation.listing.id"),
+                Map.of("listingIds", listingIds))
+                .getResultList();
+        final Map<Long, Long> result = new HashMap<>();
+        for (final Object[] row : rows) {
+            result.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
+        }
+        return result;
+    }
+
+    private Map<Long, Long> loadCoverImageIdByCarIds(final Collection<Long> carIds) {
+        if (carIds.isEmpty()) {
+            return Map.of();
+        }
+        final List<CarPicture> pictures = bindParams(
+                em.createQuery(
+                        "FROM CarPicture cp WHERE cp.car.id IN :carIds ORDER BY cp.car.id ASC, cp.displayOrder ASC",
+                        CarPicture.class),
+                Map.of("carIds", carIds))
+                .getResultList();
+        final Map<Long, Long> result = new HashMap<>();
+        for (final CarPicture picture : pictures) {
+            result.putIfAbsent(picture.getCar().getId(), picture.getImageId());
+        }
+        return result;
+    }
+
+    private static ListingCard toListingCard(final Listing listing, final long imageId, final long reviewCount) {
+        final Car car = listing.getCar();
+        return new ListingCard(
+                listing.getId(),
+                car.getId(),
+                car.getBrand(),
+                car.getModel(),
+                listing.getDayPrice(),
+                imageId,
+                listing.getRatingAvg().orElse(null),
+                listing.getStatus(),
+                reviewCount);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Long> runListingIdNativeQuery(final String sql, final Map<String, Object> params) {
+        final List<Number> raw = bindParams(em.createNativeQuery(sql), params).getResultList();
+        return new ArrayList<>(raw.stream().map(Number::longValue).collect(Collectors.toCollection(LinkedHashSet::new)));
+    }
+
+    private static void appendJpqlPublicBrowseFilters(
+            final StringBuilder jpql,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        if (browseWallDate != null) {
+            jpql.append(" AND EXISTS (SELECT 1 FROM ListingAvailability la "
+                    + "WHERE la.listing.id = l.id AND la.endInclusive >= :browseWallDate)");
+        }
+        if (excludeOwnerUserId != null) {
+            jpql.append(" AND l.car.owner.id <> :excludeOwnerUserId");
+        }
+    }
+
+    private static void appendJpqlSearchFilters(
+            final StringBuilder jpql,
             final Map<String, Object> params,
             final ListingSearchCriteria criteria) {
-        sql.append("FROM listings l INNER JOIN cars c ON l.car_id = c.id WHERE l.status = 'active' ");
-        appendSearchFilters(sql, params, criteria);
+        if (criteria.getQuery() != null) {
+            final String q = "%" + escapeLike(criteria.getQuery()) + "%";
+            jpql.append(" AND (LOWER(l.car.carModel.brand.name) LIKE LOWER(:search) ESCAPE '\\'"
+                    + " OR LOWER(l.car.carModel.name) LIKE LOWER(:search) ESCAPE '\\'"
+                    + " OR LOWER(l.title) LIKE LOWER(:search) ESCAPE '\\'"
+                    + " OR LOWER(l.description) LIKE LOWER(:search) ESCAPE '\\'"
+                    + " OR LOWER(CONCAT(COALESCE(l.startPointStreet, ''), ' ', COALESCE(l.startPointNumber, '')))"
+                    + " LIKE LOWER(:search) ESCAPE '\\')");
+            params.put("search", q);
+        }
+        if (!criteria.getTransmissions().isEmpty()) {
+            jpql.append(" AND l.car.transmission IN :transmissions");
+            params.put("transmissions", criteria.getTransmissions());
+        }
+        if (!criteria.getPowertrains().isEmpty()) {
+            jpql.append(" AND l.car.powertrain IN :powertrains");
+            params.put("powertrains", criteria.getPowertrains());
+        }
+        if (!criteria.getNeighborhoodIds().isEmpty()) {
+            jpql.append(" AND l.neighborhood.id IN :searchNeighborhoodIds");
+            params.put("searchNeighborhoodIds", criteria.getNeighborhoodIds());
+        }
+        if (!criteria.getCarTypes().isEmpty()) {
+            jpql.append(" AND l.car.type IN :carTypes");
+            params.put("carTypes", criteria.getCarTypes());
+        }
+        if (criteria.getMinPrice() != null) {
+            jpql.append(" AND l.dayPrice >= :minPrice");
+            params.put("minPrice", criteria.getMinPrice());
+        }
+        if (criteria.getMaxPrice() != null) {
+            jpql.append(" AND l.dayPrice <= :maxPrice");
+            params.put("maxPrice", criteria.getMaxPrice());
+        }
+        appendJpqlRatingBandFilter(jpql, criteria.getRatingBands());
+        if (criteria.hasAvailabilityRange()) {
+            jpql.append(" AND NOT EXISTS (SELECT 1 FROM Reservation r WHERE r.listing.id = l.id"
+                    + " AND r.status IN :blockingReservationStatuses"
+                    + " AND r.startDate < :resWindowEnd AND r.endDate > :resWindowStart)");
+            params.put("blockingReservationStatuses", BLOCKING_RESERVATION_STATUSES);
+            params.put("resWindowEnd", criteria.getAvailabilityRangeEndExclusive());
+            params.put("resWindowStart", criteria.getAvailabilityRangeStart());
+        }
+        appendJpqlPublicBrowseFilters(jpql, criteria.getBrowseWallDate(), criteria.getExcludeOwnerUserId());
+        if (criteria.getBrowseWallDate() != null) {
+            params.put("browseWallDate", criteria.getBrowseWallDate());
+        }
+        if (criteria.getExcludeOwnerUserId() != null) {
+            params.put("excludeOwnerUserId", criteria.getExcludeOwnerUserId());
+        }
     }
 
-    private static void appendSearchFilters(
+    private static void appendNativeSearchFilters(
             final StringBuilder sql,
             final Map<String, Object> params,
             final ListingSearchCriteria criteria) {
         if (criteria.getQuery() != null) {
             final String q = "%" + escapeLike(criteria.getQuery()) + "%";
-            sql.append("AND (LOWER(c.brand) LIKE LOWER(:search) ESCAPE '\\' OR LOWER(c.model) LIKE LOWER(:search) ESCAPE '\\' ")
+            sql.append("AND (LOWER(cb.name) LIKE LOWER(:search) ESCAPE '\\' OR LOWER(cm.name) LIKE LOWER(:search) ESCAPE '\\' ")
                     .append("OR LOWER(l.title) LIKE LOWER(:search) ESCAPE '\\' OR LOWER(l.description) LIKE LOWER(:search) ESCAPE '\\' ")
                     .append("OR LOWER(CONCAT(COALESCE(l.start_point_street, ''), ' ', COALESCE(l.start_point_number, ''))) "
                             + "LIKE LOWER(:search) ESCAPE '\\') ");
@@ -596,7 +807,7 @@ public class ListingJpaDao implements ListingDao {
             sql.append("AND l.day_price <= :maxPrice ");
             params.put("maxPrice", criteria.getMaxPrice());
         }
-        appendRatingBandFilter(sql, criteria.getRatingBands());
+        appendNativeRatingBandFilter(sql, criteria.getRatingBands());
         if (criteria.hasAvailabilityRange()) {
             sql.append("AND NOT EXISTS (")
                     .append("SELECT 1 FROM reservations r WHERE r.listing_id = l.id ")
@@ -610,7 +821,52 @@ public class ListingJpaDao implements ListingDao {
         sql.append(publicBrowseExcludeOwnerSql(criteria.getExcludeOwnerUserId()));
     }
 
-    private static void appendOwnerListingFilters(
+    private static void appendJpqlOwnerListingFilters(
+            final StringBuilder jpql,
+            final Map<String, Object> params,
+            final OwnerListingSearchCriteria criteria) {
+        if (!criteria.getListingStatusFilters().isEmpty()) {
+            jpql.append(" AND l.status IN :ownerListingStatuses");
+            params.put("ownerListingStatuses", criteria.getListingStatusFilters().stream()
+                    .map(s -> Listing.Status.valueOf(s.toUpperCase()))
+                    .collect(Collectors.toList()));
+        }
+        final String textQuery = criteria.getTextQuery();
+        if (textQuery != null) {
+            final String q = "%" + escapeLike(textQuery) + "%";
+            jpql.append(" AND (LOWER(l.car.carModel.brand.name) LIKE LOWER(:ownerListingSearch) ESCAPE '\\'"
+                    + " OR LOWER(l.car.carModel.name) LIKE LOWER(:ownerListingSearch) ESCAPE '\\'"
+                    + " OR LOWER(l.title) LIKE LOWER(:ownerListingSearch) ESCAPE '\\')");
+            params.put("ownerListingSearch", q);
+        }
+        if (!criteria.getCarTypes().isEmpty()) {
+            jpql.append(" AND l.car.type IN :ownerCarTypes");
+            params.put("ownerCarTypes", criteria.getCarTypes());
+        }
+        if (!criteria.getTransmissions().isEmpty()) {
+            jpql.append(" AND l.car.transmission IN :ownerTransmissions");
+            params.put("ownerTransmissions", criteria.getTransmissions());
+        }
+        if (!criteria.getPowertrains().isEmpty()) {
+            jpql.append(" AND l.car.powertrain IN :ownerPowertrains");
+            params.put("ownerPowertrains", criteria.getPowertrains());
+        }
+        if (criteria.getMinPrice() != null) {
+            jpql.append(" AND l.dayPrice >= :ownerMinPrice");
+            params.put("ownerMinPrice", criteria.getMinPrice());
+        }
+        if (criteria.getMaxPrice() != null) {
+            jpql.append(" AND l.dayPrice <= :ownerMaxPrice");
+            params.put("ownerMaxPrice", criteria.getMaxPrice());
+        }
+        if (criteria.getExcludeListingId() != null) {
+            jpql.append(" AND l.id <> :ownerExcludeListingId");
+            params.put("ownerExcludeListingId", criteria.getExcludeListingId());
+        }
+        appendJpqlRatingBandFilter(jpql, criteria.getRatingBands());
+    }
+
+    private static void appendNativeOwnerListingFilters(
             final StringBuilder sql,
             final Map<String, Object> params,
             final OwnerListingSearchCriteria criteria) {
@@ -621,8 +877,8 @@ public class ListingJpaDao implements ListingDao {
         final String textQuery = criteria.getTextQuery();
         if (textQuery != null) {
             final String q = "%" + escapeLike(textQuery) + "%";
-            sql.append("AND (LOWER(c.brand) LIKE LOWER(:ownerListingSearch) ESCAPE '\\' "
-                    + "OR LOWER(c.model) LIKE LOWER(:ownerListingSearch) ESCAPE '\\' "
+            sql.append("AND (LOWER(COALESCE(cb.name, c.brand, '')) LIKE LOWER(:ownerListingSearch) ESCAPE '\\' "
+                    + "OR LOWER(COALESCE(cm.name, c.model, '')) LIKE LOWER(:ownerListingSearch) ESCAPE '\\' "
                     + "OR LOWER(l.title) LIKE LOWER(:ownerListingSearch) ESCAPE '\\') ");
             params.put("ownerListingSearch", q);
         }
@@ -650,7 +906,7 @@ public class ListingJpaDao implements ListingDao {
             sql.append("AND l.id <> :ownerExcludeListingId ");
             params.put("ownerExcludeListingId", criteria.getExcludeListingId());
         }
-        appendRatingBandFilter(sql, criteria.getRatingBands());
+        appendNativeRatingBandFilter(sql, criteria.getRatingBands());
     }
 
     private static void appendPublicBrowseFilterParams(
@@ -680,8 +936,8 @@ public class ListingJpaDao implements ListingDao {
         return "AND c.owner_id <> :excludeOwnerUserId ";
     }
 
-    private static String buildOrderBy(final String sortBy, final String sortDirection) {
-        final String col = SORT_COLUMNS.getOrDefault(sortBy, "l.created_at");
+    private static String buildNativeOrderBy(final String sortBy, final String sortDirection) {
+        final String col = NATIVE_SORT_COLUMNS.getOrDefault(sortBy, "l.created_at");
         final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
         if ("rating".equals(sortBy)) {
             return col + " " + dir + " NULLS LAST, l.created_at DESC";
@@ -689,7 +945,16 @@ public class ListingJpaDao implements ListingDao {
         return col + " " + dir;
     }
 
-    private static void appendRatingBandFilter(final StringBuilder sql, final List<String> ratingBands) {
+    private static String buildJpqlOrderBy(final String sortBy, final String sortDirection) {
+        final String prop = JPQL_SORT_PROPERTIES.getOrDefault(sortBy, "l.createdAt");
+        final String dir = "asc".equalsIgnoreCase(sortDirection) ? "ASC" : "DESC";
+        if ("rating".equals(sortBy)) {
+            return prop + " " + dir + " NULLS LAST, l.createdAt DESC";
+        }
+        return prop + " " + dir;
+    }
+
+    private static void appendNativeRatingBandFilter(final StringBuilder sql, final List<String> ratingBands) {
         if (ratingBands.isEmpty()) {
             return;
         }
@@ -711,44 +976,33 @@ public class ListingJpaDao implements ListingDao {
         }
     }
 
+    private static void appendJpqlRatingBandFilter(final StringBuilder jpql, final List<String> ratingBands) {
+        if (ratingBands.isEmpty()) {
+            return;
+        }
+        final List<String> conditions = new ArrayList<>();
+        if (ratingBands.contains("UNDER_2")) {
+            conditions.add("l.ratingAvg < 2");
+        }
+        if (ratingBands.contains("2_TO_3")) {
+            conditions.add("(l.ratingAvg >= 2 AND l.ratingAvg < 3)");
+        }
+        if (ratingBands.contains("3_TO_4")) {
+            conditions.add("(l.ratingAvg >= 3 AND l.ratingAvg < 4)");
+        }
+        if (ratingBands.contains("OVER_4")) {
+            conditions.add("l.ratingAvg >= 4");
+        }
+        if (!conditions.isEmpty()) {
+            jpql.append(" AND (").append(String.join(" OR ", conditions)).append(")");
+        }
+    }
+
     private static String escapeLike(final String raw) {
         return raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
-    // ---- result mapping helpers ----
-
-    @SuppressWarnings("unchecked")
-    private <T> List<T> runEntityNativeQuery(final String sql, final Map<String, Object> params, final Class<T> entityClass) {
-        return bindParams(em.createNativeQuery(sql, entityClass), params).getResultList();
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<ListingCard> runListingCardNativeQuery(final String sql, final Map<String, Object> params) {
-        final List<Object[]> rows = bindParams(em.createNativeQuery(sql), params).getResultList();
-        final List<ListingCard> result = new ArrayList<>(rows.size());
-        for (final Object[] row : rows) {
-            result.add(mapListingCard(row, 0));
-        }
-        return result;
-    }
-
-    private static ListingCard mapListingCard(final Object[] row, final int offset) {
-        final long listingId = ((Number) row[offset]).longValue();
-        final String brand = (String) row[offset + 1];
-        final String model = (String) row[offset + 2];
-        final BigDecimal dayPrice = (BigDecimal) row[offset + 3];
-        final Object rawImageId = row[offset + 4];
-        final long imageId = rawImageId == null ? 0L : ((Number) rawImageId).longValue();
-        final Object rawRating = row[offset + 5];
-        final BigDecimal ratingAvg = rawRating == null ? null
-                : new BigDecimal(rawRating.toString()).setScale(2, RoundingMode.HALF_UP);
-        final String statusStr = (String) row[offset + 6];
-        final Listing.Status status = statusStr == null ? null : Listing.Status.valueOf(statusStr.toUpperCase());
-        final long reviewCount = ((Number) row[offset + 7]).longValue();
-        return new ListingCard(listingId, brand, model, dayPrice, imageId, ratingAvg, status, reviewCount);
-    }
-
-    // ---- availability coverage filtering (ported from JDBC version) ----
+    // ---- availability coverage filtering ----
 
     private <T> List<T> filterByAvailabilityCoverage(
             final ListingSearchCriteria criteria,
@@ -771,42 +1025,29 @@ public class ListingJpaDao implements ListingDao {
                 .collect(Collectors.toList());
     }
 
-    @SuppressWarnings("unchecked")
     private Map<Long, List<DateRange>> loadAvailabilityRanges(
             final List<Long> listingIds, final LocalDate fromDay, final LocalDate untilDay) {
         if (listingIds.isEmpty()) {
             return Map.of();
         }
-        final Map<String, Object> params = new HashMap<>();
-        params.put("listingIds", listingIds);
-        params.put("untilDay", java.sql.Date.valueOf(untilDay));
-        params.put("fromDay", java.sql.Date.valueOf(fromDay));
-        final List<Object[]> rows = bindParams(em.createNativeQuery(
-                        "SELECT listing_id, start_date, end_date FROM listing_availability "
-                                + "WHERE listing_id IN (:listingIds) "
-                                + "AND start_date <= :untilDay "
-                                + "AND end_date >= :fromDay "
-                                + "ORDER BY listing_id ASC, start_date ASC, end_date ASC"),
-                params)
+        final List<ListingAvailability> rows = bindParams(
+                em.createQuery(
+                        "FROM ListingAvailability la WHERE la.listing.id IN :listingIds "
+                                + "AND la.startInclusive <= :untilDay "
+                                + "AND la.endInclusive >= :fromDay "
+                                + "ORDER BY la.listing.id ASC, la.startInclusive ASC, la.endInclusive ASC",
+                        ListingAvailability.class),
+                Map.of(
+                        "listingIds", listingIds,
+                        "untilDay", untilDay,
+                        "fromDay", fromDay))
                 .getResultList();
         final Map<Long, List<DateRange>> result = new HashMap<>();
-        for (final Object[] row : rows) {
-            final long lid = ((Number) row[0]).longValue();
-            final LocalDate start = toLocalDate(row[1]);
-            final LocalDate end = toLocalDate(row[2]);
-            result.computeIfAbsent(lid, ignored -> new ArrayList<>()).add(new DateRange(start, end));
+        for (final ListingAvailability availability : rows) {
+            result.computeIfAbsent(availability.getListing().getId(), ignored -> new ArrayList<>())
+                    .add(new DateRange(availability.getStartInclusive(), availability.getEndInclusive()));
         }
         return result;
-    }
-
-    private static LocalDate toLocalDate(final Object o) {
-        if (o instanceof LocalDate) {
-            return (LocalDate) o;
-        }
-        if (o instanceof java.sql.Date) {
-            return ((java.sql.Date) o).toLocalDate();
-        }
-        return LocalDate.parse(o.toString());
     }
 
     private static boolean coversEveryDay(final List<DateRange> ranges, final LocalDate fromDay, final LocalDate untilDay) {

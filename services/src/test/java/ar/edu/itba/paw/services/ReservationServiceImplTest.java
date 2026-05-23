@@ -21,9 +21,10 @@ import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.ReservationAvailabilityLink;
 import ar.edu.itba.paw.models.domain.User;
-import java.util.Collections;
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
@@ -42,6 +43,9 @@ public class ReservationServiceImplTest {
 
     @Mock
     private ReservationDao reservationDao;
+
+    @Mock
+    private ReservationAvailabilityService reservationAvailabilityService;
 
     @Mock
     private ListingService listingService;
@@ -98,6 +102,35 @@ public class ReservationServiceImplTest {
         Mockito.when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(24);
     }
 
+    private void stubEffectiveAvailabilityForWallRange(
+            final long listingId,
+            final LocalDate firstDay,
+            final LocalDate lastDay,
+            final long availabilityId,
+            final BigDecimal dayPrice) {
+        for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
+            final ListingAvailability availability = Mockito.mock(ListingAvailability.class);
+            Mockito.when(availability.getId()).thenReturn(availabilityId);
+            Mockito.when(availability.getKind()).thenReturn(ListingAvailability.Kind.OFFERED);
+            Mockito.when(listingAvailabilityService.findEffectiveForDay(listingId, day))
+                    .thenReturn(Optional.of(availability));
+        }
+        Mockito.when(reservationAvailabilityService.quoteTotalFromLinks(Mockito.anyList()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    final List<ReservationAvailabilityLink> links = invocation.getArgument(0);
+                    if (links.isEmpty()) {
+                        return Optional.empty();
+                    }
+                    long coveredDays = 0L;
+                    for (final ReservationAvailabilityLink link : links) {
+                        coveredDays += java.time.temporal.ChronoUnit.DAYS.between(
+                                link.getCoveredStartDate(), link.getCoveredEndDate().plusDays(1));
+                    }
+                    return Optional.of(dayPrice.multiply(BigDecimal.valueOf(coveredDays)));
+                });
+    }
+
     @Test
     public void testCreateReservationWhenNoOverlapReturnsCreatedReservation() {
         stubReservationTimingForReservationFlow();
@@ -123,13 +156,17 @@ public class ReservationServiceImplTest {
         Mockito.when(userService.getListingOwner(listingId))
                 .thenReturn(Optional.of(User.identities(99L, "owner@example.com", "O", "Owner")));
         Mockito.when(userService.getUserCbu(99L)).thenReturn("0170200203000008777719");
-        Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
-        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
-        Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(Collections.emptyList());
+        stubEffectiveAvailabilityForWallRange(
+                listingId,
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 5),
+                50L,
+                new BigDecimal("40.00"));
         Mockito.when(listingViewService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
         Mockito.when(listingViewService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
         Mockito.doNothing().when(listingService).refreshListingFinishedIfExhausted(listingId);
+        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(User.identities(riderId, "r@e.com", "R", "Rider")));
         Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(Locale.ENGLISH);
         Mockito.when(reservationDao.createReservation(
@@ -139,7 +176,9 @@ public class ReservationServiceImplTest {
                 Mockito.eq(END),
                 Mockito.eq(Reservation.Status.ACCEPTED),
                 Mockito.any(BigDecimal.class),
-                Mockito.eq(PAYMENT_DEADLINE))).thenReturn(created);
+                Mockito.any(OffsetDateTime.class)))
+                .thenReturn(created);
+        Mockito.doNothing().when(reservationAvailabilityService).insertLinks(Mockito.eq(10L), Mockito.anyList());
 
         // 2. Execute
         final Reservation result = reservationService.createReservation(
@@ -246,10 +285,8 @@ public class ReservationServiceImplTest {
 
         Mockito.when(listing.getId()).thenReturn(listingId);
         Mockito.when(listing.getTitle()).thenReturn("Test vehicle");
-        Mockito.when(listing.getDayPrice()).thenReturn(new BigDecimal("40.00"));
 
         Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
-        Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(Collections.emptyList());
         Mockito.when(listingViewService.formatRiderReservationHandoverSummary(Mockito.eq(listing), Mockito.any(Reservation.class)))
                 .thenReturn("Rider handover");
         Mockito.when(listingViewService.formatOwnerReservationHandoverSummary(listing)).thenReturn("Owner handover");
@@ -292,11 +329,18 @@ public class ReservationServiceImplTest {
                         .totalPrice(inv.getArgument(5, BigDecimal.class))
                         .paymentProofDeadlineAt(inv.getArgument(6, OffsetDateTime.class))
                         .build());
+        Mockito.doNothing().when(reservationAvailabilityService).insertLinks(Mockito.eq(reservationId), Mockito.anyList());
 
         /* Takes at least ~48 h in the wall calendar: it complies with the 24 h clock rule even if the test runs at night. */
         final LocalDate fromDay = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(2);
         final String fromWall = fromDay.atTime(10, 0).toString();
         final String untilWall = fromDay.plusDays(4).atTime(18, 0).toString();
+        stubEffectiveAvailabilityForWallRange(
+                listingId,
+                fromDay,
+                fromDay.plusDays(4),
+                51L,
+                new BigDecimal("40.00"));
 
         // 2. Execute
         final Reservation result = reservationService.submitRiderReservation(
@@ -490,13 +534,15 @@ public class ReservationServiceImplTest {
     @Test
     public void testCalculateTotalWhenWallDatesSpanFifteenDaysReturnsExpectedMoney() {
         final long listingId = 2L;
-        final Listing listing = Mockito.mock(Listing.class);
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");
         final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-30T18:00");
 
-        Mockito.when(listing.getDayPrice()).thenReturn(BigDecimal.valueOf(150L));
-        Mockito.when(listingService.getListingById(listingId)).thenReturn(Optional.of(listing));
-        Mockito.when(listingAvailabilityService.findByListingId(listingId)).thenReturn(Collections.emptyList());
+        stubEffectiveAvailabilityForWallRange(
+                listingId,
+                LocalDate.of(2026, 4, 15),
+                LocalDate.of(2026, 4, 30),
+                99L,
+                BigDecimal.valueOf(150L));
 
         final Optional<BigDecimal> total = reservationService.calculateTotal(listingId, startDate, endDate);
 

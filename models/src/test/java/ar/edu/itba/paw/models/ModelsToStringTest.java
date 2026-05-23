@@ -21,22 +21,24 @@ class ModelsToStringTest {
 
     @Test
     void testCarToStringIncludesAllFields() {
-        // Arrange
+        // Arrange: no carModel set → brand/model are null
         final Car car = Car.builder()
                 .id(1L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("AA123BB")
-                .brand("Toyota")
-                .model("Yaris")
                 .type(Car.Type.HATCHBACK)
                 .powertrain(Car.Powertrain.HYBRID)
                 .transmission(Car.Transmission.AUTOMATIC)
+                .status(Car.Status.ACTIVE)
+                .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
+                .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
                 .build();
         // Exercise
         final String result = car.toString();
         // Assert
-        final String expected = "Car{id=1, ownerId=2, plate='AA123BB', brand='Toyota', model='Yaris', type=HATCHBACK, "
-                + "powertrain=HYBRID, transmission=AUTOMATIC}";
+        final String expected = "Car{id=1, ownerId=2, plate='AA123BB', brand='null', model='null', type=HATCHBACK, "
+                + "powertrain=HYBRID, transmission=AUTOMATIC, status=ACTIVE, "
+                + "createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, ratingAvg=null}";
         Assertions.assertEquals(expected, result);
     }
 
@@ -83,10 +85,13 @@ class ModelsToStringTest {
         // Arrange
         final Listing listingRef = Mockito.mock(Listing.class);
         Mockito.when(listingRef.getId()).thenReturn(11L);
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(3L);
         final Reservation reservation = Reservation.builder()
                 .id(5L)
                 .rider(User.identities(7L, "r@test.com", "R", "R"))
                 .listing(listingRef)
+                .car(carRef)
                 .startDate(OffsetDateTime.parse("2026-04-10T08:00:00Z"))
                 .endDate(OffsetDateTime.parse("2026-04-12T08:00:00Z"))
                 .status(Reservation.Status.ACCEPTED)
@@ -107,6 +112,8 @@ class ModelsToStringTest {
         // Arrange
         final Listing laListingRef = Mockito.mock(Listing.class);
         Mockito.when(laListingRef.getId()).thenReturn(11L);
+        final Car laCarRef = Mockito.mock(Car.class);
+        Mockito.when(laListingRef.getCar()).thenReturn(laCarRef);
         final ListingAvailability availability = new ListingAvailability(
                 8L,
                 laListingRef,
@@ -118,7 +125,7 @@ class ModelsToStringTest {
         final String result = availability.toString();
         // Assert
         final String expected = "ListingAvailability{id=8, listingId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
-                + "createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z}";
+                + "dayPrice=null, kind=OFFERED, createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z}";
         Assertions.assertEquals(expected, result);
     }
 

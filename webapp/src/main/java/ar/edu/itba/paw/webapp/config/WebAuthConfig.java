@@ -118,10 +118,12 @@ public class WebAuthConfig {
                                 "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
                         .requestMatchers("/publish-car", "/publish-car/**").authenticated()
-                        .requestMatchers("/my-listings", "/my-listings/car/**").authenticated()
+                        .requestMatchers("/my-cars", "/my-cars/car/**", "/my-cars/quick-cbu").authenticated()
                         .requestMatchers(
-                                mvc(handlerMappingIntrospector, "/my-listings/{listingId}"),
-                                mvc(handlerMappingIntrospector, "/my-listings/{listingId}/**"))
+                                mvc(handlerMappingIntrospector, "/my-cars/{listingId}"),
+                                mvc(handlerMappingIntrospector, "/my-cars/{listingId}/**"),
+                                mvc(handlerMappingIntrospector, "/my-cars/car/{carId}"),
+                                mvc(handlerMappingIntrospector, "/my-cars/car/{carId}/**"))
                         .access(listingWebAuthorization.ownerAccess())
                         .requestMatchers("/my-reservations").authenticated()
                         .requestMatchers("/ws", "/ws/**").authenticated()

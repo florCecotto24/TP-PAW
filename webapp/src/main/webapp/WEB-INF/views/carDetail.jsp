@@ -15,18 +15,18 @@
         <c:when test="${param.from eq 'search'}">
             <spring:message code="navbar.explore" var="exploreLabel"/>
             <c:url var="exploreHref" value="/search"/>
-            <ryden:breadcrumbTrail midLabel="${exploreLabel}" midHref="${exploreHref}" currentLabel="${listing.title}"/>
+            <ryden:breadcrumbTrail midLabel="${exploreLabel}" midHref="${exploreHref}" currentLabel="${carTitle}"/>
         </c:when>
         <c:otherwise>
-            <ryden:breadcrumbTrail currentLabel="${listing.title}"/>
+            <ryden:breadcrumbTrail currentLabel="${carTitle}"/>
         </c:otherwise>
     </c:choose>
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
-            <h1 class="h2 fw-bold mb-0"><c:out value="${listing.title}"/></h1>
+            <h1 class="h2 fw-bold mb-0"><c:out value="${carTitle}"/></h1>
             <ryden:detailListingMeta
-                    location="${listingPublicLocation}"
+                    location="${carPublicLocation}"
                     rating="${listingRatingLabel}"
                     reviewCount="${listingReviewCountLabel}"/>
         </div>
@@ -37,12 +37,12 @@
             <ryden:carDetailGalleryGrid
                     modalId="carDetailGalleryModal"
                     imageUrls="${carGalleryImagePaths}"
-                    vehicleLabel="${listing.title}"/>
+                    vehicleLabel="${carTitle}"/>
 
             <!-- Owner contact info -->
             <c:url var="ownerProfileUrl" value="/counterparty-profile">
                 <c:param name="userId" value="${owner.id}"/>
-                <c:param name="listingId" value="${listing.id}"/>
+                <c:param name="carId" value="${car.id}"/>
             </c:url>
             <div class="d-flex align-items-center gap-2">
                 <a href="${ownerProfileUrl}" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
@@ -69,10 +69,10 @@
                     </span>
                 </a>
             </div>
-            <c:if test="${not empty listing.description}">
+            <c:if test="${not empty car.description}">
                 <section>
                     <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.description"/></h2>
-                    <p class="mb-0 ryden-multiline-plaintext"><c:out value="${listing.description}"/></p>
+                    <p class="mb-0 ryden-multiline-plaintext"><c:out value="${car.description.get()}"/></p>
                 </section>
             </c:if>
             <section>
@@ -115,12 +115,12 @@
                         <c:if test="${listingReviewPage.totalPages > 1}">
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
                                 <c:url var="reviewsPrevUrl" value="/car-detail">
-                                    <c:param name="listingId" value="${listing.id}"/>
+                                    <c:param name="carId" value="${car.id}"/>
                                     <c:param name="reviewPage" value="${listingReviewPage.currentPage - 1}"/>
                                     <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
                                 </c:url>
                                 <c:url var="reviewsNextUrl" value="/car-detail">
-                                    <c:param name="listingId" value="${listing.id}"/>
+                                    <c:param name="carId" value="${car.id}"/>
                                     <c:param name="reviewPage" value="${listingReviewPage.currentPage + 1}"/>
                                     <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
                                 </c:url>
@@ -149,16 +149,16 @@
         <div class="col-lg-4 order-2">
             <div class="detail-reservation-sticky">
                 <ryden:detailReservationPanel
-                        listingId="${listing.id}"
+                        carId="${car.id}"
                         dailyPrice="${listingMinEffectiveDayPrice}"
                         priceFrom="${listingPriceIsVariable}"
-                        deliveryLocation="${listingPublicLocation}"
+                        deliveryLocation="${carPublicLocation}"
                         fromDateTimeValue="${reservationFromDefault}"
                         untilDateTimeValue="${reservationUntilDefault}"
                         bookableWallRangesJson="${bookableWallRangesJson}"
-                        carName="${listing.title}"
-                        pickupTime="${listing.checkInTime}"
-                        returnTime="${listing.checkOutTime}"
+                        carName="${carTitle}"
+                        pickupTime="${checkInTime}"
+                        returnTime="${checkOutTime}"
                         maxBillableDays="${maxReservationBillableDays}"
                         isOwnerRequesting="${isOwnerRequesting}"/>
             </div>
@@ -184,7 +184,7 @@
                                 </c:otherwise>
                             </c:choose>
 
-                            <c:url var="similarCarDetailUrl" value="/car-detail"><c:param name="listingId" value="${similar.listingId}"/></c:url>
+                            <c:url var="similarCarDetailUrl" value="/car-detail"><c:param name="carId" value="${similar.carId}"/></c:url>
                             <ryden:carCard
                                     model="${similar.model}"
                                     brand="${similar.brand}"
@@ -207,7 +207,7 @@
         modalId="carDetailGalleryModal"
         carouselId="carDetailCarousel"
         imageUrls="${carGalleryImagePaths}"
-        vehicleLabel="${listing.title}"/>
+        vehicleLabel="${carTitle}"/>
 </c:if>
 
 <%@include file="footer.jsp"%>

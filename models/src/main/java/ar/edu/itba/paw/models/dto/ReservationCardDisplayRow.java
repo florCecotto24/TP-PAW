@@ -6,7 +6,7 @@ package ar.edu.itba.paw.models.dto;
 public final class ReservationCardDisplayRow {
 
     private final long reservationId;
-    private final long listingId;
+    private final long carId;
     private final long imageId;
     private final String brand;
     private final String model;
@@ -17,7 +17,7 @@ public final class ReservationCardDisplayRow {
 
     public ReservationCardDisplayRow(
             final long reservationId,
-            final long listingId,
+            final long carId,
             final long imageId,
             final String brand,
             final String model,
@@ -26,7 +26,7 @@ public final class ReservationCardDisplayRow {
             final String statusKey,
             final String totalPrice) {
         this.reservationId = reservationId;
-        this.listingId = listingId;
+        this.carId = carId;
         this.imageId = imageId;
         this.brand = brand;
         this.model = model;
@@ -40,8 +40,8 @@ public final class ReservationCardDisplayRow {
         return reservationId;
     }
 
-    public long getListingId() {
-        return listingId;
+    public long getCarId() {
+        return carId;
     }
 
     public long getImageId() {

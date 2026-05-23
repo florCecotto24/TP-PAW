@@ -23,6 +23,12 @@ public interface ReviewService {
     /** Total public reviews stored for the listing. */
     long countReviewsForListing(long listingId);
 
+    /** Like {@link #getListingPublicReviews} but resolves by {@code car_id} (Phase 7d+). */
+    Page<ListingPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
+
+    /** Like {@link #countReviewsForListing} but resolves by {@code car_id} (Phase 7d+). */
+    long countReviewsForCar(long carId);
+
     /**
      * Owner rates the rider after a completed rental; enforces reservation state and one review per side.
      *

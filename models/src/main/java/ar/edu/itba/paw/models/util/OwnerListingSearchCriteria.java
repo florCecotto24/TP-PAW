@@ -9,8 +9,10 @@ public final class OwnerListingSearchCriteria extends BaseSearchCriteria {
     private final long ownerId;
     private final List<String> listingStatusFilters;
     private final String textQuery;
-    /** When set, rows with this listing id are omitted (public “other listings” grids). */
+    /** When set, rows with this listing id are omitted (public "other listings" grids). */
     private final Long excludeListingId;
+    /** When set, rows for this car id are omitted (car-centric "other listings" grids). */
+    private final Long excludeCarId;
 
     public OwnerListingSearchCriteria(
             final long ownerId,
@@ -27,11 +29,32 @@ public final class OwnerListingSearchCriteria extends BaseSearchCriteria {
             final String sortBy,
             final String sortDirection,
             final Long excludeListingId) {
+        this(ownerId, page, pageSize, listingStatusFilters, textQuery, carTypes, transmissions, powertrains,
+                minPrice, maxPrice, ratingBands, sortBy, sortDirection, excludeListingId, null);
+    }
+
+    public OwnerListingSearchCriteria(
+            final long ownerId,
+            final int page,
+            final int pageSize,
+            final List<String> listingStatusFilters,
+            final String textQuery,
+            final List<String> carTypes,
+            final List<String> transmissions,
+            final List<String> powertrains,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final List<String> ratingBands,
+            final String sortBy,
+            final String sortDirection,
+            final Long excludeListingId,
+            final Long excludeCarId) {
         super(page, pageSize, carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDirection);
         this.ownerId = ownerId;
         this.listingStatusFilters = listingStatusFilters == null ? List.of() : List.copyOf(listingStatusFilters);
         this.textQuery = textQuery != null && !textQuery.isBlank() ? textQuery.trim() : null;
         this.excludeListingId = excludeListingId;
+        this.excludeCarId = excludeCarId;
     }
 
     public long getOwnerId() {
@@ -48,5 +71,9 @@ public final class OwnerListingSearchCriteria extends BaseSearchCriteria {
 
     public Long getExcludeListingId() {
         return excludeListingId;
+    }
+
+    public Long getExcludeCarId() {
+        return excludeCarId;
     }
 }

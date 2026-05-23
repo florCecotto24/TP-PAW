@@ -22,7 +22,7 @@
         btn.addEventListener('click', function () {
             var ownerId = btn.getAttribute('data-owner-user-id');
             var nextPage = btn.getAttribute('data-next-page');
-            var excludeRaw = btn.getAttribute('data-exclude-listing-id');
+            var excludeRaw = btn.getAttribute('data-exclude-car-id');
             var url =
                     endpoint +
                     '?userId=' +
@@ -30,7 +30,7 @@
                     '&page=' +
                     encodeURIComponent(nextPage);
             if (excludeRaw != null && excludeRaw !== '') {
-                url += '&listingId=' + encodeURIComponent(excludeRaw);
+                url += '&carId=' + encodeURIComponent(excludeRaw);
             }
 
             btn.disabled = true;

@@ -2,7 +2,7 @@ package ar.edu.itba.paw.models.dto;
 
 import java.math.BigDecimal;
 
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
 
 /** Owner "my cars" hub card: always has car data, optionally has an active/paused listing. */
 public final class CarCard {
@@ -13,7 +13,7 @@ public final class CarCard {
     private final long imageId;
     private final Long listingId;
     private final BigDecimal dayPrice;
-    private final Listing.Status status;
+    private final Car.Status status;
     private final BigDecimal ratingAvg;
 
     public CarCard(
@@ -23,7 +23,7 @@ public final class CarCard {
             final long imageId,
             final Long listingId,
             final BigDecimal dayPrice,
-            final Listing.Status status,
+            final Car.Status status,
             final BigDecimal ratingAvg) {
         this.carId = carId;
         this.brand = brand;
@@ -59,7 +59,7 @@ public final class CarCard {
         return dayPrice;
     }
 
-    public Listing.Status getStatus() {
+    public Car.Status getStatus() {
         return status;
     }
 

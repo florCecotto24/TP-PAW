@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.LocationService;
@@ -56,11 +57,27 @@ public final class ListingAddressFormatter {
      * @return non-null string; may be blank if both street and neighborhood name are missing
      */
     public String formatPublicPickupLocation(final Listing listing) {
-        final String street = listing.getStartPointStreet() == null ? "" : listing.getStartPointStreet().trim();
-        if (listing.getNeighborhoodId().isEmpty()) {
+        return formatPublicPickupLocation(
+                listing.getStartPointStreet(),
+                listing.getNeighborhoodId().orElse(null));
+    }
+
+    /**
+     * Same as {@link #formatPublicPickupLocation(Listing)} but reads street and neighborhood directly
+     * from a {@link ListingAvailability} row (used when {@code Listing} entity is unavailable).
+     */
+    public String formatPublicPickupLocation(final ListingAvailability availability) {
+        return formatPublicPickupLocation(
+                availability.getStartPointStreet(),
+                availability.getNeighborhoodId().orElse(null));
+    }
+
+    private String formatPublicPickupLocation(final String startPointStreet, final Long neighborhoodId) {
+        final String street = startPointStreet == null ? "" : startPointStreet.trim();
+        if (neighborhoodId == null) {
             return street;
         }
-        final String neighborhoodName = locationService.findNeighborhoodById(listing.getNeighborhoodId().get())
+        final String neighborhoodName = locationService.findNeighborhoodById(neighborhoodId)
                 .map(Neighborhood::getName)
                 .orElse("");
         if (neighborhoodName.isBlank()) {
@@ -173,6 +190,85 @@ public final class ListingAddressFormatter {
     public String formatOwnerReservationHandoverSummary(final Listing listing) {
         final String p = formatFullPickupLocation(listing);
         final String d = formatFullDeliveryLocation(listing);
+        if (p.isBlank()) {
+            return d;
+        }
+        if (d.isBlank() || p.trim().equals(d.trim())) {
+            return p;
+        }
+        return p + " · " + d;
+    }
+
+    /** Like {@link #formatFullPickupLocation(Listing)} but reads from a {@link ListingAvailability} row. */
+    public String formatFullPickupLocation(final ListingAvailability availability) {
+        final String street = availability.getStartPointStreet() == null ? "" : availability.getStartPointStreet().trim();
+        final Optional<String> numberOpt = availability.getStartPointNumber();
+        final String streetWithNumber;
+        if (numberOpt.isPresent() && !numberOpt.get().isBlank()) {
+            streetWithNumber = street.isBlank() ? numberOpt.get().trim() : street + " " + numberOpt.get().trim();
+        } else {
+            streetWithNumber = street;
+        }
+        if (availability.getNeighborhoodId().isEmpty()) {
+            return streetWithNumber;
+        }
+        final String neighborhoodName = locationService.findNeighborhoodById(availability.getNeighborhoodId().get())
+                .map(Neighborhood::getName)
+                .orElse("");
+        if (neighborhoodName.isBlank()) {
+            return streetWithNumber;
+        }
+        if (streetWithNumber.isBlank()) {
+            return neighborhoodName.trim();
+        }
+        return streetWithNumber + ", " + neighborhoodName.trim();
+    }
+
+    /** Like {@link #formatFullDeliveryLocation(Listing)} but reads from a {@link ListingAvailability} row. */
+    public String formatFullDeliveryLocation(final ListingAvailability availability) {
+        return formatFullPickupLocation(availability);
+    }
+
+    /** Like {@link #formatPickupForReservationView(Listing, Reservation, boolean)} but reads from {@link ListingAvailability}. */
+    public String formatPickupForReservationView(
+            final ListingAvailability availability,
+            final Reservation reservation,
+            final boolean viewerIsOwner) {
+        if (viewerIsOwner || riderSeesSensitiveAddressNumbers(reservation)) {
+            return formatFullPickupLocation(availability);
+        }
+        return formatPublicPickupLocation(availability);
+    }
+
+    /** Like {@link #formatDeliveryForReservationView(Listing, Reservation, boolean)} but reads from {@link ListingAvailability}. */
+    public String formatDeliveryForReservationView(
+            final ListingAvailability availability,
+            final Reservation reservation,
+            final boolean viewerIsOwner) {
+        if (viewerIsOwner || riderSeesSensitiveAddressNumbers(reservation)) {
+            return formatFullDeliveryLocation(availability);
+        }
+        return formatPublicPickupLocation(availability);
+    }
+
+    /** Like {@link #formatRiderReservationHandoverSummary(Listing, Reservation)} but reads from {@link ListingAvailability}. */
+    public String formatRiderReservationHandoverSummary(
+            final ListingAvailability availability, final Reservation reservation) {
+        final String p = formatPickupForReservationView(availability, reservation, false);
+        final String d = formatDeliveryForReservationView(availability, reservation, false);
+        if (p.isBlank()) {
+            return d;
+        }
+        if (d.isBlank() || p.trim().equals(d.trim())) {
+            return p;
+        }
+        return p + " · " + d;
+    }
+
+    /** Like {@link #formatOwnerReservationHandoverSummary(Listing)} but reads from {@link ListingAvailability}. */
+    public String formatOwnerReservationHandoverSummary(final ListingAvailability availability) {
+        final String p = formatFullPickupLocation(availability);
+        final String d = formatFullDeliveryLocation(availability);
         if (p.isBlank()) {
             return d;
         }

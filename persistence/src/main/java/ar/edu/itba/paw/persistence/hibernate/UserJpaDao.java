@@ -18,7 +18,7 @@ import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
 import ar.edu.itba.paw.persistence.UserDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class UserJpaDao implements UserDao {
 
@@ -31,6 +31,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public User createUser(final String email, final String forename, final String surname, final String passwordHash) {
         final String normalizedEmail = EmailNormalizer.normalize(email);
         final LocalDate memberSince = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
@@ -68,6 +69,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateUserName(final long userId, final String forename, final String surname) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -78,6 +80,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updatePhoneNumber(final long userId, final String phoneNumber) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -87,6 +90,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateBirthDate(final long userId, final LocalDate birthDate) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -96,6 +100,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateAbout(final long userId, final String about) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -105,6 +110,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateProfilePictureId(final long userId, final Long profilePictureImageId) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -115,6 +121,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateLicenseDocument(final long userId, final long fileId, final boolean validated) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -125,6 +132,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void clearLicenseDocument(final long userId) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -135,6 +143,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateIdentityDocument(final long userId, final long fileId, final boolean validated) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -145,6 +154,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void clearIdentityDocument(final long userId) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -155,6 +165,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateEmailValidated(final long userId, final boolean validated) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -164,6 +175,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updatePasswordHash(final long userId, final String passwordHash) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -182,6 +194,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateLatestLocale(final long userId, final String localeTag) {
         final User user = em.find(User.class, userId);
         if (user == null) {
@@ -198,6 +211,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void insertUserRole(final long userId, final UserRole role) {
         final User user = em.find(User.class, userId);
         if (user != null) {
@@ -206,6 +220,7 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
     public void updateCbu(final long userId, final String cbu) {
         final User user = em.find(User.class, userId);
         if (user == null) {

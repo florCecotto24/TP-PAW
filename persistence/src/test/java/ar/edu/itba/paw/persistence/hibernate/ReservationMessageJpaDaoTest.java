@@ -73,10 +73,11 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final long listingId = jdbcTemplate.queryForObject("SELECT id FROM listings WHERE title = ?", Long.class, "Chat listing");
 
         jdbcTemplate.update(
-                "INSERT INTO reservations (rider_id, listing_id, start_date, end_date, status, total_price, created_at, "
-                        + "updated_at, payment_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO reservations (rider_id, listing_id, car_id, start_date, end_date, status, total_price, created_at, "
+                        + "updated_at, payment_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 riderId,
                 listingId,
+                carId,
                 now.plusDays(1),
                 now.plusDays(3),
                 "accepted",

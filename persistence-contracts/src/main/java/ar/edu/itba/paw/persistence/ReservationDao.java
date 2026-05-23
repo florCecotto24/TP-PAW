@@ -17,13 +17,42 @@ public interface ReservationDao {
 
     boolean hasActiveOverlap(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
 
+    /** Like {@link #hasActiveOverlap(long, OffsetDateTime, OffsetDateTime)} but resolves by {@code car_id}. */
+    boolean hasActiveOverlapByCar(long carId, OffsetDateTime startDate, OffsetDateTime endDate);
+
     List<Reservation> findBlockingByListingId(long listingId);
 
     List<Reservation> findBlockingByListingIds(Collection<Long> listingIds);
 
+    /** Like {@link #findBlockingByListingId} but resolves by {@code car_id}. */
+    List<Reservation> findBlockingByCarId(long carId);
+
+    /**
+     * Blocking reservations for {@code listingId} whose date range intersects {@code [from, to]} (UTC,
+     * exclusive end is normalised by the implementation). Used by the owner availability-edit flow to
+     * decide whether withdrawing a set of days would conflict with already-active reservations.
+     */
+    List<Reservation> findBlockingByListingIdInRange(long listingId, OffsetDateTime from, OffsetDateTime to);
+
+    /** Like {@link #findBlockingByListingIdInRange} but resolves by {@code car_id}. */
+    List<Reservation> findBlockingByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
+
     Reservation createReservation(
             long riderId,
             long listingId,
+            OffsetDateTime startDate,
+            OffsetDateTime endDate,
+            Reservation.Status status,
+            BigDecimal totalPrice,
+            OffsetDateTime paymentProofDeadlineAt);
+
+    /**
+     * Creates a reservation directly for a car (no listing reference). Sets {@code car_id}; {@code listing_id}
+     * remains null. Used by Phase 7b+ creation flow.
+     */
+    Reservation createReservationForCar(
+            long riderId,
+            long carId,
             OffsetDateTime startDate,
             OffsetDateTime endDate,
             Reservation.Status status,
@@ -53,7 +82,11 @@ public interface ReservationDao {
 
     Page<ReservationCard> getListingReservationCards(long ownerId, long listingId, int page, int pageSize, String statusFilter);
 
+    Page<ReservationCard> getCarReservationCards(long ownerId, long carId, int page, int pageSize, String statusFilter);
+
     Map<String, Long> countListingReservationsByStatus(long ownerId, long listingId);
+
+    Map<String, Long> countCarReservationsByStatus(long ownerId, long carId);
 
     BigDecimal sumListingRevenueByStatuses(long ownerId, long listingId, Collection<String> statuses);
 
@@ -62,6 +95,18 @@ public interface ReservationDao {
     Optional<OffsetDateTime> findListingNextActiveReservationDate(long ownerId, long listingId, OffsetDateTime after);
 
     List<Reservation> findListingFinishedReservations(long ownerId, long listingId);
+
+    /** Car-centric variant of {@link #sumListingRevenueByStatuses}. */
+    BigDecimal sumCarRevenueByStatuses(long ownerId, long carId, Collection<String> statuses);
+
+    /** Car-centric variant of {@link #countListingReservationsCreatedBetween}. */
+    long countCarReservationsCreatedBetween(long ownerId, long carId, OffsetDateTime from, OffsetDateTime until);
+
+    /** Car-centric variant of {@link #findListingNextActiveReservationDate}. */
+    Optional<OffsetDateTime> findCarNextActiveReservationDate(long ownerId, long carId, OffsetDateTime after);
+
+    /** Car-centric variant of {@link #findListingFinishedReservations}. */
+    List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
     /**
      * Sets {@code car_returned}; {@code status} becomes {@code finished} only if {@code payment_approved} is already

@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.persistence.ImageDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class ImageJpaDao implements ImageDao {
 
@@ -19,6 +19,7 @@ public class ImageJpaDao implements ImageDao {
     private EntityManager em;
 
     @Override
+    @Transactional
     public Image createImage(final String name, final String contentType, final byte[] data) {
         final Image image = new Image(name, contentType, data);
         em.persist(image);
@@ -31,6 +32,7 @@ public class ImageJpaDao implements ImageDao {
     }
 
     @Override
+    @Transactional
     public void deleteImage(final long id) {
         final Image image = em.find(Image.class, id);
         if (image != null) {

@@ -24,6 +24,9 @@ public class CarServiceImplTest {
     @Mock
     private CarDao carDao;
 
+    @Mock
+    private ar.edu.itba.paw.services.policy.ReservationTimingPolicy reservationTimingPolicy;
+
     @InjectMocks
     private CarServiceImpl carService;
 
@@ -32,9 +35,8 @@ public class CarServiceImplTest {
         // 1. Arrange
         final long carId = 1L;
         final long ownerId = 2L;
+        final long carModelId = 10L;
         final String plate = "testPlate";
-        final String brand = "testBrand";
-        final String model = "testModel";
         final Car.Type type = Car.Type.HATCHBACK;
         final Car.Powertrain powertrain = Car.Powertrain.GASOLINE;
         final Car.Transmission transmission = Car.Transmission.MANUAL;
@@ -42,16 +44,14 @@ public class CarServiceImplTest {
                 .id(carId)
                 .owner(User.identities(ownerId, "o@test.com", "O", "O"))
                 .plate(plate)
-                .brand(brand)
-                .model(model)
                 .type(type)
                 .powertrain(powertrain)
                 .transmission(transmission)
                 .build();
-        Mockito.when(carDao.createCar(ownerId, plate, brand, model, type, powertrain, transmission)).thenReturn(car);
+        Mockito.when(carDao.createCar(ownerId, plate, carModelId, type, powertrain, transmission)).thenReturn(car);
 
         // 2. Execute
-        final Car result = carService.createCar(ownerId, plate, brand, model, type, powertrain, transmission);
+        final Car result = carService.createCar(ownerId, plate, carModelId, type, powertrain, transmission);
 
         // 3. Assert
         Assertions.assertNotNull(result);
@@ -59,8 +59,6 @@ public class CarServiceImplTest {
         Assertions.assertEquals(carId, result.getId());
         Assertions.assertEquals(ownerId, result.getOwnerId());
         Assertions.assertEquals(plate, result.getPlate());
-        Assertions.assertEquals(brand, result.getBrand());
-        Assertions.assertEquals(model, result.getModel());
         Assertions.assertEquals(type, result.getType());
         Assertions.assertEquals(powertrain, result.getPowertrain());
         Assertions.assertEquals(transmission, result.getTransmission());
@@ -72,8 +70,6 @@ public class CarServiceImplTest {
         final long carId = 100L;
         final long ownerId = 200L;
         final String plate = "plateTest";
-        final String brand = "brandTest";
-        final String model = "modelTest";
         final Car.Type type = Car.Type.SEDAN;
         final Car.Powertrain powertrain = Car.Powertrain.DIESEL;
         final Car.Transmission transmission = Car.Transmission.AUTOMATIC;
@@ -81,8 +77,6 @@ public class CarServiceImplTest {
                 .id(carId)
                 .owner(User.identities(ownerId, "o@test.com", "O", "O"))
                 .plate(plate)
-                .brand(brand)
-                .model(model)
                 .type(type)
                 .powertrain(powertrain)
                 .transmission(transmission)
@@ -117,8 +111,6 @@ public class CarServiceImplTest {
                 .id(10L)
                 .owner(User.identities(1L, "o@test.com", "O", "O"))
                 .plate("plateTestOne")
-                .brand("brandTestOne")
-                .model("modelTestOne")
                 .type(Car.Type.HATCHBACK)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
@@ -127,8 +119,6 @@ public class CarServiceImplTest {
                 .id(11L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("plateTestTwo")
-                .brand("brandTestTwo")
-                .model("modelTestTwo")
                 .type(Car.Type.SUV)
                 .powertrain(Car.Powertrain.HYBRID)
                 .transmission(Car.Transmission.AUTOMATIC)
@@ -165,8 +155,6 @@ public class CarServiceImplTest {
                 .id(20L)
                 .owner(User.identities(3L, "o@test.com", "O", "O"))
                 .plate("plateTestOne")
-                .brand("brandTestOne")
-                .model("modelTestOne")
                 .type(Car.Type.COUPE)
                 .powertrain(Car.Powertrain.ELECTRIC)
                 .transmission(Car.Transmission.AUTOMATIC)
@@ -175,8 +163,6 @@ public class CarServiceImplTest {
                 .id(21L)
                 .owner(User.identities(4L, "o@test.com", "O", "O"))
                 .plate("plateTestTwo")
-                .brand("brandTestTwo")
-                .model("modelTestTwo")
                 .type(Car.Type.WAGON)
                 .powertrain(Car.Powertrain.DIESEL)
                 .transmission(Car.Transmission.MANUAL)

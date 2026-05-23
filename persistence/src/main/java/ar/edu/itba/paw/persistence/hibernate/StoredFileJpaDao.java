@@ -13,7 +13,7 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.StoredFileDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class StoredFileJpaDao implements StoredFileDao {
 
@@ -21,6 +21,7 @@ public class StoredFileJpaDao implements StoredFileDao {
     private EntityManager em;
 
     @Override
+    @Transactional
     public StoredFile create(final long uploaderUserId, final String fileName,
                              final String contentType, final byte[] data) {
         final User uploaderRef = em.getReference(User.class, uploaderUserId);

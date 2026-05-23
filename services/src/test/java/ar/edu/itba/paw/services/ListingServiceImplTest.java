@@ -200,8 +200,6 @@ public class ListingServiceImplTest {
                 .id(carId)
                 .owner(owner)
                 .plate("ABC")
-                .brand("Brand")
-                .model("Model")
                 .type(Car.Type.SEDAN)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
@@ -468,7 +466,7 @@ public class ListingServiceImplTest {
 
     @Test
     public void testGetOwnerListingCardsDelegatesToDao() {
-        final List<ListingCard> cards = List.of(new ListingCard(100L, "Ford", "Focus", new BigDecimal("100.00"), 0L));
+        final List<ListingCard> cards = List.of(new ListingCard(100L, 200L, "Ford", "Focus", new BigDecimal("100.00"), 0L));
         final Page<ListingCard> ownerPage = new Page<>(cards, 0, 8, 1);
         Mockito.when(listingDao.getOwnerListingCards(Mockito.any(OwnerListingSearchCriteria.class))).thenReturn(ownerPage);
 
@@ -531,12 +529,17 @@ public class ListingServiceImplTest {
                 .id(carId)
                 .owner(user)
                 .plate(plate)
-                .brand(brand)
-                .model(model)
                 .type(type)
                 .powertrain(powertrain)
                 .transmission(transmission)
                 .build();
+        // Wire a mock CarModel so car.getBrand()/car.getModel() return the expected strings
+        final ar.edu.itba.paw.models.domain.CarBrand mockBrand = Mockito.mock(ar.edu.itba.paw.models.domain.CarBrand.class);
+        Mockito.when(mockBrand.getName()).thenReturn(brand);
+        final ar.edu.itba.paw.models.domain.CarModel mockCarModel = Mockito.mock(ar.edu.itba.paw.models.domain.CarModel.class);
+        Mockito.when(mockCarModel.getName()).thenReturn(model);
+        Mockito.when(mockCarModel.getBrand()).thenReturn(mockBrand);
+        car.setCarModel(mockCarModel);
         final Listing listing = Listing.builder()
                 .id(listingId)
                 .title(expectedTitle)
@@ -614,12 +617,17 @@ public class ListingServiceImplTest {
                 .id(1L)
                 .owner(owner)
                 .plate("ABC123")
-                .brand("  ")
-                .model("Gol")
                 .type(Car.Type.SEDAN)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();
+        // CarModel resolves to blank brand and a model.
+        final ar.edu.itba.paw.models.domain.CarBrand mockBrand = Mockito.mock(ar.edu.itba.paw.models.domain.CarBrand.class);
+        Mockito.when(mockBrand.getName()).thenReturn("  ");
+        final ar.edu.itba.paw.models.domain.CarModel mockCarModel = Mockito.mock(ar.edu.itba.paw.models.domain.CarModel.class);
+        Mockito.when(mockCarModel.getName()).thenReturn("Gol");
+        Mockito.when(mockCarModel.getBrand()).thenReturn(mockBrand);
+        car.setCarModel(mockCarModel);
 
         Assertions.assertTrue(listingService.getPriceMarketInsightForCar(car, null).isEmpty());
         Mockito.verifyNoInteractions(listingDao);
@@ -632,12 +640,17 @@ public class ListingServiceImplTest {
                 .id(1L)
                 .owner(owner)
                 .plate("ABC123")
-                .brand("  Toyota ")
-                .model(" Corolla ")
                 .type(Car.Type.SEDAN)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();
+        final ar.edu.itba.paw.models.domain.CarBrand mockBrand = Mockito.mock(ar.edu.itba.paw.models.domain.CarBrand.class);
+        Mockito.when(mockBrand.getName()).thenReturn("  Toyota ");
+        final ar.edu.itba.paw.models.domain.CarModel mockCarModel = Mockito.mock(ar.edu.itba.paw.models.domain.CarModel.class);
+        Mockito.when(mockCarModel.getName()).thenReturn(" Corolla ");
+        Mockito.when(mockCarModel.getBrand()).thenReturn(mockBrand);
+        car.setCarModel(mockCarModel);
+
         final ListingPriceMarketInsight insight = new ListingPriceMarketInsight(
                 new BigDecimal("10000.00"),
                 new BigDecimal("15000.00"),
@@ -660,12 +673,17 @@ public class ListingServiceImplTest {
                 .id(1L)
                 .owner(owner)
                 .plate("ABC123")
-                .brand("Ford")
-                .model("Ka")
                 .type(Car.Type.HATCHBACK)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();
+        final ar.edu.itba.paw.models.domain.CarBrand mockBrand = Mockito.mock(ar.edu.itba.paw.models.domain.CarBrand.class);
+        Mockito.when(mockBrand.getName()).thenReturn("Ford");
+        final ar.edu.itba.paw.models.domain.CarModel mockCarModel = Mockito.mock(ar.edu.itba.paw.models.domain.CarModel.class);
+        Mockito.when(mockCarModel.getName()).thenReturn("Ka");
+        Mockito.when(mockCarModel.getBrand()).thenReturn(mockBrand);
+        car.setCarModel(mockCarModel);
+
         Mockito.when(listingDao.findActiveDayPriceMarketInsightByBrandAndModel("Ford", "Ka", null))
                 .thenReturn(Optional.empty());
 

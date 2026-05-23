@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.EmailVerificationCode;
 import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
 
-@Transactional
+@Transactional 
 @Repository
 public class EmailVerificationCodeJpaDao implements EmailVerificationCodeDao {
 
@@ -43,6 +43,7 @@ public class EmailVerificationCodeJpaDao implements EmailVerificationCodeDao {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean hasActiveCode(final long userId, final Instant now) {
         final Number n = (Number) em.createQuery(
                         "SELECT COUNT(e) FROM EmailVerificationCode e WHERE e.userId = :userId AND e.expiresAt > :now")

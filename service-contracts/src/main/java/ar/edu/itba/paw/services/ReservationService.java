@@ -74,6 +74,11 @@ public interface ReservationService {
     Optional<String> reservationTotalDisplay(Long listingId, String fromDateTime, String untilDateTime);
 
     /**
+     * Formatted total for UI when {@code carId} and wall-local range parse; uses car availability day price.
+     */
+    Optional<String> reservationTotalDisplayByCar(Long carId, String fromDateTime, String untilDateTime);
+
+    /**
      * Rider reservation from the web form: validate {@code riderId}, listing/dates/availability, then {@link #createReservation}.
      *
      * @throws ar.edu.itba.paw.exception.reservation.RiderReservationException for validation errors (message key in {@link ar.edu.itba.paw.exception.MessageKeys})
@@ -86,8 +91,22 @@ public interface ReservationService {
             String fromDateTime,
             String untilDateTime);
 
+    /**
+     * Like {@link #submitRiderReservation} but resolves the reservation via {@code carId} instead of a listing.
+     * New reservations created through this method do not have {@code listing_id} set.
+     */
+    Reservation submitRiderReservationByCar(
+            long riderId,
+            long carId,
+            Long availabilityId,
+            String fromDateTime,
+            String untilDateTime);
+
     /** Total price for the listing and UTC interval using configured billable-day rules; empty when inputs are invalid. */
     Optional<BigDecimal> calculateTotal(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
+
+    /** Total price for the car and UTC interval using configured billable-day rules; empty when inputs are invalid. */
+    Optional<BigDecimal> calculateTotalByCar(long carId, OffsetDateTime startDate, OffsetDateTime endDate);
 
     /** Inclusive billable rental days from pickup/return instants in the wall zone (at least one when valid). */
     long calculateBillableDays(OffsetDateTime startDate, OffsetDateTime endDate);
@@ -148,8 +167,14 @@ public interface ReservationService {
     /** Owner listing detail: paginated reservation cards for one listing, optional status filter token. */
     Page<ReservationCard> getListingReservationCards(long ownerId, long listingId, int page, int pageSize, String statusFilter);
 
+    /** Owner car detail: paginated reservation cards for one car, optional status filter token. */
+    Page<ReservationCard> getCarReservationCards(long ownerId, long carId, int page, int pageSize, String statusFilter);
+
     /** Counts reservations per status bucket for the owner’s listing dashboard charts. */
     Map<String, Long> countListingReservationsByStatus(long ownerId, long listingId);
+
+    /** Counts reservations per status bucket for the owner's car dashboard charts. */
+    Map<String, Long> countCarReservationsByStatus(long ownerId, long carId);
 
     /** Sum of {@code total_price} for reservations in {@code accepted}, {@code started}, or {@code finished} states. */
     BigDecimal getListingTotalEarnings(long ownerId, long listingId);
@@ -168,6 +193,21 @@ public interface ReservationService {
      * {@code now} (UTC), if any.
      */
     Optional<OffsetDateTime> getListingNextReservationDate(long ownerId, long listingId);
+
+    /** Car-centric variant of {@link #getListingTotalEarnings}. */
+    BigDecimal getCarTotalEarnings(long ownerId, long carId);
+
+    /** Car-centric variant of {@link #getListingPendingEarnings}. */
+    BigDecimal getCarPendingEarnings(long ownerId, long carId);
+
+    /** Car-centric variant of {@link #getListingTotalDaysRented}. */
+    long getCarTotalDaysRented(long ownerId, long carId);
+
+    /** Car-centric variant of {@link #getListingReservationsThisMonth}. */
+    long getCarReservationsThisMonth(long ownerId, long carId);
+
+    /** Car-centric variant of {@link #getListingNextReservationDate}. */
+    Optional<OffsetDateTime> getCarNextReservationDate(long ownerId, long carId);
 
     /**
      * Owner confirms vehicle returned after checkout; irreversible. When both return and payment approval hold,
@@ -209,6 +249,22 @@ public interface ReservationService {
 
     /** Same as {@link #findBlockingReservationsByListingId(long)} for a batch of listings. */
     List<Reservation> findBlockingReservationsByListingIds(Collection<Long> listingIds);
+
+    /** Like {@link #findBlockingReservationsByListingId(long)} but resolves by {@code car_id} (Phase 7d+). */
+    List<Reservation> findBlockingReservationsByCarId(long carId);
+
+    /**
+     * Blocking reservations for {@code listingId} whose date range intersects {@code [from, to)} (UTC).
+     * Used by the owner availability-edit flow to decide whether withdrawing a set of days would
+     * conflict with an already-active reservation.
+     */
+    List<Reservation> findBlockingReservationsByListingIdInRange(long listingId, OffsetDateTime from, OffsetDateTime to);
+
+    /**
+     * Like {@link #findBlockingReservationsByListingIdInRange} but resolves by {@code car_id}.
+     * Required for the car-centric availability edit/withdraw conflict check (Phase 7c+).
+     */
+    List<Reservation> findBlockingReservationsByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
 
     /**
      * Reservations whose pickup {@code start_date} lies in {@code [from, to)} (UTC), for the day-before reminder

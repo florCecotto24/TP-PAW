@@ -134,37 +134,47 @@
                                     <c:url var="carDetailUrl" value="/my-cars/car/${car.carId}"/>
                                     <a href="<c:out value='${carDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
-                                            <c:choose>
-                                                <c:when test="${car.hasListing}">
-                                                    <c:choose>
-                                                        <c:when test="${car.statusKey == 'ACTIVE'}">
-                                                            <span class="position-absolute top-0 end-0 m-3" style="background-color:#198754; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                                                <spring:message code="enum.listing.status.ACTIVE"/>
-                                                            </span>
-                                                        </c:when>
-                                                        <c:when test="${car.statusKey == 'PAUSED'}">
-                                                            <span class="position-absolute top-0 end-0 m-3" style="background-color:#e4960b; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                                                <spring:message code="enum.listing.status.PAUSED"/>
-                                                            </span>
-                                                        </c:when>
-                                                        <c:when test="${car.statusKey == 'FINISHED'}">
-                                                            <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                                                <spring:message code="enum.listing.status.FINISHED"/>
-                                                            </span>
-                                                        </c:when>
-                                                        <c:when test="${car.statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
-                                                            <span class="position-absolute top-0 end-0 m-3" style="background-color:#b91c1c; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                                                <spring:message code="enum.listing.status.PAUSED_DUE_TO_LACK_OF_CBU"/>
-                                                            </span>
-                                                        </c:when>
-                                                    </c:choose>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                                        <spring:message code="myCars.noListing.badge"/>
-                                                    </span>
-                                                </c:otherwise>
-                                            </c:choose>
+                                <c:choose>
+                                    <c:when test="${car.hasListing}">
+                                        <c:choose>
+                                            <c:when test="${car.statusKey == 'ACTIVE'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#198754; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.ACTIVE"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'PAUSED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#e4960b; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.PAUSED"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'DEACTIVATED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.DEACTIVATED"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'LACK_DOC'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#b91c1c; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.LACK_DOC"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'ADMIN_PAUSED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6d28d9; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.ADMIN_PAUSED"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'UNAVAILABLE'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.UNAVAILABLE"/>
+                                                </span>
+                                            </c:when>
+                                        </c:choose>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                            <spring:message code="myCars.noListing.badge"/>
+                                        </span>
+                                    </c:otherwise>
+                                </c:choose>
                                             <div class="row g-0 align-items-stretch">
                                                 <div class="col-12 col-md-3 reservation-card__media-wrap">
                                                     <c:choose>
@@ -337,7 +347,7 @@
                                 <c:forEach var="reservation" items="${ownerReservations}">
                                     <c:url var="ownerReservationDetailUrl" value="/my-reservations/${reservation.reservationId}">
                                         <c:param name="role" value="owner"/>
-                                        <c:param name="fromListing" value="${reservation.listingId}"/>
+                                        <c:param name="fromCar" value="${reservation.carId}"/>
                                     </c:url>
                                     <a href="<c:out value='${ownerReservationDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">

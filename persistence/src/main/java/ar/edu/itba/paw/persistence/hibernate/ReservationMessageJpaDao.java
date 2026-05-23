@@ -17,7 +17,7 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReservationMessageDao;
 
-@Transactional
+@Transactional(readOnly = true)
 @Repository
 public class ReservationMessageJpaDao implements ReservationMessageDao {
 
@@ -25,11 +25,13 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
     private EntityManager em;
 
     @Override
+    @Transactional
     public ReservationMessage create(final long reservationId, final long senderUserId, final String body) {
         return create(reservationId, senderUserId, body, null);
     }
 
     @Override
+    @Transactional
     public ReservationMessage create(
             final long reservationId,
             final long senderUserId,

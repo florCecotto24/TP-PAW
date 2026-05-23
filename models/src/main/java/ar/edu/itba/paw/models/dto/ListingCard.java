@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.domain.Listing;
 public final class ListingCard {
 
     private final long listingId;
+    private final long carId;
     private final String brand;
     private final String model;
     private final BigDecimal dayPrice;
@@ -19,36 +20,40 @@ public final class ListingCard {
 
     public ListingCard(
             final long listingId,
+            final long carId,
             final String brand,
             final String model,
             final BigDecimal dayPrice,
             final long imageId) {
-        this(listingId, brand, model, dayPrice, imageId, null, null, 0);
+        this(listingId, carId, brand, model, dayPrice, imageId, null, null, 0);
     }
 
     public ListingCard(
             final long listingId,
+            final long carId,
             final String brand,
             final String model,
             final BigDecimal dayPrice,
             final long imageId,
             final BigDecimal ratingAvg) {
-        this(listingId, brand, model, dayPrice, imageId, ratingAvg, null, 0);
+        this(listingId, carId, brand, model, dayPrice, imageId, ratingAvg, null, 0);
     }
 
     public ListingCard(
             final long listingId,
+            final long carId,
             final String brand,
             final String model,
             final BigDecimal dayPrice,
             final long imageId,
             final BigDecimal ratingAvg,
             final Listing.Status status) {
-        this(listingId, brand, model, dayPrice, imageId, ratingAvg, status, 0);
+        this(listingId, carId, brand, model, dayPrice, imageId, ratingAvg, status, 0);
     }
 
     public ListingCard(
             final long listingId,
+            final long carId,
             final String brand,
             final String model,
             final BigDecimal dayPrice,
@@ -57,6 +62,7 @@ public final class ListingCard {
             final Listing.Status status,
             final long reviewCount) {
         this.listingId = listingId;
+        this.carId = carId;
         this.brand = brand;
         this.model = model;
         this.dayPrice = dayPrice;
@@ -68,6 +74,10 @@ public final class ListingCard {
 
     public long getListingId() {
         return listingId;
+    }
+
+    public long getCarId() {
+        return carId;
     }
 
     public String getBrand() {

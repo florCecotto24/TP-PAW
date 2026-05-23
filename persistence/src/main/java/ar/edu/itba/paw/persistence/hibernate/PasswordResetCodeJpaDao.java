@@ -43,6 +43,7 @@ public class PasswordResetCodeJpaDao implements PasswordResetCodeDao {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public boolean hasActiveCode(final long userId, final Instant now) {
         final Number n = (Number) em.createQuery(
                         "SELECT COUNT(p) FROM PasswordResetCode p WHERE p.userId = :userId AND p.expiresAt > :now")

@@ -12,7 +12,7 @@
             </c:otherwise>
         </c:choose>
         <c:url var="counterpartyListingHref" value="/car-detail">
-            <c:param name="listingId"><c:out value="${car.listingId}"/></c:param>
+            <c:param name="carId"><c:out value="${car.carId}"/></c:param>
         </c:url>
         <ryden:carCard
                 model="${car.model}"

@@ -25,6 +25,10 @@ public class Review {
     @JoinColumn(name = "reservation_id")
     private Reservation reservation;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_id", nullable = false)
+    private Car car;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
@@ -46,9 +50,15 @@ public class Review {
             final String comment) {
         this.id = new ReviewId(reservation.getId(), madeByRider);
         this.reservation = reservation;
+        this.car = carFrom(reservation);
         this.createdAt = createdAt;
         this.rating = rating;
         this.comment = comment;
+    }
+
+    private static Car carFrom(final Reservation reservation) {
+        final Car direct = reservation.getCar();
+        return direct != null ? direct : reservation.getListing().getCar();
     }
 
     public ReviewId getId() {
@@ -57,6 +67,18 @@ public class Review {
 
     public Reservation getReservation() {
         return reservation;
+    }
+
+    public Car getCar() {
+        return car;
+    }
+
+    /**
+     * Dual-read: prefers the direct {@code car_id} column; falls back to
+     * {@code reservation.getListing().getCar()} for legacy in-memory rows.
+     */
+    public long getCarId() {
+        return (car != null ? car : carFrom(reservation)).getId();
     }
 
     public boolean isMadeByRider() {

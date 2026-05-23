@@ -78,8 +78,12 @@ public class Reservation {
     private User rider;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = false)
+    @JoinColumn(name = "listing_id", nullable = true)
     private Listing listing;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_id", nullable = false)
+    private Car car;
 
     @Column(name = "start_date", nullable = false)
     private OffsetDateTime startDate;
@@ -149,6 +153,7 @@ public class Reservation {
         this.id = b.id;
         this.rider = b.rider;
         this.listing = b.listing;
+        this.car = b.car;
         this.startDate = b.startDate;
         this.endDate = b.endDate;
         this.status = b.status;
@@ -178,6 +183,7 @@ public class Reservation {
         private long id;
         private User rider;
         private Listing listing;
+        private Car car;
         private OffsetDateTime startDate;
         private OffsetDateTime endDate;
         private Status status;
@@ -210,6 +216,11 @@ public class Reservation {
 
         public Builder listing(final Listing listing) {
             this.listing = listing;
+            return this;
+        }
+
+        public Builder car(final Car car) {
+            this.car = car;
             return this;
         }
 
@@ -310,7 +321,9 @@ public class Reservation {
 
         public Reservation build() {
             Objects.requireNonNull(rider, "rider");
-            Objects.requireNonNull(listing, "listing");
+            if (car == null && listing != null) {
+                car = listing.getCar();
+            }
             Objects.requireNonNull(startDate, "startDate");
             Objects.requireNonNull(endDate, "endDate");
             Objects.requireNonNull(status, "status");
@@ -338,9 +351,32 @@ public class Reservation {
         return listing;
     }
 
-    /** Convenience accessor — returns {@code listing.getId()}. */
+    /** Convenience accessor — returns {@code listing.getId()}. Throws if {@code listing_id} was not loaded. */
     public long getListingId() {
+        if (listing == null) {
+            throw new UnsupportedOperationException("listing_id is not set on this reservation; use getCarId() instead");
+        }
         return listing.getId();
+    }
+
+    /** Returns the listing id when present; empty for reservations created without a listing (Phase 7b+). */
+    public Optional<Long> getOptionalListingId() {
+        return listing != null ? Optional.of(listing.getId()) : Optional.empty();
+    }
+
+    public Car getCar() {
+        return car;
+    }
+
+    /**
+     * Dual-read: prefers the direct {@code car_id} column; falls back to {@code listing.getCar()}
+     * for rows not yet backfilled in memory-only tests.
+     */
+    public long getCarId() {
+        if (car != null) {
+            return car.getId();
+        }
+        return listing.getCar().getId();
     }
 
     public OffsetDateTime getStartDate() {
@@ -490,7 +526,7 @@ public class Reservation {
         return "Reservation{" +
                 "id=" + id +
                 ", riderId=" + rider.getId() +
-                ", listingId=" + listing.getId() +
+                ", listingId=" + (listing != null ? listing.getId() : "null") +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", status=" + status +

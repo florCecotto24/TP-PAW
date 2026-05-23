@@ -867,6 +867,47 @@ public final class ListingServiceImpl implements ListingService {
 
     @Override
     @Transactional(readOnly = true)
+    public OwnerListingSearchCriteria buildOwnerListingSearchCriteria(
+            final long ownerId,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final List<String> listingStatus,
+            final List<String> rating,
+            final String textQuery,
+            final int page,
+            final String sort,
+            final int pageSizeOrZero,
+            final Long excludeListingId,
+            final Long excludeCarId) {
+        final OwnerListingSearchCriteria base = buildOwnerListingSearchCriteria(
+                ownerId, category, transmission, powertrain, priceMin, priceMax,
+                listingStatus, rating, textQuery, page, sort, pageSizeOrZero, excludeListingId);
+        if (excludeCarId == null) {
+            return base;
+        }
+        return new OwnerListingSearchCriteria(
+                base.getOwnerId(),
+                base.getPage(),
+                base.getPageSize(),
+                base.getListingStatusFilters(),
+                base.getTextQuery(),
+                base.getCarTypes(),
+                base.getTransmissions(),
+                base.getPowertrains(),
+                base.getMinPrice(),
+                base.getMaxPrice(),
+                base.getRatingBands(),
+                base.getSortBy(),
+                base.getSortDirection(),
+                base.getExcludeListingId(),
+                excludeCarId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean hasListingsByOwner(final long ownerId) {
         return listingDao.hasListingsByOwner(ownerId);
     }
@@ -1193,6 +1234,7 @@ public final class ListingServiceImpl implements ListingService {
             if (!listingDao.updateListingStatus(li.getId(), Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU, Listing.Status.ACTIVE)) {
                 continue;
             }
+            carService.setCarLackDoc(li.getCarId());
             emailService.sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload.builder()
                     .messageLocale(ownerMailLocale)
                     .ownerEmail(ownerEmail)
@@ -1209,7 +1251,9 @@ public final class ListingServiceImpl implements ListingService {
         final List<Listing> toResume = listingDao.findListingsByOwnerIdAndStatus(
                 ownerId, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
         for (final Listing li : toResume) {
-            listingDao.updateListingStatus(li.getId(), Listing.Status.ACTIVE, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU);
+            if (listingDao.updateListingStatus(li.getId(), Listing.Status.ACTIVE, Listing.Status.PAUSED_DUE_TO_LACK_OF_CBU)) {
+                carService.clearCarLackDoc(li.getCarId());
+            }
         }
     }
 
