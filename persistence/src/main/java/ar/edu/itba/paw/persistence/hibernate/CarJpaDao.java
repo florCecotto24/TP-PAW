@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
-import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -31,6 +29,7 @@ import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
+import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 
 @Transactional(readOnly = true)
 @Repository

@@ -1,14 +1,14 @@
 package ar.edu.itba.paw.services;
 
+import java.util.List;
+import java.util.Optional;
+
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
-
-import java.util.List;
-import java.util.Optional;
 
 /**
  * Car rows for owners; catalog slices use {@code app.listing.car-catalog-limit} (not UI pagination).

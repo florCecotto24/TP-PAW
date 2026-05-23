@@ -1,13 +1,13 @@
 package ar.edu.itba.paw.persistence;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 
 /** JPA-backed access to {@code cars} and catalogue queries joined to active listings. */
 public interface CarDao {
