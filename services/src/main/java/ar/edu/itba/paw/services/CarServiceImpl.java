@@ -581,7 +581,8 @@ public final class CarServiceImpl implements CarService {
             final String brand = car.getBrand() != null ? car.getBrand() : "";
             final String model = car.getModel() != null ? car.getModel() : "";
             final String title = brand + (!brand.isEmpty() && !model.isEmpty() ? " " : "") + model;
-            final CarPriceMarketInsight priceMarketInsight = getPriceMarketInsightForCar(car, null).orElse(null);
+            final CarPriceMarketInsight priceMarketInsight =
+                    getPriceMarketInsightForCar(car, car.getId()).orElse(null);
             return new OwnerCarDetailPageModel(
                     allNeighborhoods,
                     carNeighborhoodName,

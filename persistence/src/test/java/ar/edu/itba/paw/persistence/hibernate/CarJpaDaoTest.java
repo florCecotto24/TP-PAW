@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 
@@ -30,7 +33,10 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedOwner() {
+        jdbcTemplate.update("DELETE FROM listing_availability");
         jdbcTemplate.update("DELETE FROM cars");
+        jdbcTemplate.update("DELETE FROM car_models");
+        jdbcTemplate.update("DELETE FROM car_brands");
         jdbcTemplate.update("DELETE FROM users WHERE email = ?", "car-owner@test.com");
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
@@ -115,5 +121,85 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM cars WHERE id = ?", String.class, carId);
         Assertions.assertEquals("lack_doc", status);
+    }
+
+    @Test
+    void testFindActiveDayPriceMarketInsightAggregatesPerCarMinPriceAndExcludesCar() {
+        // 1. Arrange — catalog + three active cars (two Corolla peers, one Ford Ka outlier).
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
+        final long toyotaBrandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Toyota");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                toyotaBrandId, "Corolla", true, "SEDAN");
+        final long corollaModelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Corolla");
+
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Ford", true);
+        final long fordBrandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Ford");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                fordBrandId, "Ka", true, "HATCHBACK");
+        final long kaModelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Ka");
+
+        final Car corollaA = dao.createCar(
+                ownerId, "COR001", corollaModelId,
+                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        final Car corollaB = dao.createCar(
+                ownerId, "COR002", corollaModelId,
+                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+        final Car ka = dao.createCar(
+                ownerId, "KA0001", kaModelId,
+                Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        em.flush();
+
+        final OffsetDateTime t = OffsetDateTime.parse("2026-07-01T10:00:00Z");
+        insertOfferedAvailability(corollaA.getId(), new BigDecimal("80.00"), t);
+        insertOfferedAvailability(corollaA.getId(), new BigDecimal("50.00"), t.plusDays(1));
+        insertOfferedAvailability(corollaB.getId(), new BigDecimal("120.00"), t);
+        insertOfferedAvailability(ka.getId(), new BigDecimal("200.00"), t);
+
+        // 2. Act — market stats for Toyota Corolla (two cars, min prices 50 and 120).
+        final Optional<CarPriceMarketInsight> market = dao.findActiveDayPriceMarketInsightByBrandAndModel(
+                "Toyota", "Corolla", null);
+        final Optional<CarPriceMarketInsight> excludingCorollaA = dao.findActiveDayPriceMarketInsightByBrandAndModel(
+                "Toyota", "Corolla", corollaA.getId());
+
+        // 3. Assert — per-car MIN aggregation (not raw segment count).
+        Assertions.assertTrue(market.isPresent());
+        final CarPriceMarketInsight insight = market.get();
+        Assertions.assertEquals(0, new BigDecimal("50.00").compareTo(insight.getMinPrice()));
+        Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(insight.getMaxPrice()));
+        Assertions.assertEquals(0, new BigDecimal("85.00").compareTo(insight.getAveragePrice()));
+        Assertions.assertEquals(2L, insight.getSampleCount());
+
+        Assertions.assertTrue(excludingCorollaA.isPresent());
+        final CarPriceMarketInsight excluded = excludingCorollaA.get();
+        Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getMinPrice()));
+        Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getMaxPrice()));
+        Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getAveragePrice()));
+        Assertions.assertEquals(1L, excluded.getSampleCount());
+    }
+
+    private void insertOfferedAvailability(
+            final long carId,
+            final BigDecimal dayPrice,
+            final OffsetDateTime createdAt) {
+        jdbcTemplate.update(
+                "INSERT INTO listing_availability (car_id, start_date, end_date, day_price, "
+                        + "start_point_street, check_in_time, check_out_time, kind, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                carId,
+                LocalDate.of(2026, 8, 1),
+                LocalDate.of(2026, 8, 31),
+                dayPrice,
+                "Belgrano",
+                LocalTime.of(10, 0),
+                LocalTime.of(18, 0),
+                "offered",
+                createdAt,
+                createdAt);
     }
 }

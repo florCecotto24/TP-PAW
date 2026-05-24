@@ -545,19 +545,23 @@ public class CarJpaDao implements CarDao {
         final Map<String, Object> params = new HashMap<>();
         params.put("brand", brand);
         params.put("model", model);
-        final StringBuilder sql = new StringBuilder(
-                "SELECT MIN(la.day_price), MAX(la.day_price), AVG(la.day_price), COUNT(*) "
-                + "FROM listing_availability la "
-                + "INNER JOIN cars c ON c.id = la.car_id "
+        final StringBuilder perCarSql = new StringBuilder(
+                "SELECT c.id, MIN(la.day_price) AS car_min_price "
+                + "FROM cars c "
+                + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
+                + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
+                + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
                 + "WHERE c.status = 'active' "
-                + "AND la.kind = 'offered' "
-                + "AND LOWER(TRIM(c.brand)) = LOWER(TRIM(:brand)) "
-                + "AND LOWER(TRIM(c.model)) = LOWER(TRIM(:model)) ");
+                + "AND LOWER(TRIM(cb.name)) = LOWER(TRIM(:brand)) "
+                + "AND LOWER(TRIM(cm.name)) = LOWER(TRIM(:model)) ");
         if (excludeCarId != null) {
-            sql.append("AND c.id <> :excludeCarId ");
+            perCarSql.append("AND c.id <> :excludeCarId ");
             params.put("excludeCarId", excludeCarId);
         }
-        final Object[] row = (Object[]) bindParams(em.createNativeQuery(sql.toString()), params).getSingleResult();
+        perCarSql.append("GROUP BY c.id");
+        final String sql = "SELECT MIN(car_min_price), MAX(car_min_price), AVG(car_min_price), COUNT(*) "
+                + "FROM (" + perCarSql + ") per_car";
+        final Object[] row = (Object[]) bindParams(em.createNativeQuery(sql), params).getSingleResult();
         if (row == null || row[0] == null || row[1] == null || row[2] == null) {
             return Optional.empty();
         }
