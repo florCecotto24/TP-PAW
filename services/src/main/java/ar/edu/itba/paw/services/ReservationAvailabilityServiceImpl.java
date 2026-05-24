@@ -1,17 +1,16 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.ReservationAvailabilityLink;
 import ar.edu.itba.paw.persistence.ReservationAvailabilityDao;
 
-/** Pass-through to {@link ReservationAvailabilityDao}; joins the caller’s transaction when one is active. */
+/** Pass-through to {@link ReservationAvailabilityDao}; joins the caller's transaction when one is active. */
 @Service
 public final class ReservationAvailabilityServiceImpl implements ReservationAvailabilityService {
 
@@ -24,19 +23,14 @@ public final class ReservationAvailabilityServiceImpl implements ReservationAvai
 
     @Override
     @Transactional
-    public void insertLinks(final long reservationId, final List<ReservationAvailabilityLink> links) {
-        reservationAvailabilityDao.insertLinks(reservationId, links);
+    public void insertCoveringAvailabilities(
+            final long reservationId, final Collection<Long> availabilityIds) {
+        reservationAvailabilityDao.insertCoveringAvailabilities(reservationId, availabilityIds);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<BigDecimal> sumReservationTotal(final long reservationId) {
         return reservationAvailabilityDao.sumReservationTotal(reservationId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<BigDecimal> quoteTotalFromLinks(final List<ReservationAvailabilityLink> links) {
-        return reservationAvailabilityDao.quoteTotalFromLinks(links);
     }
 }

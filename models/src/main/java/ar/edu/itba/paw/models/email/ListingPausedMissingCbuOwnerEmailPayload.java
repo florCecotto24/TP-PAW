@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Notifies the listing owner that a publication was paused because their profile has no valid CBU.
+ * Notifies the car owner that a publication was paused because their profile has no valid CBU.
  * Use {@link #builder()} to construct instances.
  */
 public final class ListingPausedMissingCbuOwnerEmailPayload {
@@ -13,14 +13,14 @@ public final class ListingPausedMissingCbuOwnerEmailPayload {
     private final String ownerEmail;
     private final String ownerFullName;
     private final String vehicleLabel;
-    private final long listingId;
+    private final long carId;
 
     private ListingPausedMissingCbuOwnerEmailPayload(final Builder builder) {
         this.messageLocale = Objects.requireNonNull(builder.messageLocale, "messageLocale");
         this.ownerEmail = Objects.requireNonNull(builder.ownerEmail, "ownerEmail");
         this.ownerFullName = Objects.requireNonNull(builder.ownerFullName, "ownerFullName");
         this.vehicleLabel = Objects.requireNonNull(builder.vehicleLabel, "vehicleLabel");
-        this.listingId = builder.listingId;
+        this.carId = builder.carId;
     }
 
     public static Builder builder() {
@@ -43,8 +43,8 @@ public final class ListingPausedMissingCbuOwnerEmailPayload {
         return vehicleLabel;
     }
 
-    public long getListingId() {
-        return listingId;
+    public long getCarId() {
+        return carId;
     }
 
     public static final class Builder {
@@ -52,7 +52,7 @@ public final class ListingPausedMissingCbuOwnerEmailPayload {
         private String ownerEmail;
         private String ownerFullName;
         private String vehicleLabel;
-        private long listingId;
+        private long carId;
 
         private Builder() {
         }
@@ -77,8 +77,8 @@ public final class ListingPausedMissingCbuOwnerEmailPayload {
             return this;
         }
 
-        public Builder listingId(final long value) {
-            this.listingId = value;
+        public Builder carId(final long value) {
+            this.carId = value;
             return this;
         }
 

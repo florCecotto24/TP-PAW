@@ -5,13 +5,10 @@
 <%@ attribute name="carId" required="true" type="java.lang.Long" %>
 <%@ attribute name="dailyPrice" required="true" type="java.lang.Number" %>
 <%@ attribute name="priceFrom" required="false" type="java.lang.Boolean" %>
-<%@ attribute name="deliveryLocation" required="true" type="java.lang.String" %>
 <%@ attribute name="fromDateTimeValue" required="false" type="java.lang.String" %>
 <%@ attribute name="untilDateTimeValue" required="false" type="java.lang.String" %>
 <%@ attribute name="carName" required="true" type="java.lang.String" %>
 <%@ attribute name="bookableWallRangesJson" required="true" type="java.lang.String" %>
-<%@ attribute name="pickupTime" required="false" type="java.lang.String" %>
-<%@ attribute name="returnTime" required="false" type="java.lang.String" %>
 <%@ attribute name="maxBillableDays" required="true" type="java.lang.Integer" %>
 <%@ attribute name="isOwnerRequesting" required="true" type="java.lang.Boolean" %>
 
@@ -21,8 +18,6 @@
 <div class="detail-reservation-panel border rounded-4 p-4 bg-white shadow-sm">
     <form action="<c:out value='${newReservationUrl}'/>" method="get" id="detailReservationForm"
           data-bookable-ranges='<c:out value="${bookableWallRangesJson}" escapeXml="false"/>'
-          data-pickup-time="<c:out value='${pickupTime}'/>"
-          data-return-time="<c:out value='${returnTime}'/>"
           data-max-billable-days="<c:out value='${maxBillableDays}'/>"
           data-max-billable-exceeded-msg="<c:out value='${maxBillableExceededMsg}'/>">
     <input type="hidden" name="carId" value="<c:out value='${carId}'/>" />
@@ -39,17 +34,25 @@
     <h2 class="h6 fw-semibold mb-2"><spring:message code="detailReservationPanel.pickupReturn"/></h2>
     <p class="form-text small mb-2">
         <strong><spring:message code="detailReservationPanel.pickupAt"/></strong>
-        <c:out value="${not empty pickupTime ? pickupTime : '—'}"/>
+        <span id="detail_pickup_time_label">&mdash;</span>
         <span class="text-muted mx-1">·</span>
         <strong><spring:message code="detailReservationPanel.returnBy"/></strong>
-        <c:out value="${not empty returnTime ? returnTime : '—'}"/>
+        <span id="detail_return_time_label">&mdash;</span>
     </p>
 
-    <div class="d-flex align-items-start gap-2 mb-3">
+    <div class="d-flex align-items-start gap-2 mb-2">
         <i class="bi bi-geo-alt text-secondary mt-1" aria-hidden="true"></i>
         <div class="flex-grow-1 w-100">
-            <small class="text-muted d-block mb-1"><spring:message code="detailReservationPanel.deliveryLocation"/></small>
-            <p class="mb-0 fw-medium"><c:out value="${deliveryLocation}"/></p>
+            <small class="text-muted d-block mb-1"><spring:message code="detailReservationPanel.pickupLocation"/></small>
+            <p class="mb-0 fw-medium" id="detail_pickup_location_label">&mdash;</p>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-start gap-2 mb-3">
+        <i class="bi bi-geo-alt-fill text-secondary mt-1" aria-hidden="true"></i>
+        <div class="flex-grow-1 w-100">
+            <small class="text-muted d-block mb-1"><spring:message code="detailReservationPanel.returnLocation"/></small>
+            <p class="mb-0 fw-medium" id="detail_return_location_label">&mdash;</p>
         </div>
     </div>
 

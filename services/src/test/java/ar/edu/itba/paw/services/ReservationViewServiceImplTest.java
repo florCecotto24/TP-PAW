@@ -14,8 +14,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ReservationCard;
@@ -24,6 +24,7 @@ import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
+import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 
 @ExtendWith(MockitoExtension.class)
 public class ReservationViewServiceImplTest {
@@ -38,10 +39,16 @@ public class ReservationViewServiceImplTest {
     private ReservationService reservationService;
 
     @Mock
-    private ListingService listingService;
+    private CarService carService;
 
     @Mock
-    private ListingViewService listingViewService;
+    private ListingAvailabilityService listingAvailabilityService;
+
+    @Mock
+    private CarPictureService carPictureService;
+
+    @Mock
+    private ListingAddressFormatter listingAddressFormatter;
 
     @Mock
     private UserService userService;
@@ -73,27 +80,28 @@ public class ReservationViewServiceImplTest {
     }
 
     @Test
-    public void testToReservationCardDisplayRowUsesBillableDaysAndDayPriceForTotal() {
+    public void testToReservationCardDisplayRowUsesFrozenTotalPrice() {
         final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-15T10:00");
         final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc("2026-04-16T18:00");
+        final BigDecimal frozenTotal = BigDecimal.valueOf(200L);
         final ReservationCard card = new ReservationCard(
                 1L,
                 2L,
                 "VW",
                 "Gol",
-                BigDecimal.valueOf(100L),
+                frozenTotal,
                 3L,
                 startDate,
                 endDate,
                 Reservation.Status.ACCEPTED);
-        Mockito.when(reservationService.calculateBillableDays(startDate, endDate)).thenReturn(2L);
         final var row = reservationViewService.toReservationCardDisplayRow(card, Locale.ENGLISH);
         Assertions.assertEquals(1L, row.getReservationId());
         Assertions.assertEquals("accepted", row.getStatusKey());
         Assertions.assertFalse(row.getPickupDateTime().isBlank());
         Assertions.assertFalse(row.getReturnDateTime().isBlank());
-        Assertions.assertEquals(ArsMoneyFormat.format(BigDecimal.valueOf(100L).multiply(BigDecimal.valueOf(2L))), row.getTotalPrice());
+        Assertions.assertEquals(ArsMoneyFormat.format(frozenTotal), row.getTotalPrice());
     }
+
 
     @Test
     public void testLoadMyReservationDetailForViewerWhenReservationMissingReturnsEmpty() {
@@ -104,13 +112,13 @@ public class ReservationViewServiceImplTest {
     }
 
     @Test
-    public void testLoadMyReservationDetailForViewerWhenListingDetailMissingReturnsEmpty() {
-        final Listing listingRef = Mockito.mock(Listing.class);
-        Mockito.when(listingRef.getId()).thenReturn(2L);
+    public void testLoadMyReservationDetailForViewerWhenCarMissingReturnsEmpty() {
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(7L);
         final Reservation res = Reservation.builder()
                 .id(5L)
                 .rider(User.identities(1L, "r@test.com", "R", "R"))
-                .listing(listingRef)
+                .car(carRef)
                 .startDate(START)
                 .endDate(END)
                 .status(Reservation.Status.ACCEPTED)
@@ -119,7 +127,7 @@ public class ReservationViewServiceImplTest {
                 .totalPrice(TOTAL_PRICE)
                 .build();
         Mockito.when(reservationService.getRiderReservationById(1L, 5L)).thenReturn(Optional.of(res));
-        Mockito.when(listingService.getListingDetailById(2L)).thenReturn(Optional.empty());
+        Mockito.when(carService.getCarById(7L)).thenReturn(Optional.empty());
         final Optional<ReservationDetailPageModel> got =
                 reservationViewService.loadMyReservationDetailForViewer(1L, 5L, "rider", Locale.ENGLISH);
         Assertions.assertTrue(got.isEmpty());
@@ -127,11 +135,11 @@ public class ReservationViewServiceImplTest {
 
     @Test
     public void testLoadReservationChatForParticipantWhenChatUnavailableReturnsEmpty() {
-        final Listing listingRef = Mockito.mock(Listing.class);
+        final Car carRefPending = Mockito.mock(Car.class);
         final Reservation res = Reservation.builder()
                 .id(5L)
                 .rider(User.identities(1L, "r@test.com", "R", "R"))
-                .listing(listingRef)
+                .car(carRefPending)
                 .startDate(START)
                 .endDate(END)
                 .status(Reservation.Status.PENDING)
@@ -148,13 +156,17 @@ public class ReservationViewServiceImplTest {
 
     @Test
     public void testLoadReservationChatForParticipantWhenChatAvailableReturnsModel() {
-        final Listing listingRef = Mockito.mock(Listing.class);
-        Mockito.when(listingRef.getId()).thenReturn(2L);
-        Mockito.when(listingRef.getTitle()).thenReturn("VW Gol");
+        final User owner = User.identities(9L, "o@test.com", "Owner", "One");
+        owner.setProfilePicture(new Image(42L, "avatar.png", "image/png", new byte[] {1}));
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(7L);
+        Mockito.when(carRef.getBrand()).thenReturn("VW");
+        Mockito.when(carRef.getModel()).thenReturn("Gol");
+        Mockito.when(carRef.getOwner()).thenReturn(owner);
         final Reservation res = Reservation.builder()
                 .id(5L)
                 .rider(User.identities(1L, "r@test.com", "R", "R"))
-                .listing(listingRef)
+                .car(carRef)
                 .startDate(START)
                 .endDate(END)
                 .status(Reservation.Status.ACCEPTED)
@@ -162,12 +174,9 @@ public class ReservationViewServiceImplTest {
                 .updatedAt(UPDATED_AT)
                 .totalPrice(TOTAL_PRICE)
                 .build();
-        final User owner = User.identities(9L, "o@test.com", "Owner", "One");
-        owner.setProfilePicture(new Image(42L, "avatar.png", "image/png", new byte[] {1}));
         Mockito.when(reservationService.getRiderReservationById(1L, 5L)).thenReturn(Optional.of(res));
         Mockito.when(reservationMessageService.isChatAvailable(res)).thenReturn(true);
-        Mockito.when(listingService.getListingById(2L)).thenReturn(Optional.of(listingRef));
-        Mockito.when(userService.getListingOwner(2L)).thenReturn(Optional.of(owner));
+        Mockito.when(carService.getCarById(7L)).thenReturn(Optional.of(carRef));
         Mockito.when(userService.getUserById(9L)).thenReturn(Optional.of(owner));
         Mockito.when(reservationMessageService.getMessageBodyMaxLength()).thenReturn(1000);
         Mockito.when(reservationMessageService.getMaxChatAttachmentMegabytes()).thenReturn(25);
@@ -175,7 +184,7 @@ public class ReservationViewServiceImplTest {
                 reservationViewService.loadReservationChatForParticipant(1L, 5L, "rider", Locale.ENGLISH);
         Assertions.assertTrue(got.isPresent());
         Assertions.assertEquals(5L, got.get().getReservationId());
-        Assertions.assertEquals(2L, got.get().getListingId());
+        Assertions.assertEquals(7L, got.get().getCarId());
         Assertions.assertEquals(42L, got.get().getCounterpartyProfileImageId());
     }
 }

@@ -1,19 +1,31 @@
 package ar.edu.itba.paw.services;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
+import ar.edu.itba.paw.models.util.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
 
 /**
- * Car rows for owners; catalog slices use {@code app.listing.car-catalog-limit} (not UI pagination).
+ * Car rows for owners and public catalog/search (browse cheapest/most-recent, search, owner hub,
+ * counterparty profile grid, owner detail page).
  */
 public interface CarService {
+
+    /**
+     * Sort argument for {@link #buildOwnerCarSearchCriteria} when loading the counterparty profile
+     * "other active cars" grid (initial page and load-more): higher average rating first, then newer car.
+     */
+    String COUNTERPARTY_OTHER_ACTIVE_CARS_SORT = "rating,desc";
 
     /** Persists a car for {@code ownerId} linked to the given catalog model. */
     Car createCar(
@@ -25,23 +37,10 @@ public interface CarService {
             Car.Transmission transmission);
 
     /**
-     * @deprecated Use {@link #createCar(long, String, long, Car.Type, Car.Powertrain, Car.Transmission)}.
-     *             Resolves {@code brand}/{@code model} via {@link CarBrandService} / {@link CarModelService}
-     *             internally; kept for the deprecated {@code ListingService#publish} flow until Fase 7.
-     */
-    @Deprecated
-    Car createCar(
-            long ownerId,
-            String plate,
-            String brand,
-            String model,
-            Car.Type type,
-            Car.Powertrain powertrain,
-            Car.Transmission transmission);
-
-    /**
-     * Creates a car (linked to the given catalog model) and saves its pictures in one transaction
-     * (step 1 of the two-step publish flow). Duplicate plate check is performed here.
+     * Creates a car (linked to the given catalog model), saves its pictures, and optionally stores an
+     * insurance document in one transaction (step 1 of the two-step publish flow). Duplicate plate
+     * check is performed here. When {@code insuranceData} is {@code null}/empty the car is created in
+     * {@link Car.Status#LACK_DOC}; otherwise it stays {@link Car.Status#ACTIVE}.
      */
     Car publishCar(
             long ownerId,
@@ -50,7 +49,10 @@ public interface CarService {
             Car.Type type,
             Car.Powertrain powertrain,
             Car.Transmission transmission,
-            List<ImageUpload> images);
+            List<ImageUpload> images,
+            String insuranceFilename,
+            String insuranceContentType,
+            byte[] insuranceData);
 
     /** Returns true if the owner already has a car registered with the given plate. */
     boolean existsByOwnerAndPlate(long ownerId, String plate);
@@ -58,45 +60,25 @@ public interface CarService {
     /** Loads a car by primary key when present. */
     Optional<Car> getCarById(final long id);
 
-    /** Cars with an {@code active} status, ordered by ascending listing day price (row cap {@code app.listing.car-catalog-limit}). */
-    List<Car> getCheapestCars();
-
-    /** Cars with an {@code active} status, ordered by listing creation time descending (row cap {@code app.listing.car-catalog-limit}). */
-    List<Car> getMostRecentCars();
-
     /** All cars for the owner (with or without an active/paused listing), paginated and filtered. */
-    Page<CarCard> getOwnerCarCards(OwnerListingSearchCriteria criteria);
+    Page<CarCard> getOwnerCarCards(OwnerCarSearchCriteria criteria);
 
     /**
      * Toggles a car between {@link Car.Status#ACTIVE} and {@link Car.Status#PAUSED}.
-     * Validates ownership and CBU when activating. Also syncs the most-recent listing status.
+     * Validates ownership and CBU when activating.
      *
      * @return the new {@link Car.Status} after the toggle
-     * @throws ar.edu.itba.paw.exception.listing.ListingValidationException when CBU is required or the
+     * @throws ar.edu.itba.paw.exception.car.CarValidationException when CBU is required or the
      *         car's current status does not allow toggling (e.g. {@code DEACTIVATED}, {@code ADMIN_PAUSED})
      */
     Car.Status toggleCarStatus(long ownerId, long carId);
 
     /**
      * Permanently deactivates a car (owner-initiated terminal state).
-     * The most-recent active/paused listing is finished as a side effect.
      *
      * @return {@code true} when the car existed and belonged to the owner
      */
     boolean deactivateCar(long ownerId, long carId);
-
-    /**
-     * Sets a car's status to {@link Car.Status#LACK_DOC} (e.g. missing CBU).
-     * No-op if the car does not exist. Does not change the listing status directly
-     * (that is handled by {@link ar.edu.itba.paw.services.ListingService#pauseActiveListingsDueToMissingCbuForOwnerAndNotify}).
-     */
-    void setCarLackDoc(long carId);
-
-    /**
-     * Clears a car's {@link Car.Status#LACK_DOC} status back to {@link Car.Status#ACTIVE}.
-     * No-op if the car does not exist or is not in {@code LACK_DOC}.
-     */
-    void clearCarLackDoc(long carId);
 
     /**
      * Returns a list of at most {@code limit} active cars similar to the given car
@@ -122,59 +104,105 @@ public interface CarService {
      * filters (text, body type, transmission, powertrain, price range, rating bands), the
      * requested availability window, and pagination/sort options.
      */
-    Page<CarCard> searchCarCards(ar.edu.itba.paw.models.util.ListingSearchCriteria criteria);
+    Page<CarCard> searchCarCards(CarSearchCriteria criteria);
 
     /**
-     * Builds {@link ar.edu.itba.paw.models.util.ListingSearchCriteria} from raw home/search form
-     * parameters (text, filters, wall dates, pagination, sort).
+     * Builds {@link CarSearchCriteria} from raw home/search form parameters
+     * (text, filters, wall dates, pagination, sort).
      */
-    ar.edu.itba.paw.models.util.ListingSearchCriteria buildSearchCriteria(
+    CarSearchCriteria buildSearchCriteria(
             String query,
-            java.util.List<String> category,
-            java.util.List<String> transmission,
-            java.util.List<String> powertrain,
-            java.math.BigDecimal priceMin,
-            java.math.BigDecimal priceMax,
-            java.util.List<String> rating,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            List<String> rating,
             String from,
             String until,
             int page,
             String sort,
             User viewer,
-            java.util.List<Long> neighborhoodIds);
+            List<Long> neighborhoodIds);
 
     /**
      * Sweeps active cars that have no future bookable wall day and transitions them to
      * {@link Car.Status#PAUSED} so the wall stops surfacing exhausted vehicles.
      */
-    void refreshExhaustedCarsToFinished();
+    void refreshExhaustedCarsToPaused();
 
     /**
-     * Builds {@link ar.edu.itba.paw.models.util.OwnerListingSearchCriteria} from raw owner-hub form parameters
+     * Builds {@link OwnerCarSearchCriteria} from raw owner-hub form parameters
      * (filters, sort, pagination defaults).
      */
-    ar.edu.itba.paw.models.util.OwnerListingSearchCriteria buildOwnerCarSearchCriteria(
+    OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             long ownerId,
-            java.util.List<String> category,
-            java.util.List<String> transmission,
-            java.util.List<String> powertrain,
-            java.math.BigDecimal priceMin,
-            java.math.BigDecimal priceMax,
-            java.util.List<String> listingStatus,
-            java.util.List<String> rating,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            List<String> carStatus,
+            List<String> rating,
             String textQuery,
             int page,
             String sort);
 
     /**
-     * For each active car of the owner whose status is {@link Car.Status#ACTIVE} or
-     * {@link Car.Status#PAUSED}, transitions it to {@link Car.Status#LACK_DOC} and notifies the
-     * owner by email (one mail per affected car).
+     * Same as {@link #buildOwnerCarSearchCriteria(long, List, List, List, BigDecimal, BigDecimal, List, List, String, int, String)}
+     * but allows overriding the page size and excluding a specific car id from the result.
+     * Used by the counterparty profile "other active cars" grid.
      */
-    void pauseActiveCarsDueToMissingCbuForOwnerAndNotify(long ownerId);
+    OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
+            long ownerId,
+            List<String> category,
+            List<String> transmission,
+            List<String> powertrain,
+            BigDecimal priceMin,
+            BigDecimal priceMax,
+            List<String> carStatus,
+            List<String> rating,
+            String textQuery,
+            int page,
+            String sort,
+            int pageSizeOrZero,
+            Long excludeCarId);
+
+    /**
+     * Market price stats (min / max / average) for active cars with the same brand and model.
+     * {@code excludeCarId} omits one car when editing (typically the current one).
+     */
+    Optional<CarPriceMarketInsight> getPriceMarketInsightForCar(
+            Car car, Long excludeCarId);
+
+    /**
+     * Owner car detail page model assembled from the car, its availabilities, pictures, and reservation analytics.
+     * Returns empty when the car cannot be found.
+     */
+    Optional<OwnerCarDetailPageModel> buildOwnerCarDetailPageModel(
+            long carId, Locale locale);
+
+    /**
+     * For each car of the owner whose status is {@link Car.Status#ACTIVE} or {@link Car.Status#PAUSED},
+     * transitions it to {@link Car.Status#LACK_DOC} and sends one email per affected car to the owner.
+     */
+    void pauseCarsForMissingCbu(long ownerId);
 
     /**
      * Re-activates cars that were paused only for missing CBU, after a valid CBU is stored.
      */
-    void resumeCarsPausedDueToMissingCbuForOwner(long ownerId);
+    void resumeCarsForRestoredCbu(long ownerId);
+
+    /**
+     * Stores an insurance document for the car (one slot per car). Re-uploading replaces any previous file.
+     * When the car is in {@link Car.Status#LACK_DOC} solely because of the missing insurance, it transitions
+     * back to {@link Car.Status#ACTIVE}.
+     */
+    void uploadValidatedCarInsuranceDocument(long ownerId, long carId, String originalFilename, String contentType, byte[] data);
+
+    /** Clears the insurance file reference for the car, optionally moving the car back to {@link Car.Status#LACK_DOC}. */
+    void clearCarInsuranceDocument(long ownerId, long carId);
+
+    /** Returns true when the car has an insurance document on file. */
+    boolean hasUploadedInsurance(long carId);
 }

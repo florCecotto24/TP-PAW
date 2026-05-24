@@ -185,15 +185,6 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    public Optional<User> getListingOwner(final long listingId) {
-        return em.createQuery(
-                        "SELECT l.car.owner FROM Listing l WHERE l.id = :listingId",
-                        User.class)
-                .setParameter("listingId", listingId)
-                .getResultList().stream().findAny();
-    }
-
-    @Override
     @Transactional
     public void updateLatestLocale(final long userId, final String localeTag) {
         final User user = em.find(User.class, userId);

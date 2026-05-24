@@ -9,6 +9,8 @@ import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -19,19 +21,26 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.listing.DuplicatePlateException;
+import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.services.CarBrandService;
 import ar.edu.itba.paw.services.CarModelService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -57,6 +66,8 @@ public final class PublishCarFormController {
     private final MultipartImageValidation multipartImageValidation;
     private final PublishCarPictureSessionStash pictureStash;
     private final CarEnumOptions carEnumOptions;
+    private final UserService userService;
+    private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
 
     public PublishCarFormController(
             final CarService carService,
@@ -66,7 +77,9 @@ public final class PublishCarFormController {
             final ImageService imageService,
             final MultipartImageValidation multipartImageValidation,
             final PublishCarPictureSessionStash pictureStash,
-            final CarEnumOptions carEnumOptions) {
+            final CarEnumOptions carEnumOptions,
+            final UserService userService,
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy) {
         this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
@@ -75,6 +88,8 @@ public final class PublishCarFormController {
         this.multipartImageValidation = multipartImageValidation;
         this.pictureStash = pictureStash;
         this.carEnumOptions = carEnumOptions;
+        this.userService = userService;
+        this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
     }
 
     @ModelAttribute("allBrands")
@@ -112,11 +127,20 @@ public final class PublishCarFormController {
         return imageService.getMaxImageMegabytesRoundedUp();
     }
 
+    @ModelAttribute("uploadMaxProfileDocumentMegabytes")
+    public int uploadMaxProfileDocumentMegabytes() {
+        return profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
+    }
+
     @GetMapping
     public ModelAndView index(
             @CurrentUser final User currentUser,
             final HttpSession session) {
-        WebAuthUtils.requireUser(currentUser);
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final User fresh = userService.getUserById(me.getId()).orElse(me);
+        if (!hasPublishPrerequisites(fresh)) {
+            return publishCarPrerequisitesView(fresh);
+        }
         pictureStash.clear(session);
         final PublishCarForm form = new PublishCarForm();
         final ModelAndView mav = publishCarFormView(session);
@@ -170,6 +194,12 @@ public final class PublishCarFormController {
             final HttpSession session,
             @Validated(ValidationGroups.OnPublishCar.class) @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
+        // Defensive backend check: prerequisites (CBU + identity) must be in place before publishing.
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final User fresh = userService.getUserById(me.getId()).orElse(me);
+        if (!hasPublishPrerequisites(fresh)) {
+            return publishCarPrerequisitesView(fresh);
+        }
         pictureStash.trySyncFromForm(form, session, errors);
         pictureStash.validatePicturePresence(form, session, errors);
         if (errors.hasErrors()) {
@@ -208,6 +238,19 @@ public final class PublishCarFormController {
             return publishCarFormView(session);
         }
 
+        // Optional insurance file: when present, must fit the profile-document size limit.
+        final MultipartFile insuranceFile = form.getInsuranceFile();
+        final boolean hasInsurance = insuranceFile != null && !insuranceFile.isEmpty();
+        if (hasInsurance && insuranceFile.getSize() > profileDocumentUploadPolicy.getMaxBytes()) {
+            errors.rejectValue(
+                    "insuranceFile",
+                    MessageKeys.PUBLISH_FAILED,
+                    new Object[]{profileDocumentUploadPolicy.getMaxMegabytesRoundedUp()},
+                    localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+            pictureStash.trySyncFromForm(form, session, errors);
+            return publishCarFormView(session);
+        }
+
         try {
             final long ownerId = WebAuthUtils.requireUser(currentUser).getId();
 
@@ -218,6 +261,9 @@ public final class PublishCarFormController {
                             resolvedBrand.getId(), form.getModel(), form.getType())
                     .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + form.getModel()));
 
+            final byte[] insuranceBytes = hasInsurance ? insuranceFile.getBytes() : null;
+            final String insuranceName = hasInsurance ? insuranceFile.getOriginalFilename() : null;
+            final String insuranceType = hasInsurance ? insuranceFile.getContentType() : null;
             final Car car = carService.publishCar(
                     ownerId,
                     form.getPlate(),
@@ -225,7 +271,10 @@ public final class PublishCarFormController {
                     form.getType(),
                     form.getPowertrain(),
                     form.getTransmission(),
-                    uploads);
+                    uploads,
+                    insuranceName,
+                    insuranceType,
+                    insuranceBytes);
 
             pictureStash.clear(session);
 
@@ -255,6 +304,73 @@ public final class PublishCarFormController {
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
+        return mav;
+    }
+
+    /**
+     * AJAX endpoint used by the prerequisites screen modal to save the CBU without a full reload.
+     */
+    @PostMapping(value = "/quick-cbu", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<Void> quickCbu(
+            @CurrentUser final User currentUser,
+            @RequestParam("cbu") final String cbuRaw) {
+        WebAuthUtils.requireUser(currentUser);
+        final String trimmed = cbuRaw == null ? "" : cbuRaw.trim();
+        if (!userService.isValidCbuFormat(cbuRaw)) {
+            return ResponseEntity.badRequest().build();
+        }
+        userService.updateCbu(currentUser.getId(), trimmed);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * AJAX endpoint used by the prerequisites screen modal to save the identity document
+     * without a full reload (same validation as the profile flow).
+     */
+    @PostMapping(value = "/quick-identity", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> quickIdentity(
+            @CurrentUser final User currentUser,
+            @RequestParam(name = "identityFile", required = false) final MultipartFile identityFile) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        if (identityFile == null || identityFile.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        final User fresh = userService.getUserById(me.getId()).orElse(me);
+        if (fresh.getIdentityFileId().isPresent()) {
+            // Idempotency: already uploaded; treat as success.
+            return ResponseEntity.noContent().build();
+        }
+        try {
+            userService.uploadValidatedProfileDocument(
+                    me.getId(),
+                    UserDocumentType.IDENTITY,
+                    identityFile.getOriginalFilename(),
+                    identityFile.getContentType(),
+                    identityFile.getBytes());
+            return ResponseEntity.noContent().build();
+        } catch (final RydenException e) {
+            final HttpHeaders headers = new HttpHeaders();
+            headers.add("X-Ryden-Error", localeMessages.msg(e));
+            return new ResponseEntity<>(null, headers, HttpStatus.BAD_REQUEST);
+        } catch (final IOException e) {
+            LOG.atWarn().setMessage("Could not read uploaded identity document for userId={}")
+                    .addArgument(me.getId())
+                    .setCause(e)
+                    .log();
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    private boolean hasPublishPrerequisites(final User user) {
+        return userService.hasValidCbu(user) && user.getIdentityFileId().isPresent();
+    }
+
+    private ModelAndView publishCarPrerequisitesView(final User user) {
+        final ModelAndView mav = new ModelAndView("publishCarPrerequisites");
+        mav.addObject("activeTab", "publish-car");
+        mav.addObject("publisherHasCbu", userService.hasValidCbu(user));
+        mav.addObject("publisherHasIdentity", user.getIdentityFileId().isPresent());
+        mav.addObject("cbuRequiredDigits", CbuRules.REQUIRED_DIGIT_LENGTH);
         return mav;
     }
 }

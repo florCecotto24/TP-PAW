@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.exception.listing;
+package ar.edu.itba.paw.exception.car;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,7 +9,7 @@ class AvailabilityRiderLeadViolationExceptionTest {
     void testGetAvailabilityRowIndexReturnsConstructorInput() {
         // 1.Arrange / 2.Exercise
         final AvailabilityRiderLeadViolationException ex =
-                new AvailabilityRiderLeadViolationException(3, "listing.availability.leadViolation", 24);
+                new AvailabilityRiderLeadViolationException(3, "car.availability.leadViolation", 24);
 
         // 3.Assert
         Assertions.assertEquals(3, ex.getAvailabilityRowIndex());
@@ -27,12 +27,12 @@ class AvailabilityRiderLeadViolationExceptionTest {
     }
 
     @Test
-    void testIsListingValidationExceptionForControllerAdviceMatching() {
+    void testIsCarValidationExceptionForControllerAdviceMatching() {
         // 1.Arrange / 2.Exercise
         final AvailabilityRiderLeadViolationException ex =
                 new AvailabilityRiderLeadViolationException(2, "k");
 
         // 3.Assert
-        Assertions.assertTrue(ex instanceof ListingValidationException);
+        Assertions.assertTrue(ex instanceof CarValidationException);
     }
 }

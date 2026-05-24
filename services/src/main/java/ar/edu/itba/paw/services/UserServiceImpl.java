@@ -27,6 +27,7 @@ import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
@@ -34,7 +35,6 @@ import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
-import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
@@ -54,7 +54,6 @@ public final class UserServiceImpl implements UserService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final UserDao userDao;
-    private final CarDao carDao;
     private final ImageService imageService;
     private final StoredFileService storedFileService;
     private final EmailService emailService;
@@ -67,7 +66,6 @@ public final class UserServiceImpl implements UserService {
     @Autowired
     public UserServiceImpl(
             final UserDao userDao,
-            final CarDao carDao,
             final ImageService imageService,
             final StoredFileService storedFileService,
             final EmailService emailService,
@@ -77,7 +75,6 @@ public final class UserServiceImpl implements UserService {
             @Lazy final EmailVerificationService emailVerificationService,
             @Lazy final CarService carService) {
         this.userDao = userDao;
-        this.carDao = carDao;
         this.imageService = imageService;
         this.storedFileService = storedFileService;
         this.emailService = emailService;
@@ -140,12 +137,6 @@ public final class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public List<String> findRoleNamesForUser(final long userId) {
         return userDao.findRoleNamesForUser(userId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<User> getListingOwner(final long listingId) {
-        return userDao.getListingOwner(listingId);
     }
 
     @Override
@@ -380,30 +371,9 @@ public final class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<String> findOwnerCbuForListing(final long listingId) {
-        final Optional<User> listingOwnerOpt = getListingOwner(listingId);
-        if (listingOwnerOpt.isEmpty()) {
-            LOGGER.atWarn().addArgument(listingId).log("Listing owner missing when resolving CBU for listing (listingId={})");
-            return Optional.empty();
-        }
-        final long ownerId = listingOwnerOpt.get().getId();
-        try {
-            return Optional.of(getUserCbu(ownerId));
-        } catch (final UserNotFoundException | CBUNotFoundException e) {
-            LOGGER.atWarn()
-                    .setCause(e)
-                    .addArgument(listingId)
-                    .addArgument(ownerId)
-                    .log("Owner CBU unavailable for listing (listingId={}, ownerId={})");
-            return Optional.empty();
-        }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Optional<String> findOwnerCbuForCar(final long carId) {
-        final Optional<Long> ownerIdOpt = carDao.getCarById(carId)
-                .map(ar.edu.itba.paw.models.domain.Car::getOwner)
+        final Optional<Long> ownerIdOpt = carService.getCarById(carId)
+                .map(Car::getOwner)
                 .map(User::getId);
         if (ownerIdOpt.isEmpty()) {
             LOGGER.atWarn().addArgument(carId).log("Car owner missing when resolving CBU for car (carId={})");
@@ -534,14 +504,14 @@ public final class UserServiceImpl implements UserService {
         final String normalized = cbu == null ? "" : cbu.trim();
         if (normalized.isEmpty()) {
             userDao.updateCbu(userId, null);
-            carService.pauseActiveCarsDueToMissingCbuForOwnerAndNotify(userId);
+            carService.pauseCarsForMissingCbu(userId);
             return;
         }
         if (!CbuRules.isValidFormat(normalized)) {
             throw new InvalidCbuFormatException(CbuRules.REQUIRED_DIGIT_LENGTH);
         }
         userDao.updateCbu(userId, normalized);
-        carService.resumeCarsPausedDueToMissingCbuForOwner(userId);
+        carService.resumeCarsForRestoredCbu(userId);
     }
 
     @Override

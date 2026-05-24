@@ -10,69 +10,27 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
 
 /**
- * Wall-calendar availability segments attached to a listing ({@code listing_availability} style persistence).
- * Dates are interpreted in the listing wall zone when combined with reservation rules elsewhere; this contract only
- * moves rows in and out of storage. Callers such as {@code ListingService} own validation and transaction boundaries.
+ * Wall-calendar availability segments attached to a car ({@code listing_availability} style persistence).
+ * Dates are interpreted in the car wall zone when combined with reservation rules elsewhere; this contract only
+ * moves rows in and out of storage. Callers own validation and transaction boundaries.
  * Implementations use {@code ListingAvailabilityDao} only.
  */
 public interface ListingAvailabilityService {
-
-    /**
-     * Inserts one contiguous availability window for {@code listingId} with an optional per-period price.
-     *
-     * @param listingId        owning listing primary key
-     * @param startInclusive   first bookable wall-calendar day (inclusive)
-     * @param endInclusive     last bookable wall-calendar day (inclusive)
-     * @param dayPrice         optional price per day for this period; {@code null} means use the listing-level price
-     * @return persisted row including generated id and timestamps
-     */
-    ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive, BigDecimal dayPrice);
-
-    default ListingAvailability create(long listingId, LocalDate startInclusive, LocalDate endInclusive) {
-        return create(listingId, startInclusive, endInclusive, null);
-    }
-
-    /**
-     * All segments for {@code listingId}, typically ordered by start date ascending in the JDBC implementation.
-     */
-    List<ListingAvailability> findByListingId(long listingId);
 
     /** Availability row by id, when present. */
     Optional<ListingAvailability> findById(long availabilityId);
 
     /**
-     * Batch load for several listings: rows whose {@code end_inclusive} is on or after {@code minEndDate}
-     * (used when pruning past days while keeping future availability).
-     *
-     * @param listingIds non-null collection of listing ids (may be empty; behavior is DAO-defined, usually empty list)
-     * @param minEndDate lower bound on segment end (wall-local calendar)
-     */
-    List<ListingAvailability> findByListingIdsEndingOnOrAfter(Collection<Long> listingIds, LocalDate minEndDate);
-
-    /** Removes every availability row for {@code listingId} (e.g. before replacing the whole wall). */
-    void deleteByListingId(long listingId);
-
-    /**
-     * The single availability row that is effective for {@code day}: the most recent row whose window
+     * The single availability row that is effective for {@code day} on a given car: the most recent row whose window
      * contains it. When the effective row is {@link ListingAvailability.Kind#WITHDRAWN}, the day is not
      * bookable; otherwise its {@code dayPrice} is the effective price.
      */
-    Optional<ListingAvailability> findEffectiveForDay(long listingId, LocalDate day);
-
-    /**
-     * All availability rows for {@code listingId} whose window overlaps {@code [from, to]}, ordered by
-     * {@code createdAt} descending so callers can resolve the per-day winner in memory.
-     */
-    List<ListingAvailability> findOverlappingRange(long listingId, LocalDate from, LocalDate to);
-
-    // ---- Car-id based variants (Phase 7b+) ----
-
-    /** Like {@link #findEffectiveForDay(long, LocalDate)} but resolves by {@code car_id}. */
     Optional<ListingAvailability> findEffectiveForDayByCar(long carId, LocalDate day);
 
-    /** Like {@link #findOverlappingRange(long, LocalDate, LocalDate)} but resolves by {@code car_id}. */
+    /** All availability rows for {@code carId} whose window overlaps {@code [from, to]}, ordered by {@code createdAt} descending. */
     List<ListingAvailability> findOverlappingRangeByCar(long carId, LocalDate from, LocalDate to);
 
     /**
@@ -102,19 +60,19 @@ public interface ListingAvailabilityService {
             List<AvailabilityPeriod> periods,
             List<BigDecimal> periodPrices);
 
-    /** Like {@link #findByListingId} but resolves by {@code car_id}. */
+    /** All availability segments for the car. */
     List<ListingAvailability> findByCarId(long carId);
 
-    /**
-     * Like {@link #findByListingIdsEndingOnOrAfter} but resolves by {@code car_id}.
-     */
+    /** Batch load: rows for the given car ids whose {@code end_inclusive} is on or after {@code minEndDate}. */
     List<ListingAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
-    /** Like {@link #deleteByListingId} but resolves by {@code car_id}. */
+    /** Removes every availability row for {@code carId} (e.g. before replacing the whole wall). */
     void deleteByCarId(long carId);
 
     /**
-     * Like {@link #applyOwnerEdit} but operates on a car directly (no listing required).
+     * Applies an owner edit to an availability window on a car. Mirrors {@link #applyOwnerWithdrawByCar}
+     * but for an edit: inserts a new {@link ListingAvailability.Kind#OFFERED} row and one
+     * {@link ListingAvailability.Kind#WITHDRAWN} row per removed-day chunk.
      */
     ListingAvailability applyOwnerEditByCar(
             long carId,
@@ -130,8 +88,10 @@ public interface ListingAvailabilityService {
             LocalTime checkOutTime);
 
     /**
-     * Like {@link #applyOwnerWithdrawAvailability} but verifies ownership by {@code car_id}
-     * instead of {@code listing_id}.
+     * Soft-deletes an availability period from the owner's calendar by inserting a brand new
+     * {@link ListingAvailability.Kind#WITHDRAWN} row covering the target's full window. The target row is
+     * not mutated or deleted; the "most recent createdAt wins" resolution rule makes the days unbookable.
+     * Aborts when blocking reservations intersect the target or when the target does not belong to {@code carId}.
      */
     ListingAvailability applyOwnerWithdrawByCar(long carId, long availabilityId);
 
@@ -152,6 +112,16 @@ public interface ListingAvailabilityService {
             Instant now);
 
     /**
+     * Returns the rider-facing bookable wall-day segments for the car, each carrying the effective per-day
+     * attributes: {@code dayPrice}, {@code checkInTime}, {@code checkOutTime}, and a pre-formatted public
+     * pickup location string. Each day's effective values come from the most recently created OFFERED
+     * availability that covers that day. Contiguous days are merged into the same segment iff their full
+     * projection is identical. The first day of each segment is clipped using its own {@code checkInTime}
+     * and the rider pickup-lead policy relative to {@code now}.
+     */
+    List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(long carId, Instant now);
+
+    /**
      * Returns the minimum effective day price across all future offered availability rows for the car.
      * When {@code defaultPrice} is provided it seeds the minimum (used as a fallback when no availability rows exist).
      */
@@ -161,63 +131,6 @@ public interface ListingAvailabilityService {
      * Returns {@code true} when not all future offered availability rows have the same price as {@code defaultPrice}.
      */
     boolean isCarPriceVariableByCar(long carId, BigDecimal defaultPrice);
-
-    /**
-     * Applies an owner edit to an availability window. The operation does NOT mutate or delete the
-     * existing row: it inserts a new {@link ListingAvailability.Kind#OFFERED} row for
-     * {@code [newStartInclusive, newEndInclusive]} and one
-     * {@link ListingAvailability.Kind#WITHDRAWN} row per contiguous chunk of days that are in the old
-     * window but not in the new one ({@code old \ new}). Because the "most recent createdAt wins"
-     * resolution rule already handles overlaps, this leaves a clean per-day result on the calendar.
-     * If any of the days that get withdrawn have an active reservation
-     * ({@code pending}/{@code accepted}/{@code started}), the operation aborts by throwing
-     * {@link ar.edu.itba.paw.exception.reservation.ReservationConflictException} with message key
-     * {@code listing.availability.editConflict}.
-     *
-     * @param listingId           owning listing
-     * @param oldStartInclusive   start of the previously published window (used to compute removed days)
-     * @param oldEndInclusive     end of the previously published window
-     * @param newStartInclusive   start of the new window
-     * @param newEndInclusive     end of the new window
-     * @param dayPrice            price for the new offered window
-     * @param startPointStreet    pickup street for the new offered window
-     * @param startPointNumber    pickup number for the new offered window (nullable)
-     * @param neighborhoodId      neighborhood id for the new offered window (nullable)
-     * @param checkInTime         wall check-in for the new offered window
-     * @param checkOutTime        wall check-out for the new offered window
-     * @return the newly persisted offered row (the withdrawn rows are persisted too but not returned)
-     */
-    ListingAvailability applyOwnerEdit(
-            long listingId,
-            LocalDate oldStartInclusive,
-            LocalDate oldEndInclusive,
-            LocalDate newStartInclusive,
-            LocalDate newEndInclusive,
-            BigDecimal dayPrice,
-            String startPointStreet,
-            String startPointNumber,
-            Long neighborhoodId,
-            LocalTime checkInTime,
-            LocalTime checkOutTime);
-
-    /**
-     * Soft-deletes an availability period from the owner's calendar by inserting a brand new
-     * {@link ListingAvailability.Kind#WITHDRAWN} row covering the target's full {@code [startInclusive,
-     * endInclusive]} window, using the target's own pricing/location/time as template values. The
-     * target row itself is NOT mutated nor deleted; the "most recent createdAt wins" resolution rule
-     * makes the days unbookable from this point on.
-     * <p>The operation aborts with {@link ar.edu.itba.paw.exception.reservation.ReservationConflictException}
-     * ({@code listing.availability.withdrawConflict}) when any blocking reservation
-     * ({@code pending}/{@code accepted}/{@code started}) intersects the target window.
-     * It also rejects (via {@link ar.edu.itba.paw.exception.listing.ListingValidationException})
-     * when the target does not exist, does not belong to {@code listingId}, or is itself already
-     * {@code withdrawn}.
-     *
-     * @param listingId       expected owning listing of {@code availabilityId} (ownership check)
-     * @param availabilityId  the availability period the owner wants to remove from the UI
-     * @return the newly persisted withdrawn row
-     */
-    ListingAvailability applyOwnerWithdrawAvailability(long listingId, long availabilityId);
 
     /**
      * Returns the most recent {@link ListingAvailability} row for the car (highest {@code createdAt}).
@@ -234,7 +147,7 @@ public interface ListingAvailabilityService {
     /**
      * Publication rule: each period start must be on or after {@link #getPublicationMinAvailabilityFirstWallDay}.
      *
-     * @throws ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException on the first violating row
+     * @throws ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException on the first violating row
      */
     void validatePublicationAvailabilityRiderLead(
             List<AvailabilityPeriod> periods, LocalTime checkInTime, Instant now);

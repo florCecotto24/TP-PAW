@@ -14,13 +14,13 @@ public final class ReservationMailPayload {
     private final String recipientEmail;
     private final String riderFullName;
     private final long reservationId;
-    private final long listingId;
+    private final long carId;
     private final String vehicleLabel;
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
     /**
      * Pickup/return summary for the rider email. Before payment proof: public address (no street number).
-     * After proof (second email): full address including number, see {@code ListingViewService#formatRiderReservationHandoverSummary}.
+     * After proof (second email): full address including number, see {@code ListingAddressFormatter#formatRiderReservationHandoverSummary}.
      */
     private final String riderHandoverLocation;
     /** Full data for the email to the owner. */
@@ -36,7 +36,7 @@ public final class ReservationMailPayload {
         this.recipientEmail = Objects.requireNonNull(builder.recipientEmail, "recipientEmail");
         this.riderFullName = Objects.requireNonNull(builder.riderFullName, "riderFullName");
         this.reservationId = Objects.requireNonNull(builder.reservationId, "reservationId");
-        this.listingId = Objects.requireNonNull(builder.listingId, "listingId");
+        this.carId = Objects.requireNonNull(builder.carId, "carId");
         this.vehicleLabel = Objects.requireNonNull(builder.vehicleLabel, "vehicleLabel");
         this.startDate = Objects.requireNonNull(builder.startDate, "startDate");
         this.endDate = Objects.requireNonNull(builder.endDate, "endDate");
@@ -66,8 +66,8 @@ public final class ReservationMailPayload {
         return reservationId;
     }
 
-    public long getListingId() {
-        return listingId;
+    public long getCarId() {
+        return carId;
     }
 
     public String getVehicleLabel() {
@@ -126,7 +126,7 @@ public final class ReservationMailPayload {
         private String recipientEmail;
         private String riderFullName;
         private Long reservationId;
-        private Long listingId;
+        private Long carId;
         private String vehicleLabel;
         private OffsetDateTime startDate;
         private OffsetDateTime endDate;
@@ -157,8 +157,8 @@ public final class ReservationMailPayload {
             return this;
         }
 
-        public Builder listingId(final long value) {
-            this.listingId = value;
+        public Builder carId(final long value) {
+            this.carId = value;
             return this;
         }
 

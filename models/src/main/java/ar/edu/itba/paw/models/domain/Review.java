@@ -57,8 +57,7 @@ public class Review {
     }
 
     private static Car carFrom(final Reservation reservation) {
-        final Car direct = reservation.getCar();
-        return direct != null ? direct : reservation.getListing().getCar();
+        return reservation.getCar();
     }
 
     public ReviewId getId() {
@@ -73,10 +72,7 @@ public class Review {
         return car;
     }
 
-    /**
-     * Dual-read: prefers the direct {@code car_id} column; falls back to
-     * {@code reservation.getListing().getCar()} for legacy in-memory rows.
-     */
+    /** Convenience accessor for the car id of the underlying reservation. */
     public long getCarId() {
         return (car != null ? car : carFrom(reservation)).getId();
     }

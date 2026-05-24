@@ -1,8 +1,7 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
@@ -11,7 +10,7 @@ import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
-import ar.edu.itba.paw.models.util.OwnerListingSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
@@ -19,7 +18,6 @@ import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -40,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.Instant;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -51,10 +48,6 @@ import java.util.stream.Collectors;
 @Controller
 public class CarDetailController {
 
-    /** Fallback wall-time check-in/out used when a car has no availability rows yet. */
-    private static final LocalTime DEFAULT_CHECK_IN_TIME = LocalTime.of(9, 0);
-    private static final LocalTime DEFAULT_CHECK_OUT_TIME = LocalTime.of(20, 0);
-
     private final CarService carService;
     private final ListingAvailabilityService listingAvailabilityService;
     private final ReservationService reservationService;
@@ -62,7 +55,6 @@ public class CarDetailController {
     private final UserService userService;
     private final PaginationPolicy paginationPolicy;
     private final PresentationLimitsPolicy presentationLimitsPolicy;
-    private final ListingAddressFormatter listingAddressFormatter;
 
     @Autowired
     public CarDetailController(
@@ -72,8 +64,7 @@ public class CarDetailController {
             final ReviewService reviewService,
             final UserService userService,
             final PaginationPolicy paginationPolicy,
-            final PresentationLimitsPolicy presentationLimitsPolicy,
-            final ListingAddressFormatter listingAddressFormatter) {
+            final PresentationLimitsPolicy presentationLimitsPolicy) {
         this.carService = carService;
         this.listingAvailabilityService = listingAvailabilityService;
         this.reservationService = reservationService;
@@ -81,7 +72,6 @@ public class CarDetailController {
         this.userService = userService;
         this.paginationPolicy = paginationPolicy;
         this.presentationLimitsPolicy = presentationLimitsPolicy;
-        this.listingAddressFormatter = listingAddressFormatter;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -111,27 +101,14 @@ public class CarDetailController {
                 .map(cp -> "/image/" + cp.getImageId())
                 .collect(Collectors.toList());
 
-        final Optional<ListingAvailability> latestAvailability =
-                listingAvailabilityService.findMostRecentByCarId(carId);
-        final String carPublicLocation = latestAvailability
-                .map(listingAddressFormatter::formatPublicPickupLocation)
-                .orElse("");
-        final LocalTime checkInTime = latestAvailability
-                .map(ListingAvailability::getCheckInTime)
-                .orElse(DEFAULT_CHECK_IN_TIME);
-        final LocalTime checkOutTime = latestAvailability
-                .map(ListingAvailability::getCheckOutTime)
-                .orElse(DEFAULT_CHECK_OUT_TIME);
-
         final List<VehicleCardView> similarListings = carService
                 .findSimilarCarCards(carId, presentationLimitsPolicy.getCarDetailSimilarListingsLimit(), currentUser)
                 .stream()
                 .map(VehicleCardView::fromCarCard)
                 .collect(Collectors.toList());
 
-        final List<AvailabilityPeriod> bookableSegments =
-                listingAvailabilityService.getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
-                        carId, checkInTime, Instant.now());
+        final List<BookableSegmentProjection> bookableSegments =
+                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
 
@@ -173,14 +150,11 @@ public class CarDetailController {
         mav.addObject("maxReservationBillableDays", reservationService.getConfiguredMaxReservationBillableDays());
         mav.addObject("car", car);
         mav.addObject("carTitle", carTitle);
-        mav.addObject("carPublicLocation", carPublicLocation);
-        mav.addObject("checkInTime", checkInTime);
-        mav.addObject("checkOutTime", checkOutTime);
-        mav.addObject("listingMinEffectiveDayPrice", minEffectiveDayPrice);
-        mav.addObject("listingPriceIsVariable", priceIsVariable);
-        mav.addObject("listingRatingLabel", ratingLabel);
-        mav.addObject("listingReviewCountLabel", reviewCountLabel);
-        mav.addObject("listingReviewPage", carReviewPage);
+        mav.addObject("carMinEffectiveDayPrice", minEffectiveDayPrice);
+        mav.addObject("carPriceIsVariable", priceIsVariable);
+        mav.addObject("carRatingLabel", ratingLabel);
+        mav.addObject("carReviewCountLabel", reviewCountLabel);
+        mav.addObject("carReviewPage", carReviewPage);
         mav.addObject("owner", owner);
         mav.addObject("ownerProfileImageId", ownerProfileImageId);
         mav.addObject("carGalleryImagePaths", carGalleryImagePaths);
@@ -225,10 +199,10 @@ public class CarDetailController {
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
         final int counterpartyListingsPageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
-        final OwnerListingSearchCriteria counterpartyCriteria = new OwnerListingSearchCriteria(
+        final OwnerCarSearchCriteria counterpartyCriteria = new OwnerCarSearchCriteria(
                 counterparty.getId(), 0, counterpartyListingsPageSize,
                 List.of("active"), null, null, null, null, null, null, null,
-                "rating", "desc", null, currentCarId);
+                "rating", "desc", currentCarId);
         final Page<CarCard> ownerActiveListingsPage = carService.getOwnerCarCards(counterpartyCriteria);
         final List<VehicleCardView> counterpartyActiveListings = ownerActiveListingsPage.getContent().stream()
                 .map(VehicleCardView::fromOwnerCarCard)
@@ -287,10 +261,10 @@ public class CarDetailController {
         }
 
         final int pageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
-        final OwnerListingSearchCriteria pageCriteria = new OwnerListingSearchCriteria(
+        final OwnerCarSearchCriteria pageCriteria = new OwnerCarSearchCriteria(
                 userId, page, pageSize,
                 List.of("active"), null, null, null, null, null, null, null,
-                "rating", "desc", null, excludeCarId);
+                "rating", "desc", excludeCarId);
         final Page<CarCard> listingPage = carService.getOwnerCarCards(pageCriteria);
         final List<VehicleCardView> cards = listingPage.getContent().stream()
                 .map(VehicleCardView::fromOwnerCarCard)

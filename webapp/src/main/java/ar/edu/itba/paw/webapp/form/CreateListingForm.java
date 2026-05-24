@@ -17,7 +17,7 @@ import javax.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
@@ -58,7 +58,7 @@ public final class CreateListingForm implements ListingTimeWindow {
     private List<AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public CreateListingForm() {
-        checkInTime = Listing.DEFAULT_CHECK_IN_TIME;
+        checkInTime = ListingAvailability.DEFAULT_CHECK_IN_TIME;
         checkOutTime = LocalTime.of(18, 0);
         availabilityRows.add(new AvailabilityRow());
     }

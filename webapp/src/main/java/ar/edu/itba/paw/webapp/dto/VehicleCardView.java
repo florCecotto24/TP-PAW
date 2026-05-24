@@ -2,11 +2,9 @@ package ar.edu.itba.paw.webapp.dto;
 
 import java.math.BigDecimal;
 
-import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.ListingCard;
 
-/** Listing teaser for home and search grids, optionally enriched with status and average rating. */
+/** Car teaser for home and search grids, optionally enriched with status and average rating. */
 public final class VehicleCardView {
     private final long carId;
     private final String brand;
@@ -67,23 +65,6 @@ public final class VehicleCardView {
     }
 
     /**
-     * Explore / search / similar listings: no listing status on the card grid.
-     * Uses the car id from {@link ListingCard#getCarId()}.
-     */
-    public static VehicleCardView fromListingCard(final ListingCard card) {
-        return buildFromListingCard(card, null);
-    }
-
-    /**
-     * Owner "My listings" grid: status badge uses {@link Car.Status} / {@link ar.edu.itba.paw.models.domain.Listing.Status} name.
-     */
-    public static VehicleCardView fromOwnerListingCard(final ListingCard card) {
-        return buildFromListingCard(
-                card,
-                card.getStatus().map(s -> s.name()).orElse(null));
-    }
-
-    /**
      * Explore / search grid from a car card (no listing required).
      */
     public static VehicleCardView fromCarCard(final CarCard card) {
@@ -113,29 +94,10 @@ public final class VehicleCardView {
                 0);
     }
 
-    private static VehicleCardView buildFromListingCard(
-            final ListingCard card,
-            final String statusKey) {
-        return new VehicleCardView(
-                card.getCarId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                statusKey,
-                card.getRatingAvg().orElse(null),
-                card.getReviewCount());
-    }
-
     public long getCarId() {
         return carId;
     }
 
-    /** @deprecated use {@link #getCarId()}; kept for compatibility during 7d→7e transition */
-    @Deprecated
-    public long getListingId() {
-        return carId;
-    }
 
     public String getBrand() {
         return brand;

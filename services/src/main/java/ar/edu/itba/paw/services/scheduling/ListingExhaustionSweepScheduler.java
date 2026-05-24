@@ -27,6 +27,6 @@ public final class ListingExhaustionSweepScheduler {
             cron = "${app.scheduler.listing-exhaustion.cron:0 0 4 * * ?}",
             zone = "${app.scheduler.listing-exhaustion.zone:America/Argentina/Buenos_Aires}")
     public void sweepExhaustedListings() {
-        carService.refreshExhaustedCarsToFinished();
+        carService.refreshExhaustedCarsToPaused();
     }
 }

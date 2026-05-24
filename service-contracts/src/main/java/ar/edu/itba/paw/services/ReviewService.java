@@ -17,16 +17,10 @@ public interface ReviewService {
     /** Maximum trimmed length for review comment text (configuration-backed). */
     int getReviewCommentMaxLength();
 
-    /** Public listing page: paginated reviews with reviewer display fields. */
-    Page<ListingPublicReview> getListingPublicReviews(long listingId, int page, int pageSize);
-
-    /** Total public reviews stored for the listing. */
-    long countReviewsForListing(long listingId);
-
-    /** Like {@link #getListingPublicReviews} but resolves by {@code car_id} (Phase 7d+). */
+    /** Public car page: paginated reviews with reviewer display fields. */
     Page<ListingPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
 
-    /** Like {@link #countReviewsForListing} but resolves by {@code car_id} (Phase 7d+). */
+    /** Total public reviews stored for the car. */
     long countReviewsForCar(long carId);
 
     /**

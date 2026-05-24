@@ -1,23 +1,26 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.ReservationAvailabilityLink;
-
 /**
- * Pricing breakdown rows linking a reservation to the {@code listing_availability} segments that priced each
- * wall-calendar chunk. Implementations use {@code ReservationAvailabilityDao} only.
+ * N:N bridge between reservations and the {@code listing_availability} rows considered when pricing
+ * them. The per-day winning availability is resolved at read time by date range and
+ * {@code MAX(created_at)}; no per-row date segmentation is persisted.
  */
 public interface ReservationAvailabilityService {
 
-    /** Persists the breakdown for {@code reservationId}; join the caller’s transaction when one is active. */
-    void insertLinks(long reservationId, List<ReservationAvailabilityLink> links);
+    /**
+     * Persists the bridge rows linking {@code reservationId} to each {@code availabilityIds}; joins
+     * the caller's transaction when one is active. Duplicate ids are de-duplicated.
+     */
+    void insertCoveringAvailabilities(long reservationId, Collection<Long> availabilityIds);
 
-    /** {@code SUM(dayPrice * coveredDays)} for an existing reservation from its bridge rows. */
+    /**
+     * Reconstructs the reservation total from the bridge rows by, for each wall-calendar day of the
+     * reservation, picking among the bridged availabilities the one whose range covers the day with
+     * the most recent {@code createdAt}, and summing its {@code dayPrice}.
+     */
     Optional<BigDecimal> sumReservationTotal(long reservationId);
-
-    /** Quotes {@code SUM(dayPrice * coveredDays)} for {@code links} without persisting a reservation. */
-    Optional<BigDecimal> quoteTotalFromLinks(List<ReservationAvailabilityLink> links);
 }

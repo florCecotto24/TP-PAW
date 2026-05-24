@@ -1,9 +1,9 @@
-package ar.edu.itba.paw.exception.listing;
+package ar.edu.itba.paw.exception.car;
 
 /**
  * Publication availability row whose start date is before the first wall day allowed by rider pickup lead time.
  */
-public final class AvailabilityRiderLeadViolationException extends ListingValidationException {
+public final class AvailabilityRiderLeadViolationException extends CarValidationException {
 
     private final int availabilityRowIndex;
 

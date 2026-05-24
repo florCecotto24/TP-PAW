@@ -16,7 +16,6 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.Review;
 import ar.edu.itba.paw.models.domain.ReviewId;
@@ -48,66 +47,6 @@ public class ReviewJpaDao implements ReviewDao {
         em.persist(new Review(reservation, madeByRider, OffsetDateTime.now(), rating, comment));
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public Page<ListingPublicReview> findListingPublicReviews(final long listingId, final int page, final int pageSize) {
-        final Long total = em.createQuery(
-                        "SELECT COUNT(r) FROM Review r "
-                                + "WHERE r.reservation.listing.id = :listingId AND r.rating IS NOT NULL",
-                        Long.class)
-                .setParameter("listingId", listingId)
-                .getSingleResult();
-
-        // 2. Paginate in native SQL: get only the composite PKs for this page.
-        final List<Object[]> pkRows = em.createNativeQuery(
-                        "SELECT r.reservation_id, r.made_by_rider "
-                                + "FROM reviews r "
-                                + "JOIN reservations res ON res.id = r.reservation_id "
-                                + "WHERE res.listing_id = :listingId AND r.rating IS NOT NULL "
-                                + "ORDER BY r.created_at DESC "
-                                + "LIMIT :limit OFFSET :offset")
-                .setParameter("listingId", listingId)
-                .setParameter("limit", pageSize)
-                .setParameter("offset", page * pageSize)
-                .getResultList();
-
-        if (pkRows.isEmpty()) {
-            return new Page<>(Collections.emptyList(), page, pageSize, total != null ? total : 0L);
-        }
-
-        // 3. Load the Review entities (bounded by pageSize — no setMaxResults needed).
-        final List<ReviewId> ids = pkRows.stream()
-                .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
-                .collect(Collectors.toList());
-        final List<Review> reviews = em.createQuery(
-                        "SELECT r FROM Review r "
-                                + "JOIN FETCH r.reservation res "
-                                + "JOIN FETCH res.rider rider "
-                                + "JOIN FETCH res.listing l "
-                                + "JOIN FETCH l.car c "
-                                + "JOIN FETCH c.owner owner "
-                                + "WHERE r.id IN :ids "
-                                + "ORDER BY r.createdAt DESC",
-                        Review.class)
-                .setParameter("ids", ids)
-                .getResultList();
-
-        final List<ListingPublicReview> content = reviews.stream()
-                .map(r -> {
-                    final User reviewer = r.getId().isMadeByRider()
-                            ? r.getReservation().getRider()
-                            : r.getReservation().getListing().getCar().getOwner();
-                    return new ListingPublicReview(
-                            reviewer.getForename(),
-                            reviewer.getSurname(),
-                            r.getCreatedAt(),
-                            r.getRating().orElse(0),
-                            r.getComment().orElse(null));
-                })
-                .collect(Collectors.toList());
-        return new Page<>(content, page, pageSize, total != null ? total : 0L);
-    }
-
     @Override
     @Transactional
     public void refreshRiderAverageRating(final long riderUserId) {
@@ -129,7 +68,7 @@ public class ReviewJpaDao implements ReviewDao {
     public void refreshOwnerAverageRating(final long ownerUserId) {
         final Double avg = em.createQuery(
                         "SELECT AVG(r.rating) FROM Review r "
-                                + "WHERE r.id.madeByRider = true AND r.reservation.listing.car.owner.id = :userId "
+                                + "WHERE r.id.madeByRider = true AND r.reservation.car.owner.id = :userId "
                                 + "AND r.rating IS NOT NULL",
                         Double.class)
                 .setParameter("userId", ownerUserId)
@@ -142,28 +81,18 @@ public class ReviewJpaDao implements ReviewDao {
 
     @Override
     @Transactional
-    public void refreshListingRatingAvg(final long listingId) {
+    public void refreshCarRatingAvg(final long carId) {
         final Double avg = em.createQuery(
                         "SELECT AVG(r.rating) FROM Review r "
-                                + "WHERE r.reservation.listing.id = :listingId AND r.rating IS NOT NULL",
+                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
                         Double.class)
-                .setParameter("listingId", listingId)
+                .setParameter("carId", carId)
                 .getSingleResult();
-        final Listing listing = em.find(Listing.class, listingId);
-        if (listing != null) {
-            listing.setRatingAvg(round2(avg));
-            listing.setUpdatedAt(OffsetDateTime.now());
+        final ar.edu.itba.paw.models.domain.Car car = em.find(ar.edu.itba.paw.models.domain.Car.class, carId);
+        if (car != null) {
+            car.setRatingAvg(round2(avg));
+            car.setUpdatedAt(OffsetDateTime.now());
         }
-    }
-
-    @Override
-    public long countReviewsForListing(final long listingId) {
-        return em.createQuery(
-                        "SELECT COUNT(r) FROM Review r "
-                                + "WHERE r.reservation.listing.id = :listingId AND r.rating IS NOT NULL",
-                        Long.class)
-                .setParameter("listingId", listingId)
-                .getSingleResult();
     }
 
     @Override
@@ -237,7 +166,7 @@ public class ReviewJpaDao implements ReviewDao {
     public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final String jpql = counterpartyIsOwner
                 ? "SELECT AVG(r.rating) FROM Review r "
-                        + "WHERE r.id.madeByRider = true AND r.reservation.listing.car.owner.id = :userId "
+                        + "WHERE r.id.madeByRider = true AND r.reservation.car.owner.id = :userId "
                         + "AND r.rating IS NOT NULL"
                 : "SELECT AVG(r.rating) FROM Review r "
                         + "WHERE r.id.madeByRider = false AND r.reservation.rider.id = :userId "
@@ -268,8 +197,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "FROM reviews r "
                     + "JOIN reservations res ON res.id = r.reservation_id "
                     + "JOIN users rider ON rider.id = res.rider_id "
-                    + "JOIN listings l ON l.id = res.listing_id "
-                    + "JOIN cars c ON c.id = l.car_id "
+                    + "JOIN cars c ON c.id = res.car_id "
                     + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId "
                     + "AND r.rating IS NOT NULL AND NULLIF(TRIM(r.comment), '') IS NOT NULL "
                     + "ORDER BY r.created_at DESC "
@@ -280,8 +208,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "r.rating, r.created_at, r.comment "
                     + "FROM reviews r "
                     + "JOIN reservations res ON res.id = r.reservation_id "
-                    + "JOIN listings l ON l.id = res.listing_id "
-                    + "JOIN cars c ON c.id = l.car_id "
+                    + "JOIN cars c ON c.id = res.car_id "
                     + "JOIN users owner ON owner.id = c.owner_id "
                     + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId "
                     + "AND r.rating IS NOT NULL AND NULLIF(TRIM(r.comment), '') IS NOT NULL "

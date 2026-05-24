@@ -9,7 +9,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
@@ -57,7 +57,7 @@ public final class ListingAvailabilityPolicy {
             }
             if (period.getStartInclusive().isAfter(latestAllowedInclusive)
                     || period.getEndInclusive().isAfter(latestAllowedInclusive)) {
-                throw new ListingValidationException(
+                throw new CarValidationException(
                         MessageKeys.LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON,
                         maxAvailabilityForwardWallDays);
             }

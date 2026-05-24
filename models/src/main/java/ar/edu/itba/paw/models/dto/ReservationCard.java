@@ -5,14 +5,14 @@ import java.time.OffsetDateTime;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 
-/** Reservation with car vehicle summary and UTC dates for “my reservations” service queries. */
+/** Reservation with car vehicle summary, frozen total and UTC dates for "my reservations" hub queries. */
 public final class ReservationCard {
 
     private final long reservationId;
     private final long carId;
     private final String brand;
     private final String model;
-    private final BigDecimal dayPrice;
+    private final BigDecimal totalPrice;
     private final long imageId;
     private final OffsetDateTime startDate;
     private final OffsetDateTime endDate;
@@ -23,7 +23,7 @@ public final class ReservationCard {
             final long carId,
             final String brand,
             final String model,
-            final BigDecimal dayPrice,
+            final BigDecimal totalPrice,
             final long imageId,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate,
@@ -32,7 +32,7 @@ public final class ReservationCard {
         this.carId = carId;
         this.brand = brand;
         this.model = model;
-        this.dayPrice = dayPrice;
+        this.totalPrice = totalPrice;
         this.imageId = imageId;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -55,8 +55,8 @@ public final class ReservationCard {
         return model;
     }
 
-    public BigDecimal getDayPrice() {
-        return dayPrice;
+    public BigDecimal getTotalPrice() {
+        return totalPrice;
     }
 
     public long getImageId() {

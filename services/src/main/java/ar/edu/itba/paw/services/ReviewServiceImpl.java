@@ -18,24 +18,24 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.persistence.ReviewDao;
 
-/** Uses only {@link ReviewDao}; reservation and user reads go through peer services. */
+/** Uses only {@link ReviewDao}; reservation and car reads go through peer services. */
 @Service
 public final class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
     private final ReservationService reservationService;
-    private final UserService userService;
+    private final CarService carService;
     private final ReviewValidationPolicy reviewValidationPolicy;
 
     @Autowired
     public ReviewServiceImpl(
             final ReviewDao reviewDao,
             final ReservationService reservationService,
-            final UserService userService,
+            final CarService carService,
             final ReviewValidationPolicy reviewValidationPolicy) {
         this.reviewDao = reviewDao;
         this.reservationService = reservationService;
-        this.userService = userService;
+        this.carService = carService;
         this.reviewValidationPolicy = reviewValidationPolicy;
     }
 
@@ -43,18 +43,6 @@ public final class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public int getReviewCommentMaxLength() {
         return reviewValidationPolicy.getCommentMaxLength();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ListingPublicReview> getListingPublicReviews(final long listingId, final int page, final int pageSize) {
-        return reviewDao.findListingPublicReviews(listingId, page, pageSize);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public long countReviewsForListing(final long listingId) {
-        return reviewDao.countReviewsForListing(listingId);
     }
 
     @Override
@@ -118,7 +106,7 @@ public final class ReviewServiceImpl implements ReviewService {
             }
             reviewDao.insertReview(reservationId, false, null, null);
             reviewDao.refreshRiderAverageRating(r.getRiderId());
-            reviewDao.refreshListingRatingAvg(r.getListingId());
+            reviewDao.refreshCarRatingAvg(r.getCarId());
             return;
         }
 
@@ -140,7 +128,7 @@ public final class ReviewServiceImpl implements ReviewService {
         }
         reviewDao.insertReview(reservationId, false, rating, storedComment);
         reviewDao.refreshRiderAverageRating(r.getRiderId());
-        reviewDao.refreshListingRatingAvg(r.getListingId());
+        reviewDao.refreshCarRatingAvg(r.getCarId());
     }
 
     @Override
@@ -164,9 +152,11 @@ public final class ReviewServiceImpl implements ReviewService {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
             reviewDao.insertReview(reservationId, true, null, null);
-            final long listingId = r.getListingId();
-            userService.getListingOwner(listingId).ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
-            reviewDao.refreshListingRatingAvg(listingId);
+            final long carId = r.getCarId();
+            carService.getCarById(carId)
+                    .map(ar.edu.itba.paw.models.domain.Car::getOwner)
+                    .ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
+            reviewDao.refreshCarRatingAvg(carId);
             return;
         }
 
@@ -187,8 +177,10 @@ public final class ReviewServiceImpl implements ReviewService {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
         reviewDao.insertReview(reservationId, true, rating, storedComment);
-        final long listingId = r.getListingId();
-        userService.getListingOwner(listingId).ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
-        reviewDao.refreshListingRatingAvg(listingId);
+        final long carId = r.getCarId();
+        carService.getCarById(carId)
+                .map(ar.edu.itba.paw.models.domain.Car::getOwner)
+                .ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
+        reviewDao.refreshCarRatingAvg(carId);
     }
 }

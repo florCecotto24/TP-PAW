@@ -34,7 +34,7 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.access.ListingWebAuthorization;
+import ar.edu.itba.paw.webapp.security.access.CarOwnerWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ProfileWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
@@ -100,7 +100,7 @@ public class WebAuthConfig {
             final RequestCache requestCache,
             final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
             final HandlerMappingIntrospector handlerMappingIntrospector,
-            final ListingWebAuthorization listingWebAuthorization,
+            final CarOwnerWebAuthorization carOwnerWebAuthorization,
             final ReservationWebAuthorization reservationWebAuthorization,
             final ProfileWebAuthorization profileWebAuthorization) throws Exception {
         http
@@ -120,11 +120,9 @@ public class WebAuthConfig {
                         .requestMatchers("/publish-car", "/publish-car/**").authenticated()
                         .requestMatchers("/my-cars", "/my-cars/car/**", "/my-cars/quick-cbu").authenticated()
                         .requestMatchers(
-                                mvc(handlerMappingIntrospector, "/my-cars/{listingId}"),
-                                mvc(handlerMappingIntrospector, "/my-cars/{listingId}/**"),
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}"),
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}/**"))
-                        .access(listingWebAuthorization.ownerAccess())
+                        .access(carOwnerWebAuthorization.ownerAccess())
                         .requestMatchers("/my-reservations").authenticated()
                         .requestMatchers("/ws", "/ws/**").authenticated()
                         .requestMatchers(

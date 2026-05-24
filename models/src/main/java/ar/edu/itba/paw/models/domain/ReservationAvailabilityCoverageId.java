@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.models.domain;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.Objects;
 
 import javax.persistence.Column;
@@ -17,20 +16,13 @@ public class ReservationAvailabilityCoverageId implements Serializable {
     @Column(name = "availability_id")
     private long availabilityId;
 
-    @Column(name = "covered_start_date")
-    private LocalDate coveredStartDate;
-
     /* package */ ReservationAvailabilityCoverageId() {
         // For Hibernate
     }
 
-    public ReservationAvailabilityCoverageId(
-            final long reservationId,
-            final long availabilityId,
-            final LocalDate coveredStartDate) {
+    public ReservationAvailabilityCoverageId(final long reservationId, final long availabilityId) {
         this.reservationId = reservationId;
         this.availabilityId = availabilityId;
-        this.coveredStartDate = Objects.requireNonNull(coveredStartDate);
     }
 
     public long getReservationId() {
@@ -39,10 +31,6 @@ public class ReservationAvailabilityCoverageId implements Serializable {
 
     public long getAvailabilityId() {
         return availabilityId;
-    }
-
-    public LocalDate getCoveredStartDate() {
-        return coveredStartDate;
     }
 
     @Override
@@ -54,13 +42,11 @@ public class ReservationAvailabilityCoverageId implements Serializable {
             return false;
         }
         final ReservationAvailabilityCoverageId other = (ReservationAvailabilityCoverageId) o;
-        return reservationId == other.reservationId
-                && availabilityId == other.availabilityId
-                && coveredStartDate.equals(other.coveredStartDate);
+        return reservationId == other.reservationId && availabilityId == other.availabilityId;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(reservationId, availabilityId, coveredStartDate);
+        return Objects.hash(reservationId, availabilityId);
     }
 }

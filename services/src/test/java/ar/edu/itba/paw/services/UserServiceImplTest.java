@@ -27,7 +27,6 @@ import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
-import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
@@ -38,9 +37,6 @@ public class UserServiceImplTest {
 
     @Mock
     private UserDao userDao;
-
-    @Mock
-    private CarDao carDao;
 
     @Mock
     private ImageService imageService;
@@ -71,7 +67,6 @@ public class UserServiceImplTest {
         profileDocumentUploadPolicy = new ProfileDocumentUploadPolicy(environment);
         userService = new UserServiceImpl(
                 userDao,
-                carDao,
                 imageService,
                 storedFileService,
                 emailService,
@@ -315,45 +310,6 @@ public class UserServiceImplTest {
                 () -> userService.uploadValidatedProfileDocument(
                         1L, UserDocumentType.IDENTITY, "dni.txt", "text/plain", new byte[] {1, 2}));
         Assertions.assertEquals(MessageKeys.USER_PROFILE_DOCUMENT_INVALID, thrown.getMessageCode());
-    }
-
-    @Test
-    public void testFindOwnerCbuForListingWhenOwnerHasCbuReturnsValue() {
-        final long listingId = 2L;
-        final User owner = User.builder()
-                .id(9L)
-                .email("o@example.com")
-                .forename("O")
-                .surname("Owner")
-                .cbu("0170200203000008777719")
-                .build();
-        Mockito.when(userDao.getListingOwner(listingId)).thenReturn(Optional.of(owner));
-        Mockito.when(userDao.getUserById(9L)).thenReturn(Optional.of(owner));
-
-        final Optional<String> result = userService.findOwnerCbuForListing(listingId);
-
-        Assertions.assertTrue(result.isPresent());
-        Assertions.assertEquals("0170200203000008777719", result.get());
-    }
-
-    @Test
-    public void testFindOwnerCbuForListingWhenNoOwnerReturnsEmpty() {
-        Mockito.when(userDao.getListingOwner(2L)).thenReturn(Optional.empty());
-
-        final Optional<String> result = userService.findOwnerCbuForListing(2L);
-
-        Assertions.assertTrue(result.isEmpty());
-    }
-
-    @Test
-    public void testFindOwnerCbuForListingWhenCbuMissingReturnsEmpty() {
-        final User owner = User.identities(9L, "o@example.com", "O", "Owner");
-        Mockito.when(userDao.getListingOwner(2L)).thenReturn(Optional.of(owner));
-        Mockito.when(userDao.getUserById(9L)).thenReturn(Optional.of(owner));
-
-        final Optional<String> result = userService.findOwnerCbuForListing(2L);
-
-        Assertions.assertTrue(result.isEmpty());
     }
 
     @Test

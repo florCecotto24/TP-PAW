@@ -90,7 +90,7 @@ public class EmailServiceImplTest {
         final String riderEmail = "rider@test.com";
         final String riderName = "Rider Name";
         final long reservationId = 1L;
-        final long listingId = 10L;
+        final long carId = 10L;
         final String vehicleLabel = "brandTest modelTest";
         final OffsetDateTime startDate = OffsetDateTime.parse("2026-05-01T10:00:00Z");
         final OffsetDateTime endDate = OffsetDateTime.parse("2026-05-03T18:00:00Z");
@@ -105,7 +105,7 @@ public class EmailServiceImplTest {
                 .recipientEmail(riderEmail)
                 .riderFullName(riderName)
                 .reservationId(reservationId)
-                .listingId(listingId)
+                .carId(carId)
                 .vehicleLabel(vehicleLabel)
                 .startDate(startDate)
                 .endDate(endDate)

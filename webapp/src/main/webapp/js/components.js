@@ -2045,30 +2045,201 @@
     }
 })();
 
-/* Prevent the mouse wheel from changing type="number" input values when scrolling the page. */
+/* Publish-car prerequisites screen: chain CBU + identity uploads via AJAX, then redirect into the form. */
 (function () {
-    function bindNoWheelStep(el) {
-        if (el.getAttribute("data-ryden-no-wheel") === "1") {
+    var root = document.getElementById("publishPrereqRoot");
+    if (!root) {
+        return;
+    }
+
+    var quickCbuUrl = root.getAttribute("data-ryden-quick-cbu-url");
+    var quickIdentityUrl = root.getAttribute("data-ryden-quick-identity-url");
+    var publishUrl = root.getAttribute("data-ryden-publish-url");
+    var cbuInvalidMsg = root.getAttribute("data-ryden-cbu-invalid") || "";
+    var cbuSaveFailedMsg = root.getAttribute("data-ryden-cbu-save-failed") || "";
+    var identityRequiredMsg = root.getAttribute("data-ryden-identity-required") || "";
+    var identitySaveFailedMsg = root.getAttribute("data-ryden-identity-save-failed") || "";
+
+    function hasCbu() {
+        return root.getAttribute("data-ryden-publisher-has-cbu") === "true";
+    }
+    function hasIdentity() {
+        return root.getAttribute("data-ryden-publisher-has-identity") === "true";
+    }
+
+    function findCsrf() {
+        var meta = document.querySelector('meta[name="_csrf"]');
+        var header = document.querySelector('meta[name="_csrf_header"]');
+        var inputs = document.querySelectorAll('input[type="hidden"]');
+        var i;
+        for (i = 0; i < inputs.length; i++) {
+            var n = inputs[i].name || "";
+            if (n && n.toLowerCase().indexOf("csrf") >= 0) {
+                return { name: inputs[i].name, value: inputs[i].value, header: header ? header.getAttribute("content") : null };
+            }
+        }
+        if (meta) {
+            return { name: "_csrf", value: meta.getAttribute("content"), header: header ? header.getAttribute("content") : null };
+        }
+        return null;
+    }
+
+    function openModal(triggerId) {
+        var btn = document.getElementById(triggerId);
+        if (btn) {
+            btn.click();
+        }
+    }
+
+    function closeModalById(modalId) {
+        var close = document.querySelector('[data-modal-close="' + modalId + '"]');
+        if (close) {
+            close.click();
+        }
+    }
+
+    function continueOrRedirect() {
+        if (!hasCbu()) {
+            openModal("rydenPublishPrereqCbuOpen");
             return;
         }
-        el.setAttribute("data-ryden-no-wheel", "1");
-        el.addEventListener(
-            "wheel",
-            function (e) {
-                e.preventDefault();
-            },
-            { passive: false }
-        );
+        if (!hasIdentity()) {
+            openModal("rydenPublishPrereqIdentityOpen");
+            return;
+        }
+        if (publishUrl) {
+            window.location.href = publishUrl;
+        } else {
+            window.location.reload();
+        }
     }
 
-    function init() {
-        document.querySelectorAll("input.js-no-number-wheel-step[type='number']").forEach(bindNoWheelStep);
-    }
-
+    /* Auto-open the first pending modal on page load. */
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
+        document.addEventListener("DOMContentLoaded", function () {
+            setTimeout(continueOrRedirect, 50);
+        });
     } else {
-        init();
+        setTimeout(continueOrRedirect, 50);
+    }
+
+    /* Manual buttons on the card. */
+    var openCbuBtn = document.getElementById("publishPrereqOpenCbuBtn");
+    if (openCbuBtn) {
+        openCbuBtn.addEventListener("click", function () {
+            openModal("rydenPublishPrereqCbuOpen");
+        });
+    }
+    var openIdBtn = document.getElementById("publishPrereqOpenIdentityBtn");
+    if (openIdBtn) {
+        openIdBtn.addEventListener("click", function () {
+            openModal("rydenPublishPrereqIdentityOpen");
+        });
+    }
+
+    /* CBU save handler. */
+    var cbuSaveBtn = document.getElementById("publishPrereqCbuSaveBtn");
+    var cbuInput = document.getElementById("publishPrereqCbuInput");
+    var cbuErrEl = document.getElementById("publishPrereqCbuError");
+    if (cbuSaveBtn && cbuInput && quickCbuUrl) {
+        cbuSaveBtn.addEventListener("click", function () {
+            if (cbuErrEl) {
+                cbuErrEl.textContent = "";
+                cbuErrEl.classList.add("d-none");
+            }
+            var v = (cbuInput.value || "").replace(/\D/g, "").slice(0, 22);
+            if (v.length !== 22) {
+                if (cbuErrEl) {
+                    cbuErrEl.textContent = cbuInvalidMsg;
+                    cbuErrEl.classList.remove("d-none");
+                }
+                return;
+            }
+            var csrf = findCsrf();
+            var body = new URLSearchParams();
+            body.set("cbu", v);
+            if (csrf && csrf.name) {
+                body.set(csrf.name, csrf.value);
+            }
+            fetch(quickCbuUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    Accept: "*/*",
+                },
+                body: body.toString(),
+            })
+                .then(function (res) {
+                    if (res.ok) {
+                        root.setAttribute("data-ryden-publisher-has-cbu", "true");
+                        closeModalById("publishPrereqCbuModal");
+                        setTimeout(continueOrRedirect, 100);
+                        return;
+                    }
+                    if (cbuErrEl) {
+                        cbuErrEl.textContent = res.status === 400 ? cbuInvalidMsg : cbuSaveFailedMsg;
+                        cbuErrEl.classList.remove("d-none");
+                    }
+                })
+                .catch(function () {
+                    if (cbuErrEl) {
+                        cbuErrEl.textContent = cbuSaveFailedMsg;
+                        cbuErrEl.classList.remove("d-none");
+                    }
+                });
+        });
+    }
+
+    /* Identity save handler. */
+    var idSaveBtn = document.getElementById("publishPrereqIdentitySaveBtn");
+    var idInput = document.getElementById("publishPrereqIdentityInput");
+    var idErrEl = document.getElementById("publishPrereqIdentityError");
+    if (idSaveBtn && idInput && quickIdentityUrl) {
+        idSaveBtn.addEventListener("click", function () {
+            if (idErrEl) {
+                idErrEl.textContent = "";
+                idErrEl.classList.add("d-none");
+            }
+            var hasI = idInput.files && idInput.files.length > 0;
+            if (!hasI) {
+                if (idErrEl) {
+                    idErrEl.textContent = identityRequiredMsg;
+                    idErrEl.classList.remove("d-none");
+                }
+                return;
+            }
+            var csrf = findCsrf();
+            var data = new FormData();
+            data.append("identityFile", idInput.files[0]);
+            if (csrf && csrf.name) {
+                data.append(csrf.name, csrf.value);
+            }
+            fetch(quickIdentityUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                body: data,
+            })
+                .then(function (res) {
+                    if (res.status === 204) {
+                        root.setAttribute("data-ryden-publisher-has-identity", "true");
+                        closeModalById("publishPrereqIdentityModal");
+                        setTimeout(continueOrRedirect, 100);
+                        return;
+                    }
+                    if (idErrEl) {
+                        var serverMsg = res.headers ? res.headers.get("X-Ryden-Error") : null;
+                        idErrEl.textContent = serverMsg || identitySaveFailedMsg;
+                        idErrEl.classList.remove("d-none");
+                    }
+                })
+                .catch(function () {
+                    if (idErrEl) {
+                        idErrEl.textContent = identitySaveFailedMsg;
+                        idErrEl.classList.remove("d-none");
+                    }
+                });
+        });
     }
 })();
 

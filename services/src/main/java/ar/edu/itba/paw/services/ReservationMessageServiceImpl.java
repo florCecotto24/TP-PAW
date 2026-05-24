@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
@@ -40,7 +40,6 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     private final ReservationMessageDao reservationMessageDao;
     private final ReservationService reservationService;
     private final UserService userService;
-    private final ListingService listingService;
     private final CarService carService;
     private final EmailService emailService;
     private final MailPublicUrls mailPublicUrls;
@@ -54,7 +53,6 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             final ReservationMessageDao reservationMessageDao,
             final ReservationService reservationService,
             final UserService userService,
-            final ListingService listingService,
             final CarService carService,
             final EmailService emailService,
             final MailPublicUrls mailPublicUrls,
@@ -65,7 +63,6 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         this.reservationMessageDao = reservationMessageDao;
         this.reservationService = reservationService;
         this.userService = userService;
-        this.listingService = listingService;
         this.carService = carService;
         this.emailService = emailService;
         this.mailPublicUrls = mailPublicUrls;
@@ -276,7 +273,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             }
             final User counterparty = counterpartyOpt.get();
             final User sender = senderOpt.get();
-            final String vehicleLabel = resolveVehicleLabel(reservation.getListingId());
+            final String vehicleLabel = resolveVehicleLabel(reservation.getCarId());
             final boolean recipientIsOwner = counterpartyId != reservation.getRiderId();
             final String roleParam = recipientIsOwner ? "owner" : "rider";
             final String detailPath =
@@ -303,22 +300,18 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
 
     private long resolveCounterpartyUserId(final long senderUserId, final Reservation reservation) {
         if (senderUserId == reservation.getRiderId()) {
-            return userService
-                    .getListingOwner(reservation.getListingId())
+            return carService
+                    .getCarById(reservation.getCarId())
+                    .map(Car::getOwner)
                     .map(User::getId)
                     .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
         }
         return reservation.getRiderId();
     }
 
-    private String resolveVehicleLabel(final long listingId) {
-        final Optional<Listing> listingOpt = listingService.getListingById(listingId);
-        if (listingOpt.isEmpty()) {
-            return "";
-        }
-        final Listing listing = listingOpt.get();
+    private String resolveVehicleLabel(final long carId) {
         return carService
-                .getCarById(listing.getCarId())
+                .getCarById(carId)
                 .map(car -> car.getBrand() + " " + car.getModel())
                 .orElse("");
     }

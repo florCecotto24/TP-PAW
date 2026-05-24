@@ -18,7 +18,7 @@ import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
@@ -38,7 +38,7 @@ class ReservationMessageServiceImplTest {
     private static final long OWNER_ID = 10L;
     private static final long RIDER_ID = 20L;
     private static final long RESERVATION_ID = 30L;
-    private static final long LISTING_ID = 40L;
+    private static final long CAR_ID = 40L;
     private static final long STORED_FILE_ID = 99L;
 
     @Mock
@@ -49,9 +49,6 @@ class ReservationMessageServiceImplTest {
 
     @Mock
     private UserService userService;
-
-    @Mock
-    private ListingService listingService;
 
     @Mock
     private CarService carService;
@@ -81,7 +78,6 @@ class ReservationMessageServiceImplTest {
                 reservationMessageDao,
                 reservationService,
                 userService,
-                listingService,
                 carService,
                 emailService,
                 mailPublicUrls,
@@ -92,13 +88,13 @@ class ReservationMessageServiceImplTest {
     }
 
     private static Reservation reservation(final Reservation.Status status, final boolean paymentApproved) {
-        final Listing listingRef = Mockito.mock(Listing.class);
-        Mockito.when(listingRef.getId()).thenReturn(LISTING_ID);
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(CAR_ID);
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return Reservation.builder()
                 .id(RESERVATION_ID)
                 .rider(User.identities(RIDER_ID, "r@test.com", "R", "Rider"))
-                .listing(listingRef)
+                .car(carRef)
                 .startDate(now.minusDays(1))
                 .endDate(now.plusDays(2))
                 .status(status)
@@ -139,12 +135,12 @@ class ReservationMessageServiceImplTest {
     void testIsChatAvailableWhenFinishedBeyondGracePeriod() {
         // 1.Arrange
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        final Listing listingRef = Mockito.mock(Listing.class);
-        Mockito.when(listingRef.getId()).thenReturn(LISTING_ID);
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(CAR_ID);
         final Reservation res = Reservation.builder()
                 .id(RESERVATION_ID)
                 .rider(User.identities(RIDER_ID, "r@test.com", "R", "Rider"))
-                .listing(listingRef)
+                .car(carRef)
                 .startDate(now.minusDays(20))
                 .endDate(now.minusDays(10))
                 .status(Reservation.Status.FINISHED)

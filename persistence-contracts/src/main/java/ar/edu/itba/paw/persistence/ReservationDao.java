@@ -12,43 +12,24 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 
-/** Reservations, overlap checks, listing analytics, and mail-claim flags. */
+/** Reservations, overlap checks, analytics, and mail-claim flags. */
 public interface ReservationDao {
 
-    boolean hasActiveOverlap(long listingId, OffsetDateTime startDate, OffsetDateTime endDate);
-
-    /** Like {@link #hasActiveOverlap(long, OffsetDateTime, OffsetDateTime)} but resolves by {@code car_id}. */
+    /** Returns true if any blocking reservation for the car overlaps the given range. */
     boolean hasActiveOverlapByCar(long carId, OffsetDateTime startDate, OffsetDateTime endDate);
 
-    List<Reservation> findBlockingByListingId(long listingId);
-
-    List<Reservation> findBlockingByListingIds(Collection<Long> listingIds);
-
-    /** Like {@link #findBlockingByListingId} but resolves by {@code car_id}. */
+    /** Blocking reservations ({@code pending}, {@code accepted}, {@code started}) for a car. */
     List<Reservation> findBlockingByCarId(long carId);
 
     /**
-     * Blocking reservations for {@code listingId} whose date range intersects {@code [from, to]} (UTC,
+     * Blocking reservations for {@code carId} whose date range intersects {@code [from, to]} (UTC,
      * exclusive end is normalised by the implementation). Used by the owner availability-edit flow to
      * decide whether withdrawing a set of days would conflict with already-active reservations.
      */
-    List<Reservation> findBlockingByListingIdInRange(long listingId, OffsetDateTime from, OffsetDateTime to);
-
-    /** Like {@link #findBlockingByListingIdInRange} but resolves by {@code car_id}. */
     List<Reservation> findBlockingByCarIdInRange(long carId, OffsetDateTime from, OffsetDateTime to);
 
-    Reservation createReservation(
-            long riderId,
-            long listingId,
-            OffsetDateTime startDate,
-            OffsetDateTime endDate,
-            Reservation.Status status,
-            BigDecimal totalPrice,
-            OffsetDateTime paymentProofDeadlineAt);
-
     /**
-     * Creates a reservation directly for a car (no listing reference). Sets {@code car_id}; {@code listing_id}
-     * remains null. Used by Phase 7b+ creation flow.
+     * Creates a reservation for a car. Sets {@code car_id} only.
      */
     Reservation createReservationForCar(
             long riderId,
@@ -78,34 +59,22 @@ public interface ReservationDao {
 
     int updateReservationStatus(long reservationId, String status);
 
-    List<Reservation> getListingActiveReservations(long listingId);
-
-    Page<ReservationCard> getListingReservationCards(long ownerId, long listingId, int page, int pageSize, String statusFilter);
-
+    /** Owner car dashboard: paginated reservation cards for one car. */
     Page<ReservationCard> getCarReservationCards(long ownerId, long carId, int page, int pageSize, String statusFilter);
 
-    Map<String, Long> countListingReservationsByStatus(long ownerId, long listingId);
-
+    /** Counts reservations per status bucket for the owner's car dashboard. */
     Map<String, Long> countCarReservationsByStatus(long ownerId, long carId);
 
-    BigDecimal sumListingRevenueByStatuses(long ownerId, long listingId, Collection<String> statuses);
-
-    long countListingReservationsCreatedBetween(long ownerId, long listingId, OffsetDateTime from, OffsetDateTime until);
-
-    Optional<OffsetDateTime> findListingNextActiveReservationDate(long ownerId, long listingId, OffsetDateTime after);
-
-    List<Reservation> findListingFinishedReservations(long ownerId, long listingId);
-
-    /** Car-centric variant of {@link #sumListingRevenueByStatuses}. */
+    /** Sum of {@code total_price} for reservations in the given statuses, scoped to a car. */
     BigDecimal sumCarRevenueByStatuses(long ownerId, long carId, Collection<String> statuses);
 
-    /** Car-centric variant of {@link #countListingReservationsCreatedBetween}. */
+    /** Count of reservations for a car created within {@code [from, until)}. */
     long countCarReservationsCreatedBetween(long ownerId, long carId, OffsetDateTime from, OffsetDateTime until);
 
-    /** Car-centric variant of {@link #findListingNextActiveReservationDate}. */
+    /** Earliest start_date of an accepted/started reservation on the car strictly after {@code after}. */
     Optional<OffsetDateTime> findCarNextActiveReservationDate(long ownerId, long carId, OffsetDateTime after);
 
-    /** Car-centric variant of {@link #findListingFinishedReservations}. */
+    /** Finished reservations for the car (owner analytics). */
     List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
     /**

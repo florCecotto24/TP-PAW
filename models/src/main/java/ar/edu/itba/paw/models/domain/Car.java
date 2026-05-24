@@ -122,8 +122,9 @@ public class Car {
     @JoinColumn(name = "model_id")
     private CarModel carModel;
 
-    @OneToMany(mappedBy = "car", fetch = FetchType.LAZY)
-    private List<Listing> listings = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "insurance_file_id")
+    private StoredFile insuranceFile;
 
     @OneToMany(mappedBy = "car", fetch = FetchType.LAZY, orphanRemoval = true)
     private List<CarPicture> pictures = new ArrayList<>();
@@ -306,10 +307,6 @@ public class Car {
         return Optional.ofNullable(ratingAvg);
     }
 
-    public List<Listing> getListings() {
-        return listings;
-    }
-
     public List<CarPicture> getPictures() {
         return pictures;
     }
@@ -336,6 +333,19 @@ public class Car {
 
     public void setCarModel(final CarModel carModel) {
         this.carModel = carModel;
+    }
+
+    public Optional<StoredFile> getInsuranceFile() {
+        return Optional.ofNullable(insuranceFile);
+    }
+
+    /** Convenience accessor — returns the insurance file id, or empty if no file is set. */
+    public Optional<Long> getInsuranceFileId() {
+        return insuranceFile == null ? Optional.empty() : Optional.of(insuranceFile.getId());
+    }
+
+    public void setInsuranceFile(final StoredFile insuranceFile) {
+        this.insuranceFile = insuranceFile;
     }
 
     @Override

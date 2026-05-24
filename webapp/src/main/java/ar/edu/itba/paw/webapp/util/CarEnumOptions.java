@@ -58,11 +58,14 @@ public final class CarEnumOptions {
         return sortByLabel(m);
     }
 
+    /**
+     * Owner dashboard status filter options. After the listing layer removal these are car statuses,
+     * but the model attribute name is preserved for JSP/i18n key compatibility.
+     */
     public Map<String, String> listingStatusSelectOptions() {
         final Map<String, String> m = new LinkedHashMap<>();
-        for (final ar.edu.itba.paw.models.domain.Listing.Status s
-                : ar.edu.itba.paw.models.domain.Listing.Status.values()) {
-            m.put(s.name().toLowerCase(), label("enum.listing.status." + s.name(), s.name()));
+        for (final Car.Status s : Car.Status.values()) {
+            m.put(s.name().toLowerCase(), label("enum.car.status." + s.name(), s.name()));
         }
         return m;
     }

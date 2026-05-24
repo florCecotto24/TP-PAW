@@ -122,38 +122,8 @@ SELECT setval(
     COALESCE((SELECT MAX(id) FROM neighborhoods), 1)
 );
 
-CREATE TABLE IF NOT EXISTS listings (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(105) NOT NULL,
-    car_id INTEGER NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-    status VARCHAR(40) NOT NULL CHECK (status IN ('active', 'paused', 'finished', 'paused_due_to_lack_of_cbu')),
-    day_price DECIMAL(10, 2) NOT NULL,
-    start_point_street TEXT NOT NULL,
-    start_point_number VARCHAR(10) NOT NULL DEFAULT '',
-    description VARCHAR(200) NOT NULL,
-    check_in_time TIME NOT NULL,
-    check_out_time TIME NOT NULL,
-    neighborhood_id INTEGER,
-    rating_avg NUMERIC(4, 2),
-
-    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
-    FOREIGN KEY (neighborhood_id) REFERENCES neighborhoods(id) ON DELETE SET NULL
-);
-
-CREATE TABLE IF NOT EXISTS saved_listings (
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-    car_id INTEGER NOT NULL REFERENCES cars(id),
-    PRIMARY KEY (user_id, listing_id)
-);
-
-CREATE INDEX IF NOT EXISTS saved_listings_car_id_idx ON saved_listings (car_id);
-
 CREATE TABLE IF NOT EXISTS listing_availability(
     id SERIAL PRIMARY KEY,
-    listing_id INTEGER,
     car_id INTEGER NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL CHECK (end_date >= start_date),
@@ -167,12 +137,8 @@ CREATE TABLE IF NOT EXISTS listing_availability(
     check_out_time TIME NOT NULL,
     kind VARCHAR(20) NOT NULL DEFAULT 'offered' CHECK (kind IN ('offered', 'withdrawn')),
 
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE SET NULL,
     FOREIGN KEY (car_id) REFERENCES cars(id)
 );
-
-CREATE INDEX IF NOT EXISTS listing_availability_lookup
-    ON listing_availability (listing_id, start_date, end_date, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS listing_availability_car_id_lookup
     ON listing_availability (car_id, start_date, end_date, created_at DESC);
@@ -209,7 +175,6 @@ CREATE TABLE IF NOT EXISTS stored_files (
 CREATE TABLE IF NOT EXISTS reservations (
     id SERIAL PRIMARY KEY,
     rider_id INTEGER NOT NULL,
-    listing_id INTEGER,
     car_id INTEGER NOT NULL,
     start_date TIMESTAMPTZ NOT NULL,
     end_date TIMESTAMPTZ NOT NULL,
@@ -242,7 +207,6 @@ CREATE TABLE IF NOT EXISTS reservations (
     review_deadline TIMESTAMPTZ,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE SET NULL,
     FOREIGN KEY (car_id) REFERENCES cars(id)
 );
 
@@ -251,9 +215,7 @@ CREATE INDEX IF NOT EXISTS reservations_car_id_idx ON reservations (car_id);
 CREATE TABLE IF NOT EXISTS reservations_availabilities (
     reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
     availability_id INTEGER NOT NULL REFERENCES listing_availability(id),
-    covered_start_date DATE NOT NULL,
-    covered_end_date DATE NOT NULL CHECK (covered_end_date >= covered_start_date),
-    PRIMARY KEY (reservation_id, availability_id, covered_start_date)
+    PRIMARY KEY (reservation_id, availability_id)
 );
 
 CREATE INDEX IF NOT EXISTS reservations_availabilities_reservation_id_idx

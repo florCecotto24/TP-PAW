@@ -7,9 +7,6 @@ public final class CounterpartyActiveListingsLoadMore {
 
     private final boolean hasNext;
     private final long ownerUserId;
-    /** @deprecated Use {@link #excludeCarId} */
-    @Deprecated
-    private final Long excludeListingId;
     private final Long excludeCarId;
     private final int nextPageToLoad;
     private final int pageSize;
@@ -22,7 +19,6 @@ public final class CounterpartyActiveListingsLoadMore {
             final int pageSize) {
         this.hasNext = hasNext;
         this.ownerUserId = ownerUserId;
-        this.excludeListingId = excludeCarId;
         this.excludeCarId = excludeCarId;
         this.nextPageToLoad = nextPageToLoad;
         this.pageSize = pageSize;
@@ -48,12 +44,6 @@ public final class CounterpartyActiveListingsLoadMore {
 
     public long getOwnerUserId() {
         return ownerUserId;
-    }
-
-    /** @deprecated Use {@link #getExcludeCarId()} */
-    @Deprecated
-    public Long getExcludeListingId() {
-        return excludeListingId;
     }
 
     public Long getExcludeCarId() {

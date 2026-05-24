@@ -16,11 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.ListingCard;
-import ar.edu.itba.paw.models.dto.ListingDetail;
+import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
@@ -33,14 +33,17 @@ import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
+import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 
 /** Read-only reservation views; domain reads and billable-day math go through {@link ReservationService}. */
 @Service
 public final class ReservationViewServiceImpl implements ReservationViewService {
 
     private final ReservationService reservationService;
-    private final ListingService listingService;
-    private final ListingViewService listingViewService;
+    private final CarService carService;
+    private final ListingAvailabilityService listingAvailabilityService;
+    private final CarPictureService carPictureService;
+    private final ListingAddressFormatter listingAddressFormatter;
     private final UserService userService;
     private final ImageService imageService;
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
@@ -51,8 +54,10 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     @Autowired
     public ReservationViewServiceImpl(
             final ReservationService reservationService,
-            final ListingService listingService,
-            final ListingViewService listingViewService,
+            final CarService carService,
+            final ListingAvailabilityService listingAvailabilityService,
+            final CarPictureService carPictureService,
+            final ListingAddressFormatter listingAddressFormatter,
             final UserService userService,
             final ImageService imageService,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
@@ -60,8 +65,10 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             final PresentationLimitsPolicy presentationLimitsPolicy,
             final ReservationMessageService reservationMessageService) {
         this.reservationService = reservationService;
-        this.listingService = listingService;
-        this.listingViewService = listingViewService;
+        this.carService = carService;
+        this.listingAvailabilityService = listingAvailabilityService;
+        this.carPictureService = carPictureService;
+        this.listingAddressFormatter = listingAddressFormatter;
         this.userService = userService;
         this.imageService = imageService;
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
@@ -85,29 +92,34 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             return Optional.empty();
         }
         final Reservation reservation = reservationOpt.get();
-        final Optional<ListingDetail> listingDetailOpt = listingService.getListingDetailById(reservation.getListingId());
-        if (listingDetailOpt.isEmpty()) {
+        final long carId = reservation.getCarId();
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty()) {
             return Optional.empty();
         }
-        final ListingDetail listingDetail = listingDetailOpt.get();
+        final Car car = carOpt.get();
+        final User carOwner = car.getOwner();
         final Optional<User> counterpartyOpt =
                 viewerIsOwner
                         ? userService.getUserById(reservation.getRiderId())
-                        : Optional.of(listingDetail.getOwner());
+                        : Optional.ofNullable(carOwner);
         if (counterpartyOpt.isEmpty()) {
             return Optional.empty();
         }
         final User counterpartyMinimal = counterpartyOpt.get();
         final User counterparty = userService.getUserById(counterpartyMinimal.getId()).orElse(counterpartyMinimal);
-        final Listing listing = listingDetail.getListing();
-        final String reservationPickupLocationDisplay = listingViewService.formatPickupForReservationView(
-                listing,
-                reservation,
-                viewerIsOwner);
+        final Optional<ListingAvailability> effectiveAvailability =
+                listingAvailabilityService.findEffectiveForDayByCar(
+                        carId,
+                        reservation.getStartDate().atZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDate());
+        final String reservationPickupLocationDisplay = effectiveAvailability
+                .map(av -> listingAddressFormatter.formatPickupForReservationView(av, reservation, viewerIsOwner))
+                .orElse("");
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
         final String totalPrice = ArsMoneyFormat.format(reservation.getTotalPrice());
-        final long carImageId = listingDetail.getPictures().isEmpty() ? 0L : listingDetail.getPictures().get(0).getImageId();
+        final List<ar.edu.itba.paw.models.domain.CarPicture> carPictures = carPictureService.getCarPicturesByCarId(carId);
+        final long carImageId = carPictures.isEmpty() ? 0L : carPictures.get(0).getImageId();
         final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
         final boolean periodEnded = nowUtc.isAfter(reservation.getEndDate());
         final boolean hasOwnerReview = reviewService.hasOwnerReview(reservation.getId());
@@ -125,14 +137,13 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final boolean refundReceiptApproved = reservation.isPaymentRefundApproved();
         return Optional.of(new ReservationDetailPageModel(
                 reservation,
-                listing,
                 reservationPickupLocationDisplay,
-                listingDetail.getCar(),
-                listingDetail.getOwner(),
+                car,
+                carOwner,
                 counterparty,
                 counterparty.getProfilePictureId().orElse(null),
                 counterparty.getPhoneNumber().orElse(""),
-                listingDetail.getOwner().getCbu().orElse(""),
+                carOwner.getCbu().orElse(""),
                 pickupDisplay,
                 returnDisplay,
                 reservation.getStatus().name().toLowerCase(Locale.ROOT),
@@ -175,14 +186,15 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         if (!reservationMessageService.isChatAvailable(reservation)) {
             return Optional.empty();
         }
-        final Optional<Listing> listingOpt = listingService.getListingById(reservation.getListingId());
-        if (listingOpt.isEmpty()) {
+        final long carId = reservation.getCarId();
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty()) {
             return Optional.empty();
         }
-        final Listing listing = listingOpt.get();
+        final Car car = carOpt.get();
         final Optional<User> counterpartyOpt = "owner".equals(role)
                 ? userService.getUserById(reservation.getRiderId())
-                : userService.getListingOwner(reservation.getListingId());
+                : Optional.ofNullable(car.getOwner());
         if (counterpartyOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -190,10 +202,11 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final User counterparty =
                 userService.getUserById(counterpartyMinimal.getId()).orElse(counterpartyMinimal);
         final String counterpartyDisplayName = counterparty.getForename() + " " + counterparty.getSurname();
+        final String vehicleLabel = car.getBrand() + " " + car.getModel();
         return Optional.of(new ReservationChatPageModel(
                 reservation.getId(),
-                listing.getId(),
-                listing.getTitle(),
+                carId,
+                vehicleLabel,
                 role,
                 counterpartyDisplayName,
                 counterparty.getProfilePictureId().orElse(null),
@@ -216,9 +229,10 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             return Optional.empty();
         }
         final Reservation reservation = reservationOpt.get();
+        final long reservationCarId = reservation.getCarId();
         final Optional<User> counterpartyOpt = "owner".equals(role)
                 ? userService.getUserById(reservation.getRiderId())
-                : userService.getListingOwner(reservation.getListingId());
+                : carService.getCarById(reservationCarId).map(Car::getOwner);
         if (counterpartyOpt.isEmpty()) {
             return Optional.empty();
         }
@@ -243,10 +257,10 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 counterparty.getProfilePictureId().orElse(null));
         final int ownerListingsPageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
-        final Page<ListingCard> ownerListingsPage =
+        final Page<CarCard> ownerCarsPage =
                 counterpartyIsOwner
-                        ? listingService.getOwnerListingCards(
-                                listingService.buildOwnerListingSearchCriteria(
+                        ? carService.getOwnerCarCards(
+                                carService.buildOwnerCarSearchCriteria(
                                         counterparty.getId(),
                                         null,
                                         null,
@@ -257,22 +271,22 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                                         null,
                                         null,
                                         0,
-                                        ListingService.COUNTERPARTY_OTHER_ACTIVE_LISTINGS_SORT,
+                                        CarService.COUNTERPARTY_OTHER_ACTIVE_CARS_SORT,
                                         ownerListingsPageSize,
-                                        reservation.getListingId()))
+                                        reservationCarId))
                         : null;
         final List<CounterpartyActiveListingCardRow> activeRows =
-                ownerListingsPage == null
+                ownerCarsPage == null
                         ? List.of()
-                        : ownerListingsPage.getContent().stream()
+                        : ownerCarsPage.getContent().stream()
                                 .map(ReservationViewServiceImpl::toCounterpartyActiveListingCardRow)
                                 .toList();
         final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
-                counterpartyIsOwner && ownerListingsPage != null
+                counterpartyIsOwner && ownerCarsPage != null
                         ? CounterpartyActiveListingsLoadMore.of(
-                                ownerListingsPage.isHasNext(),
+                                ownerCarsPage.isHasNext(),
                                 counterparty.getId(),
-                                reservation.getListingId(),
+                                reservationCarId,
                                 1,
                                 ownerListingsPageSize)
                         : CounterpartyActiveListingsLoadMore.none();
@@ -292,15 +306,15 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                         counterpartyActiveListingsLoadMore));
     }
 
-    private static CounterpartyActiveListingCardRow toCounterpartyActiveListingCardRow(final ListingCard card) {
+    private static CounterpartyActiveListingCardRow toCounterpartyActiveListingCardRow(final CarCard card) {
         return new CounterpartyActiveListingCardRow(
-                card.getListingId(),
+                card.getCarId(),
                 card.getBrand(),
                 card.getModel(),
                 card.getDayPrice(),
                 card.getImageId(),
-                card.getRatingAvg().orElse(null),
-                card.getReviewCount());
+                card.getRatingAvg(),
+                0L);
     }
 
     @Override
@@ -308,9 +322,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     public ReservationCardDisplayRow toReservationCardDisplayRow(final ReservationCard card, final Locale locale) {
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getEndDate(), locale);
-        final long days = reservationService.calculateBillableDays(card.getStartDate(), card.getEndDate());
-        final String totalPrice = days > 0
-                ? ArsMoneyFormat.format(card.getDayPrice().multiply(BigDecimal.valueOf(days)))
+        final String totalPrice = card.getTotalPrice() != null
+                ? ArsMoneyFormat.format(card.getTotalPrice())
                 : "-";
         return new ReservationCardDisplayRow(
                 card.getReservationId(),

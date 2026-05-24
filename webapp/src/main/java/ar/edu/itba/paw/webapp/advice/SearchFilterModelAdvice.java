@@ -9,17 +9,17 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.controller.HomeController;
-import ar.edu.itba.paw.webapp.controller.MyListingsController;
+import ar.edu.itba.paw.webapp.controller.MyCarsController;
 import ar.edu.itba.paw.webapp.controller.MyReservationsController;
 import ar.edu.itba.paw.webapp.controller.SearchController;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 
 /**
- * Supplies search and filter dropdown options on home, search, and “my” listing/reservation controllers.
+ * Supplies search and filter dropdown options on home, search, and “my” car/reservation controllers.
  */
 @ControllerAdvice(assignableTypes = {
         HomeController.class, SearchController.class,
-        MyListingsController.class, MyReservationsController.class
+        MyCarsController.class, MyReservationsController.class
 })
 public class SearchFilterModelAdvice {
 

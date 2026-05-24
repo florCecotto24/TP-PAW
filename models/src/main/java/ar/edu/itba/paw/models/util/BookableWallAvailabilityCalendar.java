@@ -10,7 +10,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 
 /**
  * Wall-calendar availability segments for rider booking UIs: merge adjacent ranges and clip to the minimum
@@ -49,7 +49,7 @@ public final class BookableWallAvailabilityCalendar {
      * Trims the start of each segment so the first selectable pickup day matches the same rule as reservation pickup
      * lead time: pickup instant {@code > minPickupExclusive}.
      *
-     * @param pickupWallTime published pickup time in {@code wallZone}; if null, {@link Listing#DEFAULT_CHECK_IN_TIME}
+     * @param pickupWallTime published pickup time in {@code wallZone}; if null, {@link ListingAvailability#DEFAULT_CHECK_IN_TIME}
      */
     public static List<AvailabilityPeriod> clipPeriodsToMinPickupInstant(
             final List<AvailabilityPeriod> merged,
@@ -59,7 +59,7 @@ public final class BookableWallAvailabilityCalendar {
         if (merged.isEmpty()) {
             return List.of();
         }
-        final LocalTime pickup = pickupWallTime != null ? pickupWallTime : Listing.DEFAULT_CHECK_IN_TIME;
+        final LocalTime pickup = pickupWallTime != null ? pickupWallTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
         final List<AvailabilityPeriod> clipped = new ArrayList<>();
         for (final AvailabilityPeriod seg : merged) {
             LocalDate d = seg.getStartInclusive();

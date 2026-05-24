@@ -15,21 +15,18 @@ public interface ReviewDao {
     /** {@code rating} {@code null} persists an omitted review (same PK slot; excluded from public aggregates). */
     void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment);
 
-    Page<ListingPublicReview> findListingPublicReviews(long listingId, int page, int pageSize);
-
-    /** Like {@link #findListingPublicReviews} but resolves by {@code car_id} (Phase 7d+). */
+    /** Public reviews for a car, paginated. */
     Page<ListingPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
 
-    /** Like {@link #countReviewsForListing} but resolves by {@code car_id} (Phase 7d+). */
+    /** Total reviews stored against the car. */
     long countReviewsForCar(long carId);
 
     void refreshRiderAverageRating(long riderUserId);
 
     void refreshOwnerAverageRating(long ownerUserId);
 
-    void refreshListingRatingAvg(long listingId);
-
-    long countReviewsForListing(long listingId);
+    /** Updates {@code cars.rating_avg} from reservations resolved by {@code car_id}. */
+    void refreshCarRatingAvg(long carId);
 
     BigDecimal findAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
 

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -22,7 +23,6 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,7 +34,6 @@ import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.ReservationCard;
@@ -51,11 +50,11 @@ import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.domain.ReservationAvailabilityLink;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
+import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 
 
 /**
@@ -69,9 +68,8 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private final ReservationDao reservationDao;
     private final ReservationAvailabilityService reservationAvailabilityService;
-    private final ListingService listingService;
     private final ListingAvailabilityService listingAvailabilityService;
-    private final ListingViewService listingViewService;
+    private final ListingAddressFormatter listingAddressFormatter;
     private final UserService userService;
     private final EmailService emailService;
     private final StoredFileService storedFileService;
@@ -84,9 +82,8 @@ public final class ReservationServiceImpl implements ReservationService {
     public ReservationServiceImpl(
             final ReservationDao reservationDao,
             final ReservationAvailabilityService reservationAvailabilityService,
-            final ListingService listingService,
             final ListingAvailabilityService listingAvailabilityService,
-            @Lazy final ListingViewService listingViewService,
+            final ListingAddressFormatter listingAddressFormatter,
             final UserService userService,
             final EmailService emailService,
             final StoredFileService storedFileService,
@@ -96,9 +93,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final CarService carService) {
         this.reservationDao = reservationDao;
         this.reservationAvailabilityService = reservationAvailabilityService;
-        this.listingService = listingService;
         this.listingAvailabilityService = listingAvailabilityService;
-        this.listingViewService = listingViewService;
+        this.listingAddressFormatter = listingAddressFormatter;
         this.userService = userService;
         this.emailService = emailService;
         this.storedFileService = storedFileService;
@@ -130,132 +126,6 @@ public final class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public int getConfiguredMaxReservationBillableDays() {
         return reservationTimingPolicy.getMaxBillableDaysPerReservation();
-    }
-
-    @Override
-    @Transactional
-    public Reservation createReservation(
-            final long riderId,
-            final long listingId,
-            final OffsetDateTime startDate,
-            final OffsetDateTime endDate,
-            final Reservation.Status status,
-            final OffsetDateTime paymentProofDeadlineAt) {
-        final long billableDays = calculateBillableDays(startDate, endDate);
-        if (billableDays > reservationTimingPolicy.getMaxBillableDaysPerReservation()) {
-            throw new RiderReservationException(
-                    MessageKeys.RESERVATION_RIDER_MAX_BILLABLE_DAYS,
-                    reservationTimingPolicy.getMaxBillableDaysPerReservation());
-        }
-        if (reservationDao.hasActiveOverlap(listingId, startDate, endDate)) {
-            throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
-        }
-        final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
-        if (listingOwnerOpt.isEmpty()) {
-            throw new RiderReservationException(MessageKeys.USER_ACCOUNT_NOT_FOUND);
-        }
-        long ownerId = listingOwnerOpt.get().getId();
-        if (ownerId == riderId) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
-        }
-        final String cbu;
-        try {
-            cbu = userService.getUserCbu(ownerId);
-        } catch (final UserNotFoundException | CBUNotFoundException e) {
-            LOGGER.atWarn().setCause(e).addArgument(ownerId).log("Owner payment details unavailable for ownerId={}");
-            throw new RiderReservationException(MessageKeys.RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE);
-        }
-        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final List<ReservationAvailabilityLink> availabilityLinks =
-                buildAvailabilityLinks(listingId, firstBillableDay, lastBillableDay);
-        if (availabilityLinks.isEmpty()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID);
-        }
-        final BigDecimal total = reservationAvailabilityService.quoteTotalFromLinks(availabilityLinks)
-                .filter(amount -> amount.signum() > 0)
-                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID));
-        final Reservation reservation =
-                reservationDao.createReservation(
-                        riderId, listingId, startDate, endDate, status, total, paymentProofDeadlineAt);
-        reservationAvailabilityService.insertLinks(reservation.getId(), availabilityLinks);
-        listingService.refreshListingFinishedIfExhausted(listingId);
-        final Optional<Listing> listingForMail = listingService.getListingById(listingId);
-        final String riderLoc = listingForMail
-                .map(l -> listingViewService.formatRiderReservationHandoverSummary(l, reservation))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .orElse(null);
-        final String ownerLoc = listingForMail
-                .map(listingViewService::formatOwnerReservationHandoverSummary)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .orElse(null);
-        enqueueReservationConfirmationEmail(riderId, listingId, reservation, riderLoc, ownerLoc, cbu);
-        LOGGER.atInfo()
-                .addArgument(reservation.getId())
-                .addArgument(listingId)
-                .addArgument(riderId)
-                .addArgument(status)
-                .log("Created reservation id={} listingId={} riderId={} status={}");
-        return reservation;
-    }
-
-    private void enqueueReservationConfirmationEmail(
-            final long riderId,
-            final long listingId,
-            final Reservation reservation,
-            final String riderHandoverLocation,
-            final String ownerHandoverLocation,
-            final String cbu) {
-        try {
-            final Optional<User> riderOpt = userService.getUserById(riderId);
-            final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
-            final Optional<Listing> listingOpt = listingService.getListingById(listingId);
-            if (riderOpt.isEmpty()) {
-                LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId()).log("Skipping reservation confirmation email: user not found for riderId={} reservationId={}");
-                return;
-            }
-            if (listingOpt.isEmpty()) {
-                LOGGER.atWarn().addArgument(listingId).addArgument(reservation.getId()).log("Skipping reservation confirmation email: listing not found for listingId={} reservationId={}");
-                return;
-            }
-            if (listingOwnerOpt.isEmpty()) {
-                LOGGER.atWarn().addArgument(listingId).addArgument(reservation.getId()).log("Skipping reservation confirmation email: listing owner not found for listingId={} reservationId={}");
-                return;
-            }
-            final User rider = riderOpt.get();
-            final User listingOwner = listingOwnerOpt.get();
-            final Listing listing = listingOpt.get();
-            final String vehicleLabel = listing.getTitle();
-            final String riderFullName = rider.getForename() + " " + rider.getSurname();
-            final String trimmedRiderLoc =
-                    riderHandoverLocation == null || riderHandoverLocation.isBlank() ? null : riderHandoverLocation.trim();
-            final String trimmedOwnerLoc =
-                    ownerHandoverLocation == null || ownerHandoverLocation.isBlank() ? null : ownerHandoverLocation.trim();
-            final ReservationMailPayload payload = ReservationMailPayload.builder()
-                    .recipientEmail(rider.getEmail())
-                    .riderFullName(riderFullName)
-                    .reservationId(reservation.getId())
-                    .listingId(listingId)
-                    .vehicleLabel(vehicleLabel)
-                    .startDate(reservation.getStartDate())
-                    .endDate(reservation.getEndDate())
-                    .riderHandoverLocation(trimmedRiderLoc)
-                    .ownerHandoverLocation(trimmedOwnerLoc)
-                    .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
-                    .ownerEmail(listingOwner.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
-                    .riderMailLocale(userService.resolveMailLocale(rider.getId()))
-                    .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
-                    .ownerCbu(cbu)
-                    .build();
-            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
-                    .log("Queueing reservation confirmation email to {} for reservation id={}");
-            emailService.sendReservationConfirmationEmail(payload);
-        } catch (final RuntimeException e) {
-            LOGGER.atError().setCause(e).addArgument(reservation.getId()).log("Could not enqueue reservation confirmation email for reservation id={}");
-        }
     }
 
     @Override
@@ -432,31 +302,6 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<String> reservationTotalDisplay(
-            final Long listingId,
-            final String fromDateTime,
-            final String untilDateTime) {
-        if (listingId == null || isBlank(fromDateTime) || isBlank(untilDateTime)) {
-            return Optional.empty();
-        }
-        try {
-            final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(fromDateTime);
-            final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(untilDateTime);
-            return calculateTotal(listingId, startDate, endDate).map(ArsMoneyFormat::format);
-        } catch (final DateTimeParseException e) {
-            LOGGER.atDebug()
-                    .setMessage("reservationTotalDisplay: unparseable wall datetimes listingId={} from=[{}] until=[{}]")
-                    .addArgument(listingId)
-                    .addArgument(fromDateTime)
-                    .addArgument(untilDateTime)
-                    .setCause(e)
-                    .log();
-            return Optional.empty();
-        }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Optional<String> reservationTotalDisplayByCar(
             final Long carId,
             final String fromDateTime,
@@ -491,66 +336,7 @@ public final class ReservationServiceImpl implements ReservationService {
         }
         final LocalDate firstBillableDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
         final LocalDate lastBillableDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final List<ReservationAvailabilityLink> links =
-                buildAvailabilityLinksByCar(carId, firstBillableDay, lastBillableDay);
-        if (links.isEmpty()) {
-            return Optional.empty();
-        }
-        return reservationAvailabilityService.quoteTotalFromLinks(links);
-    }
-
-    @Override
-    @Transactional
-    public Reservation submitRiderReservation(
-            final long riderId,
-            final Long listingId,
-            final Long availabilityId,
-            final String fromDateTime,
-            final String untilDateTime) {
-        if (listingId == null || listingService.getListingById(listingId).isEmpty()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND);
-        }
-        final User rider = userService.getUserById(riderId)
-                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_USER_NOT_FOUND));
-        if (isBlank(fromDateTime) || isBlank(untilDateTime)) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_REQUIRED);
-        }
-        final OffsetDateTime startDate;
-        final OffsetDateTime endDate;
-        try {
-            startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(fromDateTime);
-            endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(untilDateTime);
-        } catch (final DateTimeParseException e) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_INVALID_FORMAT);
-        }
-        if (!endDate.isAfter(startDate)) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_END_NOT_AFTER_START);
-        }
-        validateWallPickupDateNotBeforeToday(startDate);
-        validatePickupAtLeastTwentyFourHoursInAdvance(startDate);
-        if (!listingService.reservationIntervalFitsListingAvailability(listingId, availabilityId, startDate, endDate)) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
-        }
-        final Optional<User> listingOwnerOpt = userService.getListingOwner(listingId);
-        if (listingOwnerOpt.isEmpty()) {
-            throw new RiderReservationException(MessageKeys.USER_ACCOUNT_NOT_FOUND);
-        }
-        if (listingOwnerOpt.get().getId() == rider.getId()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
-        }
-        if (!userService.hasUploadedLicenseAndIdentity(rider)) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DOCUMENTATION_REQUIRED);
-        }
-        final OffsetDateTime proofDeadline = OffsetDateTime.ofInstant(
-                Instant.now().plus(reservationTimingPolicy.getPaymentProofDeadlineHours(), ChronoUnit.HOURS),
-                ZoneOffset.UTC);
-        return createReservation(
-                rider.getId(),
-                listingId,
-                startDate,
-                endDate,
-                Reservation.Status.PENDING,
-                proofDeadline);
+        return planReservationByCar(carId, firstBillableDay, lastBillableDay).map(ReservationPlan::total);
     }
 
     @Override
@@ -584,6 +370,7 @@ public final class ReservationServiceImpl implements ReservationService {
         if (!reservationIntervalFitsCarAvailability(carId, availabilityId, startDate, endDate)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
         }
+        validateHandoverTimesMatchEffectiveAvailability(carId, startDate, endDate);
         if (car.getOwner().getId() == rider.getId()) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
         }
@@ -654,19 +441,14 @@ public final class ReservationServiceImpl implements ReservationService {
         }
         final LocalDate firstBillableDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
         final LocalDate lastBillableDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final List<ReservationAvailabilityLink> availabilityLinks =
-                buildAvailabilityLinksByCar(carId, firstBillableDay, lastBillableDay);
-        if (availabilityLinks.isEmpty()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID);
-        }
-        final BigDecimal total = reservationAvailabilityService.quoteTotalFromLinks(availabilityLinks)
-                .filter(amount -> amount.signum() > 0)
+        final ReservationPlan plan = planReservationByCar(carId, firstBillableDay, lastBillableDay)
+                .filter(p -> p.total().signum() > 0)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID));
         final Reservation reservation =
                 reservationDao.createReservationForCar(
-                        riderId, carId, startDate, endDate, status, total, paymentProofDeadlineAt);
-        reservationAvailabilityService.insertLinks(reservation.getId(), availabilityLinks);
-        enqueueReservationConfirmationEmailForCar(riderId, carId, reservation, availabilityLinks, ownerCbu);
+                        riderId, carId, startDate, endDate, status, plan.total(), paymentProofDeadlineAt);
+        reservationAvailabilityService.insertCoveringAvailabilities(reservation.getId(), plan.coveringAvailabilityIds());
+        enqueueReservationConfirmationEmailForCar(riderId, carId, reservation, plan.firstDayAvailability(), ownerCbu);
         LOGGER.atInfo()
                 .addArgument(reservation.getId())
                 .addArgument(carId)
@@ -676,41 +458,50 @@ public final class ReservationServiceImpl implements ReservationService {
         return reservation;
     }
 
-    private List<ReservationAvailabilityLink> buildAvailabilityLinksByCar(
+    /**
+     * Day-by-day pricing plan for a reservation: for each wall-calendar day in
+     * {@code [firstBillableDay, lastBillableDay]}, picks the {@code OFFERED} availability of the car
+     * that wins by latest {@code createdAt} ({@link ListingAvailabilityService#findEffectiveForDayByCar}),
+     * accumulating the running total and the distinct set of winning availability ids in their first
+     * appearance order. Returns empty when any day lacks an effective offered availability.
+     */
+    private Optional<ReservationPlan> planReservationByCar(
             final long carId,
             final LocalDate firstBillableDay,
             final LocalDate lastBillableDay) {
-        final List<ReservationAvailabilityLink> links = new ArrayList<>();
-        Long currentAvailabilityId = null;
-        LocalDate chunkStart = null;
+        BigDecimal total = BigDecimal.ZERO;
+        final java.util.LinkedHashSet<Long> coveringIds = new java.util.LinkedHashSet<>();
+        ListingAvailability firstDayAvailability = null;
         for (LocalDate day = firstBillableDay; !day.isAfter(lastBillableDay); day = day.plusDays(1)) {
             final Optional<ListingAvailability> effective =
                     listingAvailabilityService.findEffectiveForDayByCar(carId, day);
-            if (effective.isEmpty()
-                    || effective.get().getKind() == ListingAvailability.Kind.WITHDRAWN) {
-                return List.of();
+            if (effective.isEmpty() || effective.get().getKind() == ListingAvailability.Kind.WITHDRAWN) {
+                return Optional.empty();
             }
-            final long availabilityId = effective.get().getId();
-            if (currentAvailabilityId == null) {
-                currentAvailabilityId = availabilityId;
-                chunkStart = day;
-            } else if (currentAvailabilityId != availabilityId) {
-                links.add(new ReservationAvailabilityLink(currentAvailabilityId, chunkStart, day.minusDays(1)));
-                currentAvailabilityId = availabilityId;
-                chunkStart = day;
+            final ListingAvailability av = effective.get();
+            if (firstDayAvailability == null) {
+                firstDayAvailability = av;
             }
+            coveringIds.add(av.getId());
+            total = total.add(av.getDayPriceValue());
         }
-        if (currentAvailabilityId != null) {
-            links.add(new ReservationAvailabilityLink(currentAvailabilityId, chunkStart, lastBillableDay));
+        if (firstDayAvailability == null) {
+            return Optional.empty();
         }
-        return links;
+        return Optional.of(new ReservationPlan(total, coveringIds, firstDayAvailability));
+    }
+
+    private record ReservationPlan(
+            BigDecimal total,
+            java.util.LinkedHashSet<Long> coveringAvailabilityIds,
+            ListingAvailability firstDayAvailability) {
     }
 
     private void enqueueReservationConfirmationEmailForCar(
             final long riderId,
             final long carId,
             final Reservation reservation,
-            final List<ReservationAvailabilityLink> availabilityLinks,
+            final ListingAvailability pickupAvailability,
             final String ownerCbu) {
         try {
             final Optional<User> riderOpt = userService.getUserById(riderId);
@@ -731,12 +522,12 @@ public final class ReservationServiceImpl implements ReservationService {
                 return;
             }
             final String vehicleLabel = car.getBrand() + " " + car.getModel();
-            final String handoverLocation = resolveHandoverLocationFromLinks(availabilityLinks);
+            final String handoverLocation = formatHandoverLocation(pickupAvailability);
             final ReservationMailPayload payload = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
                     .reservationId(reservation.getId())
-                    .listingId(0L)
+                    .carId(carId)
                     .vehicleLabel(vehicleLabel)
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
@@ -757,90 +548,40 @@ public final class ReservationServiceImpl implements ReservationService {
         }
     }
 
-    private String resolveHandoverLocationFromLinks(final List<ReservationAvailabilityLink> links) {
-        if (links.isEmpty()) {
+    private static String formatHandoverLocation(final ListingAvailability availability) {
+        if (availability == null) {
             return null;
         }
-        return listingAvailabilityService.findById(links.get(0).getAvailabilityId())
-                .map(av -> {
-                    final StringBuilder sb = new StringBuilder(av.getStartPointStreet());
-                    av.getStartPointNumber().ifPresent(n -> sb.append(" ").append(n));
-                    return sb.toString().trim();
-                })
-                .orElse(null);
+        final StringBuilder sb = new StringBuilder(availability.getStartPointStreet());
+        availability.getStartPointNumber().ifPresent(n -> sb.append(" ").append(n));
+        return sb.toString().trim();
     }
 
     /**
-     * Resolves the car owner from a reservation regardless of whether a {@code listing} is set.
-     * Listing-based reservations use the listing-owner mapping; car-based ones read directly from
-     * the {@code Car} entity.
+     * Resolves the car owner from a reservation by reading the {@code Car} entity directly.
      */
     private Optional<User> resolveOwnerFromReservation(final Reservation reservation) {
-        return reservation.getOptionalListingId()
-                .flatMap(userService::getListingOwner)
-                .or(() -> Optional.ofNullable(reservation.getCar()).map(Car::getOwner));
+        return Optional.ofNullable(reservation.getCar()).map(Car::getOwner);
     }
 
     /**
-     * Returns a human-readable vehicle label.  For listing-based reservations it uses the
-     * listing title; for car-based ones it falls back to {@code brand + " " + model}.
+     * Most-recent availability row for the reservation's car, used to format
+     * pickup/return address lines in transactional emails.
+     */
+    private Optional<ListingAvailability> resolveAvailabilityForReservation(final Reservation reservation) {
+        return Optional.ofNullable(reservation.getCar())
+                .map(Car::getId)
+                .flatMap(listingAvailabilityService::findMostRecentByCarId);
+    }
+
+    /**
+     * Returns a human-readable vehicle label using the car's brand and model.
+     * Falls back to an empty string when the reservation has no associated car.
      */
     private String resolveVehicleLabelFromReservation(final Reservation reservation) {
-        return reservation.getOptionalListingId()
-                .flatMap(listingService::getListingById)
-                .map(Listing::getTitle)
-                .orElseGet(() -> Optional.ofNullable(reservation.getCar())
-                        .map(c -> c.getBrand() + " " + c.getModel())
-                        .orElse(""));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<BigDecimal> calculateTotal(
-            final long listingId,
-            final OffsetDateTime startDate,
-            final OffsetDateTime endDate) {
-        if (calculateBillableDays(startDate, endDate) <= 0) {
-            return Optional.empty();
-        }
-        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final List<ReservationAvailabilityLink> links =
-                buildAvailabilityLinks(listingId, firstBillableDay, lastBillableDay);
-        if (links.isEmpty()) {
-            return Optional.empty();
-        }
-        return reservationAvailabilityService.quoteTotalFromLinks(links);
-    }
-
-    private List<ReservationAvailabilityLink> buildAvailabilityLinks(
-            final long listingId,
-            final LocalDate firstBillableDay,
-            final LocalDate lastBillableDay) {
-        final List<ReservationAvailabilityLink> links = new ArrayList<>();
-        Long currentAvailabilityId = null;
-        LocalDate chunkStart = null;
-        for (LocalDate day = firstBillableDay; !day.isAfter(lastBillableDay); day = day.plusDays(1)) {
-            final Optional<ListingAvailability> effective =
-                    listingAvailabilityService.findEffectiveForDay(listingId, day);
-            if (effective.isEmpty()
-                    || effective.get().getKind() == ListingAvailability.Kind.WITHDRAWN) {
-                return List.of();
-            }
-            final long availabilityId = effective.get().getId();
-            if (currentAvailabilityId == null) {
-                currentAvailabilityId = availabilityId;
-                chunkStart = day;
-            } else if (currentAvailabilityId != availabilityId) {
-                links.add(new ReservationAvailabilityLink(currentAvailabilityId, chunkStart, day.minusDays(1)));
-                currentAvailabilityId = availabilityId;
-                chunkStart = day;
-            }
-        }
-        if (currentAvailabilityId != null) {
-            links.add(new ReservationAvailabilityLink(currentAvailabilityId, chunkStart, lastBillableDay));
-        }
-        return links;
+        return Optional.ofNullable(reservation.getCar())
+                .map(c -> c.getBrand() + " " + c.getModel())
+                .orElse("");
     }
 
     @Override
@@ -867,6 +608,47 @@ public final class ReservationServiceImpl implements ReservationService {
         final int pickupLeadHours = reservationTimingPolicy.getPickupLeadHours();
         if (!startDate.toInstant().isAfter(now.plus(pickupLeadHours, ChronoUnit.HOURS))) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_PICKUP_MIN_24H, pickupLeadHours);
+        }
+    }
+
+    /**
+     * Defensive check against a tampered client payload: the wall-time component of {@code startDate}
+     * must equal the {@code checkInTime} of the effective {@link ListingAvailability} for the pickup day,
+     * and the wall-time component of {@code endDate} must equal the {@code checkOutTime} of the effective
+     * availability for the return day. The UI fixes these times from the bookable segment shown to the
+     * rider, so any mismatch indicates the rider submitted hand-edited values or the effective
+     * availability changed between picking dates and submitting.
+     *
+     * <p>Callers must have already validated that every day in the range is covered by an
+     * {@link ar.edu.itba.paw.models.domain.ListingAvailability.Kind#OFFERED} availability (see
+     * {@code reservationIntervalFitsCarAvailability}). This method assumes that precondition and only
+     * checks the two boundary times.
+     */
+    void validateHandoverTimesMatchEffectiveAvailability(
+            final long carId, final OffsetDateTime startDate, final OffsetDateTime endDate) {
+        final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate returnDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalTime submittedCheckIn = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalTime();
+        final LocalTime submittedCheckOut = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalTime();
+
+        final ListingAvailability pickupAv = listingAvailabilityService
+                .findEffectiveForDayByCar(carId, pickupDay)
+                .filter(a -> a.getKind() == ListingAvailability.Kind.OFFERED)
+                .orElseThrow(() -> new RiderReservationException(
+                        MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY));
+        if (!submittedCheckIn.equals(pickupAv.getCheckInTime())) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_HANDOVER_TIME_MISMATCH);
+        }
+
+        final ListingAvailability returnAv = pickupDay.equals(returnDay)
+                ? pickupAv
+                : listingAvailabilityService
+                        .findEffectiveForDayByCar(carId, returnDay)
+                        .filter(a -> a.getKind() == ListingAvailability.Kind.OFFERED)
+                        .orElseThrow(() -> new RiderReservationException(
+                                MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY));
+        if (!submittedCheckOut.equals(returnAv.getCheckOutTime())) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_HANDOVER_TIME_MISMATCH);
         }
     }
 
@@ -912,10 +694,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final boolean isRider = r.getRiderId() == userId;
         final boolean isOwner = Optional.ofNullable(r.getCar())
                 .map(c -> c.getOwner().getId() == userId)
-                .orElseGet(() -> r.getOptionalListingId()
-                        .flatMap(userService::getListingOwner)
-                        .map(o -> o.getId() == userId)
-                        .orElse(false));
+                .orElse(false);
         if (!isRider && !isOwner) {
             return Optional.empty();
         }
@@ -971,19 +750,11 @@ public final class ReservationServiceImpl implements ReservationService {
         };
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Reservation> getReservationsForCancellation(final long listingId) {
-        return reservationDao.getListingActiveReservations(listingId);
-    }
-
-
     private void enqueueCancellationEmail(final Reservation reservation, final boolean notifyOwnerCancellation) {
         try {
             final long riderId = reservation.getRiderId();
             final Optional<User> riderOpt = userService.getUserById(riderId);
-            final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                    .flatMap(listingService::getListingById);
+            final Optional<ListingAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
             final Optional<User> listingOwnerOpt = resolveOwnerFromReservation(reservation);
             if (riderOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId())
@@ -999,13 +770,13 @@ public final class ReservationServiceImpl implements ReservationService {
             final User listingOwner = listingOwnerOpt.get();
             final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
-            final String riderLoc = listingOpt.map(l -> trimToNull(listingViewService.formatRiderReservationHandoverSummary(l, reservation))).orElse(null);
-            final String ownerLoc = listingOpt.map(l -> trimToNull(listingViewService.formatOwnerReservationHandoverSummary(l))).orElse(null);
+            final String riderLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))).orElse(null);
+            final String ownerLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatOwnerReservationHandoverSummary(a))).orElse(null);
             final ReservationMailPayload mail = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
                     .reservationId(reservation.getId())
-                    .listingId(reservation.getOptionalListingId().orElse(0L))
+                    .carId(reservation.getCarId())
                     .vehicleLabel(vehicleLabel)
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
@@ -1080,7 +851,6 @@ public final class ReservationServiceImpl implements ReservationService {
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
         }
-        r.getOptionalListingId().ifPresent(listingService::refreshListingFinishedIfExhausted);
         final Reservation afterAttach = getRiderReservationById(riderId, reservationId).orElse(r);
         notifyOwnerPaymentProofUploaded(reservationId, riderId, afterAttach);
         enqueueRiderReservationConfirmedAfterPaymentProof(riderId, afterAttach);
@@ -1093,8 +863,7 @@ public final class ReservationServiceImpl implements ReservationService {
     private void enqueueRiderReservationConfirmedAfterPaymentProof(final long riderId, final Reservation reservation) {
         try {
             final Optional<User> riderOpt = userService.getUserById(riderId);
-            final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                    .flatMap(listingService::getListingById);
+            final Optional<ListingAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
             final Optional<User> listingOwnerOpt = resolveOwnerFromReservation(reservation);
             if (riderOpt.isEmpty() || listingOwnerOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log(
@@ -1104,13 +873,13 @@ public final class ReservationServiceImpl implements ReservationService {
             final User rider = riderOpt.get();
             final User listingOwner = listingOwnerOpt.get();
             final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
-            final String riderLoc = listingOpt.map(l -> trimToNull(listingViewService.formatRiderReservationHandoverSummary(l, reservation))).orElse(null);
-            final String ownerLoc = listingOpt.map(l -> trimToNull(listingViewService.formatOwnerReservationHandoverSummary(l))).orElse(null);
+            final String riderLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))).orElse(null);
+            final String ownerLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatOwnerReservationHandoverSummary(a))).orElse(null);
             final ReservationMailPayload payload = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
                     .reservationId(reservation.getId())
-                    .listingId(reservation.getOptionalListingId().orElse(0L))
+                    .carId(reservation.getCarId())
                     .vehicleLabel(vehicleLabel)
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
@@ -1132,15 +901,12 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private void notifyOwnerPaymentProofUploaded(final long reservationId, final long riderId, final Reservation reservation) {
         try {
-            final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                    .flatMap(listingService::getListingById);
             final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
             final Optional<User> riderOpt = userService.getUserById(riderId);
             if (ownerOpt.isEmpty() || riderOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservationId).log("Skipping owner payment-proof email: missing owner or rider (reservation id={})");
                 return;
             }
-            final Listing listing = listingOpt.orElse(null);
             final User owner = ownerOpt.get();
             final User rider = riderOpt.get();
             final String ownerFullName = owner.getForename() + " " + owner.getSurname();
@@ -1152,7 +918,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     .riderFullName(riderFullName)
                     .riderEmail(rider.getEmail())
                     .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
-                    .vehicleLabel(listing != null ? listing.getTitle() : resolveVehicleLabelFromReservation(reservation))
+                    .vehicleLabel(resolveVehicleLabelFromReservation(reservation))
                     .reservationId(reservationId)
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
@@ -1174,21 +940,18 @@ public final class ReservationServiceImpl implements ReservationService {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping owner refund-proof email: no deadline (reservation id={})");
                 return;
             }
-            final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                    .flatMap(listingService::getListingById);
             final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
             if (ownerOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping owner refund-proof email: owner not found (reservation id={})");
                 return;
             }
-            final Listing listing = listingOpt.orElse(null);
             final User owner = ownerOpt.get();
             final String ownerFullName = owner.getForename() + " " + owner.getSurname();
             final OwnerRefundProofObligationEmailPayload mailPayload = OwnerRefundProofObligationEmailPayload.builder()
                     .messageLocale(userService.resolveMailLocale(owner.getId()))
                     .recipientEmail(owner.getEmail())
                     .ownerFullName(ownerFullName)
-                    .vehicleLabel(listing != null ? listing.getTitle() : resolveVehicleLabelFromReservation(reservation))
+                    .vehicleLabel(resolveVehicleLabelFromReservation(reservation))
                     .reservationId(reservation.getId())
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
@@ -1207,15 +970,12 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private void notifyRiderRefundProofUploaded(final long reservationId, final Reservation reservation) {
         try {
-            final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                    .flatMap(listingService::getListingById);
             final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
             final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
             if (ownerOpt.isEmpty() || riderOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservationId).log("Skipping rider refund-proof email: missing owner or rider (reservation id={})");
                 return;
             }
-            final Listing listing = listingOpt.orElse(null);
             final User owner = ownerOpt.get();
             final User rider = riderOpt.get();
             final String ownerFullName = owner.getForename() + " " + owner.getSurname();
@@ -1227,7 +987,7 @@ public final class ReservationServiceImpl implements ReservationService {
                     .ownerFullName(ownerFullName)
                     .ownerEmail(owner.getEmail())
                     .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
-                    .vehicleLabel(listing != null ? listing.getTitle() : resolveVehicleLabelFromReservation(reservation))
+                    .vehicleLabel(resolveVehicleLabelFromReservation(reservation))
                     .reservationId(reservationId)
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
@@ -1394,17 +1154,6 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReservationCard> getListingReservationCards(
-            final long ownerId,
-            final long listingId,
-            final int page,
-            final int pageSize,
-            final String statusFilter) {
-        return reservationDao.getListingReservationCards(ownerId, listingId, page, pageSize, statusFilter);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public Page<ReservationCard> getCarReservationCards(
             final long ownerId,
             final long carId,
@@ -1412,12 +1161,6 @@ public final class ReservationServiceImpl implements ReservationService {
             final int pageSize,
             final String statusFilter) {
         return reservationDao.getCarReservationCards(ownerId, carId, page, pageSize, statusFilter);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Map<String, Long> countListingReservationsByStatus(final long ownerId, final long listingId) {
-        return mergeCancelledBuckets(reservationDao.countListingReservationsByStatus(ownerId, listingId));
     }
 
     @Override
@@ -1440,45 +1183,6 @@ public final class ReservationServiceImpl implements ReservationService {
         out.remove("cancelled_due_to_missing_payment_proof");
         out.put("cancelled", merged);
         return out;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal getListingTotalEarnings(final long ownerId, final long listingId) {
-        return reservationDao.sumListingRevenueByStatuses(
-                ownerId, listingId, Arrays.asList("accepted", "started", "finished"));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal getListingPendingEarnings(final long ownerId, final long listingId) {
-        return reservationDao.sumListingRevenueByStatuses(
-                ownerId, listingId, Arrays.asList("accepted", "started"));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public long getListingTotalDaysRented(final long ownerId, final long listingId) {
-        return reservationDao.findListingFinishedReservations(ownerId, listingId)
-                .stream()
-                .mapToLong(r -> calculateBillableDays(r.getStartDate(), r.getEndDate()))
-                .sum();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public long getListingReservationsThisMonth(final long ownerId, final long listingId) {
-        final YearMonth current = YearMonth.now(ZoneOffset.UTC);
-        final OffsetDateTime monthStart = current.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        final OffsetDateTime nextMonthStart = current.plusMonths(1).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        return reservationDao.countListingReservationsCreatedBetween(ownerId, listingId, monthStart, nextMonthStart);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<OffsetDateTime> getListingNextReservationDate(final long ownerId, final long listingId) {
-        return reservationDao.findListingNextActiveReservationDate(
-                ownerId, listingId, OffsetDateTime.now(ZoneOffset.UTC));
     }
 
     @Override
@@ -1705,16 +1409,13 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private Optional<ReservationMailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {
         final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
-        final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                .flatMap(listingService::getListingById);
         final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
         if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
             return Optional.empty();
         }
         final User rider = riderOpt.get();
         final User owner = ownerOpt.get();
-        final String vehicleLabel = listingOpt.map(Listing::getTitle)
-                .orElseGet(() -> resolveVehicleLabelFromReservation(reservation));
+        final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
         
         // Retrieve owner's CBU; if not found, skip sending email and keep flag false
         String ownerCbu;
@@ -1734,7 +1435,7 @@ public final class ReservationServiceImpl implements ReservationService {
                 .recipientEmail(rider.getEmail())
                 .riderFullName(rider.getForename() + " " + rider.getSurname())
                 .reservationId(reservation.getId())
-                .listingId(reservation.getOptionalListingId().orElse(0L))
+                .carId(reservation.getCarId())
                 .vehicleLabel(vehicleLabel)
                 .startDate(reservation.getStartDate())
                 .endDate(reservation.getEndDate())
@@ -1749,20 +1450,20 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private Optional<RiderCarReturnEmailPayload> buildRiderCarReturnEmailPayload(final Reservation reservation) {
         final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
-        final Optional<Listing> listingOpt = reservation.getOptionalListingId()
-                .flatMap(listingService::getListingById);
+        final Optional<ListingAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
         final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
         if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
             return Optional.empty();
         }
         final User rider = riderOpt.get();
-        final Listing listing = listingOpt.orElse(null);
         final User owner = ownerOpt.get();
         final Locale locale = userService.resolveMailLocale(rider.getId());
         final String checkout = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String returnLine = listing != null ? listingViewService.formatPickupForReservationView(listing, reservation, false) : null;
+        final String returnLine = availabilityOpt
+                .map(a -> listingAddressFormatter.formatPickupForReservationView(a, reservation, false))
+                .orElse(null);
         final String path = "/my-reservations/" + reservation.getId();
-        final String vehicleLabel = listing != null ? listing.getTitle() : resolveVehicleLabelFromReservation(reservation);
+        final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
         return Optional.of(RiderCarReturnEmailPayload.builder()
                 .messageLocale(locale)
                 .recipientEmail(rider.getEmail())
@@ -1796,27 +1497,8 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByListingId(final long listingId) {
-        return reservationDao.findBlockingByListingId(listingId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByListingIds(final Collection<Long> listingIds) {
-        return reservationDao.findBlockingByListingIds(listingIds);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<Reservation> findBlockingReservationsByCarId(final long carId) {
         return reservationDao.findBlockingByCarId(carId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Reservation> findBlockingReservationsByListingIdInRange(
-            final long listingId, final OffsetDateTime from, final OffsetDateTime to) {
-        return reservationDao.findBlockingByListingIdInRange(listingId, from, to);
     }
 
     @Override

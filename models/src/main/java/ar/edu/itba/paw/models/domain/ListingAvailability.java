@@ -22,7 +22,7 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 /**
- * Wall-calendar inclusive availability segment for a {@link Listing}: carries its own pricing, pickup
+ * Wall-calendar inclusive availability segment for a {@link Car}: carries its own pricing, pickup
  * location and check-in/out times. Rows are immutable from the owner's point of view; "edits" insert
  * new rows. When two rows overlap the same calendar day, the one with the most recent {@code createdAt}
  * wins (see {@link Kind} for the offered/withdrawn discriminator).
@@ -30,6 +30,18 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "listing_availability")
 public class ListingAvailability {
+
+    /**
+     * Default wall-time pickup hour used as fallback when an availability row, publication form, or rider
+     * pickup-lead calculation does not provide an explicit check-in time.
+     */
+    public static final LocalTime DEFAULT_CHECK_IN_TIME = LocalTime.of(10, 0);
+
+    /**
+     * Default wall-time return hour used as fallback when an availability row does not provide an
+     * explicit check-out time (e.g. car detail UI for a car with no published availability yet).
+     */
+    public static final LocalTime DEFAULT_CHECK_OUT_TIME = LocalTime.of(20, 0);
 
     /**
      * Discriminator for layered availability rows:
@@ -60,10 +72,6 @@ public class ListingAvailability {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "listing_availability_id_seq")
     @SequenceGenerator(name = "listing_availability_id_seq", sequenceName = "listing_availability_id_seq", allocationSize = 1)
     private long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = true)
-    private Listing listing;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id", nullable = false)
@@ -108,54 +116,8 @@ public class ListingAvailability {
         // For Hibernate
     }
 
-    /**
-     * Legacy 6-arg constructor kept for tests created before Phase 2. New code should use
-     * {@link #builder()} so pricing, location and check-in/out times are explicit.
-     *
-     * @deprecated transitional; the builder will be the only public constructor after Phase 5.
-     */
-    @Deprecated
-    public ListingAvailability(
-            final long id,
-            final Listing listing,
-            final LocalDate startInclusive,
-            final LocalDate endInclusive,
-            final OffsetDateTime createdAt,
-            final OffsetDateTime updatedAt) {
-        this(builder()
-                .id(id)
-                .listing(listing)
-                .startInclusive(startInclusive)
-                .endInclusive(endInclusive)
-                .createdAt(createdAt)
-                .updatedAt(updatedAt));
-    }
-
-    /**
-     * Legacy 6-arg constructor with explicit {@code dayPrice} kept for older tests.
-     *
-     * @deprecated transitional; use {@link #builder()} so location and check-in/out times are explicit.
-     */
-    @Deprecated
-    public ListingAvailability(
-            final Listing listing,
-            final LocalDate startInclusive,
-            final LocalDate endInclusive,
-            final BigDecimal dayPrice,
-            final OffsetDateTime createdAt,
-            final OffsetDateTime updatedAt) {
-        this(builder()
-                .listing(listing)
-                .startInclusive(startInclusive)
-                .endInclusive(endInclusive)
-                .dayPrice(dayPrice)
-                .createdAt(createdAt)
-                .updatedAt(updatedAt));
-    }
-
     private ListingAvailability(final Builder b) {
         this.id = b.id;
-        this.listing = b.listing;
         this.car = b.car;
         this.startInclusive = b.startInclusive;
         this.endInclusive = b.endInclusive;
@@ -180,7 +142,6 @@ public class ListingAvailability {
 
     public static final class Builder {
         private long id;
-        private Listing listing;
         private Car car;
         private LocalDate startInclusive;
         private LocalDate endInclusive;
@@ -196,11 +157,6 @@ public class ListingAvailability {
 
         public Builder id(final long id) {
             this.id = id;
-            return this;
-        }
-
-        public Builder listing(final Listing listing) {
-            this.listing = listing;
             return this;
         }
 
@@ -265,9 +221,7 @@ public class ListingAvailability {
         }
 
         public ListingAvailability build() {
-            if (car == null && listing != null) {
-                car = listing.getCar();
-            }
+            Objects.requireNonNull(car, "car");
             Objects.requireNonNull(startInclusive, "startInclusive");
             Objects.requireNonNull(endInclusive, "endInclusive");
             return new ListingAvailability(this);
@@ -278,32 +232,12 @@ public class ListingAvailability {
         return id;
     }
 
-    /** Returns {@code listing}, which may be {@code null} for availability rows created without a listing. */
-    public Listing getListing() {
-        return listing;
-    }
-
-    /** Convenience accessor — returns {@code listing.getId()}. Throws if {@code listing_id} was not loaded. */
-    public long getListingId() {
-        if (listing == null) {
-            throw new UnsupportedOperationException("listing_id is not set on this availability; use getCarId() instead");
-        }
-        return listing.getId();
-    }
-
     public Car getCar() {
         return car;
     }
 
-    /**
-     * Dual-read: prefers the direct {@code car_id} column; falls back to {@code listing.getCar()}
-     * for rows not yet backfilled in memory-only tests.
-     */
     public long getCarId() {
-        if (car != null) {
-            return car.getId();
-        }
-        return listing.getCar().getId();
+        return car.getId();
     }
 
     public LocalDate getStartInclusive() {
@@ -363,7 +297,7 @@ public class ListingAvailability {
     public String toString() {
         return "ListingAvailability{"
                 + "id=" + id
-                + ", listingId=" + listing.getId()
+                + ", carId=" + (car != null ? car.getId() : null)
                 + ", startInclusive=" + startInclusive
                 + ", endInclusive=" + endInclusive
                 + ", dayPrice=" + Objects.toString(dayPrice)

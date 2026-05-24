@@ -4,7 +4,6 @@
 <%@ attribute name="verified" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="rating" required="false" type="java.lang.String" %>
 <%@ attribute name="reviewCount" required="false" type="java.lang.String" %>
-<%@ attribute name="location" required="true" type="java.lang.String" %>
 
 <div class="d-flex flex-wrap align-items-center gap-3 detail-listing-meta mt-2">
     <c:if test="${not empty reviewCount}">
@@ -19,6 +18,6 @@
     </c:if>
     <span class="d-inline-flex align-items-center gap-1 text-secondary">
         <i class="bi bi-geo-alt" aria-hidden="true"></i>
-        <span class="text-dark"><c:out value="${location}"/></span>
+        <span class="text-dark" id="detail_header_location">&mdash;</span>
     </span>
 </div>

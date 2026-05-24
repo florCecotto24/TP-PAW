@@ -395,6 +395,20 @@
                             <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>
 
+                        <%-- Optional insurance document; if missing, the car is created in LACK_DOC and can be uploaded later from the car detail page. --%>
+                        <div class="mb-4">
+                            <label for="publishInsuranceFileInput" class="form-label d-block">
+                                <spring:message code="publishCar.form.insurance"/>
+                            </label>
+                            <input id="publishInsuranceFileInput" type="file" name="insuranceFile"
+                                   accept="application/pdf,image/*"
+                                   class="form-control"/>
+                            <small class="text-muted d-block mt-2">
+                                <spring:message code="publishCar.form.insurance.hint" arguments="${uploadMaxProfileDocumentMegabytes}"/>
+                            </small>
+                            <form:errors path="insuranceFile" cssClass="text-danger d-block"/>
+                        </div>
+
                         <div class="d-flex justify-content-end mt-2">
                             <button type="submit" class="btn btn-primary" id="publishCarSubmitBtn">
                                 <span class="publish-submit-default">

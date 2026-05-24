@@ -10,10 +10,10 @@ import java.util.List;
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 
 /**
- * Immutable search filters + paging (Item 17). Prefer {@link #builder()} (Item 2); in the web app, wire sizes from
- * Spring {@code Environment} via the listing service {@code buildSearchCriteria}.
+ * Immutable search filters + paging for the public car search. Prefer {@link #builder()} (Effective Java Item 2);
+ * in the web app, wire sizes from Spring {@code Environment} via {@code CarService#buildSearchCriteria}.
  */
-public final class ListingSearchCriteria extends BaseSearchCriteria {
+public final class CarSearchCriteria extends BaseSearchCriteria {
 
     private final String query;
     private final Instant availabilityRangeStart;
@@ -21,11 +21,11 @@ public final class ListingSearchCriteria extends BaseSearchCriteria {
     private final int dbFetchSize;
     /** When set, SQL requires published availability reaching this wall-calendar day or later. */
     private final LocalDate browseWallDate;
-    /** When set, SQL excludes listings owned by this user id (public rider browse). */
+    /** When set, SQL excludes cars owned by this user id (public rider browse). */
     private final Long excludeOwnerUserId;
     private final List<Long> neighborhoodIds;
 
-    private ListingSearchCriteria(final Builder b) {
+    private CarSearchCriteria(final Builder b) {
         super(b.page, b.uiPageSize, b.carTypes, b.transmissions, b.powertrains,
                 b.minPrice, b.maxPrice, b.ratingBands, b.sortBy, b.sortDirection);
         this.query = b.query != null && !b.query.isBlank() ? b.query.trim() : null;
@@ -42,7 +42,7 @@ public final class ListingSearchCriteria extends BaseSearchCriteria {
     }
 
     /**
-     * Builder for {@link ListingSearchCriteria} (Effective Java Item 2). Not thread-safe.
+     * Builder for {@link CarSearchCriteria} (Effective Java Item 2). Not thread-safe.
      */
     public static final class Builder {
 
@@ -147,8 +147,8 @@ public final class ListingSearchCriteria extends BaseSearchCriteria {
             return this;
         }
 
-        public ListingSearchCriteria build() {
-            return new ListingSearchCriteria(this);
+        public CarSearchCriteria build() {
+            return new CarSearchCriteria(this);
         }
     }
 

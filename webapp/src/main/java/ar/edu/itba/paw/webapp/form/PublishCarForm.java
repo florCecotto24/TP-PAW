@@ -44,6 +44,9 @@ public final class PublishCarForm {
     @Size(max = 8, message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
 
+    /** Optional insurance document; if missing, the car is created in {@link Car.Status#LACK_DOC}. */
+    private MultipartFile insuranceFile;
+
     public String getBrand() {
         return brand;
     }
@@ -114,5 +117,13 @@ public final class PublishCarForm {
 
     public void setPictures(final MultipartFile[] pictures) {
         this.pictures = pictures;
+    }
+
+    public MultipartFile getInsuranceFile() {
+        return insuranceFile;
+    }
+
+    public void setInsuranceFile(final MultipartFile insuranceFile) {
+        this.insuranceFile = insuranceFile;
     }
 }

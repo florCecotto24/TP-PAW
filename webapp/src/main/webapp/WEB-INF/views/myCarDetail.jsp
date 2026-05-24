@@ -9,7 +9,7 @@
 <head>
     <c:choose>
         <c:when test="${hasPublishedAvailability}">
-            <title><spring:message code="myListingDetail.pageTitle" arguments="${listingTitle}"/></title>
+            <title><spring:message code="myCarDetail.pageTitle" arguments="${carTitle}"/></title>
         </c:when>
         <c:otherwise>
             <title><c:out value="${car.brand} ${car.model}"/> - Ryden</title>
@@ -30,7 +30,7 @@
 
     <c:choose>
         <c:when test="${hasPublishedAvailability}">
-            <%-- ====== WITH PUBLISHED AVAILABILITY: identical to myListingDetail.jsp ====== --%>
+            <%-- ====== WITH PUBLISHED AVAILABILITY: identical to myCarDetail.jsp ====== --%>
             <c:url var="editListingUrl" value="/my-cars/car/${car.id}/edit"/>
             <c:url var="toggleListingUrl" value="/my-cars/car/${car.id}/toggle"/>
             <c:url var="finishListingUrl" value="/my-cars/car/${car.id}/deactivate"/>
@@ -38,13 +38,13 @@
             <c:set var="hasEditErrors" value="${editBindingResult != null and editBindingResult.errorCount > 0}"/>
 
             <section class="reservation-management-header mb-4">
-                <h1 class="h3 fw-bold mb-2"><spring:message code="myListingDetail.heading"/></h1>
-                <p class="text-secondary mb-0"><spring:message code="myListingDetail.subheading"/></p>
+                <h1 class="h3 fw-bold mb-2"><spring:message code="myCarDetail.heading"/></h1>
+                <p class="text-secondary mb-0"><spring:message code="myCarDetail.subheading"/></p>
             </section>
 
-            <c:if test="${not empty listingToggleErrorMessage}">
+            <c:if test="${not empty carToggleErrorMessage}">
                 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <c:out value="${listingToggleErrorMessage}"/>
+                    <c:out value="${carToggleErrorMessage}"/>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             </c:if>
@@ -54,13 +54,13 @@
                     <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                         <div class="card-body p-4">
                             <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingDetail.carSummary.title"/></h2>
-                                <c:if test="${statusKey != 'FINISHED'}">
+                                <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarDetail.carSummary.title"/></h2>
+                                <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
                                 <button type="button"
                                         class="btn btn-outline-primary btn-sm"
                                         id="toggleEditBtn">
                                     <i class="bi bi-pencil me-1" aria-hidden="true"></i>
-                                    <spring:message code="myListingDetail.actions.editListing"/>
+                                    <spring:message code="myCarDetail.actions.editListing"/>
                                 </button>
                                 </c:if>
                             </div>
@@ -87,33 +87,33 @@
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
                                     </div>
                                     <p class="mb-2 text-secondary small">
-                                        <spring:message code="myListingDetail.details.createdAt"/>: <c:out value="${listingCreatedAtDisplay}"/>
+                                        <spring:message code="myCarDetail.details.createdAt"/>: <c:out value="${carCreatedAtDisplay}"/>
                                     </p>
-                                    <c:if test="${not empty listingStreetName}">
+                                    <c:if test="${not empty carStreetName}">
                                         <div class="mb-2 small text-secondary">
                                             <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
-                                            <c:if test="${not empty listingNeighborhoodName}"><c:out value="${listingNeighborhoodName}"/>, </c:if>
-                                            <c:out value="${listingStreetName}"/>
-                                            <c:if test="${not empty listingStreetNumber}"> <c:out value="${listingStreetNumber}"/></c:if>
+                                            <c:if test="${not empty carNeighborhoodName}"><c:out value="${carNeighborhoodName}"/>, </c:if>
+                                            <c:out value="${carStreetName}"/>
+                                            <c:if test="${not empty carStreetNumber}"> <c:out value="${carStreetNumber}"/></c:if>
                                         </div>
                                     </c:if>
                                     <div class="d-flex align-items-center gap-2 mt-1 pt-2 border-top">
                                         <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                            <spring:message code="myListingDetail.pricePerDay"/>
+                                            <spring:message code="myCarDetail.pricePerDay"/>
                                         </span>
                                         <fmt:setLocale value="es_AR"/>
-                                        <span class="h4 fw-bold text-primary mb-0"><fmt:formatNumber value="${listingDayPrice}" type="currency" currencyCode="ARS"/></span>
+                                        <span class="h4 fw-bold text-primary mb-0"><fmt:formatNumber value="${carDayPrice}" type="currency" currencyCode="ARS"/></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </article>
 
-                    <c:if test="${statusKey != 'FINISHED'}">
+                    <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
                     <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="editListingSection"
                              style="${hasEditErrors ? '' : 'display:none;'}">
                         <div class="card-body p-4">
-                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.edit.title"/></h2>
+                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myCarDetail.edit.title"/></h2>
                             <spring:message code="validation.neighborhood.invalid" var="editNbInvalidMsg" htmlEscape="true"/>
                             <spring:message code="validation.neighborhood.notNull" var="editNbRequiredMsg" htmlEscape="true"/>
                             <form:form id="editListingFormEl" method="post"
@@ -129,7 +129,7 @@
                                 <div class="col-sm-6">
                                     <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
                                     <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
-                                                                  initialUserPrice="${not empty editForm.pricePerDay ? editForm.pricePerDay : listingDayPrice}"
+                                                                  initialUserPrice="${not empty editForm.pricePerDay ? editForm.pricePerDay : carDayPrice}"
                                                                   showDefaultPriceHint="true">
                                         <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
                                     </ryden:priceMarketInsightCard>
@@ -201,11 +201,11 @@
                                             <div class="border rounded-3 p-3 mb-2 bg-light">
                                                 <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
                                                     <span class="small text-secondary"><c:out value="${editPeriodLabel}"/></span>
-                                                    <span class="badge text-bg-secondary"><spring:message code="myListingDetail.availability.past.badge"/></span>
+                                                    <span class="badge text-bg-secondary"><spring:message code="myCarDetail.availability.past.badge"/></span>
                                                 </div>
                                                 <input type="text" class="form-control form-control-sm"
                                                        value="<c:out value='${pastRow.startInclusive}'/> – <c:out value='${pastRow.endInclusive}'/>"
-                                                       disabled aria-label="<spring:message code='myListingDetail.availability.past.badge'/>"/>
+                                                       disabled aria-label="<spring:message code='myCarDetail.availability.past.badge'/>"/>
                                             </div>
                                         </c:forEach>
                                     </c:if>
@@ -227,7 +227,7 @@
                                                        placeholder="<c:out value='${editDateRangePh}'/>" aria-label="Availability date range"/>
                                                 <c:if test="${isPastStart}">
                                                     <small class="text-muted d-block mt-1">
-                                                        <spring:message code="myListingDetail.availability.pastStart.hint"/>
+                                                        <spring:message code="myCarDetail.availability.pastStart.hint"/>
                                                     </small>
                                                 </c:if>
                                                 <form:hidden path="availabilityRows[${st.index}].from" cssClass="ryden-avail-from"/>
@@ -282,7 +282,7 @@
                                         <spring:message code="common.cancel"/>
                                     </button>
                                     <button type="submit" class="btn btn-primary">
-                                        <spring:message code="myListingDetail.actions.modify"/>
+                                        <spring:message code="myCarDetail.actions.modify"/>
                                     </button>
                                 </div>
                             </form:form>
@@ -293,10 +293,10 @@
                     <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="availabilityDisplaySection"
                              style="${hasEditErrors ? 'display:none;' : ''}">
                         <div class="card-body p-4">
-                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.availability.title"/></h2>
+                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myCarDetail.availability.title"/></h2>
                             <c:choose>
                                 <c:when test="${empty availabilities}">
-                                    <p class="text-secondary mb-0"><spring:message code="myListingDetail.availability.empty"/></p>
+                                    <p class="text-secondary mb-0"><spring:message code="myCarDetail.availability.empty"/></p>
                                 </c:when>
                                 <c:otherwise>
                                     <div class="d-flex flex-column gap-2">
@@ -322,48 +322,86 @@
                 <div class="col-lg-4">
                     <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky bg-white">
                         <div class="card-body p-4">
-                            <spring:message code="enum.listing.status.${statusKey}" var="listingStatusLabel"/>
+                            <spring:message code="enum.car.status.${statusKey}" var="carStatusLabel"/>
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingDetail.status.label"/>
+                                    <spring:message code="myCarDetail.status.label"/>
                                 </span>
                                 <c:choose>
                                     <c:when test="${statusKey == 'ACTIVE'}">
-                                        <span class="badge text-bg-success fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                                        <span class="badge text-bg-success fs-6 px-3 py-2"><c:out value="${carStatusLabel}"/></span>
                                     </c:when>
-                                    <c:when test="${statusKey == 'PAUSED' || statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
-                                        <span class="badge text-bg-warning text-dark fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                                    <c:when test="${statusKey == 'PAUSED' || statusKey == 'LACK_DOC'}">
+                                        <span class="badge text-bg-warning text-dark fs-6 px-3 py-2"><c:out value="${carStatusLabel}"/></span>
                                     </c:when>
-                                    <c:when test="${statusKey == 'FINISHED'}">
-                                        <span class="badge text-bg-secondary fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                                    <c:when test="${statusKey == 'ADMIN_PAUSED'}">
+                                        <span class="badge text-bg-danger fs-6 px-3 py-2"><c:out value="${carStatusLabel}"/></span>
+                                    </c:when>
+                                    <c:when test="${statusKey == 'DEACTIVATED'}">
+                                        <span class="badge text-bg-secondary fs-6 px-3 py-2"><c:out value="${carStatusLabel}"/></span>
                                     </c:when>
                                     <c:otherwise>
-                                        <span class="badge text-bg-light border fs-6 px-3 py-2"><c:out value="${listingStatusLabel}"/></span>
+                                        <span class="badge text-bg-light border fs-6 px-3 py-2"><c:out value="${carStatusLabel}"/></span>
                                     </c:otherwise>
                                 </c:choose>
                             </div>
 
                             <div class="d-flex flex-column gap-3 px-2">
-                                <c:url var="listingUrl" value="/car-detail">
+                                <c:url var="carDetailUrl" value="/car-detail">
                                     <c:param name="carId"><c:out value="${car.id}"/></c:param>
                                 </c:url>
-                                <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
-                                    <i class="bi bi-eye me-2"></i><spring:message code="myListingDetail.actions.viewListing"/>
+                                <a href="<c:out value='${carDetailUrl}'/>" class="btn btn-outline-warm w-100">
+                                    <i class="bi bi-eye me-2"></i><spring:message code="myCarDetail.actions.viewListing"/>
                                 </a>
 
-                                <spring:message code="myListingDetail.actions.finish" var="finishBtnLabel"/>
-                                <spring:message code="myListingDetail.finishModal.title" var="finishModalTitle"/>
-                                <spring:message code="myListingDetail.finishModal.message" var="finishModalMessage"/>
-                                <spring:message code="myListingDetail.finishModal.confirm" var="finishModalConfirm"/>
-                                <spring:message code="myListingDetail.finishModal.back" var="finishModalBack"/>
+                                <%-- Insurance document section: shows current state and lets the owner (re)upload. --%>
+                                <c:set var="carHasInsurance" value="${car.insuranceFileId.present}"/>
+                                <c:url var="carInsuranceUrl" value="/my-cars/car/${car.id}/insurance"/>
+                                <div class="border rounded-3 p-3 mt-1 bg-light">
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <c:choose>
+                                            <c:when test="${carHasInsurance}">
+                                                <i class="bi bi-shield-check text-success fs-5" aria-hidden="true"></i>
+                                                <span class="fw-semibold"><spring:message code="myCarDetail.insurance.uploaded"/></span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <i class="bi bi-shield-exclamation text-warning fs-5" aria-hidden="true"></i>
+                                                <span class="fw-semibold"><spring:message code="myCarDetail.insurance.missing"/></span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </div>
+                                    <p class="small text-secondary mb-2"><spring:message code="myCarDetail.insurance.hint" arguments="${uploadMaxProfileDocumentMegabytes}"/></p>
+                                    <c:if test="${not empty carInsuranceErrorMessage}">
+                                        <div class="alert alert-danger py-2 mb-2 small" role="alert">
+                                            <c:out value="${carInsuranceErrorMessage}"/>
+                                        </div>
+                                    </c:if>
+                                    <form method="post" action="<c:out value='${carInsuranceUrl}'/>" enctype="multipart/form-data" class="d-flex flex-column gap-2">
+                                        <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
+                                        <input type="file" name="insuranceFile" accept="application/pdf,image/*" class="form-control form-control-sm" required/>
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-upload me-1" aria-hidden="true"></i>
+                                            <c:choose>
+                                                <c:when test="${carHasInsurance}"><spring:message code="myCarDetail.insurance.replace"/></c:when>
+                                                <c:otherwise><spring:message code="myCarDetail.insurance.upload"/></c:otherwise>
+                                            </c:choose>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <spring:message code="myCarDetail.actions.finish" var="finishBtnLabel"/>
+                                <spring:message code="myCarDetail.finishModal.title" var="finishModalTitle"/>
+                                <spring:message code="myCarDetail.finishModal.message" var="finishModalMessage"/>
+                                <spring:message code="myCarDetail.finishModal.confirm" var="finishModalConfirm"/>
+                                <spring:message code="myCarDetail.finishModal.back" var="finishModalBack"/>
 
                                 <c:choose>
                                     <c:when test="${statusKey == 'ACTIVE'}">
-                                        <spring:message code="myListingDetail.pauseModal.title" var="pauseModalTitle"/>
-                                        <spring:message code="myListingDetail.pauseModal.message" var="pauseModalMessage"/>
-                                        <spring:message code="myListingDetail.pauseModal.confirm" var="pauseModalConfirm"/>
-                                        <spring:message code="myListingDetail.pauseModal.back" var="pauseModalBack"/>
-                                        <spring:message code="myListingDetail.actions.pause" var="pauseBtnLabel"/>
+                                        <spring:message code="myCarDetail.pauseModal.title" var="pauseModalTitle"/>
+                                        <spring:message code="myCarDetail.pauseModal.message" var="pauseModalMessage"/>
+                                        <spring:message code="myCarDetail.pauseModal.confirm" var="pauseModalConfirm"/>
+                                        <spring:message code="myCarDetail.pauseModal.back" var="pauseModalBack"/>
+                                        <spring:message code="myCarDetail.actions.pause" var="pauseBtnLabel"/>
                                         <button type="button" class="btn btn-pause w-100" data-modal-open="pauseListingModal" aria-label="<c:out value='${pauseBtnLabel}'/>">
                                             <i class="bi bi-pause-fill me-2"></i><c:out value="${pauseBtnLabel}"/>
                                         </button>
@@ -374,28 +412,33 @@
                                     <c:when test="${statusKey == 'PAUSED'}">
                                         <form method="post" action="<c:out value='${toggleListingUrl}'/>">
                                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                            <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myListingDetail.actions.activate'/>">
-                                                <i class="bi bi-play-fill me-2"></i><spring:message code="myListingDetail.actions.activate"/>
+                                            <button type="submit" class="btn btn-success w-100" aria-label="<spring:message code='myCarDetail.actions.activate'/>">
+                                                <i class="bi bi-play-fill me-2"></i><spring:message code="myCarDetail.actions.activate"/>
                                             </button>
                                         </form>
                                         <button type="button" class="btn btn-outline-danger w-100" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
                                             <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                         </button>
                                     </c:when>
-                                    <c:when test="${statusKey == 'PAUSED_DUE_TO_LACK_OF_CBU'}">
+                                    <c:when test="${statusKey == 'LACK_DOC'}">
                                         <p class="text-secondary small mb-2">
-                                            <spring:message code="myListingDetail.status.pausedMissingCbuHint" arguments="${cbuRequiredDigits}"/>
+                                            <spring:message code="myCarDetail.status.pausedMissingCbuHint" arguments="${cbuRequiredDigits}"/>
                                         </p>
                                         <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
-                                            <i class="bi bi-person-fill me-2"></i><spring:message code="myListingDetail.status.pausedMissingCbuCta"/>
+                                            <i class="bi bi-person-fill me-2"></i><spring:message code="myCarDetail.status.pausedMissingCbuCta"/>
                                         </a>
                                         <button type="button" class="btn btn-outline-danger w-100" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
                                             <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
                                         </button>
                                     </c:when>
-                                    <c:when test="${statusKey == 'FINISHED'}">
+                                    <c:when test="${statusKey == 'ADMIN_PAUSED'}">
                                         <p class="text-secondary small mb-0">
-                                            <spring:message code="myListingDetail.status.finishedHint"/>
+                                            <spring:message code="myCarDetail.status.adminPausedHint"/>
+                                        </p>
+                                    </c:when>
+                                    <c:when test="${statusKey == 'DEACTIVATED'}">
+                                        <p class="text-secondary small mb-0">
+                                            <spring:message code="myCarDetail.status.finishedHint"/>
                                         </p>
                                     </c:when>
                                 </c:choose>
@@ -405,14 +448,14 @@
                 </div>
             </div>
 
-            <c:url var="listingReservationsUrl" value="/my-cars/car/${car.id}/reservations"/>
+            <c:url var="carReservationsUrl" value="/my-cars/car/${car.id}/reservations"/>
             <article class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-                        <h2 class="h5 fw-semibold mb-0"><spring:message code="myListingReservations.dashboard.title"/></h2>
+                        <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarReservations.dashboard.title"/></h2>
                         <c:if test="${reservationTotal > 0}">
-                            <a href="<c:out value='${listingReservationsUrl}'/>" class="btn btn-outline-primary btn-sm">
-                                <spring:message code="myListingReservations.dashboard.viewAll"/>
+                            <a href="<c:out value='${carReservationsUrl}'/>" class="btn btn-outline-primary btn-sm">
+                                <spring:message code="myCarReservations.dashboard.viewAll"/>
                             </a>
                         </c:if>
                     </div>
@@ -421,37 +464,37 @@
                         <div class="col-6 col-sm-4 col-lg-2">
                             <div class="p-3 rounded-3 text-center bg-white border">
                                 <div class="fw-bold fs-4 mb-0"><c:out value="${reservationTotal}"/></div>
-                                <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.total"/></div>
+                                <div class="small text-secondary mt-1"><spring:message code="myCarReservations.dashboard.total"/></div>
                             </div>
                         </div>
                         <div class="col-6 col-sm-4 col-lg-2">
                             <div class="p-3 rounded-3 text-center" style="background:rgba(255,193,7,.12);">
                                 <div class="fw-bold fs-4 mb-0 text-warning-emphasis"><c:out value="${reservationStatusCounts['pending'] != null ? reservationStatusCounts['pending'] : 0}"/></div>
-                                <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.pending"/></div>
+                                <div class="small text-secondary mt-1"><spring:message code="myCarReservations.dashboard.status.pending"/></div>
                             </div>
                         </div>
                         <div class="col-6 col-sm-4 col-lg-2">
                             <div class="p-3 rounded-3 text-center" style="background:rgba(25,135,84,.1);">
                                 <div class="fw-bold fs-4 mb-0 text-success"><c:out value="${reservationStatusCounts['accepted'] != null ? reservationStatusCounts['accepted'] : 0}"/></div>
-                                <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.accepted"/></div>
+                                <div class="small text-secondary mt-1"><spring:message code="myCarReservations.dashboard.status.accepted"/></div>
                             </div>
                         </div>
                         <div class="col-6 col-sm-4 col-lg-2">
                             <div class="p-3 rounded-3 text-center" style="background:rgba(13,202,240,.1);">
                                 <div class="fw-bold fs-4 mb-0 text-info"><c:out value="${reservationStatusCounts['started'] != null ? reservationStatusCounts['started'] : 0}"/></div>
-                                <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.started"/></div>
+                                <div class="small text-secondary mt-1"><spring:message code="myCarReservations.dashboard.status.started"/></div>
                             </div>
                         </div>
                         <div class="col-6 col-sm-4 col-lg-2">
                             <div class="p-3 rounded-3 text-center" style="background:rgba(220,53,69,.1);">
                                 <div class="fw-bold fs-4 mb-0 text-danger"><c:out value="${reservationStatusCounts['cancelled'] != null ? reservationStatusCounts['cancelled'] : 0}"/></div>
-                                <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.cancelled"/></div>
+                                <div class="small text-secondary mt-1"><spring:message code="myCarReservations.dashboard.status.cancelled"/></div>
                             </div>
                         </div>
                         <div class="col-6 col-sm-4 col-lg-2">
                             <div class="p-3 rounded-3 text-center" style="background:rgba(108,117,125,.1);">
                                 <div class="fw-bold fs-4 mb-0 text-secondary"><c:out value="${reservationStatusCounts['finished'] != null ? reservationStatusCounts['finished'] : 0}"/></div>
-                                <div class="small text-secondary mt-1"><spring:message code="myListingReservations.dashboard.status.finished"/></div>
+                                <div class="small text-secondary mt-1"><spring:message code="myCarReservations.dashboard.status.finished"/></div>
                             </div>
                         </div>
                     </div>
@@ -460,54 +503,54 @@
                         <div class="col-sm-6 col-md-4">
                             <div class="d-flex flex-column gap-1">
                                 <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingReservations.dashboard.earnings.total"/>
+                                    <spring:message code="myCarReservations.dashboard.earnings.total"/>
                                 </span>
-                                <span class="fw-bold fs-5 text-primary"><c:out value="${listingTotalEarnings}"/></span>
+                                <span class="fw-bold fs-5 text-primary"><c:out value="${carTotalEarnings}"/></span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4">
                             <div class="d-flex flex-column gap-1">
                                 <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingReservations.dashboard.earnings.pending"/>
+                                    <spring:message code="myCarReservations.dashboard.earnings.pending"/>
                                 </span>
-                                <span class="fw-bold fs-5 text-warning-emphasis"><c:out value="${listingPendingEarnings}"/></span>
+                                <span class="fw-bold fs-5 text-warning-emphasis"><c:out value="${carPendingEarnings}"/></span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4">
                             <div class="d-flex flex-column gap-1">
                                 <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingReservations.dashboard.daysRented"/>
+                                    <spring:message code="myCarReservations.dashboard.daysRented"/>
                                 </span>
-                                <span class="fw-bold fs-5"><c:out value="${listingTotalDaysRented}"/></span>
+                                <span class="fw-bold fs-5"><c:out value="${carTotalDaysRented}"/></span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4">
                             <div class="d-flex flex-column gap-1">
                                 <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingReservations.dashboard.thisMonth"/>
+                                    <spring:message code="myCarReservations.dashboard.thisMonth"/>
                                 </span>
-                                <span class="fw-bold fs-5"><c:out value="${listingReservationsThisMonth}"/></span>
+                                <span class="fw-bold fs-5"><c:out value="${carReservationsThisMonth}"/></span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4">
                             <div class="d-flex flex-column gap-1">
                                 <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingReservations.dashboard.cancellationRate"/>
+                                    <spring:message code="myCarReservations.dashboard.cancellationRate"/>
                                 </span>
-                                <span class="fw-bold fs-5"><c:out value="${listingCancellationRate}"/></span>
+                                <span class="fw-bold fs-5"><c:out value="${carCancellationRate}"/></span>
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4">
                             <div class="d-flex flex-column gap-1">
                                 <span class="small text-secondary text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                    <spring:message code="myListingReservations.dashboard.nextReservation"/>
+                                    <spring:message code="myCarReservations.dashboard.nextReservation"/>
                                 </span>
                                 <c:choose>
-                                    <c:when test="${not empty listingNextReservationDisplay}">
-                                        <span class="fw-bold fs-5 text-success"><c:out value="${listingNextReservationDisplay}"/></span>
+                                    <c:when test="${not empty carNextReservationDisplay}">
+                                        <span class="fw-bold fs-5 text-success"><c:out value="${carNextReservationDisplay}"/></span>
                                     </c:when>
                                     <c:otherwise>
-                                        <span class="text-secondary fst-italic small mt-1"><spring:message code="myListingReservations.dashboard.nextReservation.none"/></span>
+                                        <span class="text-secondary fst-italic small mt-1"><spring:message code="myCarReservations.dashboard.nextReservation.none"/></span>
                                     </c:otherwise>
                                 </c:choose>
                             </div>
@@ -533,7 +576,7 @@
                     </div>
                 </form>
             </ryden:modal>
-            <c:if test="${statusKey != 'FINISHED'}">
+            <c:if test="${statusKey == 'ACTIVE' || statusKey == 'PAUSED' || statusKey == 'LACK_DOC'}">
                 <ryden:modal
                         id="finishListingModal"
                         title="${finishModalTitle}"
@@ -589,7 +632,7 @@
                 <div class="col-lg-8">
                     <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                         <div class="card-body p-4">
-                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myListingDetail.carSummary.title"/></h2>
+                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myCarDetail.carSummary.title"/></h2>
                             <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
                                 <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
                                     <i class="bi bi-car-front fs-1" aria-hidden="true"></i>

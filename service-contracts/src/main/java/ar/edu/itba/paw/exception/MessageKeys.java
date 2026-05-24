@@ -43,6 +43,8 @@ public final class MessageKeys {
     public static final String REVIEW_RATING_REQUIRED_WHEN_COMMENT = "review.rating.requiredWhenComment";
     public static final String REVIEW_COMMENT_TOO_LONG = "review.comment.tooLong";
     public static final String RESERVATION_RIDER_OUTSIDE_AVAILABILITY = "reservation.rider.outsideAvailability";
+    public static final String RESERVATION_RIDER_HANDOVER_TIME_MISMATCH =
+            "reservation.rider.handoverTimeMismatch";
     public static final String RESERVATION_RIDER_MAX_BILLABLE_DAYS = "reservation.rider.maxBillableDays";
     public static final String RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING =
             "reservation.rider.cannotReserveOwnListing";
@@ -111,4 +113,5 @@ public final class MessageKeys {
     // publish form
     public static final String PUBLISH_IMAGES_READ = "publish.images.read";
     public static final String PUBLISH_FAILED = "publish.failed";
+    public static final String PUBLISH_PREREQUISITES_MISSING = "publish.prerequisites.missing";
 }

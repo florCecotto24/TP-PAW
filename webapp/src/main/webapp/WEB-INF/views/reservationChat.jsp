@@ -31,23 +31,23 @@
 
     <c:url var="detailUrl" value="/my-reservations/${reservationId}">
         <c:param name="role" value="${reservationRole}"/>
-        <c:if test="${not empty fromListing}">
-            <c:param name="fromListing" value="${fromListing}"/>
+        <c:if test="${not empty fromCar}">
+            <c:param name="fromCar" value="${fromCar}"/>
         </c:if>
     </c:url>
 
     <c:url var="counterpartyProfileUrl" value="/my-reservations/${reservationId}/counterparty-profile">
         <c:param name="role" value="${reservationRole}"/>
-        <c:if test="${not empty reservationDetailOwnerListingHubId}">
-            <c:param name="fromListing" value="${reservationDetailOwnerListingHubId}"/>
+        <c:if test="${not empty reservationDetailOwnerCarHubId}">
+            <c:param name="fromCar" value="${reservationDetailOwnerCarHubId}"/>
         </c:if>
-        <c:if test="${empty reservationDetailOwnerListingHubId and not empty fromListing}">
-            <c:param name="fromListing" value="${fromListing}"/>
+        <c:if test="${empty reservationDetailOwnerCarHubId and not empty fromCar}">
+            <c:param name="fromCar" value="${fromCar}"/>
         </c:if>
     </c:url>
 
     <c:choose>
-        <c:when test="${not empty reservationDetailOwnerListingHubId}">
+        <c:when test="${not empty reservationDetailOwnerCarHubId}">
             <spring:message code="myListings.tab.reservations" var="bcHomeLabel"/>
             <c:url var="bcHomeHref" value="/my-cars">
                 <c:param name="tab" value="reservations"/>
@@ -55,7 +55,7 @@
             <ryden:breadcrumbTrail
                     homeLabel="${bcHomeLabel}"
                     homeHref="${bcHomeHref}"
-                    midLabel="${listingTitle}"
+                    midLabel="${vehicleLabel}"
                     midHref="${detailUrl}"
                     currentLabel="${chatPageTitle}"/>
         </c:when>
@@ -64,7 +64,7 @@
             <ryden:breadcrumbTrail
                     homeLabel="${myReservationsLabel}"
                     homeHref="${pageContext.request.contextPath}/my-reservations"
-                    midLabel="${listingTitle}"
+                    midLabel="${vehicleLabel}"
                     midHref="${detailUrl}"
                     currentLabel="${chatPageTitle}"/>
         </c:otherwise>

@@ -9,8 +9,8 @@ import java.util.function.BiConsumer;
 public final class ReservationChatPageModel {
 
     private final long reservationId;
-    private final long listingId;
-    private final String listingTitle;
+    private final long carId;
+    private final String vehicleLabel;
     private final String reservationRole;
     private final String counterpartyDisplayName;
     private final Long counterpartyProfileImageId;
@@ -20,8 +20,8 @@ public final class ReservationChatPageModel {
 
     public ReservationChatPageModel(
             final long reservationId,
-            final long listingId,
-            final String listingTitle,
+            final long carId,
+            final String vehicleLabel,
             final String reservationRole,
             final String counterpartyDisplayName,
             final Long counterpartyProfileImageId,
@@ -29,8 +29,8 @@ public final class ReservationChatPageModel {
             final int chatMessageMaxLength,
             final int chatMaxAttachmentMegabytes) {
         this.reservationId = reservationId;
-        this.listingId = listingId;
-        this.listingTitle = listingTitle;
+        this.carId = carId;
+        this.vehicleLabel = vehicleLabel;
         this.reservationRole = reservationRole;
         this.counterpartyDisplayName = counterpartyDisplayName;
         this.counterpartyProfileImageId = counterpartyProfileImageId;
@@ -43,8 +43,8 @@ public final class ReservationChatPageModel {
         return reservationId;
     }
 
-    public long getListingId() {
-        return listingId;
+    public long getCarId() {
+        return carId;
     }
 
     public Long getCounterpartyProfileImageId() {
@@ -53,8 +53,8 @@ public final class ReservationChatPageModel {
 
     public final void populateModel(final BiConsumer<String, Object> putObject) {
         putObject.accept("reservationId", reservationId);
-        putObject.accept("listingId", listingId);
-        putObject.accept("listingTitle", listingTitle);
+        putObject.accept("carId", carId);
+        putObject.accept("vehicleLabel", vehicleLabel);
         putObject.accept("reservationRole", reservationRole);
         putObject.accept("counterpartyDisplayName", counterpartyDisplayName);
         putObject.accept("counterpartyProfileImageId", counterpartyProfileImageId);

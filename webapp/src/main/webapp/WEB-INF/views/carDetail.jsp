@@ -26,9 +26,8 @@
         <div class="flex-grow-1 min-w-0">
             <h1 class="h2 fw-bold mb-0"><c:out value="${carTitle}"/></h1>
             <ryden:detailListingMeta
-                    location="${carPublicLocation}"
-                    rating="${listingRatingLabel}"
-                    reviewCount="${listingReviewCountLabel}"/>
+                    rating="${carRatingLabel}"
+                    reviewCount="${carReviewCountLabel}"/>
         </div>
     </div>
 
@@ -69,7 +68,7 @@
                     </span>
                 </a>
             </div>
-            <c:if test="${not empty car.description}">
+            <c:if test="${car.description.present}">
                 <section>
                     <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.description"/></h2>
                     <p class="mb-0 ryden-multiline-plaintext"><c:out value="${car.description.get()}"/></p>
@@ -96,12 +95,12 @@
             <section class="mt-4 pt-4 border-top border-secondary-subtle" id="listing-reviews">
                 <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.reviews.title"/></h2>
                 <c:choose>
-                    <c:when test="${empty listingReviewPage.content}">
+                    <c:when test="${empty carReviewPage.content}">
                         <p class="text-secondary mb-0"><spring:message code="carDetail.reviews.empty"/></p>
                     </c:when>
                     <c:otherwise>
                         <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
-                            <c:forEach var="row" items="${listingReviewPage.content}">
+                            <c:forEach var="row" items="${carReviewPage.content}">
                                 <div class="col">
                                     <ryden:reviewCard
                                             forename="${row.reviewerForename}"
@@ -112,30 +111,30 @@
                                 </div>
                             </c:forEach>
                         </div>
-                        <c:if test="${listingReviewPage.totalPages > 1}">
+                        <c:if test="${carReviewPage.totalPages > 1}">
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
                                 <c:url var="reviewsPrevUrl" value="/car-detail">
                                     <c:param name="carId" value="${car.id}"/>
-                                    <c:param name="reviewPage" value="${listingReviewPage.currentPage - 1}"/>
+                                    <c:param name="reviewPage" value="${carReviewPage.currentPage - 1}"/>
                                     <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
                                 </c:url>
                                 <c:url var="reviewsNextUrl" value="/car-detail">
                                     <c:param name="carId" value="${car.id}"/>
-                                    <c:param name="reviewPage" value="${listingReviewPage.currentPage + 1}"/>
+                                    <c:param name="reviewPage" value="${carReviewPage.currentPage + 1}"/>
                                     <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
                                 </c:url>
-                                <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasPrevious ? '' : ' disabled'}"
-                                   href="${listingReviewPage.hasPrevious ? reviewsPrevUrl : '#'}"
-                                   aria-disabled="${listingReviewPage.hasPrevious ? 'false' : 'true'}">
+                                <a class="btn btn-outline-secondary btn-sm${carReviewPage.hasPrevious ? '' : ' disabled'}"
+                                   href="${carReviewPage.hasPrevious ? reviewsPrevUrl : '#'}"
+                                   aria-disabled="${carReviewPage.hasPrevious ? 'false' : 'true'}">
                                     <spring:message code="carDetail.reviews.prev"/>
                                 </a>
                                 <span class="text-secondary small">
                                     <spring:message code="carDetail.reviews.pageIndicator"
-                                                    arguments="${listingReviewPage.currentPage + 1},${listingReviewPage.totalPages}"/>
+                                                    arguments="${carReviewPage.currentPage + 1},${carReviewPage.totalPages}"/>
                                 </span>
-                                <a class="btn btn-outline-secondary btn-sm${listingReviewPage.hasNext ? '' : ' disabled'}"
-                                   href="${listingReviewPage.hasNext ? reviewsNextUrl : '#'}"
-                                   aria-disabled="${listingReviewPage.hasNext ? 'false' : 'true'}">
+                                <a class="btn btn-outline-secondary btn-sm${carReviewPage.hasNext ? '' : ' disabled'}"
+                                   href="${carReviewPage.hasNext ? reviewsNextUrl : '#'}"
+                                   aria-disabled="${carReviewPage.hasNext ? 'false' : 'true'}">
                                     <spring:message code="carDetail.reviews.next"/>
                                 </a>
                             </div>
@@ -150,15 +149,12 @@
             <div class="detail-reservation-sticky">
                 <ryden:detailReservationPanel
                         carId="${car.id}"
-                        dailyPrice="${listingMinEffectiveDayPrice}"
-                        priceFrom="${listingPriceIsVariable}"
-                        deliveryLocation="${carPublicLocation}"
+                        dailyPrice="${carMinEffectiveDayPrice}"
+                        priceFrom="${carPriceIsVariable}"
                         fromDateTimeValue="${reservationFromDefault}"
                         untilDateTimeValue="${reservationUntilDefault}"
                         bookableWallRangesJson="${bookableWallRangesJson}"
                         carName="${carTitle}"
-                        pickupTime="${checkInTime}"
-                        returnTime="${checkOutTime}"
                         maxBillableDays="${maxReservationBillableDays}"
                         isOwnerRequesting="${isOwnerRequesting}"/>
             </div>

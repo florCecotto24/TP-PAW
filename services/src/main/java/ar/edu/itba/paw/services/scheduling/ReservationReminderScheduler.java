@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.services.scheduling;
 
-import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.EmailService;
 import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
@@ -37,7 +36,6 @@ public final class ReservationReminderScheduler {
     private final ReservationService reservationService;
     private final ListingAvailabilityService listingAvailabilityService;
     private final ListingAddressFormatter listingAddressFormatter;
-    private final CarService carService;
     private final UserService userService;
     private final EmailService emailService;
 
@@ -46,13 +44,11 @@ public final class ReservationReminderScheduler {
             final ReservationService reservationService,
             final ListingAvailabilityService listingAvailabilityService,
             final ListingAddressFormatter listingAddressFormatter,
-            final CarService carService,
             final UserService userService,
             final EmailService emailService) {
         this.reservationService = reservationService;
         this.listingAvailabilityService = listingAvailabilityService;
         this.listingAddressFormatter = listingAddressFormatter;
-        this.carService = carService;
         this.userService = userService;
         this.emailService = emailService;
     }
@@ -105,7 +101,7 @@ public final class ReservationReminderScheduler {
                         .recipientEmail(rider.getEmail())
                         .riderFullName(rider.getForename() + " " + rider.getSurname())
                         .reservationId(reservation.getId())
-                        .listingId(car.getId())
+                        .carId(car.getId())
                         .vehicleLabel(vehicleLabel.trim())
                         .startDate(reservation.getStartDate())
                         .endDate(reservation.getEndDate())

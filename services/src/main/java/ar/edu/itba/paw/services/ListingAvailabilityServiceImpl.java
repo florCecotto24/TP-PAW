@@ -1,18 +1,19 @@
 package ar.edu.itba.paw.services;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.listing.AvailabilityRiderLeadViolationException;
-import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException;
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
 import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
+import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,62 +43,26 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     private final ReservationService reservationService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final ListingAvailabilityPolicy listingAvailabilityPolicy;
+    private final ListingAddressFormatter listingAddressFormatter;
 
     @Autowired
     public ListingAvailabilityServiceImpl(
             final ListingAvailabilityDao listingAvailabilityDao,
             @Lazy final ReservationService reservationService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            final ListingAvailabilityPolicy listingAvailabilityPolicy) {
+            final ListingAvailabilityPolicy listingAvailabilityPolicy,
+            final ListingAddressFormatter listingAddressFormatter) {
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.reservationService = reservationService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.listingAvailabilityPolicy = listingAvailabilityPolicy;
-    }
-
-    @Override
-    @Transactional
-    public ListingAvailability create(final long listingId, final LocalDate startInclusive,
-            final LocalDate endInclusive, final BigDecimal dayPrice) {
-        return listingAvailabilityDao.create(listingId, startInclusive, endInclusive, dayPrice);
+        this.listingAddressFormatter = listingAddressFormatter;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<ListingAvailability> findById(final long availabilityId) {
         return listingAvailabilityDao.findById(availabilityId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ListingAvailability> findByListingId(final long listingId) {
-        return listingAvailabilityDao.findByListingId(listingId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ListingAvailability> findByListingIdsEndingOnOrAfter(
-            final Collection<Long> listingIds,
-            final LocalDate minEndDate) {
-        return listingAvailabilityDao.findByListingIdsEndingOnOrAfter(listingIds, minEndDate);
-    }
-
-    @Override
-    @Transactional
-    public void deleteByListingId(final long listingId) {
-        listingAvailabilityDao.deleteByListingId(listingId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<ListingAvailability> findEffectiveForDay(final long listingId, final LocalDate day) {
-        return listingAvailabilityDao.findEffectiveForDay(listingId, day);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ListingAvailability> findOverlappingRange(final long listingId, final LocalDate from, final LocalDate to) {
-        return listingAvailabilityDao.findOverlappingRange(listingId, from, to);
     }
 
     @Override
@@ -167,78 +133,6 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
 
     @Override
     @Transactional
-    public ListingAvailability applyOwnerEdit(
-            final long listingId,
-            final LocalDate oldStartInclusive,
-            final LocalDate oldEndInclusive,
-            final LocalDate newStartInclusive,
-            final LocalDate newEndInclusive,
-            final BigDecimal dayPrice,
-            final String startPointStreet,
-            final String startPointNumber,
-            final Long neighborhoodId,
-            final LocalTime checkInTime,
-            final LocalTime checkOutTime) {
-        Objects.requireNonNull(oldStartInclusive, "oldStartInclusive");
-        Objects.requireNonNull(oldEndInclusive, "oldEndInclusive");
-        Objects.requireNonNull(newStartInclusive, "newStartInclusive");
-        Objects.requireNonNull(newEndInclusive, "newEndInclusive");
-        if (newEndInclusive.isBefore(newStartInclusive)) {
-            throw new IllegalArgumentException("newEndInclusive before newStartInclusive");
-        }
-
-        final List<DateRange> removed = subtractDayRange(oldStartInclusive, oldEndInclusive,
-                newStartInclusive, newEndInclusive);
-
-        rejectIfReservationsOverlapAnyChunk(listingId, removed, MessageKeys.LISTING_AVAILABILITY_EDIT_CONFLICT);
-
-        final ListingAvailability offered = listingAvailabilityDao.createFull(
-                listingId, newStartInclusive, newEndInclusive, dayPrice,
-                startPointStreet, startPointNumber, neighborhoodId,
-                checkInTime, checkOutTime, ListingAvailability.Kind.OFFERED);
-
-        for (final DateRange chunk : removed) {
-            listingAvailabilityDao.createFull(
-                    listingId, chunk.start, chunk.end, dayPrice,
-                    startPointStreet, startPointNumber, neighborhoodId,
-                    checkInTime, checkOutTime, ListingAvailability.Kind.WITHDRAWN);
-        }
-
-        return offered;
-    }
-
-    @Override
-    @Transactional
-    public ListingAvailability applyOwnerWithdrawAvailability(final long listingId, final long availabilityId) {
-        final ListingAvailability target = listingAvailabilityDao.findById(availabilityId)
-                .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_FOUND));
-        if (target.getListingId() != listingId) {
-            throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OWNED);
-        }
-        if (target.getKind() != ListingAvailability.Kind.OFFERED) {
-            throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OFFERED);
-        }
-
-        final List<DateRange> withdrawnChunks = List.of(
-                new DateRange(target.getStartInclusive(), target.getEndInclusive()));
-        rejectIfReservationsOverlapAnyChunk(listingId, withdrawnChunks,
-                MessageKeys.LISTING_AVAILABILITY_WITHDRAW_CONFLICT);
-
-        return listingAvailabilityDao.createFull(
-                listingId,
-                target.getStartInclusive(),
-                target.getEndInclusive(),
-                target.getDayPriceValue(),
-                target.getStartPointStreet(),
-                target.getStartPointNumber().orElse(null),
-                target.getNeighborhoodId().orElse(null),
-                target.getCheckInTime(),
-                target.getCheckOutTime(),
-                ListingAvailability.Kind.WITHDRAWN);
-    }
-
-    @Override
-    @Transactional
     public ListingAvailability applyOwnerEditByCar(
             final long carId,
             final LocalDate oldStartInclusive,
@@ -283,12 +177,12 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Transactional
     public ListingAvailability applyOwnerWithdrawByCar(final long carId, final long availabilityId) {
         final ListingAvailability target = listingAvailabilityDao.findById(availabilityId)
-                .orElseThrow(() -> new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_FOUND));
+                .orElseThrow(() -> new CarValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_FOUND));
         if (target.getCarId() != carId) {
-            throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OWNED);
+            throw new CarValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OWNED);
         }
         if (target.getKind() != ListingAvailability.Kind.OFFERED) {
-            throw new ListingValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OFFERED);
+            throw new CarValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OFFERED);
         }
 
         final List<DateRange> withdrawnChunks = List.of(
@@ -312,6 +206,53 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Override
     @Transactional(readOnly = true)
     public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(final long carId) {
+        return mergeAdjacentWallDaysToPeriods(computeBookableWallDaysByCar(carId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
+            final long carId,
+            final LocalTime checkInTime,
+            final Instant now) {
+        final List<AvailabilityPeriod> bookable = getBookableWallAvailabilityPeriodsByCar(carId);
+        final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(bookable);
+        final int leadHours = reservationService.getConfiguredPickupLeadHours();
+        final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
+        return BookableWallAvailabilityCalendar.clipPeriodsToMinPickupInstant(
+                merged, checkInTime, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(
+            final long carId, final Instant now) {
+        final SortedSet<LocalDate> bookableDays = computeBookableWallDaysByCar(carId);
+        if (bookableDays.isEmpty()) {
+            return List.of();
+        }
+        final List<BookableSegmentProjection> singleDay = new ArrayList<>(bookableDays.size());
+        for (final LocalDate day : bookableDays) {
+            final Optional<ListingAvailability> effOpt = listingAvailabilityDao.findEffectiveForDayByCar(carId, day);
+            if (effOpt.isEmpty() || effOpt.get().getKind() != ListingAvailability.Kind.OFFERED) {
+                continue;
+            }
+            final ListingAvailability eff = effOpt.get();
+            singleDay.add(new BookableSegmentProjection(
+                    day,
+                    day,
+                    eff.getDayPriceValue(),
+                    eff.getCheckInTime(),
+                    eff.getCheckOutTime(),
+                    listingAddressFormatter.formatPublicPickupLocation(eff)));
+        }
+        final List<BookableSegmentProjection> merged = mergeContiguousIdenticalProjections(singleDay);
+        final int leadHours = reservationService.getConfiguredPickupLeadHours();
+        final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
+        return clipSegmentsByPickupLead(merged, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+    }
+
+    private SortedSet<LocalDate> computeBookableWallDaysByCar(final long carId) {
         final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
         final SortedSet<LocalDate> days = new TreeSet<>();
         for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
@@ -332,21 +273,67 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                 d = d.plusDays(1);
             }
         }
-        return mergeAdjacentWallDaysToPeriods(days);
+        return days;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
-            final long carId,
-            final LocalTime checkInTime,
-            final Instant now) {
-        final List<AvailabilityPeriod> bookable = getBookableWallAvailabilityPeriodsByCar(carId);
-        final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(bookable);
-        final int leadHours = reservationService.getConfiguredPickupLeadHours();
-        final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
-        return BookableWallAvailabilityCalendar.clipPeriodsToMinPickupInstant(
-                merged, checkInTime, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+    private static List<BookableSegmentProjection> mergeContiguousIdenticalProjections(
+            final List<BookableSegmentProjection> singleDay) {
+        if (singleDay.isEmpty()) {
+            return List.of();
+        }
+        final List<BookableSegmentProjection> out = new ArrayList<>();
+        BookableSegmentProjection cur = singleDay.get(0);
+        for (int i = 1; i < singleDay.size(); i++) {
+            final BookableSegmentProjection next = singleDay.get(i);
+            final boolean contiguous = next.getFrom().equals(cur.getTo().plusDays(1));
+            final boolean sameProjection = Objects.equals(cur.getDayPrice(), next.getDayPrice())
+                    && Objects.equals(cur.getCheckInTime(), next.getCheckInTime())
+                    && Objects.equals(cur.getCheckOutTime(), next.getCheckOutTime())
+                    && cur.getPublicLocation().equals(next.getPublicLocation());
+            if (contiguous && sameProjection) {
+                cur = new BookableSegmentProjection(
+                        cur.getFrom(), next.getTo(),
+                        cur.getDayPrice(), cur.getCheckInTime(),
+                        cur.getCheckOutTime(), cur.getPublicLocation());
+            } else {
+                out.add(cur);
+                cur = next;
+            }
+        }
+        out.add(cur);
+        return List.copyOf(out);
+    }
+
+    private static List<BookableSegmentProjection> clipSegmentsByPickupLead(
+            final List<BookableSegmentProjection> merged,
+            final ZoneId wallZone,
+            final Instant minPickupExclusive) {
+        if (merged.isEmpty()) {
+            return List.of();
+        }
+        final List<BookableSegmentProjection> clipped = new ArrayList<>();
+        for (final BookableSegmentProjection seg : merged) {
+            final LocalTime pickup = seg.getCheckInTime() != null
+                    ? seg.getCheckInTime()
+                    : ListingAvailability.DEFAULT_CHECK_IN_TIME;
+            LocalDate d = seg.getFrom();
+            while (!d.isAfter(seg.getTo())) {
+                final Instant pickupInstant = ZonedDateTime.of(d, pickup, wallZone).toInstant();
+                if (pickupInstant.isAfter(minPickupExclusive)) {
+                    if (d.equals(seg.getFrom())) {
+                        clipped.add(seg);
+                    } else {
+                        clipped.add(new BookableSegmentProjection(
+                                d, seg.getTo(),
+                                seg.getDayPrice(), seg.getCheckInTime(),
+                                seg.getCheckOutTime(), seg.getPublicLocation()));
+                    }
+                    break;
+                }
+                d = d.plusDays(1);
+            }
+        }
+        return List.copyOf(clipped);
     }
 
     @Override
@@ -411,27 +398,6 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         return List.copyOf(out);
     }
 
-    private void rejectIfReservationsOverlapAnyChunk(
-            final long listingId, final List<DateRange> chunks, final String conflictMessageKey) {
-        if (chunks.isEmpty()) {
-            return;
-        }
-        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
-        final OffsetDateTime fromUtc = chunks.get(0).start.atStartOfDay(wall).toOffsetDateTime();
-        final OffsetDateTime toUtc = chunks.get(chunks.size() - 1).end.plusDays(1).atStartOfDay(wall).toOffsetDateTime();
-        final List<Reservation> blocking =
-                reservationService.findBlockingReservationsByListingIdInRange(listingId, fromUtc, toUtc);
-        for (final Reservation r : blocking) {
-            final LocalDate rStart = r.getStartDate().atZoneSameInstant(wall).toLocalDate();
-            final LocalDate rEnd = r.getEndDate().atZoneSameInstant(wall).toLocalDate();
-            for (final DateRange chunk : chunks) {
-                if (!rEnd.isBefore(chunk.start) && !rStart.isAfter(chunk.end)) {
-                    throw new ReservationConflictException(conflictMessageKey);
-                }
-            }
-        }
-    }
-
     private void rejectIfReservationsOverlapAnyChunkByCar(
             final long carId, final List<DateRange> chunks, final String conflictMessageKey) {
         if (chunks.isEmpty()) {
@@ -482,7 +448,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Transactional(readOnly = true)
     public LocalDate getPublicationMinAvailabilityFirstWallDay(
             final LocalTime checkInTime, final Instant now) {
-        final LocalTime pickup = checkInTime != null ? checkInTime : Listing.DEFAULT_CHECK_IN_TIME;
+        final LocalTime pickup = checkInTime != null ? checkInTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
         return RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
                 pickup,
                 AvailabilityPeriod.WALL_ZONE,
@@ -498,7 +464,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             return;
         }
         final int pickupLeadHours = reservationTimingPolicy.getPickupLeadHours();
-        final LocalTime pickup = checkInTime != null ? checkInTime : Listing.DEFAULT_CHECK_IN_TIME;
+        final LocalTime pickup = checkInTime != null ? checkInTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
         final LocalDate minStart = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
                 pickup, AvailabilityPeriod.WALL_ZONE, now, pickupLeadHours);
         for (int i = 0; i < periods.size(); i++) {

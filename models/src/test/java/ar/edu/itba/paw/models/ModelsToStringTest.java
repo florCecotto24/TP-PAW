@@ -2,13 +2,11 @@ package ar.edu.itba.paw.models;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
@@ -54,43 +52,13 @@ class ModelsToStringTest {
     }
 
     @Test
-    void testListingToStringIncludesAllFields() {
-        // Arrange
-        final Car carRef = Mockito.mock(Car.class);
-        Mockito.when(carRef.getId()).thenReturn(9L);
-        final Listing listing = Listing.builder()
-                .id(3L)
-                .title("Trip")
-                .car(carRef)
-                .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
-                .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
-                .status(Listing.Status.ACTIVE)
-                .dayPrice(new BigDecimal("150.00"))
-                .startPointStreet("Belgrano")
-                .description("Description")
-                .checkInTime(Listing.DEFAULT_CHECK_IN_TIME)
-                .checkOutTime(LocalTime.of(18, 0))
-                .build();
-        // Exercise
-        final String result = listing.toString();
-        // Assert
-        final String expected = "Listing{id=3, title='Trip', carId=9, createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, "
-                + "status=ACTIVE, dayPrice=150.00, startPointStreet='Belgrano', description='Description', "
-                + "checkInTime=10:00, checkOutTime=18:00, ratingAvg=null}";
-        Assertions.assertEquals(expected, result);
-    }
-
-    @Test
     void testReservationToStringIncludesAllFields() {
         // Arrange
-        final Listing listingRef = Mockito.mock(Listing.class);
-        Mockito.when(listingRef.getId()).thenReturn(11L);
         final Car carRef = Mockito.mock(Car.class);
         Mockito.when(carRef.getId()).thenReturn(3L);
         final Reservation reservation = Reservation.builder()
                 .id(5L)
                 .rider(User.identities(7L, "r@test.com", "R", "R"))
-                .listing(listingRef)
                 .car(carRef)
                 .startDate(OffsetDateTime.parse("2026-04-10T08:00:00Z"))
                 .endDate(OffsetDateTime.parse("2026-04-12T08:00:00Z"))
@@ -102,7 +70,7 @@ class ModelsToStringTest {
         // Exercise
         final String result = reservation.toString();
         // Assert
-        final String expected = "Reservation{id=5, riderId=7, listingId=11, startDate=2026-04-10T08:00Z, endDate=2026-04-12T08:00Z, "
+        final String expected = "Reservation{id=5, riderId=7, carId=3, startDate=2026-04-10T08:00Z, endDate=2026-04-12T08:00Z, "
                 + "status=ACCEPTED, createdAt=2026-04-01T09:00Z, updatedAt=2026-04-01T10:00Z, totalPrice=300.00, carReturned=false}";
         Assertions.assertEquals(expected, result);
     }
@@ -110,21 +78,20 @@ class ModelsToStringTest {
     @Test
     void testListingAvailabilityToStringIncludesAllFields() {
         // Arrange
-        final Listing laListingRef = Mockito.mock(Listing.class);
-        Mockito.when(laListingRef.getId()).thenReturn(11L);
         final Car laCarRef = Mockito.mock(Car.class);
-        Mockito.when(laListingRef.getCar()).thenReturn(laCarRef);
-        final ListingAvailability availability = new ListingAvailability(
-                8L,
-                laListingRef,
-                LocalDate.of(2026, 4, 20),
-                LocalDate.of(2026, 4, 25),
-                OffsetDateTime.parse("2026-04-05T09:00:00Z"),
-                OffsetDateTime.parse("2026-04-05T09:30:00Z"));
+        Mockito.when(laCarRef.getId()).thenReturn(11L);
+        final ListingAvailability availability = ListingAvailability.builder()
+                .id(8L)
+                .car(laCarRef)
+                .startInclusive(LocalDate.of(2026, 4, 20))
+                .endInclusive(LocalDate.of(2026, 4, 25))
+                .createdAt(OffsetDateTime.parse("2026-04-05T09:00:00Z"))
+                .updatedAt(OffsetDateTime.parse("2026-04-05T09:30:00Z"))
+                .build();
         // Exercise
         final String result = availability.toString();
         // Assert
-        final String expected = "ListingAvailability{id=8, listingId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
+        final String expected = "ListingAvailability{id=8, carId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
                 + "dayPrice=null, kind=OFFERED, createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z}";
         Assertions.assertEquals(expected, result);
     }
@@ -160,4 +127,3 @@ class ModelsToStringTest {
         Assertions.assertEquals(expected, result);
     }
 }
-

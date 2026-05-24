@@ -1,8 +1,5 @@
 package ar.edu.itba.paw.services;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -23,9 +20,6 @@ public class CarServiceImplTest {
 
     @Mock
     private CarDao carDao;
-
-    @Mock
-    private ar.edu.itba.paw.services.policy.ReservationTimingPolicy reservationTimingPolicy;
 
     @InjectMocks
     private CarServiceImpl carService;
@@ -50,7 +44,7 @@ public class CarServiceImplTest {
                 .build();
         Mockito.when(carDao.createCar(ownerId, plate, carModelId, type, powertrain, transmission)).thenReturn(car);
 
-        // 2. Execute
+        // 2. Act
         final Car result = carService.createCar(ownerId, plate, carModelId, type, powertrain, transmission);
 
         // 3. Assert
@@ -83,7 +77,7 @@ public class CarServiceImplTest {
                 .build();
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(car));
 
-        // 2. Execute
+        // 2. Act
         final Optional<Car> result = carService.getCarById(carId);
 
         // 3. Assert
@@ -97,102 +91,13 @@ public class CarServiceImplTest {
         final long carId = 101L;
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.empty());
 
-        // 2. Execute
+        // 2. Act
         final Optional<Car> result = carService.getCarById(carId);
 
         // 3. Assert
         Assertions.assertTrue(result.isEmpty());
     }
 
-    @Test
-    public void testGetCheapestCarsWhenThereAreCars(){
-        // 1. Arrange
-        final Car car1 = Car.builder()
-                .id(10L)
-                .owner(User.identities(1L, "o@test.com", "O", "O"))
-                .plate("plateTestOne")
-                .type(Car.Type.HATCHBACK)
-                .powertrain(Car.Powertrain.GASOLINE)
-                .transmission(Car.Transmission.MANUAL)
-                .build();
-        final Car car2 = Car.builder()
-                .id(11L)
-                .owner(User.identities(2L, "o@test.com", "O", "O"))
-                .plate("plateTestTwo")
-                .type(Car.Type.SUV)
-                .powertrain(Car.Powertrain.HYBRID)
-                .transmission(Car.Transmission.AUTOMATIC)
-                .build();
-        final List<Car> cheapest = new ArrayList<>();
-        cheapest.add(car1);
-        cheapest.add(car2);
-        Mockito.when(carDao.getCheapestCars()).thenReturn(cheapest);
-
-        // 2. Execute
-        final List<Car> result = carService.getCheapestCars();
-
-        // 3. Assert
-        Assertions.assertSame(cheapest, result);
-    }
-
-    @Test
-    public void testGetCheapestCarsWhenThereAreNotCars(){
-        // 1. Arrange
-        final List<Car> empty = Collections.emptyList();
-        Mockito.when(carDao.getCheapestCars()).thenReturn(empty);
-
-        // 2. Execute
-        final List<Car> result = carService.getCheapestCars();
-
-        // 3. Assert
-        Assertions.assertTrue(result.isEmpty());
-    }
-
-    @Test
-    public void testGetMostRecentCarsWhenThereAreCars(){
-        // 1. Arrange
-        final Car car1 = Car.builder()
-                .id(20L)
-                .owner(User.identities(3L, "o@test.com", "O", "O"))
-                .plate("plateTestOne")
-                .type(Car.Type.COUPE)
-                .powertrain(Car.Powertrain.ELECTRIC)
-                .transmission(Car.Transmission.AUTOMATIC)
-                .build();
-        final Car car2 = Car.builder()
-                .id(21L)
-                .owner(User.identities(4L, "o@test.com", "O", "O"))
-                .plate("plateTestTwo")
-                .type(Car.Type.WAGON)
-                .powertrain(Car.Powertrain.DIESEL)
-                .transmission(Car.Transmission.MANUAL)
-                .build();
-        final List<Car> recent = new ArrayList<>();
-        recent.add(car1);
-        recent.add(car2);
-        Mockito.when(carDao.getMostRecentCars()).thenReturn(recent);
-
-        // 2. Execute
-        final List<Car> result = carService.getMostRecentCars();
-
-        // 3. Assert
-        Assertions.assertSame(recent, result);
-    }
-
-    @Test
-    public void testGetMostRecentCarsWhenThereAreNotCars(){
-        // 1. Arrange
-        final List<Car> empty = Collections.emptyList();
-        Mockito.when(carDao.getMostRecentCars()).thenReturn(empty);
-
-        // 2. Execute
-        final List<Car> result = carService.getMostRecentCars();
-
-        // 3. Assert
-        Assertions.assertTrue(result.isEmpty());
-    }
-
-    
 
 
 }

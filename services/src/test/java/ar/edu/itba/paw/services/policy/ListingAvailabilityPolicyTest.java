@@ -15,7 +15,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.listing.ListingValidationException;
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 @ExtendWith(MockitoExtension.class)
@@ -110,7 +110,7 @@ class ListingAvailabilityPolicyTest {
                 new AvailabilityPeriod(today.plusDays(31), today.plusDays(40)));
 
         // 2.Exercise
-        final ListingValidationException ex = Assertions.assertThrows(ListingValidationException.class,
+        final CarValidationException ex = Assertions.assertThrows(CarValidationException.class,
                 () -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
 
         // 3.Assert
@@ -128,7 +128,7 @@ class ListingAvailabilityPolicyTest {
                 new AvailabilityPeriod(today.plusDays(20), today.plusDays(40)));
 
         // 2.Exercise / 3.Assert
-        Assertions.assertThrows(ListingValidationException.class,
+        Assertions.assertThrows(CarValidationException.class,
                 () -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
     }
 

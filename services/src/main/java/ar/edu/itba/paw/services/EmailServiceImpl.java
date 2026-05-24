@@ -124,7 +124,7 @@ public final class EmailServiceImpl implements EmailService {
     private Context buildReservationConfirmationMailContext(final ReservationMailPayload payload, final Locale mailLocale) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
         ctx.setVariable("ctaUrlRider", mailPublicUrls.absolutePath("/my-reservations/" + payload.getReservationId()));
-        ctx.setVariable("ctaUrlOwner", mailPublicUrls.absolutePath("/my-listings/" + payload.getListingId()));
+        ctx.setVariable("ctaUrlOwner", mailPublicUrls.absolutePath("/my-cars/car/" + payload.getCarId()));
         return ctx;
     }
 
@@ -144,13 +144,13 @@ public final class EmailServiceImpl implements EmailService {
         return ctx;
     }
 
-    /** Owner cancellation template uses {@code ctaUrl} (host listings). */
+    /** Owner cancellation template uses {@code ctaUrl} (host cars). */
     private Context buildReservationCancellationOwnerMailContext(
             final ReservationMailPayload payload,
             final Locale mailLocale,
             final Reservation.Status cancellationStatus) {
         final Context ctx = buildReservationNotificationContext(payload, mailLocale);
-        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-listings/" + payload.getListingId()));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + payload.getCarId()));
         ctx.setVariable("cancellationIntroOwner", ownerCancellationIntro(cancellationStatus, mailLocale));
         return ctx;
     }
@@ -672,11 +672,11 @@ public final class EmailServiceImpl implements EmailService {
             try {
                 sendReservationCancellationToClient(reservationPayload, cancellationCtx, reservationPayload.getRecipientEmail());
                 LOGGER.atInfo().addArgument(reservationPayload.getRecipientEmail())
-                        .addArgument(reservationPayload.getListingId())
-                        .log("Reservation cancellation email sent to {} (listing id={})");
+                        .addArgument(reservationPayload.getCarId())
+                        .log("Reservation cancellation email sent to {} (car id={})");
             } catch (final EmailMessagingException | RuntimeException e) {
-                LOGGER.atError().setCause(e).addArgument(reservationPayload.getListingId())
-                        .log("Failed to send reservation cancellation email (listing id={})");
+                LOGGER.atError().setCause(e).addArgument(reservationPayload.getCarId())
+                        .log("Failed to send reservation cancellation email (car id={})");
             }
         }
 
@@ -687,13 +687,13 @@ public final class EmailServiceImpl implements EmailService {
             ownerCtx.setVariable("vehicleLabel", ownerPayload.getVehicleLabel());
             ownerCtx.setVariable("ownerFullName", ownerPayload.getOwnerFullName());
             ownerCtx.setVariable("pricePerDay", ownerPayload.getReservationTotal());
-            ownerCtx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-listings/" + ownerPayload.getListingId()));
+            ownerCtx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + ownerPayload.getCarId()));
             sendListingDeletionToOwner(ownerPayload, ownerCtx);
-            LOGGER.atInfo().addArgument(ownerPayload.getOwnerEmail()).addArgument(ownerPayload.getListingId())
-                    .log("Listing deletion owner email sent to {} (listing id={})");
+            LOGGER.atInfo().addArgument(ownerPayload.getOwnerEmail()).addArgument(ownerPayload.getCarId())
+                    .log("Listing deletion owner email sent to {} (car id={})");
         } catch (final EmailMessagingException | RuntimeException e) {
-            LOGGER.atError().setCause(e).addArgument(ownerPayload.getListingId())
-                    .log("Failed to send listing deletion owner email (listing id={})");
+            LOGGER.atError().setCause(e).addArgument(ownerPayload.getCarId())
+                    .log("Failed to send listing deletion owner email (car id={})");
         }
     }
 
@@ -752,13 +752,13 @@ public final class EmailServiceImpl implements EmailService {
         }
         final Locale locale = payload.getMessageLocale();
         final String vehicleLabel = payload.getVehicleLabel();
-        final long listingId = payload.getListingId();
+        final long carId = payload.getCarId();
         final Context ctx = new Context(locale);
         setHtmlLangFromLocale(ctx, locale);
         ctx.setVariable("ownerFullName", payload.getOwnerFullName());
         ctx.setVariable("vehicleLabel", vehicleLabel);
         ctx.setVariable("cbuRequiredDigits", CbuRules.REQUIRED_DIGIT_LENGTH);
-        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-listings/" + listingId));
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + carId));
         ctx.setVariable("profileUrl", mailPublicUrls.absolutePath("/profile"));
         try {
             runMail(() -> {
@@ -769,10 +769,10 @@ public final class EmailServiceImpl implements EmailService {
                         locale);
                 sendEmail(ownerEmail, subject, htmlContent);
             });
-            LOGGER.atInfo().addArgument(ownerEmail).addArgument(listingId).log("Listing paused (missing CBU) email sent to {} (listing id={})");
+            LOGGER.atInfo().addArgument(ownerEmail).addArgument(carId).log("Car paused (missing CBU) email sent to {} (car id={})");
         } catch (final EmailMessagingException | RuntimeException e) {
-            LOGGER.atError().setCause(e).addArgument(listingId)
-                    .log("Failed to send listing paused (missing CBU) email (listing id={})");
+            LOGGER.atError().setCause(e).addArgument(carId)
+                    .log("Failed to send car paused (missing CBU) email (car id={})");
         }
     }
 

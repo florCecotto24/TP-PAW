@@ -20,7 +20,7 @@ import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
 /**
- * Rental agreement between a rider and a listing: UTC interval, money total, payment proof state, and lifecycle status.
+ * Rental agreement between a rider and a car: UTC interval, money total, payment proof state, and lifecycle status.
  */
 @Entity
 @Table(name = "reservations")
@@ -76,10 +76,6 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rider_id", nullable = false)
     private User rider;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "listing_id", nullable = true)
-    private Listing listing;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id", nullable = false)
@@ -152,7 +148,6 @@ public class Reservation {
     private Reservation(final Builder b) {
         this.id = b.id;
         this.rider = b.rider;
-        this.listing = b.listing;
         this.car = b.car;
         this.startDate = b.startDate;
         this.endDate = b.endDate;
@@ -182,7 +177,6 @@ public class Reservation {
     public static final class Builder {
         private long id;
         private User rider;
-        private Listing listing;
         private Car car;
         private OffsetDateTime startDate;
         private OffsetDateTime endDate;
@@ -211,11 +205,6 @@ public class Reservation {
 
         public Builder rider(final User rider) {
             this.rider = rider;
-            return this;
-        }
-
-        public Builder listing(final Listing listing) {
-            this.listing = listing;
             return this;
         }
 
@@ -321,9 +310,7 @@ public class Reservation {
 
         public Reservation build() {
             Objects.requireNonNull(rider, "rider");
-            if (car == null && listing != null) {
-                car = listing.getCar();
-            }
+            Objects.requireNonNull(car, "car");
             Objects.requireNonNull(startDate, "startDate");
             Objects.requireNonNull(endDate, "endDate");
             Objects.requireNonNull(status, "status");
@@ -347,36 +334,12 @@ public class Reservation {
         return rider.getId();
     }
 
-    public Listing getListing() {
-        return listing;
-    }
-
-    /** Convenience accessor — returns {@code listing.getId()}. Throws if {@code listing_id} was not loaded. */
-    public long getListingId() {
-        if (listing == null) {
-            throw new UnsupportedOperationException("listing_id is not set on this reservation; use getCarId() instead");
-        }
-        return listing.getId();
-    }
-
-    /** Returns the listing id when present; empty for reservations created without a listing (Phase 7b+). */
-    public Optional<Long> getOptionalListingId() {
-        return listing != null ? Optional.of(listing.getId()) : Optional.empty();
-    }
-
     public Car getCar() {
         return car;
     }
 
-    /**
-     * Dual-read: prefers the direct {@code car_id} column; falls back to {@code listing.getCar()}
-     * for rows not yet backfilled in memory-only tests.
-     */
     public long getCarId() {
-        if (car != null) {
-            return car.getId();
-        }
-        return listing.getCar().getId();
+        return car.getId();
     }
 
     public OffsetDateTime getStartDate() {
@@ -526,7 +489,7 @@ public class Reservation {
         return "Reservation{" +
                 "id=" + id +
                 ", riderId=" + rider.getId() +
-                ", listingId=" + (listing != null ? listing.getId() : "null") +
+                ", carId=" + (car != null ? car.getId() : "null") +
                 ", startDate=" + startDate +
                 ", endDate=" + endDate +
                 ", status=" + status +

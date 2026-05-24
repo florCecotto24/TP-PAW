@@ -17,7 +17,7 @@ import org.mockito.quality.Strictness;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.domain.Listing;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.ReviewDao;
@@ -30,7 +30,6 @@ class ReviewServiceImplTest {
     private static final long OWNER_ID = 100L;
     private static final long RIDER_ID = 200L;
     private static final long RESERVATION_ID = 300L;
-    private static final long LISTING_ID = 400L;
 
     @Mock
     private ReviewDao reviewDao;
@@ -39,7 +38,7 @@ class ReviewServiceImplTest {
     private ReservationService reservationService;
 
     @Mock
-    private UserService userService;
+    private CarService carService;
 
     private ReviewServiceImpl service;
 
@@ -48,17 +47,19 @@ class ReviewServiceImplTest {
         service = new ReviewServiceImpl(
                 reviewDao,
                 reservationService,
-                userService,
+                carService,
                 ReviewValidationPolicy.fromValidatedCommentMaxLength(500));
     }
 
+    private static final long CAR_ID = 77L;
+
     private static Reservation reservation(final boolean carReturned, final OffsetDateTime endDate) {
-        final Listing listingRef = Mockito.mock(Listing.class);
-        Mockito.when(listingRef.getId()).thenReturn(LISTING_ID);
+        final Car carRef = Mockito.mock(Car.class);
+        Mockito.when(carRef.getId()).thenReturn(CAR_ID);
         return Reservation.builder()
                 .id(RESERVATION_ID)
                 .rider(User.identities(RIDER_ID, "r@test.com", "R", "Rider"))
-                .listing(listingRef)
+                .car(carRef)
                 .startDate(OffsetDateTime.of(2026, 4, 1, 10, 0, 0, 0, ZoneOffset.UTC))
                 .endDate(endDate)
                 .status(Reservation.Status.FINISHED)
@@ -98,7 +99,7 @@ class ReviewServiceImplTest {
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
-        Mockito.when(userService.getListingOwner(LISTING_ID)).thenReturn(Optional.empty());
+        Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.empty());
 
         // 2.Exercise & 3. Assert
         Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, null, null));
@@ -279,7 +280,7 @@ class ReviewServiceImplTest {
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
         Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
-        Mockito.when(userService.getListingOwner(LISTING_ID)).thenReturn(Optional.empty());
+        Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.empty());
 
         // 2.Exercise / 3.Assert
         Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, null));

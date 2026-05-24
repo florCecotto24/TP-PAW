@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<%@ attribute name="insight" required="false" type="ar.edu.itba.paw.models.dto.ListingPriceMarketInsight" %>
+<%@ attribute name="insight" required="false" type="ar.edu.itba.paw.models.dto.CarPriceMarketInsight" %>
 <%@ attribute name="priceInputId" required="false" type="java.lang.String" %>
 <%@ attribute name="initialUserPrice" required="false" type="java.math.BigDecimal" %>
 <%@ attribute name="showDefaultPriceHint" required="false" type="java.lang.Boolean" %>

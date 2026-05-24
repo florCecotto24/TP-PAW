@@ -6,7 +6,7 @@ import java.util.Objects;
 /** Active listing row for the counterparty profile grid ({@code carCard} / JSP). */
 public final class CounterpartyActiveListingCardRow {
 
-    private final long listingId;
+    private final long carId;
     private final String brand;
     private final String model;
     private final BigDecimal price;
@@ -15,14 +15,14 @@ public final class CounterpartyActiveListingCardRow {
     private final long reviewCount;
 
     public CounterpartyActiveListingCardRow(
-            final long listingId,
+            final long carId,
             final String brand,
             final String model,
             final BigDecimal price,
             final long imageId,
             final BigDecimal ratingAvg,
             final long reviewCount) {
-        this.listingId = listingId;
+        this.carId = carId;
         this.brand = Objects.requireNonNull(brand, "brand");
         this.model = Objects.requireNonNull(model, "model");
         this.price = Objects.requireNonNull(price, "price");
@@ -31,8 +31,8 @@ public final class CounterpartyActiveListingCardRow {
         this.reviewCount = reviewCount;
     }
 
-    public long getListingId() {
-        return listingId;
+    public long getCarId() {
+        return carId;
     }
 
     public String getBrand() {

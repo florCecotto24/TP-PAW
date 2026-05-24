@@ -17,7 +17,7 @@ class ReservationMailPayloadTest {
                 .recipientEmail("rider@example.com")
                 .riderFullName("Ada Rider")
                 .reservationId(42L)
-                .listingId(99L)
+                .carId(77L)
                 .vehicleLabel("Fiat Cronos")
                 .startDate(START)
                 .endDate(END)
@@ -43,7 +43,7 @@ class ReservationMailPayloadTest {
         Assertions.assertEquals("rider@example.com", payload.getRecipientEmail());
         Assertions.assertEquals("Ada Rider", payload.getRiderFullName());
         Assertions.assertEquals(42L, payload.getReservationId());
-        Assertions.assertEquals(99L, payload.getListingId());
+        Assertions.assertEquals(77L, payload.getCarId());
         Assertions.assertEquals("Fiat Cronos", payload.getVehicleLabel());
         Assertions.assertEquals(START, payload.getStartDate());
         Assertions.assertEquals(END, payload.getEndDate());
@@ -106,7 +106,7 @@ class ReservationMailPayloadTest {
         final ReservationMailPayload.Builder builder = ReservationMailPayload.builder()
                 .recipientEmail("rider@example.com")
                 .riderFullName("Ada Rider")
-                .listingId(99L)
+                .carId(77L)
                 .vehicleLabel("Fiat Cronos")
                 .startDate(START)
                 .endDate(END)
@@ -118,7 +118,7 @@ class ReservationMailPayloadTest {
     }
 
     @Test
-    void testBuildRejectsMissingListingId() {
+    void testBuildRejectsMissingCarId() {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = ReservationMailPayload.builder()
                 .recipientEmail("rider@example.com")

@@ -4,7 +4,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Listing;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 
@@ -15,7 +14,6 @@ import ar.edu.itba.paw.models.domain.User;
 public final class ReservationDetailPageModel {
 
     private final Reservation reservation;
-    private final Listing listing;
     private final String reservationPickupLocationDisplay;
     private final Car car;
     private final User owner;
@@ -49,7 +47,6 @@ public final class ReservationDetailPageModel {
 
     public ReservationDetailPageModel(
             final Reservation reservation,
-            final Listing listing,
             final String reservationPickupLocationDisplay,
             final Car car,
             final User owner,
@@ -81,7 +78,6 @@ public final class ReservationDetailPageModel {
             final Optional<String> refundProofDeadlineDisplay,
             final boolean chatAvailable) {
         this.reservation = reservation;
-        this.listing = listing;
         this.reservationPickupLocationDisplay = reservationPickupLocationDisplay;
         this.car = car;
         this.owner = owner;
@@ -114,14 +110,13 @@ public final class ReservationDetailPageModel {
         this.chatAvailable = chatAvailable;
     }
 
-    /** Same as {@link Reservation#getListingId()}; exposed for navigation / breadcrumb context. */
-    public long getListingId() {
-        return reservation.getListingId();
+    /** Same as {@link Reservation#getCarId()}; exposed for car-centric breadcrumb context. */
+    public long getCarId() {
+        return reservation.getCarId();
     }
 
     public final void populateModel(final BiConsumer<String, Object> putObject) {
         putObject.accept("reservation", reservation);
-        putObject.accept("listing", listing);
         putObject.accept("reservationPickupLocationDisplay", reservationPickupLocationDisplay);
         putObject.accept("car", car);
         putObject.accept("owner", owner);

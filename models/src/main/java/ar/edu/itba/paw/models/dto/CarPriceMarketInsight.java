@@ -4,15 +4,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;
 
-/** Min / max / average day prices for active listings with the same brand and model. */
-public final class ListingPriceMarketInsight {
+/** Min / max / average day prices for active cars with the same brand and model. */
+public final class CarPriceMarketInsight {
 
     private final BigDecimal minPrice;
     private final BigDecimal maxPrice;
     private final BigDecimal averagePrice;
     private final long sampleCount;
 
-    public ListingPriceMarketInsight(
+    public CarPriceMarketInsight(
             final BigDecimal minPrice,
             final BigDecimal maxPrice,
             final BigDecimal averagePrice,
