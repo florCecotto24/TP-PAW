@@ -119,6 +119,7 @@ public final class CarServiceImpl implements CarService {
             final Car.Type type,
             final Car.Powertrain powertrain,
             final Car.Transmission transmission,
+            final String description,
             final List<ImageUpload> images,
             final String insuranceFilename,
             final String insuranceContentType,
@@ -127,6 +128,9 @@ public final class CarServiceImpl implements CarService {
             throw new DuplicatePlateException(plate);
         }
         final Car car = carDao.createCar(ownerId, plate, carModelId, type, powertrain, transmission);
+        if (description != null && !description.isBlank()) {
+            car.setDescription(description.strip());
+        }
         int displayOrder = 1;
         if (images != null) {
             for (final ImageUpload picture : images) {
@@ -563,7 +567,7 @@ public final class CarServiceImpl implements CarService {
     public Optional<OwnerCarDetailPageModel> buildOwnerCarDetailPageModel(
             final long carId, final Locale locale) {
         return getCarById(carId).map(car -> {
-            final List<ListingAvailability> availabilities = listingAvailabilityService.findByCarId(carId);
+            final List<ListingAvailability> availabilities = listingAvailabilityService.findEffectiveOfferedByCar(carId);
             final long carImageId = carPictureService.getCarPicturesByCarId(carId).stream()
                     .findFirst().map(p -> p.getImageId()).orElse(0L);
             final User owner = car.getOwner();

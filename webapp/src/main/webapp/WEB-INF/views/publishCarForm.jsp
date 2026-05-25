@@ -358,6 +358,13 @@
                             <form:errors path="transmission" cssClass="text-danger d-block"/>
                         </div>
 
+                        <%-- Description --%>
+                        <div class="mb-3">
+                            <label class="form-label"><spring:message code="publishCar.form.description"/></label>
+                            <form:textarea path="description" rows="3" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <form:errors path="description" cssClass="text-danger d-block"/>
+                        </div>
+
                         <%-- Photos --%>
                         <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="publishImageTooLargeMsg" htmlEscape="true"/>
                         <spring:message code="validation.pictures.mustBeImage" var="publishMustBeImageMsg" htmlEscape="true"/>

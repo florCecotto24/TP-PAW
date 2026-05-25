@@ -29,11 +29,16 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /** Pass-through to {@link ListingAvailabilityDao}; joins the caller's transaction when one is active. */
 @Service
@@ -115,6 +120,60 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Transactional(readOnly = true)
     public List<ListingAvailability> findByCarId(final long carId) {
         return listingAvailabilityDao.findByCarId(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ListingAvailability> findEffectiveOfferedByCar(final long carId) {
+        final List<ListingAvailability> all = listingAvailabilityDao.findByCarId(carId);
+        if (all.isEmpty()) {
+            return List.of();
+        }
+        // Rows with the same createdAt are co-created "peers" (same batch/operation) and
+        // must not supersede each other — otherwise a larger peer could absorb a smaller one
+        // created in the same publish form.  We therefore process rows in groups of identical
+        // createdAt (newest group first).  Within a group every OFFERED row is checked
+        // against days claimed by *previous* (newer) groups only; peers are independent.
+        // WITHDRAWN rows participate in claiming days so that edits — which always produce
+        // WITHDRAWN rows for removed chunks — correctly invalidate overlapping older OFFERED rows.
+        final Map<OffsetDateTime, List<ListingAvailability>> byTime = all.stream()
+                .collect(Collectors.groupingBy(ListingAvailability::getCreatedAt));
+        final List<OffsetDateTime> times = byTime.keySet().stream()
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toList());
+        final Set<LocalDate> claimed = new HashSet<>();
+        final Set<Long> effectiveIds = new HashSet<>();
+        for (final OffsetDateTime time : times) {
+            final List<ListingAvailability> group = byTime.get(time);
+            // First pass: identify OFFERED rows in this group that have at least one day
+            // not yet claimed by any newer group.
+            for (final ListingAvailability la : group) {
+                if (la.getKind() != ListingAvailability.Kind.OFFERED) {
+                    continue;
+                }
+                LocalDate d = la.getStartInclusive();
+                while (!d.isAfter(la.getEndInclusive())) {
+                    if (!claimed.contains(d)) {
+                        effectiveIds.add(la.getId());
+                        break;
+                    }
+                    d = d.plusDays(1);
+                }
+            }
+            // Second pass: claim every day in this group (OFFERED and WITHDRAWN alike)
+            // so that older groups cannot reuse these days.
+            for (final ListingAvailability la : group) {
+                LocalDate d = la.getStartInclusive();
+                while (!d.isAfter(la.getEndInclusive())) {
+                    claimed.add(d);
+                    d = d.plusDays(1);
+                }
+            }
+        }
+        return all.stream()
+                .filter(la -> effectiveIds.contains(la.getId()))
+                .sorted(Comparator.comparing(ListingAvailability::getStartInclusive))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -474,6 +533,26 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                         i, "validation.availabilityRow.from.riderLeadTime", minStart, pickupLeadHours);
             }
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validateEditAvailabilityRiderLead(
+            final List<AvailabilityPeriod> periods,
+            final LocalTime checkInTime,
+            final Instant now,
+            final LocalDate originalStartInclusive) {
+        if (periods == null || periods.isEmpty()) {
+            return;
+        }
+        // If the start date is unchanged the lead-time requirement was already satisfied
+        // when the period was originally published (it may even be in progress), so
+        // re-validating it would incorrectly block price / end-date edits.
+        final LocalDate newStart = periods.get(0).getStartInclusive();
+        if (newStart.equals(originalStartInclusive)) {
+            return;
+        }
+        validatePublicationAvailabilityRiderLead(periods, checkInTime, now);
     }
 
     @Override

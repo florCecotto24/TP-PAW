@@ -42,9 +42,6 @@ public final class CreateListingForm implements ListingTimeWindow {
     @NotNull(message = "{validation.neighborhood.notNull}", groups = ValidationGroups.OnCreateListing.class)
     private Long neighborhoodId;
 
-    @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnCreateListing.class)
-    private String description;
-
     @NotNull(message = "{validation.checkInTime.notNull}", groups = ValidationGroups.OnCreateListing.class)
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkInTime;
@@ -113,14 +110,6 @@ public final class CreateListingForm implements ListingTimeWindow {
 
     public void setNeighborhoodId(final Long neighborhoodId) {
         this.neighborhoodId = neighborhoodId;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(final String description) {
-        this.description = description;
     }
 
     @Override

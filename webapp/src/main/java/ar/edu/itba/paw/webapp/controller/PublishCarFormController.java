@@ -271,6 +271,7 @@ public final class PublishCarFormController {
                     form.getType(),
                     form.getPowertrain(),
                     form.getTransmission(),
+                    form.getDescription(),
                     uploads,
                     insuranceName,
                     insuranceType,

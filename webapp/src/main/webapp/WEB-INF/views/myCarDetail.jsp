@@ -31,11 +31,8 @@
     <c:choose>
         <c:when test="${hasPublishedAvailability}">
             <%-- ====== WITH PUBLISHED AVAILABILITY: identical to myCarDetail.jsp ====== --%>
-            <c:url var="editListingUrl" value="/my-cars/car/${car.id}/edit"/>
             <c:url var="toggleListingUrl" value="/my-cars/car/${car.id}/toggle"/>
             <c:url var="finishListingUrl" value="/my-cars/car/${car.id}/deactivate"/>
-            <c:set var="editBindingResult" value="${requestScope['org.springframework.validation.BindingResult.editForm']}"/>
-            <c:set var="hasEditErrors" value="${editBindingResult != null and editBindingResult.errorCount > 0}"/>
 
             <section class="reservation-management-header mb-4">
                 <h1 class="h3 fw-bold mb-2"><spring:message code="myCarDetail.heading"/></h1>
@@ -53,17 +50,6 @@
                 <div class="col-lg-8">
                     <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                         <div class="card-body p-4">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarDetail.carSummary.title"/></h2>
-                                <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
-                                <button type="button"
-                                        class="btn btn-outline-primary btn-sm"
-                                        id="toggleEditBtn">
-                                    <i class="bi bi-pencil me-1" aria-hidden="true"></i>
-                                    <spring:message code="myCarDetail.actions.editListing"/>
-                                </button>
-                                </c:if>
-                            </div>
                             <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
                                 <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
                                     <c:choose>
@@ -79,221 +65,32 @@
                                     </c:choose>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                        <h2 class="h5 fw-semibold mb-0"><c:out value="${car.brand} ${car.model}"/></h2>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2">
                                         <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                         <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTransmissionLabel}"/></span>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
-                                    </div>
-                                    <p class="mb-2 text-secondary small">
-                                        <spring:message code="myCarDetail.details.createdAt"/>: <c:out value="${carCreatedAtDisplay}"/>
-                                    </p>
-                                    <c:if test="${not empty carStreetName}">
-                                        <div class="mb-2 small text-secondary">
-                                            <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
-                                            <c:if test="${not empty carNeighborhoodName}"><c:out value="${carNeighborhoodName}"/>, </c:if>
-                                            <c:out value="${carStreetName}"/>
-                                            <c:if test="${not empty carStreetNumber}"> <c:out value="${carStreetNumber}"/></c:if>
-                                        </div>
-                                    </c:if>
-                                    <div class="d-flex align-items-center gap-2 mt-1 pt-2 border-top">
-                                        <span class="text-secondary small text-uppercase fw-semibold" style="letter-spacing:.04em;">
-                                            <spring:message code="myCarDetail.pricePerDay"/>
-                                        </span>
-                                        <fmt:setLocale value="es_AR"/>
-                                        <span class="h4 fw-bold text-primary mb-0"><fmt:formatNumber value="${carDayPrice}" type="currency" currencyCode="ARS"/></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </article>
 
-                    <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
-                    <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="editListingSection"
-                             style="${hasEditErrors ? '' : 'display:none;'}">
+                    <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="availabilityDisplaySection">
                         <div class="card-body p-4">
-                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myCarDetail.edit.title"/></h2>
-                            <spring:message code="validation.neighborhood.invalid" var="editNbInvalidMsg" htmlEscape="true"/>
-                            <spring:message code="validation.neighborhood.notNull" var="editNbRequiredMsg" htmlEscape="true"/>
-                            <form:form id="editListingFormEl" method="post"
-                                       action="${editListingUrl}"
-                                       modelAttribute="editForm"
-                                       class="row g-3"
-                                       htmlEscape="true"
-                                       data-ryden-nb-invalid="<c:out value='${editNbInvalidMsg}'/>"
-                                       data-ryden-nb-required="<c:out value='${editNbRequiredMsg}'/>">
-                                <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                <form:hidden path="neighborhoodId" id="nb_hid_editListing"/>
-
-                                <div class="col-sm-6">
-                                    <label for="pricePerDay" class="form-label required-label"><spring:message code="publishCar.form.pricePerDay"/></label>
-                                    <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
-                                                                  initialUserPrice="${not empty editForm.pricePerDay ? editForm.pricePerDay : carDayPrice}"
-                                                                  showDefaultPriceHint="true">
-                                        <form:input path="pricePerDay" id="pricePerDay" type="number" step="0.01" max="99999999.99" data-max-int="8" data-max-frac="2" cssClass="form-control js-no-number-wheel-step js-listing-price-decimal" cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
-                                    </ryden:priceMarketInsightCard>
-                                    <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
-                                </div>
-                                <spring:message code="publishCar.form.neighborhood.placeholder" var="editNbPh"/>
-                                <spring:message code="publishCar.form.neighborhood" var="editNbFieldLabel"/>
-                                <spring:message code="publishCar.form.neighborhood.search" var="editNbSearchPh"/>
-                                <div class="col-md-12">
-                                    <ryden:neighborhoodPicker
-                                            pickerId="editListing"
-                                            mode="get"
-                                            allowMultiple="false"
-                                            springPath="neighborhoodId"
-                                            selectedNeighborhoodId="${editForm.neighborhoodId}"
-                                            neighborhoodList="${allNeighborhoods}"
-                                            anyLabel="${editNbPh}"
-                                            searchPlaceholder="${editNbSearchPh}"
-                                            selectFieldLabel="${editNbFieldLabel}"
-                                            toggleAriaLabel="${editNbFieldLabel}"
-                                            outerLabel="${editNbFieldLabel}"
-                                            outerLabelRequired="true"
-                                            required="true"
-                                            nbRequiredMessage="${editNbRequiredMsg}"
-                                            formId="editListingFormEl"/>
-                                </div>
-                                <div class="col-md-8">
-                                    <label for="start_point_street_edit" class="form-label required-label"><spring:message code="publishCar.form.pickupStreet"/></label>
-                                    <form:input path="startPointStreet" id="start_point_street_edit" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                                    <form:errors path="startPointStreet" cssClass="text-danger d-block"/>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="start_point_number_edit" class="form-label required-label"><spring:message code="publishCar.form.pickupStreetNumber"/></label>
-                                    <form:input path="startPointNumber" id="start_point_number_edit" maxlength="10" inputmode="numeric" autocomplete="off"
-                                                data-ryden-digits-only="true" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                                    <form:errors path="startPointNumber" cssClass="text-danger d-block"/>
-                                </div>
-                                <div class="col-12 mb-2">
-                                    <p class="small text-muted mb-0"><spring:message code="publishCar.form.samePickupReturnHint"/></p>
-                                </div>
-                                <div class="col-sm-6">
-                                    <label for="checkInTime" class="form-label required-label"><spring:message code="publishCar.form.checkInTime"/></label>
-                                    <form:input path="checkInTime" id="checkInTime" type="time" step="60" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                                    <form:errors path="checkInTime" cssClass="text-danger d-block"/>
-                                </div>
-                                <div class="col-sm-6">
-                                    <label for="checkOutTime" class="form-label required-label"><spring:message code="publishCar.form.checkOutTime"/></label>
-                                    <form:input path="checkOutTime" id="checkOutTime" type="time" step="60" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                                    <form:errors path="checkOutTime" cssClass="text-danger d-block"/>
-                                </div>
-                                <div class="col-12">
-                                    <label for="description" class="form-label"><spring:message code="publishCar.form.description"/></label>
-                                    <form:textarea path="description" id="description" rows="3" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
-                                    <form:errors path="description" cssClass="text-danger d-block"/>
-                                </div>
-
-                                <spring:message code="publishCar.form.period" var="editPeriodLabel"/>
-                                <spring:message code="publishCar.form.remove" var="editRemoveLabel"/>
-                                <spring:message code="publishCar.form.dateRange.placeholder" var="editDateRangePh"/>
-                                <spring:message code="createListing.availabilityRow.dayPrice" var="editDayPriceLabel" htmlEscape="true"/>
-                                <spring:message code="createListing.availabilityRow.dayPrice.placeholder" var="editDayPricePh" htmlEscape="true"/>
-                                <div class="col-12 mb-2" id="publishAvailabilitySection"
-                                     data-publish-min-avail-ymd="<c:out value='${editAvailWallToday}'/>"
-                                     data-publish-max-avail-wall-ymd="<c:out value='${editAvailMaxYmd}'/>">
-                                    <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
-                                    <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
-                                    <c:if test="${not empty editPastAvailabilities}">
-                                        <c:forEach items="${editPastAvailabilities}" var="pastRow">
-                                            <div class="border rounded-3 p-3 mb-2 bg-light">
-                                                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                                    <span class="small text-secondary"><c:out value="${editPeriodLabel}"/></span>
-                                                    <span class="badge text-bg-secondary"><spring:message code="myCarDetail.availability.past.badge"/></span>
-                                                </div>
-                                                <input type="text" class="form-control form-control-sm"
-                                                       value="<c:out value='${pastRow.startInclusive}'/> – <c:out value='${pastRow.endInclusive}'/>"
-                                                       disabled aria-label="<spring:message code='myCarDetail.availability.past.badge'/>"/>
-                                            </div>
-                                        </c:forEach>
-                                    </c:if>
-                                    <div id="publish_availability_rows">
-                                        <c:forEach items="${editForm.availabilityRows}" var="editAvailRow" varStatus="st">
-                                            <c:set var="isPastStart" value="${editAvailRow.from != null and editAvailRow.from.isBefore(editAvailWallToday)}"/>
-                                            <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row
-                                                 <c:if test="${isPastStart}">data-avail-past-start</c:if>>
-                                                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                                    <span class="small text-secondary">
-                                                        <c:out value="${editPeriodLabel}"/> <span class="publish-avail-index"><c:out value="${st.index + 1}"/></span>
-                                                    </span>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove"
-                                                            aria-label="<c:out value='${editRemoveLabel}'/>">
-                                                        <c:out value="${editRemoveLabel}"/>
-                                                    </button>
-                                                </div>
-                                                <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly
-                                                       placeholder="<c:out value='${editDateRangePh}'/>" aria-label="Availability date range"/>
-                                                <c:if test="${isPastStart}">
-                                                    <small class="text-muted d-block mt-1">
-                                                        <spring:message code="myCarDetail.availability.pastStart.hint"/>
-                                                    </small>
-                                                </c:if>
-                                                <form:hidden path="availabilityRows[${st.index}].from" cssClass="ryden-avail-from"/>
-                                                <form:hidden path="availabilityRows[${st.index}].until" cssClass="ryden-avail-until"/>
-                                                <form:errors path="availabilityRows[${st.index}].from" cssClass="text-danger d-block"/>
-                                                <form:errors path="availabilityRows[${st.index}].until" cssClass="text-danger d-block"/>
-                                                <div class="mt-2">
-                                                    <label class="form-label small mb-1"><c:out value="${editDayPriceLabel}"/></label>
-                                                    <form:input path="availabilityRows[${st.index}].dayPrice" type="number" step="0.01" max="99999999.99"
-                                                                data-max-int="8" data-max-frac="2"
-                                                                cssClass="form-control form-control-sm js-no-number-wheel-step js-listing-price-decimal"
-                                                                cssErrorClass="form-control form-control-sm is-invalid js-no-number-wheel-step js-listing-price-decimal"
-                                                                placeholder="${editDayPricePh}"/>
-                                                    <form:errors path="availabilityRows[${st.index}].dayPrice" cssClass="text-danger d-block"/>
-                                                </div>
-                                            </div>
-                                        </c:forEach>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm mt-1" id="publish_avail_add">
-                                        <i class="bi bi-plus-lg" aria-hidden="true"></i> <spring:message code="publishCar.form.addPeriod"/>
-                                    </button>
-                                </div>
-
-                                <template id="publish_avail_row_template">
-                                    <div class="publish-avail-row border rounded-3 p-3 mb-2" data-publish-avail-row>
-                                        <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                                            <span class="small text-secondary">
-                                                <c:out value="${editPeriodLabel}"/> <span class="publish-avail-index">1</span>
-                                            </span>
-                                            <button type="button" class="btn btn-sm btn-outline-danger publish-avail-remove"
-                                                    aria-label="<c:out value='${editRemoveLabel}'/>">
-                                                <c:out value="${editRemoveLabel}"/>
-                                            </button>
-                                        </div>
-                                        <input type="text" class="form-control form-control-sm ryden-avail-range-input" readonly
-                                               placeholder="<c:out value='${editDateRangePh}'/>" aria-label="Availability date range"/>
-                                        <input type="hidden" class="ryden-avail-from" name="availabilityRows[__IDX__].from" value=""/>
-                                        <input type="hidden" class="ryden-avail-until" name="availabilityRows[__IDX__].until" value=""/>
-                                        <div class="mt-2">
-                                            <label class="form-label small mb-1"><c:out value="${editDayPriceLabel}"/></label>
-                                            <input type="number" step="0.01" max="99999999.99"
-                                                   data-max-int="8" data-max-frac="2"
-                                                   class="form-control form-control-sm js-no-number-wheel-step js-listing-price-decimal ryden-avail-day-price"
-                                                   name="availabilityRows[__IDX__].dayPrice"
-                                                   placeholder="<c:out value='${editDayPricePh}'/>"/>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <div class="col-12 d-flex justify-content-end gap-2">
-                                    <button type="button" class="btn btn-outline-secondary" id="cancelEditListingBtn">
-                                        <spring:message code="common.cancel"/>
-                                    </button>
-                                    <button type="submit" class="btn btn-primary">
-                                        <spring:message code="myCarDetail.actions.modify"/>
-                                    </button>
-                                </div>
-                            </form:form>
-                        </div>
-                    </article>
-                    </c:if>
-
-                    <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="availabilityDisplaySection"
-                             style="${hasEditErrors ? 'display:none;' : ''}">
-                        <div class="card-body p-4">
-                            <h2 class="h5 fw-semibold mb-3"><spring:message code="myCarDetail.availability.title"/></h2>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarDetail.availability.title"/></h2>
+                                <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
+                                    <c:url var="createPeriodUrl" value="/my-cars/car/${car.id}/create"/>
+                                    <a href="<c:out value='${createPeriodUrl}'/>" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                        <spring:message code="myCarDetail.availability.addPeriod"/>
+                                    </a>
+                                </c:if>
+                            </div>
                             <c:choose>
                                 <c:when test="${empty availabilities}">
                                     <p class="text-secondary mb-0"><spring:message code="myCarDetail.availability.empty"/></p>
@@ -306,10 +103,19 @@
                                                     <i class="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true"></i>
                                                     <span class="fw-medium"><c:out value="${availability.startInclusive}"/> &ndash; <c:out value="${availability.endInclusive}"/></span>
                                                 </div>
-                                                <c:if test="${availability.dayPriceValue != null}">
-                                                    <fmt:setLocale value="es_AR"/>
-                                                    <span class="text-secondary small text-nowrap"><fmt:formatNumber value="${availability.dayPriceValue}" type="currency" currencyCode="ARS"/></span>
-                                                </c:if>
+                                                <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                    <c:if test="${availability.dayPriceValue != null}">
+                                                        <fmt:setLocale value="es_AR"/>
+                                                        <span class="text-secondary small text-nowrap"><fmt:formatNumber value="${availability.dayPriceValue}" type="currency" currencyCode="ARS"/></span>
+                                                    </c:if>
+                                                    <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
+                                                        <c:url var="editAvailabilityUrl" value="/my-cars/car/${car.id}/availability/${availability.id}/edit"/>
+                                                        <a href="<c:out value='${editAvailabilityUrl}'/>" class="btn btn-sm btn-outline-secondary"
+                                                           aria-label="<spring:message code='myCarDetail.availability.edit.aria'/>">
+                                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                                        </a>
+                                                    </c:if>
+                                                </div>
                                             </div>
                                         </c:forEach>
                                     </div>
@@ -596,30 +402,6 @@
                 </ryden:modal>
             </c:if>
 
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                var hasEditErrors = ${hasEditErrors ? 'true' : 'false'};
-                var editSection   = document.getElementById('editListingSection');
-                var availSection  = document.getElementById('availabilityDisplaySection');
-                var toggleBtn     = document.getElementById('toggleEditBtn');
-                var cancelBtn     = document.getElementById('cancelEditListingBtn');
-
-                function setListingEditMode(isEditing) {
-                    if (editSection)  editSection.style.display  = isEditing ? 'block' : 'none';
-                    if (availSection) availSection.style.display = isEditing ? 'none'  : 'block';
-                    if (toggleBtn)    toggleBtn.style.display    = isEditing ? 'none'  : '';
-                }
-
-                setListingEditMode(hasEditErrors);
-
-                if (toggleBtn) {
-                    toggleBtn.addEventListener('click', function() { setListingEditMode(true); });
-                }
-                if (cancelBtn) {
-                    cancelBtn.addEventListener('click', function() { setListingEditMode(false); });
-                }
-            });
-            </script>
         </c:when>
 
         <c:otherwise>
@@ -634,8 +416,18 @@
                         <div class="card-body p-4">
                             <h2 class="h5 fw-semibold mb-3"><spring:message code="myCarDetail.carSummary.title"/></h2>
                             <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
-                                <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
-                                    <i class="bi bi-car-front fs-1" aria-hidden="true"></i>
+                                <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
+                                    <c:choose>
+                                        <c:when test="${carImageId > 0}">
+                                            <c:url var="carImageUrl" value="/image/${carImageId}"/>
+                                            <img src="<c:out value='${carImageUrl}'/>" alt="<c:out value='${car.brand} ${car.model}'/>" class="w-100 h-100" style="object-fit:cover;">
+                                        </c:when>
+                                        <c:otherwise>
+                                            <div class="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                                                <i class="bi bi-car-front fs-1" aria-hidden="true"></i>
+                                            </div>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                                 <div class="flex-grow-1">
                                     <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>

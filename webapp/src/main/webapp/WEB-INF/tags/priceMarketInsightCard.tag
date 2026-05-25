@@ -29,9 +29,6 @@
         <div class="ryden-price-insight__price-field mb-2">
             <jsp:doBody/>
         </div>
-        <c:if test="${showDefaultPriceHint}">
-            <small class="text-muted d-block mb-2"><spring:message code="createListing.form.pricePerDayHint"/></small>
-        </c:if>
 
         <c:if test="${not empty insight}">
             <div class="ryden-price-insight__bar-wrap">

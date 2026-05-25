@@ -407,7 +407,82 @@ public final class MyCarsController {
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
-        return buildCreateListingView(carOpt.get(), new CreateListingForm(), me);
+        final CreateListingForm form = new CreateListingForm();
+        listingAvailabilityService.findMostRecentByCarId(carId)
+                .ifPresent(la -> prefillLocationAndTimes(form, la));
+        return buildCreateListingView(carOpt.get(), form, me);
+    }
+
+    @GetMapping("/car/{carId}/availability/{availabilityId}/edit")
+    public ModelAndView editAvailabilityForm(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @PathVariable final long availabilityId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-cars"));
+        }
+        final Optional<ListingAvailability> avOpt = listingAvailabilityService.findById(availabilityId);
+        if (avOpt.isEmpty() || avOpt.get().getCarId() != carId) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        }
+        return buildEditAvailabilityView(carOpt.get(), availabilityId, buildEditAvailabilityForm(avOpt.get()), me);
+    }
+
+    @PostMapping("/car/{carId}/availability/{availabilityId}/edit")
+    public ModelAndView editAvailability(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @PathVariable final long availabilityId,
+            @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createListingForm") final CreateListingForm form,
+            final BindingResult errors) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-cars"));
+        }
+        final Optional<ListingAvailability> avOpt = listingAvailabilityService.findById(availabilityId);
+        if (avOpt.isEmpty() || avOpt.get().getCarId() != carId) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        }
+        final ListingAvailability old = avOpt.get();
+        if (!errors.hasErrors()) {
+            try {
+                listingAvailabilityService.validateEditAvailabilityRiderLead(
+                        form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now(),
+                        old.getStartInclusive());
+            } catch (final AvailabilityRiderLeadViolationException e) {
+                errors.rejectValue(
+                        "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
+                        e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            }
+        }
+        if (!errors.hasErrors()) {
+            try {
+                listingAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
+            } catch (final CarValidationException e) {
+                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            }
+        }
+        if (errors.hasErrors()) {
+            return buildEditAvailabilityView(carOpt.get(), availabilityId, form, me);
+        }
+        final AvailabilityPeriod newPeriod = form.toAvailabilityPeriods().get(0);
+        try {
+            listingAvailabilityService.applyOwnerEditByCar(
+                    carId,
+                    old.getStartInclusive(), old.getEndInclusive(),
+                    newPeriod.getStartInclusive(), newPeriod.getEndInclusive(),
+                    form.getPricePerDay(),
+                    form.getStartPointStreet(), form.getStartPointNumber(),
+                    form.getNeighborhoodId(),
+                    form.getCheckInTime(), form.getCheckOutTime());
+        } catch (final CarValidationException e) {
+            errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return buildEditAvailabilityView(carOpt.get(), availabilityId, form, me);
+        }
+        return new ModelAndView(redirectTo("/my-cars/car/" + carId));
     }
 
     @PostMapping("/car/{carId}/create")
@@ -639,5 +714,51 @@ public final class MyCarsController {
             editForm.setNeighborhoodId(mostRecent.getNeighborhoodId().orElse(null));
         }
         editForm.populateDefaultAvailability(availabilities);
+    }
+
+    private static void prefillLocationAndTimes(final CreateListingForm form, final ListingAvailability la) {
+        form.setStartPointStreet(la.getStartPointStreet());
+        form.setStartPointNumber(la.getStartPointNumber().orElse(null));
+        form.setNeighborhoodId(la.getNeighborhoodId().orElse(null));
+        form.setCheckInTime(la.getCheckInTime());
+        form.setCheckOutTime(la.getCheckOutTime());
+    }
+
+    private static CreateListingForm buildEditAvailabilityForm(final ListingAvailability av) {
+        final CreateListingForm form = new CreateListingForm();
+        form.setPricePerDay(av.getDayPriceValue());
+        form.setStartPointStreet(av.getStartPointStreet());
+        form.setStartPointNumber(av.getStartPointNumber().orElse(null));
+        form.setNeighborhoodId(av.getNeighborhoodId().orElse(null));
+        form.setCheckInTime(av.getCheckInTime());
+        form.setCheckOutTime(av.getCheckOutTime());
+        final CreateListingForm.AvailabilityRow row = new CreateListingForm.AvailabilityRow();
+        row.setFrom(av.getStartInclusive());
+        row.setUntil(av.getEndInclusive());
+        form.setAvailabilityRows(List.of(row));
+        return form;
+    }
+
+    private ModelAndView buildEditAvailabilityView(
+            final Car car, final long availabilityId, final CreateListingForm form, final User user) {
+        final User freshUser = userService.getUserById(user.getId()).orElse(user);
+        final ModelAndView mav = new ModelAndView("editAvailability");
+        mav.addObject("car", car);
+        mav.addObject("availabilityId", availabilityId);
+        mav.addObject("createListingForm", form);
+        mav.addObject("allNeighborhoods", locationService.findAllNeighborhoods());
+        mav.addObject("activeTab", "my-cars");
+        mav.addObject("publisherEmail", freshUser.getEmail());
+        final LocalDate minAvail = listingAvailabilityService.getPublicationMinAvailabilityFirstWallDay(
+                form.getCheckInTime(), Instant.now());
+        mav.addObject("publishMinAvailabilityFrom", minAvail.toString());
+        mav.addObject("pickupLeadHours", reservationTimingPolicy.getPickupLeadHours());
+        final int forwardDays = listingAvailabilityService.getConfiguredMaxAvailabilityForwardWallDays();
+        mav.addObject("maxAvailabilityForwardWallDays", forwardDays);
+        final LocalDate wallToday = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        mav.addObject("publishMaxAvailabilityWallInclusive", wallToday.plusDays(forwardDays).toString());
+        carService.getPriceMarketInsightForCar(car, null)
+                .ifPresent(insight -> mav.addObject("priceMarketInsight", insight));
+        return mav;
     }
 }

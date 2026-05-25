@@ -40,6 +40,9 @@ public final class PublishCarForm {
     @NotNull(message = "{validation.transmission.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Car.Transmission transmission;
 
+    @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnPublishCar.class)
+    private String description;
+
     /** Can be empty on retry: pictures may be in session (see {@code PublishCarFormController}). */
     @Size(max = 8, message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
@@ -117,6 +120,14 @@ public final class PublishCarForm {
 
     public void setPictures(final MultipartFile[] pictures) {
         this.pictures = pictures;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(final String description) {
+        this.description = description;
     }
 
     public MultipartFile getInsuranceFile() {

@@ -63,6 +63,15 @@ public interface ListingAvailabilityService {
     /** All availability segments for the car. */
     List<ListingAvailability> findByCarId(long carId);
 
+    /**
+     * Returns only the currently-effective {@link ListingAvailability.Kind#OFFERED} rows for the car —
+     * those that still "win" at least one calendar day under the "most recent {@code createdAt} wins" rule.
+     * Superseded rows (fully covered by newer rows of any kind) are excluded, as are
+     * {@link ListingAvailability.Kind#WITHDRAWN} rows (internal bookkeeping).
+     * Intended for the owner's availability list view.
+     */
+    List<ListingAvailability> findEffectiveOfferedByCar(long carId);
+
     /** Batch load: rows for the given car ids whose {@code end_inclusive} is on or after {@code minEndDate}. */
     List<ListingAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
@@ -151,6 +160,20 @@ public interface ListingAvailabilityService {
      */
     void validatePublicationAvailabilityRiderLead(
             List<AvailabilityPeriod> periods, LocalTime checkInTime, Instant now);
+
+    /**
+     * Like {@link #validatePublicationAvailabilityRiderLead} but for edits: the lead-time
+     * check on the start date is skipped when the new start equals {@code originalStartInclusive},
+     * because the period may already be in progress and the lead time was satisfied at creation.
+     *
+     * @throws ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException when the start
+     *         date changed and the new start violates the rider pickup lead
+     */
+    void validateEditAvailabilityRiderLead(
+            List<AvailabilityPeriod> periods,
+            LocalTime checkInTime,
+            Instant now,
+            LocalDate originalStartInclusive);
 
     /**
      * Publication rule: availability dates must lie within {@link #getConfiguredMaxAvailabilityForwardWallDays()}

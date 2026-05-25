@@ -43,6 +43,7 @@ public interface CarService {
      * insurance document in one transaction (step 1 of the two-step publish flow). Duplicate plate
      * check is performed here. When {@code insuranceData} is {@code null}/empty the car is created in
      * {@link Car.Status#LACK_DOC}; otherwise it stays {@link Car.Status#ACTIVE}.
+     * {@code description} is optional free-text (max 200 chars) and may be {@code null}.
      */
     Car publishCar(
             long ownerId,
@@ -51,6 +52,7 @@ public interface CarService {
             Car.Type type,
             Car.Powertrain powertrain,
             Car.Transmission transmission,
+            String description,
             List<ImageUpload> images,
             String insuranceFilename,
             String insuranceContentType,
