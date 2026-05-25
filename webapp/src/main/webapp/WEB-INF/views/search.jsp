@@ -130,15 +130,7 @@
                                             <c:param name="carId"><c:out value="${car.carId}"/></c:param>
                                             <c:param name="from" value="search"/>
                                         </c:url>
-                                        <ryden:carCard
-                                                model="${car.model}"
-                                                brand="${car.brand}"
-                                                price="${car.price}"
-                                                image="${imageUrl}"
-                                                pricePeriod="day"
-                                                ratingAvg="${car.ratingAvg}"
-                                                reviewCount="${car.reviewCount}"
-                                                href="${searchCarDetailHref}"/>
+                                        <ryden:consumerCarCard card="${car}" image="${imageUrl}" href="${searchCarDetailHref}"/>
                                     </div>
                                 </c:forEach>
                             </div>

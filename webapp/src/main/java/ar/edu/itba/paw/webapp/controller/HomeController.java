@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +14,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
+import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 
 /** Home page: cheapest and most-recent car cards with guest-aware browse exclusions. */
@@ -23,10 +23,15 @@ public final class HomeController {
 
     private final CarService carService;
     private final PaginationPolicy paginationPolicy;
+    private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
 
-    public HomeController(final CarService carService, final PaginationPolicy paginationPolicy) {
+    public HomeController(
+            final CarService carService,
+            final PaginationPolicy paginationPolicy,
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
         this.carService = carService;
         this.paginationPolicy = paginationPolicy;
+        this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
     }
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
@@ -57,10 +62,9 @@ public final class HomeController {
         return mav;
     }
 
-    private static Page<VehicleCardView> mapPage(final Page<CarCard> source) {
-        final List<VehicleCardView> views = source.getContent().stream()
-                .map(VehicleCardView::fromCarCard)
-                .collect(Collectors.toList());
+    private Page<VehicleCardView> mapPage(final Page<CarCard> source) {
+        final List<VehicleCardView> views =
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(source.getContent());
         return new Page<>(views, source.getCurrentPage(), source.getPageSize(), source.getTotalItems());
     }
 }

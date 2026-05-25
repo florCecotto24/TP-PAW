@@ -514,6 +514,54 @@ body.modal-open {
     margin-top: auto;
 }
 
+.carcard-price-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    width: 100%;
+}
+
+.carcard-price-quote {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.35rem 0.5rem;
+}
+
+.carcard-price-market-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill, 99px);
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+}
+
+.carcard-price-market-badge--below_market {
+    background: #EAF3DE;
+    color: #3B6D11;
+}
+
+.carcard-price-market-badge--at_market {
+    background: #FAEEDA;
+    color: #854F0B;
+}
+
+.carcard-price-market-badge--above_market {
+    background: #FCEBEB;
+    color: #791F1F;
+}
+
 .carcard-price * {
     margin: 0;
     text-align: right;

@@ -59,15 +59,9 @@
                                                 <c:url var="counterpartyListingHref" value="/car-detail">
                                                     <c:param name="carId"><c:out value="${car.carId}"/></c:param>
                                                 </c:url>
-                                                <ryden:carCard
-                                                        model="${car.model}"
-                                                        brand="${car.brand}"
-                                                        price="${car.price}"
-                                                        image="${counterpartyListingImageUrl}"
-                                                        pricePeriod="day"
-                                                        ratingAvg="${car.ratingAvg}"
-                                                        reviewCount="${car.reviewCount}"
-                                                        href="${counterpartyListingHref}"/>
+                                                <ryden:consumerCarCard card="${car}"
+                                                                       image="${counterpartyListingImageUrl}"
+                                                                       href="${counterpartyListingHref}"/>
                                             </div>
                                         </c:forEach>
                                     </div>

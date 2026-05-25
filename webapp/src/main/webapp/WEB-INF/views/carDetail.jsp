@@ -181,15 +181,7 @@
                             </c:choose>
 
                             <c:url var="similarCarDetailUrl" value="/car-detail"><c:param name="carId" value="${similar.carId}"/></c:url>
-                            <ryden:carCard
-                                    model="${similar.model}"
-                                    brand="${similar.brand}"
-                                    price="${similar.price}"
-                                    image="${similarImageUrl}"
-                                    pricePeriod="day"
-                                    ratingAvg="${similar.ratingAvg}"
-                                    reviewCount="${similar.reviewCount}"
-                                    href="${similarCarDetailUrl}"/>
+                            <ryden:consumerCarCard card="${similar}" image="${similarImageUrl}" href="${similarCarDetailUrl}"/>
                         </div>
                     </c:forEach>
                 </div>

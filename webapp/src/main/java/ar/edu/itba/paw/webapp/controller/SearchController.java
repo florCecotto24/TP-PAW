@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -21,7 +22,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /** Public listing search and filters with canonical sort tokens and pagination. */
 @Controller
@@ -33,10 +33,15 @@ public final class SearchController {
 
     private final CarService carService;
     private final LocationService locationService;
+    private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
 
-    public SearchController(final CarService carService, final LocationService locationService) {
+    public SearchController(
+            final CarService carService,
+            final LocationService locationService,
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
         this.carService = carService;
         this.locationService = locationService;
+        this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -77,9 +82,8 @@ public final class SearchController {
             redirectView.setExposeModelAttributes(false);
             return new ModelAndView(redirectView);
         }
-        final List<VehicleCardView> results = resultPage.getContent().stream()
-                .map(VehicleCardView::fromCarCard)
-                .collect(Collectors.toList());
+        final List<VehicleCardView> results =
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(resultPage.getContent());
 
         final String safeSort = sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
         mav.addObject("results", results);

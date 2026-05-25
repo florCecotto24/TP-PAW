@@ -11,6 +11,9 @@
 <%@ attribute name="href" required="false" %>
 <%@ attribute name="ratingAvg" required="false" type="java.lang.Number" %>
 <%@ attribute name="reviewCount" required="false" type="java.lang.Number" %>
+<%@ attribute name="priceMarketPositionModifier" required="false" %>
+<%@ attribute name="marketAveragePrice" required="false" type="java.lang.Number" %>
+<%@ attribute name="marketSampleCount" required="false" type="java.lang.Number" %>
 
 <fmt:setLocale value="es_AR"/>
 <c:if test="${empty pricePeriod}">
@@ -77,8 +80,29 @@
             </c:choose>
         </div>
         <div class="carcard-price text">
-            <p class="carcard-price-amount"><fmt:formatNumber value="${price}" type="currency" currencyCode="ARS"/></p>
-            <p>/<c:out value="${pricePeriodLabel}"/></p>
+            <div class="carcard-price-row">
+                <div class="carcard-price-quote">
+                    <p class="carcard-price-amount"><fmt:formatNumber value="${price}" type="currency" currencyCode="ARS"/></p>
+                    <p>/<c:out value="${pricePeriodLabel}"/></p>
+                </div>
+                <c:if test="${not empty priceMarketPositionModifier}">
+                    <c:choose>
+                        <c:when test="${priceMarketPositionModifier eq 'below_market'}">
+                            <spring:message code="carCard.priceMarket.below" var="priceMarketBadgeLabel"/>
+                        </c:when>
+                        <c:when test="${priceMarketPositionModifier eq 'at_market'}">
+                            <spring:message code="carCard.priceMarket.at" var="priceMarketBadgeLabel"/>
+                        </c:when>
+                        <c:otherwise>
+                            <spring:message code="carCard.priceMarket.above" var="priceMarketBadgeLabel"/>
+                        </c:otherwise>
+                    </c:choose>
+                    <fmt:formatNumber value="${marketAveragePrice}" type="currency" currencyCode="ARS" var="marketAvgFormatted"/>
+                    <spring:message code="carCard.priceMarket.tooltip" arguments="${marketAvgFormatted}, ${marketSampleCount}" var="priceMarketTooltip"/>
+                    <span class="carcard-price-market-badge carcard-price-market-badge--${priceMarketPositionModifier}"
+                          title="<c:out value='${priceMarketTooltip}'/>"><c:out value="${priceMarketBadgeLabel}"/></span>
+                </c:if>
+            </div>
         </div>
     </div>
     <c:if test="${not empty href}">

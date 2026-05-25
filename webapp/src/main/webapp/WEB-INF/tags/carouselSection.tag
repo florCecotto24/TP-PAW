@@ -44,10 +44,8 @@
                             </c:otherwise>
                         </c:choose>
 
-                        <ryden:carCard model="${car.model}" brand="${car.brand}" price="${car.price}"
-                                     image="${imageUrl}" pricePeriod="day" ratingAvg="${car.ratingAvg}"
-                                     reviewCount="${car.reviewCount}"
-                                     href="${pageContext.request.contextPath}/car-detail?carId=${car.carId}"/>
+                        <ryden:consumerCarCard card="${car}" image="${imageUrl}"
+                                               href="${pageContext.request.contextPath}/car-detail?carId=${car.carId}"/>
                     </div>
 
                     <c:if test="${status.index % 4 == 3 || status.last}">

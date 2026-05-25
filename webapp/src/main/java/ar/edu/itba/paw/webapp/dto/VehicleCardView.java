@@ -3,6 +3,8 @@ package ar.edu.itba.paw.webapp.dto;
 import java.math.BigDecimal;
 
 import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.PriceMarketPosition;
 
 /** Car teaser for home and search grids, optionally enriched with status and average rating. */
 public final class VehicleCardView {
@@ -14,6 +16,9 @@ public final class VehicleCardView {
     private final String statusKey;
     private final BigDecimal ratingAvg;
     private final long reviewCount;
+    private final PriceMarketPosition priceMarketPosition;
+    private final BigDecimal marketAveragePrice;
+    private final long marketSampleCount;
 
     public VehicleCardView(
             final long carId,
@@ -21,7 +26,7 @@ public final class VehicleCardView {
             final String model,
             final BigDecimal price,
             final long imageId) {
-        this(carId, brand, model, price, imageId, null, null, 0);
+        this(carId, brand, model, price, imageId, null, null, 0, null, null, 0L);
     }
 
     public VehicleCardView(
@@ -31,7 +36,7 @@ public final class VehicleCardView {
             final BigDecimal price,
             final long imageId,
             final String statusKey) {
-        this(carId, brand, model, price, imageId, statusKey, null, 0);
+        this(carId, brand, model, price, imageId, statusKey, null, 0, null, null, 0L);
     }
 
     public VehicleCardView(
@@ -42,7 +47,7 @@ public final class VehicleCardView {
             final long imageId,
             final String statusKey,
             final BigDecimal ratingAvg) {
-        this(carId, brand, model, price, imageId, statusKey, ratingAvg, 0);
+        this(carId, brand, model, price, imageId, statusKey, ratingAvg, 0, null, null, 0L);
     }
 
     public VehicleCardView(
@@ -54,6 +59,21 @@ public final class VehicleCardView {
             final String statusKey,
             final BigDecimal ratingAvg,
             final long reviewCount) {
+        this(carId, brand, model, price, imageId, statusKey, ratingAvg, reviewCount, null, null, 0L);
+    }
+
+    public VehicleCardView(
+            final long carId,
+            final String brand,
+            final String model,
+            final BigDecimal price,
+            final long imageId,
+            final String statusKey,
+            final BigDecimal ratingAvg,
+            final long reviewCount,
+            final PriceMarketPosition priceMarketPosition,
+            final BigDecimal marketAveragePrice,
+            final long marketSampleCount) {
         this.carId = carId;
         this.brand = brand;
         this.model = model;
@@ -62,6 +82,9 @@ public final class VehicleCardView {
         this.statusKey = statusKey;
         this.ratingAvg = ratingAvg;
         this.reviewCount = reviewCount;
+        this.priceMarketPosition = priceMarketPosition;
+        this.marketAveragePrice = marketAveragePrice;
+        this.marketSampleCount = marketSampleCount;
     }
 
     /**
@@ -77,6 +100,30 @@ public final class VehicleCardView {
                 null,
                 card.getRatingAvg(),
                 0);
+    }
+
+    /**
+     * Consumer browse card with optional price market badge fields.
+     */
+    public static VehicleCardView fromCarCard(
+            final CarCard card,
+            final PriceMarketPosition position,
+            final CarPriceMarketInsight insight) {
+        if (position == null || insight == null) {
+            return fromCarCard(card);
+        }
+        return new VehicleCardView(
+                card.getCarId(),
+                card.getBrand(),
+                card.getModel(),
+                card.getDayPrice(),
+                card.getImageId(),
+                null,
+                card.getRatingAvg(),
+                0,
+                position,
+                insight.getAveragePrice(),
+                insight.getSampleCount());
     }
 
     /**
@@ -97,7 +144,6 @@ public final class VehicleCardView {
     public long getCarId() {
         return carId;
     }
-
 
     public String getBrand() {
         return brand;
@@ -125,5 +171,22 @@ public final class VehicleCardView {
 
     public long getReviewCount() {
         return reviewCount;
+    }
+
+    public PriceMarketPosition getPriceMarketPosition() {
+        return priceMarketPosition;
+    }
+
+    /** CSS modifier suffix for {@code carcard-price-market-badge--*}, e.g. {@code below_market}. */
+    public String getPriceMarketPositionModifier() {
+        return priceMarketPosition == null ? null : priceMarketPosition.name().toLowerCase();
+    }
+
+    public BigDecimal getMarketAveragePrice() {
+        return marketAveragePrice;
+    }
+
+    public long getMarketSampleCount() {
+        return marketSampleCount;
     }
 }

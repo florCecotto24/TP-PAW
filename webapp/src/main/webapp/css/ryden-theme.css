@@ -372,6 +372,22 @@ h3 { letter-spacing: -0.015em; }
     color: var(--color-primary) !important;
 }
 
+.carcard-price .carcard-price-market-badge {
+    color: inherit !important;
+}
+
+.carcard-price-market-badge--below_market {
+    color: #3B6D11 !important;
+}
+
+.carcard-price-market-badge--at_market {
+    color: #854F0B !important;
+}
+
+.carcard-price-market-badge--above_market {
+    color: #791F1F !important;
+}
+
 /* ------------------------------------------------------------------
    7. BUTTONS
    ------------------------------------------------------------------ */

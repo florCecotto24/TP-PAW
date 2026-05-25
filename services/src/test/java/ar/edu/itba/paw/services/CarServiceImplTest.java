@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -15,7 +17,10 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.PriceMarketPosition;
 import ar.edu.itba.paw.persistence.CarDao;
 
 @ExtendWith(MockitoExtension.class)
@@ -177,6 +182,57 @@ public class CarServiceImplTest {
                 .thenReturn(Optional.empty());
 
         Assertions.assertTrue(carService.getPriceMarketInsightForCar(car, null).isEmpty());
+    }
+
+    @Test
+    public void testResolveConsumerPriceMarketContextsWhenSampleCountBelowTwo() {
+        final CarCard card = new CarCard(
+                5L,
+                "Toyota",
+                "Corolla",
+                1L,
+                new BigDecimal("9000.00"),
+                Car.Status.ACTIVE,
+                null);
+        final CarPriceMarketInsight insight = new CarPriceMarketInsight(
+                new BigDecimal("8000.00"),
+                new BigDecimal("12000.00"),
+                new BigDecimal("10000.00"),
+                1L);
+        Mockito.when(carDao.findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 5L))
+                .thenReturn(Optional.of(insight));
+
+        final Map<Long, ConsumerCarCardMarketContext> contexts =
+                carService.resolveConsumerPriceMarketContexts(List.of(card));
+
+        Assertions.assertTrue(contexts.isEmpty());
+    }
+
+    @Test
+    public void testResolveConsumerPriceMarketContextsReturnsPositionWhenComparable() {
+        final CarCard card = new CarCard(
+                5L,
+                "Toyota",
+                "Corolla",
+                1L,
+                new BigDecimal("9000.00"),
+                Car.Status.ACTIVE,
+                null);
+        final CarPriceMarketInsight insight = new CarPriceMarketInsight(
+                new BigDecimal("8000.00"),
+                new BigDecimal("12000.00"),
+                new BigDecimal("10000.00"),
+                2L);
+        Mockito.when(carDao.findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 5L))
+                .thenReturn(Optional.of(insight));
+
+        final Map<Long, ConsumerCarCardMarketContext> contexts =
+                carService.resolveConsumerPriceMarketContexts(List.of(card));
+
+        Assertions.assertEquals(1, contexts.size());
+        Assertions.assertEquals(
+                PriceMarketPosition.BELOW_MARKET,
+                contexts.get(5L).getPosition());
     }
 
 }

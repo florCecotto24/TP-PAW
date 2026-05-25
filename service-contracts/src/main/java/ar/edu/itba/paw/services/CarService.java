@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.dto.ImageUpload;
@@ -10,6 +11,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.CarSearchCriteria;
@@ -174,6 +176,11 @@ public interface CarService {
      */
     Optional<CarPriceMarketInsight> getPriceMarketInsightForCar(
             Car car, Long excludeCarId);
+
+    /**
+     * Market badge context per car id for consumer browse cards. Missing keys mean no badge for that card.
+     */
+    Map<Long, ConsumerCarCardMarketContext> resolveConsumerPriceMarketContexts(List<CarCard> cards);
 
     /**
      * Owner car detail page model assembled from the car, its availabilities, pictures, and reservation analytics.

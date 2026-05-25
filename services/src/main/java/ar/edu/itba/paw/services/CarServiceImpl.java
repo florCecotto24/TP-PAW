@@ -7,6 +7,7 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -35,6 +36,7 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
@@ -520,13 +522,40 @@ public final class CarServiceImpl implements CarService {
         if (car == null) {
             return Optional.empty();
         }
-        final String brand = car.getBrand();
-        final String model = car.getModel();
+        return normalizedBrandModel(car.getBrand(), car.getModel())
+                .flatMap(bm -> carDao.findActiveDayPriceMarketInsightByBrandAndModel(
+                        bm[0], bm[1], excludeCarId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, ConsumerCarCardMarketContext> resolveConsumerPriceMarketContexts(
+            final List<CarCard> cards) {
+        if (cards == null || cards.isEmpty()) {
+            return Map.of();
+        }
+        final Map<String, Optional<CarPriceMarketInsight>> insightCache = new HashMap<>();
+        final Map<Long, ConsumerCarCardMarketContext> contexts = new HashMap<>();
+        for (final CarCard card : cards) {
+            normalizedBrandModel(card.getBrand(), card.getModel())
+                    .flatMap(bm -> {
+                        final String cacheKey = bm[0] + "|" + bm[1] + "|" + card.getCarId();
+                        final Optional<CarPriceMarketInsight> insight = insightCache.computeIfAbsent(
+                                cacheKey,
+                                k -> carDao.findActiveDayPriceMarketInsightByBrandAndModel(
+                                        bm[0], bm[1], card.getCarId()));
+                        return ConsumerCarCardMarketContext.fromInsight(insight, card.getDayPrice());
+                    })
+                    .ifPresent(ctx -> contexts.put(card.getCarId(), ctx));
+        }
+        return contexts;
+    }
+
+    private static Optional<String[]> normalizedBrandModel(final String brand, final String model) {
         if (brand == null || brand.isBlank() || model == null || model.isBlank()) {
             return Optional.empty();
         }
-        return carDao.findActiveDayPriceMarketInsightByBrandAndModel(
-                brand.trim(), model.trim(), excludeCarId);
+        return Optional.of(new String[] {brand.trim(), model.trim()});
     }
 
     @Override
