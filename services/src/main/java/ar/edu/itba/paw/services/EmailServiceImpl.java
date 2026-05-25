@@ -24,6 +24,7 @@ import ar.edu.itba.paw.exception.email.EmailMessagingException;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.NewAdminPasswordEmailPayload;
 import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
@@ -67,6 +68,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String RESERVATION_CANCELLATION_OWNER_TEMPLATE = "html/reservation-cancellation-owner";
     private static final String EMAIL_VERIFICATION_TEMPLATE = "html/email-verification-code";
     private static final String MIGRATED_PASSWORD_TEMPLATE = "html/migrated-password";
+    private static final String NEW_ADMIN_PASSWORD_TEMPLATE = "html/new-admin-password";
     private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
     private static final String RESERVATION_REMINDER_TEMPLATE = "html/reservation-reminder-rider";
     private static final String LISTING_DELETION_TEMPLATE = "html/listing-deleted-owner";
@@ -312,6 +314,32 @@ public final class EmailServiceImpl implements EmailService {
             LOGGER.atInfo().addArgument(to).log("Migrated user password email sent to {}");
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(to).log("Failed to send migrated password email to {}");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendNewAdminPassword(final NewAdminPasswordEmailPayload payload) {
+        final String to = payload.getRecipientEmail();
+        final String plainPassword = payload.getPlainPassword();
+        if (to == null || to.isBlank() || plainPassword == null || plainPassword.isBlank()) {
+            LOGGER.atError().log("sendNewAdminPassword: missing to or password");
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("plainPassword", plainPassword);
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(NEW_ADMIN_PASSWORD_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.newAdminPassword.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).log("New admin password email sent to {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send new admin password email to {}");
         }
     }
 

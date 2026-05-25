@@ -36,7 +36,4 @@ public final class ValidationGroups {
     /** Publish car wizard submit ({@code /publish-car} POST). */
     public interface OnPublishCar {
     }
-
-    public interface OnCreateListing {
-    }
 }

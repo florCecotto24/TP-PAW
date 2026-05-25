@@ -22,8 +22,8 @@
                 </li>
                 <sec:authorize access="isAuthenticated()">
                     <li class="nav-item px-1">
-                        <a class="nav-link d-flex align-items-center ${activeTab == 'my-cars' ? 'active' : ''}"
-                           href="${pageContext.request.contextPath}/my-cars"><spring:message code="navbar.myListings"/></a>
+                        <a class="nav-link d-flex align-items-center ${activeTab == 'my-listings' ? 'active' : ''}"
+                           href="${pageContext.request.contextPath}/my-listings"><spring:message code="navbar.myListings"/></a>
                     </li>
                     <li class="nav-item px-1">
                         <a class="nav-link d-flex align-items-center ${activeTab == 'my-reservations' ? 'active' : ''}"

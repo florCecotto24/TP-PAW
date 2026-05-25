@@ -133,11 +133,6 @@ public final class UserServiceImpl implements UserService {
         return userDao.findByEmailForAuthentication(email);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<String> findRoleNamesForUser(final long userId) {
-        return userDao.findRoleNamesForUser(userId);
-    }
 
     @Override
     @Transactional

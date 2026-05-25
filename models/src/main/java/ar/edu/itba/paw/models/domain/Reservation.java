@@ -39,6 +39,7 @@ public class Reservation {
         CANCELLED,
         CANCELLED_BY_RIDER,
         CANCELLED_BY_OWNER,
+        CANCELLED_BY_ADMIN,
         CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF,
         FINISHED
     }
@@ -63,7 +64,7 @@ public class Reservation {
             return false;
         }
         return switch (status) {
-            case CANCELLED, CANCELLED_BY_RIDER, CANCELLED_BY_OWNER, CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF -> true;
+            case CANCELLED, CANCELLED_BY_RIDER, CANCELLED_BY_OWNER, CANCELLED_BY_ADMIN, CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF -> true;
             default -> false;
         };
     }

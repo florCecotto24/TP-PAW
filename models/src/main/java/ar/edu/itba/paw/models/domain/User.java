@@ -13,6 +13,8 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -29,6 +31,10 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "users")
 public class User {
+    
+    public enum Role {
+        ADMIN, USER
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_seq")
@@ -94,10 +100,16 @@ public class User {
     @Column(name = "identity_validated")
     private Boolean identityValidated;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "role")
-    private Set<String> roles = new HashSet<>();
+    @Enumerated(EnumType.STRING)
+    @Column(name = "user_role", nullable = false, length = 50)
+    private Role userRole;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "role_assigned_by")
+    private User roleAssignedBy;
+
+    @Column(name = "is_blocked", nullable = false)
+    private boolean isBlocked;
 
     @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
     private List<Car> cars = new ArrayList<>();
@@ -127,6 +139,9 @@ public class User {
         this.licenseValidated = b.licenseValidated;
         this.identityFile = b.identityFile;
         this.identityValidated = b.identityValidated;
+        this.userRole = b.userRole;
+        this.roleAssignedBy = b.roleAssignedBy;
+        this.isBlocked = b.isBlocked;
     }
 
     /** Minimal user row (no password hash, no optional profile fields). */
@@ -156,6 +171,9 @@ public class User {
         private Boolean licenseValidated;
         private StoredFile identityFile;
         private Boolean identityValidated;
+        private Role userRole;
+        private User roleAssignedBy;
+        private boolean isBlocked;
 
         public Builder id(final long id) {
             this.id = id;
@@ -242,10 +260,28 @@ public class User {
             return this;
         }
 
+        public Builder userRole(final Role userRole) {
+            this.userRole = userRole;
+            return this;
+        }
+
+        public Builder roleAssignedBy(final User roleAssignedBy) {
+            this.roleAssignedBy = roleAssignedBy;
+            return this;
+        }
+
+        public Builder isBlocked(final boolean isBlocked) {
+            this.isBlocked = isBlocked;
+            return this;
+        }
+
         public User build() {
             Objects.requireNonNull(email, "email");
             Objects.requireNonNull(forename, "forename");
             Objects.requireNonNull(surname, "surname");
+            if (userRole == null) {
+                userRole = Role.USER;
+            }
             return new User(this);
         }
     }
@@ -333,8 +369,16 @@ public class User {
         return Boolean.TRUE.equals(identityValidated);
     }
 
-    public Set<String> getRoles() {
-        return roles;
+    public Role getUserRole() {
+        return userRole;
+    }
+
+    public Optional<User> getRoleAssignedBy() {
+        return Optional.ofNullable(roleAssignedBy);
+    }
+
+    public boolean isBlocked() {
+        return isBlocked;
     }
 
     public void setForename(final String forename) {
@@ -399,6 +443,18 @@ public class User {
 
     public void setIdentityValidated(final Boolean identityValidated) {
         this.identityValidated = identityValidated;
+    }
+
+    public void setUserRole(final Role userRole) {
+        this.userRole = userRole;
+    }
+
+    public void setRoleAssignedBy(final User roleAssignedBy) {
+        this.roleAssignedBy = roleAssignedBy;
+    }
+
+    public void setBlocked(final boolean isBlocked) {
+        this.isBlocked = isBlocked;
     }
 
     public List<Car> getCars() {

@@ -38,6 +38,9 @@ public interface UserService {
      */
     List<String> findRoleNamesForUser(long userId);
 
+    /** User who owns the car linked to {@code listingId}, when the join resolves. */
+    Optional<User> getListingOwner(final long listingId);
+
     /**
      * Updates first name and last name (max 50 characters each, no whitespace).
      */
@@ -122,8 +125,12 @@ public interface UserService {
      */
     String getUserCbu(long userId);
 
-    /** Owner CBU for the given car, when present and non-blank. */
-    Optional<String> findOwnerCbuForCar(long carId);
+    /**
+     * Resolves the listing owner's CBU for read-only UI (e.g. rider reservation confirmation).
+     *
+     * @return non-empty when the listing owner exists and has a non-blank CBU; otherwise empty
+     */
+    Optional<String> findOwnerCbuForListing(long listingId);
 
     /** Whether {@code user} has a persisted CBU that satisfies {@link ar.edu.itba.paw.models.util.CbuRules}. */
     boolean hasValidCbu(User user);

@@ -34,7 +34,7 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.webapp.security.access.CarOwnerWebAuthorization;
+import ar.edu.itba.paw.webapp.security.access.ListingWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ProfileWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
@@ -100,7 +100,7 @@ public class WebAuthConfig {
             final RequestCache requestCache,
             final LogoutHandler contextPathAuthCookieClearingLogoutHandler,
             final HandlerMappingIntrospector handlerMappingIntrospector,
-            final CarOwnerWebAuthorization carOwnerWebAuthorization,
+            final ListingWebAuthorization listingWebAuthorization,
             final ReservationWebAuthorization reservationWebAuthorization,
             final ProfileWebAuthorization profileWebAuthorization) throws Exception {
         http
@@ -118,11 +118,11 @@ public class WebAuthConfig {
                                 "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
                         .requestMatchers("/publish-car", "/publish-car/**").authenticated()
-                        .requestMatchers("/my-cars", "/my-cars/car/**", "/my-cars/quick-cbu").authenticated()
+                        .requestMatchers("/my-listings").authenticated()
                         .requestMatchers(
-                                mvc(handlerMappingIntrospector, "/my-cars/car/{carId}"),
-                                mvc(handlerMappingIntrospector, "/my-cars/car/{carId}/**"))
-                        .access(carOwnerWebAuthorization.ownerAccess())
+                                mvc(handlerMappingIntrospector, "/my-listings/{listingId}"),
+                                mvc(handlerMappingIntrospector, "/my-listings/{listingId}/**"))
+                        .access(listingWebAuthorization.ownerAccess())
                         .requestMatchers("/my-reservations").authenticated()
                         .requestMatchers("/ws", "/ws/**").authenticated()
                         .requestMatchers(
@@ -130,24 +130,6 @@ public class WebAuthConfig {
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/messages"))
-                        .access(reservationWebAuthorization.participantAccess())
-                        .requestMatchers(
-                                mvc(
-                                        handlerMappingIntrospector,
-                                        HttpMethod.POST,
-                                        "/my-reservations/{reservationId}/messages"))
-                        .access(reservationWebAuthorization.participantAccess())
-                        .requestMatchers(
-                                mvc(
-                                        handlerMappingIntrospector,
-                                        HttpMethod.GET,
-                                        "/my-reservations/{reservationId}/messages/{messageId}/attachment/download"))
-                        .access(reservationWebAuthorization.participantAccess())
-                        .requestMatchers(
-                                mvc(
-                                        handlerMappingIntrospector,
-                                        HttpMethod.GET,
-                                        "/my-reservations/{reservationId}/messages/{messageId}/attachment/view"))
                         .access(reservationWebAuthorization.participantAccess())
                         .requestMatchers(
                                 mvc(

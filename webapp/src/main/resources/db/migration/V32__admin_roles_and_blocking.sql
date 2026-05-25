@@ -1,0 +1,5 @@
+DROP TABLE user_roles;
+
+ALTER TABLE users ADD COLUMN user_role VARCHAR(20) DEFAULT 'USER' NOT NULL;
+ALTER TABLE users ADD COLUMN role_assigned_by BIGINT REFERENCES users(id);
+ALTER TABLE users ADD COLUMN is_blocked BOOLEAN DEFAULT false NOT NULL;

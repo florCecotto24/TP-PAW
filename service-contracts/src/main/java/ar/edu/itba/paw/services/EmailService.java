@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services;
 import java.util.List;
 import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.NewAdminPasswordEmailPayload;
 import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
@@ -35,6 +36,8 @@ public interface EmailService {
 
     /** One-time plain password for legacy migrated accounts. */
     void sendMigratedUserPassword(MigratedUserPasswordEmailPayload payload);
+
+    void sendNewAdminPassword(NewAdminPasswordEmailPayload payload);
 
     /** Password reset flow: code and link. */
     void sendPasswordResetCode(PasswordResetCodeEmailPayload payload);
