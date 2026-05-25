@@ -12,6 +12,7 @@ public final class ReservationSearchCriteria {
 
     private final Long ownerId;
     private final Long riderId;
+    private final Long carId;
     private final int page;
     private final int pageSize;
     private final List<String> statusFilters;
@@ -40,8 +41,29 @@ public final class ReservationSearchCriteria {
             final String sortBy,
             final String sortDirection,
             final String textQuery) {
+        this(ownerId, riderId, null, page, pageSize, statusFilters, carTypes, transmissions,
+                powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDirection, textQuery);
+    }
+
+    public ReservationSearchCriteria(
+            final Long ownerId,
+            final Long riderId,
+            final Long carId,
+            final int page,
+            final int pageSize,
+            final List<String> statusFilters,
+            final List<String> carTypes,
+            final List<String> transmissions,
+            final List<String> powertrains,
+            final BigDecimal minPrice,
+            final BigDecimal maxPrice,
+            final List<String> ratingBands,
+            final String sortBy,
+            final String sortDirection,
+            final String textQuery) {
         this.ownerId = ownerId;
         this.riderId = riderId;
+        this.carId = carId;
         this.page = Math.max(0, page);
         this.pageSize = pageSize > 0 ? pageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
         this.statusFilters = statusFilters == null ? List.of() : List.copyOf(statusFilters);
@@ -62,6 +84,10 @@ public final class ReservationSearchCriteria {
 
     public Long getRiderId() {
         return riderId;
+    }
+
+    public Long getCarId() {
+        return carId;
     }
 
     public int getPage() {

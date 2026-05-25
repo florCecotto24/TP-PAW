@@ -16,23 +16,25 @@
 <main class="container pt-5 pb-4">
     <c:choose>
         <c:when test="${not empty reservationDetailOwnerCarHubId}">
-            <spring:message code="myListings.tab.reservations" var="bcHomeLabel"/>
-            <spring:message code="myCarReservations.heading" var="bcMidLabel"/>
-            <c:url var="bcMidHref" value="/my-cars/car/${reservationDetailOwnerCarHubId}/reservations"/>
-            <c:url var="bcHomeHref" value="/my-cars">
-                <c:param name="tab" value="reservations"/>
-            </c:url>
+            <%-- 4-level: My Cars > Reservations for my cars > Brand Model > #reservationId --%>
+            <spring:message code="navbar.myListings" var="bcHomeLabel"/>
+            <spring:message code="ownerReservations.heading" var="bcMidLabel"/>
+            <c:url var="bcMid2Href" value="/my-cars/reservations/${reservationDetailOwnerCarHubId}"/>
             <ryden:breadcrumbTrail
                     homeLabel="${bcHomeLabel}"
-                    homeHref="${bcHomeHref}"
-                    currentLabel="${listingTitle}"/>
+                    homeHref="${pageContext.request.contextPath}/my-cars"
+                    midLabel="${bcMidLabel}"
+                    midHref="${pageContext.request.contextPath}/my-cars/reservations"
+                    mid2Label="${car.brand} ${car.model}"
+                    mid2Href="${bcMid2Href}"
+                    currentLabel="#${reservation.id}"/>
         </c:when>
         <c:otherwise>
             <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
             <ryden:breadcrumbTrail
                     homeLabel="${myReservationsLabel}"
                     homeHref="${pageContext.request.contextPath}/my-reservations"
-                    currentLabel="${listingTitle}"/>
+                    currentLabel="#${reservation.id}"/>
         </c:otherwise>
     </c:choose>
 

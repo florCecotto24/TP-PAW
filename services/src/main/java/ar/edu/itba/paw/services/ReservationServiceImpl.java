@@ -175,7 +175,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final List<String> statusFilter,
             final int page,
             final String sort,
-            final String textQuery) {
+            final String textQuery,
+            final Long carId) {
         final List<String> carTypes = collectCarTypeParams(category);
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
@@ -209,7 +210,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         return new ReservationSearchCriteria(
-                ownerId, riderId, page, paginationPolicy.getDefaultPageSize(), statuses,
+                ownerId, riderId, carId, page, paginationPolicy.getDefaultPageSize(), statuses,
                 carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDir, textQuery);
     }
 

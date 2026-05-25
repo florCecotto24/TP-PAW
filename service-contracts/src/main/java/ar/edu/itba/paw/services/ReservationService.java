@@ -35,7 +35,7 @@ public interface ReservationService {
 
     /**
      * Builds {@link ReservationSearchCriteria} from list/search parameters (filters, sort, default page size from
-     * configuration).
+     * configuration). Pass {@code carId} to restrict to a single car (owner hub); pass {@code null} for all cars.
      */
     ReservationSearchCriteria buildReservationSearchCriteria(
             Long ownerId,
@@ -49,7 +49,8 @@ public interface ReservationService {
             List<String> statusFilter,
             int page,
             String sort,
-            String textQuery);
+            String textQuery,
+            Long carId);
 
     /**
      * Normalizes a client-supplied total string (digits and optional single decimal point); empty when invalid.

@@ -22,10 +22,6 @@
                 </li>
                 <sec:authorize access="isAuthenticated()">
                     <li class="nav-item px-1">
-                        <a class="nav-link d-flex align-items-center ${activeTab == 'my-cars' ? 'active' : ''}"
-                           href="${pageContext.request.contextPath}/my-cars"><spring:message code="navbar.myListings"/></a>
-                    </li>
-                    <li class="nav-item px-1">
                         <a class="nav-link d-flex align-items-center ${activeTab == 'my-reservations' ? 'active' : ''}"
                            href="${pageContext.request.contextPath}/my-reservations"><spring:message code="navbar.myReservations"/></a>
                     </li>
@@ -68,6 +64,15 @@
                             <li>
                                 <a class="dropdown-item rounded-3 py-2 ${activeTab == 'profile' ? 'active' : ''}"
                                    href="${pageContext.request.contextPath}/profile"><spring:message code="navbar.profile"/></a>
+                            </li>
+                            <li><hr class="dropdown-divider my-2"></li>
+                            <li>
+                                <a class="dropdown-item rounded-3 py-2 ${activeTab == 'my-cars' ? 'active' : ''}"
+                                   href="${pageContext.request.contextPath}/my-cars"><spring:message code="navbar.myListings"/></a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item rounded-3 py-2 ${activeTab == 'owner-reservations' ? 'active' : ''}"
+                                   href="${pageContext.request.contextPath}/my-cars/reservations"><spring:message code="navbar.ownerReservations"/></a>
                             </li>
                             <li><hr class="dropdown-divider my-2"></li>
                             <li>

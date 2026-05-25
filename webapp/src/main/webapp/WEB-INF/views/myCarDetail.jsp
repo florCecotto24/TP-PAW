@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
@@ -68,16 +69,36 @@
                                     <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
                                         <h2 class="h5 fw-semibold mb-0"><c:out value="${car.brand} ${car.model}"/></h2>
                                     </div>
-                                    <div class="d-flex flex-wrap gap-2">
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
                                         <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                         <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
+                                        <spring:message code="enum.car.type.${car.type.name()}" var="carTypeLabel"/>
+                                        <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTypeLabel}"/></span>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTransmissionLabel}"/></span>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="small text-secondary">
+                                            <spring:message code="myCarDetail.carDetails.plate"/>:
+                                        </span>
+                                        <span class="small fw-medium"><c:out value="${car.plate}"/></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </article>
+
+                    <%-- Description block --%>
+                    <c:if test="${car.description.present}">
+                        <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                            <div class="card-body p-4">
+                                <h2 class="h6 fw-semibold text-secondary text-uppercase mb-2" style="letter-spacing:.04em;">
+                                    <spring:message code="myCarDetail.description.title"/>
+                                </h2>
+                                <p class="mb-0 text-body" style="white-space:pre-line;"><c:out value="${car.description.get()}"/></p>
+                            </div>
+                        </article>
+                    </c:if>
 
                     <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="availabilityDisplaySection">
                         <div class="card-body p-4">
@@ -257,13 +278,8 @@
             <c:url var="carReservationsUrl" value="/my-cars/car/${car.id}/reservations"/>
             <article class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
                 <div class="card-body p-4">
-                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+                    <div class="mb-4">
                         <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarReservations.dashboard.title"/></h2>
-                        <c:if test="${reservationTotal > 0}">
-                            <a href="<c:out value='${carReservationsUrl}'/>" class="btn btn-outline-primary btn-sm">
-                                <spring:message code="myCarReservations.dashboard.viewAll"/>
-                            </a>
-                        </c:if>
                     </div>
 
                     <div class="row g-2 mb-4">
@@ -365,6 +381,83 @@
                 </div>
             </article>
 
+            <%-- Recent Reservations preview --%>
+            <article class="card border-0 shadow-sm rounded-4 mt-4 bg-white">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarDetail.recentReservations.title"/></h2>
+                        <c:if test="${reservationPreviewTotal > 0}">
+                            <c:url var="seeAllReservationsUrl" value="/my-cars/reservations/${car.id}"/>
+                            <a href="<c:out value='${seeAllReservationsUrl}'/>" class="btn btn-outline-primary btn-sm">
+                                <spring:message code="myCarDetail.recentReservations.seeAll"/>
+                            </a>
+                        </c:if>
+                    </div>
+                    <c:choose>
+                        <c:when test="${not empty previewReservations}">
+                            <div class="d-flex flex-column gap-3">
+                                <c:forEach var="reservation" items="${previewReservations}">
+                                    <c:url var="previewResDetailUrl" value="/my-reservations/${reservation.reservationId}">
+                                        <c:param name="role" value="owner"/>
+                                        <c:param name="fromCar" value="${car.id}"/>
+                                    </c:url>
+                                    <a href="<c:out value='${previewResDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
+                                        <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
+                                            <span class="position-absolute top-0 end-0 m-2 z-1">
+                                                <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : fn:startsWith(reservation.statusKey, 'cancelled') ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
+                                                    <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
+                                                </span>
+                                            </span>
+                                            <div class="row g-0 align-items-stretch">
+                                                <div class="col-12 col-md-3 reservation-card__media-wrap">
+                                                    <c:choose>
+                                                        <c:when test="${reservation.imageId > 0}">
+                                                            <c:url var="prevResImgUrl" value="/image/${reservation.imageId}"/>
+                                                            <img src="<c:out value='${prevResImgUrl}'/>" alt="<c:out value='${reservation.brand} ${reservation.model}'/>" class="reservation-card__media">
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <div class="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
+                                                                <i class="bi bi-car-front fs-1" aria-hidden="true"></i>
+                                                            </div>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </div>
+                                                <div class="col-12 col-md-9">
+                                                    <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
+                                                        <div>
+                                                            <h3 class="h5 fw-semibold mb-1"><c:out value="${reservation.brand} ${reservation.model}"/></h3>
+                                                        </div>
+                                                        <div class="row g-3">
+                                                            <div class="col-12 col-sm-6">
+                                                                <p class="reservation-card__meta-label mb-1"><spring:message code="myReservations.card.pickup"/></p>
+                                                                <p class="mb-0 fw-medium"><c:out value="${reservation.pickupDateTime}"/></p>
+                                                            </div>
+                                                            <div class="col-12 col-sm-6">
+                                                                <p class="reservation-card__meta-label mb-1"><spring:message code="myReservations.card.return"/></p>
+                                                                <p class="mb-0 fw-medium"><c:out value="${reservation.returnDateTime}"/></p>
+                                                            </div>
+                                                        </div>
+                                                        <div class="pt-1">
+                                                            <div class="reservation-price-compact">
+                                                                <span class="reservation-card__meta-label mb-0"><spring:message code="myReservations.card.totalPrice"/></span>
+                                                                <span class="h5 mb-0 fw-bold text-primary"><c:out value="${reservation.totalPrice}"/></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </a>
+                                </c:forEach>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <p class="text-secondary small mb-0"><spring:message code="myCarReservations.empty.description"/></p>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
+            </article>
+
             <ryden:modal
                     id="pauseListingModal"
                     title="${pauseModalTitle}"
@@ -431,16 +524,36 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
                                         <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                         <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
+                                        <spring:message code="enum.car.type.${car.type.name()}" var="carTypeLabel"/>
+                                        <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTypeLabel}"/></span>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTransmissionLabel}"/></span>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="small text-secondary">
+                                            <spring:message code="myCarDetail.carDetails.plate"/>:
+                                        </span>
+                                        <span class="small fw-medium"><c:out value="${car.plate}"/></span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </article>
+
+                    <%-- Description block --%>
+                    <c:if test="${car.description.present}">
+                        <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                            <div class="card-body p-4">
+                                <h2 class="h6 fw-semibold text-secondary text-uppercase mb-2" style="letter-spacing:.04em;">
+                                    <spring:message code="myCarDetail.description.title"/>
+                                </h2>
+                                <p class="mb-0 text-body" style="white-space:pre-line;"><c:out value="${car.description.get()}"/></p>
+                            </div>
+                        </article>
+                    </c:if>
                 </div>
 
                 <div class="col-lg-4">

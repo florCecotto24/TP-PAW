@@ -136,7 +136,7 @@ public final class MyReservationsController {
         final String riderSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 null, me.getId(), category, transmission, powertrain, priceMin, priceMax,
-                rating, riderStatus, riderPage, riderSort, q);
+                rating, riderStatus, riderPage, riderSort, q, null);
         final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
         final Locale locale = LocaleContextHolder.getLocale();
         final List<ReservationCardDisplayRow> riderReservations = riderResultPage.getContent().stream()

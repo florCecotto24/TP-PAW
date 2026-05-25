@@ -75,9 +75,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/my-cars")
 public final class MyCarsController {
 
-    private static final String TAB_LISTINGS = "listings";
-    private static final String TAB_RESERVATIONS = "reservations";
-
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
     private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
@@ -139,11 +136,8 @@ public final class MyCarsController {
     public ModelAndView myCars(
             @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "0") int ownerPage,
             @RequestParam(required = false) final List<String> listingStatus,
-            @RequestParam(required = false) final List<String> ownerStatus,
             @RequestParam(required = false) final String q,
-            @RequestParam(required = false) final String tab,
             @RequestParam(required = false) final List<String> category,
             @RequestParam(required = false) final List<String> transmission,
             @RequestParam(required = false) final List<String> powertrain,
@@ -151,23 +145,10 @@ public final class MyCarsController {
             @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String sort,
-            @RequestParam(required = false) final List<String> ownerCategory,
-            @RequestParam(required = false) final List<String> ownerTransmission,
-            @RequestParam(required = false) final List<String> ownerPowertrain,
-            @RequestParam(required = false) final BigDecimal ownerPriceMin,
-            @RequestParam(required = false) final BigDecimal ownerPriceMax,
-            @RequestParam(required = false) final List<String> ownerRating,
-            @RequestParam(required = false) final String ownerSort,
-            @RequestParam(required = false) final String ownerQ,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
-        ownerPage = Math.max(0, ownerPage);
-
-        final String selectedTab = TAB_RESERVATIONS.equals(tab) ? TAB_RESERVATIONS : TAB_LISTINGS;
         final String listingsSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
-        final String ownerResSort = MyHubSortSanitizer.sanitize(ownerSort, DEFAULT_SORT);
-        // Cars tab data
         final var listingsCriteria = carService.buildOwnerCarSearchCriteria(
                 me.getId(), category, transmission, powertrain, priceMin, priceMax,
                 listingStatus, rating, q, page, listingsSort);
@@ -182,38 +163,104 @@ public final class MyCarsController {
             redirectView.setExposeModelAttributes(false);
             return new ModelAndView(redirectView);
         }
-        final List<CarCard> listings = resultPage.getContent();
+        final ModelAndView mav = new ModelAndView("myListings");
+        mav.addObject("results", resultPage.getContent());
+        mav.addObject("myListingsPage", resultPage);
+        mav.addObject("activeTab", "my-cars");
+        mav.addObject("listingsCurrentSort", listingsSort);
+        return mav;
+    }
 
-        // Reservations tab data
-        final var ownerCriteria = reservationService.buildReservationSearchCriteria(
-                me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain, ownerPriceMin, ownerPriceMax,
-                ownerRating, ownerStatus, ownerPage, ownerResSort, ownerQ);
-        final Page<ReservationCard> ownerResultPage = reservationService.getOwnerReservationCards(ownerCriteria);
-        final int safeOwnerPage = UiPaging.clampZeroBasedPage(
-                ownerPage, ownerResultPage.getTotalItems(), ownerResultPage.getPageSize());
-        if (safeOwnerPage != ownerPage) {
+    @GetMapping("/reservations")
+    public ModelAndView ownerReservations(
+            @CurrentUser final User currentUser,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) final List<String> ownerStatus,
+            @RequestParam(required = false) final String ownerQ,
+            @RequestParam(required = false) final List<String> ownerCategory,
+            @RequestParam(required = false) final List<String> ownerTransmission,
+            @RequestParam(required = false) final List<String> ownerPowertrain,
+            @RequestParam(required = false) final BigDecimal ownerPriceMin,
+            @RequestParam(required = false) final BigDecimal ownerPriceMax,
+            @RequestParam(required = false) final List<String> ownerRating,
+            @RequestParam(required = false) final String ownerSort,
+            final HttpServletRequest request) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        page = Math.max(0, page);
+        final String sort = MyHubSortSanitizer.sanitize(ownerSort, DEFAULT_SORT);
+        final var criteria = reservationService.buildReservationSearchCriteria(
+                me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain,
+                ownerPriceMin, ownerPriceMax, ownerRating, ownerStatus, page, sort, ownerQ, null);
+        final Page<ReservationCard> resultPage = reservationService.getOwnerReservationCards(criteria);
+        final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
+        if (safePage != page) {
             final RedirectView redirectView = new RedirectView(
                     UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
-                            .replaceQueryParam("ownerPage", safeOwnerPage)
+                            .replaceQueryParam("page", safePage)
                             .build()
                             .toUriString());
             redirectView.setExposeModelAttributes(false);
             return new ModelAndView(redirectView);
         }
         final Locale locale = LocaleContextHolder.getLocale();
-        final List<ReservationCardDisplayRow> ownerReservations = ownerResultPage.getContent().stream()
+        final List<ReservationCardDisplayRow> reservations = resultPage.getContent().stream()
                 .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
                 .collect(Collectors.toList());
+        final ModelAndView mav = new ModelAndView("ownerReservations");
+        mav.addObject("ownerReservations", reservations);
+        mav.addObject("ownerReservationsPage", resultPage);
+        mav.addObject("selectedCar", null);
+        mav.addObject("ownerCurrentSort", sort);
+        mav.addObject("activeTab", "owner-reservations");
+        return mav;
+    }
 
-        final ModelAndView mav = new ModelAndView("myListings");
-        mav.addObject("results", listings);
-        mav.addObject("myListingsPage", resultPage);
-        mav.addObject("ownerReservations", ownerReservations);
-        mav.addObject("ownerReservationsPage", ownerResultPage);
-        mav.addObject("selectedListingsTab", selectedTab);
-        mav.addObject("activeTab", "my-cars");
-        mav.addObject("listingsCurrentSort", listingsSort);
-        mav.addObject("ownerCurrentSort", ownerResSort);
+    @GetMapping("/reservations/{carId}")
+    public ModelAndView ownerReservationsForCar(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) final List<String> ownerStatus,
+            @RequestParam(required = false) final String ownerQ,
+            @RequestParam(required = false) final List<String> ownerCategory,
+            @RequestParam(required = false) final List<String> ownerTransmission,
+            @RequestParam(required = false) final List<String> ownerPowertrain,
+            @RequestParam(required = false) final BigDecimal ownerPriceMin,
+            @RequestParam(required = false) final BigDecimal ownerPriceMax,
+            @RequestParam(required = false) final List<String> ownerRating,
+            @RequestParam(required = false) final String ownerSort,
+            final HttpServletRequest request) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-cars/reservations"));
+        }
+        page = Math.max(0, page);
+        final String sort = MyHubSortSanitizer.sanitize(ownerSort, DEFAULT_SORT);
+        final var criteria = reservationService.buildReservationSearchCriteria(
+                me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain,
+                ownerPriceMin, ownerPriceMax, ownerRating, ownerStatus, page, sort, ownerQ, carId);
+        final Page<ReservationCard> resultPage = reservationService.getOwnerReservationCards(criteria);
+        final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
+        if (safePage != page) {
+            final RedirectView redirectView = new RedirectView(
+                    UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
+                            .replaceQueryParam("page", safePage)
+                            .build()
+                            .toUriString());
+            redirectView.setExposeModelAttributes(false);
+            return new ModelAndView(redirectView);
+        }
+        final Locale locale = LocaleContextHolder.getLocale();
+        final List<ReservationCardDisplayRow> reservations = resultPage.getContent().stream()
+                .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
+                .collect(Collectors.toList());
+        final ModelAndView mav = new ModelAndView("ownerReservations");
+        mav.addObject("ownerReservations", reservations);
+        mav.addObject("ownerReservationsPage", resultPage);
+        mav.addObject("selectedCar", carOpt.get());
+        mav.addObject("ownerCurrentSort", sort);
+        mav.addObject("activeTab", "owner-reservations");
         return mav;
     }
 
@@ -232,12 +279,20 @@ public final class MyCarsController {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         if (errors.hasErrors()) {
+            final Locale editLocale = LocaleContextHolder.getLocale();
             final Optional<OwnerCarDetailPageModel> pmOpt =
-                    carService.buildOwnerCarDetailPageModel(carId, LocaleContextHolder.getLocale());
+                    carService.buildOwnerCarDetailPageModel(carId, editLocale);
             if (pmOpt.isPresent()) {
+                final Page<ReservationCard> previewPage =
+                        reservationService.getCarReservationCards(me.getId(), carId, 0, 3, null);
+                final List<ReservationCardDisplayRow> previewReservations = previewPage.getContent().stream()
+                        .map(card -> reservationViewService.toReservationCardDisplayRow(card, editLocale))
+                        .collect(Collectors.toList());
                 final ModelAndView mav = new ModelAndView("myCarDetail");
                 pmOpt.get().populateModel(mav::addObject);
                 mav.addObject("editForm", editForm);
+                mav.addObject("previewReservations", previewReservations);
+                mav.addObject("reservationPreviewTotal", previewPage.getTotalItems());
                 mav.addObject("activeTab", "my-cars");
                 return mav;
             }
@@ -377,14 +432,22 @@ public final class MyCarsController {
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
+        final Locale carDetailLocale = LocaleContextHolder.getLocale();
         final Optional<OwnerCarDetailPageModel> pmOpt =
-                carService.buildOwnerCarDetailPageModel(carId, LocaleContextHolder.getLocale());
+                carService.buildOwnerCarDetailPageModel(carId, carDetailLocale);
         final ListingEditForm editForm = new ListingEditForm();
         if (pmOpt.isPresent()) {
             applyEditFormDefaultsFromAvailabilities(editForm, pmOpt.get().getAvailabilities());
+            final Page<ReservationCard> previewPage =
+                    reservationService.getCarReservationCards(me.getId(), carId, 0, 3, null);
+            final List<ReservationCardDisplayRow> previewReservations = previewPage.getContent().stream()
+                    .map(card -> reservationViewService.toReservationCardDisplayRow(card, carDetailLocale))
+                    .collect(Collectors.toList());
             final ModelAndView mav = new ModelAndView("myCarDetail");
             pmOpt.get().populateModel(mav::addObject);
             mav.addObject("editForm", editForm);
+            mav.addObject("previewReservations", previewReservations);
+            mav.addObject("reservationPreviewTotal", previewPage.getTotalItems());
             mav.addObject("activeTab", "my-cars");
             return mav;
         }

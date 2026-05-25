@@ -610,6 +610,10 @@ public class ReservationJpaDao implements ReservationDao {
             final StringBuilder sql,
             final Map<String, Object> params,
             final ReservationSearchCriteria criteria) {
+        if (criteria.getCarId() != null) {
+            sql.append("AND r.car_id = :carId ");
+            params.put("carId", criteria.getCarId());
+        }
         if (!criteria.getStatusFilters().isEmpty()) {
             sql.append("AND LOWER(r.status) IN (:resStatuses) ");
             params.put("resStatuses", criteria.getStatusFilters());
