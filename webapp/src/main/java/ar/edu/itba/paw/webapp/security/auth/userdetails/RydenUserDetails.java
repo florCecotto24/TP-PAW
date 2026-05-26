@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.security.auth.userdetails;
 
 import java.util.Collection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +16,7 @@ public final class RydenUserDetails implements UserDetails {
     private final String surname;
     private final String encodedPassword;
     private final Collection<? extends GrantedAuthority> authorities;
+    private final Long roleAssignedBy;
 
     public RydenUserDetails(
             final long userId,
@@ -22,13 +24,15 @@ public final class RydenUserDetails implements UserDetails {
             final String forename,
             final String surname,
             final String encodedPassword,
-            final Collection<? extends GrantedAuthority> authorities) {
+            final Collection<? extends GrantedAuthority> authorities,
+            final Long roleAssignedBy) {
         this.userId = userId;
         this.email = email;
         this.forename = forename;
         this.surname = surname;
         this.encodedPassword = encodedPassword;
         this.authorities = authorities;
+        this.roleAssignedBy = roleAssignedBy;
     }
 
     /**
@@ -46,6 +50,7 @@ public final class RydenUserDetails implements UserDetails {
         private String surname;
         private String encodedPassword;
         private Collection<? extends GrantedAuthority> authorities;
+        private Long roleAssignedBy;
 
         public Builder userId(final long userId) {
             this.userId = userId;
@@ -77,10 +82,15 @@ public final class RydenUserDetails implements UserDetails {
             return this;
         }
 
+        public Builder roleAssignedBy(final Long roleAssignedBy) {
+            this.roleAssignedBy = roleAssignedBy;
+            return this;
+        }
+
         public RydenUserDetails build() {
             Objects.requireNonNull(email, "email");
             Objects.requireNonNull(authorities, "authorities");
-            return new RydenUserDetails(userId, email, forename, surname, encodedPassword, authorities);
+            return new RydenUserDetails(userId, email, forename, surname, encodedPassword, authorities, roleAssignedBy);
         }
     }
 
@@ -129,5 +139,9 @@ public final class RydenUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public Optional<Long> getRoleAssignedBy() {
+        return Optional.ofNullable(roleAssignedBy);
     }
 }

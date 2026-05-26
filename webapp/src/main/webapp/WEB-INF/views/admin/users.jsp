@@ -76,6 +76,9 @@
                                         </form>
                                     </c:if>
                                     <c:choose>
+                                        <c:when test="${(currentAdminGrantorId != null and user.id eq currentAdminGrantorId) or user.id eq currentAdminId}">
+                                            <!-- No block/unblock actions for the admin who granted the current role. -->
+                                        </c:when>
                                         <c:when test="${user.blocked}">
                                             <form action="${pageContext.request.contextPath}/admin/users/${user.id}/unblock" method="post" class="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-3">
@@ -83,13 +86,13 @@
                                                 </button>
                                             </form>
                                         </c:when>
-                                        <c:when test="${not (user.roleAssignedBy.present and user.roleAssignedBy.get() eq currentAdminId)}">
+                                        <c:otherwise>
                                             <form action="${pageContext.request.contextPath}/admin/users/${user.id}/block" method="post" class="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger rounded-3">
                                                     <spring:message code="admin.users.block"/>
                                                 </button>
                                             </form>
-                                        </c:when>
+                                        </c:otherwise>
                                     </c:choose>
                                 </td>
                             </tr>

@@ -65,7 +65,8 @@ public final class SessionLoginService {
                 withHash.getForename(),
                 withHash.getSurname(),
                 hash,
-                authorities);
+                authorities,
+                withHash.getRoleAssignedBy().orElse(null));
         final UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

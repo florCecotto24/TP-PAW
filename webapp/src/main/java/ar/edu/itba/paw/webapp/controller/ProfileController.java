@@ -469,7 +469,8 @@ public final class ProfileController {
                 forename,
                 surname,
                 old.getPassword(),
-                old.getAuthorities());
+                old.getAuthorities(),
+                old.getRoleAssignedBy().orElse(null));
         final UsernamePasswordAuthenticationToken newAuth = new UsernamePasswordAuthenticationToken(
                 updated,
                 authentication.getCredentials(),

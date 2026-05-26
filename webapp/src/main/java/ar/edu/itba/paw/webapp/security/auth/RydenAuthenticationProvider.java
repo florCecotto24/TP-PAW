@@ -72,7 +72,8 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
                 user.getForename(),
                 user.getSurname(),
                 hash,
-                authorities);
+                authorities,
+                user.getRoleAssignedBy().orElse(null));
 
         return new UsernamePasswordAuthenticationToken(principal, rawPassword, principal.getAuthorities());
     }

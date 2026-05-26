@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,10 +71,12 @@ public final class AdminController {
             @RequestParam(defaultValue = "0") final int page,
             final Authentication authentication) {
         final long currentAdminId = requireAdminId(authentication);
+        final Long currentAdminGrantorId = requireAdminGrantorId(authentication).orElse(null);
         final Page<User> users = adminService.listUsers(page, DEFAULT_PAGE_SIZE);
         final ModelAndView mav = new ModelAndView("admin/users");
         mav.addObject("users", users);
         mav.addObject("currentAdminId", currentAdminId);
+        mav.addObject("currentAdminGrantorId", currentAdminGrantorId);
         return mav;
     }
 
@@ -283,6 +286,10 @@ public final class AdminController {
 
     private long requireAdminId(final Authentication authentication) {
         return WebAuthUtils.requireCurrentUser(authentication).getUserId();
+    }
+
+    private Optional<Long> requireAdminGrantorId(final Authentication authentication) {
+        return WebAuthUtils.requireCurrentUser(authentication).getRoleAssignedBy();
     }
 
     private void invalidateUserSessions(final long userId) {
