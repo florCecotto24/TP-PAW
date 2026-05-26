@@ -29,6 +29,9 @@
   </listener>
 
   <listener>
+    <listener-class>org.springframework.security.web.session.HttpSessionEventPublisher</listener-class>
+  </listener>
+  <listener>
     <listener-class>ar.edu.itba.paw.webapp.listener.PublishCarStashSessionListener</listener-class>
   </listener>
   <listener>

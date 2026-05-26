@@ -257,9 +257,25 @@ public final class PublishCarFormController {
             // Resolve brand/model strings (validated non-blank by JSR-303) to a catalog CarModel
             final CarBrand resolvedBrand = carBrandService.findOrCreateUnvalidated(form.getBrand())
                     .orElseThrow(() -> new IllegalStateException("Could not resolve brand: " + form.getBrand()));
+            if (!resolvedBrand.isValidated()) {
+                errors.rejectValue(
+                        "brand",
+                        "publishCar.error.brandPendingValidation",
+                        localeMessages.msg("publishCar.error.brandPendingValidation"));
+                pictureStash.trySyncFromForm(form, session, errors);
+                return publishCarFormView(session);
+            }
             final CarModel resolvedModel = carModelService.findOrCreateUnvalidated(
                             resolvedBrand.getId(), form.getModel(), form.getType())
                     .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + form.getModel()));
+            if (!resolvedModel.isValidated()) {
+                errors.rejectValue(
+                        "model",
+                        "publishCar.error.modelPendingValidation",
+                        localeMessages.msg("publishCar.error.modelPendingValidation"));
+                pictureStash.trySyncFromForm(form, session, errors);
+                return publishCarFormView(session);
+            }
 
             final byte[] insuranceBytes = hasInsurance ? insuranceFile.getBytes() : null;
             final String insuranceName = hasInsurance ? insuranceFile.getOriginalFilename() : null;

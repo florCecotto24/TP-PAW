@@ -3,15 +3,11 @@ package ar.edu.itba.paw.models.domain;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -22,6 +18,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+
+import ar.edu.itba.paw.models.security.UserRole;
 
 /**
  * Domain user. Prefer {@link #builder()} or {@link #identities(long, String, String, String)} over ad-hoc construction.
@@ -94,10 +92,14 @@ public class User {
     @Column(name = "identity_validated")
     private Boolean identityValidated;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
-    @Column(name = "role")
-    private Set<String> roles = new HashSet<>();
+    @Column(name = "user_role", nullable = false, length = 50)
+    private String userRole;
+
+    @Column(name = "role_assigned_by")
+    private Long roleAssignedBy;
+
+    @Column(name = "blocked", nullable = false)
+    private boolean blocked;
 
     @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
     private List<Car> cars = new ArrayList<>();
@@ -127,6 +129,9 @@ public class User {
         this.licenseValidated = b.licenseValidated;
         this.identityFile = b.identityFile;
         this.identityValidated = b.identityValidated;
+        this.userRole = b.userRole;
+        this.roleAssignedBy = b.roleAssignedBy;
+        this.blocked = b.blocked;
     }
 
     /** Minimal user row (no password hash, no optional profile fields). */
@@ -156,6 +161,9 @@ public class User {
         private Boolean licenseValidated;
         private StoredFile identityFile;
         private Boolean identityValidated;
+        private String userRole = UserRole.USER.persistenceName();
+        private Long roleAssignedBy = null;
+        private boolean blocked = false;
 
         public Builder id(final long id) {
             this.id = id;
@@ -239,6 +247,21 @@ public class User {
 
         public Builder identityValidated(final Boolean identityValidated) {
             this.identityValidated = identityValidated;
+            return this;
+        }
+
+        public Builder userRole(final String userRole) {
+            this.userRole = userRole;
+            return this;
+        }
+
+        public Builder roleAssignedBy(final Long roleAssignedBy) {
+            this.roleAssignedBy = roleAssignedBy;
+            return this;
+        }
+
+        public Builder blocked(final boolean blocked) {
+            this.blocked = blocked;
             return this;
         }
 
@@ -333,8 +356,32 @@ public class User {
         return Boolean.TRUE.equals(identityValidated);
     }
 
-    public Set<String> getRoles() {
-        return roles;
+    public String getUserRole() {
+        return userRole;
+    }
+
+    public Optional<Long> getRoleAssignedBy() {
+        return Optional.ofNullable(roleAssignedBy);
+    }
+
+    public boolean isBlocked() {
+        return blocked;
+    }
+
+    public boolean isAdmin() {
+        return UserRole.ADMIN.persistenceName().equals(this.userRole);
+    }
+
+    public void setUserRole(final String userRole) {
+        this.userRole = userRole;
+    }
+
+    public void setRoleAssignedBy(final Long roleAssignedBy) {
+        this.roleAssignedBy = roleAssignedBy;
+    }
+
+    public void setBlocked(final boolean blocked) {
+        this.blocked = blocked;
     }
 
     public void setForename(final String forename) {

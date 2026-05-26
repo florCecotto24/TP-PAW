@@ -30,4 +30,10 @@ public interface CarModelDao {
 
     /** Inserts a new model under the given brand with the given validation flag and body type. */
     CarModel create(long brandId, String name, boolean validated, Car.Type type);
+
+    /** All unvalidated models ordered alphabetically by brand then name. */
+    List<CarModel> findPendingOrdered();
+
+    /** Removes a model row by id. */
+    void deleteById(long modelId);
 }

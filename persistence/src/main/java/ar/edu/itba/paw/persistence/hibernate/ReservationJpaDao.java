@@ -597,6 +597,22 @@ public class ReservationJpaDao implements ReservationDao {
         return 1;
     }
 
+    @Override
+    public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
+        final String countSql = "SELECT COUNT(*) FROM reservations";
+        final Number total = (Number) em.createNativeQuery(countSql).getSingleResult();
+        final String listSql = reservationCardSelectSql()
+                + "FROM reservations r "
+                + "JOIN cars c ON c.id = r.car_id "
+                + "ORDER BY r.created_at DESC "
+                + "LIMIT :limit OFFSET :offset";
+        final Map<String, Object> params = new java.util.LinkedHashMap<>();
+        params.put("limit", pageSize);
+        params.put("offset", page * pageSize);
+        final List<ReservationCard> content = runReservationCardNativeQuery(listSql, params);
+        return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
+    }
+
     // ---- SQL helpers ----
 
     private static String reservationCardSelectSql() {

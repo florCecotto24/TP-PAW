@@ -115,4 +115,7 @@ public final class MessageKeys {
     public static final String PUBLISH_IMAGES_READ = "publish.images.read";
     public static final String PUBLISH_FAILED = "publish.failed";
     public static final String PUBLISH_PREREQUISITES_MISSING = "publish.prerequisites.missing";
+
+    // admin
+    public static final String ADMIN_BLOCK_CANNOT_BLOCK_GRANTOR = "admin.block.cannotBlockGrantor";
 }

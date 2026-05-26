@@ -61,6 +61,15 @@
                             </c:choose>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2 py-2 px-1" aria-labelledby="navbarUserMenuToggle">
+                            <sec:authorize access="hasRole('ADMIN')">
+                                <li>
+                                    <a class="dropdown-item rounded-3 py-2"
+                                       href="${pageContext.request.contextPath}/admin/panel">
+                                        <spring:message code="navbar.adminPanel"/>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"/></li>
+                            </sec:authorize>
                             <li>
                                 <a class="dropdown-item rounded-3 py-2 ${activeTab == 'profile' ? 'active' : ''}"
                                    href="${pageContext.request.contextPath}/profile"><spring:message code="navbar.profile"/></a>

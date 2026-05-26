@@ -25,4 +25,10 @@ public interface CarBrandDao {
 
     /** Inserts a new brand with the given validation flag. */
     CarBrand create(String name, boolean validated);
+
+    /** All unvalidated brands ordered alphabetically. */
+    List<CarBrand> findPendingOrdered();
+
+    /** Removes a brand row by id; cascades to car_models via FK. */
+    void deleteById(long brandId);
 }

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.security.UserRole;
+import ar.edu.itba.paw.models.dto.Page;
 
 /** Users, roles, profile fields, and listing-owner resolution joins. */
 public interface UserDao {
@@ -45,7 +45,13 @@ public interface UserDao {
 
     List<String> findRoleNamesForUser(long userId);
 
-    void insertUserRole(long userId, UserRole role);
+    void promoteToAdmin(long userId, Long assignedByUserId);
+
+    void blockUser(long userId);
+
+    void unblockUser(long userId);
+
+    Page<User> findAllUsersPaginated(int page, int pageSize);
 
     void updateCbu(final long userId, final String cbu);
 }

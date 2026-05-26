@@ -31,7 +31,10 @@ CREATE TABLE IF NOT EXISTS users(
     identity_validated BOOLEAN NOT NULL DEFAULT FALSE,
     member_since DATE NOT NULL,
     rating_as_rider NUMERIC(4, 2),
-    rating_as_owner NUMERIC(4, 2)
+    rating_as_owner NUMERIC(4, 2),
+    user_role VARCHAR(50) NOT NULL DEFAULT 'USER',
+    role_assigned_by BIGINT,
+    blocked BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS cars (
@@ -203,13 +206,6 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
     code VARCHAR(6) NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS user_roles (
-    user_id BIGINT NOT NULL,
-    role VARCHAR(50) NOT NULL,
-    PRIMARY KEY (user_id, role),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

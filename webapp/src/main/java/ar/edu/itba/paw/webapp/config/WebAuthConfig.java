@@ -18,6 +18,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -56,6 +58,11 @@ public class WebAuthConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
     }
 
     @Bean
@@ -102,7 +109,8 @@ public class WebAuthConfig {
             final HandlerMappingIntrospector handlerMappingIntrospector,
             final CarOwnerWebAuthorization carOwnerWebAuthorization,
             final ReservationWebAuthorization reservationWebAuthorization,
-            final ProfileWebAuthorization profileWebAuthorization) throws Exception {
+            final ProfileWebAuthorization profileWebAuthorization,
+            final SessionRegistry sessionRegistry) throws Exception {
         http
                 .headers(headers -> headers.cacheControl(Customizer.withDefaults()))
                 .csrf(csrf -> csrf.disable())
@@ -240,6 +248,7 @@ public class WebAuthConfig {
                                         "/my-reservations/{reservationId}"))
                         .access(reservationWebAuthorization.participantAccess())
                         .requestMatchers("/reservation", "/reservation/**").authenticated()
+                        .requestMatchers("/admin", "/admin/**").hasRole("ADMIN")
                         .requestMatchers("/login").permitAll()
                         .requestMatchers("/logout").authenticated()
                         .requestMatchers("/profile", "/profile/**")
@@ -268,7 +277,10 @@ public class WebAuthConfig {
                         .rememberMeParameter("remember-me")
                         .rememberMeCookieName("remember-me")
                         .tokenValiditySeconds((int) TimeUnit.DAYS.toSeconds(30))
-                        .userDetailsService(userDetailsService));
+                        .userDetailsService(userDetailsService))
+                .sessionManagement(sm -> sm
+                        .maximumSessions(-1)
+                        .sessionRegistry(sessionRegistry));
         return http.build();
     }
 

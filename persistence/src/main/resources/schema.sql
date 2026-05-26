@@ -19,7 +19,11 @@ CREATE TABLE IF NOT EXISTS users(
     cbu VARCHAR(22),
     rating_as_rider NUMERIC(4, 2),
     rating_as_owner NUMERIC(4, 2),
-    member_since DATE
+    member_since DATE,
+    user_role VARCHAR(50) NOT NULL DEFAULT 'USER',
+    role_assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    blocked BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT users_user_role_check CHECK (user_role IN ('USER', 'ADMIN'))
 );
 
 CREATE TABLE IF NOT EXISTS car_brands (
@@ -268,9 +272,3 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes (user_id);
 
-CREATE TABLE IF NOT EXISTS user_roles (
-    user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL,
-    assigned_by INTEGER REFERENCES users (id) ON DELETE SET NULL,
-    PRIMARY KEY (user_id, role)
-);

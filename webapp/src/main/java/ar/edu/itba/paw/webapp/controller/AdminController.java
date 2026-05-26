@@ -1,0 +1,300 @@
+package ar.edu.itba.paw.webapp.controller;
+
+import java.util.List;
+import java.util.Locale;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.core.session.SessionInformation;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarBrand;
+import ar.edu.itba.paw.models.domain.CarModel;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.ReservationMessage;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.services.AdminService;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+
+import org.springframework.security.core.Authentication;
+
+/** Administration endpoints: user management, car moderation, catalog validation, reservation inspection. */
+@Controller
+@RequestMapping("/admin")
+public final class AdminController {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AdminController.class);
+
+    private static final int DEFAULT_PAGE_SIZE = 20;
+
+    private final AdminService adminService;
+    private final SessionRegistry sessionRegistry;
+    private final LocaleMessages localeMessages;
+
+    public AdminController(
+            final AdminService adminService,
+            final SessionRegistry sessionRegistry,
+            final LocaleMessages localeMessages) {
+        this.adminService = adminService;
+        this.sessionRegistry = sessionRegistry;
+        this.localeMessages = localeMessages;
+    }
+
+    @GetMapping
+    public String adminRoot() {
+        return "redirect:/admin/panel";
+    }
+
+    @GetMapping("/panel")
+    public ModelAndView panel() {
+        return new ModelAndView("admin/panel");
+    }
+
+    @GetMapping("/users")
+    public ModelAndView listUsers(
+            @RequestParam(defaultValue = "0") final int page,
+            final Authentication authentication) {
+        final long currentAdminId = requireAdminId(authentication);
+        final Page<User> users = adminService.listUsers(page, DEFAULT_PAGE_SIZE);
+        final ModelAndView mav = new ModelAndView("admin/users");
+        mav.addObject("users", users);
+        mav.addObject("currentAdminId", currentAdminId);
+        return mav;
+    }
+
+    @PostMapping("/users/{userId}/promote")
+    public String promoteUser(
+            @PathVariable final long userId,
+            final Authentication authentication,
+            final RedirectAttributes redirectAttributes) {
+        final long actingAdminId = requireAdminId(authentication);
+        try {
+            adminService.promoteUserToAdmin(userId, actingAdminId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.promoted"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        }
+        return "redirect:/admin/users";
+    }
+
+    @PostMapping("/users/{userId}/block")
+    public String blockUser(
+            @PathVariable final long userId,
+            final Authentication authentication,
+            final RedirectAttributes redirectAttributes) {
+        final long actingAdminId = requireAdminId(authentication);
+        try {
+            adminService.blockUser(userId, actingAdminId);
+            invalidateUserSessions(userId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.blocked"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        }
+        return "redirect:/admin/users";
+    }
+
+    @PostMapping("/users/{userId}/unblock")
+    public String unblockUser(
+            @PathVariable final long userId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            adminService.unblockUser(userId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.unblocked"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        }
+        return "redirect:/admin/users";
+    }
+
+    @GetMapping("/users/create")
+    public ModelAndView createAdminUserForm() {
+        return new ModelAndView("admin/createAdminUser");
+    }
+
+    @PostMapping("/users/create")
+    public String createAdminUser(
+            @RequestParam final String forename,
+            @RequestParam final String surname,
+            @RequestParam final String email,
+            @RequestParam final String password,
+            final Authentication authentication,
+            final Locale locale,
+            final RedirectAttributes redirectAttributes) {
+        final long actingAdminId = requireAdminId(authentication);
+        try {
+            adminService.createAdminUser(email, forename, surname, password, actingAdminId, locale);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.adminCreated"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        }
+        return "redirect:/admin/users";
+    }
+
+    @GetMapping("/cars")
+    public ModelAndView listAdminPausedCars() {
+        final List<Car> cars = adminService.findAdminPausedCars();
+        final ModelAndView mav = new ModelAndView("admin/cars");
+        mav.addObject("cars", cars);
+        return mav;
+    }
+
+    @PostMapping("/cars/{carId}/pause")
+    public String pauseCar(
+            @PathVariable final long carId,
+            final Authentication authentication,
+            final RedirectAttributes redirectAttributes) {
+        final long actingAdminId = requireAdminId(authentication);
+        try {
+            adminService.adminPauseCar(carId, actingAdminId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carPaused"));
+        } catch (final Exception e) {
+            LOG.warn("Admin pause car {} failed", carId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/cars";
+    }
+
+    @PostMapping("/cars/{carId}/resume")
+    public String resumeCar(
+            @PathVariable final long carId,
+            final Authentication authentication,
+            final RedirectAttributes redirectAttributes) {
+        final long actingAdminId = requireAdminId(authentication);
+        try {
+            adminService.adminResumeCar(carId, actingAdminId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carResumed"));
+        } catch (final Exception e) {
+            LOG.warn("Admin resume car {} failed", carId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/cars";
+    }
+
+    @GetMapping("/catalog")
+    public ModelAndView catalog() {
+        final List<CarBrand> pendingBrands = adminService.findPendingBrands();
+        final List<CarModel> pendingModels = adminService.findPendingModels();
+        final ModelAndView mav = new ModelAndView("admin/catalog");
+        mav.addObject("pendingBrands", pendingBrands);
+        mav.addObject("pendingModels", pendingModels);
+        return mav;
+    }
+
+    @PostMapping("/catalog/brands/{brandId}/validate")
+    public String validateBrand(
+            @PathVariable final long brandId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            adminService.validateCarBrand(brandId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.brandValidated"));
+        } catch (final Exception e) {
+            LOG.warn("Admin validate brand {} failed", brandId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/catalog";
+    }
+
+    @PostMapping("/catalog/brands/{brandId}/reject")
+    public String rejectBrand(
+            @PathVariable final long brandId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            adminService.rejectCarBrand(brandId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.brandRejected"));
+        } catch (final Exception e) {
+            LOG.warn("Admin reject brand {} failed", brandId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/catalog";
+    }
+
+    @PostMapping("/catalog/models/{modelId}/validate")
+    public String validateModel(
+            @PathVariable final long modelId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            adminService.validateCarModel(modelId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.modelValidated"));
+        } catch (final Exception e) {
+            LOG.warn("Admin validate model {} failed", modelId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/catalog";
+    }
+
+    @PostMapping("/catalog/models/{modelId}/reject")
+    public String rejectModel(
+            @PathVariable final long modelId,
+            final RedirectAttributes redirectAttributes) {
+        try {
+            adminService.rejectCarModel(modelId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.modelRejected"));
+        } catch (final Exception e) {
+            LOG.warn("Admin reject model {} failed", modelId, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/catalog";
+    }
+
+    @GetMapping("/reservations")
+    public ModelAndView listReservations(
+            @RequestParam(defaultValue = "0") final int page) {
+        final Page<ReservationCard> reservations = adminService.listAllReservations(page, DEFAULT_PAGE_SIZE);
+        final ModelAndView mav = new ModelAndView("admin/reservations");
+        mav.addObject("reservations", reservations);
+        return mav;
+    }
+
+    @GetMapping("/reservations/{reservationId}/chat")
+    public ModelAndView reservationChat(
+            @PathVariable final long reservationId,
+            @RequestParam(defaultValue = "0") final int page) {
+        final Reservation reservation = adminService.getReservationById(reservationId).orElse(null);
+        if (reservation == null) {
+            return new ModelAndView("redirect:/admin/reservations");
+        }
+        final int pageSize = 50;
+        final List<ReservationMessage> messages =
+                adminService.getAdminChatMessages(reservationId, page * pageSize, pageSize);
+        final long totalMessages = adminService.countReservationMessages(reservationId);
+        final ModelAndView mav = new ModelAndView("admin/reservationChat");
+        mav.addObject("reservation", reservation);
+        mav.addObject("messages", messages);
+        mav.addObject("totalMessages", totalMessages);
+        mav.addObject("currentPage", page);
+        mav.addObject("pageSize", pageSize);
+        return mav;
+    }
+
+    private long requireAdminId(final Authentication authentication) {
+        return WebAuthUtils.requireCurrentUser(authentication).getUserId();
+    }
+
+    private void invalidateUserSessions(final long userId) {
+        for (final Object principal : sessionRegistry.getAllPrincipals()) {
+            if (principal instanceof RydenUserDetails) {
+                final RydenUserDetails details = (RydenUserDetails) principal;
+                if (details.getUserId() == userId) {
+                    for (final SessionInformation session : sessionRegistry.getAllSessions(principal, false)) {
+                        session.expireNow();
+                    }
+                }
+            }
+        }
+    }
+}

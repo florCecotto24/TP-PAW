@@ -123,4 +123,7 @@ public interface ReservationDao {
     List<Reservation> findReservationsWithDuePendingRefundProof(OffsetDateTime now);
 
     int claimPendingRefundEmailSent(long reservationId);
+
+    /** All reservations paginated for admin view; ordered by creation date descending. */
+    Page<ReservationCard> findAllReservationCards(int page, int pageSize);
 }

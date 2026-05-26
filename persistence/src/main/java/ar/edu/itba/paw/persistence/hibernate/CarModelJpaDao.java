@@ -84,4 +84,21 @@ public class CarModelJpaDao implements CarModelDao {
         em.persist(model);
         return model;
     }
+
+    @Override
+    public List<CarModel> findPendingOrdered() {
+        return em.createQuery(
+                "FROM CarModel m WHERE m.validated = FALSE ORDER BY m.brand.id ASC, LOWER(m.name) ASC",
+                CarModel.class)
+                .getResultList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(final long modelId) {
+        final CarModel model = em.find(CarModel.class, modelId);
+        if (model != null) {
+            em.remove(model);
+        }
+    }
 }

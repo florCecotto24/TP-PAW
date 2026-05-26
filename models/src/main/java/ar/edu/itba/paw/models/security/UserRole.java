@@ -15,7 +15,10 @@ import org.slf4j.event.Level;
 public enum UserRole {
 
     /** Default authenticated user. */
-    USER;
+    USER,
+
+    /** Platform administrator. */
+    ADMIN;
 
     private static final Logger LOG = LoggerFactory.getLogger(UserRole.class);
 

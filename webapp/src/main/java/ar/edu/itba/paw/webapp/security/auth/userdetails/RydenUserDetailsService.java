@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.security.auth.userdetails;
 
 import java.util.List;
 
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -25,6 +26,9 @@ public final class RydenUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("No user for email"));
         if (!Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
             throw new UsernameNotFoundException("Email not validated");
+        }
+        if (user.isBlocked()) {
+            throw new DisabledException("Account is blocked");
         }
         final String hash = user.getPasswordHash()
                 .filter(h -> !h.isBlank())

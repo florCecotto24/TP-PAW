@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.persistence.EntityManager;
@@ -14,6 +13,7 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
 import ar.edu.itba.paw.persistence.UserDao;
@@ -44,8 +44,10 @@ public class UserJpaDao implements UserDao {
                 .memberSince(memberSince)
                 .licenseValidated(Boolean.FALSE)
                 .identityValidated(Boolean.FALSE)
+                .userRole(UserRole.USER.persistenceName())
+                .roleAssignedBy(null)
+                .blocked(false)
                 .build();
-        user.getRoles().add(UserRole.USER.persistenceName());
         em.persist(user);
         return user;
     }
@@ -197,17 +199,50 @@ public class UserJpaDao implements UserDao {
     @Override
     public List<String> findRoleNamesForUser(final long userId) {
         return getUserById(userId)
-                .map(u -> new ArrayList<>(u.getRoles()))
-                .orElse(new ArrayList<>());
+                .map(u -> java.util.Collections.singletonList(u.getUserRole()))
+                .orElse(java.util.Collections.emptyList());
     }
 
     @Override
     @Transactional
-    public void insertUserRole(final long userId, final UserRole role) {
+    public void promoteToAdmin(final long userId, final Long assignedByUserId) {
         final User user = em.find(User.class, userId);
-        if (user != null) {
-            user.getRoles().add(role.persistenceName());
+        if (user == null) {
+            return;
         }
+        user.setUserRole(UserRole.ADMIN.persistenceName());
+        user.setRoleAssignedBy(assignedByUserId);
+    }
+
+    @Override
+    @Transactional
+    public void blockUser(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setBlocked(true);
+    }
+
+    @Override
+    @Transactional
+    public void unblockUser(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setBlocked(false);
+    }
+
+    @Override
+    public Page<User> findAllUsersPaginated(final int page, final int pageSize) {
+        final long total = em.createQuery("SELECT COUNT(u) FROM User u", Long.class)
+                .getSingleResult();
+        final List<User> users = em.createQuery("FROM User u ORDER BY u.id ASC", User.class)
+                .setFirstResult(page * pageSize)
+                .setMaxResults(pageSize)
+                .getResultList();
+        return new Page<>(users, page, pageSize, total);
     }
 
     @Override
