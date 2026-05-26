@@ -635,7 +635,8 @@ public class CarJpaDao implements CarDao {
                         imageByCar.getOrDefault(c.getId(), 0L),
                         priceById.get(c.getId()),
                         c.getStatus(),
-                        c.getRatingAvg().orElse(null)))
+                        c.getRatingAvg().orElse(null),
+                        c.isModelPendingValidation()))
                 .collect(Collectors.toList());
     }
 

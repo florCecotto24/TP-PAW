@@ -331,6 +331,16 @@ public class Car {
         return Optional.ofNullable(carModel);
     }
 
+    /**
+     * Returns {@code true} when the linked catalog model exists but has not yet been validated by an
+     * admin (i.e. it was created on the fly through the publish-car flow). The car may still be
+     * {@link Status#ACTIVE} if all other documents are present; this flag signals that it will not
+     * appear in public search until the model is approved.
+     */
+    public boolean isModelPendingValidation() {
+        return carModel != null && !carModel.isValidated();
+    }
+
     public void setCarModel(final CarModel carModel) {
         this.carModel = carModel;
     }

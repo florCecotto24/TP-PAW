@@ -13,7 +13,7 @@
         <ryden:navbar/>
         <div class="container pt-5 pb-4">
             <spring:message code="myListings.heading" var="myListingsLabel"/>
-            <ryden:breadcrumbTrail currentLabel="${myListingsLabel}" showHome="${false}"/>
+            <!-- <ryden:breadcrumbTrail currentLabel="${myListingsLabel}" showHome="${false}"/> -->
             <section class="reservation-management-header mt-4 pt-5 mb-4">
                 <h1 class="h3 fw-bold mb-2"><spring:message code="myListings.heading"/></h1>
                 <p class="text-secondary mb-0"><spring:message code="myListings.subheading"/></p>
@@ -119,6 +119,11 @@
                                     <a href="<c:out value='${carDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
                                 <c:choose>
+                                    <c:when test="${car.modelPendingValidation}">
+                                        <span class="position-absolute top-0 end-0 m-3" style="background-color:#0369a1; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                            <i class="bi bi-clock me-1"></i><spring:message code="myCars.modelPendingValidation.badge"/>
+                                        </span>
+                                    </c:when>
                                     <c:when test="${car.hasListing}">
                                         <c:choose>
                                             <c:when test="${car.statusKey == 'ACTIVE'}">

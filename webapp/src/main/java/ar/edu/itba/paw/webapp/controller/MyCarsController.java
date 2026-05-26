@@ -470,6 +470,9 @@ public final class MyCarsController {
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
+        if (carService.isModelPendingValidation(carId)) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        }
         final CreateListingForm form = new CreateListingForm();
         listingAvailabilityService.findMostRecentByCarId(carId)
                 .ifPresent(la -> prefillLocationAndTimes(form, la));
@@ -558,6 +561,9 @@ public final class MyCarsController {
         final Optional<Car> carOpt = carService.getCarById(carId);
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
             return new ModelAndView(redirectTo("/my-cars"));
+        }
+        if (carService.isModelPendingValidation(carId)) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         if (errors.hasErrors()) {
             return buildCreateListingView(carOpt.get(), form, me);

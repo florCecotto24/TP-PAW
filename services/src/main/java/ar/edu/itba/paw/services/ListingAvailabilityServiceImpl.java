@@ -46,6 +46,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
 
     private final ListingAvailabilityDao listingAvailabilityDao;
     private final ReservationService reservationService;
+    private final CarService carService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final ListingAvailabilityPolicy listingAvailabilityPolicy;
     private final ListingAddressFormatter listingAddressFormatter;
@@ -54,11 +55,13 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     public ListingAvailabilityServiceImpl(
             final ListingAvailabilityDao listingAvailabilityDao,
             @Lazy final ReservationService reservationService,
+            @Lazy final CarService carService,
             final ReservationTimingPolicy reservationTimingPolicy,
             final ListingAvailabilityPolicy listingAvailabilityPolicy,
             final ListingAddressFormatter listingAddressFormatter) {
         this.listingAvailabilityDao = listingAvailabilityDao;
         this.reservationService = reservationService;
+        this.carService = carService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.listingAvailabilityPolicy = listingAvailabilityPolicy;
         this.listingAddressFormatter = listingAddressFormatter;
@@ -94,6 +97,9 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             final LocalTime checkOutTime,
             final List<AvailabilityPeriod> periods,
             final List<BigDecimal> periodPrices) {
+        if (carService.isModelPendingValidation(carId)) {
+            throw new CarValidationException(MessageKeys.LISTING_CREATE_MODEL_PENDING);
+        }
         final List<ListingAvailability> result = new ArrayList<>();
         for (int i = 0; i < periods.size(); i++) {
             final AvailabilityPeriod period = periods.get(i);

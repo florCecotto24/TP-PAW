@@ -11,6 +11,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.util.CbuRules;
 
 /**
  * Model attributes for the owner {@code myCarDetail} JSP (analytics, neighborhood labels, availability helpers);
@@ -144,6 +145,8 @@ public final class OwnerCarDetailPageModel {
         putObject.accept("hasPublishedAvailability", hasPublishedAvailability);
         putObject.accept("carCreatedAtDisplay", carCreatedAtDisplay);
         putObject.accept("car", car);
+        putObject.accept("carModelPendingValidation", car.isModelPendingValidation());
+        putObject.accept("ownerHasValidCbu", CbuRules.isValidFormat(owner.getCbu().orElse(null)));
         putObject.accept("owner", owner);
         putObject.accept("availabilities", availabilities);
         putObject.accept("carImageId", carImageId);

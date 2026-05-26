@@ -105,6 +105,7 @@ public final class MessageKeys {
     public static final String LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS = "listing.pickupStreetNumber.maxDigits";
     public static final String LISTING_PUBLISH_CBU_REQUIRED = "listing.publish.cbuRequired";
     public static final String LISTING_ACTIVATE_CBU_REQUIRED = "listing.activate.cbuRequired";
+    public static final String LISTING_CREATE_MODEL_PENDING = "listing.create.modelPending";
     // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";

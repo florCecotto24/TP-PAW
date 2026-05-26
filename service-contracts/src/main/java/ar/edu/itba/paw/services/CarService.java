@@ -214,4 +214,11 @@ public interface CarService {
 
     /** Returns true when the car has an insurance document on file. */
     boolean hasUploadedInsurance(long carId);
+
+    /**
+     * Returns {@code true} when the car's linked catalog model exists but has not yet been
+     * validated by an admin (i.e. was created through the "Other" free-text path during publish).
+     * Returns {@code false} when the car does not exist or its model is already validated.
+     */
+    boolean isModelPendingValidation(long carId);
 }

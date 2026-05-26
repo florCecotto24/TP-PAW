@@ -14,6 +14,8 @@ public final class CarCard {
     private final BigDecimal dayPrice;
     private final Car.Status status;
     private final BigDecimal ratingAvg;
+    /** True when the car's catalog model was created on the fly and has not yet been validated by an admin. */
+    private final boolean modelPendingValidation;
 
     public CarCard(
             final long carId,
@@ -23,6 +25,18 @@ public final class CarCard {
             final BigDecimal dayPrice,
             final Car.Status status,
             final BigDecimal ratingAvg) {
+        this(carId, brand, model, imageId, dayPrice, status, ratingAvg, false);
+    }
+
+    public CarCard(
+            final long carId,
+            final String brand,
+            final String model,
+            final long imageId,
+            final BigDecimal dayPrice,
+            final Car.Status status,
+            final BigDecimal ratingAvg,
+            final boolean modelPendingValidation) {
         this.carId = carId;
         this.brand = brand;
         this.model = model;
@@ -30,6 +44,7 @@ public final class CarCard {
         this.dayPrice = dayPrice;
         this.status = status;
         this.ratingAvg = ratingAvg;
+        this.modelPendingValidation = modelPendingValidation;
     }
 
     public long getCarId() {
@@ -67,5 +82,10 @@ public final class CarCard {
 
     public String getStatusKey() {
         return status != null ? status.name() : null;
+    }
+
+    /** True when the car's catalog model was created on the fly and has not yet been validated by an admin. */
+    public boolean isModelPendingValidation() {
+        return modelPendingValidation;
     }
 }

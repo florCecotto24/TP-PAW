@@ -456,7 +456,12 @@ public final class CarServiceImpl implements CarService {
     public void resumeCarsForRestoredCbu(final long ownerId) {
         final List<Car> toResume = carDao.findCarsByOwnerAndStatuses(ownerId, List.of(Car.Status.LACK_DOC));
         for (final Car car : toResume) {
-            carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.ACTIVE, Car.Status.LACK_DOC);
+            // Only re-activate when the insurance document is also present; if the car was in
+            // LACK_DOC because of missing insurance (not just missing CBU), restoring the CBU
+            // alone is not enough to make it active.
+            if (car.getInsuranceFileId().isPresent()) {
+                carDao.updateCarStatusIfCurrent(car.getId(), Car.Status.ACTIVE, Car.Status.LACK_DOC);
+            }
         }
     }
 
@@ -510,6 +515,14 @@ public final class CarServiceImpl implements CarService {
         return carDao.getCarById(carId)
                 .flatMap(Car::getInsuranceFileId)
                 .isPresent();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isModelPendingValidation(final long carId) {
+        return carDao.getCarById(carId)
+                .map(Car::isModelPendingValidation)
+                .orElse(false);
     }
 
     private static String carLabel(final Car car) {
@@ -625,7 +638,7 @@ public final class CarServiceImpl implements CarService {
                     checkInTime,
                     checkOutTime,
                     title,
-                    mostRecent != null,
+                    true,
                     carCreatedAtDisplay,
                     car,
                     owner,
