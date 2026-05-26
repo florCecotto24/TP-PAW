@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -24,6 +25,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
@@ -36,6 +38,8 @@ import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 @Transactional(readOnly = true)
 @Repository
 public class CarJpaDao implements CarDao {
+
+    private static final ZoneId WALL_ZONE = AvailabilityPeriod.WALL_ZONE;
 
     @PersistenceContext
     private EntityManager em;
@@ -691,10 +695,23 @@ public class CarJpaDao implements CarDao {
         }
         appendCarSearchRatingBandFilter(sql, criteria.getRatingBands());
         if (criteria.hasAvailabilityRange()) {
+            final LocalDate searchFromWallDate = criteria.getAvailabilityRangeStart().atZone(WALL_ZONE).toLocalDate();
+            final LocalDate searchUntilWallInclusive = criteria.getAvailabilityRangeEndExclusive()
+                    .atZone(WALL_ZONE)
+                    .toLocalDate()
+                    .minusDays(1);
+            sql.append("AND EXISTS (")
+                    .append("SELECT 1 FROM listing_availability la_cover ")
+                    .append("WHERE la_cover.car_id = c.id ")
+                    .append("AND la_cover.kind = 'offered' ")
+                    .append("AND la_cover.start_date <= :searchFromWallDate ")
+                    .append("AND la_cover.end_date >= :searchUntilWallInclusive) ");
             sql.append("AND NOT EXISTS (")
                     .append("SELECT 1 FROM reservations r WHERE r.car_id = c.id ")
                     .append("AND r.status IN ('pending', 'accepted', 'started') ")
                     .append("AND r.start_date < :resWindowEnd AND r.end_date > :resWindowStart) ");
+            params.put("searchFromWallDate", java.sql.Date.valueOf(searchFromWallDate));
+            params.put("searchUntilWallInclusive", java.sql.Date.valueOf(searchUntilWallInclusive));
             params.put("resWindowEnd", Timestamp.from(criteria.getAvailabilityRangeEndExclusive()));
             params.put("resWindowStart", Timestamp.from(criteria.getAvailabilityRangeStart()));
         }

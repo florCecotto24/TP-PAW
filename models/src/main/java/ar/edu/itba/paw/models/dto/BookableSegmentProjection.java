@@ -7,12 +7,13 @@ import java.util.Objects;
 
 /**
  * Effective per-day projection for the rider date-picker, grouped into contiguous wall-day segments where
- * every day shares the same effective attributes (price, check-in/out times, and public location).
+ * every day shares the same effective attributes (price, check-in/out times, public location, and
+ * neighbourhood).
  *
  * <p>Because a car may have multiple overlapping {@code ListingAvailability} rows, the day-effective
  * values come from the most recently created OFFERED availability that covers each day. Adjacent days
  * are merged into the same segment iff their full projection ({@code dayPrice}, {@code checkInTime},
- * {@code checkOutTime}, {@code publicLocation}) is identical.</p>
+ * {@code checkOutTime}, {@code publicLocation}, {@code neighborhoodId}) is identical.</p>
  *
  * <p>All times are wall-clock in the car's wall zone. The {@code publicLocation} is a pre-formatted
  * single-line "street, neighborhood" string and does not include the door number.</p>
@@ -25,6 +26,7 @@ public final class BookableSegmentProjection {
     private final LocalTime checkInTime;
     private final LocalTime checkOutTime;
     private final String publicLocation;
+    private final Long neighborhoodId;
 
     public BookableSegmentProjection(
             final LocalDate from,
@@ -32,13 +34,15 @@ public final class BookableSegmentProjection {
             final BigDecimal dayPrice,
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
-            final String publicLocation) {
+            final String publicLocation,
+            final Long neighborhoodId) {
         this.from = Objects.requireNonNull(from, "from");
         this.to = Objects.requireNonNull(to, "to");
         this.dayPrice = dayPrice;
         this.checkInTime = checkInTime;
         this.checkOutTime = checkOutTime;
         this.publicLocation = publicLocation == null ? "" : publicLocation;
+        this.neighborhoodId = neighborhoodId;
         if (from.isAfter(to)) {
             throw new IllegalArgumentException("from must be on or before to");
         }
@@ -68,6 +72,10 @@ public final class BookableSegmentProjection {
         return publicLocation;
     }
 
+    public Long getNeighborhoodId() {
+        return neighborhoodId;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -82,12 +90,13 @@ public final class BookableSegmentProjection {
                 && Objects.equals(dayPrice, that.dayPrice)
                 && Objects.equals(checkInTime, that.checkInTime)
                 && Objects.equals(checkOutTime, that.checkOutTime)
-                && publicLocation.equals(that.publicLocation);
+                && publicLocation.equals(that.publicLocation)
+                && Objects.equals(neighborhoodId, that.neighborhoodId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(from, to, dayPrice, checkInTime, checkOutTime, publicLocation);
+        return Objects.hash(from, to, dayPrice, checkInTime, checkOutTime, publicLocation, neighborhoodId);
     }
 
     @Override
@@ -99,6 +108,7 @@ public final class BookableSegmentProjection {
                 + ", checkInTime=" + checkInTime
                 + ", checkOutTime=" + checkOutTime
                 + ", publicLocation='" + publicLocation + '\''
+                + ", neighborhoodId=" + neighborhoodId
                 + '}';
     }
 }

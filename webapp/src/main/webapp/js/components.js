@@ -936,6 +936,12 @@
         } else {
             fpConfig.disable = opts.disable || [];
         }
+        if (opts.inline === true) {
+            fpConfig.inline = true;
+        }
+        if (typeof opts.onDayCreate === 'function') {
+            fpConfig.onDayCreate = opts.onDayCreate;
+        }
         var fp = flatpickr(anchor, fpConfig);
         return {
             fp: fp,

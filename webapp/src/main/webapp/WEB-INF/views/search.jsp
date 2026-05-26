@@ -128,7 +128,12 @@
 
                                         <c:url var="searchCarDetailHref" value="/car-detail">
                                             <c:param name="carId"><c:out value="${car.carId}"/></c:param>
-                                            <c:param name="from" value="search"/>
+                                            <c:param name="src" value="search"/>
+                                            <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
+                                            <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
+                                            <c:forEach var="nid" items="${paramValues.neighborhoodId}">
+                                                <c:param name="searchNbId"><c:out value="${nid}"/></c:param>
+                                            </c:forEach>
                                         </c:url>
                                         <ryden:consumerCarCard card="${car}" image="${imageUrl}" href="${searchCarDetailHref}"/>
                                     </div>

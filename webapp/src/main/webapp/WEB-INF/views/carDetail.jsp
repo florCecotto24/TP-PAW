@@ -12,7 +12,7 @@
 
 <main class="car-detail-page container pb-4">
     <c:choose>
-        <c:when test="${param.from eq 'search'}">
+        <c:when test="${param.src eq 'search'}">
             <spring:message code="navbar.explore" var="exploreLabel"/>
             <c:url var="exploreHref" value="/search"/>
             <ryden:breadcrumbTrail midLabel="${exploreLabel}" midHref="${exploreHref}" currentLabel="${carTitle}"/>
@@ -116,12 +116,16 @@
                                 <c:url var="reviewsPrevUrl" value="/car-detail">
                                     <c:param name="carId" value="${car.id}"/>
                                     <c:param name="reviewPage" value="${carReviewPage.currentPage - 1}"/>
-                                    <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
+                                    <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
+                                    <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
+                                    <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
                                 </c:url>
                                 <c:url var="reviewsNextUrl" value="/car-detail">
                                     <c:param name="carId" value="${car.id}"/>
                                     <c:param name="reviewPage" value="${carReviewPage.currentPage + 1}"/>
-                                    <c:if test="${param.from eq 'search'}"><c:param name="from" value="search"/></c:if>
+                                    <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
+                                    <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
+                                    <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
                                 </c:url>
                                 <a class="btn btn-outline-secondary btn-sm${carReviewPage.hasPrevious ? '' : ' disabled'}"
                                    href="${carReviewPage.hasPrevious ? reviewsPrevUrl : '#'}"
@@ -156,7 +160,8 @@
                         bookableWallRangesJson="${bookableWallRangesJson}"
                         carName="${carTitle}"
                         maxBillableDays="${maxReservationBillableDays}"
-                        isOwnerRequesting="${isOwnerRequesting}"/>
+                        isOwnerRequesting="${isOwnerRequesting}"
+                        searchNeighborhoodIds="${searchNeighborhoodIds}"/>
             </div>
         </div>
     </div>

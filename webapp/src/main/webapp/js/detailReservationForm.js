@@ -255,6 +255,28 @@
             }
         }
 
+        function compactPrice(price) {
+            if (price == null || !isFinite(price)) { return ''; }
+            var n = Math.round(price);
+            if (n >= 1000000) {
+                var m = n / 1000000;
+                return '$' + (m % 1 === 0 ? m : m.toFixed(1)) + 'M';
+            }
+            if (n >= 1000) {
+                var k = n / 1000;
+                return '$' + (k % 1 === 0 ? k : k.toFixed(1)) + 'k';
+            }
+            return '$' + n;
+        }
+
+        function parseSearchNbIds(raw) {
+            if (!raw || typeof raw !== 'string') { return []; }
+            try {
+                var arr = JSON.parse(raw.trim());
+                return Array.isArray(arr) ? arr.map(Number).filter(isFinite) : [];
+            } catch (e) { return []; }
+        }
+
         var segments = parseSegmentsJson(form.getAttribute('data-bookable-ranges'));
         var enable = segments.map(function (s) {
             return {
@@ -273,12 +295,48 @@
             if (d2) { dd.push(d2); }
         }
 
+        // If no date params from URL, pre-select dates of the first segment matching
+        // a searched neighbourhood (passed from the explore/search results page).
+        if (dd.length === 0) {
+            var searchNbIds = parseSearchNbIds(form.getAttribute('data-search-nb-ids'));
+            if (searchNbIds.length > 0) {
+                var matchSeg = null;
+                for (var si = 0; si < segments.length; si++) {
+                    var seg = segments[si];
+                    if (seg.neighborhoodId != null && searchNbIds.indexOf(seg.neighborhoodId) !== -1) {
+                        matchSeg = seg;
+                        break;
+                    }
+                }
+                if (matchSeg) {
+                    var nbD1 = RydenFlatpickrRange.localWallDayStartFromYmd(matchSeg.from);
+                    var nbD2 = RydenFlatpickrRange.localWallDayStartFromYmd(matchSeg.to);
+                    if (nbD1) { dd.push(nbD1); fromHidden.value = matchSeg.from; }
+                    if (nbD2) { dd.push(nbD2); untilHidden.value = matchSeg.to; }
+                }
+            }
+        }
+
         var initOpts = {
             anchor: daterangeInput,
             fromHidden: fromHidden,
             untilHidden: untilHidden,
             dateFormat: 'Y-m-d',
-            defaultDate: dd.length ? dd : undefined
+            defaultDate: dd.length ? dd : undefined,
+            inline: true,
+            showMonths: 1,
+            onDayCreate: function (dObj, dStr, fp, dayElem) {
+                var date = dayElem.dateObj;
+                if (!date) { return; }
+                var ymd = ymdFromDate(date);
+                var seg = findSegmentForYmd(ymd, segments);
+                if (seg && seg.dayPrice != null) {
+                    var priceEl = document.createElement('span');
+                    priceEl.className = 'fp-day-price';
+                    priceEl.textContent = compactPrice(seg.dayPrice);
+                    dayElem.appendChild(priceEl);
+                }
+            }
         };
         if (enable.length > 0) {
             initOpts.enable = enable;
@@ -294,7 +352,6 @@
         if (ctrl.fp && ctrl.fp.config && Array.isArray(ctrl.fp.config.onChange)) {
             ctrl.fp.config.onChange.push(function (selectedDates) {
                 applyRangeProjection(selectedDates, segments);
-                syncDateAlert();
                 syncMaxBillableAlert();
             });
         }
@@ -312,14 +369,11 @@
         }
 
         syncMaxBillableAlert();
-        syncDateAlert();
 
         daterangeInput.addEventListener('change', function () {
-            syncDateAlert();
             syncMaxBillableAlert();
         });
         daterangeInput.addEventListener('input', function () {
-            syncDateAlert();
             syncMaxBillableAlert();
         });
 

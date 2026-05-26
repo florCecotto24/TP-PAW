@@ -82,6 +82,9 @@ public class CarDetailController {
     public ModelAndView carDetail(
             @RequestParam(name = "carId", required = false) final Long carIdParam,
             @RequestParam(name = "reviewPage", defaultValue = "0") final int reviewPage,
+            @RequestParam(name = "from", required = false) final String fromDateParam,
+            @RequestParam(name = "until", required = false) final String untilDateParam,
+            @RequestParam(name = "searchNbId", required = false) final List<Long> searchNeighborhoodIds,
             @CurrentUser final User currentUser,
             final HttpServletRequest request) {
 
@@ -162,8 +165,9 @@ public class CarDetailController {
         mav.addObject("carGalleryImagePaths", carGalleryImagePaths);
         mav.addObject("hasBookableDays", hasBookableDays);
         mav.addObject("bookableWallRangesJson", bookableWallRangesJson);
-        mav.addObject("reservationFromDefault", "");
-        mav.addObject("reservationUntilDefault", "");
+        mav.addObject("reservationFromDefault", fromDateParam != null ? fromDateParam : "");
+        mav.addObject("reservationUntilDefault", untilDateParam != null ? untilDateParam : "");
+        mav.addObject("searchNeighborhoodIds", searchNeighborhoodIds != null ? searchNeighborhoodIds : List.of());
         mav.addObject("similarListings", similarListings);
         final String similarSearchUrl = "/search?category=" + car.getType().name()
                 + "&transmission=" + car.getTransmission().name()

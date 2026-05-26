@@ -309,7 +309,8 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                     eff.getDayPriceValue(),
                     eff.getCheckInTime(),
                     eff.getCheckOutTime(),
-                    listingAddressFormatter.formatPublicPickupLocation(eff)));
+                    listingAddressFormatter.formatPublicPickupLocation(eff),
+                    eff.getNeighborhoodId().orElse(null)));
         }
         final List<BookableSegmentProjection> merged = mergeContiguousIdenticalProjections(singleDay);
         final int leadHours = reservationService.getConfiguredPickupLeadHours();
@@ -354,12 +355,14 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             final boolean sameProjection = Objects.equals(cur.getDayPrice(), next.getDayPrice())
                     && Objects.equals(cur.getCheckInTime(), next.getCheckInTime())
                     && Objects.equals(cur.getCheckOutTime(), next.getCheckOutTime())
-                    && cur.getPublicLocation().equals(next.getPublicLocation());
+                    && cur.getPublicLocation().equals(next.getPublicLocation())
+                    && Objects.equals(cur.getNeighborhoodId(), next.getNeighborhoodId());
             if (contiguous && sameProjection) {
                 cur = new BookableSegmentProjection(
                         cur.getFrom(), next.getTo(),
                         cur.getDayPrice(), cur.getCheckInTime(),
-                        cur.getCheckOutTime(), cur.getPublicLocation());
+                        cur.getCheckOutTime(), cur.getPublicLocation(),
+                        cur.getNeighborhoodId());
             } else {
                 out.add(cur);
                 cur = next;
@@ -391,7 +394,8 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                         clipped.add(new BookableSegmentProjection(
                                 d, seg.getTo(),
                                 seg.getDayPrice(), seg.getCheckInTime(),
-                                seg.getCheckOutTime(), seg.getPublicLocation()));
+                                seg.getCheckOutTime(), seg.getPublicLocation(),
+                                seg.getNeighborhoodId()));
                     }
                     break;
                 }

@@ -16,8 +16,4 @@
             <span class="text-muted"><c:out value="${reviewsCntText}"/></span>
         </span>
     </c:if>
-    <span class="d-inline-flex align-items-center gap-1 text-secondary">
-        <i class="bi bi-geo-alt" aria-hidden="true"></i>
-        <span class="text-dark" id="detail_header_location">&mdash;</span>
-    </span>
 </div>

@@ -38,7 +38,9 @@ public final class BookableWallRangesJson {
                     .append(timeToJson(s.getCheckOutTime()))
                     .append(",\"location\":\"")
                     .append(escapeJsonString(s.getPublicLocation()))
-                    .append("\"}");
+                    .append("\",\"neighborhoodId\":")
+                    .append(s.getNeighborhoodId() != null ? s.getNeighborhoodId() : "null")
+                    .append("}");
         }
         sb.append(']');
         return sb.toString();

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.hibernate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -16,7 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.CarSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 
@@ -183,8 +188,78 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(1L, excluded.getSampleCount());
     }
 
+    @Test
+    void testSearchCarCardsWithAvailabilityRangeReturnsOnlyCarsCoveringWholeWallRange() {
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
+        final long brandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Toyota");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Corolla", true, "SEDAN");
+        final long modelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Corolla");
+
+        final Car outsideRange = dao.createCar(
+                ownerId, "OUT111", modelId,
+                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        final Car coversRange = dao.createCar(
+                ownerId, "IN1111", modelId,
+                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+        em.flush();
+
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T10:00:00Z");
+        insertOfferedAvailability(
+                outsideRange.getId(),
+                LocalDate.of(2026, 6, 1),
+                LocalDate.of(2026, 6, 10),
+                new BigDecimal("20.00"),
+                createdAt);
+        insertOfferedAvailability(
+                coversRange.getId(),
+                LocalDate.of(2026, 6, 15),
+                LocalDate.of(2026, 6, 30),
+                new BigDecimal("25.00"),
+                createdAt.plusMinutes(1));
+
+        final Instant rangeStart = LocalDate.of(2026, 6, 15)
+                .atStartOfDay(AvailabilityPeriod.WALL_ZONE)
+                .toInstant();
+        final Instant rangeEndExclusive = LocalDate.of(2026, 6, 19)
+                .atStartOfDay(AvailabilityPeriod.WALL_ZONE)
+                .toInstant();
+        final CarSearchCriteria criteria = CarSearchCriteria.builder()
+                .availabilityRange(rangeStart, rangeEndExclusive)
+                .browseWallDate(LocalDate.of(2026, 6, 1))
+                .page(0)
+                .uiPageSize(10)
+                .dbFetchSize(10)
+                .sortBy("date")
+                .sortDirection("desc")
+                .build();
+
+        final Page<CarCard> result = dao.searchCarCards(criteria);
+
+        Assertions.assertEquals(1, result.getContent().size());
+        Assertions.assertEquals(coversRange.getId(), result.getContent().get(0).getCarId());
+        Assertions.assertEquals(1L, result.getTotalItems());
+    }
+
     private void insertOfferedAvailability(
             final long carId,
+            final BigDecimal dayPrice,
+            final OffsetDateTime createdAt) {
+        insertOfferedAvailability(
+                carId,
+                LocalDate.of(2026, 8, 1),
+                LocalDate.of(2026, 8, 31),
+                dayPrice,
+                createdAt);
+    }
+
+    private void insertOfferedAvailability(
+            final long carId,
+            final LocalDate startDate,
+            final LocalDate endDate,
             final BigDecimal dayPrice,
             final OffsetDateTime createdAt) {
         jdbcTemplate.update(
@@ -192,8 +267,8 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                         + "start_point_street, check_in_time, check_out_time, kind, created_at, updated_at) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 carId,
-                LocalDate.of(2026, 8, 1),
-                LocalDate.of(2026, 8, 31),
+                startDate,
+                endDate,
                 dayPrice,
                 "Belgrano",
                 LocalTime.of(10, 0),
