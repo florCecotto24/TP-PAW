@@ -6,6 +6,7 @@ import java.util.Locale;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -43,6 +44,10 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
 
         final User user = userService.findByEmailForAuthentication(email)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+        if (user.isBlocked()) {
+            throw new DisabledException("Account is blocked");
+        }
 
         final String hash = user.getPasswordHash().filter(h -> !h.isBlank()).orElse(null);
         if (hash == null) {
