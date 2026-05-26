@@ -47,6 +47,10 @@ public final class RydenAuthenticationFailureHandler extends SimpleUrlAuthentica
             getRedirectStrategy().sendRedirect(request, response, "/verify-email?fromLogin=1");
             return;
         }
+        if (isAccountBlocked(exception)) {
+            getRedirectStrategy().sendRedirect(request, response, "/login?blocked=1");
+            return;
+        }
         super.onAuthenticationFailure(request, response, exception);
     }
 
@@ -59,5 +63,16 @@ public final class RydenAuthenticationFailureHandler extends SimpleUrlAuthentica
             current = current.getCause();
         }
         return null;
+    }
+
+    private static boolean isAccountBlocked(final AuthenticationException exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof org.springframework.security.authentication.DisabledException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

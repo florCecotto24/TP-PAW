@@ -22,6 +22,11 @@
     <div class="bg-white rounded-4 shadow-sm p-4 p-md-5">
     <h1 class="h4 mb-4"><spring:message code="login.heading"/></h1>
 
+    <c:if test="${param.blocked != null}">
+        <div class="alert alert-danger" role="alert">
+            <spring:message code="login.error.blocked"/>
+        </div>
+    </c:if>
     <c:if test="${param.error != null && param.error != 'emailNotValidated'}">
         <div class="alert alert-danger" role="alert">
             <spring:message code="login.error.badCredentials"/>
