@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.admin.AdminCannotBlockGrantorException;
+import ar.edu.itba.paw.exception.admin.AdminCannotBlockSelfException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
@@ -96,6 +97,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void blockUser(final long targetUserId, final long actingAdminId) {
+        if (actingAdminId == targetUserId) {
+            throw new AdminCannotBlockSelfException();
+        }
         final User target = userDao.getUserById(targetUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
         target.getRoleAssignedBy().ifPresent(grantorId -> {

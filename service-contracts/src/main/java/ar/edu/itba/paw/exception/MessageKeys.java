@@ -118,4 +118,5 @@ public final class MessageKeys {
 
     // admin
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_GRANTOR = "admin.block.cannotBlockGrantor";
+    public static final String ADMIN_BLOCK_CANNOT_BLOCK_SELF = "admin.block.cannotBlockSelf";
 }
