@@ -21,6 +21,7 @@ import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.persistence.CarBrandDao;
@@ -116,9 +117,12 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void adminPauseCar(final long carId, final long actingAdminId) {
+    public void adminPauseCar(final long carId, final long actingAdminId, final Locale locale) {
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+        if (car.getOwner().isAdmin()) {
+            throw new IllegalArgumentException("Cannot admin-pause a car owned by another admin: " + carId);
+        }
         car.setStatus(Car.Status.ADMIN_PAUSED);
         final List<Reservation> blocking = reservationService.findBlockingReservationsByCarId(carId);
         for (final Reservation r : blocking) {
@@ -127,6 +131,18 @@ public class AdminServiceImpl implements AdminService {
             }
         }
         LOGGER.info("Admin {} paused car {}", actingAdminId, carId);
+        final User owner = car.getOwner();
+        final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
+                + (car.getBrand() != null && car.getModel() != null ? " " : "")
+                + (car.getModel() != null ? car.getModel() : "");
+        emailService.sendListingPausedByAdmin(
+                ListingPausedByAdminOwnerEmailPayload.builder()
+                        .messageLocale(locale)
+                        .ownerEmail(owner.getEmail())
+                        .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                        .vehicleLabel(vehicleLabel)
+                        .carId(carId)
+                        .build());
     }
 
     @Override
@@ -166,6 +182,32 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void rejectCarModel(final long modelId) {
         carModelDao.deleteById(modelId);
+    }
+
+    @Override
+    public void validateCatalogEntry(final long modelId) {
+        final CarModel model = carModelDao.findById(modelId)
+                .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
+        if (!model.getBrand().isValidated()) {
+            model.getBrand().setValidated(true);
+        }
+        model.setValidated(true);
+    }
+
+    @Override
+    public void rejectCatalogEntry(final long modelId) {
+        final CarModel model = carModelDao.findById(modelId)
+                .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
+        final CarBrand brand = model.getBrand();
+        final boolean brandIsPending = !brand.isValidated();
+        final boolean isLastModelForBrand = carModelDao.countByBrandId(brand.getId()) == 1;
+        for (final Car car : carDao.findCarsByModelId(modelId)) {
+            car.setCarModel(null);
+        }
+        carModelDao.deleteById(modelId);
+        if (brandIsPending && isLastModelForBrand) {
+            carBrandDao.deleteById(brand.getId());
+        }
     }
 
     @Override

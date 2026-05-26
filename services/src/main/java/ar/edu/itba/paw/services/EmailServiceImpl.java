@@ -78,6 +78,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE = "html/owner-refund-proof-obligation";
     private static final String RIDER_REFUND_PROOF_RECEIVED_TEMPLATE = "html/rider-refund-proof-received";
     private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/listing-paused-missing-cbu-owner";
+    private static final String LISTING_PAUSED_BY_ADMIN_TEMPLATE = "html/listing-paused-by-admin-owner";
     private static final String RESERVATION_CHAT_MESSAGE_TEMPLATE = "html/reservation-chat-message";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
@@ -773,6 +774,39 @@ public final class EmailServiceImpl implements EmailService {
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(carId)
                     .log("Failed to send car paused (missing CBU) email (car id={})");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendListingPausedByAdmin(final ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload payload) {
+        final String ownerEmail = payload.getOwnerEmail();
+        if (ownerEmail == null || ownerEmail.isBlank()) {
+            LOGGER.atWarn().log("Skipping listing-paused-by-admin email: missing recipient");
+            return;
+        }
+        final Locale locale = payload.getMessageLocale();
+        final String vehicleLabel = payload.getVehicleLabel();
+        final long carId = payload.getCarId();
+        final Context ctx = new Context(locale);
+        setHtmlLangFromLocale(ctx, locale);
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        ctx.setVariable("vehicleLabel", vehicleLabel);
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars/car/" + carId));
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(LISTING_PAUSED_BY_ADMIN_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.listingPausedByAdmin.subject",
+                        new Object[] { vehicleLabel },
+                        locale);
+                sendEmail(ownerEmail, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(ownerEmail).addArgument(carId).log("Car paused by admin email sent to {} (car id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(carId)
+                    .log("Failed to send car paused by admin email (car id={})");
         }
     }
 

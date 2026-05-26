@@ -295,6 +295,7 @@ public class WebConfig implements WebMvcConfigurer {
             }
             final RequestMappingHandlerAdapter adapter =
                     event.getApplicationContext().getBean(RequestMappingHandlerAdapter.class);
+            adapter.setIgnoreDefaultModelOnRedirect(true);
             final List<HandlerMethodArgumentResolver> resolvers =
                     new ArrayList<>(adapter.getArgumentResolvers());
             if (resolvers.stream().anyMatch(r -> r instanceof CurrentUserArgumentResolver)) {

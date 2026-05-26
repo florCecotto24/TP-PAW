@@ -617,6 +617,7 @@ body.modal-open {
     top: 55px;
     z-index: 1000;
     padding-top: 1.5rem;
+    padding-bottom: 1rem;
     background-color: var(--color-bg, #FAF9F7);
 }
 

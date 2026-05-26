@@ -8,7 +8,13 @@
       "Read(//mnt/wsl/instances/Ubuntu-22.04/home/dorbaj/TP-PAW/webapp/src/main/webapp/css/**)",
       "Read(///wsl.localhost/Ubuntu-22.04/mnt/wsl/instances/Ubuntu-22.04/home/dorbaj/TP-PAW/webapp/src/main/webapp/css/**)",
       "Bash(grep -n \"search.empty\\\\|login\\\\.\\\\|home\\\\.cta\\\\|navbar\\\\.explore\" \"\\\\\\\\wsl.localhost\\\\Ubuntu-22.04\\\\home\\\\dorbaj\\\\TP-PAW\\\\webapp\\\\src\\\\main\\\\resources\\\\messages\\\\messages_es.properties\")",
-      "Bash(cd \"\\\\\\\\wsl.localhost\\\\Ubuntu-22.04\\\\home\\\\dorbaj\\\\TP-PAW\")"
+      "Bash(cd \"\\\\\\\\wsl.localhost\\\\Ubuntu-22.04\\\\home\\\\dorbaj\\\\TP-PAW\")",
+      "Bash(find //wsl.localhost/Ubuntu-22.04/home/dorbaj/TP-PAW/webapp/src/main/java -name \"*Controller.java\" -type f)",
+      "Read(///wsl.localhost/Ubuntu-22.04/home/dorbaj/TP-PAW/webapp/src/main/**)"
+    ],
+    "additionalDirectories": [
+      "\\home\\dorbaj\\TP-PAW\\webapp\\src\\main\\java\\ar\\edu\\itba\\paw\\webapp\\controller",
+      "\\\\wsl.localhost\\Ubuntu-22.04\\home\\dorbaj\\TP-PAW\\webapp\\src\\main\\java\\ar\\edu\\itba\\paw\\webapp\\controller"
     ]
   }
 }

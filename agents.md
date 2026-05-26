@@ -253,3 +253,15 @@ Use `@ControllerAdvice` to expose `@ModelAttribute` beans across controllers.
 - **`@Cacheable`**: cache expensive work.
 
 Same proxy rule as `@Transactional`: only applies to **public** methods invoked from outside the bean.
+
+## UI / Visual design conventions
+
+### Background contrast rule
+
+The page body uses Bootstrap's `bg-light` (`#f8f9fa`, "cream/off-white"). Any section or card rendered directly on this background **must** carry `bg-white` so it visually pops. Nested elements placed *inside* a `bg-white` section that need their own background should use `bg-light` (the cream tone) to keep the alternating contrast going.
+
+Quick checklist when adding a new section card:
+- Section sits on `bg-light` page → add `bg-white` to the card/container.
+- Sub-element sits on `bg-white` card → use `bg-light` for its background.
+
+This applies to JSP fragments, tag files, and any inline HTML added to existing views.

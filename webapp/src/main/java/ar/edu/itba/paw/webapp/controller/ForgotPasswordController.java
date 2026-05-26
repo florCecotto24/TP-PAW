@@ -22,6 +22,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.PasswordResetService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
+import ar.edu.itba.paw.webapp.form.ForgotPasswordRequestForm;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.security.http.ForgotPasswordSessionAttributes;
 import ar.edu.itba.paw.webapp.security.auth.SessionLoginService;
@@ -62,10 +63,17 @@ public final class ForgotPasswordController {
     @GetMapping
     public String forgotForm(
             final HttpServletRequest request,
-            @CurrentUser final User currentUser) {
+            @CurrentUser final User currentUser,
+            final Model model) {
         if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
+        final ForgotPasswordRequestForm form = new ForgotPasswordRequestForm();
+        final Object flashEmail = model.asMap().get("forgotEmail");
+        if (flashEmail instanceof String) {
+            form.setEmail((String) flashEmail);
+        }
+        model.addAttribute("forgotPasswordRequestForm", form);
         return "forgot-password";
     }
 

@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -31,15 +32,13 @@
         <div class="alert alert-info" role="alert"><spring:message code="forgotPassword.genericHint"/></div>
     </c:if>
 
-    <form method="post" action="${pageContext.request.contextPath}/forgot-password" class="needs-validation" novalidate>
-        <%@ include file="includes/csrfHidden.jspf" %>
+    <form:form method="post" action="${pageContext.request.contextPath}/forgot-password" modelAttribute="forgotPasswordRequestForm" cssClass="needs-validation" novalidate="novalidate">
         <div class="mb-4">
             <label for="email" class="form-label"><spring:message code="forgotPassword.email"/></label>
-            <input type="email" class="form-control" id="email" name="email" required maxlength="50"
-                   value="<c:out value='${forgotEmail}'/>"/>
+            <form:input path="email" type="email" cssClass="form-control" id="email" required="required" maxlength="50"/>
         </div>
         <button type="submit" class="btn btn-primary w-100"><spring:message code="forgotPassword.submit"/></button>
-    </form>
+    </form:form>
     <p class="text-center mt-3 small">
         <a href="<c:url value='/login'/>"><spring:message code="common.back"/></a>
     </p>

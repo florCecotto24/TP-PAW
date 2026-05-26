@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -21,63 +22,18 @@
         <div class="alert alert-danger rounded-3"><c:out value="${errorMessage}"/></div>
     </c:if>
 
-    <h2 class="h4 fw-semibold mb-3"><spring:message code="admin.catalog.brands"/></h2>
-    <c:choose>
-        <c:when test="${empty pendingBrands}">
-            <p class="text-secondary mb-4"><spring:message code="admin.catalog.brands.empty"/></p>
-        </c:when>
-        <c:otherwise>
-            <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th><spring:message code="admin.catalog.table.id"/></th>
-                                    <th><spring:message code="admin.catalog.brandName"/></th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <c:forEach var="brand" items="${pendingBrands}">
-                                    <tr>
-                                        <td><c:out value="${brand.id}"/></td>
-                                        <td><c:out value="${brand.name}"/></td>
-                                        <td class="text-end">
-                                            <form action="${pageContext.request.contextPath}/admin/catalog/brands/${brand.id}/validate" method="post" class="d-inline">
-                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-3 me-1">
-                                                    <spring:message code="admin.catalog.validate"/>
-                                                </button>
-                                            </form>
-                                            <form action="${pageContext.request.contextPath}/admin/catalog/brands/${brand.id}/reject" method="post" class="d-inline">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-3">
-                                                    <spring:message code="admin.catalog.reject"/>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </c:otherwise>
-    </c:choose>
-
-    <h2 class="h4 fw-semibold mb-3"><spring:message code="admin.catalog.models"/></h2>
+    <h2 class="h4 fw-semibold mb-3"><spring:message code="admin.catalog.entries"/></h2>
     <c:choose>
         <c:when test="${empty pendingModels}">
-            <p class="text-secondary mb-4"><spring:message code="admin.catalog.models.empty"/></p>
+            <p class="text-secondary mb-4"><spring:message code="admin.catalog.entries.empty"/></p>
         </c:when>
         <c:otherwise>
-            <div class="card border-0 shadow-sm rounded-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-4" style="overflow: hidden;">
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                            <thead class="table-primary">
                                 <tr>
-                                    <th><spring:message code="admin.catalog.table.id"/></th>
                                     <th><spring:message code="admin.catalog.brandName"/></th>
                                     <th><spring:message code="admin.catalog.modelName"/></th>
                                     <th><spring:message code="admin.catalog.modelType"/></th>
@@ -87,21 +43,23 @@
                             <tbody>
                                 <c:forEach var="model" items="${pendingModels}">
                                     <tr>
-                                        <td><c:out value="${model.id}"/></td>
                                         <td><c:out value="${model.brand.name}"/></td>
                                         <td><c:out value="${model.name}"/></td>
-                                        <td><c:out value="${model.type}"/></td>
+                                        <td>
+                                            <spring:message code="enum.car.type.${model.type.name()}" var="modelTypeLabel"/>
+                                            <c:out value="${modelTypeLabel}"/>
+                                        </td>
                                         <td class="text-end">
-                                            <form action="${pageContext.request.contextPath}/admin/catalog/models/${model.id}/validate" method="post" class="d-inline">
+                                            <form:form action="${pageContext.request.contextPath}/admin/catalog/entries/${model.id}/validate" method="post" modelAttribute="adminActionForm" cssClass="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-3 me-1">
                                                     <spring:message code="admin.catalog.validate"/>
                                                 </button>
-                                            </form>
-                                            <form action="${pageContext.request.contextPath}/admin/catalog/models/${model.id}/reject" method="post" class="d-inline">
+                                            </form:form>
+                                            <form:form action="${pageContext.request.contextPath}/admin/catalog/entries/${model.id}/reject" method="post" modelAttribute="adminActionForm" cssClass="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger rounded-3">
                                                     <spring:message code="admin.catalog.reject"/>
                                                 </button>
-                                            </form>
+                                            </form:form>
                                         </td>
                                     </tr>
                                 </c:forEach>

@@ -15,13 +15,12 @@
 <div class="container py-5 mt-5">
     <h1 class="h2 fw-bold mb-4"><spring:message code="admin.reservations.title"/></h1>
 
-    <div class="card border-0 shadow-sm rounded-4">
+    <div class="card border-0 shadow-sm rounded-4" style="overflow: hidden;">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="table-primary">
                         <tr>
-                            <th><spring:message code="admin.reservations.table.id"/></th>
                             <th><spring:message code="admin.reservations.table.car"/></th>
                             <th><spring:message code="admin.reservations.table.start"/></th>
                             <th><spring:message code="admin.reservations.table.end"/></th>
@@ -33,7 +32,6 @@
                     <tbody>
                         <c:forEach var="r" items="${reservations.content}">
                             <tr>
-                                <td><c:out value="${r.reservationId}"/></td>
                                 <td><c:out value="${r.brand} ${r.model}"/></td>
                                 <td><c:out value="${r.startDate}"/></td>
                                 <td><c:out value="${r.endDate}"/></td>

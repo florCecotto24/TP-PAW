@@ -101,4 +101,13 @@ public class CarModelJpaDao implements CarModelDao {
             em.remove(model);
         }
     }
+
+    @Override
+    public int countByBrandId(final long brandId) {
+        final Long count = em.createQuery(
+                "SELECT COUNT(m) FROM CarModel m WHERE m.brand.id = :brandId", Long.class)
+                .setParameter("brandId", brandId)
+                .getSingleResult();
+        return count.intValue();
+    }
 }

@@ -35,6 +35,7 @@ import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.util.CbuRules;
+import ar.edu.itba.paw.services.AdminService;
 import ar.edu.itba.paw.services.CarBrandService;
 import ar.edu.itba.paw.services.CarModelService;
 import ar.edu.itba.paw.services.CarService;
@@ -68,6 +69,7 @@ public final class PublishCarFormController {
     private final CarEnumOptions carEnumOptions;
     private final UserService userService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
+    private final AdminService adminService;
 
     public PublishCarFormController(
             final CarService carService,
@@ -79,7 +81,8 @@ public final class PublishCarFormController {
             final PublishCarPictureSessionStash pictureStash,
             final CarEnumOptions carEnumOptions,
             final UserService userService,
-            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy) {
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
+            final AdminService adminService) {
         this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
@@ -90,6 +93,7 @@ public final class PublishCarFormController {
         this.carEnumOptions = carEnumOptions;
         this.userService = userService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
+        this.adminService = adminService;
     }
 
     @ModelAttribute("allBrands")
@@ -257,29 +261,44 @@ public final class PublishCarFormController {
             // Resolve brand/model strings (validated non-blank by JSR-303) to a catalog CarModel
             final CarBrand resolvedBrand = carBrandService.findOrCreateUnvalidated(form.getBrand())
                     .orElseThrow(() -> new IllegalStateException("Could not resolve brand: " + form.getBrand()));
-            if (!resolvedBrand.isValidated()) {
-                errors.rejectValue(
-                        "brand",
-                        "publishCar.error.brandPendingValidation",
-                        localeMessages.msg("publishCar.error.brandPendingValidation"));
-                pictureStash.trySyncFromForm(form, session, errors);
-                return publishCarFormView(session);
-            }
             final CarModel resolvedModel = carModelService.findOrCreateUnvalidated(
                             resolvedBrand.getId(), form.getModel(), form.getType())
                     .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + form.getModel()));
-            if (!resolvedModel.isValidated()) {
-                errors.rejectValue(
-                        "model",
-                        "publishCar.error.modelPendingValidation",
-                        localeMessages.msg("publishCar.error.modelPendingValidation"));
-                pictureStash.trySyncFromForm(form, session, errors);
-                return publishCarFormView(session);
-            }
 
             final byte[] insuranceBytes = hasInsurance ? insuranceFile.getBytes() : null;
             final String insuranceName = hasInsurance ? insuranceFile.getOriginalFilename() : null;
             final String insuranceType = hasInsurance ? insuranceFile.getContentType() : null;
+
+            if (!resolvedBrand.isValidated() || !resolvedModel.isValidated()) {
+                if (fresh.isAdmin()) {
+                    adminService.validateCatalogEntry(resolvedModel.getId());
+                } else {
+                    // Create the car now so it appears in /my-cars under "pending validation".
+                    final Car pendingCar = carService.publishCar(
+                            ownerId,
+                            form.getPlate(),
+                            resolvedModel.getId(),
+                            form.getType(),
+                            form.getPowertrain(),
+                            form.getTransmission(),
+                            form.getDescription(),
+                            uploads,
+                            insuranceName,
+                            insuranceType,
+                            insuranceBytes);
+                    pictureStash.clear(session);
+                    final ModelAndView pendingMav = new ModelAndView("publishCarPending");
+                    pendingMav.addObject("createdCarId", pendingCar.getId());
+                    if (!resolvedBrand.isValidated()) {
+                        pendingMav.addObject("pendingBrand", resolvedBrand.getName());
+                    }
+                    if (!resolvedModel.isValidated()) {
+                        pendingMav.addObject("pendingModel", resolvedModel.getName());
+                    }
+                    return pendingMav;
+                }
+            }
+
             final Car car = carService.publishCar(
                     ownerId,
                     form.getPlate(),

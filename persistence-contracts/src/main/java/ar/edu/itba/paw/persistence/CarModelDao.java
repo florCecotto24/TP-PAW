@@ -36,4 +36,7 @@ public interface CarModelDao {
 
     /** Removes a model row by id. */
     void deleteById(long modelId);
+
+    /** Returns the number of models (validated or not) belonging to the given brand. */
+    int countByBrandId(long brandId);
 }

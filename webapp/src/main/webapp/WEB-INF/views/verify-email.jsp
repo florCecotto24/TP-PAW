@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -33,31 +34,27 @@
         <div class="alert alert-success" role="alert"><spring:message code="verifyEmail.resent"/></div>
     </c:if>
 
-    <c:set var="prefillEmail" value="${verifyEmail}"/>
-    <c:if test="${empty prefillEmail}"><c:set var="prefillEmail" value="${verifyEmailHint}"/></c:if>
     <c:set var="emailLocked" value="${not empty verifyEmailHint or not empty verifyEmail}"/>
 
-    <form method="post" action="${pageContext.request.contextPath}/verify-email" class="needs-validation" novalidate>
-        <%@ include file="includes/csrfHidden.jspf" %>
+    <form:form method="post" action="${pageContext.request.contextPath}/verify-email" modelAttribute="verifyEmailForm" cssClass="needs-validation" novalidate="novalidate">
         <div class="mb-3">
             <label for="email" class="form-label"><spring:message code="verifyEmail.email"/></label>
-            <input type="email" class="form-control<c:if test='${emailLocked}'> form-control-verify-email-locked</c:if>" id="email" name="email"
-                   required maxlength="50" value="<c:out value='${prefillEmail}'/>"<c:if test="${emailLocked}"> readonly</c:if>/>
+            <form:input path="email" type="email" cssClass="form-control${emailLocked ? ' form-control-verify-email-locked' : ''}" id="email"
+                        required="required" maxlength="50" readonly="${emailLocked ? 'readonly' : ''}"/>
         </div>
         <div class="mb-3">
             <label for="code" class="form-label"><spring:message code="verifyEmail.code"/></label>
-            <input type="text" class="form-control" id="code" name="code" required maxlength="6" pattern="[0-9]{6}"
-                   inputmode="numeric" autocomplete="one-time-code" placeholder="<c:out value='${verifyEmailCodePlaceholder}'/>"
-                   data-ryden-digits-only="true" data-max-len="6"/>
+            <form:input path="code" type="text" cssClass="form-control" id="code" required="required" maxlength="6" pattern="[0-9]{6}"
+                        inputmode="numeric" autocomplete="one-time-code" placeholder="${verifyEmailCodePlaceholder}"
+                        data-ryden-digits-only="true" data-max-len="6"/>
         </div>
         <button type="submit" class="btn btn-primary w-100 mb-2"><spring:message code="verifyEmail.submit"/></button>
-    </form>
+    </form:form>
 
-    <form method="post" action="${pageContext.request.contextPath}/verify-email/resend" class="mb-3">
-        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-        <input type="hidden" name="email" value="<c:out value='${prefillEmail}'/>"/>
+    <form:form method="post" action="${pageContext.request.contextPath}/verify-email/resend" modelAttribute="verifyEmailForm" cssClass="mb-3">
+        <form:hidden path="email"/>
         <button type="submit" class="btn btn-outline-secondary w-100"><spring:message code="verifyEmail.resend"/></button>
-    </form>
+    </form:form>
 
     <p class="text-center mt-3 small mb-1">
         <span class="text-muted"><spring:message code="verifyEmail.alreadyVerified"/></span>

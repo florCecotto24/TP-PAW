@@ -348,6 +348,14 @@ public class CarJpaDao implements CarDao {
     }
 
     @Override
+    public List<Car> findCarsByModelId(final long modelId) {
+        return em.createQuery(
+                        "FROM Car c WHERE c.carModel.id = :modelId", Car.class)
+                .setParameter("modelId", modelId)
+                .getResultList();
+    }
+
+    @Override
     @Transactional
     public boolean updateCarStatusIfCurrent(
             final long carId, final Car.Status newStatus, final Car.Status expected) {

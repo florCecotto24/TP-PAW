@@ -78,6 +78,15 @@
                                     </div>
                                     <div class="ryden-catalog-scroll px-2 pb-2" style="max-height:220px;overflow-y:auto">
                                         <ul class="list-unstyled mb-0" id="publishBrandList">
+                                            <li>
+                                                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
+                                                    <input type="radio" class="form-check-input flex-shrink-0 js-brand-pick mt-0"
+                                                           name="_brandPick" value="0"
+                                                           data-catname=""
+                                                           <c:if test="${brandIsOther}">checked="checked"</c:if>/>
+                                                    <span class="small"><c:out value="${otherLabel}"/></span>
+                                                </label>
+                                            </li>
                                             <c:forEach var="b" items="${allBrands}">
                                                 <li data-catlookup="${fn:toLowerCase(b.name)}">
                                                     <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
@@ -89,15 +98,6 @@
                                                     </label>
                                                 </li>
                                             </c:forEach>
-                                            <li>
-                                                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
-                                                    <input type="radio" class="form-check-input flex-shrink-0 js-brand-pick mt-0"
-                                                           name="_brandPick" value="0"
-                                                           data-catname=""
-                                                           <c:if test="${brandIsOther}">checked="checked"</c:if>/>
-                                                    <span class="small"><c:out value="${otherLabel}"/></span>
-                                                </label>
-                                            </li>
                                         </ul>
                                     </div>
                                 </div>
@@ -135,7 +135,7 @@
                             <form:hidden path="model" id="publishModelHidden"/>
                             <input type="hidden" id="publishModelIdHidden" name="modelId"
                                    value="<c:out value='${publishCarForm.modelId}'/>"/>
-                            <div class="dropdown" id="publishModelDd">
+                            <div class="dropdown<c:if test="${brandIsOther}"> d-none</c:if>" id="publishModelDd">
                                 <button type="button" id="publishModelBtn"
                                         class="form-select dropdown-toggle ryden-select-btn text-start w-100"
                                         data-bs-toggle="dropdown" data-bs-auto-close="outside"
@@ -157,6 +157,15 @@
                                     </div>
                                     <div class="ryden-catalog-scroll px-2 pb-2" style="max-height:220px;overflow-y:auto">
                                         <ul class="list-unstyled mb-0" id="publishModelList">
+                                            <li id="publishModelOtherLi">
+                                                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
+                                                    <input type="radio" class="form-check-input flex-shrink-0 js-model-pick mt-0"
+                                                           name="_modelPick" value="0"
+                                                           data-catname=""
+                                                           <c:if test="${modelIsOther}">checked="checked"</c:if>/>
+                                                    <span class="small"><c:out value="${otherLabel}"/></span>
+                                                </label>
+                                            </li>
                                             <c:forEach var="m" items="${allModels}">
                                                 <li data-catlookup="${fn:toLowerCase(m.name)}"
                                                     data-brandid="${m.brandId}">
@@ -169,21 +178,12 @@
                                                     </label>
                                                 </li>
                                             </c:forEach>
-                                            <li id="publishModelOtherLi">
-                                                <label class="dropdown-item d-flex gap-2 align-items-center py-2 px-2 mb-0 rounded-2">
-                                                    <input type="radio" class="form-check-input flex-shrink-0 js-model-pick mt-0"
-                                                           name="_modelPick" value="0"
-                                                           data-catname=""
-                                                           <c:if test="${modelIsOther}">checked="checked"</c:if>/>
-                                                    <span class="small"><c:out value="${otherLabel}"/></span>
-                                                </label>
-                                            </li>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                             <%-- "Other" model text input --%>
-                            <div id="publishModelOtherRow" class="mt-2<c:if test="${not modelIsOther}"> d-none</c:if>">
+                            <div id="publishModelOtherRow" class="mt-2<c:if test="${not brandIsOther and not modelIsOther}"> d-none</c:if>">
                                 <input type="text" id="publishModelOtherInput"
                                        class="form-control" maxlength="50"
                                        placeholder="<c:out value='${modelOtherPlaceholder}'/>"
@@ -410,6 +410,15 @@
                             <input id="publishInsuranceFileInput" type="file" name="insuranceFile"
                                    accept="application/pdf,image/*"
                                    class="form-control"/>
+                            <div id="publishInsuranceSelected" class="d-none d-flex align-items-center gap-2 mt-2">
+                                <i class="bi bi-file-earmark text-secondary" aria-hidden="true"></i>
+                                <span id="publishInsuranceFileName" class="small text-truncate" style="max-width:260px"></span>
+                                <button type="button" id="publishInsuranceClearBtn"
+                                        class="btn btn-sm btn-outline-danger ms-1"
+                                        aria-label="<spring:message code='publishCar.form.removeFile'/>">
+                                    <i class="bi bi-trash" aria-hidden="true"></i>
+                                </button>
+                            </div>
                             <small class="text-muted d-block mt-2">
                                 <spring:message code="publishCar.form.insurance.hint" arguments="${uploadMaxProfileDocumentMegabytes}"/>
                             </small>
@@ -619,17 +628,26 @@
         }
         if (modelIdHid) { modelIdHid.value = ''; }
         if (modelHid)   { modelHid.value = ''; }
-        if (modelOtherRow) { modelOtherRow.classList.add('d-none'); }
         if (modelOtherInput) { modelOtherInput.value = ''; }
         if (modelFilter) { modelFilter.value = ''; }
-        // Enable model button once brand is set
-        if (modelBtn) {
-            var hasValidBrand = newBrandId && newBrandId !== '';
-            modelBtn.disabled = !hasValidBrand;
-            if (modelLbl) {
-                modelLbl.textContent = hasValidBrand
-                    ? modelBtn.getAttribute('data-placeholder') || ''
-                    : (modelBtn.getAttribute('data-select-brand-first') || '');
+        var publishModelDd = document.getElementById('publishModelDd');
+        if (newBrandId === '0') {
+            // "Other" brand: bypass dropdown and show text input directly
+            if (publishModelDd) { publishModelDd.classList.add('d-none'); }
+            if (modelOtherRow) { modelOtherRow.classList.remove('d-none'); }
+            if (modelIdHid) { modelIdHid.value = '0'; }
+        } else {
+            // Normal brand: restore dropdown, hide text input
+            if (publishModelDd) { publishModelDd.classList.remove('d-none'); }
+            if (modelOtherRow) { modelOtherRow.classList.add('d-none'); }
+            if (modelBtn) {
+                var hasValidBrand = newBrandId && newBrandId !== '';
+                modelBtn.disabled = !hasValidBrand;
+                if (modelLbl) {
+                    modelLbl.textContent = hasValidBrand
+                        ? modelBtn.getAttribute('data-placeholder') || ''
+                        : (modelBtn.getAttribute('data-select-brand-first') || '');
+                }
             }
         }
         applyModelFilter();
@@ -644,10 +662,37 @@
     /* ── Initial model filter (page load with pre-selected brand) ─────────── */
     (function initFilters() {
         applyModelFilter();
-        // On page re-display after a validation error, reconstruct model button label
         var bid = getCurrentBrandId();
-        if (modelBtn && bid && bid !== '') {
+        if (bid === '0') {
+            // Brand is "Other" on page load: ensure model text input is shown, modelId is 0
+            if (modelOtherRow) { modelOtherRow.classList.remove('d-none'); }
+            if (modelIdHid && !modelIdHid.value) { modelIdHid.value = '0'; }
+        } else if (modelBtn && bid && bid !== '') {
+            // On page re-display after a validation error, reconstruct model button label
             modelBtn.disabled = false;
+        }
+    }());
+
+    /* ── Insurance file clear button ─────────────────────────────────────── */
+    (function initInsuranceClear() {
+        var insuranceInput    = document.getElementById('publishInsuranceFileInput');
+        var insuranceSelected = document.getElementById('publishInsuranceSelected');
+        var insuranceFileName = document.getElementById('publishInsuranceFileName');
+        var insuranceClearBtn = document.getElementById('publishInsuranceClearBtn');
+        if (!insuranceInput) { return; }
+        insuranceInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                if (insuranceFileName) { insuranceFileName.textContent = this.files[0].name; }
+                if (insuranceSelected) { insuranceSelected.classList.remove('d-none'); }
+            } else {
+                if (insuranceSelected) { insuranceSelected.classList.add('d-none'); }
+            }
+        });
+        if (insuranceClearBtn) {
+            insuranceClearBtn.addEventListener('click', function () {
+                insuranceInput.value = '';
+                if (insuranceSelected) { insuranceSelected.classList.add('d-none'); }
+            });
         }
     }());
 

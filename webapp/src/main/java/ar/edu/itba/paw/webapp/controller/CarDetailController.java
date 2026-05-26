@@ -25,6 +25,7 @@ import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -86,6 +87,7 @@ public class CarDetailController {
             @RequestParam(name = "until", required = false) final String untilDateParam,
             @RequestParam(name = "searchNbId", required = false) final List<Long> searchNeighborhoodIds,
             @CurrentUser final User currentUser,
+            final Authentication authentication,
             final HttpServletRequest request) {
 
         if (carIdParam == null) {
@@ -151,7 +153,14 @@ public class CarDetailController {
                 + (car.getModel() != null ? car.getModel() : "");
 
         final ModelAndView mav = new ModelAndView("carDetail");
+        final boolean currentUserIsAdmin = authentication != null
+                && authentication.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         mav.addObject("isOwnerRequesting", isOwnerRequesting);
+        mav.addObject("currentUserIsAdmin", currentUserIsAdmin);
+        if (currentUserIsAdmin) {
+            mav.addObject("adminActionForm", new java.util.HashMap<>());
+        }
         mav.addObject("maxReservationBillableDays", reservationService.getConfiguredMaxReservationBillableDays());
         mav.addObject("car", car);
         mav.addObject("carTitle", carTitle);

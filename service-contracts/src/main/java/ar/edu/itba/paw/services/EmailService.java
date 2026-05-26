@@ -69,6 +69,9 @@ public interface EmailService {
     /** Owner notified when an active listing was paused because CBU was removed or invalid. */
     void sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload payload);
 
+    /** Owner notified when a platform administrator pauses their listing. */
+    void sendListingPausedByAdmin(ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload payload);
+
     /** Counterparty notified when a new reservation chat message is received. */
     void sendReservationChatMessageNotification(ReservationChatMessageEmailPayload payload);
 }

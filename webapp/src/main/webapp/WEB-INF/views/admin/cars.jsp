@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -26,13 +27,12 @@
             <p class="text-secondary"><spring:message code="admin.cars.empty"/></p>
         </c:when>
         <c:otherwise>
-            <div class="card border-0 shadow-sm rounded-4">
+            <div class="card border-0 shadow-sm rounded-4" style="overflow: hidden;">
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
+                            <thead class="table-primary">
                                 <tr>
-                                    <th><spring:message code="admin.cars.table.id"/></th>
                                     <th><spring:message code="admin.cars.table.plate"/></th>
                                     <th><spring:message code="admin.cars.owner"/></th>
                                     <th><spring:message code="admin.cars.status"/></th>
@@ -42,16 +42,22 @@
                             <tbody>
                                 <c:forEach var="car" items="${cars}">
                                     <tr>
-                                        <td><c:out value="${car.id}"/></td>
                                         <td><c:out value="${car.plate}"/></td>
                                         <td><c:out value="${car.owner.forename} ${car.owner.surname}"/></td>
-                                        <td><span class="badge text-bg-warning"><c:out value="${car.status}"/></span></td>
+                                        <td>
+                                            <spring:message code="enum.car.status.${car.status.name()}" var="carStatusLabel"/>
+                                            <span class="badge text-bg-warning"><c:out value="${carStatusLabel}"/></span>
+                                        </td>
                                         <td class="text-end">
-                                            <form action="${pageContext.request.contextPath}/admin/cars/${car.id}/resume" method="post" class="d-inline">
+                                            <a href="${pageContext.request.contextPath}/car-detail?carId=${car.id}"
+                                               class="btn btn-sm btn-outline-secondary rounded-3 me-1">
+                                                <spring:message code="admin.cars.viewListing"/>
+                                            </a>
+                                            <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/resume" method="post" modelAttribute="adminActionForm" cssClass="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-3">
                                                     <spring:message code="admin.cars.resume"/>
                                                 </button>
-                                            </form>
+                                            </form:form>
                                         </td>
                                     </tr>
                                 </c:forEach>

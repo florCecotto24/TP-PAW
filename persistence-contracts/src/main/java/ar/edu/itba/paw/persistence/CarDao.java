@@ -46,6 +46,9 @@ public interface CarDao {
     /** All cars whose status equals {@code status}. */
     List<Car> findCarsByStatus(Car.Status status);
 
+    /** All cars whose catalog model id equals {@code modelId}. */
+    List<Car> findCarsByModelId(long modelId);
+
     /**
      * Atomically transitions a car from {@code expected} to {@code newStatus} only when its current
      * status matches {@code expected}. Returns {@code true} when the row was updated.

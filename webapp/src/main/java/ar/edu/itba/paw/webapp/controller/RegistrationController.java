@@ -24,6 +24,7 @@ import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.RegistrationAccountForm;
+import ar.edu.itba.paw.webapp.form.VerifyEmailForm;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.security.auth.SessionLoginService;
 import ar.edu.itba.paw.webapp.security.http.RegistrationSessionAttributes;
@@ -170,6 +171,17 @@ public final class RegistrationController {
         } else if (StringUtils.hasText(email)) {
             model.addAttribute("verifyEmailHint", email.trim());
         }
+        final VerifyEmailForm verifyEmailForm = new VerifyEmailForm();
+        final Object flashEmail = model.asMap().get("verifyEmail");
+        if (flashEmail instanceof String && StringUtils.hasText((String) flashEmail)) {
+            verifyEmailForm.setEmail((String) flashEmail);
+        } else {
+            final Object hintEmail = model.asMap().get("verifyEmailHint");
+            if (hintEmail instanceof String && StringUtils.hasText((String) hintEmail)) {
+                verifyEmailForm.setEmail((String) hintEmail);
+            }
+        }
+        model.addAttribute("verifyEmailForm", verifyEmailForm);
         return "verify-email";
     }
 

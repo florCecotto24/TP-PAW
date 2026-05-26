@@ -25,7 +25,7 @@ public interface AdminService {
 
     void unblockUser(long targetUserId);
 
-    void adminPauseCar(long carId, long actingAdminId);
+    void adminPauseCar(long carId, long actingAdminId, Locale locale);
 
     void adminResumeCar(long carId, long actingAdminId);
 
@@ -36,6 +36,12 @@ public interface AdminService {
     void validateCarModel(long modelId);
 
     void rejectCarModel(long modelId);
+
+    /** Validates a pending catalog entry: validates the model and, if its brand is also pending, validates the brand. */
+    void validateCatalogEntry(long modelId);
+
+    /** Rejects a pending catalog entry: removes the model and, if its brand is pending and has no remaining models, removes the brand too. */
+    void rejectCatalogEntry(long modelId);
 
     Page<User> listUsers(int page, int pageSize);
 

@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,6 +12,12 @@
 <ryden:navbar/>
 
 <main class="car-detail-page container pb-4">
+    <c:if test="${not empty successMessage}">
+        <div class="alert alert-warning rounded-3 mt-3"><c:out value="${successMessage}"/></div>
+    </c:if>
+    <c:if test="${not empty errorMessage}">
+        <div class="alert alert-danger rounded-3 mt-3"><c:out value="${errorMessage}"/></div>
+    </c:if>
     <c:choose>
         <c:when test="${param.src eq 'search'}">
             <spring:message code="navbar.explore" var="exploreLabel"/>
@@ -150,6 +157,31 @@
         </div>
 
         <div class="col-lg-4 order-2">
+            <c:if test="${currentUserIsAdmin and !owner.admin}">
+                <div class="card bg-white border-0 shadow-sm rounded-4 mb-3 p-3">
+                    <h6 class="fw-semibold mb-2"><spring:message code="carDetail.admin.sectionTitle"/></h6>
+                    <c:if test="${car.status.name() eq 'ACTIVE'}">
+                        <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/pause"
+                                   method="post" modelAttribute="adminActionForm" cssClass="d-inline">
+                            <input type="hidden" name="fromCarDetail" value="true"/>
+                            <input type="hidden" name="carDetailId" value="${car.id}"/>
+                            <button type="submit" class="btn btn-warning btn-sm rounded-3 w-100">
+                                <spring:message code="carDetail.admin.pause"/>
+                            </button>
+                        </form:form>
+                    </c:if>
+                    <c:if test="${car.status.name() eq 'ADMIN_PAUSED'}">
+                        <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/resume"
+                                   method="post" modelAttribute="adminActionForm" cssClass="d-inline">
+                            <input type="hidden" name="fromCarDetail" value="true"/>
+                            <input type="hidden" name="carDetailId" value="${car.id}"/>
+                            <button type="submit" class="btn btn-success btn-sm rounded-3 w-100">
+                                <spring:message code="carDetail.admin.resume"/>
+                            </button>
+                        </form:form>
+                    </c:if>
+                </div>
+            </c:if>
             <div class="detail-reservation-sticky">
                 <ryden:detailReservationPanel
                         carId="${car.id}"

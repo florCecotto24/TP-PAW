@@ -25,7 +25,7 @@
             </div>
 
 
-            <div class="sticky-top w-100 pt-2" style="top: 55px; z-index: 1020; background-color: var(--color-bg, #FAF9F7);">
+            <div class="sticky-top w-100 pt-2 pb-3" style="top: 55px; z-index: 1020; background-color: var(--color-bg, #FAF9F7);">
                 <c:url var="homeSearchFiltersClearHref" value="/"/>
                 <c:set var="hasActiveSearchFilters"
                        value="${not empty param.query or not empty param.from or not empty param.until or not empty searchSanitizedNeighborhoodIds or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>

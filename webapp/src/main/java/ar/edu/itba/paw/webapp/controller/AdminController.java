@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -19,7 +20,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
@@ -29,6 +29,7 @@ import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.services.AdminService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.form.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
@@ -126,7 +127,9 @@ public final class AdminController {
 
     @GetMapping("/users/create")
     public ModelAndView createAdminUserForm() {
-        return new ModelAndView("admin/createAdminUser");
+        final ModelAndView mav = new ModelAndView("admin/createAdminUser");
+        mav.addObject("createAdminUserForm", new CreateAdminUserForm());
+        return mav;
     }
 
     @PostMapping("/users/create")
@@ -153,21 +156,30 @@ public final class AdminController {
         final List<Car> cars = adminService.findAdminPausedCars();
         final ModelAndView mav = new ModelAndView("admin/cars");
         mav.addObject("cars", cars);
+        mav.addObject("adminActionForm", new HashMap<>());
         return mav;
     }
 
     @PostMapping("/cars/{carId}/pause")
     public String pauseCar(
             @PathVariable final long carId,
+            @RequestParam(required = false, defaultValue = "false") final boolean fromCarDetail,
+            @RequestParam(required = false) final Long carDetailId,
             final Authentication authentication,
+            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
         try {
-            adminService.adminPauseCar(carId, actingAdminId);
+            adminService.adminPauseCar(carId, actingAdminId, locale);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carPaused"));
-        } catch (final Exception e) {
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        } catch (final RuntimeException e) {
             LOG.warn("Admin pause car {} failed", carId, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        if (fromCarDetail && carDetailId != null) {
+            return "redirect:/car-detail?carId=" + carDetailId;
         }
         return "redirect:/admin/cars";
     }
@@ -175,80 +187,58 @@ public final class AdminController {
     @PostMapping("/cars/{carId}/resume")
     public String resumeCar(
             @PathVariable final long carId,
+            @RequestParam(required = false, defaultValue = "false") final boolean fromCarDetail,
+            @RequestParam(required = false) final Long carDetailId,
             final Authentication authentication,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
         try {
             adminService.adminResumeCar(carId, actingAdminId);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carResumed"));
-        } catch (final Exception e) {
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        } catch (final RuntimeException e) {
             LOG.warn("Admin resume car {} failed", carId, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        if (fromCarDetail && carDetailId != null) {
+            return "redirect:/car-detail?carId=" + carDetailId;
         }
         return "redirect:/admin/cars";
     }
 
     @GetMapping("/catalog")
     public ModelAndView catalog() {
-        final List<CarBrand> pendingBrands = adminService.findPendingBrands();
         final List<CarModel> pendingModels = adminService.findPendingModels();
         final ModelAndView mav = new ModelAndView("admin/catalog");
-        mav.addObject("pendingBrands", pendingBrands);
         mav.addObject("pendingModels", pendingModels);
+        mav.addObject("adminActionForm", new HashMap<>());
         return mav;
     }
 
-    @PostMapping("/catalog/brands/{brandId}/validate")
-    public String validateBrand(
-            @PathVariable final long brandId,
-            final RedirectAttributes redirectAttributes) {
-        try {
-            adminService.validateCarBrand(brandId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.brandValidated"));
-        } catch (final Exception e) {
-            LOG.warn("Admin validate brand {} failed", brandId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        return "redirect:/admin/catalog";
-    }
-
-    @PostMapping("/catalog/brands/{brandId}/reject")
-    public String rejectBrand(
-            @PathVariable final long brandId,
-            final RedirectAttributes redirectAttributes) {
-        try {
-            adminService.rejectCarBrand(brandId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.brandRejected"));
-        } catch (final Exception e) {
-            LOG.warn("Admin reject brand {} failed", brandId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-        }
-        return "redirect:/admin/catalog";
-    }
-
-    @PostMapping("/catalog/models/{modelId}/validate")
-    public String validateModel(
+    @PostMapping("/catalog/entries/{modelId}/validate")
+    public String validateCatalogEntry(
             @PathVariable final long modelId,
             final RedirectAttributes redirectAttributes) {
         try {
-            adminService.validateCarModel(modelId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.modelValidated"));
+            adminService.validateCatalogEntry(modelId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryValidated"));
         } catch (final Exception e) {
-            LOG.warn("Admin validate model {} failed", modelId, e);
+            LOG.warn("Admin validate catalog entry (modelId={}) failed", modelId, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/catalog";
     }
 
-    @PostMapping("/catalog/models/{modelId}/reject")
-    public String rejectModel(
+    @PostMapping("/catalog/entries/{modelId}/reject")
+    public String rejectCatalogEntry(
             @PathVariable final long modelId,
             final RedirectAttributes redirectAttributes) {
         try {
-            adminService.rejectCarModel(modelId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.modelRejected"));
+            adminService.rejectCatalogEntry(modelId);
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryRejected"));
         } catch (final Exception e) {
-            LOG.warn("Admin reject model {} failed", modelId, e);
+            LOG.warn("Admin reject catalog entry (modelId={}) failed", modelId, e);
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/catalog";
