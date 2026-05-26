@@ -18,6 +18,8 @@
     <h1 class="h4 mb-3"><spring:message code="verifyEmail.heading"/></h1>
     <p class="text-muted small mb-4"><spring:message code="verifyEmail.intro"/></p>
 
+    <spring:message code="verifyEmail.code.placeholder" var="verifyEmailCodePlaceholder" htmlEscape="true"/>
+
     <c:if test="${not empty verifyErrorMessage}">
         <div class="alert alert-danger" role="alert"><c:out value="${verifyErrorMessage}"/></div>
     </c:if>
@@ -45,7 +47,7 @@
         <div class="mb-3">
             <label for="code" class="form-label"><spring:message code="verifyEmail.code"/></label>
             <input type="text" class="form-control" id="code" name="code" required maxlength="6" pattern="[0-9]{6}"
-                   inputmode="numeric" autocomplete="one-time-code" placeholder="000000"
+                   inputmode="numeric" autocomplete="one-time-code" placeholder="<c:out value='${verifyEmailCodePlaceholder}'/>"
                    data-ryden-digits-only="true" data-max-len="6"/>
         </div>
         <button type="submit" class="btn btn-primary w-100 mb-2"><spring:message code="verifyEmail.submit"/></button>

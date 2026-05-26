@@ -33,9 +33,9 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
+                            <th><spring:message code="admin.users.table.id"/></th>
+                            <th><spring:message code="admin.users.table.name"/></th>
+                            <th><spring:message code="admin.users.table.email"/></th>
                             <th><spring:message code="admin.users.role"/></th>
                             <th><spring:message code="admin.users.blocked"/></th>
                             <th></th>
@@ -50,10 +50,10 @@
                                 <td>
                                     <c:choose>
                                         <c:when test="${user.admin}">
-                                            <span class="badge text-bg-primary">ADMIN</span>
+                                            <span class="badge text-bg-primary"><spring:message code="admin.users.role.admin"/></span>
                                         </c:when>
                                         <c:otherwise>
-                                            <span class="badge text-bg-secondary">USER</span>
+                                            <span class="badge text-bg-secondary"><spring:message code="admin.users.role.user"/></span>
                                         </c:otherwise>
                                     </c:choose>
                                 </td>

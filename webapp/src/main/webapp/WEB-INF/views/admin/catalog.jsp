@@ -24,7 +24,7 @@
     <h2 class="h4 fw-semibold mb-3"><spring:message code="admin.catalog.brands"/></h2>
     <c:choose>
         <c:when test="${empty pendingBrands}">
-            <p class="text-secondary mb-4">No pending brands.</p>
+            <p class="text-secondary mb-4"><spring:message code="admin.catalog.brands.empty"/></p>
         </c:when>
         <c:otherwise>
             <div class="card border-0 shadow-sm rounded-4 mb-4">
@@ -33,7 +33,7 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>ID</th>
+                                    <th><spring:message code="admin.catalog.table.id"/></th>
                                     <th><spring:message code="admin.catalog.brandName"/></th>
                                     <th></th>
                                 </tr>
@@ -68,7 +68,7 @@
     <h2 class="h4 fw-semibold mb-3"><spring:message code="admin.catalog.models"/></h2>
     <c:choose>
         <c:when test="${empty pendingModels}">
-            <p class="text-secondary mb-4">No pending models.</p>
+            <p class="text-secondary mb-4"><spring:message code="admin.catalog.models.empty"/></p>
         </c:when>
         <c:otherwise>
             <div class="card border-0 shadow-sm rounded-4">
@@ -77,7 +77,7 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>ID</th>
+                                    <th><spring:message code="admin.catalog.table.id"/></th>
                                     <th><spring:message code="admin.catalog.brandName"/></th>
                                     <th><spring:message code="admin.catalog.modelName"/></th>
                                     <th><spring:message code="admin.catalog.modelType"/></th>

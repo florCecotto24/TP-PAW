@@ -134,6 +134,9 @@
                         <%-- Availability row --%>
                         <spring:message code="publishCar.form.period" var="periodLabel"/>
                         <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
+                        <spring:message code="availability.dateRange.aria" var="availabilityDateRangeAria" htmlEscape="true"/>
+                        <spring:message code="createListing.availabilityRow.dayPrice" var="dayPriceLabel" htmlEscape="true"/>
+                        <spring:message code="createListing.availabilityRow.dayPrice.placeholder" var="dayPricePh" htmlEscape="true"/>
                         <spring:message code="listing.availability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonMsg" htmlEscape="true"/>
                         <spring:message code="listing.availability.required" var="availRequiredClientMsg" htmlEscape="true"/>
                         <div class="mb-4" id="publishAvailabilitySection"

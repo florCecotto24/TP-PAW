@@ -21,12 +21,12 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Car</th>
-                            <th>Start</th>
-                            <th>End</th>
-                            <th>Status</th>
-                            <th>Total</th>
+                            <th><spring:message code="admin.reservations.table.id"/></th>
+                            <th><spring:message code="admin.reservations.table.car"/></th>
+                            <th><spring:message code="admin.reservations.table.start"/></th>
+                            <th><spring:message code="admin.reservations.table.end"/></th>
+                            <th><spring:message code="admin.reservations.table.status"/></th>
+                            <th><spring:message code="admin.reservations.table.total"/></th>
                             <th></th>
                         </tr>
                     </thead>

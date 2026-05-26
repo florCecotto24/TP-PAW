@@ -23,7 +23,7 @@
 
     <c:choose>
         <c:when test="${empty cars}">
-            <p class="text-secondary">No admin-paused cars.</p>
+            <p class="text-secondary"><spring:message code="admin.cars.empty"/></p>
         </c:when>
         <c:otherwise>
             <div class="card border-0 shadow-sm rounded-4">
@@ -32,8 +32,8 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Plate</th>
+                                    <th><spring:message code="admin.cars.table.id"/></th>
+                                    <th><spring:message code="admin.cars.table.plate"/></th>
                                     <th><spring:message code="admin.cars.owner"/></th>
                                     <th><spring:message code="admin.cars.status"/></th>
                                     <th></th>

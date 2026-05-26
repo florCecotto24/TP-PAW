@@ -15,7 +15,7 @@
 <div class="auth-page__shell auth-page__shell--tall-form">
     <div class="auth-page__brand">
         <a href="<c:url value='/'/>" class="text-decoration-none">
-            <span class="auth-page__logo">Ryden</span>
+            <span class="auth-page__logo"><spring:message code="app.title"/></span>
         </a>
     </div>
     <div class="auth-page__main">
