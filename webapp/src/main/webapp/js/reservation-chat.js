@@ -41,6 +41,7 @@
     var labelYesterday = root.getAttribute('data-label-yesterday') || 'Yesterday';
     var errorLoadLabel = root.getAttribute('data-error-load') || 'Could not load chat. Try again later.';
     var errorConnectionLabel = root.getAttribute('data-error-connection') || 'Connection lost. Refresh the page.';
+    var errorSendLabel = root.getAttribute('data-error-send') || 'Could not send the message. Try again.';
     var labelUploading = root.getAttribute('data-uploading-label') || 'Uploading…';
     var labelTooLarge = root.getAttribute('data-too-large-label') || 'File must be at most {0} MB.';
     var labelInvalidType = root.getAttribute('data-invalid-type-label') || 'This file type is not allowed.';
@@ -70,6 +71,16 @@
     var lastStickyDayKey = null;
     var pendingFile = null;
     var uploading = false;
+    // Dedupe by message id: when STOMP is broken (typical in deploy behind some
+    // reverse proxies) the server still broadcasts after the HTTP POST resolves,
+    // so the sender renders the response DTO locally and the broadcast (if any)
+    // must not duplicate the bubble.
+    var renderedMessageIds = Object.create(null);
+    // Exponential backoff state for STOMP reconnect attempts.
+    var reconnectAttempts = 0;
+    var reconnectTimer = null;
+    var stompFatallyFailed = false;
+    var MAX_RECONNECT_ATTEMPTS = 6;
 
     function showError(msg) {
         if (!errorEl) {
@@ -608,6 +619,13 @@
         if (!dto) {
             return;
         }
+        if (dto.id != null) {
+            var key = String(dto.id);
+            if (renderedMessageIds[key]) {
+                return;
+            }
+            renderedMessageIds[key] = true;
+        }
         removeEmptyPlaceholder();
         var dayKey = wallDayKey(dto.createdAt);
         if (!dayKey) {
@@ -675,6 +693,7 @@
 
     function renderAll(messages) {
         clearMessageContent();
+        renderedMessageIds = Object.create(null);
         if (!messages || messages.length === 0) {
             var p = document.createElement('p');
             p.className = 'text-muted small mb-0 reservation-chat__empty';
@@ -715,6 +734,31 @@
 
     function markDisconnected() {
         connected = false;
+        // Drop any in-flight client; next connectStomp() will rebuild it.
+        stompClient = null;
+        scheduleStompReconnect();
+    }
+
+    function scheduleStompReconnect() {
+        if (reconnectTimer || stompFatallyFailed) {
+            return;
+        }
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            stompFatallyFailed = true;
+            // History is already on screen by this point: show the live-channel
+            // error rather than the misleading "could not load chat" copy.
+            showError(errorConnectionLabel);
+            return;
+        }
+        // 1s, 2s, 4s, 8s, 16s, 16s — exponential with cap.
+        var delay = Math.min(16000, 1000 * Math.pow(2, reconnectAttempts));
+        reconnectAttempts++;
+        reconnectTimer = setTimeout(function () {
+            reconnectTimer = null;
+            connectStomp().catch(function () {
+                scheduleStompReconnect();
+            });
+        }, delay);
     }
 
     function connectStomp() {
@@ -730,18 +774,28 @@
                 {},
                 function () {
                     connected = true;
+                    reconnectAttempts = 0;
+                    stompFatallyFailed = false;
+                    // Clear the connection-lost banner if a previous retry put it up.
+                    if (historyLoaded) {
+                        showError('');
+                    }
                     stompClient.subscribe('/topic/reservations/' + reservationId, function (frame) {
                         try {
                             var dto = JSON.parse(frame.body);
                             appendMessage(dto);
                         } catch (e) {
-                            showError(errorLoadLabel);
+                            // Drop a single malformed frame silently: history is already
+                            // loaded, so surfacing "could not load chat" would be misleading.
                         }
                     });
                     resolve();
                 },
                 function () {
-                    markDisconnected();
+                    connected = false;
+                    // Schedule a backoff retry: SockJS may not always fire
+                    // `onclose` on a failed CONNECT, so kick the loop here.
+                    scheduleStompReconnect();
                     reject(new Error('stomp'));
                 }
             );
@@ -757,7 +811,33 @@
         } catch (e) {
             /* ignore */
         }
-        return errorLoadLabel;
+        // Fallback for upload failures: this path fires on POST /messages, so the
+        // user is sending — never loading. A "could not load chat" copy here was a bug.
+        return errorSendLabel;
+    }
+
+    function tryAppendDtoFromResponse(xhr) {
+        // Render the just-posted message locally so the sender still sees it
+        // even when the STOMP subscribe channel is degraded in the deployed env.
+        // renderMessage() dedupes by id, so the upcoming /topic broadcast (if it
+        // arrives) won't duplicate the bubble.
+        try {
+            var dto = JSON.parse(xhr.responseText);
+            if (dto && dto.id != null) {
+                appendMessage(dto);
+            }
+        } catch (e) {
+            /* ignore: response is optional, broadcast may still deliver */
+        }
+    }
+
+    function clearTransientErrorBanner() {
+        // Keep the connection-lost banner visible after retries are exhausted:
+        // the user still needs to refresh to recover the live channel even if
+        // their last message went through via the HTTP fallback.
+        if (!stompFatallyFailed) {
+            showError('');
+        }
     }
 
     function uploadMessageWithFile(file, body) {
@@ -779,7 +859,8 @@
                 setUploadProgress(null);
                 uploading = false;
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    showError('');
+                    clearTransientErrorBanner();
+                    tryAppendDtoFromResponse(xhr);
                     resolve();
                     return;
                 }
@@ -795,6 +876,35 @@
             uploading = true;
             showError(labelUploading);
             setUploadProgress(0);
+            xhr.send(formData);
+        });
+    }
+
+    function sendTextOverHttp(body) {
+        // HTTP fallback used when the STOMP send path isn't available. Some
+        // deploy environments (reverse proxies, ALBs) accept the SockJS
+        // subscribe channel but block the upstream client→server frame, so
+        // texts would silently fail while file uploads (already HTTP) work.
+        return new Promise(function (resolve, reject) {
+            var formData = new FormData();
+            formData.append('body', body);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', contextPath + '/my-reservations/' + reservationId + '/messages', true);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    clearTransientErrorBanner();
+                    tryAppendDtoFromResponse(xhr);
+                    resolve();
+                    return;
+                }
+                showError(parseErrorResponse(xhr));
+                reject(new Error('send'));
+            };
+            xhr.onerror = function () {
+                showError(errorConnectionLabel);
+                reject(new Error('network'));
+            };
             xhr.send(formData);
         });
     }
@@ -831,21 +941,31 @@
         if (body.length > maxLength) {
             body = body.substring(0, maxLength);
         }
-        if (!stompClient || !stompClient.connected) {
-            showError(errorConnectionLabel);
-            return;
+        if (stompClient && stompClient.connected) {
+            try {
+                stompClient.send(
+                    '/app/reservations/' + reservationId + '/messages',
+                    {},
+                    JSON.stringify({ body: body })
+                );
+                inputEl.value = '';
+                return;
+            } catch (e) {
+                // STOMP frame failed mid-flight; flag the channel as broken and
+                // fall through to the HTTP fallback so the user still gets the
+                // message delivered instead of a "connection lost" dead end.
+                markDisconnected();
+            }
         }
-        try {
-            stompClient.send(
-                '/app/reservations/' + reservationId + '/messages',
-                {},
-                JSON.stringify({ body: body })
-            );
-            inputEl.value = '';
-        } catch (e) {
-            markDisconnected();
-            showError(errorConnectionLabel);
-        }
+        sendTextOverHttp(body)
+            .then(function () {
+                if (inputEl) {
+                    inputEl.value = '';
+                }
+            })
+            .catch(function () {
+                /* error already shown */
+            });
     }
 
     function handleFilesFromDrop(fileList) {
@@ -911,8 +1031,16 @@
                 showDayBarWhileScrolling();
             });
         }
-        Promise.all([loadHistory(), connectStomp()]).catch(function () {
+        // Only "could not load chat" is shown when the history GET fails. A
+        // failed initial STOMP connect goes silent here: the backoff loop
+        // (scheduleStompReconnect) takes over and surfaces the connection
+        // banner only after exhausting retries. Meanwhile, the HTTP fallback
+        // in sendMessage keeps the chat usable for sending text or files.
+        loadHistory().catch(function () {
             showError(errorLoadLabel);
+        });
+        connectStomp().catch(function () {
+            /* handled by scheduleStompReconnect; nothing to surface here */
         });
     }
 

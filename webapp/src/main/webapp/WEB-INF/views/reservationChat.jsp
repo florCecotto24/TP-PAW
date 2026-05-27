@@ -18,6 +18,7 @@
     <spring:message code="myReservationDetail.chat.empty" var="chatEmptyLabel"/>
     <spring:message code="reservationChat.error.load" var="chatErrorLoad"/>
     <spring:message code="reservationChat.error.connection" var="chatErrorConnection"/>
+    <spring:message code="reservationChat.error.send" var="chatErrorSend"/>
     <spring:message code="reservationChat.date.today" var="chatDateToday"/>
     <spring:message code="reservationChat.date.yesterday" var="chatDateYesterday"/>
     <spring:message code="reservationChat.attach.button" var="chatAttachLabel"/>
@@ -89,6 +90,7 @@
                  data-empty-label="<c:out value='${chatEmptyLabel}'/>"
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
                  data-error-connection="<c:out value='${chatErrorConnection}'/>"
+                 data-error-send="<c:out value='${chatErrorSend}'/>"
                  data-label-today="<c:out value='${chatDateToday}'/>"
                  data-label-yesterday="<c:out value='${chatDateYesterday}'/>">
                 <div id="reservationChatDropZone" class="reservation-chat__drop-zone d-flex flex-column flex-grow-1 min-h-0">
