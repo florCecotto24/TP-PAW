@@ -24,7 +24,7 @@
 
     <c:if test="${param.blocked != null}">
         <div class="alert alert-danger" role="alert">
-            <spring:message code="login.error.blocked"/>
+            <spring:message code="login.error.blocked" arguments="${supportEmail}"/>
         </div>
     </c:if>
     <c:if test="${param.error != null && param.error != 'emailNotValidated'}">

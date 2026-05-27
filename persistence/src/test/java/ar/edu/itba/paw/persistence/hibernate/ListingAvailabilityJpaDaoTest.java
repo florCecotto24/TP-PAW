@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,8 +42,8 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
         final long ownerId = jdbcTemplate.queryForObject(
                 "SELECT id FROM users WHERE email = ?", Long.class, "la-owner@test.com");
         jdbcTemplate.update(
-                "INSERT INTO cars (owner_id, plate, brand, model, type, transmission, powertrain) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                ownerId, "AVL01", "Brand", "Model", "SEDAN", "MANUAL", "GASOLINE");
+                "INSERT INTO cars (owner_id, plate, transmission, powertrain) VALUES (?, ?, ?, ?)",
+                ownerId, "AVL01", "MANUAL", "GASOLINE");
         this.carId = jdbcTemplate.queryForObject(
                 "SELECT id FROM cars WHERE plate = ?", Long.class, "AVL01");
     }

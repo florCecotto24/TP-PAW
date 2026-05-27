@@ -14,9 +14,9 @@ import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
 /** JPA-backed access to {@code cars} and catalogue queries joined to active listings. */
 public interface CarDao {
     /** Creates a car linked to the given catalog model. The {@code model_id} FK is set; legacy
-     *  {@code brand}/{@code model} columns are no longer written. */
-    Car createCar(long ownerId, String plate, long carModelId,
-                  Car.Type type, Car.Powertrain powertrain, Car.Transmission transmission);
+     *  {@code brand}/{@code model} columns are no longer written. {@code year} is optional. */
+    Car createCar(long ownerId, String plate, long carModelId, Integer year,
+                  Car.Powertrain powertrain, Car.Transmission transmission);
 
     boolean existsByOwnerAndPlate(long ownerId, String plate);
 

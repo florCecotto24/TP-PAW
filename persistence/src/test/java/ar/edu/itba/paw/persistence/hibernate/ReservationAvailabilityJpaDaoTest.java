@@ -55,8 +55,8 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
         this.riderId = jdbcTemplate.queryForObject(
                 "SELECT id FROM users WHERE email = ?", Long.class, "rider-bridge@test.com");
         jdbcTemplate.update(
-                "INSERT INTO cars (owner_id, plate, brand, model, type, transmission, powertrain) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                ownerId, "RAB01", "Brand", "Model", "SEDAN", "MANUAL", "GASOLINE");
+                "INSERT INTO cars (owner_id, plate, transmission, powertrain) VALUES (?, ?, ?, ?)",
+                ownerId, "RAB01", "MANUAL", "GASOLINE");
         this.carId = jdbcTemplate.queryForObject(
                 "SELECT id FROM cars WHERE plate = ?", Long.class, "RAB01");
 

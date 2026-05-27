@@ -45,9 +45,6 @@ CREATE TABLE IF NOT EXISTS cars (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     plate VARCHAR(50) NOT NULL,
-    brand VARCHAR(50),
-    model VARCHAR(50),
-    type VARCHAR(50) NOT NULL,
     transmission VARCHAR(50) NOT NULL,
     powertrain VARCHAR(50) NOT NULL,
     model_id INTEGER,
@@ -58,11 +55,13 @@ CREATE TABLE IF NOT EXISTS cars (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     rating_avg DECIMAL(4, 2),
+    manufacture_year INTEGER,
 
     UNIQUE (owner_id, plate),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (model_id) REFERENCES car_models(id),
-    CHECK (powertrain IN ('GASOLINE', 'DIESEL', 'ELECTRIC', 'HYBRID', 'CNG'))
+    CHECK (powertrain IN ('GASOLINE', 'DIESEL', 'ELECTRIC', 'HYBRID', 'CNG')),
+    CHECK (manufacture_year IS NULL OR manufacture_year >= 1886)
 );
 
 CREATE TABLE IF NOT EXISTS neighborhoods (
@@ -268,6 +267,7 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
     code VARCHAR(6) NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
+);
 );
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes (user_id);

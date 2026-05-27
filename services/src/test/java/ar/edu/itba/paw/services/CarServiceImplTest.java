@@ -40,21 +40,21 @@ public class CarServiceImplTest {
         final long ownerId = 2L;
         final long carModelId = 10L;
         final String plate = "testPlate";
-        final Car.Type type = Car.Type.HATCHBACK;
+        final Integer year = 2020;
         final Car.Powertrain powertrain = Car.Powertrain.GASOLINE;
         final Car.Transmission transmission = Car.Transmission.MANUAL;
         final Car car = Car.builder()
                 .id(carId)
                 .owner(User.identities(ownerId, "o@test.com", "O", "O"))
                 .plate(plate)
-                .type(type)
+                .year(year)
                 .powertrain(powertrain)
                 .transmission(transmission)
                 .build();
-        Mockito.when(carDao.createCar(ownerId, plate, carModelId, type, powertrain, transmission)).thenReturn(car);
+        Mockito.when(carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission)).thenReturn(car);
 
         // 2. Act
-        final Car result = carService.createCar(ownerId, plate, carModelId, type, powertrain, transmission);
+        final Car result = carService.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
 
         // 3. Assert
         Assertions.assertNotNull(result);
@@ -62,7 +62,7 @@ public class CarServiceImplTest {
         Assertions.assertEquals(carId, result.getId());
         Assertions.assertEquals(ownerId, result.getOwnerId());
         Assertions.assertEquals(plate, result.getPlate());
-        Assertions.assertEquals(type, result.getType());
+        Assertions.assertEquals(Optional.of(year), result.getYear());
         Assertions.assertEquals(powertrain, result.getPowertrain());
         Assertions.assertEquals(transmission, result.getTransmission());
     }
@@ -73,14 +73,12 @@ public class CarServiceImplTest {
         final long carId = 100L;
         final long ownerId = 200L;
         final String plate = "plateTest";
-        final Car.Type type = Car.Type.SEDAN;
         final Car.Powertrain powertrain = Car.Powertrain.DIESEL;
         final Car.Transmission transmission = Car.Transmission.AUTOMATIC;
         final Car car = Car.builder()
                 .id(carId)
                 .owner(User.identities(ownerId, "o@test.com", "O", "O"))
                 .plate(plate)
-                .type(type)
                 .powertrain(powertrain)
                 .transmission(transmission)
                 .build();
@@ -118,7 +116,6 @@ public class CarServiceImplTest {
                 .id(1L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("ABC123")
-                .type(Car.Type.SEDAN)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();
@@ -140,7 +137,6 @@ public class CarServiceImplTest {
                 .id(1L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("ABC123")
-                .type(Car.Type.SEDAN)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();
@@ -173,7 +169,6 @@ public class CarServiceImplTest {
                 .id(1L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("ABC123")
-                .type(Car.Type.HATCHBACK)
                 .powertrain(Car.Powertrain.GASOLINE)
                 .transmission(Car.Transmission.MANUAL)
                 .build();

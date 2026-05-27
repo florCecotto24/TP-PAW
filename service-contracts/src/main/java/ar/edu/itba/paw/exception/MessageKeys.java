@@ -84,6 +84,8 @@ public final class MessageKeys {
     public static final String CAR_PLATE_ALREADY_EXISTS = "car.plate.alreadyExists";
     public static final String CAR_NOT_FOUND = "car.notFound";
     public static final String CAR_INVALID_STATUS_TRANSITION = "car.invalidStatusTransition";
+    public static final String CAR_INSURANCE_INVALID = "car.insurance.invalid";
+    public static final String CAR_INSURANCE_TOO_LARGE = "car.insurance.tooLarge";
 
     // listing
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";

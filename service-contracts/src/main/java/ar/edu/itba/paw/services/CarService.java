@@ -29,12 +29,12 @@ public interface CarService {
      */
     String COUNTERPARTY_OTHER_ACTIVE_CARS_SORT = "rating,desc";
 
-    /** Persists a car for {@code ownerId} linked to the given catalog model. */
+    /** Persists a car for {@code ownerId} linked to the given catalog model. {@code year} is optional. */
     Car createCar(
             long ownerId,
             String plate,
             long carModelId,
-            Car.Type type,
+            Integer year,
             Car.Powertrain powertrain,
             Car.Transmission transmission);
 
@@ -44,12 +44,13 @@ public interface CarService {
      * check is performed here. When {@code insuranceData} is {@code null}/empty the car is created in
      * {@link Car.Status#LACK_DOC}; otherwise it stays {@link Car.Status#ACTIVE}.
      * {@code description} is optional free-text (max 200 chars) and may be {@code null}.
+     * {@code year} is optional manufacture year (1886 .. current year).
      */
     Car publishCar(
             long ownerId,
             String plate,
             long carModelId,
-            Car.Type type,
+            Integer year,
             Car.Powertrain powertrain,
             Car.Transmission transmission,
             String description,

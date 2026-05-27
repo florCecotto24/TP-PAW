@@ -34,6 +34,9 @@
             <div class="card-body">
               <p class="mb-2"><strong><spring:message code="publishCar.confirmation.brand"/></strong> <c:out value="${car.brand}"/></p>
               <p class="mb-2"><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/></p>
+              <c:if test="${car.year.present}">
+                <p class="mb-2"><strong><spring:message code="publishCar.confirmation.year"/></strong> <c:out value="${car.year.get()}"/></p>
+              </c:if>
               <p class="mb-2"><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
               <spring:message code="enum.car.type.${car.type.name()}" var="confirmCarTypeLabel"/>
               <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="confirmPowertrainLabel"/>
@@ -44,8 +47,8 @@
             </div>
           </div>
 
-          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="<c:url value='/my-cars/car/${car.id}/create'/>" class="btn btn-primary btn-lg">
+          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center align-items-sm-center">
+            <a href="<c:url value='/my-cars/car/${car.id}/create'/>" class="btn btn-primary">
               <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
               <spring:message code="publishCar.confirmation.createListingCta"/>
             </a>

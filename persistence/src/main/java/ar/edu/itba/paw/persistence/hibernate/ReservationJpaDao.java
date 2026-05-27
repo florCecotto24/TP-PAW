@@ -97,7 +97,7 @@ public class ReservationJpaDao implements ReservationDao {
             final BigDecimal totalPrice,
             final OffsetDateTime paymentProofDeadlineAt) {
         final User riderRef = em.getReference(User.class, riderId);
-        final ar.edu.itba.paw.models.domain.Car carRef = em.getReference(ar.edu.itba.paw.models.domain.Car.class, carId);
+        final Car carRef = em.getReference(Car.class, carId);
         final OffsetDateTime now = OffsetDateTime.now();
         final Reservation reservation = Reservation.builder()
                 .rider(riderRef)
@@ -197,6 +197,7 @@ public class ReservationJpaDao implements ReservationDao {
         final StringBuilder listSql = new StringBuilder(reservationCardSelectSql()
                 + "FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
+                + reservationCardCatalogJoins()
                 + "WHERE r.rider_id = :riderId ");
         appendReservationFilters(listSql, listParams, criteria);
         listSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
@@ -237,6 +238,7 @@ public class ReservationJpaDao implements ReservationDao {
         final StringBuilder listSql = new StringBuilder(reservationCardSelectSql()
                 + "FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
+                + reservationCardCatalogJoins()
                 + "WHERE c.owner_id = :ownerId ");
         appendReservationFilters(listSql, listParams, criteria);
         listSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
@@ -286,6 +288,7 @@ public class ReservationJpaDao implements ReservationDao {
         final StringBuilder listSql = new StringBuilder(reservationCardSelectSql()
                 + "FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
+                + reservationCardCatalogJoins()
                 + "WHERE c.owner_id = :ownerId AND r.car_id = :carId ");
         if (statusFilter != null) {
             listSql.append("AND LOWER(r.status) = :statusFilter ");
@@ -604,6 +607,7 @@ public class ReservationJpaDao implements ReservationDao {
         final String listSql = reservationCardSelectSql()
                 + "FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
+                + reservationCardCatalogJoins()
                 + "ORDER BY r.created_at DESC "
                 + "LIMIT :limit OFFSET :offset";
         final Map<String, Object> params = new java.util.LinkedHashMap<>();
@@ -617,9 +621,15 @@ public class ReservationJpaDao implements ReservationDao {
 
     private static String reservationCardSelectSql() {
         return "SELECT r.id AS reservation_id, c.id AS car_id, r.start_date, r.end_date, r.status, "
-                + "c.brand, c.model, r.total_price, "
+                + "cb.name AS brand, cm.name AS model, r.total_price, "
                 + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
                 +    "ORDER BY cp.display_order ASC LIMIT 1) AS image_id ";
+    }
+
+    /** Joins required by {@link #reservationCardSelectSql()} (brand/model display columns). */
+    private static String reservationCardCatalogJoins() {
+        return "LEFT JOIN car_models cm ON cm.id = c.model_id "
+                + "LEFT JOIN car_brands cb ON cb.id = cm.brand_id ";
     }
 
     private static void appendReservationFilters(
@@ -637,12 +647,16 @@ public class ReservationJpaDao implements ReservationDao {
         final String textQuery = criteria.getTextQuery();
         if (textQuery != null) {
             final String q = "%" + escapeLike(textQuery) + "%";
-            sql.append("AND (LOWER(c.brand) LIKE LOWER(:resSearch) ESCAPE '\\' "
-                    + "OR LOWER(c.model) LIKE LOWER(:resSearch) ESCAPE '\\') ");
+            sql.append("AND EXISTS (SELECT 1 FROM car_models cm "
+                    + "JOIN car_brands cb ON cb.id = cm.brand_id "
+                    + "WHERE cm.id = c.model_id "
+                    + "AND (LOWER(cb.name) LIKE LOWER(:resSearch) ESCAPE '\\' "
+                    + "OR LOWER(cm.name) LIKE LOWER(:resSearch) ESCAPE '\\')) ");
             params.put("resSearch", q);
         }
         if (!criteria.getCarTypes().isEmpty()) {
-            sql.append("AND c.type IN (:resCarTypes) ");
+            sql.append("AND EXISTS (SELECT 1 FROM car_models cm "
+                    + "WHERE cm.id = c.model_id AND cm.type IN (:resCarTypes)) ");
             params.put("resCarTypes", criteria.getCarTypes());
         }
         if (!criteria.getTransmissions().isEmpty()) {

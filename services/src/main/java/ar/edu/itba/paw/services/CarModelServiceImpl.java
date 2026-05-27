@@ -49,7 +49,7 @@ public final class CarModelServiceImpl implements CarModelService {
     @Override
     @Transactional
     public Optional<CarModel> findOrCreateUnvalidated(final long brandId, final String rawName, final Car.Type type) {
-        if (rawName == null || type == null) {
+        if (rawName == null) {
             return Optional.empty();
         }
         final String normalized = rawName.trim();
@@ -58,7 +58,13 @@ public final class CarModelServiceImpl implements CarModelService {
         }
         final Optional<CarModel> existing = carModelDao.findByBrandIdAndNameIgnoreCase(brandId, normalized);
         if (existing.isPresent()) {
+            // When the user picks an existing catalog model, the publish form does not ask for {@code type}
+            // (the body type is already stored on car_models). Reuse the existing row regardless of {@code type}.
             return existing;
+        }
+        // Creating a brand-new car_models row requires the body type; without it the model is unresolvable.
+        if (type == null) {
+            return Optional.empty();
         }
         return Optional.of(carModelDao.create(brandId, normalized, false, type));
     }

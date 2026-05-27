@@ -104,10 +104,10 @@ public final class CarServiceImpl implements CarService {
             final long ownerId,
             final String plate,
             final long carModelId,
-            final Car.Type type,
+            final Integer year,
             final Car.Powertrain powertrain,
             final Car.Transmission transmission) {
-        return carDao.createCar(ownerId, plate, carModelId, type, powertrain, transmission);
+        return carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
     }
 
     @Override
@@ -116,7 +116,7 @@ public final class CarServiceImpl implements CarService {
             final long ownerId,
             final String plate,
             final long carModelId,
-            final Car.Type type,
+            final Integer year,
             final Car.Powertrain powertrain,
             final Car.Transmission transmission,
             final String description,
@@ -127,7 +127,7 @@ public final class CarServiceImpl implements CarService {
         if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
             throw new DuplicatePlateException(plate);
         }
-        final Car car = carDao.createCar(ownerId, plate, carModelId, type, powertrain, transmission);
+        final Car car = carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
         if (description != null && !description.isBlank()) {
             car.setDescription(description.strip());
         }
@@ -478,7 +478,7 @@ public final class CarServiceImpl implements CarService {
             throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
         }
         if (data == null || data.length == 0) {
-            throw new CarValidationException(MessageKeys.PUBLISH_FAILED);
+            throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
         }
         final Car car = carOpt.get();
         final StoredFile stored = storedFileService.create(

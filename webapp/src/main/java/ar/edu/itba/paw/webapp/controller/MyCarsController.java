@@ -32,6 +32,7 @@ import ar.edu.itba.paw.webapp.form.ListingEditForm;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -87,6 +88,7 @@ public final class MyCarsController {
     private final ListingAvailabilityService listingAvailabilityService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
+    private final String supportEmail;
 
     public MyCarsController(
             final ReservationService reservationService,
@@ -100,7 +102,8 @@ public final class MyCarsController {
             final UserService userService,
             final ListingAvailabilityService listingAvailabilityService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy) {
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
+            @Value("${app.support.email}") final String supportEmail) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
         this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
@@ -113,6 +116,7 @@ public final class MyCarsController {
         this.listingAvailabilityService = listingAvailabilityService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
+        this.supportEmail = supportEmail;
     }
 
     @InitBinder("editForm")
@@ -653,12 +657,13 @@ public final class MyCarsController {
         }
         if (insuranceFile == null || insuranceFile.isEmpty()) {
             redirectAttributes.addFlashAttribute("carInsuranceErrorMessage",
-                    localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+                    localeMessages.msg(MessageKeys.CAR_INSURANCE_INVALID));
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         if (insuranceFile.getSize() > profileDocumentUploadPolicy.getMaxBytes()) {
+            final int maxMb = profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
             redirectAttributes.addFlashAttribute("carInsuranceErrorMessage",
-                    localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+                    localeMessages.msg(MessageKeys.CAR_INSURANCE_TOO_LARGE, maxMb));
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         try {
@@ -672,7 +677,7 @@ public final class MyCarsController {
             redirectAttributes.addFlashAttribute("carInsuranceErrorMessage", localeMessages.msg(e));
         } catch (final IOException e) {
             redirectAttributes.addFlashAttribute("carInsuranceErrorMessage",
-                    localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+                    localeMessages.msg(MessageKeys.PUBLISH_FAILED, supportEmail));
         }
         return new ModelAndView(redirectTo("/my-cars/car/" + carId));
     }
@@ -694,8 +699,9 @@ public final class MyCarsController {
             return ResponseEntity.badRequest().build();
         }
         if (insuranceFile.getSize() > profileDocumentUploadPolicy.getMaxBytes()) {
+            final int maxMb = profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
             final HttpHeaders headers = new HttpHeaders();
-            headers.add("X-Ryden-Error", localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+            headers.add("X-Ryden-Error", localeMessages.msg(MessageKeys.CAR_INSURANCE_TOO_LARGE, maxMb));
             return new ResponseEntity<>(null, headers, HttpStatus.BAD_REQUEST);
         }
         try {

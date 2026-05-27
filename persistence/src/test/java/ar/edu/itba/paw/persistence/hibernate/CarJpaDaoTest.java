@@ -65,7 +65,7 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         // 2. Act
         final Car created = dao.createCar(
                 ownerId, "AAA111", carModelId,
-                Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
         em.flush();
 
         // 3. Assert — verify state with JdbcTemplate, not by re-reading via the DAO.
@@ -85,11 +85,11 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange — insert a car directly with a non-default status via JdbcTemplate (no DAO call).
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
-                "INSERT INTO cars (owner_id, plate, brand, model, type, transmission, powertrain, "
+                "INSERT INTO cars (owner_id, plate, transmission, powertrain, "
                         + "status, description, created_at, updated_at, rating_avg) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                ownerId, "BBB222", "Honda", "Civic",
-                "SEDAN", "AUTOMATIC", "GASOLINE",
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                ownerId, "BBB222",
+                "AUTOMATIC", "GASOLINE",
                 "admin_paused", "Some description", now, now, new BigDecimal("4.50"));
         final long carId = jdbcTemplate.queryForObject(
                 "SELECT id FROM cars WHERE plate = ?", Long.class, "BBB222");
@@ -110,9 +110,9 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange — seed via JdbcTemplate, then load through the EntityManager (not the DAO under test).
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
-                "INSERT INTO cars (owner_id, plate, brand, model, type, transmission, powertrain, status, created_at, updated_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                ownerId, "CCC333", "Ford", "Focus", "HATCHBACK", "MANUAL", "GASOLINE",
+                "INSERT INTO cars (owner_id, plate, transmission, powertrain, status, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                ownerId, "CCC333", "MANUAL", "GASOLINE",
                 "active", now, now);
         final long carId = jdbcTemplate.queryForObject(
                 "SELECT id FROM cars WHERE plate = ?", Long.class, "CCC333");
@@ -151,13 +151,13 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
         final Car corollaA = dao.createCar(
                 ownerId, "COR001", corollaModelId,
-                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
         final Car corollaB = dao.createCar(
                 ownerId, "COR002", corollaModelId,
-                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
         final Car ka = dao.createCar(
                 ownerId, "KA0001", kaModelId,
-                Car.Type.HATCHBACK, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+                2018, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
         em.flush();
 
         final OffsetDateTime t = OffsetDateTime.parse("2026-07-01T10:00:00Z");
@@ -201,10 +201,10 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
         final Car outsideRange = dao.createCar(
                 ownerId, "OUT111", modelId,
-                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
         final Car coversRange = dao.createCar(
                 ownerId, "IN1111", modelId,
-                Car.Type.SEDAN, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
         em.flush();
 
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T10:00:00Z");

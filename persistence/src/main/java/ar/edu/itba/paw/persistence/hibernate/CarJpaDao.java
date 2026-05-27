@@ -47,7 +47,7 @@ public class CarJpaDao implements CarDao {
     @Override
     @Transactional
     public Car createCar(final long ownerId, final String plate, final long carModelId,
-                         final Car.Type type, final Car.Powertrain powertrain,
+                         final Integer year, final Car.Powertrain powertrain,
                          final Car.Transmission transmission) {
         final User ownerRef = em.getReference(User.class, ownerId);
         // Load carModel with JOIN FETCH so brand is available outside the transaction (JSP display)
@@ -59,7 +59,7 @@ public class CarJpaDao implements CarDao {
         final Car car = Car.builder()
                 .owner(ownerRef)
                 .plate(plate)
-                .type(type)
+                .year(year)
                 .powertrain(powertrain)
                 .transmission(transmission)
                 .status(Car.Status.ACTIVE)
@@ -194,8 +194,10 @@ public class CarJpaDao implements CarDao {
             params.put("ownerCarSearch", q);
         }
         if (!criteria.getCarTypes().isEmpty()) {
-            jpql.append("AND c.type IN (:ownerCarTypes) ");
-            params.put("ownerCarTypes", criteria.getCarTypes());
+            jpql.append("AND c.carModel.type IN (:ownerCarTypes) ");
+            params.put("ownerCarTypes", criteria.getCarTypes().stream()
+                    .map(s -> Car.Type.valueOf(s.toUpperCase()))
+                    .collect(Collectors.toList()));
         }
         if (!criteria.getTransmissions().isEmpty()) {
             jpql.append("AND c.transmission IN (:ownerTransmissions) ");
@@ -256,12 +258,12 @@ public class CarJpaDao implements CarDao {
         final String textQuery = criteria.getTextQuery();
         if (textQuery != null) {
             final String q = "%" + escapeLike(textQuery) + "%";
-            sql.append("AND (LOWER(COALESCE(cb.name, c.brand, '')) LIKE LOWER(:ownerCarSearch) ESCAPE '\\' "
-                    + "OR LOWER(COALESCE(cm.name, c.model, '')) LIKE LOWER(:ownerCarSearch) ESCAPE '\\') ");
+            sql.append("AND (LOWER(COALESCE(cb.name, '')) LIKE LOWER(:ownerCarSearch) ESCAPE '\\' "
+                    + "OR LOWER(COALESCE(cm.name, '')) LIKE LOWER(:ownerCarSearch) ESCAPE '\\') ");
             params.put("ownerCarSearch", q);
         }
         if (!criteria.getCarTypes().isEmpty()) {
-            sql.append("AND c.type IN (:ownerCarTypes) ");
+            sql.append("AND cm.type IN (:ownerCarTypes) ");
             params.put("ownerCarTypes", criteria.getCarTypes());
         }
         if (!criteria.getTransmissions().isEmpty()) {
@@ -404,20 +406,24 @@ public class CarJpaDao implements CarDao {
         }
         final Car ref = anchorOpt.get();
 
+        final Car.Type refType = ref.getType();
         final Map<String, Object> params = new HashMap<>();
         params.put("carId", carId);
-        params.put("refType", ref.getType().name());
         params.put("refPowertrain", ref.getPowertrain().name());
         params.put("refTransmission", ref.getTransmission().name());
 
         final StringBuilder idSql = new StringBuilder(
                 "SELECT c.id FROM cars c "
                 + "JOIN listing_availability la ON la.car_id = c.id "
+                + "JOIN car_models cm ON cm.id = c.model_id "
                 + "WHERE c.status = 'active' "
                 + "AND c.id <> :carId "
-                + "AND UPPER(c.type) = :refType "
                 + "AND UPPER(c.powertrain) = :refPowertrain "
                 + "AND UPPER(c.transmission) = :refTransmission ");
+        if (refType != null) {
+            idSql.append("AND UPPER(cm.type) = :refType ");
+            params.put("refType", refType.name());
+        }
         if (browseWallDate != null) {
             idSql.append("AND la.end_date >= :browseWallDate ");
             params.put("browseWallDate", browseWallDate);
@@ -690,7 +696,7 @@ public class CarJpaDao implements CarDao {
             params.put("searchNeighborhoodIds", criteria.getNeighborhoodIds());
         }
         if (!criteria.getCarTypes().isEmpty()) {
-            sql.append("AND c.type IN (:carTypes) ");
+            sql.append("AND cm.type IN (:carTypes) ");
             params.put("carTypes", criteria.getCarTypes());
         }
         if (criteria.getMinPrice() != null) {

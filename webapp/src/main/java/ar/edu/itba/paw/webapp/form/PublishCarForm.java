@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.form;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -31,7 +32,11 @@ public final class PublishCarForm {
     @NoPunctuation(groups = ValidationGroups.OnPublishCar.class)
     private String plate;
 
-    @NotNull(message = "{validation.type.notNull}", groups = ValidationGroups.OnPublishCar.class)
+    /**
+     * Car body type. Only required when the user creates a new {@code car_models} row (modelId == 0 /
+     * "Other"); when an existing catalog model is picked, the type is read from {@link ar.edu.itba.paw.models.domain.CarModel}.
+     * The conditional rule is enforced by {@link ar.edu.itba.paw.webapp.validation.PublishCarFormValidator}.
+     */
     private Car.Type type;
 
     @NotNull(message = "{validation.powertrain.notNull}", groups = ValidationGroups.OnPublishCar.class)
@@ -39,6 +44,10 @@ public final class PublishCarForm {
 
     @NotNull(message = "{validation.transmission.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Car.Transmission transmission;
+
+    /** Optional manufacture year (>= 1886, <= current year). Upper bound checked by {@code PublishCarFormValidator}. */
+    @Min(value = 1886, message = "{validation.year.min}", groups = ValidationGroups.OnPublishCar.class)
+    private Integer year;
 
     @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnPublishCar.class)
     private String description;
@@ -112,6 +121,14 @@ public final class PublishCarForm {
 
     public void setTransmission(final Car.Transmission transmission) {
         this.transmission = transmission;
+    }
+
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(final Integer year) {
+        this.year = year;
     }
 
     public MultipartFile[] getPictures() {

@@ -72,7 +72,9 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                        <h2 class="h5 fw-semibold mb-0"><c:out value="${car.brand} ${car.model}"/></h2>
+                                        <h2 class="h5 fw-semibold mb-0">
+                                            <c:out value="${car.brand} ${car.model}"/><c:if test="${car.year.present}"> <span class="text-secondary fw-normal">(<c:out value="${car.year.get()}"/>)</span></c:if>
+                                        </h2>
                                     </div>
                                     <div class="d-flex flex-wrap gap-2 mb-3">
                                         <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
@@ -286,7 +288,7 @@
                                             </c:when>
                                             <c:when test="${statusKey == 'ADMIN_PAUSED'}">
                                                 <p class="text-secondary small mb-0">
-                                                    <spring:message code="myCarDetail.status.adminPausedHint"/>
+                                                    <spring:message code="myCarDetail.status.adminPausedHint" arguments="${supportEmail}"/>
                                                 </p>
                                             </c:when>
                                             <c:when test="${statusKey == 'DEACTIVATED'}">

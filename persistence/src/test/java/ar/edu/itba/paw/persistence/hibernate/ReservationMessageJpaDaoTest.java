@@ -46,12 +46,9 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         riderId = jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ?", Long.class, "rider-chat@test.com");
 
         jdbcTemplate.update(
-                "INSERT INTO cars (owner_id, plate, brand, model, type, transmission, powertrain) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO cars (owner_id, plate, transmission, powertrain) VALUES (?, ?, ?, ?)",
                 ownerId,
                 "CHAT01",
-                "Brand",
-                "Model",
-                "sedan",
                 "manual",
                 "gasoline");
         final long carId = jdbcTemplate.queryForObject("SELECT id FROM cars WHERE plate = ?", Long.class, "CHAT01");

@@ -199,12 +199,13 @@
                             <form:errors path="plate" cssClass="text-danger d-block"/>
                         </div>
 
+                        <%-- Type dropdown: only required/visible when creating a new model ("Other"); when an
+                             existing catalog model is picked, its type is taken from car_models. --%>
                         <spring:message code="publishCar.form.type.placeholder" var="typePlaceholder"/>
-                        <div class="mb-3">
+                        <div id="publishTypeWrap" class="mb-3<c:if test="${not modelIsOther}"> d-none</c:if>">
                             <label class="form-label required-label"><spring:message code="publishCar.form.type"/></label>
                             <input type="hidden" id="publishTypeHidden" name="type"
                                    value="<c:out value='${publishCarForm.type}'/>"
-                                   data-ryden-required="true"
                                    data-ryden-dd-btn-id="publishTypeBtn"/>
                             <c:set var="currentTypeLabel" value="${typePlaceholder}"/>
                             <c:forEach var="entry" items="${carTypeOptions}">
@@ -358,6 +359,29 @@
                             <form:errors path="transmission" cssClass="text-danger d-block"/>
                         </div>
 
+                        <%-- Optional manufacture year (>= 1886, <= current year). Rendered as type=text (with
+                             inputmode=numeric and digits-only JS) to prevent the browser from silently clamping
+                             out-of-range values to {min,max} on submit, which would mask the rule from the user.
+                             The min message uses the Hibernate Validator {value} template (Spring/MessageFormat
+                             ignores non-positional placeholders); we substitute it client-side. --%>
+                        <spring:message code="publishCar.form.year.placeholder" var="yearPlaceholder"/>
+                        <spring:message code="validation.year.min" var="yearMinClientTemplate" htmlEscape="true"/>
+                        <spring:message code="validation.year.max" arguments="${carYearMax}" var="yearMaxClientMsg" htmlEscape="true"/>
+                        <div class="mb-3">
+                            <label class="form-label" for="publishCarYear"><spring:message code="publishCar.form.year"/></label>
+                            <form:input path="year" id="publishCarYear" type="text" cssClass="form-control"
+                                        cssErrorClass="form-control is-invalid"
+                                        inputmode="numeric" autocomplete="off" maxlength="4"
+                                        placeholder="${yearPlaceholder}"
+                                        data-ryden-digits-only="true"
+                                        data-year-min="${carYearMin}"
+                                        data-year-max="${carYearMax}"
+                                        data-year-min-template="${yearMinClientTemplate}"
+                                        data-year-max-msg="${yearMaxClientMsg}"/>
+                            <div id="publishCarYearClientError" class="text-danger d-block small mt-1 d-none" aria-live="polite"></div>
+                            <form:errors path="year" cssClass="text-danger d-block"/>
+                        </div>
+
                         <%-- Description --%>
                         <div class="mb-3">
                             <label class="form-label"><spring:message code="publishCar.form.description"/></label>
@@ -402,7 +426,9 @@
                             <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>
 
-                        <%-- Optional insurance document; if missing, the car is created in LACK_DOC and can be uploaded later from the car detail page. --%>
+                        <%-- Optional insurance document; if missing, the car is created in LACK_DOC and can be uploaded later from the car detail page.
+                             When a previous submission attached one, the file is preserved server-side (browser cannot repopulate <input type="file">). --%>
+                        <spring:message code="publishCar.form.removeFile" var="removeFileLabel"/>
                         <div class="mb-4">
                             <label for="publishInsuranceFileInput" class="form-label d-block">
                                 <spring:message code="publishCar.form.insurance"/>
@@ -415,10 +441,26 @@
                                 <span id="publishInsuranceFileName" class="small text-truncate" style="max-width:260px"></span>
                                 <button type="button" id="publishInsuranceClearBtn"
                                         class="btn btn-sm btn-outline-danger ms-1"
-                                        aria-label="<spring:message code='publishCar.form.removeFile'/>">
+                                        aria-label="<c:out value='${removeFileLabel}'/>">
                                     <i class="bi bi-trash" aria-hidden="true"></i>
                                 </button>
                             </div>
+                            <c:if test="${not empty retainedInsuranceFilename}">
+                                <div id="publishRetainedInsurance" class="d-flex align-items-center gap-2 mt-2"
+                                     data-remove-url="${pageContext.request.contextPath}/publish-car/retained-insurance/remove">
+                                    <i class="bi bi-file-earmark-check text-success" aria-hidden="true"></i>
+                                    <a href="${pageContext.request.contextPath}/publish-car/retained-insurance"
+                                       class="small text-truncate" style="max-width:260px"
+                                       target="_blank" rel="noopener noreferrer">
+                                        <c:out value="${retainedInsuranceFilename}"/>
+                                    </a>
+                                    <button type="button" id="publishRetainedInsuranceRemoveBtn"
+                                            class="btn btn-sm btn-outline-danger ms-1"
+                                            aria-label="<c:out value='${removeFileLabel}'/>">
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </c:if>
                             <small class="text-muted d-block mt-2">
                                 <spring:message code="publishCar.form.insurance.hint" arguments="${uploadMaxProfileDocumentMegabytes}"/>
                             </small>
@@ -490,6 +532,21 @@
     var modelFilter = document.getElementById('publishModelFilter');
     var modelOtherRow   = document.getElementById('publishModelOtherRow');
     var modelOtherInput = document.getElementById('publishModelOtherInput');
+
+    /* ── Type wrapper (only visible when creating a new car model "Other") ── */
+    var typeWrap   = document.getElementById('publishTypeWrap');
+    var typeHidden = document.getElementById('publishTypeHidden');
+    var typeLbl    = document.getElementById('publishTypeLbl');
+    function setTypeRequired(visible) {
+        if (!typeWrap) { return; }
+        typeWrap.classList.toggle('d-none', !visible);
+        if (!visible && typeHidden) {
+            typeHidden.value = '';
+            if (typeLbl) {
+                typeLbl.textContent = '${fn:escapeXml(typePlaceholder)}';
+            }
+        }
+    }
 
     var brandSelectBrandFirst = modelBtn ? (modelBtn.getAttribute('data-select-brand-first') || '') : '';
 
@@ -603,6 +660,8 @@
             if (modelOtherRow) { modelOtherRow.classList.add('d-none'); }
             if (modelOtherInput) { modelOtherInput.value = ''; }
         }
+        // Show body-type dropdown only when creating a new catalog model.
+        setTypeRequired(id === '0');
         if (modelBtn && window.bootstrap && bootstrap.Dropdown) {
             var inst = bootstrap.Dropdown.getInstance(modelBtn);
             if (inst) { inst.hide(); }
@@ -636,6 +695,8 @@
             if (publishModelDd) { publishModelDd.classList.add('d-none'); }
             if (modelOtherRow) { modelOtherRow.classList.remove('d-none'); }
             if (modelIdHid) { modelIdHid.value = '0'; }
+            // New model implies type is required.
+            setTypeRequired(true);
         } else {
             // Normal brand: restore dropdown, hide text input
             if (publishModelDd) { publishModelDd.classList.remove('d-none'); }
@@ -649,6 +710,8 @@
                         : (modelBtn.getAttribute('data-select-brand-first') || '');
                 }
             }
+            // No model picked yet → hide body-type dropdown.
+            setTypeRequired(false);
         }
         applyModelFilter();
     }
@@ -673,25 +736,112 @@
         }
     }());
 
-    /* ── Insurance file clear button ─────────────────────────────────────── */
+    /* ── Year input: validate range [min, max] on blur/input/change and block submit if out-of-range. ──
+       We do NOT silently clamp the value; the user must correct it explicitly so the backend rule
+       (PublishCarFormValidator: year <= currentYear, @Min(1886)) is mirrored visibly on the client.
+       The submit listener runs in the capture phase + stopImmediatePropagation to ensure other submit
+       handlers (e.g. spinner / availability checks) cannot override the block. */
+    (function initYearGuard() {
+        var yearInput = document.getElementById('publishCarYear');
+        var errorBox  = document.getElementById('publishCarYearClientError');
+        if (!yearInput) { return; }
+        function readBound(attr) {
+            var n = parseInt(yearInput.getAttribute(attr), 10);
+            return isNaN(n) ? null : n;
+        }
+        function showError(msg) {
+            yearInput.classList.add('is-invalid');
+            if (errorBox) {
+                errorBox.textContent = msg || '';
+                errorBox.classList.remove('d-none');
+            }
+        }
+        function clearError() {
+            yearInput.classList.remove('is-invalid');
+            if (errorBox) {
+                errorBox.textContent = '';
+                errorBox.classList.add('d-none');
+            }
+        }
+        function validate() {
+            var raw = (yearInput.value || '').trim();
+            if (!raw) { clearError(); return true; }
+            var v = parseInt(raw, 10);
+            if (isNaN(v)) { clearError(); return true; }
+            var lo = readBound('data-year-min');
+            var hi = readBound('data-year-max');
+            if (lo !== null && v < lo) {
+                var tpl = yearInput.getAttribute('data-year-min-template') || '';
+                showError(tpl.replace('{value}', String(lo)));
+                return false;
+            }
+            if (hi !== null && v > hi) {
+                showError(yearInput.getAttribute('data-year-max-msg') || '');
+                return false;
+            }
+            clearError();
+            return true;
+        }
+        yearInput.addEventListener('input', validate);
+        yearInput.addEventListener('change', validate);
+        yearInput.addEventListener('blur', validate);
+        var formEl = document.getElementById('publishCarFormEl');
+        if (formEl) {
+            formEl.addEventListener('submit', function (e) {
+                if (!validate()) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    yearInput.focus();
+                }
+            }, true);
+        }
+    }());
+
+    /* ── Insurance file clear button + retained-from-previous-submit cleanup ─ */
     (function initInsuranceClear() {
         var insuranceInput    = document.getElementById('publishInsuranceFileInput');
         var insuranceSelected = document.getElementById('publishInsuranceSelected');
         var insuranceFileName = document.getElementById('publishInsuranceFileName');
         var insuranceClearBtn = document.getElementById('publishInsuranceClearBtn');
-        if (!insuranceInput) { return; }
-        insuranceInput.addEventListener('change', function () {
-            if (this.files && this.files.length > 0) {
-                if (insuranceFileName) { insuranceFileName.textContent = this.files[0].name; }
-                if (insuranceSelected) { insuranceSelected.classList.remove('d-none'); }
-            } else {
-                if (insuranceSelected) { insuranceSelected.classList.add('d-none'); }
-            }
-        });
+        var retainedBox       = document.getElementById('publishRetainedInsurance');
+        var retainedRemoveBtn = document.getElementById('publishRetainedInsuranceRemoveBtn');
+        if (!insuranceInput && !retainedBox) { return; }
+
+        if (insuranceInput) {
+            insuranceInput.addEventListener('change', function () {
+                if (this.files && this.files.length > 0) {
+                    if (insuranceFileName) { insuranceFileName.textContent = this.files[0].name; }
+                    if (insuranceSelected) { insuranceSelected.classList.remove('d-none'); }
+                    // A fresh upload will replace the stashed one server-side on submit; hide the chip now.
+                    if (retainedBox) { retainedBox.classList.add('d-none'); }
+                } else {
+                    if (insuranceSelected) { insuranceSelected.classList.add('d-none'); }
+                }
+            });
+        }
         if (insuranceClearBtn) {
             insuranceClearBtn.addEventListener('click', function () {
-                insuranceInput.value = '';
+                if (insuranceInput) { insuranceInput.value = ''; }
                 if (insuranceSelected) { insuranceSelected.classList.add('d-none'); }
+            });
+        }
+        if (retainedRemoveBtn && retainedBox) {
+            retainedRemoveBtn.addEventListener('click', function () {
+                var url = retainedBox.getAttribute('data-remove-url');
+                if (!url) { return; }
+                retainedRemoveBtn.disabled = true;
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState !== 4) { return; }
+                    if (xhr.status >= 200 && xhr.status < 400) {
+                        retainedBox.parentNode.removeChild(retainedBox);
+                    } else {
+                        retainedRemoveBtn.disabled = false;
+                    }
+                };
+                xhr.send(null);
             });
         }
     }());

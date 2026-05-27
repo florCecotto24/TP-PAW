@@ -19,12 +19,12 @@ class ModelsToStringTest {
 
     @Test
     void testCarToStringIncludesAllFields() {
-        // Arrange: no carModel set → brand/model are null
+        // Arrange: no carModel set → brand/model/type all delegate to null
         final Car car = Car.builder()
                 .id(1L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
                 .plate("AA123BB")
-                .type(Car.Type.HATCHBACK)
+                .year(2020)
                 .powertrain(Car.Powertrain.HYBRID)
                 .transmission(Car.Transmission.AUTOMATIC)
                 .status(Car.Status.ACTIVE)
@@ -34,7 +34,8 @@ class ModelsToStringTest {
         // Exercise
         final String result = car.toString();
         // Assert
-        final String expected = "Car{id=1, ownerId=2, plate='AA123BB', brand='null', model='null', type=HATCHBACK, "
+        final String expected = "Car{id=1, ownerId=2, plate='AA123BB', brand='null', model='null', type=null, "
+                + "year=2020, "
                 + "powertrain=HYBRID, transmission=AUTOMATIC, status=ACTIVE, "
                 + "createdAt=2026-04-05T10:00Z, updatedAt=2026-04-05T11:00Z, ratingAvg=null}";
         Assertions.assertEquals(expected, result);

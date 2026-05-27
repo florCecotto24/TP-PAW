@@ -62,14 +62,29 @@ class CarModelServiceImplTest {
     }
 
     @Test
-    void testFindOrCreateUnvalidatedReturnsEmptyForNullType() {
-        // 1. Arrange — no stubs.
+    void testFindOrCreateUnvalidatedReturnsEmptyWhenTypeMissingAndModelDoesNotExist() {
+        // 1. Arrange — name is not present in the catalog, so creation would be needed but {@code type} is null.
+        Mockito.when(carModelDao.findByBrandIdAndNameIgnoreCase(BRAND_ID, "Civic")).thenReturn(Optional.empty());
 
         // 2. Act
         final Optional<CarModel> result = carModelService.findOrCreateUnvalidated(BRAND_ID, "Civic", null);
 
         // 3. Assert
         Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testFindOrCreateUnvalidatedReusesExistingMatchWhenTypeIsNull() {
+        // 1. Arrange — when the user picks an existing catalog model, the publish form omits {@code type}.
+        final CarModel existing = sampleModel(33L, "Civic", true);
+        Mockito.when(carModelDao.findByBrandIdAndNameIgnoreCase(BRAND_ID, "Civic")).thenReturn(Optional.of(existing));
+
+        // 2. Act
+        final Optional<CarModel> result = carModelService.findOrCreateUnvalidated(BRAND_ID, "Civic", null);
+
+        // 3. Assert
+        Assertions.assertTrue(result.isPresent());
+        Assertions.assertSame(existing, result.get());
     }
 
     @Test

@@ -9,6 +9,7 @@ import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -43,12 +44,15 @@ import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
+import ar.edu.itba.paw.webapp.dto.PublishCarRetainedInsurance;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
+import ar.edu.itba.paw.webapp.util.PublishCarInsuranceSessionStash;
 import ar.edu.itba.paw.webapp.util.PublishCarPictureSessionStash;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.PublishCarFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
@@ -66,10 +70,13 @@ public final class PublishCarFormController {
     private final ImageService imageService;
     private final MultipartImageValidation multipartImageValidation;
     private final PublishCarPictureSessionStash pictureStash;
+    private final PublishCarInsuranceSessionStash insuranceStash;
     private final CarEnumOptions carEnumOptions;
     private final UserService userService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final AdminService adminService;
+    private final PublishCarFormValidator publishCarFormValidator;
+    private final String supportEmail;
 
     public PublishCarFormController(
             final CarService carService,
@@ -79,10 +86,13 @@ public final class PublishCarFormController {
             final ImageService imageService,
             final MultipartImageValidation multipartImageValidation,
             final PublishCarPictureSessionStash pictureStash,
+            final PublishCarInsuranceSessionStash insuranceStash,
             final CarEnumOptions carEnumOptions,
             final UserService userService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
-            final AdminService adminService) {
+            final AdminService adminService,
+            final PublishCarFormValidator publishCarFormValidator,
+            @Value("${app.support.email}") final String supportEmail) {
         this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
@@ -90,10 +100,13 @@ public final class PublishCarFormController {
         this.imageService = imageService;
         this.multipartImageValidation = multipartImageValidation;
         this.pictureStash = pictureStash;
+        this.insuranceStash = insuranceStash;
         this.carEnumOptions = carEnumOptions;
         this.userService = userService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.adminService = adminService;
+        this.publishCarFormValidator = publishCarFormValidator;
+        this.supportEmail = supportEmail;
     }
 
     @ModelAttribute("allBrands")
@@ -136,6 +149,16 @@ public final class PublishCarFormController {
         return profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
     }
 
+    @ModelAttribute("carYearMin")
+    public int carYearMin() {
+        return 1886;
+    }
+
+    @ModelAttribute("carYearMax")
+    public int carYearMax() {
+        return java.time.Year.now().getValue();
+    }
+
     @GetMapping
     public ModelAndView index(
             @CurrentUser final User currentUser,
@@ -146,10 +169,57 @@ public final class PublishCarFormController {
             return publishCarPrerequisitesView(fresh);
         }
         pictureStash.clear(session);
+        insuranceStash.clear(session);
         final PublishCarForm form = new PublishCarForm();
         final ModelAndView mav = publishCarFormView(session);
         mav.addObject("publishCarForm", form);
         return mav;
+    }
+
+    @GetMapping("/retained-insurance")
+    public ResponseEntity<byte[]> retainedInsurance(
+            @CurrentUser final User currentUser,
+            final HttpSession session) {
+        WebAuthUtils.requireUser(currentUser);
+        final PublishCarRetainedInsurance meta = insuranceStash.getOrNull(session);
+        if (meta == null) {
+            return ResponseEntity.notFound().build();
+        }
+        final Optional<byte[]> bytes;
+        try {
+            bytes = insuranceStash.readRetainedBytes(session);
+        } catch (final IOException e) {
+            LOG.atDebug()
+                    .setMessage("Could not read retained publish-car insurance bytes for session=[{}]")
+                    .addArgument(session.getId())
+                    .setCause(e)
+                    .log();
+            return ResponseEntity.notFound().build();
+        }
+        if (bytes.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        final MediaType mediaType;
+        try {
+            mediaType = meta.contentType().isBlank()
+                    ? MediaType.APPLICATION_OCTET_STREAM
+                    : MediaType.parseMediaType(meta.contentType());
+        } catch (final IllegalArgumentException e) {
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(bytes.get());
+        }
+        return ResponseEntity.ok().contentType(mediaType).body(bytes.get());
+    }
+
+    @PostMapping("/retained-insurance/remove")
+    public ResponseEntity<Void> removeRetainedInsurance(
+            @CurrentUser final User currentUser,
+            final HttpSession session) {
+        WebAuthUtils.requireUser(currentUser);
+        if (!insuranceStash.isStashed(session)) {
+            return ResponseEntity.notFound().build();
+        }
+        insuranceStash.clear(session);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/retained-picture/{token}")
@@ -204,9 +274,11 @@ public final class PublishCarFormController {
         if (!hasPublishPrerequisites(fresh)) {
             return publishCarPrerequisitesView(fresh);
         }
+        publishCarFormValidator.validate(form, errors);
         pictureStash.trySyncFromForm(form, session, errors);
         pictureStash.validatePicturePresence(form, session, errors);
         if (errors.hasErrors()) {
+            insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
         }
 
@@ -214,10 +286,12 @@ public final class PublishCarFormController {
         if (fromForm > 0) {
             if (!multipartImageValidation.validateFilesAreImages(form.getPictures(), errors, "pictures")) {
                 pictureStash.trySyncFromForm(form, session, errors);
+                insuranceStash.trySyncFromForm(form, session);
                 return publishCarFormView(session);
             }
             if (!multipartImageValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
                 pictureStash.trySyncFromForm(form, session, errors);
+                insuranceStash.trySyncFromForm(form, session);
                 return publishCarFormView(session);
             }
         }
@@ -230,29 +304,39 @@ public final class PublishCarFormController {
                     MessageKeys.PUBLISH_IMAGES_READ,
                     localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
             pictureStash.trySyncFromForm(form, session, errors);
+            insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
         }
 
         if (!multipartImageValidation.validateImageUploadsAreImages(uploads, errors, "pictures")) {
             pictureStash.trySyncFromForm(form, session, errors);
+            insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
         }
         if (!multipartImageValidation.validateImageUploadsWithinMaxSize(uploads, errors)) {
             pictureStash.trySyncFromForm(form, session, errors);
+            insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
         }
 
         // Optional insurance file: when present, must fit the profile-document size limit.
+        // If the form does not bring a fresh file, fall back to the previously stashed one (if any).
         final MultipartFile insuranceFile = form.getInsuranceFile();
-        final boolean hasInsurance = insuranceFile != null && !insuranceFile.isEmpty();
-        if (hasInsurance && insuranceFile.getSize() > profileDocumentUploadPolicy.getMaxBytes()) {
+        final boolean hasFreshInsurance = insuranceFile != null && !insuranceFile.isEmpty();
+        if (hasFreshInsurance && insuranceFile.getSize() > profileDocumentUploadPolicy.getMaxBytes()) {
+            final int maxMb = profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
             errors.rejectValue(
                     "insuranceFile",
-                    MessageKeys.PUBLISH_FAILED,
-                    new Object[]{profileDocumentUploadPolicy.getMaxMegabytesRoundedUp()},
-                    localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+                    MessageKeys.CAR_INSURANCE_TOO_LARGE,
+                    new Object[] { maxMb },
+                    localeMessages.msg(MessageKeys.CAR_INSURANCE_TOO_LARGE, maxMb));
             pictureStash.trySyncFromForm(form, session, errors);
+            // Do NOT stash the oversized file; keep any previously stashed (valid) one untouched.
             return publishCarFormView(session);
+        }
+        // Persist the freshly uploaded insurance so we can recover it on subsequent retries.
+        if (hasFreshInsurance) {
+            insuranceStash.trySyncFromForm(form, session);
         }
 
         try {
@@ -265,9 +349,34 @@ public final class PublishCarFormController {
                             resolvedBrand.getId(), form.getModel(), form.getType())
                     .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + form.getModel()));
 
-            final byte[] insuranceBytes = hasInsurance ? insuranceFile.getBytes() : null;
-            final String insuranceName = hasInsurance ? insuranceFile.getOriginalFilename() : null;
-            final String insuranceType = hasInsurance ? insuranceFile.getContentType() : null;
+            // Resolve insurance from this submission or from the session stash (so a file uploaded on a
+            // previous failed attempt is not lost when re-submitting).
+            final byte[] insuranceBytes;
+            final String insuranceName;
+            final String insuranceType;
+            if (hasFreshInsurance) {
+                insuranceBytes = insuranceFile.getBytes();
+                insuranceName = insuranceFile.getOriginalFilename();
+                insuranceType = insuranceFile.getContentType();
+            } else {
+                final PublishCarRetainedInsurance retained = insuranceStash.getOrNull(session);
+                if (retained != null) {
+                    final Optional<byte[]> stashed = insuranceStash.readRetainedBytes(session);
+                    if (stashed.isPresent()) {
+                        insuranceBytes = stashed.get();
+                        insuranceName = retained.filename();
+                        insuranceType = retained.contentType();
+                    } else {
+                        insuranceBytes = null;
+                        insuranceName = null;
+                        insuranceType = null;
+                    }
+                } else {
+                    insuranceBytes = null;
+                    insuranceName = null;
+                    insuranceType = null;
+                }
+            }
 
             if (!resolvedBrand.isValidated() || !resolvedModel.isValidated()) {
                 if (fresh.isAdmin()) {
@@ -278,7 +387,7 @@ public final class PublishCarFormController {
                             ownerId,
                             form.getPlate(),
                             resolvedModel.getId(),
-                            form.getType(),
+                            form.getYear(),
                             form.getPowertrain(),
                             form.getTransmission(),
                             form.getDescription(),
@@ -287,6 +396,7 @@ public final class PublishCarFormController {
                             insuranceType,
                             insuranceBytes);
                     pictureStash.clear(session);
+                    insuranceStash.clear(session);
                     final ModelAndView pendingMav = new ModelAndView("publishCarPending");
                     pendingMav.addObject("createdCarId", pendingCar.getId());
                     if (!resolvedBrand.isValidated()) {
@@ -303,7 +413,7 @@ public final class PublishCarFormController {
                     ownerId,
                     form.getPlate(),
                     resolvedModel.getId(),
-                    form.getType(),
+                    form.getYear(),
                     form.getPowertrain(),
                     form.getTransmission(),
                     form.getDescription(),
@@ -313,6 +423,7 @@ public final class PublishCarFormController {
                     insuranceBytes);
 
             pictureStash.clear(session);
+            insuranceStash.clear(session);
 
             final ModelAndView mav = new ModelAndView("publishCarConfirmation");
             mav.addObject("car", car);
@@ -326,9 +437,16 @@ public final class PublishCarFormController {
             pictureStash.trySyncFromForm(form, session, errors);
             return publishCarFormView(session);
         } catch (final Exception e) {
+            LOG.atError()
+                    .setMessage("Failed to publish car for ownerId={} plate={}")
+                    .addArgument(currentUser != null ? currentUser.getId() : null)
+                    .addArgument(form.getPlate())
+                    .setCause(e)
+                    .log();
             errors.reject(
                     MessageKeys.PUBLISH_FAILED,
-                    localeMessages.msg(MessageKeys.PUBLISH_FAILED));
+                    new Object[] { supportEmail },
+                    localeMessages.msg(MessageKeys.PUBLISH_FAILED, supportEmail));
             pictureStash.trySyncFromForm(form, session, errors);
             return publishCarFormView(session);
         }
@@ -340,6 +458,10 @@ public final class PublishCarFormController {
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
+        final PublishCarRetainedInsurance retainedInsurance = insuranceStash.getOrNull(session);
+        if (retainedInsurance != null) {
+            mav.addObject("retainedInsuranceFilename", retainedInsurance.filename());
+        }
         return mav;
     }
 

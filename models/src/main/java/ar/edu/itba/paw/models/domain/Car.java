@@ -90,9 +90,8 @@ public class Car {
     @Column(nullable = false, length = 50)
     private String plate;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    private Type type;
+    @Column(name = "manufacture_year")
+    private Integer year;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -137,7 +136,7 @@ public class Car {
         this.id = b.id;
         this.owner = b.owner;
         this.plate = b.plate;
-        this.type = b.type;
+        this.year = b.year;
         this.powertrain = b.powertrain;
         this.transmission = b.transmission;
         this.status = b.status;
@@ -155,7 +154,7 @@ public class Car {
         private long id;
         private User owner;
         private String plate;
-        private Type type;
+        private Integer year;
         private Powertrain powertrain;
         private Transmission transmission;
         private Status status;
@@ -179,8 +178,8 @@ public class Car {
             return this;
         }
 
-        public Builder type(final Type type) {
-            this.type = type;
+        public Builder year(final Integer year) {
+            this.year = year;
             return this;
         }
 
@@ -222,7 +221,6 @@ public class Car {
         public Car build() {
             Objects.requireNonNull(owner, "owner");
             Objects.requireNonNull(plate, "plate");
-            Objects.requireNonNull(type, "type");
             Objects.requireNonNull(powertrain, "powertrain");
             Objects.requireNonNull(transmission, "transmission");
             // Transitional defaults during Phase 1: legacy call sites (tests created before this refactor) do not
@@ -275,8 +273,21 @@ public class Car {
         return carModel != null ? carModel.getName() : null;
     }
 
+    /**
+     * Returns the body type from the linked {@link CarModel}, or {@code null} when no catalog
+     * model has been assigned yet. The body type lives exclusively in the catalog model now.
+     */
     public Type getType() {
-        return type;
+        return carModel != null ? carModel.getType() : null;
+    }
+
+    /** Optional manufacture year (1886 .. current year), empty when not provided by the owner. */
+    public Optional<Integer> getYear() {
+        return Optional.ofNullable(year);
+    }
+
+    public void setYear(final Integer year) {
+        this.year = year;
     }
 
     public Powertrain getPowertrain() {
@@ -366,7 +377,8 @@ public class Car {
                 ", plate='" + plate + '\'' +
                 ", brand='" + getBrand() + '\'' +
                 ", model='" + getModel() + '\'' +
-                ", type=" + type +
+                ", type=" + getType() +
+                ", year=" + Objects.toString(year) +
                 ", powertrain=" + powertrain +
                 ", transmission=" + transmission +
                 ", status=" + status +
