@@ -95,16 +95,16 @@ public final class RegistrationController {
 
     private static void copyRegisterFlashToForm(final Model model, final RegistrationAccountForm form) {
         final Object forename = model.getAttribute("forename");
-        if (forename instanceof String && StringUtils.hasText((String) forename)) {
-            form.setForename(((String) forename).trim());
+        if (forename instanceof String forenameString && StringUtils.hasText(forenameString)) {
+            form.setForename(forenameString.trim());
         }
         final Object surname = model.getAttribute("surname");
-        if (surname instanceof String && StringUtils.hasText((String) surname)) {
-            form.setSurname(((String) surname).trim());
+        if (surname instanceof String surnameString && StringUtils.hasText(surnameString)) {
+            form.setSurname(surnameString.trim());
         }
         final Object mail = model.getAttribute("email");
-        if (mail instanceof String && StringUtils.hasText((String) mail)) {
-            form.setEmail(((String) mail).trim());
+        if (mail instanceof String mailString && StringUtils.hasText(mailString)) {
+            form.setEmail(mailString.trim());
         }
     }
 
@@ -161,8 +161,8 @@ public final class RegistrationController {
             final HttpSession session = request.getSession(false);
             if (session != null) {
                 final Object pending = session.getAttribute(RegistrationSessionAttributes.PENDING_VERIFY_EMAIL);
-                if (pending instanceof String && StringUtils.hasText((String) pending)) {
-                    final String pendingEmail = ((String) pending).trim();
+                if (pending instanceof String pendingString && StringUtils.hasText(pendingString)) {
+                    final String pendingEmail = pendingString.trim();
                     model.addAttribute("verifyEmailHint", pendingEmail);
                     userService.ensureAccountConfirmationPrerequisites(
                             pendingEmail, LocaleContextHolder.getLocale());
@@ -173,12 +173,12 @@ public final class RegistrationController {
         }
         final VerifyEmailForm verifyEmailForm = new VerifyEmailForm();
         final Object flashEmail = model.asMap().get("verifyEmail");
-        if (flashEmail instanceof String && StringUtils.hasText((String) flashEmail)) {
-            verifyEmailForm.setEmail((String) flashEmail);
+        if (flashEmail instanceof String flashEmailString && StringUtils.hasText(flashEmailString)) {
+            verifyEmailForm.setEmail(flashEmailString);
         } else {
             final Object hintEmail = model.asMap().get("verifyEmailHint");
-            if (hintEmail instanceof String && StringUtils.hasText((String) hintEmail)) {
-                verifyEmailForm.setEmail((String) hintEmail);
+            if (hintEmail instanceof String hintEmailString && StringUtils.hasText(hintEmailString)) {
+                verifyEmailForm.setEmail(hintEmailString);
             }
         }
         model.addAttribute("verifyEmailForm", verifyEmailForm);
@@ -189,43 +189,46 @@ public final class RegistrationController {
     public String verifyResend(
             final HttpServletRequest request,
             @CurrentUser final User currentUser,
-            @RequestParam("email") final String email,
+            @Validated(ValidationGroups.OnResendVerification.class)
+            @ModelAttribute("verifyEmailForm") final VerifyEmailForm verifyEmailForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
-        if (!StringUtils.hasText(email)) {
-            redirectAttributes.addFlashAttribute("verifyFieldError", Boolean.TRUE);
-            return "redirect:/verify-email";
+        if (bindingResult.hasErrors()) {
+            return "verify-email";
         }
+        final String email = verifyEmailForm.getEmail();
         try {
-            if (!userService.requestAccountConfirmationResend(email.trim(), LocaleContextHolder.getLocale())) {
+            if (!userService.requestAccountConfirmationResend(email, LocaleContextHolder.getLocale())) {
                 redirectAttributes.addFlashAttribute("verifyErrorMessage", localeMessages.msg("verifyEmail.resendUnknown"));
-                redirectAttributes.addFlashAttribute("verifyEmail", email.trim());
+                redirectAttributes.addFlashAttribute("verifyEmail", email);
                 return "redirect:/verify-email";
             }
             redirectAttributes.addFlashAttribute("verifyResent", Boolean.TRUE);
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("verifyErrorMessage", localeMessages.msg(e));
         }
-        redirectAttributes.addFlashAttribute("verifyEmail", email.trim());
+        redirectAttributes.addFlashAttribute("verifyEmail", email);
         return "redirect:/verify-email";
     }
 
     @PostMapping("/verify-email")
     public String verifySubmit(
-            @RequestParam("email") final String email,
-            @RequestParam("code") final String code,
+            @Validated(ValidationGroups.OnVerifyEmail.class)
+            @ModelAttribute("verifyEmailForm") final VerifyEmailForm verifyEmailForm,
+            final BindingResult bindingResult,
             final HttpServletRequest request,
             final HttpServletResponse response,
             final RedirectAttributes redirectAttributes) {
-        if (!StringUtils.hasText(email) || !StringUtils.hasText(code)) {
-            redirectAttributes.addFlashAttribute("verifyFieldError", Boolean.TRUE);
-            redirectAttributes.addFlashAttribute("verifyEmail", email != null ? email : "");
-            return "redirect:/verify-email";
+        if (bindingResult.hasErrors()) {
+            return "verify-email";
         }
+        final String email = verifyEmailForm.getEmail();
+        final String code = verifyEmailForm.getCode();
         try {
-            final long userId = userService.completeAccountConfirmation(email, code.trim());
+            final long userId = userService.completeAccountConfirmation(email, code);
             final HttpSession session = request.getSession(false);
             if (session != null) {
                 session.removeAttribute(RegistrationSessionAttributes.PENDING_VERIFY_EMAIL);
@@ -234,7 +237,7 @@ public final class RegistrationController {
             return resolvePostAuthRedirect(request, response);
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("verifyErrorMessage", localeMessages.msg(e));
-            redirectAttributes.addFlashAttribute("verifyEmail", email.trim());
+            redirectAttributes.addFlashAttribute("verifyEmail", email);
             return "redirect:/verify-email";
         }
     }

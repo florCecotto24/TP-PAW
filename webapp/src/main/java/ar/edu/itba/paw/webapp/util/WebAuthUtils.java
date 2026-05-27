@@ -8,7 +8,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
@@ -104,10 +103,10 @@ public final class WebAuthUtils {
         if (authentication == null
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken
-                || !(authentication.getPrincipal() instanceof RydenUserDetails)) {
+                || !(authentication.getPrincipal() instanceof RydenUserDetails details)) {
             return Optional.empty();
         }
-        return Optional.of((RydenUserDetails) authentication.getPrincipal());
+        return Optional.of(details);
     }
 
     public static RydenUserDetails requireCurrentUser(final Authentication authentication) {

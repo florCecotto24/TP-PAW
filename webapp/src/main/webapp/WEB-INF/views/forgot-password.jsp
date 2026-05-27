@@ -35,7 +35,8 @@
     <form:form method="post" action="${pageContext.request.contextPath}/forgot-password" modelAttribute="forgotPasswordRequestForm" cssClass="needs-validation" novalidate="novalidate">
         <div class="mb-4">
             <label for="email" class="form-label"><spring:message code="forgotPassword.email"/></label>
-            <form:input path="email" type="email" cssClass="form-control" id="email" required="required" maxlength="50"/>
+            <form:input path="email" type="email" cssClass="form-control" id="email" required="required" maxlength="${registrationEmailMaxLength}" autocomplete="email"/>
+            <form:errors path="email" cssClass="text-danger small d-block" element="div"/>
         </div>
         <button type="submit" class="btn btn-primary w-100"><spring:message code="forgotPassword.submit"/></button>
     </form:form>

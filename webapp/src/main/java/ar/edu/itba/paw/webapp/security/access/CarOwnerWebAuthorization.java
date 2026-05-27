@@ -60,9 +60,9 @@ public final class CarOwnerWebAuthorization {
                 || authentication instanceof AnonymousAuthenticationToken) {
             return null;
         }
-        if (!(authentication.getPrincipal() instanceof RydenUserDetails)) {
+        if (!(authentication.getPrincipal() instanceof RydenUserDetails details)) {
             return null;
         }
-        return ((RydenUserDetails) authentication.getPrincipal()).getUserId();
+        return details.getUserId();
     }
 }

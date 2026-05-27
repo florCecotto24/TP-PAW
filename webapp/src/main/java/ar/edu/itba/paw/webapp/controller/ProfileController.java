@@ -11,7 +11,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -459,10 +458,9 @@ public final class ProfileController {
             final HttpServletRequest request,
             final HttpServletResponse response) {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof RydenUserDetails)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof RydenUserDetails old)) {
             return;
         }
-        final RydenUserDetails old = (RydenUserDetails) authentication.getPrincipal();
         final RydenUserDetails updated = new RydenUserDetails(
                 old.getUserId(),
                 old.getUsername(),

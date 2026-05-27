@@ -10,7 +10,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,11 +30,12 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.services.AdminService;
+import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 
 import org.springframework.security.core.Authentication;
 
@@ -47,14 +51,32 @@ public final class AdminController {
     private final AdminService adminService;
     private final SessionRegistry sessionRegistry;
     private final LocaleMessages localeMessages;
+    private final UserValidationPolicy userValidationPolicy;
 
     public AdminController(
             final AdminService adminService,
             final SessionRegistry sessionRegistry,
-            final LocaleMessages localeMessages) {
+            final LocaleMessages localeMessages,
+            final UserValidationPolicy userValidationPolicy) {
         this.adminService = adminService;
         this.sessionRegistry = sessionRegistry;
         this.localeMessages = localeMessages;
+        this.userValidationPolicy = userValidationPolicy;
+    }
+
+    @ModelAttribute("registrationDisplayNamePartMaxLength")
+    public int registrationDisplayNamePartMaxLength() {
+        return userValidationPolicy.getDisplayNamePartMaxLength();
+    }
+
+    @ModelAttribute("registrationEmailMaxLength")
+    public int registrationEmailMaxLength() {
+        return userValidationPolicy.getRegistrationEmailMaxLength();
+    }
+
+    @ModelAttribute("registrationPasswordMaxLength")
+    public int registrationPasswordMaxLength() {
+        return userValidationPolicy.getRegistrationPasswordMaxLength();
     }
 
     @GetMapping
@@ -133,22 +155,30 @@ public final class AdminController {
     }
 
     @PostMapping("/users/create")
-    public String createAdminUser(
-            @RequestParam final String forename,
-            @RequestParam final String surname,
-            @RequestParam final String email,
-            @RequestParam final String password,
+    public ModelAndView createAdminUser(
+            @Validated(ValidationGroups.OnCreateAdminUser.class)
+            @ModelAttribute("createAdminUserForm") final CreateAdminUserForm createAdminUserForm,
+            final BindingResult bindingResult,
             final Authentication authentication,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            return new ModelAndView("admin/createAdminUser");
+        }
         final long actingAdminId = requireAdminId(authentication);
         try {
-            adminService.createAdminUser(email, forename, surname, password, actingAdminId, locale);
+            adminService.createAdminUser(
+                    createAdminUserForm.getEmail(),
+                    createAdminUserForm.getForename(),
+                    createAdminUserForm.getSurname(),
+                    createAdminUserForm.getPassword(),
+                    actingAdminId,
+                    locale);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.adminCreated"));
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
         }
-        return "redirect:/admin/users";
+        return new ModelAndView("redirect:/admin/users");
     }
 
     @GetMapping("/cars")
@@ -284,12 +314,9 @@ public final class AdminController {
 
     private void invalidateUserSessions(final long userId) {
         for (final Object principal : sessionRegistry.getAllPrincipals()) {
-            if (principal instanceof RydenUserDetails) {
-                final RydenUserDetails details = (RydenUserDetails) principal;
-                if (details.getUserId() == userId) {
-                    for (final SessionInformation session : sessionRegistry.getAllSessions(principal, false)) {
-                        session.expireNow();
-                    }
+            if (principal instanceof RydenUserDetails details && details.getUserId() == userId) {
+                for (final SessionInformation session : sessionRegistry.getAllSessions(principal, false)) {
+                    session.expireNow();
                 }
             }
         }

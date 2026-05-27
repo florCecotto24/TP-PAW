@@ -42,8 +42,7 @@ public final class NoCacheHtmlInterceptor implements HandlerInterceptor {
         if (response.isCommitted()) {
             return false;
         }
-        if (handler instanceof HandlerMethod) {
-            final HandlerMethod handlerMethod = (HandlerMethod) handler;
+        if (handler instanceof HandlerMethod handlerMethod) {
             if (handlerMethod.getMethodAnnotation(org.springframework.web.bind.annotation.ResponseBody.class) != null) {
                 return false;
             }
@@ -59,10 +58,7 @@ public final class NoCacheHtmlInterceptor implements HandlerInterceptor {
             return false;
         }
         final String path = request.getRequestURI();
-        if (path != null && isStaticAssetPath(path, request.getContextPath())) {
-            return false;
-        }
-        return true;
+        return path == null || !isStaticAssetPath(path, request.getContextPath());
     }
 
     private static boolean isRedirectView(final String viewName) {

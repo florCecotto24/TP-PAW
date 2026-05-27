@@ -40,13 +40,15 @@
         <div class="mb-3">
             <label for="email" class="form-label"><spring:message code="verifyEmail.email"/></label>
             <form:input path="email" type="email" cssClass="form-control${emailLocked ? ' form-control-verify-email-locked' : ''}" id="email"
-                        required="required" maxlength="50" readonly="${emailLocked ? 'readonly' : ''}"/>
+                        required="required" maxlength="${registrationEmailMaxLength}" readonly="${emailLocked ? 'readonly' : ''}" autocomplete="email"/>
+            <form:errors path="email" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">
             <label for="code" class="form-label"><spring:message code="verifyEmail.code"/></label>
             <form:input path="code" type="text" cssClass="form-control" id="code" required="required" maxlength="6" pattern="[0-9]{6}"
                         inputmode="numeric" autocomplete="one-time-code" placeholder="${verifyEmailCodePlaceholder}"
                         data-ryden-digits-only="true" data-max-len="6"/>
+            <form:errors path="code" cssClass="text-danger small d-block" element="div"/>
         </div>
         <button type="submit" class="btn btn-primary w-100 mb-2"><spring:message code="verifyEmail.submit"/></button>
     </form:form>

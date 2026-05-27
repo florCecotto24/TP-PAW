@@ -73,10 +73,10 @@ public final class ReservationChatChannelInterceptor implements ChannelIntercept
     }
 
     private static long resolveUserId(@Nullable final Principal principal) {
-        if (principal instanceof Authentication) {
-            final Object authenticatedPrincipal = ((Authentication) principal).getPrincipal();
-            if (authenticatedPrincipal instanceof RydenUserDetails) {
-                return ((RydenUserDetails) authenticatedPrincipal).getUserId();
+        if (principal instanceof Authentication authentication) {
+            final Object authenticatedPrincipal = authentication.getPrincipal();
+            if (authenticatedPrincipal instanceof RydenUserDetails details) {
+                return details.getUserId();
             }
         }
         throw new AccessDeniedException("Unauthenticated WebSocket session");

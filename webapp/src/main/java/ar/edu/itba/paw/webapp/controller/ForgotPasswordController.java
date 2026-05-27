@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
@@ -60,6 +59,11 @@ public final class ForgotPasswordController {
         return userValidationPolicy.getRegistrationPasswordMaxLength();
     }
 
+    @ModelAttribute("registrationEmailMaxLength")
+    public int registrationEmailMaxLength() {
+        return userValidationPolicy.getRegistrationEmailMaxLength();
+    }
+
     @GetMapping
     public String forgotForm(
             final HttpServletRequest request,
@@ -70,8 +74,8 @@ public final class ForgotPasswordController {
         }
         final ForgotPasswordRequestForm form = new ForgotPasswordRequestForm();
         final Object flashEmail = model.asMap().get("forgotEmail");
-        if (flashEmail instanceof String) {
-            form.setEmail((String) flashEmail);
+        if (flashEmail instanceof String flashEmailString) {
+            form.setEmail(flashEmailString);
         }
         model.addAttribute("forgotPasswordRequestForm", form);
         return "forgot-password";
@@ -81,28 +85,30 @@ public final class ForgotPasswordController {
     public String forgotSubmit(
             final HttpServletRequest request,
             @CurrentUser final User currentUser,
-            @RequestParam("email") final String email,
+            @Validated(ValidationGroups.OnForgotPasswordRequest.class)
+            @ModelAttribute("forgotPasswordRequestForm") final ForgotPasswordRequestForm form,
+            final BindingResult bindingResult,
             final HttpSession session,
             final RedirectAttributes redirectAttributes) {
         if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
-        if (!StringUtils.hasText(email)) {
-            redirectAttributes.addFlashAttribute("forgotFieldError", Boolean.TRUE);
-            return "redirect:/forgot-password";
+        if (bindingResult.hasErrors()) {
+            return "forgot-password";
         }
+        final String email = form.getEmail();
         try {
-            final boolean userFound = passwordResetService.initiatePasswordReset(email.trim(), LocaleContextHolder.getLocale());
+            final boolean userFound = passwordResetService.initiatePasswordReset(email, LocaleContextHolder.getLocale());
             if (!userFound) {
                 redirectAttributes.addFlashAttribute("forgotGenericHint", Boolean.TRUE);
                 return "redirect:/forgot-password";
             }
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("forgotErrorMessage", localeMessages.msg(e));
-            redirectAttributes.addFlashAttribute("forgotEmail", email.trim());
+            redirectAttributes.addFlashAttribute("forgotEmail", email);
             return "redirect:/forgot-password";
         }
-        session.setAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL, email.trim());
+        session.setAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL, email);
         redirectAttributes.addFlashAttribute("forgotCodeSent", Boolean.TRUE);
         return "redirect:/forgot-password/reset";
     }
@@ -139,14 +145,14 @@ public final class ForgotPasswordController {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         final Object rawEmail = session.getAttribute(ForgotPasswordSessionAttributes.PENDING_RESET_EMAIL);
-        if (!(rawEmail instanceof String) || !StringUtils.hasText((String) rawEmail)) {
+        if (!(rawEmail instanceof String rawEmailString) || !StringUtils.hasText(rawEmailString)) {
             redirectAttributes.addFlashAttribute("forgotSessionExpired", Boolean.TRUE);
             return "redirect:/forgot-password";
         }
         if (bindingResult.hasErrors()) {
             return "forgot-password-reset";
         }
-        final String email = ((String) rawEmail).trim();
+        final String email = rawEmailString.trim();
         try {
             passwordResetService.completePasswordReset(email, form.getCode(), form.getPassword(), form.getPasswordConfirm());
         } catch (final RydenException e) {

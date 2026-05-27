@@ -57,8 +57,8 @@ public final class RydenAuthenticationFailureHandler extends SimpleUrlAuthentica
     private static EmailNotValidatedException findEmailNotValidated(final AuthenticationException exception) {
         Throwable current = exception;
         while (current != null) {
-            if (current instanceof EmailNotValidatedException) {
-                return (EmailNotValidatedException) current;
+            if (current instanceof EmailNotValidatedException emailNotValidated) {
+                return emailNotValidated;
             }
             current = current.getCause();
         }

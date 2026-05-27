@@ -39,4 +39,20 @@ public final class ValidationGroups {
 
     public interface OnCreateListing {
     }
+
+    /** Forgot-password initial request ({@code /forgot-password} POST). */
+    public interface OnForgotPasswordRequest {
+    }
+
+    /** Email verification submit ({@code /verify-email} POST). */
+    public interface OnVerifyEmail {
+    }
+
+    /** Email verification code resend ({@code /verify-email/resend} POST). */
+    public interface OnResendVerification {
+    }
+
+    /** Admin user creation ({@code /admin/users/create} POST). */
+    public interface OnCreateAdminUser {
+    }
 }

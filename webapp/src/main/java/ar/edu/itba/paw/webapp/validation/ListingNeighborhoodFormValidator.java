@@ -25,10 +25,10 @@ public final class ListingNeighborhoodFormValidator implements Validator {
     @Override
     public void validate(final Object target, final Errors errors) {
         final Long neighborhoodId;
-        if (target instanceof CreateListingForm) {
-            neighborhoodId = ((CreateListingForm) target).getNeighborhoodId();
-        } else if (target instanceof ListingEditForm) {
-            neighborhoodId = ((ListingEditForm) target).getNeighborhoodId();
+        if (target instanceof CreateListingForm createListingForm) {
+            neighborhoodId = createListingForm.getNeighborhoodId();
+        } else if (target instanceof ListingEditForm listingEditForm) {
+            neighborhoodId = listingEditForm.getNeighborhoodId();
         } else {
             return;
         }

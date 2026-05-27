@@ -38,10 +38,9 @@ public final class LatestLocaleSaveInterceptor implements HandlerInterceptor {
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
             return;
         }
-        if (!(auth.getPrincipal() instanceof RydenUserDetails)) {
+        if (!(auth.getPrincipal() instanceof RydenUserDetails principal)) {
             return;
         }
-        final RydenUserDetails principal = (RydenUserDetails) auth.getPrincipal();
         final Locale locale = RequestContextUtils.getLocale(request);
         if (locale == null) {
             return;
