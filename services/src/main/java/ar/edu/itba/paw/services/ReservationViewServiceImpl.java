@@ -26,7 +26,6 @@ import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingCardRow;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsLoadMore;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
@@ -275,12 +274,10 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                                         ownerListingsPageSize,
                                         reservationCarId))
                         : null;
-        final List<CounterpartyActiveListingCardRow> activeRows =
-                ownerCarsPage == null
-                        ? List.of()
-                        : ownerCarsPage.getContent().stream()
-                                .map(ReservationViewServiceImpl::toCounterpartyActiveListingCardRow)
-                                .toList();
+        // Pass raw CarCard rows; the controller converts them to VehicleCardView so
+        // the JSP's <ryden:consumerCarCard> tag receives the type it requires.
+        final List<CarCard> activeCarCards =
+                ownerCarsPage == null ? List.of() : ownerCarsPage.getContent();
         final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
                 counterpartyIsOwner && ownerCarsPage != null
                         ? CounterpartyActiveListingsLoadMore.of(
@@ -302,19 +299,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                         counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent(),
                         recentReviewItems,
                         counterpartyIsOwner,
-                        activeRows,
+                        activeCarCards,
                         counterpartyActiveListingsLoadMore));
-    }
-
-    private static CounterpartyActiveListingCardRow toCounterpartyActiveListingCardRow(final CarCard card) {
-        return new CounterpartyActiveListingCardRow(
-                card.getCarId(),
-                card.getBrand(),
-                card.getModel(),
-                card.getDayPrice(),
-                card.getImageId(),
-                card.getRatingAvg(),
-                0L);
     }
 
     @Override

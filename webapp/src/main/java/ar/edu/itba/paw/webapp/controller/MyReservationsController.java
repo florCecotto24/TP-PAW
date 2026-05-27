@@ -19,6 +19,8 @@ import ar.edu.itba.paw.services.ReservationViewService;
 import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.webapp.form.ReservationReviewAction;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
+import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.MyReservationDetailModelFactory;
 import ar.edu.itba.paw.webapp.support.RiderReservationReviewExceptionMapper;
@@ -70,6 +72,7 @@ public final class MyReservationsController {
     private final ReservationReviewFormValidator reservationReviewFormValidator;
     private final MyReservationDetailModelFactory reservationDetailFactory;
     private final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper;
+    private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
 
     public MyReservationsController(
             final ReservationService reservationService,
@@ -78,7 +81,8 @@ public final class MyReservationsController {
             final ReviewService reviewService,
             final ReservationReviewFormValidator reservationReviewFormValidator,
             final MyReservationDetailModelFactory reservationDetailFactory,
-            final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper) {
+            final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper,
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
         this.localeMessages = localeMessages;
@@ -86,6 +90,7 @@ public final class MyReservationsController {
         this.reservationReviewFormValidator = reservationReviewFormValidator;
         this.reservationDetailFactory = reservationDetailFactory;
         this.riderReservationReviewExceptionMapper = riderReservationReviewExceptionMapper;
+        this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
     }
 
     private static final String DEFAULT_SORT = "date,desc";
@@ -235,6 +240,19 @@ public final class MyReservationsController {
         final CounterpartyProfilePageModel profile = profileOpt.get();
         final ModelAndView mav = new ModelAndView("counterpartyProfile");
         profile.populateModel(mav::addObject);
+        // The JSP renders the listings grid with <ryden:consumerCarCard>, which only
+        // accepts VehicleCardView. Converting here keeps the webapp-only mapping out
+        // of the models module while still letting the service own the data fetch.
+        final List<VehicleCardView> counterpartyActiveListings =
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(profile.getActiveOwnerCarCards());
+        mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
+        // Star floor for half-star rendering in counterpartyProfileHeader.tag, matching
+        // the value CarDetailController exposes on the same JSP.
+        final BigDecimal counterpartyAverageRating =
+                (BigDecimal) mav.getModel().get("counterpartyAverageRating");
+        mav.addObject(
+                "counterpartyRatingFloor",
+                counterpartyAverageRating != null ? counterpartyAverageRating.longValue() : 0L);
         mav.addObject("activeTab", "my-reservations");
         return mav;
     }

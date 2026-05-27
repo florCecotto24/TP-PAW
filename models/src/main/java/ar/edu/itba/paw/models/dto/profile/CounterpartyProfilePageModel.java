@@ -4,7 +4,16 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-/** Model attributes for the {@code counterpartyProfile} JSP; built in the service layer. */
+import ar.edu.itba.paw.models.dto.CarCard;
+
+/**
+ * Model attributes for the {@code counterpartyProfile} JSP; built in the service layer.
+ *
+ * The active-listings grid is intentionally exposed as raw {@link CarCard} rows rather
+ * than as view-layer rows. The JSP renders them with {@code consumerCarCard.tag}, which
+ * requires {@code VehicleCardView}; the controller is the right place to perform that
+ * webapp-only conversion (the {@code models} module cannot depend on {@code webapp}).
+ */
 public final class CounterpartyProfilePageModel {
 
     private final String counterpartyForename;
@@ -17,7 +26,7 @@ public final class CounterpartyProfilePageModel {
     private final boolean counterpartyIdentityValidated;
     private final List<ReviewItemDto> recentReviewComments;
     private final boolean showCounterpartyActiveListings;
-    private final List<CounterpartyActiveListingCardRow> counterpartyActiveListings;
+    private final List<CarCard> activeOwnerCarCards;
     private final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore;
 
     public CounterpartyProfilePageModel(
@@ -31,7 +40,7 @@ public final class CounterpartyProfilePageModel {
             final boolean counterpartyIdentityValidated,
             final List<ReviewItemDto> recentReviewComments,
             final boolean showCounterpartyActiveListings,
-            final List<CounterpartyActiveListingCardRow> counterpartyActiveListings,
+            final List<CarCard> activeOwnerCarCards,
             final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore) {
         this.counterpartyForename = counterpartyForename;
         this.counterpartySurname = counterpartySurname;
@@ -43,13 +52,24 @@ public final class CounterpartyProfilePageModel {
         this.counterpartyIdentityValidated = counterpartyIdentityValidated;
         this.recentReviewComments = List.copyOf(recentReviewComments);
         this.showCounterpartyActiveListings = showCounterpartyActiveListings;
-        this.counterpartyActiveListings = List.copyOf(counterpartyActiveListings);
+        this.activeOwnerCarCards = List.copyOf(activeOwnerCarCards);
         this.counterpartyActiveListingsLoadMore =
                 counterpartyActiveListingsLoadMore != null
                         ? counterpartyActiveListingsLoadMore
                         : CounterpartyActiveListingsLoadMore.none();
     }
 
+    /** Raw owner car rows for the controller to convert into {@code VehicleCardView}s. */
+    public List<CarCard> getActiveOwnerCarCards() {
+        return activeOwnerCarCards;
+    }
+
+    /**
+     * Adds every header / metadata attribute the JSP expects. The active-listings grid
+     * itself is not added here because the webapp layer must convert {@link CarCard}
+     * rows to {@code VehicleCardView}s before exposing them under
+     * {@code counterpartyActiveListings}.
+     */
     public final void populateModel(final BiConsumer<String, Object> putObject) {
         putObject.accept("counterpartyForename", counterpartyForename);
         putObject.accept("counterpartySurname", counterpartySurname);
@@ -61,7 +81,6 @@ public final class CounterpartyProfilePageModel {
         putObject.accept("counterpartyIdentityValidated", counterpartyIdentityValidated);
         putObject.accept("recentReviewComments", recentReviewComments);
         putObject.accept("showCounterpartyActiveListings", showCounterpartyActiveListings);
-        putObject.accept("counterpartyActiveListings", counterpartyActiveListings);
         putObject.accept("counterpartyActiveListingsLoadMore", counterpartyActiveListingsLoadMore);
     }
 }
