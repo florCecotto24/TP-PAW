@@ -121,4 +121,10 @@ public final class MessageKeys {
     // admin
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_GRANTOR = "admin.block.cannotBlockGrantor";
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_SELF = "admin.block.cannotBlockSelf";
+
+    // minimum rental days
+    public static final String LISTING_MIN_RENTAL_DAYS_EXCEEDS_PERIOD = "listing.minRentalDays.exceedsPeriod";
+    public static final String LISTING_MIN_RENTAL_DAYS_INVALID = "listing.minRentalDays.invalid";
+    public static final String RESERVATION_RIDER_BELOW_MINIMUM_DAYS = "reservation.rider.belowMinimumDays";
+    public static final String SEARCH_FLEXIBLE_MONTH_REQUIRED = "search.flexible.monthRequired";
 }

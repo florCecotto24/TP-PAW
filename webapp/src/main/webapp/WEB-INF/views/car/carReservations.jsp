@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="myCarReservations.pageTitle" arguments="${car.brand} ${car.model}"/></title>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
 <ryden:navbar/>
@@ -281,6 +281,6 @@
     })();
 </script>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>

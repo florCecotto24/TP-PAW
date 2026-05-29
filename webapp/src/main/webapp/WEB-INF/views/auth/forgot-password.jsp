@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="forgotPassword.title"/> — <spring:message code="app.title"/></title>
-    <%@include file="header.jsp" %>
+    <%@include file="../header.jsp" %>
 </head>
 <body class="has-fixed-navbar auth-page">
 <ryden:navbar/>
@@ -47,6 +47,6 @@
         </div>
     </div>
 </div>
-<%@ include file="includes/footerScripts.jspf" %>
+<%@ include file="../includes/footerScripts.jspf" %>
 </body>
 </html>

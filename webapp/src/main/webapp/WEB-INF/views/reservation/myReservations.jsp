@@ -6,7 +6,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="myReservations.pageTitle"/></title>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
 <ryden:navbar/>
@@ -208,6 +208,6 @@
     </c:choose>
 </main>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>

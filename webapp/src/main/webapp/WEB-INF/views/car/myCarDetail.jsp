@@ -16,7 +16,7 @@
             <title><c:out value="${car.brand} ${car.model}"/> - Ryden</title>
         </c:otherwise>
     </c:choose>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
 <ryden:navbar/>
@@ -193,19 +193,19 @@
                                         </span>
                                         <c:choose>
                                             <c:when test="${statusKey == 'ACTIVE'}">
-                                                <span class="badge text-bg-success w-100 py-2 text-wrap fs-6"><c:out value="${carStatusLabel}"/></span>
+                                                <span class="badge text-bg-success w-100 py-2 text-wrap fs-6" style="white-space: normal;"><c:out value="${carStatusLabel}"/></span>
                                             </c:when>
                                             <c:when test="${statusKey == 'PAUSED' || statusKey == 'LACK_DOC'}">
-                                                <span class="badge text-bg-warning text-dark w-100 py-2 text-wrap" style="font-size:.8rem;"><c:out value="${carStatusLabel}"/></span>
+                                                <span class="badge text-bg-warning text-dark w-100 py-2 text-wrap" style="font-size:.8rem; white-space: normal;"><c:out value="${carStatusLabel}"/></span>
                                             </c:when>
                                             <c:when test="${statusKey == 'ADMIN_PAUSED'}">
-                                                <span class="badge text-bg-danger w-100 py-2 text-wrap" style="font-size:.8rem;"><c:out value="${carStatusLabel}"/></span>
+                                                <span class="badge text-bg-danger w-100 py-2 text-wrap" style="font-size:.8rem; white-space: normal;"><c:out value="${carStatusLabel}"/></span>
                                             </c:when>
                                             <c:when test="${statusKey == 'DEACTIVATED'}">
-                                                <span class="badge text-bg-secondary w-100 py-2 text-wrap fs-6"><c:out value="${carStatusLabel}"/></span>
+                                                <span class="badge text-bg-secondary w-100 py-2 text-wrap fs-6" style="white-space: normal;"><c:out value="${carStatusLabel}"/></span>
                                             </c:when>
                                             <c:otherwise>
-                                                <span class="badge text-bg-light border w-100 py-2 text-wrap" style="font-size:.8rem;"><c:out value="${carStatusLabel}"/></span>
+                                                <span class="badge text-bg-light border w-100 py-2 text-wrap" style="font-size:.8rem; white-space: normal;"><c:out value="${carStatusLabel}"/></span>
                                             </c:otherwise>
                                         </c:choose>
                                     </div>
@@ -531,6 +531,6 @@
         </c:when>
     </c:choose>
 </main>
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>

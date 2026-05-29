@@ -9,6 +9,8 @@ import java.util.List;
 import javax.validation.Valid;
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Digits;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
@@ -53,6 +55,11 @@ public final class CreateListingForm implements ListingTimeWindow {
     @Valid
     @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}", groups = ValidationGroups.OnCreateListing.class)
     private List<AvailabilityRow> availabilityRows = new ArrayList<>();
+
+    @NotNull(groups = ValidationGroups.OnCreateListing.class)
+    @Min(value = 1, groups = ValidationGroups.OnCreateListing.class)
+    @Max(value = 365, groups = ValidationGroups.OnCreateListing.class)
+    private Integer minimumRentalDays = 1;
 
     public CreateListingForm() {
         checkInTime = ListingAvailability.DEFAULT_CHECK_IN_TIME;
@@ -136,6 +143,14 @@ public final class CreateListingForm implements ListingTimeWindow {
 
     public void setAvailabilityRows(final List<AvailabilityRow> availabilityRows) {
         this.availabilityRows = availabilityRows;
+    }
+
+    public Integer getMinimumRentalDays() {
+        return minimumRentalDays;
+    }
+
+    public void setMinimumRentalDays(final Integer minimumRentalDays) {
+        this.minimumRentalDays = minimumRentalDays;
     }
 
     public static final class AvailabilityRow {

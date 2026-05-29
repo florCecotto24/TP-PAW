@@ -40,8 +40,12 @@ public interface AdminService {
     /** Validates a pending catalog entry: validates the model and, if its brand is also pending, validates the brand. */
     void validateCatalogEntry(long modelId);
 
-    /** Rejects a pending catalog entry: removes the model and, if its brand is pending and has no remaining models, removes the brand too. */
-    void rejectCatalogEntry(long modelId);
+    /**
+     * Rejects a pending catalog entry: removes the model and, if its brand is pending and has no remaining models,
+     * removes the brand too. Notifies by email each affected car owner indicating whether the rejection targeted
+     * only the model or both brand and model. {@code locale} is the fallback request locale.
+     */
+    void rejectCatalogEntry(long modelId, Locale locale);
 
     Page<User> listUsers(int page, int pageSize);
 

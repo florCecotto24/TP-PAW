@@ -263,9 +263,10 @@ public final class AdminController {
     @PostMapping("/catalog/entries/{modelId}/reject")
     public String rejectCatalogEntry(
             @PathVariable final long modelId,
+            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         try {
-            adminService.rejectCatalogEntry(modelId);
+            adminService.rejectCatalogEntry(modelId, locale);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryRejected"));
         } catch (final Exception e) {
             LOG.warn("Admin reject catalog entry (modelId={}) failed", modelId, e);

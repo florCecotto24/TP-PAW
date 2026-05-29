@@ -96,10 +96,12 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
             final List<AvailabilityPeriod> periods,
-            final List<BigDecimal> periodPrices) {
+            final List<BigDecimal> periodPrices,
+            final int minimumRentalDays) {
         if (carService.isModelPendingValidation(carId)) {
             throw new CarValidationException(MessageKeys.LISTING_CREATE_MODEL_PENDING);
         }
+        validateMinimumRentalDaysAgainstPeriods(minimumRentalDays, periods);
         final List<ListingAvailability> result = new ArrayList<>();
         for (int i = 0; i < periods.size(); i++) {
             final AvailabilityPeriod period = periods.get(i);
@@ -119,7 +121,32 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                     ListingAvailability.Kind.OFFERED);
             result.add(row);
         }
+        carService.updateMinimumRentalDays(carId, minimumRentalDays);
         return result;
+    }
+
+    @Override
+    @Transactional
+    public void updateMinimumRentalDays(final long carId, final int minDays) {
+        final List<AvailabilityPeriod> periods = findEffectiveOfferedByCar(carId).stream()
+                .map(la -> new AvailabilityPeriod(la.getStartInclusive(), la.getEndInclusive()))
+                .collect(Collectors.toList());
+        if (!periods.isEmpty()) {
+            validateMinimumRentalDaysAgainstPeriods(minDays, periods);
+        }
+        carService.updateMinimumRentalDays(carId, minDays);
+    }
+
+    private static void validateMinimumRentalDaysAgainstPeriods(
+            final int minDays, final List<AvailabilityPeriod> periods) {
+        for (final AvailabilityPeriod period : periods) {
+            final long periodLength = ChronoUnit.DAYS.between(period.getStartInclusive(), period.getEndInclusive()) + 1;
+            if (minDays > periodLength) {
+                throw new CarValidationException(
+                        MessageKeys.LISTING_MIN_RENTAL_DAYS_EXCEEDS_PERIOD,
+                        new Object[]{minDays});
+            }
+        }
     }
 
     @Override

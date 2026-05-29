@@ -1825,8 +1825,9 @@
         'Ford Ranger...', 'Chevrolet Onix...', 'Honda Civic...'
     ];
     function setupAnimPlaceholder(input) {
-        var parent = input.closest('.form-floating');
+        var parent = input.closest('.form-floating') || input.parentElement;
         if (!parent) return;
+        var isFloating = parent.classList.contains('form-floating');
         var idx = 0;
         var timer = null;
         function start() {
@@ -1843,7 +1844,7 @@
             clearInterval(timer);
             timer = null;
             parent.classList.remove('placeholder-anim');
-            input.placeholder = ' ';
+            input.placeholder = isFloating ? ' ' : '';
         }
         input.addEventListener('focus', stop);
         input.addEventListener('blur', function () { if (!input.value) start(); });

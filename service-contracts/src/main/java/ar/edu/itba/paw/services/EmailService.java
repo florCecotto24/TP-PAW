@@ -72,6 +72,9 @@ public interface EmailService {
     /** Owner notified when a platform administrator pauses their listing. */
     void sendListingPausedByAdmin(ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload payload);
 
+    /** Owner notified when a platform administrator rejects the catalog entry (brand, model, or both) used by their car. */
+    void sendListingRejectedByAdmin(ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload payload);
+
     /** Counterparty notified when a new reservation chat message is received. */
     void sendReservationChatMessageNotification(ReservationChatMessageEmailPayload payload);
 }

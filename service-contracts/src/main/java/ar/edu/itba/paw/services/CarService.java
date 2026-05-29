@@ -113,7 +113,7 @@ public interface CarService {
 
     /**
      * Builds {@link CarSearchCriteria} from raw home/search form parameters
-     * (text, filters, wall dates, pagination, sort).
+     * (text, filters, wall dates or flexible month/days, pagination, sort).
      */
     CarSearchCriteria buildSearchCriteria(
             String query,
@@ -128,7 +128,10 @@ public interface CarService {
             int page,
             String sort,
             User viewer,
-            List<Long> neighborhoodIds);
+            List<Long> neighborhoodIds,
+            boolean flexible,
+            String flexMonth,
+            Integer flexDays);
 
     /**
      * Sweeps active cars that have no future bookable wall day and transitions them to
@@ -222,4 +225,7 @@ public interface CarService {
      * Returns {@code false} when the car does not exist or its model is already validated.
      */
     boolean isModelPendingValidation(long carId);
+
+    /** Updates the minimum rental days for a car via dirty-checking. */
+    void updateMinimumRentalDays(long carId, int days);
 }

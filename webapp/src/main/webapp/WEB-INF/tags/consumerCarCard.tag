@@ -17,4 +17,5 @@
         href="${href}"
         priceMarketPositionModifier="${card.priceMarketPositionModifier}"
         marketAveragePrice="${card.marketAveragePrice}"
-        marketSampleCount="${card.marketSampleCount}"/>
+        marketSampleCount="${card.marketSampleCount}"
+        minimumRentalDays="${card.minimumRentalDays}"/>

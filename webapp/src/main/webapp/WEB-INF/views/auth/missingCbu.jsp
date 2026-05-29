@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="missingCbu.title"/> — <spring:message code="app.title"/></title>
-    <%@include file="header.jsp" %>
+    <%@include file="../header.jsp" %>
     <style>
         .steps-container {
             display: flex;
@@ -153,6 +153,6 @@
     </article>
 </div>
 
-<%@include file="footer.jsp" %>
+<%@include file="../footer.jsp" %>
 </body>
 </html>

@@ -52,8 +52,11 @@ CREATE TABLE IF NOT EXISTS cars (
     insurance_file_id BIGINT,
     manufacture_year INTEGER,
 
+    minimum_rental_days INTEGER DEFAULT 1 NOT NULL,
+
     CONSTRAINT cars_status_check CHECK (status IN ('active', 'paused', 'admin_paused', 'lack_doc', 'unavailable', 'deactivated')),
     CONSTRAINT cars_manufacture_year_check CHECK (manufacture_year IS NULL OR manufacture_year >= 1886),
+    CONSTRAINT cars_minimum_rental_days_positive CHECK (minimum_rental_days >= 1),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

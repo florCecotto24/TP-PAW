@@ -6,7 +6,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -186,6 +188,82 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getMaxPrice()));
         Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getAveragePrice()));
         Assertions.assertEquals(1L, excluded.getSampleCount());
+    }
+
+    @Test
+    void testUpdateMinimumRentalDaysPersistsValueViaJdbcTemplate() {
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Honda", true);
+        final long brandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Honda");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Civic", true, "SEDAN");
+        final long modelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Civic");
+
+        final Car car = dao.createCar(
+                ownerId, "HON001", modelId,
+                2021, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        em.flush();
+
+        dao.updateMinimumRentalDays(car.getId(), 3);
+        em.flush();
+
+        final int persisted = jdbcTemplate.queryForObject(
+                "SELECT minimum_rental_days FROM cars WHERE id = ?", Integer.class, car.getId());
+        Assertions.assertEquals(3, persisted);
+    }
+
+    @Test
+    void testSearchCarCardsExcludesCarsWhoseMinimumRentalDaysExceedsRangeLength() {
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Hyundai", true);
+        final long brandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Hyundai");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Elantra", true, "SEDAN");
+        final long modelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Elantra");
+
+        final Car fitsMin = dao.createCar(
+                ownerId, "HYU001", modelId,
+                2022, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+        final Car exceedsMin = dao.createCar(
+                ownerId, "HYU002", modelId,
+                2022, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        em.flush();
+
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2030-01-01T00:00:00Z");
+        insertOfferedAvailability(fitsMin.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+                new BigDecimal("50.00"), createdAt);
+        insertOfferedAvailability(exceedsMin.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+                new BigDecimal("50.00"), createdAt);
+
+        jdbcTemplate.update("UPDATE cars SET minimum_rental_days = ? WHERE id = ?", 1, fitsMin.getId());
+        jdbcTemplate.update("UPDATE cars SET minimum_rental_days = ? WHERE id = ?", 5, exceedsMin.getId());
+
+        // Search range of 1 day: only fitsMin (minDays=1) should appear; exceedsMin (minDays=5) excluded.
+        final Instant rangeStart = LocalDate.of(2030, 6, 10)
+                .atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant();
+        final Instant rangeEndExclusive = LocalDate.of(2030, 6, 11)
+                .atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant();
+        final CarSearchCriteria criteria = CarSearchCriteria.builder()
+                .availabilityRange(rangeStart, rangeEndExclusive)
+                .browseWallDate(LocalDate.of(2030, 6, 1))
+                .page(0)
+                .uiPageSize(10)
+                .dbFetchSize(10)
+                .sortBy("date")
+                .sortDirection("desc")
+                .build();
+
+        final Page<CarCard> result = dao.searchCarCards(criteria);
+
+        final List<Long> ids = result.getContent().stream()
+                .map(CarCard::getCarId)
+                .collect(Collectors.toList());
+        Assertions.assertTrue(ids.contains(fitsMin.getId()), "Car with minDays=1 should be included");
+        Assertions.assertFalse(ids.contains(exceedsMin.getId()), "Car with minDays=5 should be excluded for 1-day range");
     }
 
     @Test

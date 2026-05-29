@@ -160,7 +160,7 @@ public final class MyReservationsController {
             return new ModelAndView(redirectView);
         }
 
-        final ModelAndView mav = new ModelAndView("myReservations");
+        final ModelAndView mav = new ModelAndView("reservation/myReservations");
         mav.addObject("riderReservations", riderReservations);
         mav.addObject("riderReservationsPage", riderResultPage);
         mav.addObject("activeTab", "my-reservations");
@@ -207,7 +207,7 @@ public final class MyReservationsController {
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
         final ReservationChatPageModel chat = chatOpt.get();
-        final ModelAndView mav = new ModelAndView("reservationChat");
+        final ModelAndView mav = new ModelAndView("reservation/reservationChat");
         chat.populateModel(mav::addObject);
         mav.addObject("activeTab", "my-reservations");
         if (fromCar != null) {
@@ -238,7 +238,7 @@ public final class MyReservationsController {
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
         final CounterpartyProfilePageModel profile = profileOpt.get();
-        final ModelAndView mav = new ModelAndView("counterpartyProfile");
+        final ModelAndView mav = new ModelAndView("profile/counterpartyProfile");
         profile.populateModel(mav::addObject);
         // The JSP renders the listings grid with <ryden:consumerCarCard>, which only
         // accepts VehicleCardView. Converting here keeps the webapp-only mapping out
@@ -266,7 +266,7 @@ public final class MyReservationsController {
         if (fileOpt.isEmpty()) {
             return new ModelAndView("redirect:/my-reservations/" + reservationId);
         }
-        final ModelAndView view = new ModelAndView("payment-receipt-view");
+        final ModelAndView view = new ModelAndView("reservation/payment-receipt-view");
         view.addObject("reservationId", reservationId);
         view.addObject("receiptFileName", fileOpt.get().getFileName());
         return view;
@@ -312,7 +312,7 @@ public final class MyReservationsController {
         if (fileOpt.isEmpty()) {
             return new ModelAndView("redirect:/my-reservations/" + reservationId);
         }
-        final ModelAndView view = new ModelAndView("refund-receipt-view");
+        final ModelAndView view = new ModelAndView("reservation/refund-receipt-view");
         view.addObject("reservationId", reservationId);
         view.addObject("receiptFileName", fileOpt.get().getFileName());
         return view;
@@ -557,7 +557,7 @@ public final class MyReservationsController {
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
 
-        final ModelAndView mav = new ModelAndView("reservationCancelled");
+        final ModelAndView mav = new ModelAndView("reservation/reservationCancelled");
         mav.addObject("reservationRole", role);
         return mav;
     }

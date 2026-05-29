@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="app.title"/> — <spring:message code="login.title"/></title>
-    <%@include file="header.jsp" %>
+    <%@include file="../header.jsp" %>
 </head>
 <body class="has-fixed-navbar auth-page">
 <ryden:navbar/>
@@ -58,7 +58,7 @@
 
     <form method="post" action="${pageContext.request.contextPath}/login" class="needs-validation" novalidate
           data-ryden-disable-submit-once="true">
-        <%@ include file="includes/csrfHidden.jspf" %>
+        <%@ include file="../includes/csrfHidden.jspf" %>
 
         <div class="mb-3">
             <label for="email" class="form-label"><spring:message code="login.email"/></label>
@@ -95,6 +95,6 @@
         </div>
     </div>
 </div>
-<%@ include file="includes/footerScripts.jspf" %>
+<%@ include file="../includes/footerScripts.jspf" %>
 </body>
 </html>

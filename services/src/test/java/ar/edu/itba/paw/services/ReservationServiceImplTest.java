@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -14,8 +16,10 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
@@ -154,5 +158,55 @@ public class ReservationServiceImplTest {
 
         Assertions.assertEquals(2L, billableDays);
     }
- 
+
+    @Test
+    public void testSubmitRiderReservationByCarWhenBillableDaysBelowMinimumThrowsException() {
+        // 2 wall days (June 1–2, 2030) < minimumRentalDays = 5
+        final long carId = 1L;
+        final long riderId = 20L;
+        final long ownerId = 10L;
+        final long availabilityId = 99L;
+        final String fromDateTime = "2030-06-01T10:00";
+        final String untilDateTime = "2030-06-02T18:00";
+
+        final User owner = User.identities(ownerId, "owner@test.com", "Owner", "Test");
+        final User rider = User.identities(riderId, "rider@test.com", "Rider", "Test");
+        final Car car = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("ABC123")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .minimumRentalDays(5)
+                .build();
+        final ListingAvailability avRow = ListingAvailability.builder()
+                .id(availabilityId)
+                .car(car)
+                .startInclusive(LocalDate.of(2030, 5, 1))
+                .endInclusive(LocalDate.of(2030, 7, 31))
+                .dayPrice(new BigDecimal("100.00"))
+                .startPointStreet("Av. Test")
+                .checkInTime(LocalTime.of(10, 0))
+                .checkOutTime(LocalTime.of(18, 0))
+                .kind(ListingAvailability.Kind.OFFERED)
+                .build();
+
+        Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
+        Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(rider));
+        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
+        Mockito.when(listingAvailabilityService.findById(availabilityId)).thenReturn(Optional.of(avRow));
+        Mockito.when(listingAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2030, 6, 1)))
+                .thenReturn(Optional.of(avRow));
+        Mockito.when(listingAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2030, 6, 2)))
+                .thenReturn(Optional.of(avRow));
+        Mockito.when(userService.hasUploadedLicenseAndIdentity(rider)).thenReturn(true);
+        Mockito.when(userService.getUserCbu(ownerId)).thenReturn("12345678901234567890123");
+        Mockito.lenient().when(reservationTimingPolicy.getMaxBillableDaysPerReservation()).thenReturn(30);
+        Mockito.lenient().when(reservationTimingPolicy.getPaymentProofDeadlineHours()).thenReturn(24);
+
+        Assertions.assertThrows(RiderReservationException.class,
+                () -> reservationService.submitRiderReservationByCar(
+                        riderId, carId, availabilityId, fromDateTime, untilDateTime));
+    }
+
 }

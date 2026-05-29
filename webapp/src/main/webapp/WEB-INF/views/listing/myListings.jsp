@@ -7,7 +7,7 @@
 <html lang="en">
     <head>
         <title><spring:message code="myListings.pageTitle"/></title>
-        <%@include file="header.jsp"%>
+        <%@include file="../header.jsp"%>
     </head>
     <body class="has-fixed-navbar">
         <ryden:navbar/>
@@ -20,7 +20,7 @@
             </section>
 
             <div>
-                    <c:set var="hasActiveFilters" value="${not empty param.q or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain}"/>
+                    <c:set var="hasActiveFilters" value="${not empty param.q or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.listingStatus or not empty param.priceMin or not empty param.priceMax or not empty paramValues.rating}"/>
 
                     <c:url var="myListingsBaseUrl" value="/my-cars">
                         <c:param name="tab" value="listings"/>
@@ -35,6 +35,18 @@
                         </c:forEach>
                         <c:forEach var="pw" items="${paramValues.powertrain}">
                             <c:param name="powertrain"><c:out value="${pw}"/></c:param>
+                        </c:forEach>
+                        <c:forEach var="ls" items="${paramValues.listingStatus}">
+                            <c:param name="listingStatus"><c:out value="${ls}"/></c:param>
+                        </c:forEach>
+                        <c:if test="${not empty param.priceMin}">
+                            <c:param name="priceMin"><c:out value="${param.priceMin}"/></c:param>
+                        </c:if>
+                        <c:if test="${not empty param.priceMax}">
+                            <c:param name="priceMax"><c:out value="${param.priceMax}"/></c:param>
+                        </c:if>
+                        <c:forEach var="rt" items="${paramValues.rating}">
+                            <c:param name="rating"><c:out value="${rt}"/></c:param>
                         </c:forEach>
                     </c:url>
 
@@ -57,12 +69,37 @@
                             </div>
                             <div class="d-flex justify-content-center">
                                 <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
+                                    <spring:message code="myListings.filter.status" var="lstStatusLabel"/>
+                                    <ryden:exploreFilterDropdown filterLabel="${lstStatusLabel}" paramName="listingStatus" ariaGroup="lst-status" options="${listingStatusOptions}"/>
                                     <spring:message code="search.filter.category" var="lstCategoryLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstCategoryLabel}" paramName="category" ariaGroup="lst-category" options="${categoryFilterOptions}"/>
                                     <spring:message code="search.filter.transmission" var="lstTransmissionLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstTransmissionLabel}" paramName="transmission" ariaGroup="lst-transmission" options="${transmissionFilterOptions}"/>
                                     <spring:message code="search.filter.powertrain" var="lstPowertrainLabel"/>
                                     <ryden:exploreFilterDropdown filterLabel="${lstPowertrainLabel}" paramName="powertrain" ariaGroup="lst-powertrain" options="${powertrainFilterOptions}"/>
+                                    <spring:message code="search.filter.price" var="lstPriceLabel"/>
+                                    <spring:message code="search.filter.price.min" var="lstPriceMinLabel"/>
+                                    <spring:message code="search.filter.price.max" var="lstPriceMaxLabel"/>
+                                    <c:set var="hasActiveLstPrice" value="${not empty param.priceMin or not empty param.priceMax}"/>
+                                    <div class="dropdown explore-filter-dropdown mx-1 my-1">
+                                        <button class="btn btn-light border dropdown-toggle rounded-4 d-inline-flex align-items-center gap-1" type="button"
+                                                data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                            <span class="explore-filter-dropdown__label"><c:out value="${lstPriceLabel}"/></span>
+                                            <span class="badge text-bg-primary rounded-pill <c:if test='${not hasActiveLstPrice}'>d-none</c:if>" data-filter-count="true">1</span>
+                                        </button>
+                                        <div class="dropdown-menu p-3" style="min-width:200px">
+                                            <div class="mb-2">
+                                                <label class="form-label small mb-1"><c:out value="${lstPriceMinLabel}"/></label>
+                                                <input type="number" class="form-control form-control-sm" name="priceMin" min="0" step="1" value="<c:out value='${param.priceMin}'/>"/>
+                                            </div>
+                                            <div>
+                                                <label class="form-label small mb-1"><c:out value="${lstPriceMaxLabel}"/></label>
+                                                <input type="number" class="form-control form-control-sm" name="priceMax" min="0" step="1" value="<c:out value='${param.priceMax}'/>"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <spring:message code="search.filter.rating" var="lstRatingLabel"/>
+                                    <ryden:exploreFilterDropdown filterLabel="${lstRatingLabel}" paramName="rating" ariaGroup="lst-rating" options="${ratingFilterOptions}"/>
                                 </div>
                             </div>
                         </form>
@@ -80,8 +117,7 @@
                                 </c:choose>
                             </h3>
                             <ryden:sortBar baseUrl="${myListingsBaseUrl}" currentSort="${listingsCurrentSort}"
-                                           wrapperClass="d-flex align-items-center gap-2 flex-wrap"
-                                           dateOnly="${true}"/>
+                                           wrapperClass="d-flex align-items-center gap-2 flex-wrap"/>
                         </div>
                     </c:if>
 
@@ -211,6 +247,6 @@
         </div>
 
 
-        <%@include file="footer.jsp"%>
+        <%@include file="../footer.jsp"%>
     </body>
 </html>

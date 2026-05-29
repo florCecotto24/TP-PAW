@@ -437,6 +437,13 @@ public final class ReservationServiceImpl implements ReservationService {
                     MessageKeys.RESERVATION_RIDER_MAX_BILLABLE_DAYS,
                     reservationTimingPolicy.getMaxBillableDaysPerReservation());
         }
+        final Car car = carService.getCarById(carId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+        if (billableDays < car.getMinimumRentalDays()) {
+            throw new RiderReservationException(
+                    MessageKeys.RESERVATION_RIDER_BELOW_MINIMUM_DAYS,
+                    car.getMinimumRentalDays());
+        }
         if (reservationDao.hasActiveOverlapByCar(carId, startDate, endDate)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }

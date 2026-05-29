@@ -12,9 +12,14 @@
 <%@ attribute name="maxBillableDays" required="true" type="java.lang.Integer" %>
 <%@ attribute name="isOwnerRequesting" required="true" type="java.lang.Boolean" %>
 <%@ attribute name="searchNeighborhoodIds" required="false" type="java.util.List" %>
+<%@ attribute name="minimumRentalDays" required="false" type="java.lang.Integer" %>
+<%@ attribute name="defaultMonthFirstDay" required="false" type="java.lang.String" %>
 
 <c:url var="newReservationUrl" value="/reservation/new" />
 <spring:message code="validation.reservationForm.maxBillableDays" arguments="${maxBillableDays}" var="maxBillableExceededMsg" htmlEscape="true"/>
+<c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">
+    <spring:message code="validation.reservationForm.minRentalDays" arguments="${minimumRentalDays}" var="minRentalDaysMsg" htmlEscape="true"/>
+</c:if>
 
 <%-- Build JSON array of searched neighbourhood IDs for client-side segment filtering --%>
 <c:set var="nbIdsJson" value="["/>
@@ -29,10 +34,20 @@
           data-bookable-ranges='<c:out value="${bookableWallRangesJson}" escapeXml="false"/>'
           data-max-billable-days="<c:out value='${maxBillableDays}'/>"
           data-max-billable-exceeded-msg="<c:out value='${maxBillableExceededMsg}'/>"
-          data-search-nb-ids='<c:out value="${nbIdsJson}" escapeXml="false"/>'>
+          <c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">data-min-rental-days="<c:out value='${minimumRentalDays}'/>" data-min-rental-days-msg="<c:out value='${minRentalDaysMsg}'/>"</c:if>
+          data-search-nb-ids='<c:out value="${nbIdsJson}" escapeXml="false"/>'
+          <c:if test="${not empty defaultMonthFirstDay}">data-default-month="<c:out value='${defaultMonthFirstDay}'/>"</c:if>>
     <input type="hidden" name="carId" value="<c:out value='${carId}'/>" />
     <input type="hidden" name="carName" value="<c:out value='${carName}'/>" />
     <input type="hidden" name="reservationTotal" id="detail_reservation_total_hint" value="" />
+
+    <c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">
+        <spring:message code="carDetail.minRentalDays" arguments="${minimumRentalDays}" var="minRentalDaysBadge"/>
+        <p class="small text-secondary mb-3">
+            <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>
+            <c:out value="${minRentalDaysBadge}"/>
+        </p>
+    </c:if>
 
     <%-- Inline calendar (non-owners only): always visible, shows prices per day --%>
     <c:if test="${!isOwnerRequesting}">
@@ -95,6 +110,8 @@
         <div class="alert alert-danger mb-3" id="detail_max_billable_alert" role="alert" hidden>
             <c:out value="${maxBillableExceededMsg}"/>
         </div>
+
+        <div class="alert alert-warning mb-3" id="detail_min_rental_days_alert" role="alert" hidden></div>
 
         <button type="submit" class="btn btn-lg btn-primary w-100 py-3 rounded-3 mb-2" id="detailReservationSubmitBtn">
             <spring:message code="detailReservationPanel.startReservation"/>

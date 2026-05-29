@@ -14,6 +14,7 @@
 <%@ attribute name="priceMarketPositionModifier" required="false" %>
 <%@ attribute name="marketAveragePrice" required="false" type="java.lang.Number" %>
 <%@ attribute name="marketSampleCount" required="false" type="java.lang.Number" %>
+<%@ attribute name="minimumRentalDays" required="false" type="java.lang.Integer" %>
 
 <fmt:setLocale value="es_AR"/>
 <c:if test="${empty pricePeriod}">
@@ -78,6 +79,13 @@
                     </p>
                 </c:when>
             </c:choose>
+            <c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">
+                <spring:message code="search.card.minRentalDays" arguments="${minimumRentalDays}" var="minDaysLabel"/>
+                <p class="small text-secondary mb-0 mt-1">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                    <c:out value="${minDaysLabel}"/>
+                </p>
+            </c:if>
         </div>
         <div class="carcard-price text">
             <div class="carcard-price-row">

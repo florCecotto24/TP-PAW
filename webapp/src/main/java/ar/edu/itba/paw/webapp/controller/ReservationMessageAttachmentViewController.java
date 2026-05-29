@@ -34,7 +34,7 @@ public final class ReservationMessageAttachmentViewController {
         final StoredFile sf = reservationMessageService
                 .findMessageAttachmentForParticipant(me.getId(), reservationId, messageId)
                 .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_ATTACHMENT_NOT_FOUND));
-        final ModelAndView view = new ModelAndView("chat-attachment-view");
+        final ModelAndView view = new ModelAndView("reservation/chat-attachment-view");
         view.addObject("reservationId", reservationId);
         view.addObject("messageId", messageId);
         view.addObject("attachmentFileName", sf.getFileName());

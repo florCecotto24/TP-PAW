@@ -397,7 +397,7 @@ public final class PublishCarFormController {
                             insuranceBytes);
                     pictureStash.clear(session);
                     insuranceStash.clear(session);
-                    final ModelAndView pendingMav = new ModelAndView("publishCarPending");
+                    final ModelAndView pendingMav = new ModelAndView("listing/publishCarPending");
                     pendingMav.addObject("createdCarId", pendingCar.getId());
                     if (!resolvedBrand.isValidated()) {
                         pendingMav.addObject("pendingBrand", resolvedBrand.getName());
@@ -425,7 +425,7 @@ public final class PublishCarFormController {
             pictureStash.clear(session);
             insuranceStash.clear(session);
 
-            final ModelAndView mav = new ModelAndView("publishCarConfirmation");
+            final ModelAndView mav = new ModelAndView("listing/publishCarConfirmation");
             mav.addObject("car", car);
             return mav;
         } catch (final DuplicatePlateException e) {
@@ -453,7 +453,7 @@ public final class PublishCarFormController {
     }
 
     private ModelAndView publishCarFormView(final HttpSession session) {
-        final ModelAndView mav = new ModelAndView("publishCarForm");
+        final ModelAndView mav = new ModelAndView("listing/publishCarForm");
         mav.addObject("activeTab", "publish-car");
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
@@ -524,7 +524,7 @@ public final class PublishCarFormController {
     }
 
     private ModelAndView publishCarPrerequisitesView(final User user) {
-        final ModelAndView mav = new ModelAndView("publishCarPrerequisites");
+        final ModelAndView mav = new ModelAndView("listing/publishCarPrerequisites");
         mav.addObject("activeTab", "publish-car");
         mav.addObject("publisherHasCbu", userService.hasValidCbu(user));
         mav.addObject("publisherHasIdentity", user.getIdentityFileId().isPresent());

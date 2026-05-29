@@ -58,6 +58,9 @@ public final class SearchController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) final String sort,
             @RequestParam(required = false) final List<String> neighborhoodId,
+            @RequestParam(defaultValue = "false") final boolean flexible,
+            @RequestParam(required = false) final String flexMonth,
+            @RequestParam(required = false) final Integer flexDays,
             @CurrentUser final User currentUser,
             final HttpServletRequest request) {
         final ModelAndView mav = new ModelAndView("search");
@@ -68,7 +71,8 @@ public final class SearchController {
 
         final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
         final var criteria = carService.buildSearchCriteria(
-                query, category, transmission, powertrain, priceMin, priceMax, rating, from, until, page, sort, viewer, neighborhoodIds);
+                query, category, transmission, powertrain, priceMin, priceMax, rating, from, until, page, sort,
+                viewer, neighborhoodIds, flexible, flexMonth, flexDays);
         final Page<CarCard> resultPage = carService.searchCarCards(criteria);
 
         final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());
@@ -91,12 +95,18 @@ public final class SearchController {
         mav.addObject("currentSort", safeSort);
         mav.addObject("activeTab", "search");
         mav.addObject("hasActiveSearchFilters", hasActiveSearchFilters(request, neighborhoodIds));
+        mav.addObject("searchFlexible", flexible);
+        mav.addObject("searchFlexMonth", flexMonth != null ? flexMonth : "");
+        mav.addObject("searchFlexDays", flexDays);
 
         return mav;
     }
 
     private static boolean hasActiveSearchFilters(final HttpServletRequest request, final List<Long> neighborhoodIds) {
         if (nonBlank(request.getParameter("query"))) {
+            return true;
+        }
+        if ("true".equalsIgnoreCase(request.getParameter("flexible")) && nonBlank(request.getParameter("flexMonth"))) {
             return true;
         }
         if (nonBlank(request.getParameter("from")) || nonBlank(request.getParameter("until"))) {

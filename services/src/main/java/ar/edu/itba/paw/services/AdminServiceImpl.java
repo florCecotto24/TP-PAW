@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.persistence.CarBrandDao;
@@ -195,18 +196,40 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void rejectCatalogEntry(final long modelId) {
+    public void rejectCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelDao.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
         final CarBrand brand = model.getBrand();
         final boolean brandIsPending = !brand.isValidated();
         final boolean isLastModelForBrand = carModelDao.countByBrandId(brand.getId()) == 1;
-        for (final Car car : carDao.findCarsByModelId(modelId)) {
+        final boolean brandWillBeRejected = brandIsPending && isLastModelForBrand;
+        final String brandName = brand.getName();
+        final String modelName = model.getName();
+        final List<Car> affectedCars = carDao.findCarsByModelId(modelId);
+        final List<ListingRejectedByAdminOwnerEmailPayload> notifications = new java.util.ArrayList<>(affectedCars.size());
+        for (final Car car : affectedCars) {
+            final User owner = car.getOwner();
+            final String vehicleLabel = brandName + " " + modelName;
+            notifications.add(
+                    ListingRejectedByAdminOwnerEmailPayload.builder()
+                            .messageLocale(locale != null ? locale : Locale.ENGLISH)
+                            .ownerEmail(owner.getEmail())
+                            .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                            .vehicleLabel(vehicleLabel)
+                            .carId(car.getId())
+                            .brandName(brandName)
+                            .modelName(modelName)
+                            .brandRejected(brandWillBeRejected)
+                            .modelRejected(true)
+                            .build());
             car.setCarModel(null);
         }
         carModelDao.deleteById(modelId);
-        if (brandIsPending && isLastModelForBrand) {
+        if (brandWillBeRejected) {
             carBrandDao.deleteById(brand.getId());
+        }
+        for (final ListingRejectedByAdminOwnerEmailPayload payload : notifications) {
+            emailService.sendListingRejectedByAdmin(payload);
         }
     }
 

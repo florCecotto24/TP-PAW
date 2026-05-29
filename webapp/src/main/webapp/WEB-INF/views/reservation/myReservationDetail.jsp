@@ -7,8 +7,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><spring:message code="myReservationDetail.pageTitle" arguments="${listingTitle}"/></title>
-    <%@include file="header.jsp"%>
+    <title><spring:message code="myReservationDetail.pageTitle" arguments="${car.brand} ${car.model}"/></title>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
 <ryden:navbar/>
@@ -92,7 +92,7 @@
                               action="${pageContext.request.contextPath}/my-reservations/${reservation.id}/payment-receipt"
                               class="ryden-payment-receipt__form">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <%@ include file="includes/fromCarHubHidden.jspf" %>
+                            <%@ include file="../includes/fromCarHubHidden.jspf" %>
                             <div class="d-flex align-items-stretch gap-2">
                                 <label class="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
                                     <span id="paymentReceiptFileText" class="text-truncate text-muted pe-1 flex-grow-1 min-w-0"><c:out value="${paymentReceiptChooseHint}"/></span>
@@ -165,7 +165,7 @@
                                         triggerClass="btn btn-primary"
                                         confirmButtonClass="btn btn-primary">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="includes/fromCarHubHidden.jspf" %>
+                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
                                 </ryden:confirmModal>
                             </c:if>
                             <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
@@ -193,7 +193,7 @@
                               action="${pageContext.request.contextPath}/my-reservations/${reservation.id}/refund-receipt"
                               class="ryden-payment-receipt__form">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <%@ include file="includes/fromCarHubHidden.jspf" %>
+                            <%@ include file="../includes/fromCarHubHidden.jspf" %>
                             <div class="d-flex align-items-stretch gap-2">
                                 <label class="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
                                     <span id="refundReceiptFileText" class="text-truncate text-muted pe-1 flex-grow-1 min-w-0"><c:out value="${refundReceiptChooseHint}"/></span>
@@ -269,7 +269,7 @@
                             <c:if test="${not refundReceiptApproved}">
                                 <form method="post" action="<c:out value='${refundApprovalUrl}'/>" class="d-inline">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="includes/fromCarHubHidden.jspf" %>
+                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
                                     <input type="hidden" name="approved" value="true"/>
                                     <button type="submit" class="btn btn-primary btn-sm">
                                         <spring:message code="myReservationDetail.refund.markReviewed"/>
@@ -279,7 +279,7 @@
                             <c:if test="${refundReceiptApproved}">
                                 <form method="post" action="<c:out value='${refundApprovalUrl}'/>" class="d-inline">
                                     <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="includes/fromCarHubHidden.jspf" %>
+                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
                                     <input type="hidden" name="approved" value="false"/>
                                     <button type="submit" class="btn btn-outline-secondary btn-sm">
                                         <spring:message code="myReservationDetail.refund.clearReview"/>
@@ -313,7 +313,7 @@
                                 triggerClass="btn btn-primary"
                                 confirmButtonClass="btn btn-primary">
                             <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                            <%@ include file="includes/fromCarHubHidden.jspf" %>
+                            <%@ include file="../includes/fromCarHubHidden.jspf" %>
                         </ryden:confirmModal>
                     </div>
                 </article>
@@ -326,8 +326,8 @@
                         <c:url var="ownerReviewUrl" value="/my-reservations/${reservation.id}/owner-review-rider"/>
                         <form:form modelAttribute="ownerReviewForm" action="${ownerReviewUrl}" method="post"
                                    cssClass="vstack gap-2" htmlEscape="true">
-                            <%@ include file="includes/csrfHidden.jspf" %>
-                            <%@ include file="includes/fromCarHubHidden.jspf" %>
+                            <%@ include file="../includes/csrfHidden.jspf" %>
+                            <%@ include file="../includes/fromCarHubHidden.jspf" %>
                             <form:errors path="*" element="div" cssClass="alert alert-danger mb-0 py-2" delimiter=" "/>
                             <label class="form-label small"><spring:message code="myReservationDetail.review.rating"/></label>
                             <div class="ryden-star-rating" data-target="ownerReviewRating">
@@ -360,8 +360,8 @@
                         <c:url var="riderReviewUrl" value="/my-reservations/${reservation.id}/rider-review-owner"/>
                         <form:form modelAttribute="riderReviewForm" action="${riderReviewUrl}" method="post"
                                    cssClass="vstack gap-2" htmlEscape="true">
-                            <%@ include file="includes/csrfHidden.jspf" %>
-                            <%@ include file="includes/fromCarHubHidden.jspf" %>
+                            <%@ include file="../includes/csrfHidden.jspf" %>
+                            <%@ include file="../includes/fromCarHubHidden.jspf" %>
                             <form:errors path="*" element="div" cssClass="alert alert-danger mb-0 py-2" delimiter=" "/>
                             <label class="form-label small"><spring:message code="myReservationDetail.review.rating"/></label>
                             <div class="ryden-star-rating" data-target="riderReviewRating">
@@ -405,7 +405,6 @@
                         </div>
                         <div>
                             <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
-                            <p class="text-secondary mb-2"><c:out value="${listingTitle}"/></p>
                             <div class="d-flex flex-wrap gap-2">
                                 <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                 <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>
@@ -567,7 +566,7 @@
                                         confirmButtonClass="btn btn-danger">
                                     <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
                                     <input type="hidden" name="role" value="${reservationRole}"/>
-                                    <%@ include file="includes/fromCarHubHidden.jspf" %>
+                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
                                 </ryden:confirmModal>
                             </c:when>
                             <c:otherwise>
@@ -704,7 +703,7 @@
     })();
 </script>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>
 

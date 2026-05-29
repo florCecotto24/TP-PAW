@@ -3,6 +3,8 @@ package ar.edu.itba.paw.models.util;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,6 +26,10 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
     /** When set, SQL excludes cars owned by this user id (public rider browse). */
     private final Long excludeOwnerUserId;
     private final List<Long> neighborhoodIds;
+    /** Non-null when the rider chose flexible dates: month to search within (wall calendar). */
+    private final YearMonth flexibleMonth;
+    /** Minimum contiguous free-window length for flexible search; null means "any availability". */
+    private final Integer flexibleDays;
 
     private CarSearchCriteria(final Builder b) {
         super(b.page, b.uiPageSize, b.carTypes, b.transmissions, b.powertrains,
@@ -35,6 +41,8 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         this.browseWallDate = b.browseWallDate;
         this.excludeOwnerUserId = b.excludeOwnerUserId;
         this.neighborhoodIds = normalizeIdList(b.neighborhoodIds);
+        this.flexibleMonth = b.flexibleMonth;
+        this.flexibleDays = b.flexibleDays;
     }
 
     public static Builder builder() {
@@ -65,6 +73,8 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         private LocalDate browseWallDate;
         private Long excludeOwnerUserId;
         private List<Long> neighborhoodIds = List.of();
+        private YearMonth flexibleMonth;
+        private Integer flexibleDays;
 
         public Builder query(final String query) {
             this.query = query;
@@ -147,6 +157,16 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
             return this;
         }
 
+        public Builder flexibleMonth(final YearMonth flexibleMonth) {
+            this.flexibleMonth = flexibleMonth;
+            return this;
+        }
+
+        public Builder flexibleDays(final Integer flexibleDays) {
+            this.flexibleDays = flexibleDays;
+            return this;
+        }
+
         public CarSearchCriteria build() {
             return new CarSearchCriteria(this);
         }
@@ -211,5 +231,31 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
 
     public List<Long> getNeighborhoodIds() {
         return neighborhoodIds;
+    }
+
+    /** True when the rider chose flexible dates (month-based search, no exact range). */
+    public boolean isFlexibleSearch() {
+        return flexibleMonth != null;
+    }
+
+    public YearMonth getFlexibleMonth() {
+        return flexibleMonth;
+    }
+
+    public Integer getFlexibleDays() {
+        return flexibleDays;
+    }
+
+    /**
+     * Wall-calendar day count for the exact availability range (inclusive on both ends).
+     * Only meaningful when {@link #hasAvailabilityRange()} is true and the search is not flexible.
+     */
+    public long getRangeLengthDays() {
+        if (!hasAvailabilityRange()) {
+            return 0L;
+        }
+        final LocalDate from = availabilityRangeStart.atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toLocalDate();
+        final LocalDate until = availabilityRangeEndExclusive.atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toLocalDate().minusDays(1);
+        return java.time.temporal.ChronoUnit.DAYS.between(from, until) + 1;
     }
 }

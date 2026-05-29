@@ -7,7 +7,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
     <title><spring:message code="reservationForm.title"/></title>
 </head>
 <body class="bg-light has-fixed-navbar">
@@ -145,7 +145,7 @@
     </div>
 </main>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>
 

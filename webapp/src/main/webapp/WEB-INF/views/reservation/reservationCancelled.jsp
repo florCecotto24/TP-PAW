@@ -6,7 +6,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="reservationCancelled.pageTitle"/></title>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">
 <ryden:navbar/>
@@ -37,6 +37,6 @@
     </div>
 </main>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>

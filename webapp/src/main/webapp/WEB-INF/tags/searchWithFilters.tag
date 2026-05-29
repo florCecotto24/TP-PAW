@@ -14,6 +14,7 @@
 <%@ attribute name="powertrainFilterOptions" required="true" type="java.util.Map" %>
 <%@ attribute name="clearFiltersHref" required="false" type="java.lang.String" %>
 <%@ attribute name="showClearFilters" required="false" type="java.lang.Boolean" %>
+<%@ attribute name="allowFlexibleSearch" required="false" type="java.lang.Boolean" %>
 
 <c:set var="resolvedFormId" value="${empty formId ? 'exploreSearchForm' : formId}"/>
 <c:set var="resolvedFormClass" value="${empty formClass ? 'search-menu w-100' : formClass}"/>
@@ -21,6 +22,8 @@
 <c:set var="resolvedShowFilters" value="${showFilters ne false}"/>
 <c:set var="resolvedAutoSubmit" value="${autoSubmitOnFilterChange eq true}"/>
 <c:set var="resolvedShowClear" value="${showClearFilters eq true}"/>
+<c:set var="resolvedAllowFlex" value="${allowFlexibleSearch eq true}"/>
+<c:set var="isFlexActive" value="${resolvedAllowFlex and param.flexible eq 'true'}"/>
 
 <c:set var="fromRaw" value="${param.from}"/>
 <c:set var="untilRaw" value="${param.until}"/>
@@ -44,13 +47,13 @@
       data-ryden-search-nb-invalid="<c:out value='${searchNbInvalidMsg}'/>">
     <div class="container">
         <div class="bg-white rounded-4 px-3 py-2 shadow-sm">
-            <div class="d-flex align-items-end gap-2 flex-wrap">
-                <div class="form-floating flex-grow-1" style="min-width: 12rem;">
+            <div class="d-flex align-items-stretch gap-2 flex-wrap">
+                <div class="flex-grow-1" style="min-width: 12rem;">
                     <spring:message code="searchBar.query.ariaLabel" var="queryAriaLabel"/>
                     <spring:message code="searchBar.query.label" var="queryLabel"/>
-                    <input type="text" class="form-control border-0 shadow-none" aria-label="<c:out value='${queryAriaLabel}'/>" id="search_query_<c:out value='${resolvedFormId}'/>"
-                           name="query" value="<c:out value='${param.query}'/>" placeholder=" ">
-                    <label for="search_query_<c:out value='${resolvedFormId}'/>"><c:out value="${queryLabel}"/></label>
+                    <label class="form-label small text-secondary text-uppercase mb-1" for="search_query_<c:out value='${resolvedFormId}'/>"><c:out value="${queryLabel}"/></label>
+                    <input type="text" class="form-control form-control-sm border-0 shadow-none" aria-label="<c:out value='${queryAriaLabel}'/>" id="search_query_<c:out value='${resolvedFormId}'/>"
+                           name="query" value="<c:out value='${param.query}'/>">
                 </div>
 
                 <c:if test="${resolvedShowFilters}">
@@ -74,22 +77,76 @@
 
                 <div class="vr flex-shrink-0 d-none d-md-block"></div>
 
-                <div class="d-flex flex-wrap gap-2 flex-grow-1 align-items-end" style="min-width: 14rem;">
-                    <div class="flex-grow-1" style="min-width: 7rem;">
-                        <label class="form-label small text-secondary mb-1" for="search_from_picker_<c:out value='${resolvedFormId}'/>"><spring:message code="searchBar.from"/></label>
-                        <spring:message code="searchBar.date.placeholder" var="datePlaceholder"/>
-                        <spring:message code="searchBar.from.ariaLabel" var="fromAriaLabel"/>
-                        <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_from_picker_<c:out value='${resolvedFormId}'/>"
-                               readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${fromAriaLabel}'/>"/>
-                        <input type="hidden" name="from" id="search_from_hidden_<c:out value='${resolvedFormId}'/>" value="<c:out value='${fromDateOnly}'/>"/>
+                <div class="flex-grow-1" style="min-width: 14rem;">
+                    <div class="ryden-date-stack">
+                        <%-- Exact date range --%>
+                        <div class="js-exact-date-range<c:if test='${isFlexActive}'> js-date-mode-hidden</c:if>" style="display:grid;grid-template-columns:1fr 1fr;column-gap:.5rem;">
+                            <div>
+                                <label class="form-label small text-secondary mb-1" for="search_from_picker_<c:out value='${resolvedFormId}'/>"><spring:message code="searchBar.from"/></label>
+                                <spring:message code="searchBar.date.placeholder" var="datePlaceholder"/>
+                                <spring:message code="searchBar.from.ariaLabel" var="fromAriaLabel"/>
+                                <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_from_picker_<c:out value='${resolvedFormId}'/>"
+                                       readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${fromAriaLabel}'/>"/>
+                                <input type="hidden" name="from" id="search_from_hidden_<c:out value='${resolvedFormId}'/>" value="<c:out value='${fromDateOnly}'/>"/>
+                            </div>
+                            <div>
+                                <label class="form-label small text-secondary mb-1" for="search_until_picker_<c:out value='${resolvedFormId}'/>"><spring:message code="searchBar.until"/></label>
+                                <spring:message code="searchBar.until.ariaLabel" var="untilAriaLabel"/>
+                                <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_until_picker_<c:out value='${resolvedFormId}'/>"
+                                       readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${untilAriaLabel}'/>"/>
+                                <input type="hidden" name="until" id="search_until_hidden_<c:out value='${resolvedFormId}'/>" value="<c:out value='${untilDateOnly}'/>"/>
+                            </div>
+                        </div>
+                        <c:if test="${resolvedAllowFlex}">
+                            <%-- Flexible date controls --%>
+                            <div class="js-flexible-controls<c:if test='${!isFlexActive}'> js-date-mode-hidden</c:if>" style="display:grid;grid-template-columns:1fr 1fr;column-gap:.5rem;">
+                                <div>
+                                    <spring:message code="search.flexible.month.label" var="flexMonthLabel"/>
+                                    <label class="form-label small text-secondary mb-1" for="search_flexmonth_<c:out value='${resolvedFormId}'/>">
+                                        <c:out value="${flexMonthLabel}"/>
+                                    </label>
+                                    <div class="dropdown js-flex-month-wrapper">
+                                        <button type="button"
+                                                id="search_flexmonth_<c:out value='${resolvedFormId}'/>"
+                                                class="form-control form-control-sm border-0 shadow-none dropdown-toggle d-flex align-items-center w-100 text-start"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false">
+                                            <span class="text-truncate min-w-0 js-flex-month-display">&mdash;</span>
+                                        </button>
+                                        <div class="dropdown-menu shadow js-flex-month-menu" style="max-height:14rem;overflow-y:auto;min-width:100%"></div>
+                                        <input type="hidden" name="flexMonth" class="js-flex-month-hidden" value="<c:out value='${param.flexMonth}'/>"/>
+                                    </div>
+                                </div>
+                                <div>
+                                    <spring:message code="search.flexible.days.label" var="flexDaysLabel"/>
+                                    <spring:message code="search.flexible.anyDays" var="anyDaysPlaceholder"/>
+                                    <label class="form-label small text-secondary mb-1" for="search_flexdays_<c:out value='${resolvedFormId}'/>">
+                                        <c:out value="${flexDaysLabel}"/>
+                                    </label>
+                                    <input type="number" name="flexDays" id="search_flexdays_<c:out value='${resolvedFormId}'/>"
+                                           min="1" max="31" step="1"
+                                           class="form-control form-control-sm border-0 shadow-none"
+                                           placeholder="<c:out value='${anyDaysPlaceholder}'/>"
+                                           value="<c:out value='${param.flexDays}'/>"/>
+                                </div>
+                            </div>
+                        </c:if>
                     </div>
-                    <div class="flex-grow-1" style="min-width: 7rem;">
-                        <label class="form-label small text-secondary mb-1" for="search_until_picker_<c:out value='${resolvedFormId}'/>"><spring:message code="searchBar.until"/></label>
-                        <spring:message code="searchBar.until.ariaLabel" var="untilAriaLabel"/>
-                        <input type="text" class="form-control form-control-sm border-0 shadow-none" id="search_until_picker_<c:out value='${resolvedFormId}'/>"
-                               readonly placeholder="<c:out value='${datePlaceholder}'/>" aria-label="<c:out value='${untilAriaLabel}'/>"/>
-                        <input type="hidden" name="until" id="search_until_hidden_<c:out value='${resolvedFormId}'/>" value="<c:out value='${untilDateOnly}'/>"/>
-                    </div>
+                    <c:if test="${resolvedAllowFlex}">
+                        <%-- Toggle below date inputs, inside date column --%>
+                        <spring:message code="search.flexible.toggle" var="flexToggleLabel"/>
+                        <div class="form-check form-switch d-flex align-items-center gap-2 mt-2 ps-0">
+                            <input class="form-check-input flex-shrink-0 ms-0 js-flexible-toggle" type="checkbox" role="switch"
+                                   id="search_flex_<c:out value='${resolvedFormId}'/>"
+                                   name="flexible" value="true"
+                                   style="cursor:pointer;"
+                                   <c:if test="${isFlexActive}">checked</c:if>/>
+                            <label class="form-check-label small text-secondary mb-0"
+                                   for="search_flex_<c:out value='${resolvedFormId}'/>">
+                                <c:out value="${flexToggleLabel}"/>
+                            </label>
+                        </div>
+                    </c:if>
                 </div>
 
                 <div class="vr flex-shrink-0 d-none d-md-block"></div>
@@ -171,6 +228,84 @@
         </div>
     </div>
 </form>
+
+<script>
+    (function () {
+        var monthWrappers = document.querySelectorAll('#<c:out value="${resolvedFormId}"/> .js-flex-month-wrapper');
+        monthWrappers.forEach(function (wrapper) {
+            var menu = wrapper.querySelector('.js-flex-month-menu');
+            var display = wrapper.querySelector('.js-flex-month-display');
+            var hidden = wrapper.querySelector('.js-flex-month-hidden');
+            if (!menu || !display || !hidden) { return; }
+            var selected = hidden.value || '';
+            var now = new Date();
+            var firstVal = null, firstLabel = null;
+            for (var i = 0; i < 12; i++) {
+                var d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                var y = d.getFullYear();
+                var mo = d.getMonth() + 1;
+                var val = y + '-' + (mo < 10 ? '0' + mo : mo);
+                var lbl = d.toLocaleDateString(navigator.language || 'es-AR', { month: 'long', year: 'numeric' });
+                lbl = lbl.charAt(0).toUpperCase() + lbl.slice(1);
+                if (i === 0) { firstVal = val; firstLabel = lbl; }
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'dropdown-item small px-3 py-1';
+                btn.setAttribute('data-val', val);
+                btn.textContent = lbl;
+                if (val === selected) { btn.classList.add('active'); display.textContent = lbl; }
+                menu.appendChild(btn);
+            }
+            if (!selected && firstVal) {
+                hidden.value = firstVal;
+                display.textContent = firstLabel;
+                var first = menu.querySelector('.dropdown-item');
+                if (first) { first.classList.add('active'); }
+            }
+            menu.addEventListener('click', function (e) {
+                var item = e.target.closest('.dropdown-item[data-val]');
+                if (!item) { return; }
+                hidden.value = item.getAttribute('data-val');
+                display.textContent = item.textContent;
+                menu.querySelectorAll('.dropdown-item').forEach(function (el) { el.classList.remove('active'); });
+                item.classList.add('active');
+                var toggler = wrapper.querySelector('[data-bs-toggle="dropdown"]');
+                if (toggler && window.bootstrap && bootstrap.Dropdown) {
+                    var inst = bootstrap.Dropdown.getInstance(toggler);
+                    if (inst) { inst.hide(); }
+                }
+            });
+        });
+
+        var flexForm = document.getElementById('<c:out value="${resolvedFormId}"/>');
+        if (flexForm) {
+            var toggle = flexForm.querySelector('.js-flexible-toggle');
+            var exactRange = flexForm.querySelector('.js-exact-date-range');
+            var flexControls = flexForm.querySelector('.js-flexible-controls');
+
+            function syncFlexMode(isFlexible) {
+                if (exactRange) { exactRange.classList.toggle('js-date-mode-hidden', isFlexible); }
+                if (flexControls) { flexControls.classList.toggle('js-date-mode-hidden', !isFlexible); }
+                if (!isFlexible) {
+                    var flexMonth = flexForm.querySelector('[name="flexMonth"]');
+                    var flexDays = flexForm.querySelector('[name="flexDays"]');
+                    if (flexDays) { flexDays.value = ''; }
+                } else {
+                    var fromHid = flexForm.querySelector('[name="from"]');
+                    var untilHid = flexForm.querySelector('[name="until"]');
+                    if (fromHid) { fromHid.value = ''; }
+                    if (untilHid) { untilHid.value = ''; }
+                }
+            }
+
+            if (toggle) {
+                toggle.addEventListener('change', function () {
+                    syncFlexMode(toggle.checked);
+                });
+            }
+        }
+    })();
+</script>
 
 <c:if test="${resolvedShowFilters}">
     <script>

@@ -85,6 +85,7 @@
    ------------------------------------------------------------------ */
 html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
 }
 
 body {
@@ -1454,6 +1455,22 @@ hr {
     border-color: var(--color-border) !important;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
     overflow: hidden;
+}
+
+/* Flexible search toggle switch */
+.js-flexible-toggle.form-check-input {
+    width: 2.5rem;
+    height: 1.25rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.js-flexible-toggle.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.js-flexible-toggle.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem var(--color-primary-glow);
+    border-color: var(--color-primary);
 }
 
 .ryden-select-item {

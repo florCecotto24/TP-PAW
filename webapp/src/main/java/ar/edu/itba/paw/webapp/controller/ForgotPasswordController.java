@@ -78,7 +78,7 @@ public final class ForgotPasswordController {
             form.setEmail(flashEmailString);
         }
         model.addAttribute("forgotPasswordRequestForm", form);
-        return "forgot-password";
+        return "auth/forgot-password";
     }
 
     @PostMapping
@@ -94,7 +94,7 @@ public final class ForgotPasswordController {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/forgot-password");
         }
         if (bindingResult.hasErrors()) {
-            return "forgot-password";
+            return "auth/forgot-password";
         }
         final String email = form.getEmail();
         try {
@@ -128,7 +128,7 @@ public final class ForgotPasswordController {
             return "redirect:/forgot-password";
         }
         model.addAttribute("forgotPasswordResetForm", new ForgotPasswordResetForm());
-        return "forgot-password-reset";
+        return "auth/forgot-password-reset";
     }
 
     @PostMapping("/reset")
@@ -150,7 +150,7 @@ public final class ForgotPasswordController {
             return "redirect:/forgot-password";
         }
         if (bindingResult.hasErrors()) {
-            return "forgot-password-reset";
+            return "auth/forgot-password-reset";
         }
         final String email = rawEmailString.trim();
         try {

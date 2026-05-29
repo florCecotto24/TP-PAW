@@ -18,6 +18,7 @@
                     formClass="search-menu sticky-top w-100"
                     actionPath="/search"
                     showFilters="true"
+                    allowFlexibleSearch="true"
                     autoSubmitOnFilterChange="false"
                     clearFiltersHref="${searchFiltersClearHref}"
                     showClearFilters="${hasActiveSearchFilters}"
@@ -31,12 +32,23 @@
                     <c:if test="${not empty param.query}">
                         <c:param name="query"><c:out value="${param.query}"/></c:param>
                     </c:if>
-                    <c:if test="${not empty param.from}">
-                        <c:param name="from"><c:out value="${param.from}"/></c:param>
-                    </c:if>
-                    <c:if test="${not empty param.until}">
-                        <c:param name="until"><c:out value="${param.until}"/></c:param>
-                    </c:if>
+                    <c:choose>
+                        <c:when test="${searchFlexible and not empty searchFlexMonth}">
+                            <c:param name="flexible" value="true"/>
+                            <c:param name="flexMonth"><c:out value="${searchFlexMonth}"/></c:param>
+                            <c:if test="${not empty searchFlexDays}">
+                                <c:param name="flexDays"><c:out value="${searchFlexDays}"/></c:param>
+                            </c:if>
+                        </c:when>
+                        <c:otherwise>
+                            <c:if test="${not empty param.from}">
+                                <c:param name="from"><c:out value="${param.from}"/></c:param>
+                            </c:if>
+                            <c:if test="${not empty param.until}">
+                                <c:param name="until"><c:out value="${param.until}"/></c:param>
+                            </c:if>
+                        </c:otherwise>
+                    </c:choose>
                     <c:forEach items="${searchSanitizedNeighborhoodIds}" var="nid">
                         <c:param name="neighborhoodId"><c:out value="${nid}"/></c:param>
                     </c:forEach>
@@ -129,8 +141,15 @@
                                         <c:url var="searchCarDetailHref" value="/car-detail">
                                             <c:param name="carId"><c:out value="${car.carId}"/></c:param>
                                             <c:param name="src" value="search"/>
-                                            <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
-                                            <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
+                                            <c:choose>
+                                                <c:when test="${searchFlexible and not empty searchFlexMonth}">
+                                                    <c:param name="flexMonth"><c:out value="${searchFlexMonth}"/></c:param>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
+                                                    <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
+                                                </c:otherwise>
+                                            </c:choose>
                                             <c:forEach var="nid" items="${paramValues.neighborhoodId}">
                                                 <c:param name="searchNbId"><c:out value="${nid}"/></c:param>
                                             </c:forEach>

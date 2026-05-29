@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="register.title"/> — <spring:message code="app.title"/></title>
-    <%@include file="header.jsp" %>
+    <%@include file="../header.jsp" %>
 </head>
 <body class="has-fixed-navbar auth-page">
 <ryden:navbar/>
@@ -33,7 +33,7 @@
     <form:form modelAttribute="registrationAccountForm" method="post" cssClass="needs-validation" novalidate="novalidate"
                data-ryden-disable-submit-once="true"
                action="${pageContext.request.contextPath}/register">
-        <%@ include file="includes/csrfHidden.jspf" %>
+        <%@ include file="../includes/csrfHidden.jspf" %>
         <form:errors path="*" element="div" cssClass="alert alert-danger" delimiter=" "/>
 
         <div class="mb-3">
@@ -85,6 +85,6 @@
 </div>
 </div>
 </div>
-<%@ include file="includes/footerScripts.jspf" %>
+<%@ include file="../includes/footerScripts.jspf" %>
 </body>
 </html>

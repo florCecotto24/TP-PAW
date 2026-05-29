@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -395,6 +396,16 @@ public class CarJpaDao implements CarDao {
     }
 
     @Override
+    @Transactional
+    public void updateMinimumRentalDays(final long carId, final int days) {
+        final Car car = em.find(Car.class, carId);
+        if (car != null) {
+            car.setMinimumRentalDays(days);
+            car.setUpdatedAt(OffsetDateTime.now());
+        }
+    }
+
+    @Override
     public List<CarCard> findSimilarCarCards(
             final long carId,
             final int limit,
@@ -654,7 +665,8 @@ public class CarJpaDao implements CarDao {
                         priceById.get(c.getId()),
                         c.getStatus(),
                         c.getRatingAvg().orElse(null),
-                        c.isModelPendingValidation()))
+                        c.isModelPendingValidation(),
+                        c.getMinimumRentalDays()))
                 .collect(Collectors.toList());
     }
 
@@ -708,12 +720,19 @@ public class CarJpaDao implements CarDao {
             params.put("maxPrice", criteria.getMaxPrice());
         }
         appendCarSearchRatingBandFilter(sql, criteria.getRatingBands());
-        if (criteria.hasAvailabilityRange()) {
+        if (criteria.isFlexibleSearch()) {
+            appendFlexibleSearchFilter(sql, params, criteria);
+        } else if (criteria.hasAvailabilityRange()) {
             final LocalDate searchFromWallDate = criteria.getAvailabilityRangeStart().atZone(WALL_ZONE).toLocalDate();
             final LocalDate searchUntilWallInclusive = criteria.getAvailabilityRangeEndExclusive()
                     .atZone(WALL_ZONE)
                     .toLocalDate()
                     .minusDays(1);
+            final long rangeDays = criteria.getRangeLengthDays();
+            if (rangeDays > 0) {
+                sql.append("AND c.minimum_rental_days <= :rangeLengthDays ");
+                params.put("rangeLengthDays", (int) rangeDays);
+            }
             sql.append("AND EXISTS (")
                     .append("SELECT 1 FROM listing_availability la_cover ")
                     .append("WHERE la_cover.car_id = c.id ")
@@ -728,6 +747,48 @@ public class CarJpaDao implements CarDao {
             params.put("searchUntilWallInclusive", java.sql.Date.valueOf(searchUntilWallInclusive));
             params.put("resWindowEnd", Timestamp.from(criteria.getAvailabilityRangeEndExclusive()));
             params.put("resWindowStart", Timestamp.from(criteria.getAvailabilityRangeStart()));
+        }
+    }
+
+    private static void appendFlexibleSearchFilter(
+            final StringBuilder sql, final Map<String, Object> params,
+            final CarSearchCriteria criteria) {
+        final YearMonth month = criteria.getFlexibleMonth();
+        final LocalDate monthStart = month.atDay(1);
+        final LocalDate monthEnd = month.atEndOfMonth();
+        final Integer flexDays = criteria.getFlexibleDays();
+        if (flexDays == null) {
+            sql.append("AND EXISTS (")
+                    .append("SELECT 1 FROM listing_availability la_month ")
+                    .append("WHERE la_month.car_id = c.id ")
+                    .append("AND la_month.kind = 'offered' ")
+                    .append("AND la_month.start_date <= :flexMonthEnd ")
+                    .append("AND la_month.end_date >= :flexMonthStart) ");
+            params.put("flexMonthStart", java.sql.Date.valueOf(monthStart));
+            params.put("flexMonthEnd", java.sql.Date.valueOf(monthEnd));
+        } else {
+            sql.append("AND c.minimum_rental_days <= :flexibleDays ");
+            sql.append("AND EXISTS (")
+                    .append("SELECT 1 FROM listing_availability la ")
+                    .append("CROSS JOIN LATERAL generate_series(")
+                    .append("    GREATEST(la.start_date, :flexMonthStart),")
+                    .append("    LEAST(la.end_date, :flexMonthEnd) - (:flexibleDays - 1),")
+                    .append("    INTERVAL '1 day'")
+                    .append(") AS w(window_start) ")
+                    .append("WHERE la.car_id = c.id ")
+                    .append("AND la.kind = 'offered' ")
+                    .append("AND la.start_date <= :flexMonthEnd ")
+                    .append("AND la.end_date >= :flexMonthStart ")
+                    .append("AND NOT EXISTS (")
+                    .append("    SELECT 1 FROM reservations r ")
+                    .append("    WHERE r.car_id = c.id ")
+                    .append("    AND r.status IN ('pending', 'accepted', 'started') ")
+                    .append("    AND r.start_date < ((w.window_start + (:flexibleDays * INTERVAL '1 day')) AT TIME ZONE 'America/Argentina/Buenos_Aires') ")
+                    .append("    AND r.end_date > (w.window_start AT TIME ZONE 'America/Argentina/Buenos_Aires')")
+                    .append(")) ");
+            params.put("flexMonthStart", java.sql.Date.valueOf(monthStart));
+            params.put("flexMonthEnd", java.sql.Date.valueOf(monthEnd));
+            params.put("flexibleDays", flexDays);
         }
     }
 

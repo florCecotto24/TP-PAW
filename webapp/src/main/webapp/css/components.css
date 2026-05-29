@@ -866,6 +866,32 @@ select.form-select.ryden-car-spec-select option {
     cursor: pointer;
 }
 
+/* Search bar VR separators: stretch full row height; margin-right adds space between
+   the divider and the content to its right so it doesn't look cramped */
+.search-menu .vr {
+    align-self: stretch;
+    margin-right: 0.5rem;
+}
+
+/* Month flex dropdown: push caret to the right end, matching the neighborhood picker */
+.js-flex-month-wrapper .dropdown-toggle::after {
+    margin-left: auto;
+}
+
+/* Date mode stack: exact-dates and flex-controls overlap in the same grid cell so the
+   column height is always max(H_exact, H_flex) — toggling between them never causes reflow */
+.ryden-date-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+}
+.ryden-date-stack > * {
+    grid-area: 1 / 1;
+}
+.js-date-mode-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .carouselSection .carcard {
     max-width: 100%;
 }

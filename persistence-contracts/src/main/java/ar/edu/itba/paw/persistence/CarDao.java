@@ -75,4 +75,7 @@ public interface CarDao {
      */
     Optional<CarPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
             String brand, String model, Long excludeCarId);
+
+    /** Updates the minimum rental days for a car via dirty-checking (load + mutate). */
+    void updateMinimumRentalDays(long carId, int days);
 }

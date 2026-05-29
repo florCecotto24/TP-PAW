@@ -222,7 +222,7 @@ public final class CarServiceImpl implements CarService {
         final LocalDate wall = LocalDate.ofInstant(
                 Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS),
                 AvailabilityPeriod.WALL_ZONE);
-        final Long excludeOwnerId = viewer != null ? viewer.getId() : null;
+        final Long excludeOwnerId = null;
         return carDao.findSimilarCarCards(carId, limit, wall, excludeOwnerId);
     }
 
@@ -273,31 +273,22 @@ public final class CarServiceImpl implements CarService {
             final int page,
             final String sort,
             final User viewer,
-            final List<Long> neighborhoodIds) {
+            final List<Long> neighborhoodIds,
+            final boolean flexible,
+            final String flexMonth,
+            final Integer flexDays) {
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
         final List<String> mergedCarTypes = collectCarTypeParams(category);
         final BigDecimal minPrice = priceMin != null && priceMin.compareTo(BigDecimal.ZERO) >= 0 ? priceMin : null;
         final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
         final List<String> ratingBands = collectRatingBandParams(rating);
-        Instant rangeStart = WallDateTimeParsing.parseSearchFilterRangeStartInstant(from);
-        Instant rangeEndExclusive = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(until);
-        if (rangeStart != null && rangeEndExclusive != null && !rangeEndExclusive.isAfter(rangeStart)) {
-            final Instant rs = WallDateTimeParsing.parseSearchFilterRangeStartInstant(until);
-            final Instant re = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(from);
-            rangeStart = rs;
-            rangeEndExclusive = re;
-        }
-        if (rangeStart == null || rangeEndExclusive == null || !rangeEndExclusive.isAfter(rangeStart)) {
-            rangeStart = null;
-            rangeEndExclusive = null;
-        }
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         final LocalDate browseWallDate = publicBrowseMinBookableWallDate();
         final List<Long> mergedNeighborhoodIds = mergeNeighborhoodIdsForSearch(query, neighborhoodIds);
-        return CarSearchCriteria.builder()
+        final CarSearchCriteria.Builder builder = CarSearchCriteria.builder()
                 .query(query)
                 .transmissions(transmissions)
                 .powertrains(powertrains)
@@ -305,16 +296,42 @@ public final class CarServiceImpl implements CarService {
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .ratingBands(ratingBands)
-                .availabilityRange(rangeStart, rangeEndExclusive)
                 .page(page)
                 .uiPageSize(paginationPolicy.getUiPageSize())
                 .dbFetchSize(paginationPolicy.getDbFetchSize())
                 .sortBy(sortBy)
                 .sortDirection(sortDir)
                 .browseWallDate(browseWallDate)
-                .excludeOwnerUserId(viewer != null ? viewer.getId() : null)
-                .neighborhoodIds(mergedNeighborhoodIds)
-                .build();
+                .excludeOwnerUserId(null)
+                .neighborhoodIds(mergedNeighborhoodIds);
+        if (flexible && flexMonth != null && !flexMonth.isBlank()) {
+            java.time.YearMonth parsedMonth = null;
+            try {
+                parsedMonth = java.time.YearMonth.parse(flexMonth);
+            } catch (final java.time.format.DateTimeParseException ignored) {
+                // invalid month string — fall back to no filter
+            }
+            if (parsedMonth != null) {
+                final Integer clampedDays = flexDays != null && flexDays >= 1
+                        && flexDays <= parsedMonth.lengthOfMonth() ? flexDays : null;
+                builder.flexibleMonth(parsedMonth).flexibleDays(clampedDays);
+            }
+        } else {
+            Instant rangeStart = WallDateTimeParsing.parseSearchFilterRangeStartInstant(from);
+            Instant rangeEndExclusive = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(until);
+            if (rangeStart != null && rangeEndExclusive != null && !rangeEndExclusive.isAfter(rangeStart)) {
+                final Instant rs = WallDateTimeParsing.parseSearchFilterRangeStartInstant(until);
+                final Instant re = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(from);
+                rangeStart = rs;
+                rangeEndExclusive = re;
+            }
+            if (rangeStart == null || rangeEndExclusive == null || !rangeEndExclusive.isAfter(rangeStart)) {
+                rangeStart = null;
+                rangeEndExclusive = null;
+            }
+            builder.availabilityRange(rangeStart, rangeEndExclusive);
+        }
+        return builder.build();
     }
 
     @Override
@@ -523,6 +540,12 @@ public final class CarServiceImpl implements CarService {
         return carDao.getCarById(carId)
                 .map(Car::isModelPendingValidation)
                 .orElse(false);
+    }
+
+    @Override
+    @Transactional
+    public void updateMinimumRentalDays(final long carId, final int days) {
+        carDao.updateMinimumRentalDays(carId, days);
     }
 
     private static String carLabel(final Car car) {

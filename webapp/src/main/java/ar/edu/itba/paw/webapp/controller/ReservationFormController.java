@@ -101,7 +101,7 @@ public final class ReservationFormController {
         form.setFromDateTime(fromDateTime);
         form.setUntilDateTime(untilDateTime);
 
-        final ModelAndView mav = new ModelAndView("reservationForm");
+        final ModelAndView mav = new ModelAndView("reservation/reservationForm");
         mav.addObject("availabilityId", availabilityId);
         final User rider = WebAuthUtils.requireUser(currentUser);
         mav.addObject("riderForename", rider.getForename());
@@ -174,7 +174,7 @@ public final class ReservationFormController {
         }
 
         if (errors.hasErrors()) {
-            final ModelAndView mav = new ModelAndView("reservationForm");
+            final ModelAndView mav = new ModelAndView("reservation/reservationForm");
             mav.addObject("availabilityId", availabilityId);
             final User riderErr = WebAuthUtils.requireUser(currentUser);
             mav.addObject("riderForename", riderErr.getForename());
@@ -188,7 +188,7 @@ public final class ReservationFormController {
         }
 
         if (form.getCarName() == null || form.getCarName().isBlank()) {
-            final ModelAndView mav = new ModelAndView("reservationForm");
+            final ModelAndView mav = new ModelAndView("reservation/reservationForm");
             mav.addObject("reservationError", localeMessages.msg(MessageKeys.RESERVATION_FORM_CAR_NAME_REQUIRED));
             mav.addObject("availabilityId", availabilityId);
             final User riderCar = WebAuthUtils.requireUser(currentUser);
@@ -221,7 +221,7 @@ public final class ReservationFormController {
                     form.getFromDateTime(),
                     form.getUntilDateTime());
         } catch (final ReservationException e) {
-            final ModelAndView mav = new ModelAndView("reservationForm");
+            final ModelAndView mav = new ModelAndView("reservation/reservationForm");
             mav.addObject("reservationError", localeMessages.msg(e));
             mav.addObject("availabilityId", availabilityId);
             final User riderEx = WebAuthUtils.requireUser(currentUser);
@@ -236,7 +236,7 @@ public final class ReservationFormController {
         }
 
         final User riderDone = WebAuthUtils.requireUser(currentUser);
-        final ModelAndView mav = new ModelAndView("reservationConfirmation");
+        final ModelAndView mav = new ModelAndView("reservation/reservationConfirmation");
         mav.addObject("carName", form.getCarName());
         mav.addObject("name", riderDone.getForename());
         mav.addObject("surname", riderDone.getSurname());

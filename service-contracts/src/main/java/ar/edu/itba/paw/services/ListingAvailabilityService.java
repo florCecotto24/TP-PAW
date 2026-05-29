@@ -37,16 +37,18 @@ public interface ListingAvailabilityService {
      * Creates a full set of availability periods for a car without creating a {@code Listing} entity.
      * Each period gets a {@link ar.edu.itba.paw.models.domain.ListingAvailability.Kind#OFFERED} row
      * with the given price/location/time defaults. Per-period prices override the default when provided.
+     * Also persists {@code minimumRentalDays} on the car after validating it does not exceed any period.
      *
-     * @param carId         owning car primary key
-     * @param dayPrice      default price per day (used for periods whose index has no entry in {@code periodPrices})
-     * @param street        pickup street
-     * @param number        pickup street number (nullable)
-     * @param neighborhoodId neighborhood id (nullable)
-     * @param checkInTime   wall check-in time
-     * @param checkOutTime  wall check-out time
-     * @param periods       non-empty list of availability windows
-     * @param periodPrices  per-period price overrides; may be shorter than {@code periods}
+     * @param carId             owning car primary key
+     * @param dayPrice          default price per day (used for periods whose index has no entry in {@code periodPrices})
+     * @param street            pickup street
+     * @param number            pickup street number (nullable)
+     * @param neighborhoodId    neighborhood id (nullable)
+     * @param checkInTime       wall check-in time
+     * @param checkOutTime      wall check-out time
+     * @param periods           non-empty list of availability windows
+     * @param periodPrices      per-period price overrides; may be shorter than {@code periods}
+     * @param minimumRentalDays minimum consecutive days a rider must book (≥ 1)
      * @return the list of persisted offered rows
      */
     List<ListingAvailability> createCarAvailabilityPeriods(
@@ -58,7 +60,16 @@ public interface ListingAvailabilityService {
             LocalTime checkInTime,
             LocalTime checkOutTime,
             List<AvailabilityPeriod> periods,
-            List<BigDecimal> periodPrices);
+            List<BigDecimal> periodPrices,
+            int minimumRentalDays);
+
+    /**
+     * Updates the minimum rental days for an already-published car.
+     * Validates that {@code minDays} does not exceed the shortest currently-effective offered period.
+     *
+     * @throws ar.edu.itba.paw.exception.car.CarValidationException when the new minimum exceeds a period
+     */
+    void updateMinimumRentalDays(long carId, int minDays);
 
     /** All availability segments for the car. */
     List<ListingAvailability> findByCarId(long carId);

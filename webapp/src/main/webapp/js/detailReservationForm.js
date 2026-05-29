@@ -19,6 +19,7 @@
         var form = document.getElementById('detailReservationForm');
         var dateAlert = document.getElementById('detail_date_alert');
         var maxBillableAlert = document.getElementById('detail_max_billable_alert');
+        var minRentalDaysAlert = document.getElementById('detail_min_rental_days_alert');
         var submitBtn = document.getElementById('detailReservationSubmitBtn');
         var pickupTimeLabel = document.getElementById('detail_pickup_time_label');
         var returnTimeLabel = document.getElementById('detail_return_time_label');
@@ -229,30 +230,51 @@
             }
         }
 
+        function isMaxBillableViolated() {
+            var maxStr = form.getAttribute('data-max-billable-days');
+            var maxD = parseInt(maxStr, 10);
+            if (!isFinite(maxD) || maxD < 1 || !hasCompleteRange()) { return false; }
+            return billableDaysInclusive(fromHidden.value, untilHidden.value) > maxD;
+        }
+
+        function isMinRentalDaysViolated() {
+            var minStr = form.getAttribute('data-min-rental-days');
+            var minD = parseInt(minStr, 10);
+            if (!isFinite(minD) || minD < 2 || !hasCompleteRange()) { return false; }
+            return billableDaysInclusive(fromHidden.value, untilHidden.value) < minD;
+        }
+
+        function syncSubmitBtn() {
+            if (!submitBtn) { return; }
+            submitBtn.disabled = isMaxBillableViolated() || isMinRentalDaysViolated();
+        }
+
         function syncMaxBillableAlert() {
             if (!maxBillableAlert) {
                 return;
             }
-            var maxStr = form.getAttribute('data-max-billable-days');
-            var maxD = parseInt(maxStr, 10);
-            if (!isFinite(maxD) || maxD < 1) {
-                maxBillableAlert.setAttribute('hidden', 'hidden');
-                if (submitBtn) { submitBtn.disabled = false; }
-                return;
-            }
-            if (!hasCompleteRange()) {
-                maxBillableAlert.setAttribute('hidden', 'hidden');
-                if (submitBtn) { submitBtn.disabled = false; }
-                return;
-            }
-            var n = billableDaysInclusive(fromHidden.value, untilHidden.value);
-            if (n > maxD) {
+            if (isMaxBillableViolated()) {
                 maxBillableAlert.removeAttribute('hidden');
-                if (submitBtn) { submitBtn.disabled = true; }
             } else {
                 maxBillableAlert.setAttribute('hidden', 'hidden');
-                if (submitBtn) { submitBtn.disabled = false; }
             }
+            syncSubmitBtn();
+        }
+
+        function syncMinRentalDaysAlert() {
+            if (!minRentalDaysAlert) {
+                return;
+            }
+            if (isMinRentalDaysViolated()) {
+                var minStr = form.getAttribute('data-min-rental-days');
+                var minD = parseInt(minStr, 10);
+                var msg = form.getAttribute('data-min-rental-days-msg') || ('Minimum ' + minD + ' days required.');
+                minRentalDaysAlert.textContent = msg;
+                minRentalDaysAlert.removeAttribute('hidden');
+            } else {
+                minRentalDaysAlert.setAttribute('hidden', 'hidden');
+            }
+            syncSubmitBtn();
         }
 
         function compactPrice(price) {
@@ -349,10 +371,26 @@
             return;
         }
 
+        // When arriving from a flexible search (no pre-selected dates), jump the calendar
+        // to the searched month without pre-selecting any dates.
+        if (ctrl.fp && dd.length === 0) {
+            var defaultMonth = form.getAttribute('data-default-month');
+            if (defaultMonth) {
+                var parts = defaultMonth.split('-');
+                if (parts.length === 3) {
+                    var jumpDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    if (!isNaN(jumpDate.getTime())) {
+                        ctrl.fp.jumpToDate(jumpDate, false);
+                    }
+                }
+            }
+        }
+
         if (ctrl.fp && ctrl.fp.config && Array.isArray(ctrl.fp.config.onChange)) {
             ctrl.fp.config.onChange.push(function (selectedDates) {
                 applyRangeProjection(selectedDates, segments);
                 syncMaxBillableAlert();
+                syncMinRentalDaysAlert();
             });
         }
 
@@ -369,29 +407,24 @@
         }
 
         syncMaxBillableAlert();
+        syncMinRentalDaysAlert();
 
         daterangeInput.addEventListener('change', function () {
             syncMaxBillableAlert();
+            syncMinRentalDaysAlert();
         });
         daterangeInput.addEventListener('input', function () {
             syncMaxBillableAlert();
+            syncMinRentalDaysAlert();
         });
 
         form.addEventListener('submit', function (e) {
             syncDateAlert();
             syncMaxBillableAlert();
-            if (!hasCompleteRange()) {
+            syncMinRentalDaysAlert();
+            if (!hasCompleteRange() || isMaxBillableViolated() || isMinRentalDaysViolated()) {
                 e.preventDefault();
                 return false;
-            }
-            var maxStr = form.getAttribute('data-max-billable-days');
-            var maxD = parseInt(maxStr, 10);
-            if (isFinite(maxD) && maxD >= 1) {
-                var n = billableDaysInclusive(fromHidden.value, untilHidden.value);
-                if (n > maxD) {
-                    e.preventDefault();
-                    return false;
-                }
             }
         });
     }

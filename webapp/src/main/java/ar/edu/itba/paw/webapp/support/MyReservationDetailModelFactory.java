@@ -28,7 +28,7 @@ public final class MyReservationDetailModelFactory {
             final ReservationReviewForm riderReviewForm,
             final BindingResult riderReviewBinding,
             final Long ownerCarHubForBreadcrumb) {
-        final ModelAndView mav = new ModelAndView("myReservationDetail");
+        final ModelAndView mav = new ModelAndView("reservation/myReservationDetail");
         detail.populateModel(mav::addObject);
         mav.addObject("activeTab", "my-reservations");
         if (ownerCarHubForBreadcrumb != null) {

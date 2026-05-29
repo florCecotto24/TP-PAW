@@ -191,7 +191,7 @@ public final class ProfileController {
         } else {
             model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
         }
-        return "profile";
+        return "profile/profile";
     }
 
     @PostMapping
@@ -205,7 +205,7 @@ public final class ProfileController {
         final User me = WebAuthUtils.requireUser(currentUser);
         final LocalDate birthParsed = parseAndValidateBirthDate(profileForm.getBirthDate(), bindingResult);
         if (bindingResult.hasErrors()) {
-            return "profile";
+            return "profile/profile";
         }
         try {
             userService.updateDisplayName(me.getId(), profileForm.getForename(), profileForm.getSurname());
@@ -216,10 +216,10 @@ public final class ProfileController {
         } catch (final RydenException e) {
             if (e instanceof InvalidCbuFormatException ic) {
                 bindingResult.rejectValue("cbu", ic.getMessageCode(), ic.getMessageArgs(), null);
-                return "profile";
+                return "profile/profile";
             }
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
-            return "profile";
+            return "profile/profile";
         }
         refreshPrincipalDisplayName(profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
         redirectAttributes.addFlashAttribute("profileSaved", Boolean.TRUE);
@@ -404,7 +404,7 @@ public final class ProfileController {
         }
         model.addAttribute("documentFileName", storedOpt.get().getFileName());
         model.addAttribute("documentType", documentType.name());
-        return "profile-document-view";
+        return "profile/profile-document-view";
     }
 
     @GetMapping("/password")
@@ -413,7 +413,7 @@ public final class ProfileController {
             final Model model) {
         WebAuthUtils.requireUser(currentUser);
         model.addAttribute("profilePasswordForm", new ProfilePasswordChangeForm());
-        return "profile-password";
+        return "profile/profile-password";
     }
 
     @PostMapping("/password")
@@ -425,7 +425,7 @@ public final class ProfileController {
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         if (bindingResult.hasErrors()) {
-            return "profile-password";
+            return "profile/profile-password";
         }
         try {
             userService.changePassword(
@@ -435,7 +435,7 @@ public final class ProfileController {
                     profilePasswordForm.getPasswordConfirm());
         } catch (final RydenException e) {
             bindingResult.reject("profile.password.failed", localeMessages.msg(e));
-            return "profile-password";
+            return "profile/profile-password";
         }
         redirectAttributes.addFlashAttribute("profilePasswordSaved", Boolean.TRUE);
         return "redirect:/profile";

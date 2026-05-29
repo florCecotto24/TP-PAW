@@ -121,6 +121,9 @@ public class Car {
     @JoinColumn(name = "model_id")
     private CarModel carModel;
 
+    @Column(name = "minimum_rental_days", nullable = false)
+    private int minimumRentalDays = 1;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "insurance_file_id")
     private StoredFile insuranceFile;
@@ -144,6 +147,7 @@ public class Car {
         this.createdAt = b.createdAt;
         this.updatedAt = b.updatedAt;
         this.ratingAvg = b.ratingAvg;
+        this.minimumRentalDays = b.minimumRentalDays;
     }
 
     public static Builder builder() {
@@ -162,6 +166,7 @@ public class Car {
         private OffsetDateTime createdAt;
         private OffsetDateTime updatedAt;
         private BigDecimal ratingAvg;
+        private int minimumRentalDays = 1;
 
         public Builder id(final long id) {
             this.id = id;
@@ -215,6 +220,11 @@ public class Car {
 
         public Builder ratingAvg(final BigDecimal ratingAvg) {
             this.ratingAvg = ratingAvg;
+            return this;
+        }
+
+        public Builder minimumRentalDays(final int minimumRentalDays) {
+            this.minimumRentalDays = minimumRentalDays;
             return this;
         }
 
@@ -367,6 +377,14 @@ public class Car {
 
     public void setInsuranceFile(final StoredFile insuranceFile) {
         this.insuranceFile = insuranceFile;
+    }
+
+    public int getMinimumRentalDays() {
+        return minimumRentalDays;
+    }
+
+    public void setMinimumRentalDays(final int minimumRentalDays) {
+        this.minimumRentalDays = minimumRentalDays;
     }
 
     @Override

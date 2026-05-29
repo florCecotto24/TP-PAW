@@ -32,24 +32,6 @@
         Intro
     </p>
 
-    <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
-
-    <div style="margin-bottom:20px;">
-        <div style="margin-bottom:10px;">
-            <a th:href="${ctaUrl}"
-               style="display:inline-block; padding:12px 24px; background-color:#4338ca;
-                      color:#ffffff; text-decoration:none; border-radius:8px;
-                      font-size:14px; font-weight:600;"
-               th:text="#{mail.listingPausedByAdmin.ctaListing}">
-                View listing
-            </a>
-        </div>
-        <p style="font-size:12px; color:#4b5563; line-height:1.6; margin:0;">
-            <span th:text="#{mail.common.fallbackAuthLinkCopy}">If the button does not work</span><br/>
-            <span th:text="${ctaUrl}">listing url</span>
-        </p>
-    </div>
-
     <p style="font-size:12px; color:#9ca3af; margin-top:24px;"
        th:text="#{mail.common.footer}">
         Footer

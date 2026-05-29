@@ -167,7 +167,7 @@ public final class MyCarsController {
             redirectView.setExposeModelAttributes(false);
             return new ModelAndView(redirectView);
         }
-        final ModelAndView mav = new ModelAndView("myListings");
+        final ModelAndView mav = new ModelAndView("listing/myListings");
         mav.addObject("results", resultPage.getContent());
         mav.addObject("myListingsPage", resultPage);
         mav.addObject("activeTab", "my-cars");
@@ -210,7 +210,7 @@ public final class MyCarsController {
         final List<ReservationCardDisplayRow> reservations = resultPage.getContent().stream()
                 .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
                 .collect(Collectors.toList());
-        final ModelAndView mav = new ModelAndView("ownerReservations");
+        final ModelAndView mav = new ModelAndView("reservation/ownerReservations");
         mav.addObject("ownerReservations", reservations);
         mav.addObject("ownerReservationsPage", resultPage);
         mav.addObject("selectedCar", null);
@@ -259,7 +259,7 @@ public final class MyCarsController {
         final List<ReservationCardDisplayRow> reservations = resultPage.getContent().stream()
                 .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
                 .collect(Collectors.toList());
-        final ModelAndView mav = new ModelAndView("ownerReservations");
+        final ModelAndView mav = new ModelAndView("reservation/ownerReservations");
         mav.addObject("ownerReservations", reservations);
         mav.addObject("ownerReservationsPage", resultPage);
         mav.addObject("selectedCar", carOpt.get());
@@ -292,7 +292,7 @@ public final class MyCarsController {
                 final List<ReservationCardDisplayRow> previewReservations = previewPage.getContent().stream()
                         .map(card -> reservationViewService.toReservationCardDisplayRow(card, editLocale))
                         .collect(Collectors.toList());
-                final ModelAndView mav = new ModelAndView("myCarDetail");
+                final ModelAndView mav = new ModelAndView("car/myCarDetail");
                 pmOpt.get().populateModel(mav::addObject);
                 mav.addObject("editForm", editForm);
                 mav.addObject("previewReservations", previewReservations);
@@ -319,13 +319,14 @@ public final class MyCarsController {
                         editForm.getCheckInTime(),
                         editForm.getCheckOutTime(),
                         newPeriods,
-                        newPeriodPrices);
+                        newPeriodPrices,
+                        1);
             } catch (final CarValidationException e) {
                 errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
                 final Optional<OwnerCarDetailPageModel> pmOpt =
                         carService.buildOwnerCarDetailPageModel(carId, LocaleContextHolder.getLocale());
                 if (pmOpt.isPresent()) {
-                    final ModelAndView mav = new ModelAndView("myCarDetail");
+                    final ModelAndView mav = new ModelAndView("car/myCarDetail");
                     pmOpt.get().populateModel(mav::addObject);
                     mav.addObject("editForm", editForm);
                     mav.addObject("activeTab", "my-cars");
@@ -418,7 +419,7 @@ public final class MyCarsController {
                 .collect(Collectors.toList());
 
         final Car car = carOpt.get();
-        final ModelAndView mav = new ModelAndView("carReservations");
+        final ModelAndView mav = new ModelAndView("car/carReservations");
         mav.addObject("car", car);
         mav.addObject("reservations", reservations);
         mav.addObject("carReservationsPage", resultPage);
@@ -447,7 +448,7 @@ public final class MyCarsController {
             final List<ReservationCardDisplayRow> previewReservations = previewPage.getContent().stream()
                     .map(card -> reservationViewService.toReservationCardDisplayRow(card, carDetailLocale))
                     .collect(Collectors.toList());
-            final ModelAndView mav = new ModelAndView("myCarDetail");
+            final ModelAndView mav = new ModelAndView("car/myCarDetail");
             pmOpt.get().populateModel(mav::addObject);
             mav.addObject("editForm", editForm);
             mav.addObject("previewReservations", previewReservations);
@@ -457,7 +458,7 @@ public final class MyCarsController {
         }
         final long carImageId = carPictureService.getCarPicturesByCarId(carOpt.get().getId()).stream()
                 .findFirst().map(p -> p.getImageId()).orElse(0L);
-        final ModelAndView mav = new ModelAndView("myCarDetail");
+        final ModelAndView mav = new ModelAndView("car/myCarDetail");
         mav.addObject("car", carOpt.get());
         mav.addObject("carImageId", carImageId);
         mav.addObject("hasPublishedAvailability", false);
@@ -607,7 +608,8 @@ public final class MyCarsController {
                     form.getCheckInTime(),
                     form.getCheckOutTime(),
                     form.toAvailabilityPeriods(),
-                    form.toPeriodPrices());
+                    form.toPeriodPrices(),
+                    form.getMinimumRentalDays());
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         } catch (final CarValidationException e) {
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
@@ -741,7 +743,7 @@ public final class MyCarsController {
     private ModelAndView buildCreateListingView(final Car car, final CreateListingForm form, final User user) {
         final User freshUser = userService.getUserById(user.getId()).orElse(user);
         final boolean userHasCbu = userService.hasValidCbu(freshUser);
-        final ModelAndView mav = new ModelAndView("createListing");
+        final ModelAndView mav = new ModelAndView("listing/createListing");
         mav.addObject("car", car);
         mav.addObject("createListingForm", form);
         mav.addObject("userHasCbu", userHasCbu);
@@ -817,7 +819,7 @@ public final class MyCarsController {
     private ModelAndView buildEditAvailabilityView(
             final Car car, final long availabilityId, final CreateListingForm form, final User user) {
         final User freshUser = userService.getUserById(user.getId()).orElse(user);
-        final ModelAndView mav = new ModelAndView("editAvailability");
+        final ModelAndView mav = new ModelAndView("listing/editAvailability");
         mav.addObject("car", car);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("createListingForm", form);

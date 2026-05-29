@@ -25,6 +25,6 @@ public final class LoginController {
         if ("emailNotValidated".equals(error)) {
             return "redirect:/verify-email?fromLogin=1";
         }
-        return "login";
+        return "auth/login";
     }
 }

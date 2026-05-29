@@ -7,7 +7,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="counterpartyProfile.title"/> — <spring:message code="app.title"/></title>
-    <%@include file="header.jsp" %>
+    <%@include file="../header.jsp" %>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/counterparty-profile.css">
 </head>
@@ -95,6 +95,6 @@
     </div>
 </main>
 
-<%@include file="footer.jsp" %>
+<%@include file="../footer.jsp" %>
 </body>
 </html>

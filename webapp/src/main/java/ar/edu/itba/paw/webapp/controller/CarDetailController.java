@@ -152,7 +152,7 @@ public class CarDetailController {
                 + (car.getBrand() != null && car.getModel() != null ? " " : "")
                 + (car.getModel() != null ? car.getModel() : "");
 
-        final ModelAndView mav = new ModelAndView("carDetail");
+        final ModelAndView mav = new ModelAndView("car/carDetail");
         final boolean currentUserIsAdmin = authentication != null
                 && authentication.getAuthorities().stream()
                         .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
@@ -229,7 +229,7 @@ public class CarDetailController {
                         1,
                         counterpartyListingsPageSize);
 
-        final ModelAndView mav = new ModelAndView("counterpartyProfile");
+        final ModelAndView mav = new ModelAndView("profile/counterpartyProfile");
         mav.addObject("activeTab", "explore");
         mav.addObject("counterpartyForename", headerDto.getForename());
         mav.addObject("counterpartySurname", headerDto.getSurname());
@@ -282,7 +282,7 @@ public class CarDetailController {
         final Page<CarCard> listingPage = carService.getOwnerCarCards(pageCriteria);
         final List<VehicleCardView> cards =
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(listingPage.getContent());
-        final ModelAndView mav = new ModelAndView("counterpartyActiveListingCols");
+        final ModelAndView mav = new ModelAndView("profile/counterpartyActiveListingCols");
         mav.addObject("counterpartyActiveListings", cards);
         mav.addObject("fragmentHasMore", listingPage.isHasNext());
         mav.addObject("fragmentNextPage", listingPage.isHasNext() ? page + 1 : page);
@@ -290,7 +290,7 @@ public class CarDetailController {
     }
 
     private static ModelAndView emptyCounterpartyListingsFragment() {
-        final ModelAndView mav = new ModelAndView("counterpartyActiveListingCols");
+        final ModelAndView mav = new ModelAndView("profile/counterpartyActiveListingCols");
         mav.addObject("counterpartyActiveListings", List.of());
         mav.addObject("fragmentHasMore", false);
         mav.addObject("fragmentNextPage", 0);

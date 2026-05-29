@@ -6,7 +6,7 @@
 <html lang="en">
 <head>
     <title><spring:message code="reservationChat.pageTitle"/> — <spring:message code="app.title"/></title>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light reservation-chat-body">
 <ryden:navbar/>
@@ -158,6 +158,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" crossorigin="anonymous"></script>
 <script src="${pageContext.request.contextPath}/js/reservation-chat.js"></script>
-<%@ include file="includes/footerScripts.jspf" %>
+<%@ include file="../includes/footerScripts.jspf" %>
 </body>
 </html>

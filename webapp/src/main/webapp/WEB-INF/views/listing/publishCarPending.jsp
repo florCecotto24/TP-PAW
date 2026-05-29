@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <%@include file="header.jsp"%>
+  <%@include file="../header.jsp"%>
 </head>
 <body class="bg-light has-fixed-navbar">
 <ryden:navbar/>
@@ -64,6 +64,6 @@
   </div>
 </main>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>

@@ -19,6 +19,7 @@ public final class VehicleCardView {
     private final PriceMarketPosition priceMarketPosition;
     private final BigDecimal marketAveragePrice;
     private final long marketSampleCount;
+    private final int minimumRentalDays;
 
     public VehicleCardView(
             final long carId,
@@ -26,7 +27,7 @@ public final class VehicleCardView {
             final String model,
             final BigDecimal price,
             final long imageId) {
-        this(carId, brand, model, price, imageId, null, null, 0, null, null, 0L);
+        this(carId, brand, model, price, imageId, null, null, 0, null, null, 0L, 1);
     }
 
     public VehicleCardView(
@@ -36,7 +37,7 @@ public final class VehicleCardView {
             final BigDecimal price,
             final long imageId,
             final String statusKey) {
-        this(carId, brand, model, price, imageId, statusKey, null, 0, null, null, 0L);
+        this(carId, brand, model, price, imageId, statusKey, null, 0, null, null, 0L, 1);
     }
 
     public VehicleCardView(
@@ -47,7 +48,7 @@ public final class VehicleCardView {
             final long imageId,
             final String statusKey,
             final BigDecimal ratingAvg) {
-        this(carId, brand, model, price, imageId, statusKey, ratingAvg, 0, null, null, 0L);
+        this(carId, brand, model, price, imageId, statusKey, ratingAvg, 0, null, null, 0L, 1);
     }
 
     public VehicleCardView(
@@ -59,7 +60,7 @@ public final class VehicleCardView {
             final String statusKey,
             final BigDecimal ratingAvg,
             final long reviewCount) {
-        this(carId, brand, model, price, imageId, statusKey, ratingAvg, reviewCount, null, null, 0L);
+        this(carId, brand, model, price, imageId, statusKey, ratingAvg, reviewCount, null, null, 0L, 1);
     }
 
     public VehicleCardView(
@@ -74,6 +75,22 @@ public final class VehicleCardView {
             final PriceMarketPosition priceMarketPosition,
             final BigDecimal marketAveragePrice,
             final long marketSampleCount) {
+        this(carId, brand, model, price, imageId, statusKey, ratingAvg, reviewCount, priceMarketPosition, marketAveragePrice, marketSampleCount, 1);
+    }
+
+    public VehicleCardView(
+            final long carId,
+            final String brand,
+            final String model,
+            final BigDecimal price,
+            final long imageId,
+            final String statusKey,
+            final BigDecimal ratingAvg,
+            final long reviewCount,
+            final PriceMarketPosition priceMarketPosition,
+            final BigDecimal marketAveragePrice,
+            final long marketSampleCount,
+            final int minimumRentalDays) {
         this.carId = carId;
         this.brand = brand;
         this.model = model;
@@ -85,6 +102,7 @@ public final class VehicleCardView {
         this.priceMarketPosition = priceMarketPosition;
         this.marketAveragePrice = marketAveragePrice;
         this.marketSampleCount = marketSampleCount;
+        this.minimumRentalDays = minimumRentalDays;
     }
 
     /**
@@ -99,7 +117,11 @@ public final class VehicleCardView {
                 card.getImageId(),
                 null,
                 card.getRatingAvg(),
-                0);
+                0,
+                null,
+                null,
+                0L,
+                card.getMinimumRentalDays());
     }
 
     /**
@@ -123,7 +145,8 @@ public final class VehicleCardView {
                 0,
                 position,
                 insight.getAveragePrice(),
-                insight.getSampleCount());
+                insight.getSampleCount(),
+                card.getMinimumRentalDays());
     }
 
     /**
@@ -188,5 +211,9 @@ public final class VehicleCardView {
 
     public long getMarketSampleCount() {
         return marketSampleCount;
+    }
+
+    public int getMinimumRentalDays() {
+        return minimumRentalDays;
     }
 }

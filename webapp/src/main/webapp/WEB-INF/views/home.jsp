@@ -34,6 +34,7 @@
                         formClass="search-menu w-100"
                         actionPath="/search"
                         showFilters="true"
+                        allowFlexibleSearch="true"
                         autoSubmitOnFilterChange="false"
                         clearFiltersHref="${homeSearchFiltersClearHref}"
                         showClearFilters="${hasActiveSearchFilters}"

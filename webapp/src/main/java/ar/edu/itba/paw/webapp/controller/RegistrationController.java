@@ -90,7 +90,7 @@ public final class RegistrationController {
         final RegistrationAccountForm form = new RegistrationAccountForm();
         copyRegisterFlashToForm(model, form);
         model.addAttribute("registrationAccountForm", form);
-        return "register";
+        return "auth/register";
     }
 
     private static void copyRegisterFlashToForm(final Model model, final RegistrationAccountForm form) {
@@ -120,7 +120,7 @@ public final class RegistrationController {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/register");
         }
         if (bindingResult.hasErrors()) {
-            return "register";
+            return "auth/register";
         }
         try {
             final User created = userService.registerUserRequiringAccountConfirmation(
@@ -140,7 +140,7 @@ public final class RegistrationController {
             return "redirect:/register";
         } catch (final RydenException e) {
             bindingResult.reject("register.failed", localeMessages.msg(e));
-            return "register";
+            return "auth/register";
         }
     }
 
@@ -182,7 +182,7 @@ public final class RegistrationController {
             }
         }
         model.addAttribute("verifyEmailForm", verifyEmailForm);
-        return "verify-email";
+        return "auth/verify-email";
     }
 
     @PostMapping("/verify-email/resend")
@@ -197,7 +197,7 @@ public final class RegistrationController {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
         if (bindingResult.hasErrors()) {
-            return "verify-email";
+            return "auth/verify-email";
         }
         final String email = verifyEmailForm.getEmail();
         try {
@@ -223,7 +223,7 @@ public final class RegistrationController {
             final HttpServletResponse response,
             final RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            return "verify-email";
+            return "auth/verify-email";
         }
         final String email = verifyEmailForm.getEmail();
         final String code = verifyEmailForm.getCode();

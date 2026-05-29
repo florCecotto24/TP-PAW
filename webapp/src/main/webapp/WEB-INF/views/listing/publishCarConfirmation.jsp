@@ -5,7 +5,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <%@include file="header.jsp"%>
+  <%@include file="../header.jsp"%>
 </head>
 <body class="bg-light has-fixed-navbar">
 <ryden:navbar/>
@@ -52,6 +52,10 @@
               <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
               <spring:message code="publishCar.confirmation.createListingCta"/>
             </a>
+            <a href="<c:url value='/my-cars'/>" class="btn btn-outline-primary">
+              <i class="bi bi-car-front me-1" aria-hidden="true"></i>
+              <spring:message code="publishCar.confirmation.myCarsCta"/>
+            </a>
             <a href="<c:url value='/search'/>" class="btn btn-outline-secondary">
               <spring:message code="common.backToSearch"/>
             </a>
@@ -62,6 +66,6 @@
   </div>
 </main>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 </body>
 </html>

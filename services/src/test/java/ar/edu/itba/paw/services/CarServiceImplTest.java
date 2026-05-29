@@ -1,9 +1,12 @@
 package ar.edu.itba.paw.services;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import ar.edu.itba.paw.models.util.CarSearchCriteria;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,8 @@ import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.PriceMarketPosition;
 import ar.edu.itba.paw.persistence.CarDao;
+import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 
 @ExtendWith(MockitoExtension.class)
 public class CarServiceImplTest {
@@ -29,6 +34,12 @@ public class CarServiceImplTest {
 
     @Mock
     private CarDao carDao;
+
+    @Mock
+    private ReservationTimingPolicy reservationTimingPolicy;
+
+    @Mock
+    private PaginationPolicy paginationPolicy;
 
     @InjectMocks
     private CarServiceImpl carService;
@@ -228,6 +239,50 @@ public class CarServiceImplTest {
         Assertions.assertEquals(
                 PriceMarketPosition.BELOW_MARKET,
                 contexts.get(5L).getPosition());
+    }
+
+    @Test
+    public void testBuildSearchCriteriaWithFlexibleMonthSetsFlexibleSearchTrue() {
+        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
+        Mockito.lenient().when(paginationPolicy.getUiPageSize()).thenReturn(12);
+        Mockito.lenient().when(paginationPolicy.getDbFetchSize()).thenReturn(24);
+        final CarSearchCriteria criteria = carService.buildSearchCriteria(
+                null, null, null, null, null, null, null,
+                null, null, 0, null, null, null,
+                true, "2026-06", null);
+
+        Assertions.assertTrue(criteria.isFlexibleSearch());
+        Assertions.assertEquals(YearMonth.of(2026, 6), criteria.getFlexibleMonth());
+        Assertions.assertNull(criteria.getFlexibleDays());
+    }
+
+    @Test
+    public void testBuildSearchCriteriaWithFlexibleMonthAndDaysSetsFlexibleDays() {
+        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
+        Mockito.lenient().when(paginationPolicy.getUiPageSize()).thenReturn(12);
+        Mockito.lenient().when(paginationPolicy.getDbFetchSize()).thenReturn(24);
+        final CarSearchCriteria criteria = carService.buildSearchCriteria(
+                null, null, null, null, null, null, null,
+                null, null, 0, null, null, null,
+                true, "2026-08", 7);
+
+        Assertions.assertTrue(criteria.isFlexibleSearch());
+        Assertions.assertEquals(YearMonth.of(2026, 8), criteria.getFlexibleMonth());
+        Assertions.assertEquals(Integer.valueOf(7), criteria.getFlexibleDays());
+    }
+
+    @Test
+    public void testBuildSearchCriteriaWithFlexibleFalseIsNotFlexibleSearch() {
+        Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
+        Mockito.lenient().when(paginationPolicy.getUiPageSize()).thenReturn(12);
+        Mockito.lenient().when(paginationPolicy.getDbFetchSize()).thenReturn(24);
+        final CarSearchCriteria criteria = carService.buildSearchCriteria(
+                null, null, null, null, null, null, null,
+                null, null, 0, null, null, null,
+                false, "2026-06", 3);
+
+        Assertions.assertFalse(criteria.isFlexibleSearch());
+        Assertions.assertNull(criteria.getFlexibleMonth());
     }
 
 }

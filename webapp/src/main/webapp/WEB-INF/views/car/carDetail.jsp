@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <%@include file="header.jsp"%>
+    <%@include file="../header.jsp"%>
 </head>
 <body class="bg-light has-fixed-navbar">
 <ryden:navbar/>
@@ -193,7 +193,9 @@
                         carName="${carTitle}"
                         maxBillableDays="${maxReservationBillableDays}"
                         isOwnerRequesting="${isOwnerRequesting}"
-                        searchNeighborhoodIds="${searchNeighborhoodIds}"/>
+                        searchNeighborhoodIds="${searchNeighborhoodIds}"
+                        minimumRentalDays="${car.minimumRentalDays}"
+                        defaultMonthFirstDay="${reservationDefaultMonthFirstDay}"/>
             </div>
         </div>
     </div>
@@ -235,7 +237,7 @@
         vehicleLabel="${carTitle}"/>
 </c:if>
 
-<%@include file="footer.jsp"%>
+<%@include file="../footer.jsp"%>
 <script src="<c:url value='/js/detailReservationForm.js'/>"></script>
 </body>
 </html>
