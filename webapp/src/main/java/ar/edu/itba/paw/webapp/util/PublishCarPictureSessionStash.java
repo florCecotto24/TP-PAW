@@ -26,9 +26,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
 
-import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
+import ar.edu.itba.paw.models.util.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 
@@ -147,13 +148,18 @@ public final class PublishCarPictureSessionStash {
         return Optional.of(Files.readAllBytes(file));
     }
 
-    public static MediaType safeImageMediaType(final String contentType) {
-        if (Image.isImageContentType(contentType)) {
+    public List<PublishCarRetainedImage> getStashedRetainedImages(final HttpSession session) {
+        return readStash(session);
+    }
+
+    public static MediaType safeGalleryMediaType(final String contentType) {
+        if (CarGalleryMediaContentTypes.isImageContentType(contentType)
+                || CarGalleryMediaContentTypes.isVideoContentType(contentType, null)) {
             try {
                 return MediaType.parseMediaType(contentType);
             } catch (final IllegalArgumentException e) {
                 LOG.atDebug()
-                        .setMessage("Unparseable image Content-Type '{}', using application/octet-stream: {}")
+                        .setMessage("Unparseable gallery Content-Type '{}', using application/octet-stream: {}")
                         .addArgument(contentType)
                         .addArgument(e.toString())
                         .setCause(e)
@@ -163,17 +169,22 @@ public final class PublishCarPictureSessionStash {
         return MediaType.APPLICATION_OCTET_STREAM;
     }
 
+    /** @deprecated use {@link #safeGalleryMediaType(String)} */
+    public static MediaType safeImageMediaType(final String contentType) {
+        return safeGalleryMediaType(contentType);
+    }
+
     /**
      * If the request brings files, replaces the stash on disk; otherwise, keeps the previous stash.
      */
     public void syncFromForm(final PublishCarForm form, final HttpSession session) throws IOException {
-        final List<ImageUpload> fromForm = toImageUploads(form.getPictures());
+        final List<GalleryMediaUpload> fromForm = toGalleryMediaUploads(form.getPictures());
         if (fromForm.isEmpty()) {
             return;
         }
         deleteStashedFilesOnly(session);
         final List<PublishCarRetainedImage> retained = new ArrayList<>(fromForm.size());
-        for (final ImageUpload u : fromForm) {
+        for (final GalleryMediaUpload u : fromForm) {
             final String token = UUID.randomUUID().toString();
             writeStashFile(session.getId(), token, u.getData());
             retained.add(new PublishCarRetainedImage(token, u.getFilename(), u.getContentType()));
@@ -191,8 +202,9 @@ public final class PublishCarPictureSessionStash {
         }
     }
 
-    public List<ImageUpload> resolveUploads(final PublishCarForm form, final HttpSession session) throws IOException {
-        final List<ImageUpload> fromForm = toImageUploads(form.getPictures());
+    public List<GalleryMediaUpload> resolveUploads(final PublishCarForm form, final HttpSession session)
+            throws IOException {
+        final List<GalleryMediaUpload> fromForm = toGalleryMediaUploads(form.getPictures());
         if (!fromForm.isEmpty()) {
             return fromForm;
         }
@@ -200,13 +212,13 @@ public final class PublishCarPictureSessionStash {
         if (stashed.isEmpty()) {
             return Collections.emptyList();
         }
-        final List<ImageUpload> out = new ArrayList<>(stashed.size());
+        final List<GalleryMediaUpload> out = new ArrayList<>(stashed.size());
         for (final PublishCarRetainedImage r : stashed) {
             final Path file = stashFile(session.getId(), r.stashToken());
             if (!Files.isRegularFile(file)) {
-                throw new IOException("Missing stashed publish-car image file");
+                throw new IOException("Missing stashed publish-car gallery media file");
             }
-            out.add(new ImageUpload(r.filename(), r.contentType(), Files.readAllBytes(file)));
+            out.add(new GalleryMediaUpload(r.filename(), r.contentType(), Files.readAllBytes(file)));
         }
         return out;
     }
@@ -214,7 +226,7 @@ public final class PublishCarPictureSessionStash {
     public void validatePicturePresence(final PublishCarForm form, final HttpSession session, final BindingResult errors) {
         final int fromForm = countNonEmptyMultipart(form.getPictures());
         final int stashSize = readStash(session).size();
-        if (fromForm > 8) {
+        if (fromForm > CarGalleryUploadPolicy.MAX_ITEMS) {
             errors.rejectValue(
                     "pictures",
                     "validation.pictures.size",
@@ -228,7 +240,7 @@ public final class PublishCarPictureSessionStash {
                     localeMessages.msg("validation.pictures.notNull"));
             return;
         }
-        if (stashSize > 8) {
+        if (stashSize > CarGalleryUploadPolicy.MAX_ITEMS) {
             errors.rejectValue(
                     "pictures",
                     "validation.pictures.size",
@@ -280,16 +292,16 @@ public final class PublishCarPictureSessionStash {
         return (List<PublishCarRetainedImage>) raw;
     }
 
-    private static List<ImageUpload> toImageUploads(final MultipartFile[] pictures) throws IOException {
+    private static List<GalleryMediaUpload> toGalleryMediaUploads(final MultipartFile[] pictures) throws IOException {
         if (pictures == null) {
             return Collections.emptyList();
         }
-        final List<ImageUpload> out = new ArrayList<>();
+        final List<GalleryMediaUpload> out = new ArrayList<>();
         for (final MultipartFile picture : pictures) {
             if (picture == null || picture.isEmpty()) {
                 continue;
             }
-            out.add(new ImageUpload(
+            out.add(new GalleryMediaUpload(
                     picture.getOriginalFilename(),
                     picture.getContentType(),
                     picture.getBytes()));

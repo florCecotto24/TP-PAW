@@ -122,6 +122,7 @@ public class WebAuthConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/search", "/car-detail").permitAll()
                         .requestMatchers("/image/**").permitAll()
+                        .requestMatchers("/car-media/**").permitAll()
                         .requestMatchers(
                                 "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()

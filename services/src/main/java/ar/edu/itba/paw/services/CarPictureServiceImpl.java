@@ -12,17 +12,22 @@ import ar.edu.itba.paw.exception.image.ImageValidationException;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.persistence.CarPictureDao;
 
-/** Gallery rows via {@link CarPictureDao}; {@link ImageService} guards {@code imageId} on create. */
+/** Gallery rows via {@link CarPictureDao}; validates referenced media ids on create. */
 @Service
 public final class CarPictureServiceImpl implements CarPictureService {
 
     private final CarPictureDao carPictureDao;
     private final ImageService imageService;
+    private final StoredFileService storedFileService;
 
     @Autowired
-    public CarPictureServiceImpl(final CarPictureDao carPictureDao, final ImageService imageService) {
+    public CarPictureServiceImpl(
+            final CarPictureDao carPictureDao,
+            final ImageService imageService,
+            final StoredFileService storedFileService) {
         this.carPictureDao = carPictureDao;
         this.imageService = imageService;
+        this.storedFileService = storedFileService;
     }
 
     @Override
@@ -35,6 +40,16 @@ public final class CarPictureServiceImpl implements CarPictureService {
     }
 
     @Override
+    @Transactional
+    public CarPicture createCarPictureFromVideo(
+            final long carId, final long storedFileId, final int displayOrder) {
+        if (storedFileId <= 0 || storedFileService.findById(storedFileId).isEmpty()) {
+            throw new ImageValidationException(MessageKeys.IMAGE_INVALID_ID);
+        }
+        return carPictureDao.createCarPictureFromVideo(carId, storedFileId, displayOrder);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<CarPicture> getCarPictureById(final long id) {
         return carPictureDao.getCarPictureById(id);
@@ -44,5 +59,11 @@ public final class CarPictureServiceImpl implements CarPictureService {
     @Transactional(readOnly = true)
     public List<CarPicture> getCarPicturesByCarId(final long carId) {
         return carPictureDao.getCarPicturesByCarId(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isStoredFileInCarGallery(final long storedFileId) {
+        return carPictureDao.isStoredFileInCarGallery(storedFileId);
     }
 }

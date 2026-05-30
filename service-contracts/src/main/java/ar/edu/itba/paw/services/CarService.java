@@ -6,7 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.CarCard;
@@ -54,7 +54,7 @@ public interface CarService {
             Car.Powertrain powertrain,
             Car.Transmission transmission,
             String description,
-            List<ImageUpload> images,
+            List<GalleryMediaUpload> galleryMedia,
             String insuranceFilename,
             String insuranceContentType,
             byte[] insuranceData);

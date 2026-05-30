@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
-import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
@@ -43,6 +43,7 @@ import ar.edu.itba.paw.services.CarModelService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedInsurance;
@@ -55,7 +56,7 @@ import ar.edu.itba.paw.webapp.util.PublishCarPictureSessionStash;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.PublishCarFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
-import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
+import ar.edu.itba.paw.webapp.validation.support.MultipartGalleryMediaValidation;
 
 /** Step 1 of the two-step publish flow: registers a car with pictures. */
 @Controller
@@ -69,7 +70,8 @@ public final class PublishCarFormController {
     private final CarModelService carModelService;
     private final LocaleMessages localeMessages;
     private final ImageService imageService;
-    private final MultipartImageValidation multipartImageValidation;
+    private final MultipartGalleryMediaValidation multipartGalleryMediaValidation;
+    private final CarGalleryUploadPolicy carGalleryUploadPolicy;
     private final PublishCarPictureSessionStash pictureStash;
     private final PublishCarInsuranceSessionStash insuranceStash;
     private final CarEnumOptions carEnumOptions;
@@ -85,7 +87,8 @@ public final class PublishCarFormController {
             final CarModelService carModelService,
             final LocaleMessages localeMessages,
             final ImageService imageService,
-            final MultipartImageValidation multipartImageValidation,
+            final MultipartGalleryMediaValidation multipartGalleryMediaValidation,
+            final CarGalleryUploadPolicy carGalleryUploadPolicy,
             final PublishCarPictureSessionStash pictureStash,
             final PublishCarInsuranceSessionStash insuranceStash,
             final CarEnumOptions carEnumOptions,
@@ -99,7 +102,8 @@ public final class PublishCarFormController {
         this.carModelService = carModelService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
-        this.multipartImageValidation = multipartImageValidation;
+        this.multipartGalleryMediaValidation = multipartGalleryMediaValidation;
+        this.carGalleryUploadPolicy = carGalleryUploadPolicy;
         this.pictureStash = pictureStash;
         this.insuranceStash = insuranceStash;
         this.carEnumOptions = carEnumOptions;
@@ -143,6 +147,16 @@ public final class PublishCarFormController {
     @ModelAttribute("uploadMaxImageMegabytes")
     public long uploadMaxImageMegabytes() {
         return imageService.getMaxImageMegabytesRoundedUp();
+    }
+
+    @ModelAttribute("uploadMaxGalleryVideoBytes")
+    public long uploadMaxGalleryVideoBytes() {
+        return carGalleryUploadPolicy.getMaxVideoBytes();
+    }
+
+    @ModelAttribute("uploadMaxGalleryVideoMegabytes")
+    public long uploadMaxGalleryVideoMegabytes() {
+        return carGalleryUploadPolicy.getMaxVideoMegabytesRoundedUp();
     }
 
     @ModelAttribute("uploadMaxProfileDocumentMegabytes")
@@ -247,7 +261,7 @@ public final class PublishCarFormController {
         if (bytes.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        final MediaType mediaType = PublishCarPictureSessionStash.safeImageMediaType(img.contentType());
+        final MediaType mediaType = PublishCarPictureSessionStash.safeGalleryMediaType(img.contentType());
         return ResponseEntity.ok().contentType(mediaType).body(bytes.get());
     }
 
@@ -286,19 +300,19 @@ public final class PublishCarFormController {
 
         final int fromForm = PublishCarPictureSessionStash.countNonEmptyMultipart(form.getPictures());
         if (fromForm > 0) {
-            if (!multipartImageValidation.validateFilesAreImages(form.getPictures(), errors, "pictures")) {
+            if (!multipartGalleryMediaValidation.validateFilesAreGalleryMedia(form.getPictures(), errors, "pictures")) {
                 pictureStash.trySyncFromForm(form, session, errors);
                 insuranceStash.trySyncFromForm(form, session);
                 return publishCarFormView(session);
             }
-            if (!multipartImageValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
+            if (!multipartGalleryMediaValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
                 pictureStash.trySyncFromForm(form, session, errors);
                 insuranceStash.trySyncFromForm(form, session);
                 return publishCarFormView(session);
             }
         }
 
-        final List<ImageUpload> uploads;
+        final List<GalleryMediaUpload> uploads;
         try {
             uploads = pictureStash.resolveUploads(form, session);
         } catch (final IOException e) {
@@ -310,12 +324,12 @@ public final class PublishCarFormController {
             return publishCarFormView(session);
         }
 
-        if (!multipartImageValidation.validateImageUploadsAreImages(uploads, errors, "pictures")) {
+        if (!multipartGalleryMediaValidation.validateGalleryMediaUploadsAreAllowed(uploads, errors, "pictures")) {
             pictureStash.trySyncFromForm(form, session, errors);
             insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
         }
-        if (!multipartImageValidation.validateImageUploadsWithinMaxSize(uploads, errors)) {
+        if (!multipartGalleryMediaValidation.validateGalleryMediaUploadsWithinMaxSize(uploads, errors)) {
             pictureStash.trySyncFromForm(form, session, errors);
             insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
@@ -463,6 +477,7 @@ public final class PublishCarFormController {
         mav.addObject("activeTab", "publish-car");
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
+        mav.addObject("retainedPictures", pictureStash.getStashedRetainedImages(session));
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
         final PublishCarRetainedInsurance retainedInsurance = insuranceStash.getOrNull(session);
         if (retainedInsurance != null) {

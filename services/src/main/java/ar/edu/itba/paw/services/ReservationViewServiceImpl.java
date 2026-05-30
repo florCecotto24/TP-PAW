@@ -118,7 +118,11 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
         final String totalPrice = ArsMoneyFormat.format(reservation.getTotalPrice());
         final List<ar.edu.itba.paw.models.domain.CarPicture> carPictures = carPictureService.getCarPicturesByCarId(carId);
-        final long carImageId = carPictures.isEmpty() ? 0L : carPictures.get(0).getImageId();
+        final long carImageId = carPictures.stream()
+                .map(ar.edu.itba.paw.models.domain.CarPicture::getImageId)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(0L);
         final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
         final boolean periodEnded = nowUtc.isAfter(reservation.getEndDate());
         final boolean hasOwnerReview = reviewService.hasOwnerReview(reservation.getId());

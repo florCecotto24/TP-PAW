@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.persistence.CarPictureDao;
 
 @Transactional(readOnly = true)
@@ -28,7 +29,19 @@ public class CarPictureJpaDao implements CarPictureDao {
         final Car carRef = em.getReference(Car.class, carId);
         final Image imageRef = em.getReference(Image.class, imageId);
         final OffsetDateTime now = OffsetDateTime.now();
-        final CarPicture picture = new CarPicture(carRef, imageRef, displayOrder, now, now);
+        final CarPicture picture = CarPicture.forImage(carRef, imageRef, displayOrder, now, now);
+        em.persist(picture);
+        return picture;
+    }
+
+    @Override
+    @Transactional
+    public CarPicture createCarPictureFromVideo(
+            final long carId, final long storedFileId, final int displayOrder) {
+        final Car carRef = em.getReference(Car.class, carId);
+        final StoredFile storedFileRef = em.getReference(StoredFile.class, storedFileId);
+        final OffsetDateTime now = OffsetDateTime.now();
+        final CarPicture picture = CarPicture.forVideo(carRef, storedFileRef, displayOrder, now, now);
         em.persist(picture);
         return picture;
     }
@@ -41,9 +54,22 @@ public class CarPictureJpaDao implements CarPictureDao {
     @Override
     public List<CarPicture> getCarPicturesByCarId(final long carId) {
         return em.createQuery(
-                        "FROM CarPicture cp WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
+                        "SELECT cp FROM CarPicture cp "
+                                + "LEFT JOIN FETCH cp.image "
+                                + "LEFT JOIN FETCH cp.storedFile "
+                                + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
                         CarPicture.class)
                 .setParameter("carId", carId)
                 .getResultList();
+    }
+
+    @Override
+    public boolean isStoredFileInCarGallery(final long storedFileId) {
+        final Long count = em.createQuery(
+                        "SELECT COUNT(cp) FROM CarPicture cp WHERE cp.storedFile.id = :storedFileId",
+                        Long.class)
+                .setParameter("storedFileId", storedFileId)
+                .getSingleResult();
+        return count != null && count > 0;
     }
 }

@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.dto.ImageUpload;
+import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
@@ -42,6 +42,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.CbuRules;
+import ar.edu.itba.paw.models.util.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.models.util.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
@@ -120,7 +121,7 @@ public final class CarServiceImpl implements CarService {
             final Car.Powertrain powertrain,
             final Car.Transmission transmission,
             final String description,
-            final List<ImageUpload> images,
+            final List<GalleryMediaUpload> galleryMedia,
             final String insuranceFilename,
             final String insuranceContentType,
             final byte[] insuranceData) {
@@ -132,16 +133,26 @@ public final class CarServiceImpl implements CarService {
             car.setDescription(description.strip());
         }
         int displayOrder = 1;
-        if (images != null) {
-            for (final ImageUpload picture : images) {
-                if (picture.getData() == null || picture.getData().length == 0) {
+        if (galleryMedia != null) {
+            for (final GalleryMediaUpload media : galleryMedia) {
+                if (media.getData() == null || media.getData().length == 0) {
                     continue;
                 }
-                final Image image = imageService.createImage(
-                        picture.getFilename(),
-                        picture.getContentType(),
-                        picture.getData());
-                carPictureService.createCarPicture(car.getId(), image.getId(), displayOrder);
+                if (CarGalleryMediaContentTypes.isImageContentType(media.getContentType())) {
+                    final Image image = imageService.createImage(
+                            media.getFilename(), media.getContentType(), media.getData());
+                    carPictureService.createCarPicture(car.getId(), image.getId(), displayOrder);
+                } else if (CarGalleryMediaContentTypes.isVideoContentType(
+                        media.getContentType(), media.getFilename())) {
+                    final StoredFile video = storedFileService.create(
+                            ownerId,
+                            media.getFilename() != null ? media.getFilename() : "video",
+                            media.getContentType() != null ? media.getContentType() : "video/mp4",
+                            media.getData());
+                    carPictureService.createCarPictureFromVideo(car.getId(), video.getId(), displayOrder);
+                } else {
+                    throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
+                }
                 displayOrder++;
             }
         }
@@ -605,7 +616,10 @@ public final class CarServiceImpl implements CarService {
         return getCarById(carId).map(car -> {
             final List<ListingAvailability> availabilities = listingAvailabilityService.findEffectiveOfferedByCar(carId);
             final long carImageId = carPictureService.getCarPicturesByCarId(carId).stream()
-                    .findFirst().map(p -> p.getImageId()).orElse(0L);
+                    .map(p -> p.getImageId())
+                    .filter(java.util.Objects::nonNull)
+                    .findFirst()
+                    .orElse(0L);
             final User owner = car.getOwner();
             final long ownerId = owner.getId();
             final List<Neighborhood> allNeighborhoods = locationService.findAllNeighborhoods();

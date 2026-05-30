@@ -13,7 +13,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-/** Ordered gallery link between a {@link Car} and an {@link Image} for listing photos. */
+/** Ordered gallery link between a {@link Car} and a photo ({@link Image}) or video ({@link StoredFile}). */
 @Entity
 @Table(name = "car_pictures")
 public class CarPicture {
@@ -28,8 +28,12 @@ public class CarPicture {
     private Car car;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "image_id", nullable = false)
+    @JoinColumn(name = "image_id")
     private Image image;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "stored_file_id")
+    private StoredFile storedFile;
 
     @Column(name = "display_order", nullable = false)
     private int displayOrder;
@@ -59,17 +63,34 @@ public class CarPicture {
         this.updatedAt = updatedAt;
     }
 
-    public CarPicture(
+    public static CarPicture forImage(
             final Car car,
             final Image image,
             final int displayOrder,
             final OffsetDateTime createdAt,
             final OffsetDateTime updatedAt) {
-        this.car = car;
-        this.image = image;
-        this.displayOrder = displayOrder;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        final CarPicture picture = new CarPicture();
+        picture.car = car;
+        picture.image = image;
+        picture.displayOrder = displayOrder;
+        picture.createdAt = createdAt;
+        picture.updatedAt = updatedAt;
+        return picture;
+    }
+
+    public static CarPicture forVideo(
+            final Car car,
+            final StoredFile storedFile,
+            final int displayOrder,
+            final OffsetDateTime createdAt,
+            final OffsetDateTime updatedAt) {
+        final CarPicture picture = new CarPicture();
+        picture.car = car;
+        picture.storedFile = storedFile;
+        picture.displayOrder = displayOrder;
+        picture.createdAt = createdAt;
+        picture.updatedAt = updatedAt;
+        return picture;
     }
 
     public long getId() {
@@ -89,9 +110,22 @@ public class CarPicture {
         return image;
     }
 
-    /** Convenience accessor — returns {@code image.getId()}. */
-    public long getImageId() {
-        return image.getId();
+    public StoredFile getStoredFile() {
+        return storedFile;
+    }
+
+    public boolean isVideo() {
+        return storedFile != null;
+    }
+
+    /** Convenience accessor — {@code null} when this row is a video. */
+    public Long getImageId() {
+        return image == null ? null : image.getId();
+    }
+
+    /** Convenience accessor — {@code null} when this row is a photo. */
+    public Long getStoredFileId() {
+        return storedFile == null ? null : storedFile.getId();
     }
 
     public int getDisplayOrder() {
@@ -110,8 +144,9 @@ public class CarPicture {
     public String toString() {
         return "CarPicture{" +
                 "id=" + id +
-                ", carId=" + car.getId() +
-                ", imageId=" + image.getId() +
+                ", carId=" + (car == null ? null : car.getId()) +
+                ", imageId=" + getImageId() +
+                ", storedFileId=" + getStoredFileId() +
                 ", displayOrder=" + displayOrder +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +

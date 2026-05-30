@@ -155,6 +155,9 @@ public class CarJpaDao implements CarDao {
                 CarPicture.class), Map.of("carIds", carIds)).getResultList();
         final Map<Long, Long> result = new HashMap<>();
         for (final CarPicture picture : pictures) {
+            if (picture.getImageId() == null) {
+                continue;
+            }
             result.putIfAbsent(picture.getCar().getId(), picture.getImageId());
         }
         return result;
@@ -467,8 +470,12 @@ public class CarJpaDao implements CarDao {
         // Load first image per car
         @SuppressWarnings("unchecked")
         final List<Object[]> imgRows = em.createNativeQuery(
-                        "SELECT cp.car_id, MIN(cp.image_id) FROM car_pictures cp "
-                        + "WHERE cp.car_id IN :ids GROUP BY cp.car_id")
+                        "SELECT cp.car_id, cp.image_id FROM car_pictures cp "
+                                + "INNER JOIN ("
+                                + "  SELECT car_id, MIN(display_order) AS min_order FROM car_pictures "
+                                + "  WHERE image_id IS NOT NULL GROUP BY car_id"
+                                + ") first ON first.car_id = cp.car_id AND first.min_order = cp.display_order "
+                                + "WHERE cp.car_id IN :ids AND cp.image_id IS NOT NULL")
                 .setParameter("ids", idLongs)
                 .getResultList();
         final Map<Long, Long> imageMap = new HashMap<>();

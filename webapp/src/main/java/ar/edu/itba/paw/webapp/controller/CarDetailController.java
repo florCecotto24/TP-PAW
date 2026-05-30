@@ -11,6 +11,8 @@ import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
+import ar.edu.itba.paw.models.util.CarGalleryMediaItems;
+import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
@@ -51,6 +53,7 @@ import java.util.stream.Collectors;
 public class CarDetailController {
 
     private final CarService carService;
+    private final CarPictureService carPictureService;
     private final ListingAvailabilityService listingAvailabilityService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
@@ -62,6 +65,7 @@ public class CarDetailController {
     @Autowired
     public CarDetailController(
             final CarService carService,
+            final CarPictureService carPictureService,
             final ListingAvailabilityService listingAvailabilityService,
             final ReservationService reservationService,
             final ReviewService reviewService,
@@ -70,6 +74,7 @@ public class CarDetailController {
             final PresentationLimitsPolicy presentationLimitsPolicy,
             final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
         this.carService = carService;
+        this.carPictureService = carPictureService;
         this.listingAvailabilityService = listingAvailabilityService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
@@ -106,9 +111,8 @@ public class CarDetailController {
                 .flatMap(User::getProfilePictureId)
                 .orElse(null);
 
-        final List<String> carGalleryImagePaths = car.getPictures().stream()
-                .map(cp -> "/image/" + cp.getImageId())
-                .collect(Collectors.toList());
+        final var carGalleryMedia = CarGalleryMediaItems.fromPictures(
+                carPictureService.getCarPicturesByCarId(carId));
 
         final List<VehicleCardView> similarListings = consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
                 carService.findSimilarCarCards(
@@ -171,7 +175,7 @@ public class CarDetailController {
         mav.addObject("carReviewPage", carReviewPage);
         mav.addObject("owner", owner);
         mav.addObject("ownerProfileImageId", ownerProfileImageId);
-        mav.addObject("carGalleryImagePaths", carGalleryImagePaths);
+        mav.addObject("carGalleryMedia", carGalleryMedia);
         mav.addObject("hasBookableDays", hasBookableDays);
         mav.addObject("bookableWallRangesJson", bookableWallRangesJson);
         mav.addObject("reservationFromDefault", fromDateParam != null ? fromDateParam : "");

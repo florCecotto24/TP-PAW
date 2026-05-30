@@ -110,6 +110,8 @@ public final class MessageKeys {
     // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";
+    public static final String CAR_GALLERY_MEDIA_INVALID_TYPE = "car.gallery.media.invalidType";
+    public static final String CAR_GALLERY_VIDEO_TOO_LARGE = "car.gallery.video.tooLarge";
     public static final String IMAGE_CONTENT_TYPE_NOT_IMAGE = "image.contentType.notImage";
 
     // publish form

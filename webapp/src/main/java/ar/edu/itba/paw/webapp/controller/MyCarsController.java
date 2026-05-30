@@ -457,7 +457,10 @@ public final class MyCarsController {
             return mav;
         }
         final long carImageId = carPictureService.getCarPicturesByCarId(carOpt.get().getId()).stream()
-                .findFirst().map(p -> p.getImageId()).orElse(0L);
+                .map(p -> p.getImageId())
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(0L);
         final ModelAndView mav = new ModelAndView("car/myCarDetail");
         mav.addObject("car", carOpt.get());
         mav.addObject("carImageId", carImageId);

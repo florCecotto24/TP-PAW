@@ -351,12 +351,32 @@
             if (!carouselEl) {
                 return;
             }
+            carouselEl.querySelectorAll('video').forEach(function (video) {
+                try {
+                    video.pause();
+                } catch (ignored) {
+                    // ignore
+                }
+            });
             var items = carouselEl.querySelectorAll('.carousel-item');
             if (items.length > 0) {
                 idx = Math.max(0, Math.min(idx, items.length - 1));
             }
             var instance = window.bootstrap.Carousel.getOrCreateInstance(carouselEl);
             instance.to(idx);
+        });
+        modalEl.addEventListener('slid.bs.carousel', function () {
+            var carouselEl = modalEl.querySelector('.carousel');
+            if (!carouselEl) {
+                return;
+            }
+            carouselEl.querySelectorAll('video').forEach(function (video) {
+                try {
+                    video.pause();
+                } catch (ignored) {
+                    // ignore
+                }
+            });
         });
     }
 
@@ -419,27 +439,55 @@
         }
     }
 
+    function rydenParseMaxVideoBytes(inputEl) {
+        if (!inputEl) {
+            return 0;
+        }
+        var raw = inputEl.getAttribute("data-upload-max-video-bytes");
+        if (!raw) {
+            return 0;
+        }
+        var n = parseInt(raw, 10);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function rydenVideoTooLargeMessage(inputEl) {
+        if (!inputEl) {
+            return "";
+        }
+        return inputEl.getAttribute("data-upload-video-too-large") || "";
+    }
+
+    function isAllowedGalleryMediaType(file) {
+        var t = (file.type || "").toLowerCase();
+        if (t.indexOf("image/") === 0) {
+            return true;
+        }
+        return t === "video/mp4" || t === "video/webm" || t === "video/quicktime";
+    }
+
     function validatePublishPictureFiles(files) {
         if (!files || files.length === 0) {
             return requiredMsg || "";
         }
-        var maxBytes = rydenParseMaxImageBytes(input);
-        var tooLargeMsg = rydenImageTooLargeMessage(input);
-        if (maxBytes > 0) {
-            var i;
-            for (i = 0; i < files.length; i++) {
-                if (files[i].size > maxBytes) {
-                    return tooLargeMsg || "";
-                }
+        var maxImageBytes = rydenParseMaxImageBytes(input);
+        var maxVideoBytes = rydenParseMaxVideoBytes(input);
+        var imageTooLargeMsg = rydenImageTooLargeMessage(input);
+        var videoTooLargeMsg = rydenVideoTooLargeMessage(input);
+        var notAllowedMsg = rydenNotImageMessage(input);
+        var i;
+        for (i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (!isAllowedGalleryMediaType(file)) {
+                return notAllowedMsg || "";
             }
-        }
-        var notImgMsg = rydenNotImageMessage(input);
-        var j;
-        for (j = 0; j < files.length; j++) {
-            var fj = files[j];
-            var t = (fj.type || "").toLowerCase();
-            if (!t || t.indexOf("image/") !== 0) {
-                return notImgMsg || "";
+            var t = (file.type || "").toLowerCase();
+            if (t.indexOf("image/") === 0) {
+                if (maxImageBytes > 0 && file.size > maxImageBytes) {
+                    return imageTooLargeMsg || "";
+                }
+            } else if (maxVideoBytes > 0 && file.size > maxVideoBytes) {
+                return videoTooLargeMsg || "";
             }
         }
         return "";
@@ -483,12 +531,29 @@
             var card = document.createElement("div");
             card.className = "border rounded p-2 position-relative";
 
-            var img = document.createElement("img");
-            img.className = "img-fluid rounded";
-            img.style.height = "130px";
-            img.style.objectFit = "cover";
-            img.style.width = "100%";
-            img.alt = file.name;
+            var isVideo = (file.type || "").toLowerCase().indexOf("video/") === 0;
+            var mediaEl;
+            if (isVideo) {
+                mediaEl = document.createElement("video");
+                mediaEl.className = "img-fluid rounded w-100";
+                mediaEl.style.height = "130px";
+                mediaEl.style.objectFit = "cover";
+                mediaEl.muted = true;
+                mediaEl.playsInline = true;
+                mediaEl.preload = "metadata";
+                var playOverlay = document.createElement("span");
+                playOverlay.className = "position-absolute top-50 start-50 translate-middle text-white fs-2";
+                playOverlay.setAttribute("aria-hidden", "true");
+                playOverlay.innerHTML = '<i class="bi bi-play-circle"></i>';
+                card.appendChild(playOverlay);
+            } else {
+                mediaEl = document.createElement("img");
+                mediaEl.className = "img-fluid rounded";
+                mediaEl.style.height = "130px";
+                mediaEl.style.objectFit = "cover";
+                mediaEl.style.width = "100%";
+            }
+            mediaEl.alt = file.name;
 
             var name = document.createElement("small");
             name.className = "d-block text-truncate mt-1";
@@ -497,7 +562,7 @@
             var removeBtn = document.createElement("button");
             removeBtn.type = "button";
             removeBtn.className = "btn btn-sm btn-danger position-absolute top-0 end-0 m-1";
-            removeBtn.setAttribute("aria-label", "Remove image");
+            removeBtn.setAttribute("aria-label", "Remove file");
             removeBtn.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
 
             removeBtn.addEventListener("click", function() {
@@ -505,7 +570,7 @@
                 renderPreview();
             });
 
-            card.appendChild(img);
+            card.appendChild(mediaEl);
             card.appendChild(name);
             card.appendChild(removeBtn);
             col.appendChild(card);
@@ -513,7 +578,11 @@
 
             var reader = new FileReader();
             reader.onload = function (e) {
-                img.src = e.target.result;
+                if (isVideo) {
+                    mediaEl.src = e.target.result;
+                } else {
+                    mediaEl.src = e.target.result;
+                }
             };
             reader.readAsDataURL(file);
         });

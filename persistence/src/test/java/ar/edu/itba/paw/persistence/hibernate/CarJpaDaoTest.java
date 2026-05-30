@@ -24,6 +24,7 @@ import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
 
@@ -320,6 +321,76 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(1, result.getContent().size());
         Assertions.assertEquals(coversRange.getId(), result.getContent().get(0).getCarId());
         Assertions.assertEquals(1L, result.getTotalItems());
+    }
+
+    @Test
+    void testGetOwnerCarCardsUsesFirstImageSkippingLeadingVideo() {
+        // 1. Arrange
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
+        final long brandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Toyota");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Yaris", true, "HATCHBACK");
+        final long modelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Yaris");
+
+        final Car car = dao.createCar(
+                ownerId, "VID111", modelId,
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        em.flush();
+
+        jdbcTemplate.update(
+                "INSERT INTO images (image_name, content_type, byte_array) VALUES (?, ?, ?)",
+                "cover.jpg",
+                "image/jpeg",
+                new byte[] {1, 2, 3});
+        final long imageId = jdbcTemplate.queryForObject(
+                "SELECT id FROM images WHERE image_name = ?", Long.class, "cover.jpg");
+
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                ownerId,
+                "intro.mp4",
+                "video/mp4",
+                new byte[] {4, 5, 6},
+                now);
+        final long storedFileId = jdbcTemplate.queryForObject(
+                "SELECT id FROM stored_files WHERE file_name = ?", Long.class, "intro.mp4");
+
+        jdbcTemplate.update(
+                "INSERT INTO car_pictures (car_id, image_id, stored_file_id, display_order, created_at, updated_at) "
+                        + "VALUES (?, NULL, ?, 1, ?, ?)",
+                car.getId(),
+                storedFileId,
+                now,
+                now);
+        jdbcTemplate.update(
+                "INSERT INTO car_pictures (car_id, image_id, stored_file_id, display_order, created_at, updated_at) "
+                        + "VALUES (?, ?, NULL, 2, ?, ?)",
+                car.getId(),
+                imageId,
+                now,
+                now);
+
+        insertOfferedAvailability(car.getId(), new BigDecimal("30.00"), now);
+
+        final OwnerCarSearchCriteria criteria = new OwnerCarSearchCriteria(
+                ownerId, 0, 10,
+                List.of("active"), null, null, null, null, null, null, null,
+                "date", "desc", null);
+
+        // 2. Exercise
+        final Page<CarCard> result = dao.getOwnerCarCards(criteria);
+
+        // 3. Assert
+        final Optional<CarCard> card = result.getContent().stream()
+                .filter(c -> c.getCarId() == car.getId())
+                .findFirst();
+        Assertions.assertTrue(card.isPresent());
+        Assertions.assertEquals(imageId, card.get().getImageId());
     }
 
     private void insertOfferedAvailability(

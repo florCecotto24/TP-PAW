@@ -391,29 +391,45 @@
 
                         <%-- Photos --%>
                         <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="publishImageTooLargeMsg" htmlEscape="true"/>
-                        <spring:message code="validation.pictures.mustBeImage" var="publishMustBeImageMsg" htmlEscape="true"/>
+                        <spring:message code="validation.carGallery.videoTooLarge" arguments="${uploadMaxGalleryVideoMegabytes}" var="publishVideoTooLargeMsg" htmlEscape="true"/>
+                        <spring:message code="validation.pictures.mustBeGalleryMedia" var="publishMustBeGalleryMediaMsg" htmlEscape="true"/>
                         <spring:message code="publishCar.form.removeImage" var="removeImageLabel"/>
                         <div class="mb-4">
                             <span class="form-label required-label d-block"><spring:message code="publishCar.form.pictures"/></span>
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden" accept="image/*" multiple aria-label="Vehicle photos"
+                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden"
+                                       accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" multiple
+                                       aria-label="Vehicle photos and videos"
                                        data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
+                                       data-upload-max-video-bytes="<c:out value='${uploadMaxGalleryVideoBytes}'/>"
                                        data-upload-image-too-large="<c:out value='${publishImageTooLargeMsg}'/>"
-                                       data-upload-not-image-msg="<c:out value='${publishMustBeImageMsg}'/>"/>
+                                       data-upload-video-too-large="<c:out value='${publishVideoTooLargeMsg}'/>"
+                                       data-upload-not-image-msg="<c:out value='${publishMustBeGalleryMediaMsg}'/>"/>
                                 <label id="picturesChooseLabel" for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
                             </div>
-                            <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint" arguments="${uploadMaxImageMegabytes}"/></small>
-                            <c:if test="${not empty retainedPictureTokens}">
+                            <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint" arguments="${uploadMaxImageMegabytes}, ${uploadMaxGalleryVideoMegabytes}"/></small>
+                            <c:if test="${not empty retainedPictures}">
                                 <div id="publishRetainedPictures" class="row g-2 mt-2">
-                                    <c:forEach var="rpToken" items="${retainedPictureTokens}">
+                                    <c:forEach var="rp" items="${retainedPictures}">
                                         <div class="col-6 col-md-4" data-retained-picture-col>
                                             <div class="border rounded p-2 position-relative">
-                                                <img class="img-fluid rounded"
-                                                     style="height:130px;object-fit:cover;width:100%"
-                                                     alt=""
-                                                     src="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}"/>
+                                                <c:choose>
+                                                    <c:when test="${fn:startsWith(rp.contentType(), 'video/')}">
+                                                        <video class="img-fluid rounded w-100"
+                                                               style="height:130px;object-fit:cover"
+                                                               muted playsinline preload="metadata"
+                                                               src="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}"></video>
+                                                        <span class="position-absolute top-50 start-50 translate-middle text-white fs-2" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <img class="img-fluid rounded"
+                                                             style="height:130px;object-fit:cover;width:100%"
+                                                             alt=""
+                                                             src="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}"/>
+                                                    </c:otherwise>
+                                                </c:choose>
                                                 <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 ryden-publish-remove-retained-btn"
-                                                        aria-label="<c:out value='${removeImageLabel}'/>" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rpToken}/remove">
+                                                        aria-label="<c:out value='${removeImageLabel}'/>" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}/remove">
                                                     <i class="bi bi-trash" aria-hidden="true"></i>
                                                 </button>
                                             </div>

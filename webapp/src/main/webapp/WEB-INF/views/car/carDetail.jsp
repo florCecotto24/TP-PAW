@@ -42,7 +42,7 @@
         <div class="col-lg-8 order-1 d-flex flex-column gap-4">
             <ryden:carDetailGalleryGrid
                     modalId="carDetailGalleryModal"
-                    imageUrls="${carGalleryImagePaths}"
+                    mediaItems="${carGalleryMedia}"
                     vehicleLabel="${carTitle}"/>
 
             <!-- Owner contact info -->
@@ -229,11 +229,11 @@
     </section>
 </main>
 
-<c:if test="${not empty carGalleryImagePaths}">
+<c:if test="${not empty carGalleryMedia}">
 <ryden:carDetailGalleryModal
         modalId="carDetailGalleryModal"
         carouselId="carDetailCarousel"
-        imageUrls="${carGalleryImagePaths}"
+        mediaItems="${carGalleryMedia}"
         vehicleLabel="${carTitle}"/>
 </c:if>
 

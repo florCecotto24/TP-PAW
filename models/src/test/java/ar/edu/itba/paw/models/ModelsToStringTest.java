@@ -112,7 +112,7 @@ class ModelsToStringTest {
         // Exercise
         final String result = picture.toString();
         // Assert
-        final String expected = "CarPicture{id=1, carId=2, imageId=3, displayOrder=0, createdAt=2026-04-05T10:00Z, "
+        final String expected = "CarPicture{id=1, carId=2, imageId=3, storedFileId=null, displayOrder=0, createdAt=2026-04-05T10:00Z, "
                 + "updatedAt=2026-04-05T10:05Z}";
         Assertions.assertEquals(expected, result);
     }

@@ -19,7 +19,11 @@ import ar.edu.itba.paw.exception.image.ImageValidationException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.persistence.CarPictureDao;
+import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.StoredFileService;
 
 @ExtendWith(MockitoExtension.class)
 public class CarPictureServiceImplTest {
@@ -29,6 +33,9 @@ public class CarPictureServiceImplTest {
 
     @Mock
     private ImageService imageService;
+
+    @Mock
+    private StoredFileService storedFileService;
 
     @InjectMocks
     private CarPictureServiceImpl carPictureService;
@@ -136,6 +143,51 @@ public class CarPictureServiceImplTest {
 
         // 3. Assert
         Assertions.assertEquals(pictures, result);
+    }
+
+    @Test
+    public void testCreateCarPictureFromVideoWhenStoredFileExists() {
+        // 1. Arrange
+        final long carId = 1L;
+        final long storedFileId = 99L;
+        final int displayOrder = 1;
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
+        final StoredFile storedFile = new StoredFile(
+                storedFileId,
+                User.identities(2L, "u@test.com", "U", "U"),
+                "clip.mp4",
+                "video/mp4",
+                new byte[] {1},
+                createdAt);
+        final CarPicture carPicture = CarPicture.forVideo(
+                Mockito.mock(Car.class), storedFile, displayOrder, createdAt, updatedAt);
+
+        Mockito.when(storedFileService.findById(storedFileId)).thenReturn(Optional.of(storedFile));
+        Mockito.when(carPictureDao.createCarPictureFromVideo(carId, storedFileId, displayOrder))
+                .thenReturn(carPicture);
+
+        // 2. Execute
+        final CarPicture result = carPictureService.createCarPictureFromVideo(carId, storedFileId, displayOrder);
+
+        // 3. Assert
+        Assertions.assertNotNull(result);
+        Assertions.assertSame(carPicture, result);
+    }
+
+    @Test
+    public void testCreateCarPictureFromVideoWhenStoredFileDoesNotExist() {
+        // 1. Arrange
+        final long carId = 1L;
+        final long storedFileId = 100L;
+        final int displayOrder = 1;
+        Mockito.when(storedFileService.findById(storedFileId)).thenReturn(Optional.empty());
+
+        // 2. Execute and 3. Assert
+        final ImageValidationException ex = Assertions.assertThrows(
+                ImageValidationException.class,
+                () -> carPictureService.createCarPictureFromVideo(carId, storedFileId, displayOrder));
+        Assertions.assertEquals(MessageKeys.IMAGE_INVALID_ID, ex.getMessageCode());
     }
 
     @Test
