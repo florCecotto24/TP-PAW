@@ -735,20 +735,18 @@ body.modal-open {
 .car-detail-carousel-img {
     position: relative;
     z-index: 2;
-    max-width: 100%;
-    max-height: min(70vh, 520px);
-    width: auto;
-    height: auto;
+    display: block;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
 }
 
 .car-detail-carousel-video {
     position: relative;
     z-index: 2;
-    max-width: 100%;
-    max-height: min(70vh, 520px);
-    width: auto;
-    height: auto;
+    display: block;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
 }
 
@@ -766,11 +764,11 @@ body.modal-open {
 
 .car-detail-gallery-modal .carousel-inner {
     overflow: hidden;
-    min-height: min(70vh, 520px);
+    height: min(70vh, 520px);
 }
 
 .car-detail-gallery-modal .carousel-item {
-    min-height: min(70vh, 520px);
+    height: min(70vh, 520px);
     transition: opacity 0.35s ease-out;
 }
 
@@ -780,7 +778,8 @@ body.modal-open {
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    min-height: min(70vh, 520px);
+    width: 100%;
+    height: min(70vh, 520px);
     background: #0a0a0a;
 }
 
