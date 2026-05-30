@@ -339,45 +339,91 @@
 
 /* Bootstrap gallery modal: open carousel at clicked slide */
 (function () {
+    function prefersReducedMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    function pauseGalleryVideos(carouselEl) {
+        if (!carouselEl) {
+            return;
+        }
+        carouselEl.querySelectorAll('video').forEach(function (video) {
+            try {
+                video.pause();
+            } catch (ignored) {
+                // ignore
+            }
+        });
+    }
+
+    function resetInactiveGalleryVideos(carouselEl) {
+        if (!carouselEl) {
+            return;
+        }
+        carouselEl.querySelectorAll('.carousel-item').forEach(function (item) {
+            if (item.classList.contains('active')) {
+                return;
+            }
+            item.querySelectorAll('video').forEach(function (video) {
+                try {
+                    video.pause();
+                    video.currentTime = 0;
+                } catch (ignored) {
+                    // ignore
+                }
+            });
+        });
+    }
+
+    function clearCarouselTransitionClasses(item) {
+        item.classList.remove('carousel-item-start', 'carousel-item-end', 'carousel-item-next', 'carousel-item-prev');
+    }
+
+    function setGallerySlideInstant(carouselEl, idx) {
+        var items = carouselEl.querySelectorAll('.carousel-item');
+        if (items.length === 0) {
+            return;
+        }
+        idx = Math.max(0, Math.min(idx, items.length - 1));
+        items.forEach(function (item, itemIdx) {
+            clearCarouselTransitionClasses(item);
+            item.classList.toggle('active', itemIdx === idx);
+        });
+    }
+
     function initCarDetailGalleryModal() {
         var modalEl = document.getElementById('carDetailGalleryModal');
         if (!modalEl || typeof window.bootstrap === 'undefined') {
             return;
         }
+
+        var carouselEl = modalEl.querySelector('.carousel');
+        if (!carouselEl) {
+            return;
+        }
+
+        if (prefersReducedMotion()) {
+            modalEl.classList.add('car-detail-gallery-modal--reduced-motion');
+        }
+
+        window.bootstrap.Carousel.getOrCreateInstance(carouselEl, { ride: false });
+
         modalEl.addEventListener('show.bs.modal', function (event) {
             var trigger = event.relatedTarget;
             var idx = trigger ? parseInt(trigger.getAttribute('data-carousel-index') || '0', 10) : 0;
-            var carouselEl = modalEl.querySelector('.carousel');
-            if (!carouselEl) {
-                return;
-            }
-            carouselEl.querySelectorAll('video').forEach(function (video) {
-                try {
-                    video.pause();
-                } catch (ignored) {
-                    // ignore
-                }
-            });
-            var items = carouselEl.querySelectorAll('.carousel-item');
-            if (items.length > 0) {
-                idx = Math.max(0, Math.min(idx, items.length - 1));
-            }
-            var instance = window.bootstrap.Carousel.getOrCreateInstance(carouselEl);
-            instance.to(idx);
+            pauseGalleryVideos(carouselEl);
+            setGallerySlideInstant(carouselEl, idx);
         });
-        modalEl.addEventListener('slid.bs.carousel', function () {
-            var carouselEl = modalEl.querySelector('.carousel');
-            if (!carouselEl) {
-                return;
-            }
-            carouselEl.querySelectorAll('video').forEach(function (video) {
-                try {
-                    video.pause();
-                } catch (ignored) {
-                    // ignore
-                }
-            });
+
+        carouselEl.addEventListener('slide.bs.carousel', function () {
+            pauseGalleryVideos(carouselEl);
         });
+
+        carouselEl.addEventListener('slid.bs.carousel', function () {
+            pauseGalleryVideos(carouselEl);
+            resetInactiveGalleryVideos(carouselEl);
+        });
+
         modalEl.querySelectorAll('.car-detail-carousel-video').forEach(function (video) {
             video.addEventListener('click', function (event) {
                 event.stopPropagation();

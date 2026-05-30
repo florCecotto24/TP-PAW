@@ -20,26 +20,28 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<c:out value='${closeLabel}'/>"></button>
             </div>
             <div class="modal-body p-0">
-                <div id="<c:out value='${carouselId}'/>" class="carousel slide" data-bs-ride="false">
+                <div id="<c:out value='${carouselId}'/>" class="carousel slide carousel-fade" data-bs-ride="false">
                     <div class="carousel-inner">
                         <c:forEach items="${mediaItems}" var="item" varStatus="st">
                             <c:url var="slideSrc" value="${item.url}" />
                             <div class="carousel-item<c:if test="${st.first}"> active</c:if>">
-                                <c:choose>
-                                    <c:when test="${item.video}">
-                                        <spring:message code="carDetailGalleryModal.videoAlt" arguments="${vehicleLabel}, ${st.count}" var="videoAlt"/>
-                                        <video src="<c:out value='${slideSrc}'/>"
-                                               class="d-block w-100 car-detail-carousel-video"
-                                               controls playsinline preload="metadata"
-                                               aria-label="<c:out value='${videoAlt}'/>">
-                                            <source src="<c:out value='${slideSrc}'/>" type="<c:out value='${item.contentType}'/>"/>
-                                        </video>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <spring:message code="carDetailGalleryModal.photoAlt" arguments="${vehicleLabel}, ${st.count}" var="photoAlt"/>
-                                        <img src="<c:out value='${slideSrc}'/>" class="d-block w-100 car-detail-carousel-img" alt="<c:out value='${photoAlt}'/>">
-                                    </c:otherwise>
-                                </c:choose>
+                                <div class="car-detail-carousel-frame">
+                                    <c:choose>
+                                        <c:when test="${item.video}">
+                                            <spring:message code="carDetailGalleryModal.videoAlt" arguments="${vehicleLabel}, ${st.count}" var="videoAlt"/>
+                                            <video src="<c:out value='${slideSrc}'/>"
+                                                   class="car-detail-carousel-video"
+                                                   controls playsinline preload="metadata"
+                                                   aria-label="<c:out value='${videoAlt}'/>">
+                                                <source src="<c:out value='${slideSrc}'/>" type="<c:out value='${item.contentType}'/>"/>
+                                            </video>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <spring:message code="carDetailGalleryModal.photoAlt" arguments="${vehicleLabel}, ${st.count}" var="photoAlt"/>
+                                            <img src="<c:out value='${slideSrc}'/>" class="car-detail-carousel-img" alt="<c:out value='${photoAlt}'/>">
+                                        </c:otherwise>
+                                    </c:choose>
+                                </div>
                             </div>
                         </c:forEach>
                     </div>

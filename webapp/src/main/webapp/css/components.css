@@ -733,16 +733,38 @@ body.modal-open {
 }
 
 .car-detail-carousel-img {
+    max-width: 100%;
     max-height: min(70vh, 520px);
-    width: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
     background: #111827;
 }
 
 .car-detail-carousel-video {
+    max-width: 100%;
     max-height: min(70vh, 520px);
-    width: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
+    background: #111827;
+}
+
+.car-detail-gallery-modal .carousel-inner {
+    overflow: hidden;
+    min-height: min(70vh, 520px);
+}
+
+.car-detail-gallery-modal .carousel-item {
+    min-height: min(70vh, 520px);
+    transition: opacity 0.35s ease-out;
+}
+
+.car-detail-carousel-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: min(70vh, 520px);
     background: #111827;
 }
 
@@ -755,11 +777,46 @@ body.modal-open {
     transform: translateY(-50%);
     pointer-events: none;
     z-index: 3;
+    opacity: 0.85;
+    transition: opacity var(--transition-base, 0.3s ease-out);
+}
+
+.car-detail-gallery-modal .carousel-control-prev:hover,
+.car-detail-gallery-modal .carousel-control-next:hover,
+.car-detail-gallery-modal .carousel-control-prev:focus-visible,
+.car-detail-gallery-modal .carousel-control-next:focus-visible {
+    opacity: 1;
 }
 
 .car-detail-gallery-modal .carousel-control-prev-icon,
 .car-detail-gallery-modal .carousel-control-next-icon {
     pointer-events: auto;
+    transition: transform var(--transition-base, 0.3s ease-out);
+}
+
+.car-detail-gallery-modal .carousel-control-prev:hover .carousel-control-prev-icon,
+.car-detail-gallery-modal .carousel-control-prev:focus-visible .carousel-control-prev-icon {
+    transform: scale(1.08);
+}
+
+.car-detail-gallery-modal .carousel-control-next:hover .carousel-control-next-icon,
+.car-detail-gallery-modal .carousel-control-next:focus-visible .carousel-control-next-icon {
+    transform: scale(1.08);
+}
+
+.car-detail-gallery-modal--reduced-motion .carousel-item {
+    transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .car-detail-gallery-modal .carousel-item {
+        transition: none;
+    }
+
+    .car-detail-gallery-modal .carousel-control-prev-icon,
+    .car-detail-gallery-modal .carousel-control-next-icon {
+        transition: none;
+    }
 }
 
 .host-profile-bar {
