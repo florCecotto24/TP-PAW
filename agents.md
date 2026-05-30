@@ -1,6 +1,6 @@
 # Repository guidance
 
-**`CLAUDE.md`** and **`agents.md`** are identical: guidance for Claude Code, Cursor, and other coding agents.
+**`agents.md`** is the repository guidance for Cursor, Claude Code, and other coding agents. Edit this file only.
 
 ## Commands
 
