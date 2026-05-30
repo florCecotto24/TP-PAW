@@ -649,9 +649,18 @@ body.modal-open {
 }
 
 .car-detail-gallery__cell {
+    position: relative;
     overflow: hidden;
     min-height: 0;
     min-width: 0;
+}
+
+.car-detail-gallery__open-btn {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
 }
 
 .car-detail-gallery__main {
@@ -683,6 +692,7 @@ body.modal-open {
 .car-detail-gallery__more-overlay {
     position: absolute;
     inset: 0;
+    z-index: 2;
     border-radius: 0.75rem;
     background: rgba(0, 0, 0, 0.45);
     display: flex;
@@ -708,6 +718,7 @@ body.modal-open {
 
 .car-detail-gallery__video {
     background: #111827;
+    pointer-events: none;
 }
 
 .car-detail-gallery__play-overlay {
@@ -733,6 +744,22 @@ body.modal-open {
     width: 100%;
     object-fit: contain;
     background: #111827;
+}
+
+.car-detail-gallery-modal .carousel-control-prev,
+.car-detail-gallery-modal .carousel-control-next {
+    width: 3rem;
+    height: 3rem;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 3;
+}
+
+.car-detail-gallery-modal .carousel-control-prev-icon,
+.car-detail-gallery-modal .carousel-control-next-icon {
+    pointer-events: auto;
 }
 
 .host-profile-bar {

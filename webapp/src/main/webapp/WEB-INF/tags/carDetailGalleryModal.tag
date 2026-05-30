@@ -11,7 +11,7 @@
     <c:set var="vehicleLabel" value="${defaultVehicleLabel}" />
 </c:if>
 
-<div class="modal fade" id="<c:out value='${modalId}'/>" tabindex="-1" aria-hidden="true" aria-labelledby="<c:out value='${modalId}'/>Title">
+<div class="modal fade car-detail-gallery-modal" id="<c:out value='${modalId}'/>" tabindex="-1" aria-hidden="true" aria-labelledby="<c:out value='${modalId}'/>Title">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content bg-dark text-white border-0">
             <div class="modal-header border-0">

@@ -378,6 +378,11 @@
                 }
             });
         });
+        modalEl.querySelectorAll('.car-detail-carousel-video').forEach(function (video) {
+            video.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+        });
     }
 
     document.addEventListener('DOMContentLoaded', initCarDetailGalleryModal);

@@ -28,60 +28,87 @@
             <c:when test="${mediaCount == 1}">
                 <c:url var="mainSrc" value="${mediaItems[0].url}" />
                 <div class="car-detail-gallery car-detail-gallery--single rounded-4 overflow-hidden">
-                    <button type="button"
-                            class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
-                            data-bs-toggle="modal"
-                            data-bs-target="#<c:out value='${modalId}'/>"
-                            data-carousel-index="0"
-                            aria-label="<c:out value='${openGalleryAria}'/>">
-                        <c:choose>
-                            <c:when test="${mediaItems[0].video}">
-                                <video src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__video" muted playsinline preload="metadata"></video>
-                                <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
-                            </c:when>
-                            <c:otherwise>
-                                <img src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
-                            </c:otherwise>
-                        </c:choose>
-                    </button>
+                    <c:choose>
+                        <c:when test="${mediaItems[0].video}">
+                            <div class="car-detail-gallery__cell car-detail-gallery__main">
+                                <video src="<c:out value='${mainSrc}'/>" class="car-detail-gallery__video" muted playsinline preload="metadata"></video>
+                                <button type="button"
+                                        class="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#<c:out value='${modalId}'/>"
+                                        data-carousel-index="0"
+                                        aria-label="<c:out value='${openGalleryAria}'/>">
+                                    <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                </button>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button"
+                                    class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#<c:out value='${modalId}'/>"
+                                    data-carousel-index="0"
+                                    aria-label="<c:out value='${openGalleryAria}'/>">
+                                <img src="<c:out value='${mainSrc}'/>" class="car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
+                            </button>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </c:when>
             <c:when test="${mediaCount == 2}">
                 <c:url var="mainSrc" value="${mediaItems[0].url}" />
                 <c:url var="topSrc" value="${mediaItems[1].url}" />
                 <div class="car-detail-gallery car-detail-gallery--pair rounded-4 overflow-hidden">
-                    <button type="button"
-                            class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
-                            data-bs-toggle="modal"
-                            data-bs-target="#<c:out value='${modalId}'/>"
-                            data-carousel-index="0"
-                            aria-label="<c:out value='${openGalleryAria}'/>">
-                        <c:choose>
-                            <c:when test="${mediaItems[0].video}">
-                                <video src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__video" muted playsinline preload="metadata"></video>
-                                <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
-                            </c:when>
-                            <c:otherwise>
-                                <img src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
-                            </c:otherwise>
-                        </c:choose>
-                    </button>
-                    <button type="button"
-                            class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
-                            data-bs-toggle="modal"
-                            data-bs-target="#<c:out value='${modalId}'/>"
-                            data-carousel-index="1"
-                            aria-label="<c:out value='${openGalleryAria}'/>">
-                        <c:choose>
-                            <c:when test="${mediaItems[1].video}">
-                                <video src="<c:out value='${topSrc}'/>" class="w-100 h-100 car-detail-gallery__video" muted playsinline preload="metadata"></video>
-                                <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
-                            </c:when>
-                            <c:otherwise>
-                                <img src="<c:out value='${topSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
-                            </c:otherwise>
-                        </c:choose>
-                    </button>
+                    <c:choose>
+                        <c:when test="${mediaItems[0].video}">
+                            <div class="car-detail-gallery__cell car-detail-gallery__main">
+                                <video src="<c:out value='${mainSrc}'/>" class="car-detail-gallery__video" muted playsinline preload="metadata"></video>
+                                <button type="button"
+                                        class="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#<c:out value='${modalId}'/>"
+                                        data-carousel-index="0"
+                                        aria-label="<c:out value='${openGalleryAria}'/>">
+                                    <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                </button>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button"
+                                    class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#<c:out value='${modalId}'/>"
+                                    data-carousel-index="0"
+                                    aria-label="<c:out value='${openGalleryAria}'/>">
+                                <img src="<c:out value='${mainSrc}'/>" class="car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
+                            </button>
+                        </c:otherwise>
+                    </c:choose>
+                    <c:choose>
+                        <c:when test="${mediaItems[1].video}">
+                            <div class="car-detail-gallery__cell car-detail-gallery__side">
+                                <video src="<c:out value='${topSrc}'/>" class="car-detail-gallery__video" muted playsinline preload="metadata"></video>
+                                <button type="button"
+                                        class="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#<c:out value='${modalId}'/>"
+                                        data-carousel-index="1"
+                                        aria-label="<c:out value='${openGalleryAria}'/>">
+                                    <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                </button>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button"
+                                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#<c:out value='${modalId}'/>"
+                                    data-carousel-index="1"
+                                    aria-label="<c:out value='${openGalleryAria}'/>">
+                                <img src="<c:out value='${topSrc}'/>" class="car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
+                            </button>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </c:when>
             <c:otherwise>
@@ -91,57 +118,87 @@
                 <c:set var="extra" value="${mediaCount - 3}" />
 
                 <div class="car-detail-gallery rounded-4 overflow-hidden">
-                    <button type="button"
-                            class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
-                            data-bs-toggle="modal"
-                            data-bs-target="#<c:out value='${modalId}'/>"
-                            data-carousel-index="0"
-                            aria-label="<c:out value='${openGalleryAria}'/>">
-                        <c:choose>
-                            <c:when test="${mediaItems[0].video}">
-                                <video src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__video" muted playsinline preload="metadata"></video>
-                                <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
-                            </c:when>
-                            <c:otherwise>
-                                <img src="<c:out value='${mainSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
-                            </c:otherwise>
-                        </c:choose>
-                    </button>
-                    <button type="button"
-                            class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
-                            data-bs-toggle="modal"
-                            data-bs-target="#<c:out value='${modalId}'/>"
-                            data-carousel-index="1"
-                            aria-label="<c:out value='${openGalleryAria}'/>">
-                        <c:choose>
-                            <c:when test="${mediaItems[1].video}">
-                                <video src="<c:out value='${topSrc}'/>" class="w-100 h-100 car-detail-gallery__video" muted playsinline preload="metadata"></video>
-                                <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
-                            </c:when>
-                            <c:otherwise>
-                                <img src="<c:out value='${topSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
-                            </c:otherwise>
-                        </c:choose>
-                    </button>
-                    <button type="button"
-                            class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
-                            data-bs-toggle="modal"
-                            data-bs-target="#<c:out value='${modalId}'/>"
-                            data-carousel-index="2"
-                            aria-label="<c:out value='${openGalleryAria}'/>">
-                        <c:choose>
-                            <c:when test="${mediaItems[2].video}">
-                                <video src="<c:out value='${bottomSrc}'/>" class="w-100 h-100 car-detail-gallery__video" muted playsinline preload="metadata"></video>
-                                <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
-                            </c:when>
-                            <c:otherwise>
-                                <img src="<c:out value='${bottomSrc}'/>" class="w-100 h-100 car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
-                            </c:otherwise>
-                        </c:choose>
-                        <c:if test="${extra > 0}">
-                            <div class="car-detail-gallery__more-overlay" aria-hidden="true">+<c:out value="${extra}"/></div>
-                        </c:if>
-                    </button>
+                    <c:choose>
+                        <c:when test="${mediaItems[0].video}">
+                            <div class="car-detail-gallery__cell car-detail-gallery__main">
+                                <video src="<c:out value='${mainSrc}'/>" class="car-detail-gallery__video" muted playsinline preload="metadata"></video>
+                                <button type="button"
+                                        class="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#<c:out value='${modalId}'/>"
+                                        data-carousel-index="0"
+                                        aria-label="<c:out value='${openGalleryAria}'/>">
+                                    <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                </button>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button"
+                                    class="car-detail-gallery__cell car-detail-gallery__main btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#<c:out value='${modalId}'/>"
+                                    data-carousel-index="0"
+                                    aria-label="<c:out value='${openGalleryAria}'/>">
+                                <img src="<c:out value='${mainSrc}'/>" class="car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
+                            </button>
+                        </c:otherwise>
+                    </c:choose>
+                    <c:choose>
+                        <c:when test="${mediaItems[1].video}">
+                            <div class="car-detail-gallery__cell car-detail-gallery__side">
+                                <video src="<c:out value='${topSrc}'/>" class="car-detail-gallery__video" muted playsinline preload="metadata"></video>
+                                <button type="button"
+                                        class="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#<c:out value='${modalId}'/>"
+                                        data-carousel-index="1"
+                                        aria-label="<c:out value='${openGalleryAria}'/>">
+                                    <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                </button>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button"
+                                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#<c:out value='${modalId}'/>"
+                                    data-carousel-index="1"
+                                    aria-label="<c:out value='${openGalleryAria}'/>">
+                                <img src="<c:out value='${topSrc}'/>" class="car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
+                            </button>
+                        </c:otherwise>
+                    </c:choose>
+                    <c:choose>
+                        <c:when test="${mediaItems[2].video}">
+                            <div class="car-detail-gallery__cell car-detail-gallery__side">
+                                <video src="<c:out value='${bottomSrc}'/>" class="car-detail-gallery__video" muted playsinline preload="metadata"></video>
+                                <button type="button"
+                                        class="car-detail-gallery__open-btn btn p-0 border-0 bg-transparent text-start"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#<c:out value='${modalId}'/>"
+                                        data-carousel-index="2"
+                                        aria-label="<c:out value='${openGalleryAria}'/>">
+                                    <span class="car-detail-gallery__play-overlay" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
+                                </button>
+                                <c:if test="${extra > 0}">
+                                    <div class="car-detail-gallery__more-overlay" aria-hidden="true">+<c:out value="${extra}"/></div>
+                                </c:if>
+                            </div>
+                        </c:when>
+                        <c:otherwise>
+                            <button type="button"
+                                    class="car-detail-gallery__cell car-detail-gallery__side btn p-0 border-0 bg-transparent w-100 h-100 text-start position-relative"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#<c:out value='${modalId}'/>"
+                                    data-carousel-index="2"
+                                    aria-label="<c:out value='${openGalleryAria}'/>">
+                                <img src="<c:out value='${bottomSrc}'/>" class="car-detail-gallery__img" alt="<c:out value='${vehicleLabel}'/>">
+                                <c:if test="${extra > 0}">
+                                    <div class="car-detail-gallery__more-overlay" aria-hidden="true">+<c:out value="${extra}"/></div>
+                                </c:if>
+                            </button>
+                        </c:otherwise>
+                    </c:choose>
                 </div>
             </c:otherwise>
         </c:choose>
