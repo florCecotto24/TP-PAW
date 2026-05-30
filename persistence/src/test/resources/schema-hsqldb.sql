@@ -121,7 +121,6 @@ CREATE TABLE IF NOT EXISTS reservations (
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     payment_receipt_file_id BIGINT,
-    payment_approved BOOLEAN NOT NULL DEFAULT FALSE,
     payment_proof_deadline_at TIMESTAMP,
     car_returned BOOLEAN NOT NULL DEFAULT FALSE,
     return_reminder_email_sent BOOLEAN NOT NULL DEFAULT FALSE,

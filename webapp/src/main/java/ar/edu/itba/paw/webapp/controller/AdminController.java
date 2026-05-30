@@ -249,9 +249,10 @@ public final class AdminController {
     @PostMapping("/catalog/entries/{modelId}/validate")
     public String validateCatalogEntry(
             @PathVariable final long modelId,
+            final Locale locale,
             final RedirectAttributes redirectAttributes) {
         try {
-            adminService.validateCatalogEntry(modelId);
+            adminService.validateCatalogEntry(modelId, locale);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryValidated"));
         } catch (final Exception e) {
             LOG.warn("Admin validate catalog entry (modelId={}) failed", modelId, e);

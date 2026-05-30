@@ -56,7 +56,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
                 "INSERT INTO reservations (rider_id, car_id, start_date, end_date, status, total_price, created_at, "
-                        + "updated_at, payment_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        + "updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 riderId,
                 carId,
                 now.plusDays(1),
@@ -64,8 +64,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
                 "accepted",
                 200.00,
                 now,
-                now,
-                true);
+                now);
         reservationId = jdbcTemplate.queryForObject(
                 "SELECT id FROM reservations WHERE rider_id = ?", Long.class, riderId);
     }

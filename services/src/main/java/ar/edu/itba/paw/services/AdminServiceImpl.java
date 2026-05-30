@@ -23,6 +23,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.persistence.CarBrandDao;
@@ -186,13 +187,33 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void validateCatalogEntry(final long modelId) {
+    public void validateCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelDao.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
-        if (!model.getBrand().isValidated()) {
-            model.getBrand().setValidated(true);
+        final CarBrand brand = model.getBrand();
+        final boolean brandWillBeValidated = !brand.isValidated();
+        final String brandName = brand.getName();
+        final String modelName = model.getName();
+        final List<Car> affectedCars = carDao.findCarsByModelId(modelId);
+        if (brandWillBeValidated) {
+            brand.setValidated(true);
         }
         model.setValidated(true);
+        for (final Car car : affectedCars) {
+            final User owner = car.getOwner();
+            final String vehicleLabel = brandName + " " + modelName;
+            emailService.sendListingValidatedByAdmin(
+                    ListingValidatedByAdminOwnerEmailPayload.builder()
+                            .messageLocale(locale != null ? locale : Locale.ENGLISH)
+                            .ownerEmail(owner.getEmail())
+                            .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                            .vehicleLabel(vehicleLabel)
+                            .carId(car.getId())
+                            .brandName(brandName)
+                            .modelName(modelName)
+                            .brandValidated(brandWillBeValidated)
+                            .build());
+        }
     }
 
     @Override

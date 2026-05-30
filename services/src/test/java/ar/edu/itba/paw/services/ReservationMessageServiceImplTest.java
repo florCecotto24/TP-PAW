@@ -87,7 +87,7 @@ class ReservationMessageServiceImplTest {
                 chatAttachmentUploadPolicy);
     }
 
-    private static Reservation reservation(final Reservation.Status status, final boolean paymentApproved) {
+    private static Reservation reservation(final Reservation.Status status) {
         final Car carRef = Mockito.mock(Car.class);
         Mockito.when(carRef.getId()).thenReturn(CAR_ID);
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -101,12 +101,11 @@ class ReservationMessageServiceImplTest {
                 .createdAt(now.minusDays(5))
                 .updatedAt(now)
                 .totalPrice(new BigDecimal("100"))
-                .paymentApproved(paymentApproved)
                 .build();
     }
 
     private void stubParticipantAndSender() {
-        final Reservation res = reservation(Reservation.Status.ACCEPTED, true);
+        final Reservation res = reservation(Reservation.Status.ACCEPTED);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
         Mockito.when(userService.getUserById(RIDER_ID))
@@ -114,9 +113,9 @@ class ReservationMessageServiceImplTest {
     }
 
     @Test
-    void testIsChatAvailableWhenAcceptedAndPaymentApproved() {
+    void testIsChatAvailableWhenAccepted() {
         // 1.Arrange
-        final Reservation res = reservation(Reservation.Status.ACCEPTED, true);
+        final Reservation res = reservation(Reservation.Status.ACCEPTED);
 
         // 2.Exercise / 3.Assert
         Assertions.assertTrue(service.isChatAvailable(res));
@@ -125,7 +124,7 @@ class ReservationMessageServiceImplTest {
     @Test
     void testIsChatAvailableWhenPending() {
         // 1.Arrange
-        final Reservation res = reservation(Reservation.Status.PENDING, true);
+        final Reservation res = reservation(Reservation.Status.PENDING);
 
         // 2.Exercise / 3.Assert
         Assertions.assertFalse(service.isChatAvailable(res));
@@ -147,7 +146,6 @@ class ReservationMessageServiceImplTest {
                 .createdAt(now.minusDays(25))
                 .updatedAt(now)
                 .totalPrice(new BigDecimal("100"))
-                .paymentApproved(true)
                 .build();
 
         // 2.Exercise / 3.Assert
@@ -157,7 +155,7 @@ class ReservationMessageServiceImplTest {
     @Test
     void testPostMessageRejectsEmptyBody() {
         // 1.Arrange
-        final Reservation res = reservation(Reservation.Status.ACCEPTED, true);
+        final Reservation res = reservation(Reservation.Status.ACCEPTED);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
 

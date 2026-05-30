@@ -123,11 +123,23 @@
                                     <label class="form-label small text-secondary mb-1" for="search_flexdays_<c:out value='${resolvedFormId}'/>">
                                         <c:out value="${flexDaysLabel}"/>
                                     </label>
-                                    <input type="number" name="flexDays" id="search_flexdays_<c:out value='${resolvedFormId}'/>"
-                                           min="1" max="31" step="1"
-                                           class="form-control form-control-sm border-0 shadow-none"
-                                           placeholder="<c:out value='${anyDaysPlaceholder}'/>"
-                                           value="<c:out value='${param.flexDays}'/>"/>
+                                    <div class="d-flex align-items-center gap-0">
+                                        <button type="button"
+                                                class="btn rounded-circle border border-primary text-primary bg-transparent flex-shrink-0 d-flex align-items-center justify-content-center js-flexdays-dec d-none"
+                                                style="width:1.75rem;height:1.75rem;padding:0;" aria-label="-">
+                                            <i class="bi bi-dash" style="font-size:1rem;line-height:1;" aria-hidden="true"></i>
+                                        </button>
+                                        <input type="number" name="flexDays" id="search_flexdays_<c:out value='${resolvedFormId}'/>"
+                                               min="1" max="31" step="1"
+                                               class="form-control form-control-sm border-0 shadow-none js-flexdays-input ryden-no-spinner"
+                                               placeholder="<c:out value='${anyDaysPlaceholder}'/>"
+                                               value="<c:out value='${param.flexDays}'/>"/>
+                                        <button type="button"
+                                                class="btn rounded-circle border border-primary text-primary bg-transparent flex-shrink-0 d-flex align-items-center justify-content-center js-flexdays-inc d-none"
+                                                style="width:1.75rem;height:1.75rem;padding:0;" aria-label="+">
+                                            <i class="bi bi-plus" style="font-size:1rem;line-height:1;" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </c:if>
@@ -229,8 +241,20 @@
     </div>
 </form>
 
+<style>
+    .ryden-no-spinner::-webkit-outer-spin-button,
+    .ryden-no-spinner::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .ryden-no-spinner { -moz-appearance: textfield; }
+</style>
+
 <script>
     (function () {
+        function daysInMonth(yyyyMM) {
+            var parts = yyyyMM ? yyyyMM.split('-') : [];
+            if (parts.length < 2) { return 31; }
+            return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10), 0).getDate();
+        }
+
         var monthWrappers = document.querySelectorAll('#<c:out value="${resolvedFormId}"/> .js-flex-month-wrapper');
         monthWrappers.forEach(function (wrapper) {
             var menu = wrapper.querySelector('.js-flex-month-menu');
@@ -274,7 +298,23 @@
                     var inst = bootstrap.Dropdown.getInstance(toggler);
                     if (inst) { inst.hide(); }
                 }
+                var form = wrapper.closest('form');
+                if (form) {
+                    var daysInp = form.querySelector('.js-flexdays-input');
+                    if (daysInp) {
+                        var maxD = daysInMonth(hidden.value);
+                        daysInp.max = maxD;
+                        if (daysInp.value !== '' && parseInt(daysInp.value, 10) > maxD) {
+                            daysInp.value = maxD;
+                        }
+                    }
+                }
             });
+            var initForm = wrapper.closest('form');
+            if (initForm) {
+                var initDaysInp = initForm.querySelector('.js-flexdays-input');
+                if (initDaysInp && hidden.value) { initDaysInp.max = daysInMonth(hidden.value); }
+            }
         });
 
         var flexForm = document.getElementById('<c:out value="${resolvedFormId}"/>');
@@ -302,6 +342,40 @@
                 toggle.addEventListener('change', function () {
                     syncFlexMode(toggle.checked);
                 });
+            }
+
+            var flexDaysInput = flexForm ? flexForm.querySelector('.js-flexdays-input') : null;
+            if (flexDaysInput) {
+                var decBtn = flexForm.querySelector('.js-flexdays-dec');
+                var incBtn = flexForm.querySelector('.js-flexdays-inc');
+                function clampDays(val) {
+                    var min = parseInt(flexDaysInput.min, 10) || 1;
+                    var max = parseInt(flexDaysInput.max, 10) || 31;
+                    return Math.min(max, Math.max(min, val));
+                }
+                function syncDaysButtons() {
+                    var hasValue = flexDaysInput.value.trim() !== '';
+                    if (decBtn) { decBtn.classList.toggle('d-none', !hasValue); }
+                    if (incBtn) { incBtn.classList.toggle('d-none', !hasValue); }
+                    flexDaysInput.classList.toggle('text-center', hasValue);
+                    flexDaysInput.style.width = hasValue ? '3.5rem' : '';
+                }
+                syncDaysButtons();
+                flexDaysInput.addEventListener('input', syncDaysButtons);
+                if (decBtn) {
+                    decBtn.addEventListener('click', function () {
+                        var cur = parseInt(flexDaysInput.value, 10);
+                        flexDaysInput.value = isNaN(cur) ? '' : clampDays(cur - 1);
+                        syncDaysButtons();
+                    });
+                }
+                if (incBtn) {
+                    incBtn.addEventListener('click', function () {
+                        var cur = parseInt(flexDaysInput.value, 10);
+                        flexDaysInput.value = isNaN(cur) ? 1 : clampDays(cur + 1);
+                        syncDaysButtons();
+                    });
+                }
             }
         }
     })();

@@ -22,7 +22,6 @@ public final class MessageKeys {
     public static final String RESERVATION_PAYMENT_RECEIPT_INVALID = "reservation.paymentReceipt.invalid";
     public static final String RESERVATION_PAYMENT_RECEIPT_TOO_LARGE = "reservation.paymentReceipt.tooLarge";
     public static final String RESERVATION_PAYMENT_RECEIPT_NOT_FOUND = "reservation.paymentReceipt.notFound";
-    public static final String RESERVATION_PAYMENT_APPROVAL_INVALID = "reservation.paymentApproval.invalid";
     public static final String RESERVATION_CANCEL_NOT_ALLOWED = "reservation.cancel.notAllowed";
     public static final String RESERVATION_MARK_RETURNED_NOT_ALLOWED = "reservation.carReturned.notAllowed";
     public static final String RESERVATION_REFUND_RECEIPT_INVALID = "reservation.refundReceipt.invalid";

@@ -178,7 +178,7 @@
                                                 </span>
                                             </c:when>
                                             <c:when test="${car.statusKey == 'LACK_DOC'}">
-                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#b91c1c; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#ffc107; color:#212529; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
                                                     <spring:message code="enum.car.status.LACK_DOC"/>
                                                 </span>
                                             </c:when>
@@ -195,9 +195,33 @@
                                         </c:choose>
                                     </c:when>
                                     <c:otherwise>
-                                        <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
-                                            <spring:message code="myCars.noListing.badge"/>
-                                        </span>
+                                        <c:choose>
+                                            <c:when test="${car.statusKey == 'LACK_DOC'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#ffc107; color:#212529; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.LACK_DOC"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'ADMIN_PAUSED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6d28d9; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.ADMIN_PAUSED"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'PAUSED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#e4960b; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.PAUSED"/>
+                                                </span>
+                                            </c:when>
+                                            <c:when test="${car.statusKey == 'DEACTIVATED'}">
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="enum.car.status.DEACTIVATED"/>
+                                                </span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="position-absolute top-0 end-0 m-3" style="background-color:#6c757d; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                    <spring:message code="myCars.noListing.badge"/>
+                                                </span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </c:otherwise>
                                 </c:choose>
                                             <div class="row g-0 align-items-stretch">

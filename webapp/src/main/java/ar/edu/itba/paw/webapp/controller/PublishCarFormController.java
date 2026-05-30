@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -266,6 +267,7 @@ public final class PublishCarFormController {
     public ModelAndView publish(
             @CurrentUser final User currentUser,
             final HttpSession session,
+            final Locale locale,
             @Validated(ValidationGroups.OnPublishCar.class) @ModelAttribute("publishCarForm") final PublishCarForm form,
             final BindingResult errors) {
         // Defensive backend check: prerequisites (CBU + identity) must be in place before publishing.
@@ -378,9 +380,10 @@ public final class PublishCarFormController {
                 }
             }
 
-            if (!resolvedBrand.isValidated() || !resolvedModel.isValidated()) {
+            final boolean newCatalogEntry = !resolvedBrand.isValidated() || !resolvedModel.isValidated();
+            if (newCatalogEntry) {
                 if (fresh.isAdmin()) {
-                    adminService.validateCatalogEntry(resolvedModel.getId());
+                    adminService.validateCatalogEntry(resolvedModel.getId(), locale);
                 } else {
                     // Create the car now so it appears in /my-cars under "pending validation".
                     final Car pendingCar = carService.publishCar(
@@ -427,6 +430,9 @@ public final class PublishCarFormController {
 
             final ModelAndView mav = new ModelAndView("listing/publishCarConfirmation");
             mav.addObject("car", car);
+            if (newCatalogEntry) {
+                mav.addObject("newCatalogEntry", true);
+            }
             return mav;
         } catch (final DuplicatePlateException e) {
             errors.rejectValue(

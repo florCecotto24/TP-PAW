@@ -40,9 +40,6 @@ public final class ReservationChatPolicy {
         if (reservation == null || now == null) {
             return false;
         }
-        if (!reservation.isPaymentApproved()) {
-            return false;
-        }
         final Reservation.Status status = reservation.getStatus();
         if (status != Reservation.Status.ACCEPTED
                 && status != Reservation.Status.STARTED

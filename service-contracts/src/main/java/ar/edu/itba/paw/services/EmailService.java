@@ -24,7 +24,7 @@ public interface EmailService {
     /** Rider and owner copies after a new reservation is created. */
     void sendReservationConfirmationEmail(ReservationMailPayload payload);
 
-    /** Rider only: after payment proof upload; includes full pickup address (street number). */
+    /** Rider only: after uploading payment proof; includes full pickup address (street number). */
     void sendRiderReservationConfirmedAfterPaymentProof(ReservationMailPayload payload);
 
     /** Rider and owner copies when a reservation is cancelled. */
@@ -74,6 +74,9 @@ public interface EmailService {
 
     /** Owner notified when a platform administrator rejects the catalog entry (brand, model, or both) used by their car. */
     void sendListingRejectedByAdmin(ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload payload);
+
+    /** Owner notified when a platform administrator validates the catalog entry (brand, model, or both) used by their car. */
+    void sendListingValidatedByAdmin(ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload payload);
 
     /** Counterparty notified when a new reservation chat message is received. */
     void sendReservationChatMessageNotification(ReservationChatMessageEmailPayload payload);

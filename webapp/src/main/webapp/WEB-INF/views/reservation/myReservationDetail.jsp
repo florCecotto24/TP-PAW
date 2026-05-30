@@ -138,40 +138,12 @@
 
             <c:if test="${reservationRole eq 'owner' and hasPaymentReceipt and (statusKey eq 'accepted' or statusKey eq 'started' or statusKey eq 'finished')}">
                 <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            <h2 class="h5 fw-semibold mb-0"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
-                            <c:if test="${paymentReceiptApproved}">
-                                <span class="badge text-bg-success"><spring:message code="myReservationDetail.payment.reviewedBadge"/></span>
-                            </c:if>
-                        </div>
+                    <div class="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <h2 class="h6 fw-semibold mb-0"><spring:message code="myReservationDetail.payment.ownerTitle"/></h2>
                         <c:url var="ownerReceiptViewUrl" value="/my-reservations/${reservation.id}/payment-receipt/view"/>
-                        <c:url var="approvalUrl" value="/my-reservations/${reservation.id}/payment-receipt/approval"/>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <c:if test="${not paymentReceiptApproved}">
-                                <spring:message code="myReservationDetail.payment.markReviewed" var="paymentApproveBtnLabel"/>
-                                <spring:message code="myReservationDetail.payment.modal.title" var="paymentApproveModalTitle"/>
-                                <spring:message code="myReservationDetail.payment.modal.message" var="paymentApproveModalMessage"/>
-                                <spring:message code="myReservationDetail.payment.modal.confirm" var="paymentApproveModalConfirm"/>
-                                <spring:message code="myReservationDetail.payment.modal.back" var="paymentApproveModalBack"/>
-                                <ryden:confirmModal
-                                        id="paymentReceiptApprovalModal"
-                                        title="${paymentApproveModalTitle}"
-                                        message="${paymentApproveModalMessage}"
-                                        action="${approvalUrl}"
-                                        cancelLabel="${paymentApproveModalBack}"
-                                        confirmLabel="${paymentApproveModalConfirm}"
-                                        triggerLabel="${paymentApproveBtnLabel}"
-                                        triggerClass="btn btn-primary"
-                                        confirmButtonClass="btn btn-primary">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
-                                </ryden:confirmModal>
-                            </c:if>
-                            <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
-                                <spring:message code="myReservationDetail.payment.viewReceipt"/>
-                            </a>
-                        </div>
+                        <a class="btn btn-outline-primary" href="<c:out value='${ownerReceiptViewUrl}'/>" target="_blank" rel="noopener noreferrer">
+                            <spring:message code="myReservationDetail.payment.viewReceipt"/>
+                        </a>
                     </div>
                 </article>
             </c:if>

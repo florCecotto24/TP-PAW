@@ -47,6 +47,13 @@
             </div>
           </div>
 
+          <c:if test="${newCatalogEntry}">
+            <div class="alert alert-info d-flex align-items-start gap-2 text-start mb-4" role="alert">
+              <i class="bi bi-info-circle-fill flex-shrink-0 mt-1" aria-hidden="true"></i>
+              <span><spring:message code="publishCar.confirmation.newCatalogEntry" arguments="${car.brand},${car.model}"/></span>
+            </div>
+          </c:if>
+
           <div class="d-grid gap-2 d-sm-flex justify-content-sm-center align-items-sm-center">
             <a href="<c:url value='/my-cars/car/${car.id}/create'/>" class="btn btn-primary">
               <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>

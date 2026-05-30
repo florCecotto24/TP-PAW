@@ -104,9 +104,6 @@ public class Reservation {
     @JoinColumn(name = "payment_receipt_file_id", nullable = true)
     private StoredFile paymentReceiptFile;
 
-    @Column(name = "payment_approved", nullable = false)
-    private boolean paymentApproved;
-
     @Column(name = "payment_proof_deadline_at")
     private OffsetDateTime paymentProofDeadlineAt;
 
@@ -156,7 +153,6 @@ public class Reservation {
         this.updatedAt = b.updatedAt;
         this.totalPrice = b.totalPrice;
         this.paymentReceiptFile = b.paymentReceiptFile;
-        this.paymentApproved = b.paymentApproved;
         this.paymentProofDeadlineAt = b.paymentProofDeadlineAt;
         this.carReturned = b.carReturned;
         this.paymentRefundRequired = b.paymentRefundRequired;
@@ -185,7 +181,6 @@ public class Reservation {
         private OffsetDateTime updatedAt;
         private BigDecimal totalPrice;
         private StoredFile paymentReceiptFile;
-        private boolean paymentApproved;
         private OffsetDateTime paymentProofDeadlineAt;
         private boolean carReturned;
         private boolean paymentRefundRequired;
@@ -248,10 +243,6 @@ public class Reservation {
             return this;
         }
 
-        public Builder paymentApproved(final boolean paymentApproved) {
-            this.paymentApproved = paymentApproved;
-            return this;
-        }
 
         public Builder paymentProofDeadlineAt(final OffsetDateTime paymentProofDeadlineAt) {
             this.paymentProofDeadlineAt = paymentProofDeadlineAt;
@@ -375,10 +366,6 @@ public class Reservation {
         return paymentReceiptFile == null ? Optional.empty() : Optional.of(paymentReceiptFile.getId());
     }
 
-    public boolean isPaymentApproved() {
-        return paymentApproved;
-    }
-
     public Optional<OffsetDateTime> getPaymentProofDeadlineAt() {
         return Optional.ofNullable(paymentProofDeadlineAt);
     }
@@ -418,10 +405,6 @@ public class Reservation {
 
     public void setPaymentReceiptFile(final StoredFile paymentReceiptFile) {
         this.paymentReceiptFile = paymentReceiptFile;
-    }
-
-    public void setPaymentApproved(final boolean paymentApproved) {
-        this.paymentApproved = paymentApproved;
     }
 
     public void setCarReturned(final boolean carReturned) {

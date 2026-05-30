@@ -5,7 +5,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Notifies the listing owner that the rider uploaded a payment receipt and should review it.
+ * Notifies the listing owner that the rider uploaded a payment receipt and can view it.
  * Use {@link #builder()} to construct instances.
  */
 public final class OwnerPaymentProofReceivedEmailPayload {

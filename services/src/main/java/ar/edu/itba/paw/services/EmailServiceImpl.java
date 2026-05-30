@@ -36,6 +36,7 @@ import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationChatMessageEmailPayload;
+import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 
@@ -80,6 +81,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/listing-paused-missing-cbu-owner";
     private static final String LISTING_PAUSED_BY_ADMIN_TEMPLATE = "html/listing-paused-by-admin-owner";
     private static final String LISTING_REJECTED_BY_ADMIN_TEMPLATE = "html/listing-rejected-by-admin-owner";
+    private static final String LISTING_VALIDATED_BY_ADMIN_TEMPLATE = "html/listing-validated-by-admin-owner";
     private static final String RESERVATION_CHAT_MESSAGE_TEMPLATE = "html/reservation-chat-message";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
@@ -848,6 +850,45 @@ public final class EmailServiceImpl implements EmailService {
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(carId)
                     .log("Failed to send catalog entry rejected by admin email (car id={})");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendListingValidatedByAdmin(final ListingValidatedByAdminOwnerEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendListingValidatedByAdmin")) {
+            return;
+        }
+        final String ownerEmail = payload.getOwnerEmail();
+        if (ownerEmail == null || ownerEmail.isBlank()) {
+            LOGGER.atWarn().log("Skipping listing-validated-by-admin email: missing recipient");
+            return;
+        }
+        final Locale locale = payload.getMessageLocale();
+        final String vehicleLabel = payload.getVehicleLabel();
+        final long carId = payload.getCarId();
+        final Context ctx = new Context(locale);
+        setHtmlLangFromLocale(ctx, locale);
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        ctx.setVariable("vehicleLabel", vehicleLabel);
+        ctx.setVariable("brandName", payload.getBrandName() != null ? payload.getBrandName() : "");
+        ctx.setVariable("modelName", payload.getModelName() != null ? payload.getModelName() : "");
+        ctx.setVariable("brandValidated", payload.isBrandValidated());
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-cars"));
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(LISTING_VALIDATED_BY_ADMIN_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.listingValidatedByAdmin.subject",
+                        new Object[] { vehicleLabel },
+                        locale);
+                sendEmail(ownerEmail, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(ownerEmail).addArgument(carId).log("Catalog entry validated by admin email sent to {} (car id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(carId)
+                    .log("Failed to send catalog entry validated by admin email (car id={})");
         }
     }
 

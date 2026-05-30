@@ -109,7 +109,6 @@ public class ReservationJpaDao implements ReservationDao {
                 .createdAt(now)
                 .updatedAt(now)
                 .paymentProofDeadlineAt(paymentProofDeadlineAt)
-                .paymentApproved(false)
                 .carReturned(false)
                 .paymentRefundRequired(false)
                 .paymentRefundApproved(false)
@@ -144,18 +143,6 @@ public class ReservationJpaDao implements ReservationDao {
         }
         r.setStatus(Reservation.Status.ACCEPTED);
         r.setPaymentReceiptFile(em.getReference(StoredFile.class, storedFileId));
-        r.setUpdatedAt(OffsetDateTime.now());
-        return 1;
-    }
-
-    @Override
-    @Transactional
-    public int updatePaymentApproved(final long reservationId, final long ownerUserId, final boolean approved) {
-        final Reservation r = em.find(Reservation.class, reservationId);
-        if (r == null || r.getCar().getOwner().getId() != ownerUserId) {
-            return 0;
-        }
-        r.setPaymentApproved(approved);
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
     }
@@ -491,7 +478,7 @@ public class ReservationJpaDao implements ReservationDao {
                         "SELECT * FROM reservations r "
                                 + "WHERE r.payment_proof_deadline_at IS NOT NULL "
                                 + "AND r.payment_proof_deadline_at <= :windowEnd "
-                                + "AND r.payment_approved = FALSE "
+                                + "AND r.payment_receipt_file_id IS NULL "
                                 + "AND r.pending_paymentproof_email_sent = FALSE",
                         Reservation.class)
                 .setParameter("windowEnd", toTimestamp(windowEnd))

@@ -37,8 +37,12 @@ public interface AdminService {
 
     void rejectCarModel(long modelId);
 
-    /** Validates a pending catalog entry: validates the model and, if its brand is also pending, validates the brand. */
-    void validateCatalogEntry(long modelId);
+    /**
+     * Validates a pending catalog entry: validates the model and, if its brand is also pending, validates the brand.
+     * Notifies by email each affected car owner indicating whether only the model or both brand and model were validated.
+     * {@code locale} is the fallback request locale.
+     */
+    void validateCatalogEntry(long modelId, Locale locale);
 
     /**
      * Rejects a pending catalog entry: removes the model and, if its brand is pending and has no remaining models,

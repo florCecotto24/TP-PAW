@@ -160,7 +160,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 !viewerIsOwner && periodEnded && !hasRiderReview,
                 paymentProofDeadlineDisplay,
                 reservation.getPaymentReceiptFileId().isPresent(),
-                reservation.isPaymentApproved(),
                 canCancelReservation,
                 hasRefundReceipt,
                 refundReceiptApproved,

@@ -44,9 +44,6 @@ public interface ReservationDao {
 
     int attachPaymentReceiptAndAccept(long reservationId, long riderId, long storedFileId);
 
-    /** Sets {@code payment_approved} only; lifecycle status is owned by the service layer. */
-    int updatePaymentApproved(long reservationId, long ownerUserId, boolean approved);
-
     Optional<Reservation> getReservationById(long id);
 
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
@@ -77,10 +74,7 @@ public interface ReservationDao {
     /** Finished reservations for the car (owner analytics). */
     List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
-    /**
-     * Sets {@code car_returned}; {@code status} becomes {@code finished} only if {@code payment_approved} is already
-     * true, otherwise unchanged.
-     */
+    /** Sets {@code car_returned}; transitions {@code status} to {@code finished} when the car is marked returned. */
     int markCarReturned(long reservationId, long ownerUserId);
 
     List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);

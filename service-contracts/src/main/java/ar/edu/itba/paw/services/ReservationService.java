@@ -111,11 +111,6 @@ public interface ReservationService {
      */
     Optional<StoredFile> findPaymentReceiptForParticipant(long userId, long reservationId);
 
-    /**
-     * Owner validates the payment proof (only accepted/started/finished reservation with proof); irreversible.
-     */
-    void approvePaymentReceiptByOwner(long ownerUserId, long reservationId);
-
     /** Owner uploads refund transfer proof for a cancelled confirmed reservation that requires refund documentation. */
     void attachRefundReceiptByOwner(long ownerUserId, long reservationId, String originalFilename, String contentType, byte[] data);
 

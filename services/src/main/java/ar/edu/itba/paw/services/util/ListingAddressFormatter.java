@@ -50,9 +50,9 @@ public final class ListingAddressFormatter {
         return street + ", " + neighborhoodName.trim();
     }
 
-    /** Whether the rider may see the full address including door number (payment proof uploaded or approved). */
+    /** Whether the rider may see the full address including door number (payment proof uploaded). */
     private static boolean riderSeesSensitiveAddressNumbers(final Reservation reservation) {
-        return reservation.getPaymentReceiptFileId().isPresent() || reservation.isPaymentApproved();
+        return reservation.getPaymentReceiptFileId().isPresent();
     }
 
     /** Full pickup line (street, optional number, neighborhood) read from a {@link ListingAvailability}. */

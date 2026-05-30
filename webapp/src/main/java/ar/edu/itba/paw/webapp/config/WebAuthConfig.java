@@ -160,12 +160,6 @@ public class WebAuthConfig {
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
-                                        HttpMethod.POST,
-                                        "/my-reservations/{reservationId}/payment-receipt/approval"))
-                        .access(reservationWebAuthorization.ownerAccess())
-                        .requestMatchers(
-                                mvc(
-                                        handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/payment-receipt/download"))
                         .access(reservationWebAuthorization.participantAccess())

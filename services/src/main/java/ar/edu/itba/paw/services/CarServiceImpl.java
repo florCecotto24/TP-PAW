@@ -667,7 +667,8 @@ public final class CarServiceImpl implements CarService {
                     owner,
                     availabilities,
                     carImageId,
-                    car.getStatus().name(),
+                    (availabilities.isEmpty() && car.getStatus() == Car.Status.ACTIVE
+                            ? Car.Status.UNAVAILABLE : car.getStatus()).name(),
                     reservationStatusCounts,
                     reservationTotal,
                     totalEarnings,

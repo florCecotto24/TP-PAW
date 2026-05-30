@@ -1035,37 +1035,6 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
-    public void approvePaymentReceiptByOwner(final long ownerUserId, final long reservationId) {
-        final Reservation r = getOwnerReservationById(ownerUserId, reservationId)
-                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID));
-        if (r.getStatus() != Reservation.Status.ACCEPTED
-                && r.getStatus() != Reservation.Status.STARTED
-                && r.getStatus() != Reservation.Status.FINISHED) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
-        }
-        if (r.getPaymentReceiptFileId().isEmpty()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
-        }
-        if (r.isPaymentApproved()) {
-            return;
-        }
-        final int updated = reservationDao.updatePaymentApproved(reservationId, ownerUserId, true);
-        if (updated == 0) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_APPROVAL_INVALID);
-        }
-        syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
-        LOGGER.atInfo()
-                .addArgument(ownerUserId)
-                .addArgument(reservationId)
-                .log("Owner ownerUserId={} approved payment receipt for reservation id={}");
-        if (r.isCarReturned()) {
-            reservationDao.updateReservationStatus(reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
-            LOGGER.atInfo().addArgument(reservationId).log("Reservation id={} transitioned to finished (payment approved + car already returned)");
-        }
-    }
-
-    @Override
-    @Transactional
     public void attachRefundReceiptByOwner(
             final long ownerUserId,
             final long reservationId,
@@ -1233,10 +1202,10 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     /**
-     * Sets {@link Reservation.Status#FINISHED} when payment is approved and the car is marked returned; if status was
-     * {@code finished} and that is no longer true, reverts to {@link Reservation.Status#STARTED}.
+     * Sets {@link Reservation.Status#FINISHED} when the car is marked returned; if status was {@code finished} and
+     * the car is no longer returned, reverts to {@link Reservation.Status#STARTED}.
      */
-    private void syncFinishedStatusWithCarReturnedAndPaymentApproved(
+    private void syncFinishedStatusWithCarReturned(
             final long ownerUserId,
             final long reservationId) {
         final Optional<Reservation> freshOpt = getOwnerReservationById(ownerUserId, reservationId);
@@ -1244,13 +1213,13 @@ public final class ReservationServiceImpl implements ReservationService {
             return;
         }
         final Reservation fresh = freshOpt.get();
-        final boolean both = fresh.isPaymentApproved() && fresh.isCarReturned();
-        if (both
+        final boolean carReturned = fresh.isCarReturned();
+        if (carReturned
                 && (fresh.getStatus() == Reservation.Status.ACCEPTED
                         || fresh.getStatus() == Reservation.Status.STARTED)) {
             reservationDao.updateReservationStatus(
                     reservationId, Reservation.Status.FINISHED.name().toLowerCase(Locale.ROOT));
-        } else if (!both && fresh.getStatus() == Reservation.Status.FINISHED) {
+        } else if (!carReturned && fresh.getStatus() == Reservation.Status.FINISHED) {
             reservationDao.updateReservationStatus(
                     reservationId, Reservation.Status.STARTED.name().toLowerCase(Locale.ROOT));
         }
@@ -1274,7 +1243,7 @@ public final class ReservationServiceImpl implements ReservationService {
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
-        syncFinishedStatusWithCarReturnedAndPaymentApproved(ownerUserId, reservationId);
+        syncFinishedStatusWithCarReturned(ownerUserId, reservationId);
         LOGGER.atInfo()
                 .addArgument(ownerUserId)
                 .addArgument(reservationId)

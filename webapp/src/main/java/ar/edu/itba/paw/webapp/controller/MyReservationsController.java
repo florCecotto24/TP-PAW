@@ -391,24 +391,6 @@ public final class MyReservationsController {
         return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
     }
 
-    @PostMapping("/my-reservations/{reservationId}/payment-receipt/approval")
-    public ModelAndView approvePaymentReceipt(
-            @CurrentUser final User currentUser,
-            @PathVariable("reservationId") final long reservationId,
-            @RequestParam(required = false) final Long fromCar,
-            final RedirectAttributes redirectAttributes) {
-        final User me = WebAuthUtils.requireUser(currentUser);
-        try {
-            reservationService.approvePaymentReceiptByOwner(me.getId(), reservationId);
-            redirectAttributes.addFlashAttribute(
-                    "paymentApprovalMessage",
-                    localeMessages.msg("myReservationDetail.payment.approvalUpdated"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("paymentReceiptError", localeMessages.msg(e));
-        }
-        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
-    }
-
     private static String sanitizeDownloadFileName(final String raw) {
         if (raw == null || raw.isBlank()) {
             return "receipt";
