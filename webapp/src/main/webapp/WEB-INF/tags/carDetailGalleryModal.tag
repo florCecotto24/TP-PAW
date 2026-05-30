@@ -30,6 +30,13 @@
                                         <c:when test="${item.video}">
                                             <spring:message code="carDetailGalleryModal.videoAlt" arguments="${vehicleLabel}, ${st.count}" var="videoAlt"/>
                                             <video src="<c:out value='${slideSrc}'/>"
+                                                   class="car-detail-carousel-backdrop"
+                                                   muted
+                                                   playsinline
+                                                   preload="metadata"
+                                                   tabindex="-1"
+                                                   aria-hidden="true"></video>
+                                            <video src="<c:out value='${slideSrc}'/>"
                                                    class="car-detail-carousel-video"
                                                    controls playsinline preload="metadata"
                                                    aria-label="<c:out value='${videoAlt}'/>">
@@ -38,7 +45,13 @@
                                         </c:when>
                                         <c:otherwise>
                                             <spring:message code="carDetailGalleryModal.photoAlt" arguments="${vehicleLabel}, ${st.count}" var="photoAlt"/>
-                                            <img src="<c:out value='${slideSrc}'/>" class="car-detail-carousel-img" alt="<c:out value='${photoAlt}'/>">
+                                            <img src="<c:out value='${slideSrc}'/>"
+                                                 class="car-detail-carousel-backdrop"
+                                                 alt=""
+                                                 aria-hidden="true">
+                                            <img src="<c:out value='${slideSrc}'/>"
+                                                 class="car-detail-carousel-img"
+                                                 alt="<c:out value='${photoAlt}'/>">
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
