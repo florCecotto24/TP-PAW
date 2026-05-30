@@ -1,6 +1,11 @@
 /* Price market insight card: animated slider + sync with price-per-day input */
 (function () {
-    var moneyFmt = new Intl.NumberFormat(undefined, { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
+    var moneyFmt = new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: "ARS",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    });
     var nextCardId = 0;
 
     function parseMoney(raw) {
@@ -49,7 +54,7 @@
     }
 
     function formatInputPrice(price) {
-        return clampPrice(price).toFixed(2);
+        return String(Math.round(clampPrice(price)));
     }
 
     function getBarZoneLayout(min, max, avg) {
