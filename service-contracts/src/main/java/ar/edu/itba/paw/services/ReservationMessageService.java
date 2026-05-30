@@ -33,4 +33,6 @@ public interface ReservationMessageService {
             long viewerUserId, long reservationId, long messageId);
 
     boolean canParticipantAccessReservationChat(long viewerUserId, long reservationId);
+
+    void dispatchChatDigestEmails();
 }

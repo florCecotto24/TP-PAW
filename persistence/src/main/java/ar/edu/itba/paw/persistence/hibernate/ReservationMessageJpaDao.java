@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.hibernate;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -82,5 +83,35 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
                 .setMaxResults(1)
                 .getResultList();
         return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+    }
+
+    @Override
+    public List<ReservationMessage> findPendingEmailNotification() {
+        return em.createQuery(
+                        "SELECT DISTINCT m FROM ReservationMessage m "
+                                + "JOIN FETCH m.reservation "
+                                + "JOIN FETCH m.sender "
+                                + "LEFT JOIN FETCH m.attachment "
+                                + "WHERE m.emailNotified = false "
+                                + "ORDER BY m.createdAt ASC",
+                        ReservationMessage.class)
+                .getResultList();
+    }
+
+    @Override
+    @Transactional
+    public int markEmailNotified(final Collection<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return 0;
+        }
+        final List<ReservationMessage> messages = em.createQuery(
+                        "SELECT m FROM ReservationMessage m WHERE m.id IN :ids AND m.emailNotified = false",
+                        ReservationMessage.class)
+                .setParameter("ids", messageIds)
+                .getResultList();
+        for (final ReservationMessage message : messages) {
+            message.setEmailNotified(true);
+        }
+        return messages.size();
     }
 }

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,4 +17,8 @@ public interface ReservationMessageDao {
     long countByReservationId(long reservationId);
 
     Optional<ReservationMessage> findByIdAndReservationId(long messageId, long reservationId);
+
+    List<ReservationMessage> findPendingEmailNotification();
+
+    int markEmailNotified(Collection<Long> messageIds);
 }

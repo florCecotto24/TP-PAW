@@ -3,6 +3,9 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
@@ -24,6 +27,7 @@ import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ReservationMessageDto;
+import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.persistence.ReservationMessageDao;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.services.policy.ChatAttachmentUploadPolicy;
@@ -65,10 +69,19 @@ class ReservationMessageServiceImplTest {
     @Mock
     private Environment environment;
 
+    private final List<ReservationChatDigestEmailPayload> sentDigests = new ArrayList<>();
+
     private ReservationMessageServiceImpl service;
 
     @BeforeEach
     void setUp() {
+        sentDigests.clear();
+        Mockito.doAnswer(invocation -> {
+                    sentDigests.add(invocation.getArgument(0));
+                    return null;
+                })
+                .when(emailService)
+                .sendReservationChatDigestEmail(Mockito.any(ReservationChatDigestEmailPayload.class));
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_BYTES_PER_BINARY_MB, Integer.class))
                 .thenReturn(1048576);
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_CHAT_ATTACHMENT_MB, Long.class))
@@ -272,5 +285,81 @@ class ReservationMessageServiceImplTest {
         Assertions.assertEquals("", dto.getBody());
         Assertions.assertNotNull(dto.getAttachment());
         Assertions.assertEquals("IMAGE", dto.getAttachment().getKind().name());
+    }
+
+    @Test
+    void testPostMessageDoesNotSendImmediateDigestEmail() {
+        // 1.Arrange
+        stubParticipantAndSender();
+        final ReservationMessage saved = Mockito.mock(ReservationMessage.class);
+        Mockito.when(saved.getId()).thenReturn(1L);
+        Mockito.when(saved.getReservationId()).thenReturn(RESERVATION_ID);
+        Mockito.when(saved.getSenderUserId()).thenReturn(RIDER_ID);
+        Mockito.when(saved.getBody()).thenReturn("Hello");
+        Mockito.when(saved.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
+        Mockito.when(saved.getAttachment()).thenReturn(null);
+        Mockito.when(reservationMessageDao.create(RESERVATION_ID, RIDER_ID, "Hello")).thenReturn(saved);
+
+        // 2.Exercise
+        service.postMessage(RIDER_ID, RESERVATION_ID, "Hello");
+
+        // 3.Assert
+        Assertions.assertTrue(sentDigests.isEmpty());
+    }
+
+    @Test
+    void testDispatchChatDigestEmailsWhenNoPendingMessagesDoesNothing() {
+        // 1.Arrange
+        Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of());
+
+        // 2.Exercise
+        service.dispatchChatDigestEmails();
+
+        // 3.Assert
+        Assertions.assertTrue(sentDigests.isEmpty());
+    }
+
+    @Test
+    void testDispatchChatDigestEmailsSendsOneDigestForRecipient() {
+        // 1.Arrange
+        final Reservation reservation = reservation(Reservation.Status.ACCEPTED);
+        final User owner = User.identities(OWNER_ID, "o@test.com", "O", "Owner");
+        final User rider = User.identities(RIDER_ID, "r@test.com", "R", "Rider");
+        final Car car = Mockito.mock(Car.class);
+        Mockito.when(car.getId()).thenReturn(CAR_ID);
+        Mockito.when(car.getBrand()).thenReturn("Toyota");
+        Mockito.when(car.getModel()).thenReturn("Corolla");
+        Mockito.when(car.getOwner()).thenReturn(owner);
+        Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.of(car));
+
+        final ReservationMessage message = Mockito.mock(ReservationMessage.class);
+        Mockito.when(message.getId()).thenReturn(55L);
+        Mockito.when(message.getReservation()).thenReturn(reservation);
+        Mockito.when(message.getReservationId()).thenReturn(RESERVATION_ID);
+        Mockito.when(message.getSenderUserId()).thenReturn(RIDER_ID);
+        Mockito.when(message.getSender()).thenReturn(rider);
+        Mockito.when(message.getBody()).thenReturn("When can I pick up?");
+        Mockito.when(message.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
+        Mockito.when(message.getAttachment()).thenReturn(null);
+
+        Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
+        Mockito.when(reservationMessageDao.markEmailNotified(List.of(55L))).thenReturn(1);
+        Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(owner));
+        Mockito.when(userService.resolveMailLocale(OWNER_ID)).thenReturn(Locale.ENGLISH);
+        Mockito.when(mailPublicUrls.absolutePath("/my-reservations/30/chat?role=owner"))
+                .thenReturn("https://example.com/my-reservations/30/chat?role=owner");
+
+        // 2.Exercise
+        service.dispatchChatDigestEmails();
+
+        // 3.Assert
+        Assertions.assertEquals(1, sentDigests.size());
+        final ReservationChatDigestEmailPayload payload = sentDigests.get(0);
+        Assertions.assertEquals("o@test.com", payload.getRecipientEmail());
+        Assertions.assertEquals(1, payload.getTotalMessageCount());
+        Assertions.assertEquals(1, payload.getConversations().size());
+        Assertions.assertEquals("Toyota Corolla", payload.getConversations().get(0).getVehicleLabel());
+        Assertions.assertEquals(1, payload.getConversations().get(0).getMessages().size());
+        Assertions.assertEquals("When can I pick up?", payload.getConversations().get(0).getMessages().get(0).getMessagePreview());
     }
 }

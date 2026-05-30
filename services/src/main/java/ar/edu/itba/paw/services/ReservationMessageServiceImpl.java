@@ -2,8 +2,11 @@ package ar.edu.itba.paw.services;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -22,9 +25,12 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.ReservationMessageAttachmentDto;
 import ar.edu.itba.paw.models.dto.ReservationMessageDto;
-import ar.edu.itba.paw.models.email.ReservationChatMessageEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationChatDigestConversationEntry;
+import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationChatDigestMessageEntry;
 import ar.edu.itba.paw.models.util.ChatAttachmentContentTypes;
 import ar.edu.itba.paw.models.util.ChatAttachmentKindResolver;
+import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.persistence.ReservationMessageDao;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.services.policy.ChatAttachmentUploadPolicy;
@@ -133,9 +139,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         validateBodyLength(trimmed);
         final Reservation reservation = requireChatOpenForParticipant(senderUserId, reservationId);
         final ReservationMessage saved = reservationMessageDao.create(reservationId, senderUserId, trimmed);
-        final ReservationMessageDto dto = toDto(saved);
-        enqueueCounterpartyNotification(senderUserId, reservation, trimmed, null);
-        return dto;
+        return toDto(saved);
     }
 
     @Override
@@ -164,9 +168,24 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
                 storedFileService.create(senderUserId, safeFileName, normalizeContentType(contentType), data);
         final ReservationMessage saved = reservationMessageDao.create(
                 reservationId, senderUserId, trimmedBody, storedFile.getId());
-        final ReservationMessageDto dto = toDto(saved);
-        enqueueCounterpartyNotification(senderUserId, reservation, trimmedBody, safeFileName);
-        return dto;
+        return toDto(saved);
+    }
+
+    @Override
+    @Transactional
+    public void dispatchChatDigestEmails() {
+        final List<ReservationMessage> pending = reservationMessageDao.findPendingEmailNotification();
+        if (pending.isEmpty()) {
+            return;
+        }
+        final Map<Long, List<ReservationMessage>> byRecipient = new LinkedHashMap<>();
+        for (final ReservationMessage message : pending) {
+            final long recipientId = resolveCounterpartyUserId(message.getSenderUserId(), message.getReservation());
+            byRecipient.computeIfAbsent(recipientId, ignored -> new ArrayList<>()).add(message);
+        }
+        for (final Map.Entry<Long, List<ReservationMessage>> entry : byRecipient.entrySet()) {
+            dispatchDigestForRecipient(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
@@ -184,6 +203,85 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             return Optional.empty();
         }
         return Optional.of(messageOpt.get().getAttachment());
+    }
+
+    private void dispatchDigestForRecipient(final long recipientId, final List<ReservationMessage> messages) {
+        try {
+            final List<Long> messageIds =
+                    messages.stream().map(ReservationMessage::getId).collect(Collectors.toList());
+            if (reservationMessageDao.markEmailNotified(messageIds) == 0) {
+                return;
+            }
+            final Optional<User> recipientOpt = userService.getUserById(recipientId);
+            if (recipientOpt.isEmpty()) {
+                return;
+            }
+            final User recipient = recipientOpt.get();
+            final Locale mailLocale = userService.resolveMailLocale(recipientId);
+            final Optional<ReservationChatDigestEmailPayload> payloadOpt =
+                    buildDigestPayload(recipient, mailLocale, messages);
+            if (payloadOpt.isEmpty()) {
+                return;
+            }
+            emailService.sendReservationChatDigestEmail(payloadOpt.get());
+        } catch (final RuntimeException e) {
+            LOGGER.atWarn()
+                    .setCause(e)
+                    .addArgument(recipientId)
+                    .log("Failed to dispatch reservation chat digest email (recipient id={})");
+        }
+    }
+
+    private Optional<ReservationChatDigestEmailPayload> buildDigestPayload(
+            final User recipient, final Locale mailLocale, final List<ReservationMessage> messages) {
+        final Map<Long, List<ReservationMessage>> byReservation = new LinkedHashMap<>();
+        for (final ReservationMessage message : messages) {
+            byReservation
+                    .computeIfAbsent(message.getReservationId(), ignored -> new ArrayList<>())
+                    .add(message);
+        }
+        final List<ReservationChatDigestConversationEntry> conversations = new ArrayList<>();
+        for (final Map.Entry<Long, List<ReservationMessage>> reservationEntry : byReservation.entrySet()) {
+            final List<ReservationMessage> reservationMessages = reservationEntry.getValue();
+            if (reservationMessages.isEmpty()) {
+                continue;
+            }
+            final Reservation reservation = reservationMessages.get(0).getReservation();
+            final long reservationId = reservation.getId();
+            final String vehicleLabel = resolveVehicleLabel(reservation.getCarId());
+            final boolean recipientIsOwner = recipient.getId() != reservation.getRiderId();
+            final String roleParam = recipientIsOwner ? "owner" : "rider";
+            final String detailPath = "/my-reservations/" + reservationId + "/chat?role=" + roleParam;
+            final List<ReservationChatDigestMessageEntry> messageEntries = reservationMessages.stream()
+                    .map(message -> toDigestMessageEntry(message, mailLocale))
+                    .collect(Collectors.toList());
+            conversations.add(new ReservationChatDigestConversationEntry(
+                    vehicleLabel,
+                    reservationId,
+                    mailPublicUrls.absolutePath(detailPath),
+                    messageEntries));
+        }
+        if (conversations.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(ReservationChatDigestEmailPayload.builder()
+                .messageLocale(mailLocale)
+                .recipientEmail(recipient.getEmail())
+                .recipientFullName(formatDisplayName(recipient))
+                .totalMessageCount(messages.size())
+                .conversations(conversations)
+                .build());
+    }
+
+    private ReservationChatDigestMessageEntry toDigestMessageEntry(
+            final ReservationMessage message, final Locale mailLocale) {
+        final User sender = message.getSender();
+        final String attachmentFileName =
+                message.getAttachment() == null ? null : message.getAttachment().getFileName();
+        return new ReservationChatDigestMessageEntry(
+                formatDisplayName(sender),
+                truncateForEmailPreview(message.getBody(), attachmentFileName),
+                WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(message.getCreatedAt(), mailLocale));
     }
 
     private void validateBodyLength(final String trimmed) {
@@ -257,45 +355,6 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
 
     private static String formatDisplayName(final User user) {
         return user.getForename() + " " + user.getSurname();
-    }
-
-    private void enqueueCounterpartyNotification(
-            final long senderUserId,
-            final Reservation reservation,
-            final String messageBody,
-            final String attachmentFileName) {
-        try {
-            final long counterpartyId = resolveCounterpartyUserId(senderUserId, reservation);
-            final Optional<User> counterpartyOpt = userService.getUserById(counterpartyId);
-            final Optional<User> senderOpt = userService.getUserById(senderUserId);
-            if (counterpartyOpt.isEmpty() || senderOpt.isEmpty()) {
-                return;
-            }
-            final User counterparty = counterpartyOpt.get();
-            final User sender = senderOpt.get();
-            final String vehicleLabel = resolveVehicleLabel(reservation.getCarId());
-            final boolean recipientIsOwner = counterpartyId != reservation.getRiderId();
-            final String roleParam = recipientIsOwner ? "owner" : "rider";
-            final String detailPath =
-                    "/my-reservations/" + reservation.getId() + "/chat?role=" + roleParam;
-            final Locale mailLocale = userService.resolveMailLocale(counterpartyId);
-            final ReservationChatMessageEmailPayload payload = ReservationChatMessageEmailPayload.builder()
-                    .messageLocale(mailLocale)
-                    .recipientEmail(counterparty.getEmail())
-                    .recipientFullName(formatDisplayName(counterparty))
-                    .senderFullName(formatDisplayName(sender))
-                    .messagePreview(truncateForEmailPreview(messageBody, attachmentFileName))
-                    .vehicleLabel(vehicleLabel)
-                    .reservationId(reservation.getId())
-                    .detailUrl(mailPublicUrls.absolutePath(detailPath))
-                    .build();
-            emailService.sendReservationChatMessageNotification(payload);
-        } catch (final RuntimeException e) {
-            LOGGER.atWarn()
-                    .setCause(e)
-                    .addArgument(reservation.getId())
-                    .log("Failed to enqueue reservation chat notification email (reservation id={})");
-        }
     }
 
     private long resolveCounterpartyUserId(final long senderUserId, final Reservation reservation) {

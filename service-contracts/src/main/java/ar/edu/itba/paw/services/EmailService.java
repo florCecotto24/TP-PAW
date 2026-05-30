@@ -12,7 +12,7 @@ import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
-import ar.edu.itba.paw.models.email.ReservationChatMessageEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 
 /**
  * HTML mail dispatch (implementation is typically asynchronous). Callers supply fully-built payloads; this layer
@@ -78,6 +78,6 @@ public interface EmailService {
     /** Owner notified when a platform administrator validates the catalog entry (brand, model, or both) used by their car. */
     void sendListingValidatedByAdmin(ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload payload);
 
-    /** Counterparty notified when a new reservation chat message is received. */
-    void sendReservationChatMessageNotification(ReservationChatMessageEmailPayload payload);
+    /** Hourly digest of reservation chat messages for one recipient. */
+    void sendReservationChatDigestEmail(ReservationChatDigestEmailPayload payload);
 }

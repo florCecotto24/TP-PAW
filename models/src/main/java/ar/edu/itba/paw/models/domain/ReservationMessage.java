@@ -44,6 +44,9 @@ public class ReservationMessage {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(name = "email_notified", nullable = false)
+    private boolean emailNotified;
+
     /* package */ ReservationMessage() {
         // For Hibernate
     }
@@ -67,6 +70,7 @@ public class ReservationMessage {
         this.body = body;
         this.attachment = attachment;
         this.createdAt = createdAt;
+        this.emailNotified = false;
     }
 
     public long getId() {
@@ -103,5 +107,13 @@ public class ReservationMessage {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isEmailNotified() {
+        return emailNotified;
+    }
+
+    public void setEmailNotified(final boolean emailNotified) {
+        this.emailNotified = emailNotified;
     }
 }

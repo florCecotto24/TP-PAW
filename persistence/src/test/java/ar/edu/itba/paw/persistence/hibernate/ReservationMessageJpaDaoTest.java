@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.hibernate;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 
 import javax.persistence.EntityManager;
@@ -128,5 +129,42 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
                 Long.class,
                 created.getId());
         Assertions.assertEquals(fileId, attachmentId.longValue());
+    }
+
+    @Test
+    void testFindPendingEmailNotificationReturnsOnlyUnnotifiedMessages() {
+        // 1.Arrange
+        final ReservationMessage pending = dao.create(reservationId, riderId, "Pending");
+        dao.create(reservationId, riderId, "Notified");
+        em.flush();
+        jdbcTemplate.update(
+                "UPDATE reservation_messages SET email_notified = TRUE WHERE id = ?",
+                jdbcTemplate.queryForObject(
+                        "SELECT id FROM reservation_messages WHERE body = ?", Long.class, "Notified"));
+
+        // 2.Exercise
+        final var pendingMessages = dao.findPendingEmailNotification();
+
+        // 3.Assert
+        Assertions.assertEquals(1, pendingMessages.size());
+        Assertions.assertEquals(pending.getId(), pendingMessages.get(0).getId());
+        Assertions.assertEquals("Pending", pendingMessages.get(0).getBody());
+    }
+
+    @Test
+    void testMarkEmailNotifiedPersistsFlag() {
+        // 1.Arrange
+        final ReservationMessage created = dao.create(reservationId, riderId, BODY);
+        em.flush();
+
+        // 2.Exercise
+        final int marked = dao.markEmailNotified(List.of(created.getId()));
+        em.flush();
+
+        // 3.Assert
+        Assertions.assertEquals(1, marked);
+        final Boolean notified = jdbcTemplate.queryForObject(
+                "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, created.getId());
+        Assertions.assertTrue(notified);
     }
 }
