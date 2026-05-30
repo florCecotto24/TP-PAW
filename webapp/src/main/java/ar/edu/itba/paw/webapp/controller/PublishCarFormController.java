@@ -10,7 +10,6 @@ import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -79,7 +78,6 @@ public final class PublishCarFormController {
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final AdminService adminService;
     private final PublishCarFormValidator publishCarFormValidator;
-    private final String supportEmail;
 
     public PublishCarFormController(
             final CarService carService,
@@ -95,8 +93,7 @@ public final class PublishCarFormController {
             final UserService userService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final AdminService adminService,
-            final PublishCarFormValidator publishCarFormValidator,
-            @Value("${app.support.email}") final String supportEmail) {
+            final PublishCarFormValidator publishCarFormValidator) {
         this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
@@ -111,7 +108,6 @@ public final class PublishCarFormController {
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.adminService = adminService;
         this.publishCarFormValidator = publishCarFormValidator;
-        this.supportEmail = supportEmail;
     }
 
     @ModelAttribute("allBrands")
@@ -456,18 +452,30 @@ public final class PublishCarFormController {
                     localeMessages.msg(e));
             pictureStash.trySyncFromForm(form, session, errors);
             return publishCarFormView(session);
-        } catch (final Exception e) {
-            LOG.atError()
-                    .setMessage("Failed to publish car for ownerId={} plate={}")
+        } catch (final RydenException e) {
+            // Typed domain failures (e.g. ImageValidationException) get repainted on the form with
+            // their specific i18n message so the user sees what to fix without losing the stash.
+            // Unexpected RuntimeExceptions are intentionally NOT caught: they bubble up to
+            // RydenExceptionHandler / UnhandledExceptionHandler (see webapp.exception package).
+            LOG.atDebug()
+                    .setMessage("Publish car rejected for ownerId={} plate={} code={}")
                     .addArgument(currentUser != null ? currentUser.getId() : null)
                     .addArgument(form.getPlate())
+                    .addArgument(e.getMessageCode())
                     .setCause(e)
                     .log();
-            errors.reject(
-                    MessageKeys.PUBLISH_FAILED,
-                    new Object[] { supportEmail },
-                    localeMessages.msg(MessageKeys.PUBLISH_FAILED, supportEmail));
+            errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             pictureStash.trySyncFromForm(form, session, errors);
+            return publishCarFormView(session);
+        } catch (final IOException e) {
+            // Reading the freshly uploaded insurance file or its stashed copy failed.
+            // Repaint the form with the same generic "upload read" message used elsewhere
+            // (see the pictureStash.resolveUploads catch above).
+            errors.reject(
+                    MessageKeys.PUBLISH_IMAGES_READ,
+                    localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
+            pictureStash.trySyncFromForm(form, session, errors);
+            insuranceStash.trySyncFromForm(form, session);
             return publishCarFormView(session);
         }
     }

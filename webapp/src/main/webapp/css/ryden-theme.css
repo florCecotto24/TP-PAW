@@ -1138,6 +1138,14 @@ hr {
     box-shadow: var(--shadow-card) !important;
 }
 
+.listing-review-card-image {
+    max-height: 220px;
+    width: auto;
+    max-width: 100%;
+    object-fit: cover;
+    cursor: zoom-in;
+}
+
 /* ------------------------------------------------------------------
    26. HOW IT WORKS SECTION
    ------------------------------------------------------------------ */

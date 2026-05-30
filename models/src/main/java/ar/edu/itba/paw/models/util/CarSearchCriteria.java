@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,6 +17,12 @@ import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
  * in the web app, wire sizes from Spring {@code Environment} via {@code CarService#buildSearchCriteria}.
  */
 public final class CarSearchCriteria extends BaseSearchCriteria {
+
+    /**
+     * Wall calendar reference for all date math derived from the (instant) availability range.
+     * Argentina does not observe DST; safe to use as a fixed zone.
+     */
+    private static final ZoneId BA_ZONE = ZoneId.of("America/Argentina/Buenos_Aires");
 
     private final String query;
     private final Instant availabilityRangeStart;
@@ -247,15 +254,17 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
     }
 
     /**
-     * Wall-calendar day count for the exact availability range (inclusive on both ends).
+     * Wall-calendar day count for the exact availability range. Equivalent to the rental span:
+     * {@code ChronoUnit.DAYS.between(from, endExclusive)} already yields that count when the
+     * upper bound is exclusive (no need for the {@code -1}/{@code +1} round-trip).
      * Only meaningful when {@link #hasAvailabilityRange()} is true and the search is not flexible.
      */
     public long getRangeLengthDays() {
         if (!hasAvailabilityRange()) {
             return 0L;
         }
-        final LocalDate from = availabilityRangeStart.atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toLocalDate();
-        final LocalDate until = availabilityRangeEndExclusive.atZone(ZoneId.of("America/Argentina/Buenos_Aires")).toLocalDate().minusDays(1);
-        return java.time.temporal.ChronoUnit.DAYS.between(from, until) + 1;
+        final LocalDate from = availabilityRangeStart.atZone(BA_ZONE).toLocalDate();
+        final LocalDate endExclusive = availabilityRangeEndExclusive.atZone(BA_ZONE).toLocalDate();
+        return ChronoUnit.DAYS.between(from, endExclusive);
     }
 }

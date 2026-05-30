@@ -1,25 +1,58 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.pagination.UiPaging;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.RydenException;
+import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.ReservationCard;
 import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
+import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.util.MyHubSortSanitizer;
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
 import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.form.ReservationReviewAction;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
-import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.MyReservationDetailModelFactory;
@@ -27,37 +60,7 @@ import ar.edu.itba.paw.webapp.support.RiderReservationReviewExceptionMapper;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.server.ServletServerHttpRequest;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.view.RedirectView;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import javax.servlet.http.HttpServletRequest;
-
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 /** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
 @Controller
@@ -73,6 +76,8 @@ public final class MyReservationsController {
     private final MyReservationDetailModelFactory reservationDetailFactory;
     private final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
+    private final MultipartImageValidation multipartImageValidation;
+    private final ImageService imageService;
 
     public MyReservationsController(
             final ReservationService reservationService,
@@ -82,7 +87,9 @@ public final class MyReservationsController {
             final ReservationReviewFormValidator reservationReviewFormValidator,
             final MyReservationDetailModelFactory reservationDetailFactory,
             final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper,
-            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
+            final MultipartImageValidation multipartImageValidation,
+            final ImageService imageService) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
         this.localeMessages = localeMessages;
@@ -91,6 +98,18 @@ public final class MyReservationsController {
         this.reservationDetailFactory = reservationDetailFactory;
         this.riderReservationReviewExceptionMapper = riderReservationReviewExceptionMapper;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
+        this.multipartImageValidation = multipartImageValidation;
+        this.imageService = imageService;
+    }
+
+    @ModelAttribute("uploadMaxImageBytes")
+    public long uploadMaxImageBytes() {
+        return imageService.getMaxImageBytes();
+    }
+
+    @ModelAttribute("uploadMaxImageMegabytes")
+    public long uploadMaxImageMegabytes() {
+        return imageService.getMaxImageMegabytesRoundedUp();
     }
 
     private static final String DEFAULT_SORT = "date,desc";
@@ -458,7 +477,17 @@ public final class MyReservationsController {
             }
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
         }
+        validateReviewPicture(ownerReviewForm.getPicture(), ownerBinding);
         if (ownerBinding.hasErrors()) {
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
+        }
+        final ReviewImagePayload picturePayload;
+        try {
+            picturePayload = readPicturePayload(ownerReviewForm.getPicture());
+        } catch (final IOException e) {
+            ownerBinding.rejectValue("picture", "profile.picture.readFailed",
+                    localeMessages.msg("profile.picture.readFailed"));
             return reservationDetailFactory.detailOrRedirect(
                     me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
         }
@@ -467,10 +496,17 @@ public final class MyReservationsController {
                     me.getId(),
                     reservationId,
                     ownerReviewForm.getRating(),
-                    ownerReviewForm.getComment());
+                    ownerReviewForm.getComment(),
+                    picturePayload.name,
+                    picturePayload.contentType,
+                    picturePayload.bytes);
             redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
         } catch (final RiderReservationException ex) {
             riderReservationReviewExceptionMapper.mergeOntoBinding(ex, ownerBinding);
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
+        } catch (final RydenException ex) {
+            ownerBinding.rejectValue("picture", ex.getMessageCode(), ex.getMessageArgs(), localeMessages.msg(ex));
             return reservationDetailFactory.detailOrRedirect(
                     me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
         }
@@ -495,7 +531,17 @@ public final class MyReservationsController {
             }
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, "rider", fromCar));
         }
+        validateReviewPicture(riderReviewForm.getPicture(), riderBinding);
         if (riderBinding.hasErrors()) {
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
+        }
+        final ReviewImagePayload picturePayload;
+        try {
+            picturePayload = readPicturePayload(riderReviewForm.getPicture());
+        } catch (final IOException e) {
+            riderBinding.rejectValue("picture", "profile.picture.readFailed",
+                    localeMessages.msg("profile.picture.readFailed"));
             return reservationDetailFactory.detailOrRedirect(
                     me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
         }
@@ -504,14 +550,55 @@ public final class MyReservationsController {
                     me.getId(),
                     reservationId,
                     riderReviewForm.getRating(),
-                    riderReviewForm.getComment());
+                    riderReviewForm.getComment(),
+                    picturePayload.name,
+                    picturePayload.contentType,
+                    picturePayload.bytes);
             redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
         } catch (final RiderReservationException ex) {
             riderReservationReviewExceptionMapper.mergeOntoBinding(ex, riderBinding);
             return reservationDetailFactory.detailOrRedirect(
                     me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
+        } catch (final RydenException ex) {
+            riderBinding.rejectValue("picture", ex.getMessageCode(), ex.getMessageArgs(), localeMessages.msg(ex));
+            return reservationDetailFactory.detailOrRedirect(
+                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
         }
         return new ModelAndView(redirectToMyReservationDetailView(reservationId, "rider", fromCar));
+    }
+
+    private void validateReviewPicture(final MultipartFile picture, final BindingResult binding) {
+        if (picture == null || picture.isEmpty()) {
+            return;
+        }
+        final MultipartFile[] singleton = new MultipartFile[] { picture };
+        if (!multipartImageValidation.validateFilesAreImages(singleton, binding, "picture")) {
+            return;
+        }
+        multipartImageValidation.validateFilesWithinMaxSize(singleton, binding);
+    }
+
+    private static ReviewImagePayload readPicturePayload(final MultipartFile picture) throws IOException {
+        if (picture == null || picture.isEmpty()) {
+            return ReviewImagePayload.empty();
+        }
+        return new ReviewImagePayload(picture.getOriginalFilename(), picture.getContentType(), picture.getBytes());
+    }
+
+    private static final class ReviewImagePayload {
+        private final String name;
+        private final String contentType;
+        private final byte[] bytes;
+
+        private ReviewImagePayload(final String name, final String contentType, final byte[] bytes) {
+            this.name = name;
+            this.contentType = contentType;
+            this.bytes = bytes;
+        }
+
+        private static ReviewImagePayload empty() {
+            return new ReviewImagePayload(null, null, null);
+        }
     }
 
     @PostMapping("/my-reservations/{reservationId}/cancel")

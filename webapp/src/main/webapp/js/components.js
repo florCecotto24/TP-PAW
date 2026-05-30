@@ -2370,3 +2370,114 @@
     }
 })();
 
+/* Review picture (single, optional): preview + "remove" button before submit.
+   Simpler than the publish-car flow: one file per input, no server-side stash,
+   no submit-guard (the picture is optional). Multiple inputs per page supported
+   via per-input data-attributes that point to preview/error targets. */
+(function () {
+    function parseMaxBytes(input) {
+        var raw = input && input.getAttribute("data-upload-max-image-bytes");
+        if (!raw) return NaN;
+        var n = parseInt(raw, 10);
+        return isNaN(n) ? NaN : n;
+    }
+
+    function validateSingleFile(file, input) {
+        if (!file) return "";
+        var maxBytes = parseMaxBytes(input);
+        if (!isNaN(maxBytes) && maxBytes > 0 && file.size > maxBytes) {
+            return input.getAttribute("data-upload-image-too-large") || "";
+        }
+        var t = (file.type || "").toLowerCase();
+        if (!t || t.indexOf("image/") !== 0) {
+            return input.getAttribute("data-upload-not-image-msg") || "";
+        }
+        return "";
+    }
+
+    function clearError(errEl) {
+        if (!errEl) return;
+        errEl.textContent = "";
+        errEl.classList.add("d-none");
+    }
+
+    function showError(errEl, msg) {
+        if (!errEl) return;
+        errEl.textContent = msg || "";
+        errEl.classList.toggle("d-none", !msg);
+    }
+
+    function clearPreview(previewEl) {
+        if (!previewEl) return;
+        previewEl.innerHTML = "";
+        previewEl.classList.add("d-none");
+    }
+
+    function renderPreview(input, previewEl, errEl) {
+        clearPreview(previewEl);
+        var file = input.files && input.files[0];
+        if (!file) {
+            return;
+        }
+        var err = validateSingleFile(file, input);
+        if (err) {
+            input.value = "";
+            showError(errEl, err);
+            return;
+        }
+        clearError(errEl);
+
+        var card = document.createElement("div");
+        card.className = "border rounded p-2 position-relative d-inline-block";
+        card.style.maxWidth = "240px";
+
+        var img = document.createElement("img");
+        img.className = "img-fluid rounded";
+        img.style.height = "130px";
+        img.style.objectFit = "cover";
+        img.style.width = "100%";
+        img.alt = file.name;
+
+        var name = document.createElement("small");
+        name.className = "d-block text-truncate mt-1";
+        name.style.maxWidth = "220px";
+        name.textContent = file.name;
+
+        var removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-sm btn-danger position-absolute top-0 end-0 m-1";
+        removeBtn.setAttribute("aria-label",
+                input.getAttribute("data-remove-label") || "Remove image");
+        removeBtn.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
+        removeBtn.addEventListener("click", function () {
+            input.value = "";
+            clearPreview(previewEl);
+            clearError(errEl);
+        });
+
+        card.appendChild(img);
+        card.appendChild(name);
+        card.appendChild(removeBtn);
+        previewEl.appendChild(card);
+        previewEl.classList.remove("d-none");
+
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    var inputs = document.querySelectorAll(".ryden-review-picture-input");
+    Array.prototype.forEach.call(inputs, function (input) {
+        var previewSel = input.getAttribute("data-preview-target");
+        var errSel = input.getAttribute("data-error-target");
+        var previewEl = previewSel ? document.querySelector(previewSel) : null;
+        var errEl = errSel ? document.querySelector(errSel) : null;
+        if (!previewEl) return;
+        input.addEventListener("change", function () {
+            clearError(errEl);
+            renderPreview(input, previewEl, errEl);
+        });
+    });
+})();

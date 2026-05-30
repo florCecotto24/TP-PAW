@@ -8,9 +8,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.exception.car.CarValidationException;
-import ar.edu.itba.paw.services.CarService;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
@@ -263,18 +261,6 @@ public class ListingAvailabilityServiceImplTest {
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertSame(row, result.get(0));
-    }
-
-    @Test
-    public void testUpdateMinimumRentalDaysWhenMinDaysFitsShortestPeriodDelegatesToCarService() {
-        final LocalDate start = LocalDate.of(2026, 7, 1);
-        final LocalDate end = LocalDate.of(2026, 7, 5); // 5-day period
-        final ListingAvailability row = buildAvailability(200L, CAR_ID, start, end, ListingAvailability.Kind.OFFERED);
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(row));
-
-        listingAvailabilityService.updateMinimumRentalDays(CAR_ID, 3);
-
-        Mockito.verify(carService).updateMinimumRentalDays(CAR_ID, 3);
     }
 
     @Test

@@ -14,17 +14,19 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.dto.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.persistence.ReviewDao;
 
-/** Uses only {@link ReviewDao}; reservation and car reads go through peer services. */
+/** Uses only {@link ReviewDao}; reservation, car reads and image persistence go through peer services. */
 @Service
 public final class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
     private final ReservationService reservationService;
     private final CarService carService;
+    private final ImageService imageService;
     private final ReviewValidationPolicy reviewValidationPolicy;
 
     @Autowired
@@ -32,10 +34,12 @@ public final class ReviewServiceImpl implements ReviewService {
             final ReviewDao reviewDao,
             final ReservationService reservationService,
             final CarService carService,
+            final ImageService imageService,
             final ReviewValidationPolicy reviewValidationPolicy) {
         this.reviewDao = reviewDao;
         this.reservationService = reservationService;
         this.carService = carService;
+        this.imageService = imageService;
         this.reviewValidationPolicy = reviewValidationPolicy;
     }
 
@@ -90,7 +94,10 @@ public final class ReviewServiceImpl implements ReviewService {
             final long ownerUserId,
             final long reservationId,
             final Integer rating,
-            final String comment) {
+            final String comment,
+            final String imageName,
+            final String imageContentType,
+            final byte[] imageBytes) {
         final String trimmed = comment == null ? "" : comment.trim();
         if (rating == null) {
             if (!trimmed.isEmpty()) {
@@ -104,7 +111,7 @@ public final class ReviewServiceImpl implements ReviewService {
             if (reviewDao.existsReview(reservationId, false)) {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
-            reviewDao.insertReview(reservationId, false, null, null);
+            reviewDao.insertReview(reservationId, false, null, null, null);
             reviewDao.refreshRiderAverageRating(r.getRiderId());
             reviewDao.refreshCarRatingAvg(r.getCarId());
             return;
@@ -126,7 +133,8 @@ public final class ReviewServiceImpl implements ReviewService {
         if (reviewDao.existsReview(reservationId, false)) {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
-        reviewDao.insertReview(reservationId, false, rating, storedComment);
+        final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
+        reviewDao.insertReview(reservationId, false, rating, storedComment, imageId);
         reviewDao.refreshRiderAverageRating(r.getRiderId());
         reviewDao.refreshCarRatingAvg(r.getCarId());
     }
@@ -137,7 +145,10 @@ public final class ReviewServiceImpl implements ReviewService {
             final long riderUserId,
             final long reservationId,
             final Integer rating,
-            final String comment) {
+            final String comment,
+            final String imageName,
+            final String imageContentType,
+            final byte[] imageBytes) {
         final String trimmed = comment == null ? "" : comment.trim();
         if (rating == null) {
             if (!trimmed.isEmpty()) {
@@ -151,7 +162,7 @@ public final class ReviewServiceImpl implements ReviewService {
             if (reviewDao.existsReview(reservationId, true)) {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
-            reviewDao.insertReview(reservationId, true, null, null);
+            reviewDao.insertReview(reservationId, true, null, null, null);
             final long carId = r.getCarId();
             carService.getCarById(carId)
                     .map(ar.edu.itba.paw.models.domain.Car::getOwner)
@@ -176,11 +187,27 @@ public final class ReviewServiceImpl implements ReviewService {
         if (reviewDao.existsReview(reservationId, true)) {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
-        reviewDao.insertReview(reservationId, true, rating, storedComment);
+        final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
+        reviewDao.insertReview(reservationId, true, rating, storedComment, imageId);
         final long carId = r.getCarId();
         carService.getCarById(carId)
                 .map(ar.edu.itba.paw.models.domain.Car::getOwner)
                 .ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
         reviewDao.refreshCarRatingAvg(carId);
+    }
+
+    /**
+     * Validates and persists the optional review image via {@link ImageService} (content type and
+     * byte length are checked there, raising {@link ar.edu.itba.paw.exception.image.ImageValidationException}).
+     * Returns {@code null} when no bytes are provided.
+     */
+    private Long persistOptionalReviewImage(final String name, final String contentType, final byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return null;
+        }
+        final String safeName = name != null && !name.isBlank() ? name : "review";
+        final String safeType = contentType != null && !contentType.isBlank() ? contentType : "application/octet-stream";
+        final Image created = imageService.createImage(safeName, safeType, bytes);
+        return created.getId();
     }
 }

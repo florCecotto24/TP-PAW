@@ -204,9 +204,6 @@ public final class AdminController {
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carPaused"));
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        } catch (final RuntimeException e) {
-            LOG.warn("Admin pause car {} failed", carId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         if (fromCarDetail && carDetailId != null) {
             return "redirect:/car-detail?carId=" + carDetailId;
@@ -227,9 +224,6 @@ public final class AdminController {
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carResumed"));
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        } catch (final RuntimeException e) {
-            LOG.warn("Admin resume car {} failed", carId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         if (fromCarDetail && carDetailId != null) {
             return "redirect:/car-detail?carId=" + carDetailId;
@@ -254,9 +248,8 @@ public final class AdminController {
         try {
             adminService.validateCatalogEntry(modelId, locale);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryValidated"));
-        } catch (final Exception e) {
-            LOG.warn("Admin validate catalog entry (modelId={}) failed", modelId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
         }
         return "redirect:/admin/catalog";
     }
@@ -269,9 +262,8 @@ public final class AdminController {
         try {
             adminService.rejectCatalogEntry(modelId, locale);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryRejected"));
-        } catch (final Exception e) {
-            LOG.warn("Admin reject catalog entry (modelId={}) failed", modelId, e);
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
         }
         return "redirect:/admin/catalog";
     }

@@ -114,7 +114,8 @@
                                             surname="${row.reviewerSurname}"
                                             dateLabel="${row.dateText}"
                                             rating="${row.rating}"
-                                            comment="${row.comment}"/>
+                                            comment="${row.comment}"
+                                            imageId="${row.imageId}"/>
                                 </div>
                             </c:forEach>
                         </div>

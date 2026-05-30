@@ -40,6 +40,9 @@ class ReviewServiceImplTest {
     @Mock
     private CarService carService;
 
+    @Mock
+    private ImageService imageService;
+
     private ReviewServiceImpl service;
 
     @BeforeEach
@@ -48,6 +51,7 @@ class ReviewServiceImplTest {
                 reviewDao,
                 reservationService,
                 carService,
+                imageService,
                 ReviewValidationPolicy.fromValidatedCommentMaxLength(500));
     }
 
@@ -197,7 +201,7 @@ class ReviewServiceImplTest {
             insertedComment[0] = inv.getArgument(3);
             return null;
         }).when(reviewDao).insertReview(Mockito.eq(RESERVATION_ID), Mockito.eq(false), Mockito.eq(4),
-                Mockito.anyString());
+                Mockito.anyString(), Mockito.isNull());
 
         // 2.Exercise
         service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 4, "  Great rider!  ");
@@ -218,7 +222,7 @@ class ReviewServiceImplTest {
             capturedComment[0] = inv.getArgument(3);
             return null;
         }).when(reviewDao).insertReview(Mockito.eq(RESERVATION_ID), Mockito.eq(false), Mockito.eq(5),
-                Mockito.isNull());
+                Mockito.isNull(), Mockito.isNull());
 
         // 2.Exercise
         service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 5, "   ");

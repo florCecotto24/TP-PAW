@@ -7,6 +7,7 @@
 <%@ attribute name="dateLabel" required="true" type="java.lang.String" %>
 <%@ attribute name="rating" required="true" type="java.lang.Integer" %>
 <%@ attribute name="comment" required="false" type="java.lang.String" %>
+<%@ attribute name="imageId" required="false" type="java.lang.Long" %>
 
 <article class="card border-0 shadow-sm rounded-4 h-100 listing-review-card">
     <div class="card-body p-4 d-flex flex-column gap-2">
@@ -44,5 +45,14 @@
                 <p class="mb-0 small text-secondary"><spring:message code="reviewCard.noComment"/></p>
             </c:otherwise>
         </c:choose>
+        <c:if test="${imageId != null}">
+            <c:url var="reviewImageUrl" value="/image/${imageId}"/>
+            <spring:message code="reviewCard.image.alt" var="reviewImageAlt"/>
+            <a href="${reviewImageUrl}" target="_blank" rel="noopener" class="d-block mt-2">
+                <img src="${reviewImageUrl}" alt="<c:out value='${reviewImageAlt}'/>"
+                     class="img-fluid rounded-3 listing-review-card-image"
+                     loading="lazy"/>
+            </a>
+        </c:if>
     </div>
 </article>

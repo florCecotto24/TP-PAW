@@ -296,7 +296,11 @@
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewOwner.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewOwner.intro"/></p>
                         <c:url var="ownerReviewUrl" value="/my-reservations/${reservation.id}/owner-review-rider"/>
+                        <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="ownerReviewImageTooLargeMsg" htmlEscape="true"/>
+                        <spring:message code="validation.pictures.mustBeImage" var="ownerReviewMustBeImageMsg" htmlEscape="true"/>
+                        <spring:message code="publishCar.form.removeImage" var="ownerReviewRemoveImageLabel"/>
                         <form:form modelAttribute="ownerReviewForm" action="${ownerReviewUrl}" method="post"
+                                   enctype="multipart/form-data"
                                    cssClass="vstack gap-2" htmlEscape="true">
                             <%@ include file="../includes/csrfHidden.jspf" %>
                             <%@ include file="../includes/fromCarHubHidden.jspf" %>
@@ -313,6 +317,22 @@
                             <label class="form-label small" for="ownerReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
                             <form:textarea path="comment" id="ownerReviewComment" cssClass="form-control"
                                            rows="3" maxlength="${reviewCommentMaxLength}"/>
+                            <label class="form-label small mt-2" for="ownerReviewPicture">
+                                <spring:message code="myReservationDetail.review.picture.optional"/>
+                            </label>
+                            <form:input path="picture" id="ownerReviewPicture" type="file" accept="image/*"
+                                        cssClass="form-control form-control-sm ryden-review-picture-input"
+                                        data-upload-max-image-bytes="${uploadMaxImageBytes}"
+                                        data-upload-image-too-large="${ownerReviewImageTooLargeMsg}"
+                                        data-upload-not-image-msg="${ownerReviewMustBeImageMsg}"
+                                        data-preview-target="#ownerReviewPicturePreview"
+                                        data-error-target="#ownerReviewPictureError"
+                                        data-remove-label="${ownerReviewRemoveImageLabel}"/>
+                            <small class="text-secondary">
+                                <spring:message code="myReservationDetail.review.picture.hint" arguments="${uploadMaxImageMegabytes}"/>
+                            </small>
+                            <div id="ownerReviewPictureError" class="alert alert-danger d-none mt-1 py-2 small" role="alert"></div>
+                            <div id="ownerReviewPicturePreview" class="d-none mt-1"></div>
                             <div class="d-flex gap-2">
                                 <button type="submit" name="reviewAction" value="SUBMIT" class="btn btn-primary btn-sm">
                                     <spring:message code="myReservationDetail.review.submit"/></button>
@@ -330,7 +350,11 @@
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewRider.title"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewRider.intro"/></p>
                         <c:url var="riderReviewUrl" value="/my-reservations/${reservation.id}/rider-review-owner"/>
+                        <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="riderReviewImageTooLargeMsg" htmlEscape="true"/>
+                        <spring:message code="validation.pictures.mustBeImage" var="riderReviewMustBeImageMsg" htmlEscape="true"/>
+                        <spring:message code="publishCar.form.removeImage" var="riderReviewRemoveImageLabel"/>
                         <form:form modelAttribute="riderReviewForm" action="${riderReviewUrl}" method="post"
+                                   enctype="multipart/form-data"
                                    cssClass="vstack gap-2" htmlEscape="true">
                             <%@ include file="../includes/csrfHidden.jspf" %>
                             <%@ include file="../includes/fromCarHubHidden.jspf" %>
@@ -347,6 +371,22 @@
                             <label class="form-label small" for="riderReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
                             <form:textarea path="comment" id="riderReviewComment" cssClass="form-control"
                                            rows="3" maxlength="${reviewCommentMaxLength}"/>
+                            <label class="form-label small mt-2" for="riderReviewPicture">
+                                <spring:message code="myReservationDetail.review.picture.optional"/>
+                            </label>
+                            <form:input path="picture" id="riderReviewPicture" type="file" accept="image/*"
+                                        cssClass="form-control form-control-sm ryden-review-picture-input"
+                                        data-upload-max-image-bytes="${uploadMaxImageBytes}"
+                                        data-upload-image-too-large="${riderReviewImageTooLargeMsg}"
+                                        data-upload-not-image-msg="${riderReviewMustBeImageMsg}"
+                                        data-preview-target="#riderReviewPicturePreview"
+                                        data-error-target="#riderReviewPictureError"
+                                        data-remove-label="${riderReviewRemoveImageLabel}"/>
+                            <small class="text-secondary">
+                                <spring:message code="myReservationDetail.review.picture.hint" arguments="${uploadMaxImageMegabytes}"/>
+                            </small>
+                            <div id="riderReviewPictureError" class="alert alert-danger d-none mt-1 py-2 small" role="alert"></div>
+                            <div id="riderReviewPicturePreview" class="d-none mt-1"></div>
                             <div class="d-flex gap-2">
                                 <button type="submit" name="reviewAction" value="SUBMIT" class="btn btn-primary btn-sm">
                                     <spring:message code="myReservationDetail.review.submit"/></button>

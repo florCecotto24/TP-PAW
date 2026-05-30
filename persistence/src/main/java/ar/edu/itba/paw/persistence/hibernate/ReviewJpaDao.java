@@ -16,6 +16,7 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.Review;
 import ar.edu.itba.paw.models.domain.ReviewId;
@@ -39,12 +40,25 @@ public class ReviewJpaDao implements ReviewDao {
 
     @Override
     @Transactional
-    public void insertReview(final long reservationId, final boolean madeByRider, final Integer rating, final String comment) {
+    public void insertReview(
+            final long reservationId,
+            final boolean madeByRider,
+            final Integer rating,
+            final String comment,
+            final Long imageId) {
         final Reservation reservation = em.find(Reservation.class, reservationId);
         if (reservation == null) {
             return;
         }
-        em.persist(new Review(reservation, madeByRider, OffsetDateTime.now(), rating, comment));
+        final Image image = imageId == null ? null : em.find(Image.class, imageId);
+        em.persist(Review.builder()
+                .reservation(reservation)
+                .madeByRider(madeByRider)
+                .createdAt(OffsetDateTime.now())
+                .rating(rating)
+                .comment(comment)
+                .image(image)
+                .build());
     }
 
     @Override
@@ -130,6 +144,7 @@ public class ReviewJpaDao implements ReviewDao {
                                 + "JOIN FETCH res.rider rider "
                                 + "JOIN FETCH res.car c "
                                 + "JOIN FETCH c.owner owner "
+                                + "LEFT JOIN FETCH r.image img "
                                 + "WHERE r.id IN :ids "
                                 + "ORDER BY r.createdAt DESC",
                         Review.class)
@@ -146,7 +161,8 @@ public class ReviewJpaDao implements ReviewDao {
                             reviewer.getSurname(),
                             r.getCreatedAt(),
                             r.getRating().orElse(0),
-                            r.getComment().orElse(null));
+                            r.getComment().orElse(null),
+                            r.getImage().map(Image::getId).orElse(null));
                 })
                 .collect(Collectors.toList());
         return new Page<>(content, page, pageSize, total != null ? total : 0L);

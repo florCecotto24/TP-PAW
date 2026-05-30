@@ -56,12 +56,14 @@ CREATE TABLE IF NOT EXISTS cars (
     updated_at TIMESTAMPTZ NOT NULL,
     rating_avg DECIMAL(4, 2),
     manufacture_year INTEGER,
+    minimum_rental_days INTEGER NOT NULL DEFAULT 1,
 
     UNIQUE (owner_id, plate),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (model_id) REFERENCES car_models(id),
     CHECK (powertrain IN ('GASOLINE', 'DIESEL', 'ELECTRIC', 'HYBRID', 'CNG')),
-    CHECK (manufacture_year IS NULL OR manufacture_year >= 1886)
+    CHECK (manufacture_year IS NULL OR manufacture_year >= 1886),
+    CONSTRAINT cars_minimum_rental_days_positive CHECK (minimum_rental_days >= 1)
 );
 
 CREATE TABLE IF NOT EXISTS neighborhoods (
@@ -153,19 +155,6 @@ CREATE TABLE IF NOT EXISTS images (
     byte_array BYTEA NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS car_pictures (
-    id SERIAL PRIMARY KEY,
-    car_id INTEGER NOT NULL,
-    image_id INTEGER NOT NULL,
-    display_order INTEGER NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-
-    UNIQUE (car_id, display_order),
-    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
-    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE
-);
-
 CREATE TABLE IF NOT EXISTS stored_files (
     id SERIAL PRIMARY KEY,
     uploader_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -174,6 +163,24 @@ CREATE TABLE IF NOT EXISTS stored_files (
     byte_array BYTEA NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS car_pictures (
+    id SERIAL PRIMARY KEY,
+    car_id INTEGER NOT NULL,
+    image_id INTEGER,
+    stored_file_id INTEGER REFERENCES stored_files(id) ON DELETE CASCADE,
+    display_order INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+
+    UNIQUE (car_id, display_order),
+    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
+    FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+    CONSTRAINT car_pictures_image_or_video_chk
+        CHECK (image_id IS NOT NULL OR stored_file_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_car_pictures_stored_file_id ON car_pictures (stored_file_id);
 
 CREATE TABLE IF NOT EXISTS reservations (
     id SERIAL PRIMARY KEY,
@@ -195,7 +202,6 @@ CREATE TABLE IF NOT EXISTS reservations (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     payment_receipt_file_id INTEGER REFERENCES stored_files(id),
-    payment_approved BOOLEAN NOT NULL DEFAULT FALSE,
     payment_proof_deadline_at TIMESTAMPTZ,
     car_returned BOOLEAN NOT NULL DEFAULT FALSE,
     return_reminder_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
@@ -234,10 +240,28 @@ CREATE TABLE IF NOT EXISTS reviews (
     created_at TIMESTAMPTZ NOT NULL,
     rating INTEGER CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
     comment TEXT,
-    PRIMARY KEY (reservation_id, made_by_rider)
+    image_id INTEGER REFERENCES images(id) ON DELETE SET NULL,
+    PRIMARY KEY (reservation_id, made_by_rider),
+    CONSTRAINT reviews_image_id_unique UNIQUE (image_id)
 );
 
 CREATE INDEX IF NOT EXISTS reviews_car_id_idx ON reviews (car_id);
+
+CREATE TABLE IF NOT EXISTS reservation_messages (
+    id SERIAL PRIMARY KEY,
+    reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
+    sender_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    attachment_file_id INTEGER REFERENCES stored_files(id) ON DELETE SET NULL,
+    email_notified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_reservation_messages_reservation_created
+    ON reservation_messages (reservation_id, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_reservation_messages_email_pending
+    ON reservation_messages (email_notified, created_at);
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_profile_picture_id;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_license_file_id;
@@ -267,7 +291,6 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
     code VARCHAR(6) NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
-);
 );
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes (user_id);

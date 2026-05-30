@@ -28,14 +28,38 @@ public interface ReviewService {
      *
      * @throws ar.edu.itba.paw.exception.RydenException when validation or business rules fail
      */
-    void submitOwnerReviewOfRider(long ownerUserId, long reservationId, Integer rating, String comment);
+    default void submitOwnerReviewOfRider(long ownerUserId, long reservationId, Integer rating, String comment) {
+        submitOwnerReviewOfRider(ownerUserId, reservationId, rating, comment, null, null, null);
+    }
+
+    /**
+     * Owner rates the rider after a completed rental with an optional attached image.
+     * Pass {@code null} for {@code imageBytes} to skip the image; otherwise the service validates content type and
+     * size via {@link ImageService} and persists the {@link ar.edu.itba.paw.models.domain.Image} together with the
+     * {@link ar.edu.itba.paw.models.domain.Review} (cascade-persisted from the Review aggregate root).
+     *
+     * @throws ar.edu.itba.paw.exception.RydenException when validation or business rules fail
+     */
+    void submitOwnerReviewOfRider(long ownerUserId, long reservationId, Integer rating, String comment,
+                                   String imageName, String imageContentType, byte[] imageBytes);
 
     /**
      * Rider rates the owner after a completed rental; enforces reservation state and one review per side.
      *
      * @throws ar.edu.itba.paw.exception.RydenException when validation or business rules fail
      */
-    void submitRiderReviewOfOwner(long riderUserId, long reservationId, Integer rating, String comment);
+    default void submitRiderReviewOfOwner(long riderUserId, long reservationId, Integer rating, String comment) {
+        submitRiderReviewOfOwner(riderUserId, reservationId, rating, comment, null, null, null);
+    }
+
+    /**
+     * Rider rates the owner after a completed rental with an optional attached image. See
+     * {@link #submitOwnerReviewOfRider(long, long, Integer, String, String, String, byte[])} for the image semantics.
+     *
+     * @throws ar.edu.itba.paw.exception.RydenException when validation or business rules fail
+     */
+    void submitRiderReviewOfOwner(long riderUserId, long reservationId, Integer rating, String comment,
+                                   String imageName, String imageContentType, byte[] imageBytes);
 
     /** Whether the owner already left a review for this reservation. */
     boolean hasOwnerReview(long reservationId);

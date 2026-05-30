@@ -10,18 +10,21 @@ public final class ListingReviewRowView {
     private final String dateText;
     private final int rating;
     private final String comment;
+    private final Long imageId;
 
     public ListingReviewRowView(
             final String reviewerForename,
             final String reviewerSurname,
             final String dateText,
             final int rating,
-            final String comment) {
+            final String comment,
+            final Long imageId) {
         this.reviewerForename = reviewerForename == null ? "" : reviewerForename;
         this.reviewerSurname = reviewerSurname == null ? "" : reviewerSurname;
         this.dateText = dateText == null ? "" : dateText;
         this.rating = rating;
         this.comment = comment == null ? "" : comment;
+        this.imageId = imageId;
     }
 
     public String getReviewerForename() {
@@ -42,5 +45,9 @@ public final class ListingReviewRowView {
 
     public String getComment() {
         return comment;
+    }
+
+    public Long getImageId() {
+        return imageId;
     }
 }

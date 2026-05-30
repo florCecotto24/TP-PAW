@@ -138,7 +138,8 @@ public class CarDetailController {
                         r.getReviewerSurname(),
                         WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(r.getCreatedAt(), locale),
                         r.getRating(),
-                        r.getComment().orElse("")))
+                        r.getComment().orElse(""),
+                        r.getImageId().orElse(null)))
                 .collect(Collectors.toList());
         final Page<ListingReviewRowView> carReviewPage = new Page<>(
                 reviewRows,

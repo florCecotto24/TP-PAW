@@ -13,7 +13,16 @@ public interface ReviewDao {
     boolean existsReview(long reservationId, boolean madeByRider);
 
     /** {@code rating} {@code null} persists an omitted review (same PK slot; excluded from public aggregates). */
-    void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment);
+    default void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment) {
+        insertReview(reservationId, madeByRider, rating, comment, null);
+    }
+
+    /**
+     * Same as {@link #insertReview(long, boolean, Integer, String)} but allows attaching an optional image
+     * already persisted in the {@code images} table. Pass {@code null} for {@code imageId} when no image
+     * should be attached.
+     */
+    void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment, Long imageId);
 
     /** Public reviews for a car, paginated. */
     Page<ListingPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
