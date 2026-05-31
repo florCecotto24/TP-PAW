@@ -128,12 +128,58 @@
             </section>
 
             <section class="mt-4 pt-4 border-top border-secondary-subtle" id="listing-reviews">
-                <h2 class="h5 fw-bold mb-3"><spring:message code="carDetail.reviews.title"/></h2>
+                <c:set var="reviewsIsListView" value="${reviewsView eq 'list'}"/>
+                <c:set var="reviewsHasMoreThanOnePage" value="${carReviewPage.totalPages > 1}"/>
+                <%-- Toggle target: 'list' when in carousel, 'carousel' when expanded. --%>
+                <c:set var="reviewsToggleView" value="${reviewsIsListView ? 'carousel' : 'list'}"/>
+                <c:url var="reviewsToggleUrl" value="/car-detail">
+                    <c:param name="carId" value="${car.id}"/>
+                    <c:param name="reviewsView" value="${reviewsToggleView}"/>
+                    <%-- Always reset to page 0 when switching modes (the user expects "all reviews from the start"). --%>
+                    <c:if test="${reviewsIsListView}"><c:param name="reviewPage" value="0"/></c:if>
+                    <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
+                    <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
+                    <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
+                </c:url>
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h2 class="h5 fw-bold mb-0"><spring:message code="carDetail.reviews.title"/></h2>
+                    <div class="d-flex align-items-center gap-2">
+                        <c:if test="${not reviewsIsListView and not empty carReviewPage.content}">
+                            <spring:message code="carDetail.reviews.carousel.prev" var="reviewsPrevAria"/>
+                            <spring:message code="carDetail.reviews.carousel.next" var="reviewsNextAria"/>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-target="#carDetailReviewsCarousel" data-bs-slide="prev"
+                                    aria-label="<c:out value='${reviewsPrevAria}'/>">
+                                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-target="#carDetailReviewsCarousel" data-bs-slide="next"
+                                    aria-label="<c:out value='${reviewsNextAria}'/>">
+                                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </c:if>
+                        <c:if test="${reviewsHasMoreThanOnePage}">
+                            <a class="btn btn-sm btn-link text-decoration-none" href="${reviewsToggleUrl}">
+                                <c:choose>
+                                    <c:when test="${reviewsIsListView}">
+                                        <spring:message code="carDetail.reviews.viewLess"/>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <spring:message code="carDetail.reviews.viewAll"/>
+                                    </c:otherwise>
+                                </c:choose>
+                            </a>
+                        </c:if>
+                    </div>
+                </div>
+
                 <c:choose>
                     <c:when test="${empty carReviewPage.content}">
                         <p class="text-secondary mb-0"><spring:message code="carDetail.reviews.empty"/></p>
                     </c:when>
-                    <c:otherwise>
+                    <c:when test="${reviewsIsListView}">
+                        <%-- Expanded list: full grid + numbered pagination. --%>
                         <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
                             <c:forEach var="row" items="${carReviewPage.content}">
                                 <div class="col">
@@ -151,6 +197,7 @@
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
                                 <c:url var="reviewsPrevUrl" value="/car-detail">
                                     <c:param name="carId" value="${car.id}"/>
+                                    <c:param name="reviewsView" value="list"/>
                                     <c:param name="reviewPage" value="${carReviewPage.currentPage - 1}"/>
                                     <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
                                     <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
@@ -158,6 +205,7 @@
                                 </c:url>
                                 <c:url var="reviewsNextUrl" value="/car-detail">
                                     <c:param name="carId" value="${car.id}"/>
+                                    <c:param name="reviewsView" value="list"/>
                                     <c:param name="reviewPage" value="${carReviewPage.currentPage + 1}"/>
                                     <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
                                     <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
@@ -179,6 +227,10 @@
                                 </a>
                             </div>
                         </c:if>
+                    </c:when>
+                    <c:otherwise>
+                        <%-- Default: carousel view (Bootstrap, client-side slide navigation). --%>
+                        <ryden:reviewCarousel reviews="${carReviewPage.content}" id="carDetailReviewsCarousel"/>
                     </c:otherwise>
                 </c:choose>
             </section>

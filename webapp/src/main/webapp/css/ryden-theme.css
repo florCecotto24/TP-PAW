@@ -1188,6 +1188,16 @@ hr {
     cursor: zoom-in;
 }
 
+/* Reviews carousel: keep both cards in a slide aligned and prevent vertical jitter between slides. */
+.ryden-review-carousel .listing-review-card {
+    height: 100%;
+    width: 100%;
+}
+
+.ryden-review-carousel .carousel-item {
+    transition: transform 0.4s ease-in-out;
+}
+
 /* ------------------------------------------------------------------
    26. HOW IT WORKS SECTION
    ------------------------------------------------------------------ */

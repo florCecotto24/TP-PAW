@@ -88,10 +88,23 @@ public class CarDetailController {
         this.favCarService = favCarService;
     }
 
+    /**
+     * Reviews section UI mode. Two flavours, both backed by the same paginated DB query:
+     * <ul>
+     *   <li>{@code carousel} (default) — a Bootstrap carousel showing the first page (max
+     *       {@link ar.edu.itba.paw.services.policy.PaginationPolicy#getListingPublicReviewsPageSize()} reviews).
+     *       The "view all" button is shown when more pages exist; it switches to {@code list}.</li>
+     *   <li>{@code list} — the classic grid + numbered pagination. The "view less" button switches back.</li>
+     * </ul>
+     */
+    private static final String REVIEWS_VIEW_LIST = "list";
+    private static final String REVIEWS_VIEW_CAROUSEL = "carousel";
+
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
     public ModelAndView carDetail(
             @RequestParam(name = "carId", required = false) final Long carIdParam,
             @RequestParam(name = "reviewPage", defaultValue = "0") final int reviewPage,
+            @RequestParam(name = "reviewsView", required = false) final String reviewsViewParam,
             @RequestParam(name = "from", required = false) final String fromDateParam,
             @RequestParam(name = "until", required = false) final String untilDateParam,
             @RequestParam(name = "searchNbId", required = false) final List<Long> searchNeighborhoodIds,
@@ -142,9 +155,13 @@ public class CarDetailController {
 
         final Locale locale = RequestContextUtils.getLocale(request);
         final long reviewTotal = reviewService.countReviewsForCar(carId);
+        // Carousel always renders page 0 (it is a "teaser"); the list view respects ?reviewPage.
+        final String reviewsView =
+                REVIEWS_VIEW_LIST.equalsIgnoreCase(reviewsViewParam) ? REVIEWS_VIEW_LIST : REVIEWS_VIEW_CAROUSEL;
+        final int effectiveReviewPage = REVIEWS_VIEW_LIST.equals(reviewsView) ? Math.max(0, reviewPage) : 0;
         final Page<ListingPublicReview> reviewSource =
                 reviewService.getCarPublicReviews(
-                        carId, reviewPage, paginationPolicy.getListingPublicReviewsPageSize());
+                        carId, effectiveReviewPage, paginationPolicy.getListingPublicReviewsPageSize());
         final List<ListingReviewRowView> reviewRows = reviewSource.getContent().stream()
                 .map(r -> new ListingReviewRowView(
                         r.getReviewerForename(),
@@ -184,6 +201,7 @@ public class CarDetailController {
         mav.addObject("carRatingLabel", ratingLabel);
         mav.addObject("carReviewCountLabel", reviewCountLabel);
         mav.addObject("carReviewPage", carReviewPage);
+        mav.addObject("reviewsView", reviewsView);
         mav.addObject("owner", owner);
         mav.addObject("ownerProfileImageId", ownerProfileImageId);
         mav.addObject("carGalleryMedia", carGalleryMedia);

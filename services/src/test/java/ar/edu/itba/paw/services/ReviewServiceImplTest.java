@@ -3,7 +3,12 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+
+import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.Page;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -274,6 +279,52 @@ class ReviewServiceImplTest {
 
         // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_ALREADY_SUBMITTED, ex.getMessageCode());
+    }
+
+    @Test
+    void testGetCarPublicReviewsReturnsWhateverTheDaoProvides() {
+        // 1.Arrange
+        final ListingPublicReview oneReview = new ListingPublicReview(
+                "Ada", "Lovelace",
+                OffsetDateTime.of(2026, 5, 1, 12, 0, 0, 0, ZoneOffset.UTC),
+                5, "Loved the car", null);
+        final Page<ListingPublicReview> daoPage = new Page<>(
+                List.of(oneReview), 0, 6, 1L);
+        Mockito.when(reviewDao.findCarPublicReviews(CAR_ID, 0, 6)).thenReturn(daoPage);
+
+        // 2.Exercise
+        final Page<ListingPublicReview> actual = service.getCarPublicReviews(CAR_ID, 0, 6);
+
+        // 3.Assert
+        Assertions.assertSame(daoPage, actual);
+        Assertions.assertEquals(1, actual.getContent().size());
+        Assertions.assertEquals(1L, actual.getTotalItems());
+    }
+
+    @Test
+    void testGetCarPublicReviewsReturnsEmptyPageWhenCarHasNoReviews() {
+        // 1.Arrange
+        final Page<ListingPublicReview> emptyPage = new Page<>(Collections.emptyList(), 0, 6, 0L);
+        Mockito.when(reviewDao.findCarPublicReviews(CAR_ID, 0, 6)).thenReturn(emptyPage);
+
+        // 2.Exercise
+        final Page<ListingPublicReview> actual = service.getCarPublicReviews(CAR_ID, 0, 6);
+
+        // 3.Assert
+        Assertions.assertTrue(actual.getContent().isEmpty());
+        Assertions.assertEquals(0L, actual.getTotalItems());
+    }
+
+    @Test
+    void testCountReviewsForCarDelegatesToDao() {
+        // 1.Arrange
+        Mockito.when(reviewDao.countReviewsForCar(CAR_ID)).thenReturn(42L);
+
+        // 2.Exercise
+        final long count = service.countReviewsForCar(CAR_ID);
+
+        // 3.Assert
+        Assertions.assertEquals(42L, count);
     }
 
     @Test
