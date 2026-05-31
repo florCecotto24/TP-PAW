@@ -6,6 +6,8 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
@@ -164,52 +166,81 @@ public class ReviewJpaDao implements ReviewDao {
             final boolean counterpartyIsOwner,
             final int limit) {
         /*
-         * Two JPQL branches to avoid a CASE WHEN over different association paths: in each branch
-         * the reviewer side (rider vs owner) is statically known, so we JOIN FETCH only that side
-         * plus its (nullable) profilePicture. Mapping to {@link ReviewItemDto} happens in code
-         * because {@code LocalDate} is not derivable from {@code OffsetDateTime} inside a JPQL
-         * constructor expression on every provider.
+         * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
+         * - Step 1 (native): filter, order and apply LIMIT on the {@code reviews} table joined
+         *   against {@code reservations}/{@code cars} for the counterparty constraint, projecting
+         *   only the composite PK ({@code reservation_id}, {@code made_by_rider}).
+         * - Step 2 (JPQL):  hydrate the {@link Review} entities by their PK with {@code JOIN FETCH}
+         *   on the reviewer side (rider or owner depending on branch) plus the nullable
+         *   {@code profilePicture} via {@code LEFT JOIN FETCH}. The mapping loop respects the order
+         *   given by the native step because {@code WHERE id IN :ids} does not preserve it on its own.
          *
-         * Note on LEFT JOIN FETCH on profilePicture: navigating {@code rider.profilePicture.id}
-         * directly in JPQL would generate an implicit INNER JOIN and silently drop reviews whose
-         * reviewer has no profile picture (the association is nullable). The explicit LEFT JOIN
-         * FETCH preserves those rows AND eagerly hydrates the image so the mapping loop does not
-         * trigger a per-row N+1.
-         *
-         * Joins are all *-to-one (rider, car, owner, profilePicture), so {@code setMaxResults}
-         * does not collide with the JOIN FETCH multiplicity limitation.
+         * Why two branches: the reviewer side is statically known per branch (rider when the
+         * counterparty is the owner; owner when the counterparty is the rider), so we JOIN FETCH
+         * only that side and avoid the implicit INNER JOIN that {@code rider.profilePicture.id}
+         * would produce on a nullable association (which would silently drop avatar-less reviews).
          */
-        final String jpql;
+        final String idSql;
         if (counterpartyIsOwner) {
             // counterparty is the owner -> reviews written by riders -> reviewer = rider
-            jpql = "FROM Review r "
+            idSql = "SELECT r.reservation_id, r.made_by_rider "
+                    + "FROM reviews r "
+                    + "JOIN reservations res ON res.id = r.reservation_id "
+                    + "JOIN cars c ON c.id = res.car_id "
+                    + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId "
+                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
+                    + "ORDER BY r.created_at DESC "
+                    + "LIMIT :limit";
+        } else {
+            // counterparty is the rider -> reviews written by owners -> reviewer = owner
+            idSql = "SELECT r.reservation_id, r.made_by_rider "
+                    + "FROM reviews r "
+                    + "JOIN reservations res ON res.id = r.reservation_id "
+                    + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId "
+                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
+                    + "ORDER BY r.created_at DESC "
+                    + "LIMIT :limit";
+        }
+        @SuppressWarnings("unchecked")
+        final List<Object[]> pkRows = em.createNativeQuery(idSql)
+                .setParameter("userId", counterpartyUserId)
+                .setParameter("limit", limit)
+                .getResultList();
+        if (pkRows.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final List<ReviewId> ids = pkRows.stream()
+                .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
+                .collect(Collectors.toList());
+
+        final String hydrateJpql;
+        if (counterpartyIsOwner) {
+            hydrateJpql = "FROM Review r "
                     + "JOIN FETCH r.reservation res "
                     + "JOIN FETCH res.rider rider "
                     + "LEFT JOIN FETCH rider.profilePicture "
-                    + "JOIN res.car c "
-                    + "JOIN c.owner owner "
-                    + "WHERE r.id.madeByRider = TRUE AND owner.id = :userId "
-                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
-                    + "ORDER BY r.createdAt DESC";
+                    + "WHERE r.id IN :ids";
         } else {
-            // counterparty is the rider -> reviews written by owners -> reviewer = owner
-            jpql = "FROM Review r "
+            hydrateJpql = "FROM Review r "
                     + "JOIN FETCH r.reservation res "
-                    + "JOIN res.rider rider "
                     + "JOIN FETCH res.car c "
                     + "JOIN FETCH c.owner owner "
                     + "LEFT JOIN FETCH owner.profilePicture "
-                    + "WHERE r.id.madeByRider = FALSE AND rider.id = :userId "
-                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
-                    + "ORDER BY r.createdAt DESC";
+                    + "WHERE r.id IN :ids";
         }
-        final List<Review> reviews = em.createQuery(jpql, Review.class)
-                .setParameter("userId", counterpartyUserId)
-                .setMaxResults(limit)
+        final List<Review> hydrated = em.createQuery(hydrateJpql, Review.class)
+                .setParameter("ids", ids)
                 .getResultList();
+        final Map<ReviewId, Review> byId = hydrated.stream()
+                .collect(Collectors.toMap(Review::getId, Function.identity()));
 
-        final List<ReviewItemDto> result = new ArrayList<>(reviews.size());
-        for (final Review r : reviews) {
+        final List<ReviewItemDto> result = new ArrayList<>(ids.size());
+        for (final ReviewId id : ids) {
+            final Review r = byId.get(id);
+            if (r == null) {
+                continue;
+            }
             final User reviewer = r.getId().isMadeByRider()
                     ? r.getReservation().getRider()
                     : r.getReservation().getCar().getOwner();

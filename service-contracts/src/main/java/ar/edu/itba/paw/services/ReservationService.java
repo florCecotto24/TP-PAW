@@ -204,4 +204,14 @@ public interface ReservationService {
      * scheduled job.
      */
     List<Reservation> findReminderReservations(OffsetDateTime from, OffsetDateTime to);
+
+    // -----------------------------------------------------------------------------------------------------------
+    // Admin-orchestrated read of reservation rows.
+    //
+    // Exists so that {@link AdminService} can list every reservation in the system without bypassing the layering
+    // rule "each service may only call its own DAO".
+    // -----------------------------------------------------------------------------------------------------------
+
+    /** Admin-only: paginated list of every reservation in the system as display cards. */
+    Page<ReservationCard> findAllReservationCards(int page, int pageSize);
 }

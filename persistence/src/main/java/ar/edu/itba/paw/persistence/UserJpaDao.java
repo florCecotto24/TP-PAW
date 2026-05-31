@@ -1,8 +1,11 @@
 package ar.edu.itba.paw.persistence;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
@@ -14,9 +17,8 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
-import ar.edu.itba.paw.persistence.UserDao;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 
 @Transactional(readOnly = true)
 @Repository
@@ -256,13 +258,32 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public Page<User> findAllUsersPaginated(final int page, final int pageSize) {
+        /*
+         * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
+         * - Step 1 (native): paginate + order on the {@code users} table, projecting only the PKs
+         *   for the requested window.
+         * - Step 2 (JPQL):   hydrate the {@link User} entities by id. The reorder by id ASC happens
+         *   in memory because {@code WHERE id IN :ids} does not preserve native-step ordering.
+         */
         final long total = em.createQuery("SELECT COUNT(u) FROM User u", Long.class)
                 .getSingleResult();
-        final List<User> users = em.createQuery("FROM User u ORDER BY u.id ASC", User.class)
-                .setFirstResult(page * pageSize)
-                .setMaxResults(pageSize)
+        @SuppressWarnings("unchecked")
+        final List<Number> pageIds = em.createNativeQuery(
+                        "SELECT u.id FROM users u ORDER BY u.id ASC LIMIT :limit OFFSET :offset")
+                .setParameter("limit", pageSize)
+                .setParameter("offset", page * pageSize)
                 .getResultList();
-        return new Page<>(users, page, pageSize, total);
+        if (pageIds.isEmpty()) {
+            return new Page<>(Collections.emptyList(), page, pageSize, total);
+        }
+        final List<Long> ids = pageIds.stream().map(Number::longValue).collect(Collectors.toList());
+        final List<User> hydrated = em.createQuery("FROM User u WHERE u.id IN :ids", User.class)
+                .setParameter("ids", ids)
+                .getResultList();
+        final List<User> sorted = hydrated.stream()
+                .sorted(Comparator.comparingLong(User::getId))
+                .collect(Collectors.toList());
+        return new Page<>(sorted, page, pageSize, total);
     }
 
     @Override

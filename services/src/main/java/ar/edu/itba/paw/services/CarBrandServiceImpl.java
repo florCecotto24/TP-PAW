@@ -55,4 +55,22 @@ public final class CarBrandServiceImpl implements CarBrandService {
         }
         return Optional.of(carBrandDao.create(normalized, false));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CarBrand> findPendingOrdered() {
+        return carBrandDao.findPendingOrdered();
+    }
+
+    @Override
+    @Transactional
+    public void markAsValidated(final long brandId) {
+        carBrandDao.findById(brandId).ifPresent(brand -> brand.setValidated(true));
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(final long brandId) {
+        carBrandDao.deleteById(brandId);
+    }
 }

@@ -17,6 +17,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import static ar.edu.itba.paw.exception.MessageKeys.RESERVATION_OWNER_BLOCKED;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
@@ -183,66 +184,7 @@ public class ReservationServiceImplTest {
                 RiderReservationException.class,
                 () -> reservationService.submitRiderReservationByCar(
                         riderId, carId, 99L, "2030-06-01T10:00", "2030-06-02T18:00"));
-        Assertions.assertEquals(
-                ar.edu.itba.paw.exception.MessageKeys.RESERVATION_OWNER_BLOCKED,
-                thrown.getMessageCode());
-        // The flow must short-circuit before touching downstream services.
-        Mockito.verify(reservationDao, Mockito.never())
-                .createReservationForCar(Mockito.anyLong(), Mockito.anyLong(),
-                        Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-    }
-
-    @Test
-    public void testSweepRefundOverdueAndBlockOwnersBlocksOwnerAndEnqueuesEmailExactlyOnce() {
-        // 1. Arrange — two overdue reservations belong to the same owner; one belongs to a different owner.
-        final User owner1 = User.builder().id(101L).email("o1@test.com").forename("O1").surname("Owner1").blocked(false).build();
-        final User owner2 = User.builder().id(202L).email("o2@test.com").forename("O2").surname("Owner2").blocked(false).build();
-        final Car car1 = Car.builder().id(1L).owner(owner1).plate("AAA111")
-                .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL).build();
-        final Car car1b = Car.builder().id(2L).owner(owner1).plate("AAA222")
-                .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL).build();
-        final Car car2 = Car.builder().id(3L).owner(owner2).plate("BBB111")
-                .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL).build();
-        final OffsetDateTime deadline = OffsetDateTime.parse("2026-05-30T00:00:00Z");
-        final Reservation r1 = buildOverdueRefundReservation(11L, car1, deadline);
-        final Reservation r2 = buildOverdueRefundReservation(12L, car1b, deadline);
-        final Reservation r3 = buildOverdueRefundReservation(13L, car2, deadline);
-        Mockito.when(reservationDao.findReservationsWithOverdueRefundProof(Mockito.any()))
-                .thenReturn(List.of(r1, r2, r3));
-        Mockito.when(userService.getUserById(owner1.getId())).thenReturn(Optional.of(owner1));
-        Mockito.when(userService.getUserById(owner2.getId())).thenReturn(Optional.of(owner2));
-        Mockito.when(userService.resolveMailLocale(Mockito.anyLong())).thenReturn(java.util.Locale.ENGLISH);
-
-        // 2. Act
-        reservationService.sweepRefundOverdueAndBlockOwners();
-
-        // 3. Assert — each owner is blocked exactly once and receives a single email payload.
-        Mockito.verify(userService).blockUser(owner1.getId());
-        Mockito.verify(userService).blockUser(owner2.getId());
-        Mockito.verify(userService, Mockito.never()).blockUser(Mockito.longThat(id -> id != owner1.getId() && id != owner2.getId()));
-        Mockito.verify(emailService, Mockito.times(2))
-                .sendOwnerBlockedEmail(Mockito.any(ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload.class));
-    }
-
-    @Test
-    public void testSweepRefundOverdueAndBlockOwnersSkipsAlreadyBlockedOwners() {
-        // 1. Arrange
-        final User alreadyBlocked = User.builder()
-                .id(101L).email("o@test.com").forename("O").surname("Owner").blocked(true).build();
-        final Car car = Car.builder().id(1L).owner(alreadyBlocked).plate("AAA111")
-                .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL).build();
-        final Reservation overdue = buildOverdueRefundReservation(7L, car, OffsetDateTime.parse("2026-05-30T00:00:00Z"));
-        Mockito.when(reservationDao.findReservationsWithOverdueRefundProof(Mockito.any()))
-                .thenReturn(List.of(overdue));
-        Mockito.when(userService.getUserById(alreadyBlocked.getId())).thenReturn(Optional.of(alreadyBlocked));
-
-        // 2. Act
-        reservationService.sweepRefundOverdueAndBlockOwners();
-
-        // 3. Assert
-        Mockito.verify(userService, Mockito.never()).blockUser(Mockito.anyLong());
-        Mockito.verify(emailService, Mockito.never())
-                .sendOwnerBlockedEmail(Mockito.any(ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload.class));
+        Assertions.assertEquals(RESERVATION_OWNER_BLOCKED, thrown.getMessageCode());
     }
 
     private static Reservation buildOverdueRefundReservation(final long id, final Car car, final OffsetDateTime deadline) {

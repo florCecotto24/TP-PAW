@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 
@@ -35,4 +36,18 @@ public interface ReservationMessageService {
     boolean canParticipantAccessReservationChat(long viewerUserId, long reservationId);
 
     void dispatchChatDigestEmails();
+
+    // -----------------------------------------------------------------------------------------------------------
+    // Admin-orchestrated read of chat messages.
+    //
+    // Exists so that {@link AdminService} can audit reservation chats without bypassing the layering rule
+    // "each service may only call its own DAO". Unlike {@link #getMessagesForParticipant}, no participant
+    // check is performed: the caller (admin facade) decides who is allowed to read.
+    // -----------------------------------------------------------------------------------------------------------
+
+    /** Admin-only: raw page of chat messages for a reservation, no participant check applied. */
+    List<ReservationMessage> getAdminChatMessages(long reservationId, int offset, int limit);
+
+    /** Total number of chat messages for a reservation. */
+    long countMessages(long reservationId);
 }

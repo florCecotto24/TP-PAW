@@ -191,4 +191,29 @@ public interface UserService {
      * Clears the {@code blocked} flag for {@code userId}. Idempotent — a no-op when the user is already unblocked.
      */
     void unblockUser(long userId);
+
+    // -----------------------------------------------------------------------------------------------------------
+    // Admin-orchestrated operations on user rows.
+    //
+    // These methods exist so that {@link AdminService} can mutate user state without bypassing the layering rule
+    // "each service may only call its own DAO". They are intentionally narrow and do NOT include the admin-side
+    // policy checks (self-block, grantor-block, etc.); the calling {@link AdminService} owns those.
+    // -----------------------------------------------------------------------------------------------------------
+
+    /**
+     * Promotes {@code targetUserId} to admin role, recording {@code assignedByUserId} as the granting admin.
+     * Idempotent at the persistence layer.
+     */
+    void promoteToAdmin(long targetUserId, long assignedByUserId);
+
+    /**
+     * Creates a user row directly from a pre-encoded password hash (BCrypt). Bypasses the registration form
+     * validation and is intended for admin-initiated account creation only.
+     */
+    User createUserWithEncodedPassword(String email, String forename, String surname, String bcryptEncodedHash);
+
+    /**
+     * Paginated list of every user in the system, ordered by id. Admin-only listing.
+     */
+    ar.edu.itba.paw.models.dto.Page<User> findAllUsersPaginated(int page, int pageSize);
 }

@@ -64,7 +64,7 @@ public interface EmailService {
     /** Owner must upload refund transfer proof after cancelling a confirmed paid reservation (initial or reminder). */
     void sendOwnerRefundProofObligationEmail(OwnerRefundProofObligationEmailPayload payload);
     /** Notifies the owner that their account was blocked because at least one refund-proof deadline lapsed. */
-    void sendOwnerBlockedEmail(ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload payload);
+    void sendOwnerBlockedEmail(OwnerBlockedEmailPayload payload);
 
     /** Rider notified that the host uploaded a refund receipt for a cancelled reservation. */
     void sendRiderRefundProofReceivedEmail(RiderRefundProofReceivedEmailPayload payload);

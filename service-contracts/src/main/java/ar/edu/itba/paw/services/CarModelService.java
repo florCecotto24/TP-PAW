@@ -31,4 +31,25 @@ public interface CarModelService {
      * returns {@link Optional#empty()}.
      */
     Optional<CarModel> findOrCreateUnvalidated(long brandId, String rawName, Car.Type type);
+
+    // -----------------------------------------------------------------------------------------------------------
+    // Admin-orchestrated operations on model rows.
+    //
+    // These methods exist so that {@link AdminService} can mutate model state without bypassing the layering rule
+    // "each service may only call its own DAO". The calling {@link AdminService} owns the surrounding flow
+    // (cascading car-row cleanup, notification emails, etc.).
+    // -----------------------------------------------------------------------------------------------------------
+
+    /** Models awaiting admin validation. */
+    List<CarModel> findPendingOrdered();
+
+    /** Number of models attached to a brand. Used by admin reject-catalog flow to decide whether the brand
+     *  should also be removed. */
+    int countByBrandId(long brandId);
+
+    /** Admin-only: sets {@code validated = true} on the model row. No-op when model is missing. */
+    void markAsValidated(long modelId);
+
+    /** Admin-only: removes the model. The caller is responsible for breaking dangling references on car rows. */
+    void deleteById(long modelId);
 }

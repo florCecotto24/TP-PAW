@@ -68,4 +68,28 @@ public final class CarModelServiceImpl implements CarModelService {
         }
         return Optional.of(carModelDao.create(brandId, normalized, false, type));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CarModel> findPendingOrdered() {
+        return carModelDao.findPendingOrdered();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countByBrandId(final long brandId) {
+        return carModelDao.countByBrandId(brandId);
+    }
+
+    @Override
+    @Transactional
+    public void markAsValidated(final long modelId) {
+        carModelDao.findById(modelId).ifPresent(model -> model.setValidated(true));
+    }
+
+    @Override
+    @Transactional
+    public void deleteById(final long modelId) {
+        carModelDao.deleteById(modelId);
+    }
 }

@@ -172,6 +172,18 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ReservationMessage> getAdminChatMessages(final long reservationId, final int offset, final int limit) {
+        return reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(reservationId, offset, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countMessages(final long reservationId) {
+        return reservationMessageDao.countByReservationId(reservationId);
+    }
+
+    @Override
     @Transactional
     public void dispatchChatDigestEmails() {
         final List<ReservationMessage> pending = reservationMessageDao.findPendingEmailNotification();

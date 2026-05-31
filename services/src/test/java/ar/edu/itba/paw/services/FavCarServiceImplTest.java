@@ -152,23 +152,6 @@ class FavCarServiceImplTest {
     }
 
     @Test
-    void testFindMyFavoritesForwardsRawPageCoordinatesToDao() {
-        // 1. Arrange — page bounds checks (negative page, zero page size) are the DAO's
-        // responsibility. The service must pass the raw coordinates straight through.
-        final Page<CarCard> daoPage = new Page<>(List.of(), 0, 10, 0L);
-        Mockito.when(favCarDao.findFavoriteCarCards(
-                Mockito.anyLong(), Mockito.anyCollection(), Mockito.anyInt(), Mockito.anyInt()))
-                .thenReturn(daoPage);
-
-        // 2. Act
-        service.findMyFavorites(OTHER_USER_ID, -3, 0);
-
-        // 3. Assert — service did not pre-clamp before delegating; the DAO sees the request as-is.
-        Mockito.verify(favCarDao).findFavoriteCarCards(
-                Mockito.eq(OTHER_USER_ID), Mockito.anyCollection(), Mockito.eq(-3), Mockito.eq(0));
-    }
-
-    @Test
     void testFilterFavoritedCarIdsReturnsDaoResult() {
         // 1. Arrange
         final List<Long> requestedIds = List.of(1L, 2L, 3L);

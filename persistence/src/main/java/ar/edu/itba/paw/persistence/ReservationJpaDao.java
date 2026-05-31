@@ -363,17 +363,38 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public Optional<OffsetDateTime> findCarNextActiveReservationDate(
             final long ownerId, final long carId, final OffsetDateTime after) {
-        return em.createQuery(
-                        "SELECT r.startDate FROM Reservation r "
-                                + "WHERE r.car.owner.id = :ownerId AND r.car.id = :carId "
-                                + "AND r.status IN :statuses AND r.startDate > :after "
-                                + "ORDER BY r.startDate ASC",
-                        OffsetDateTime.class)
+        /*
+         * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
+         * - Step 1 (native): filter, order by {@code start_date ASC} and apply {@code LIMIT 1} on
+         *   the {@code reservations} table to obtain the top-1 reservation id for the window. The
+         *   WHERE clause does NOT guarantee uniqueness (status IN + start_date > :after can match
+         *   multiple rows), so this is a "top 1" pagination case and must use the 1+1 pattern.
+         * - Step 2 (JPQL):   hydrate only the {@code startDate} scalar field of the chosen
+         *   reservation. No JOIN FETCH needed because the consumer reads a single scalar value.
+         */
+        @SuppressWarnings("unchecked")
+        final List<Number> ids = em.createNativeQuery(
+                        "SELECT r.id FROM reservations r "
+                                + "JOIN cars c ON c.id = r.car_id "
+                                + "WHERE c.owner_id = :ownerId AND r.car_id = :carId "
+                                + "AND r.status IN (:statuses) AND r.start_date > :after "
+                                + "ORDER BY r.start_date ASC "
+                                + "LIMIT 1")
                 .setParameter("ownerId", ownerId)
                 .setParameter("carId", carId)
-                .setParameter("statuses", Arrays.asList(Reservation.Status.ACCEPTED, Reservation.Status.STARTED))
+                .setParameter("statuses", Arrays.asList(
+                        Reservation.Status.ACCEPTED.name().toLowerCase(Locale.ROOT),
+                        Reservation.Status.STARTED.name().toLowerCase(Locale.ROOT)))
                 .setParameter("after", after)
-                .setMaxResults(1)
+                .getResultList();
+        if (ids.isEmpty()) {
+            return Optional.empty();
+        }
+        final long reservationId = ids.get(0).longValue();
+        return em.createQuery(
+                        "SELECT r.startDate FROM Reservation r WHERE r.id = :id",
+                        OffsetDateTime.class)
+                .setParameter("id", reservationId)
                 .getResultList().stream().findFirst();
     }
 

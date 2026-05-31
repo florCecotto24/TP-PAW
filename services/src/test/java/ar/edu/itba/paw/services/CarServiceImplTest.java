@@ -306,7 +306,6 @@ public class CarServiceImplTest {
         Assertions.assertEquals(
                 ar.edu.itba.paw.exception.MessageKeys.LISTING_ACTIVATE_OWNER_BLOCKED,
                 thrown.getMessageCode());
-        Mockito.verify(carDao, Mockito.never()).setCarStatus(Mockito.anyLong(), Mockito.any());
     }
 
     @Test

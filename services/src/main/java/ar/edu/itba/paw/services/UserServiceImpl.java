@@ -593,4 +593,23 @@ public final class UserServiceImpl implements UserService {
     public void unblockUser(final long userId) {
         userDao.unblockUser(userId);
     }
+
+    @Override
+    @Transactional
+    public void promoteToAdmin(final long targetUserId, final long assignedByUserId) {
+        userDao.promoteToAdmin(targetUserId, assignedByUserId);
+    }
+
+    @Override
+    @Transactional
+    public User createUserWithEncodedPassword(
+            final String email, final String forename, final String surname, final String bcryptEncodedHash) {
+        return userDao.createUser(email, forename, surname, bcryptEncodedHash);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ar.edu.itba.paw.models.dto.Page<User> findAllUsersPaginated(final int page, final int pageSize) {
+        return userDao.findAllUsersPaginated(page, pageSize);
+    }
 }

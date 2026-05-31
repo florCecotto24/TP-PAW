@@ -558,6 +558,43 @@ public final class CarServiceImpl implements CarService {
         carDao.updateRatingAvg(carId, average);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<Car> findAdminPausedCars() {
+        return carDao.findCarsByStatus(Car.Status.ADMIN_PAUSED);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Car> findCarsByModelId(final long modelId) {
+        return carDao.findCarsByModelId(modelId);
+    }
+
+    @Override
+    @Transactional
+    public void markCarAsAdminPaused(final long carId) {
+        final Car car = carDao.getCarById(carId)
+                .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+        car.setStatus(Car.Status.ADMIN_PAUSED);
+    }
+
+    @Override
+    @Transactional
+    public void releaseAdminCarPause(final long carId) {
+        final Car car = carDao.getCarById(carId)
+                .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+        if (car.getStatus() != Car.Status.ADMIN_PAUSED) {
+            throw new IllegalStateException("Car is not admin-paused: " + carId);
+        }
+        car.setStatus(Car.Status.ACTIVE);
+    }
+
+    @Override
+    @Transactional
+    public void clearCarModel(final long carId) {
+        carDao.getCarById(carId).ifPresent(car -> car.setCarModel(null));
+    }
+
     private static String carLabel(final Car car) {
         final String brand = car.getBrand() != null ? car.getBrand() : "";
         final String model = car.getModel() != null ? car.getModel() : "";

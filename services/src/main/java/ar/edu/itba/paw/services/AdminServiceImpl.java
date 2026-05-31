@@ -25,56 +25,53 @@ import ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
-import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.persistence.CarBrandDao;
-import ar.edu.itba.paw.persistence.CarDao;
-import ar.edu.itba.paw.persistence.CarModelDao;
-import ar.edu.itba.paw.persistence.ReservationDao;
-import ar.edu.itba.paw.persistence.ReservationMessageDao;
-import ar.edu.itba.paw.persistence.UserDao;
 
-/** Admin operations: user management, car moderation, catalog validation, and reservation inspection. */
+/**
+ * Admin operations: user management, car moderation, catalog validation, and reservation inspection.
+ *
+ * <p>This service is a pure orchestrator: it never talks to any DAO directly (project rule: a service may
+ * only call its own DAO). All persistence access is delegated to the corresponding peer services
+ * ({@link UserService}, {@link CarService}, {@link CarBrandService}, {@link CarModelService},
+ * {@link ReservationService}, {@link ReservationMessageService}).</p>
+ */
 @Service
 @Transactional
 public class AdminServiceImpl implements AdminService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AdminServiceImpl.class);
 
-    private final UserDao userDao;
-    private final CarDao carDao;
-    private final CarBrandDao carBrandDao;
-    private final CarModelDao carModelDao;
-    private final ReservationDao reservationDao;
-    private final ReservationMessageDao reservationMessageDao;
+    private final UserService userService;
+    private final CarService carService;
+    private final CarBrandService carBrandService;
+    private final CarModelService carModelService;
+    private final ReservationService reservationService;
+    private final ReservationMessageService reservationMessageService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
-    private final ReservationService reservationService;
 
     @Autowired
     public AdminServiceImpl(
-            final UserDao userDao,
-            final CarDao carDao,
-            final CarBrandDao carBrandDao,
-            final CarModelDao carModelDao,
-            final ReservationDao reservationDao,
-            final ReservationMessageDao reservationMessageDao,
+            final UserService userService,
+            final CarService carService,
+            final CarBrandService carBrandService,
+            final CarModelService carModelService,
+            final ReservationService reservationService,
+            final ReservationMessageService reservationMessageService,
             final EmailService emailService,
-            final PasswordEncoder passwordEncoder,
-            final ReservationService reservationService) {
-        this.userDao = userDao;
-        this.carDao = carDao;
-        this.carBrandDao = carBrandDao;
-        this.carModelDao = carModelDao;
-        this.reservationDao = reservationDao;
-        this.reservationMessageDao = reservationMessageDao;
+            final PasswordEncoder passwordEncoder) {
+        this.userService = userService;
+        this.carService = carService;
+        this.carBrandService = carBrandService;
+        this.carModelService = carModelService;
+        this.reservationService = reservationService;
+        this.reservationMessageService = reservationMessageService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
-        this.reservationService = reservationService;
     }
 
     @Override
     public void promoteUserToAdmin(final long targetUserId, final long assignedByUserId) {
-        userDao.promoteToAdmin(targetUserId, assignedByUserId);
+        userService.promoteToAdmin(targetUserId, assignedByUserId);
     }
 
     @Override
@@ -85,10 +82,10 @@ public class AdminServiceImpl implements AdminService {
             final String temporaryPassword,
             final long assignedByUserId,
             final Locale locale) {
-        final User newUser = userDao.createUser(
+        final User newUser = userService.createUserWithEncodedPassword(
                 email, forename, surname, passwordEncoder.encode(temporaryPassword));
-        userDao.promoteToAdmin(newUser.getId(), assignedByUserId);
-        userDao.updateEmailValidated(newUser.getId(), true);
+        userService.promoteToAdmin(newUser.getId(), assignedByUserId);
+        userService.markEmailVerified(newUser.getId());
         emailService.sendMigratedUserPassword(
                 MigratedUserPasswordEmailPayload.builder()
                         .messageLocale(locale)
@@ -103,29 +100,29 @@ public class AdminServiceImpl implements AdminService {
         if (actingAdminId == targetUserId) {
             throw new AdminCannotBlockSelfException();
         }
-        final User target = userDao.getUserById(targetUserId)
+        final User target = userService.getUserById(targetUserId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
         target.getRoleAssignedBy().ifPresent(grantorId -> {
             if (grantorId == actingAdminId) {
                 throw new AdminCannotBlockGrantorException();
             }
         });
-        userDao.blockUser(targetUserId);
+        userService.blockUser(targetUserId);
     }
 
     @Override
     public void unblockUser(final long targetUserId) {
-        userDao.unblockUser(targetUserId);
+        userService.unblockUser(targetUserId);
     }
 
     @Override
     public void adminPauseCar(final long carId, final long actingAdminId, final Locale locale) {
-        final Car car = carDao.getCarById(carId)
+        final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
         if (car.getOwner().isAdmin()) {
             throw new IllegalArgumentException("Cannot admin-pause a car owned by another admin: " + carId);
         }
-        car.setStatus(Car.Status.ADMIN_PAUSED);
+        carService.markCarAsAdminPaused(carId);
         final List<Reservation> blocking = reservationService.findBlockingReservationsByCarId(carId);
         for (final Reservation r : blocking) {
             if (r.getStatus() == Reservation.Status.PENDING || r.getStatus() == Reservation.Status.ACCEPTED) {
@@ -149,56 +146,53 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void adminResumeCar(final long carId, final long actingAdminId) {
-        final Car car = carDao.getCarById(carId)
-                .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
-        if (car.getStatus() != Car.Status.ADMIN_PAUSED) {
-            throw new IllegalStateException("Car is not admin-paused: " + carId);
-        }
-        car.setStatus(Car.Status.ACTIVE);
+        carService.releaseAdminCarPause(carId);
         LOGGER.info("Admin {} resumed car {}", actingAdminId, carId);
     }
 
     @Override
     public void validateCarBrand(final long brandId) {
-        final CarBrand brand = carBrandDao.findById(brandId)
-                .orElseThrow(() -> new IllegalArgumentException("Brand not found: " + brandId));
-        brand.setValidated(true);
+        if (carBrandService.findById(brandId).isEmpty()) {
+            throw new IllegalArgumentException("Brand not found: " + brandId);
+        }
+        carBrandService.markAsValidated(brandId);
     }
 
     @Override
     public void rejectCarBrand(final long brandId) {
-        carBrandDao.findById(brandId).ifPresent(brand -> {
+        carBrandService.findById(brandId).ifPresent(brand -> {
             LOGGER.warn("Admin rejecting brand id={} name='{}'; cars referencing this brand/model become orphaned",
                     brandId, brand.getName());
-            carBrandDao.deleteById(brandId);
+            carBrandService.deleteById(brandId);
         });
     }
 
     @Override
     public void validateCarModel(final long modelId) {
-        final CarModel model = carModelDao.findById(modelId)
-                .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
-        model.setValidated(true);
+        if (carModelService.findById(modelId).isEmpty()) {
+            throw new IllegalArgumentException("Model not found: " + modelId);
+        }
+        carModelService.markAsValidated(modelId);
     }
 
     @Override
     public void rejectCarModel(final long modelId) {
-        carModelDao.deleteById(modelId);
+        carModelService.deleteById(modelId);
     }
 
     @Override
     public void validateCatalogEntry(final long modelId, final Locale locale) {
-        final CarModel model = carModelDao.findById(modelId)
+        final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
         final CarBrand brand = model.getBrand();
         final boolean brandWillBeValidated = !brand.isValidated();
         final String brandName = brand.getName();
         final String modelName = model.getName();
-        final List<Car> affectedCars = carDao.findCarsByModelId(modelId);
+        final List<Car> affectedCars = carService.findCarsByModelId(modelId);
         if (brandWillBeValidated) {
-            brand.setValidated(true);
+            carBrandService.markAsValidated(brand.getId());
         }
-        model.setValidated(true);
+        carModelService.markAsValidated(modelId);
         for (final Car car : affectedCars) {
             final User owner = car.getOwner();
             final String vehicleLabel = brandName + " " + modelName;
@@ -218,15 +212,15 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void rejectCatalogEntry(final long modelId, final Locale locale) {
-        final CarModel model = carModelDao.findById(modelId)
+        final CarModel model = carModelService.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
         final CarBrand brand = model.getBrand();
         final boolean brandIsPending = !brand.isValidated();
-        final boolean isLastModelForBrand = carModelDao.countByBrandId(brand.getId()) == 1;
+        final boolean isLastModelForBrand = carModelService.countByBrandId(brand.getId()) == 1;
         final boolean brandWillBeRejected = brandIsPending && isLastModelForBrand;
         final String brandName = brand.getName();
         final String modelName = model.getName();
-        final List<Car> affectedCars = carDao.findCarsByModelId(modelId);
+        final List<Car> affectedCars = carService.findCarsByModelId(modelId);
         final List<ListingRejectedByAdminOwnerEmailPayload> notifications = new java.util.ArrayList<>(affectedCars.size());
         for (final Car car : affectedCars) {
             final User owner = car.getOwner();
@@ -243,11 +237,11 @@ public class AdminServiceImpl implements AdminService {
                             .brandRejected(brandWillBeRejected)
                             .modelRejected(true)
                             .build());
-            car.setCarModel(null);
+            carService.clearCarModel(car.getId());
         }
-        carModelDao.deleteById(modelId);
+        carModelService.deleteById(modelId);
         if (brandWillBeRejected) {
-            carBrandDao.deleteById(brand.getId());
+            carBrandService.deleteById(brand.getId());
         }
         for (final ListingRejectedByAdminOwnerEmailPayload payload : notifications) {
             emailService.sendListingRejectedByAdmin(payload);
@@ -257,49 +251,49 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional(readOnly = true)
     public Page<User> listUsers(final int page, final int pageSize) {
-        return userDao.findAllUsersPaginated(page, pageSize);
+        return userService.findAllUsersPaginated(page, pageSize);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarBrand> findPendingBrands() {
-        return carBrandDao.findPendingOrdered();
+        return carBrandService.findPendingOrdered();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarModel> findPendingModels() {
-        return carModelDao.findPendingOrdered();
+        return carModelService.findPendingOrdered();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Car> findAdminPausedCars() {
-        return carDao.findCarsByStatus(Car.Status.ADMIN_PAUSED);
+        return carService.findAdminPausedCars();
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ReservationCard> listAllReservations(final int page, final int pageSize) {
-        return reservationDao.findAllReservationCards(page, pageSize);
+        return reservationService.findAllReservationCards(page, pageSize);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Reservation> getReservationById(final long reservationId) {
-        return reservationDao.getReservationById(reservationId);
+        return reservationService.getReservationById(reservationId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<ReservationMessage> getAdminChatMessages(final long reservationId, final int offset, final int limit) {
-        return reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(reservationId, offset, limit);
+        return reservationMessageService.getAdminChatMessages(reservationId, offset, limit);
     }
 
     @Override
     @Transactional(readOnly = true)
     public long countReservationMessages(final long reservationId) {
-        return reservationMessageDao.countByReservationId(reservationId);
+        return reservationMessageService.countMessages(reservationId);
     }
 
 }

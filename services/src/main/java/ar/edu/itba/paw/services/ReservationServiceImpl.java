@@ -1570,6 +1570,12 @@ public final class ReservationServiceImpl implements ReservationService {
         return reservationDao.getReminderReservations(from, to);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
+        return reservationDao.findAllReservationCards(page, pageSize);
+    }
+
     private static String trimName(final String forename, final String surname) {
         final String f = forename == null ? "" : forename.trim();
         final String s = surname == null ? "" : surname.trim();

@@ -36,16 +36,30 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
 
     @Override
     public Optional<ListingAvailability> findEffectiveForDayByCar(final long carId, final LocalDate day) {
-        final List<ListingAvailability> rows = em.createQuery(
-                        "FROM ListingAvailability la WHERE la.car.id = :carId "
-                                + "AND la.startInclusive <= :day AND la.endInclusive >= :day "
-                                + "ORDER BY la.createdAt DESC, la.id DESC",
-                        ListingAvailability.class)
+        /*
+         * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
+         * - Step 1 (native): filter, order by {@code (created_at DESC, id DESC)} and apply
+         *   {@code LIMIT 1} on {@code listing_availability} to get the most recent availability
+         *   that covers the given day. The WHERE does NOT guarantee uniqueness (multiple
+         *   availabilities may overlap the same day; we deliberately want the most recently
+         *   created one), so this is a "top 1" pagination case and must use the 1+1 pattern.
+         * - Step 2 (JPQL):   hydrate the {@link ListingAvailability} entity by id.
+         */
+        @SuppressWarnings("unchecked")
+        final List<Number> ids = em.createNativeQuery(
+                        "SELECT la.id FROM listing_availability la "
+                                + "WHERE la.car_id = :carId "
+                                + "AND la.start_date <= :day AND la.end_date >= :day "
+                                + "ORDER BY la.created_at DESC, la.id DESC "
+                                + "LIMIT 1")
                 .setParameter("carId", carId)
                 .setParameter("day", day)
-                .setMaxResults(1)
                 .getResultList();
-        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+        if (ids.isEmpty()) {
+            return Optional.empty();
+        }
+        final long availabilityId = ids.get(0).longValue();
+        return Optional.ofNullable(em.find(ListingAvailability.class, availabilityId));
     }
 
     @Override

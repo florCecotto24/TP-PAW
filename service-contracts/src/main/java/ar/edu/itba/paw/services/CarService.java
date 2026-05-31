@@ -9,13 +9,13 @@ import java.util.Optional;
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.models.dto.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
-import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 
 /**
  * Car rows for owners and public catalog/search (browse cheapest/most-recent, search, owner hub,
@@ -233,4 +233,30 @@ public interface CarService {
 
     /** Persists the car's average rating via dirty-checking; {@code null} clears the value. */
     void updateRatingAvg(long carId, BigDecimal average);
+
+    // -----------------------------------------------------------------------------------------------------------
+    // Admin-orchestrated operations on car rows.
+    //
+    // These methods exist so that {@link AdminService} can mutate car state without bypassing the layering rule
+    // "each service may only call its own DAO". They are intentionally narrow: the calling {@link AdminService}
+    // owns the surrounding admin policy (e.g. forbidding pausing an admin-owned car, cascading reservation
+    // cancellations, sending notification emails).
+    // -----------------------------------------------------------------------------------------------------------
+
+    /** Admin-only: all cars currently in {@link Car.Status#ADMIN_PAUSED}. */
+    List<Car> findAdminPausedCars();
+
+    /** All cars in the catalog linked to the given model id. Admin uses it to enumerate cars affected by a
+     *  catalog validation/rejection. */
+    List<Car> findCarsByModelId(long modelId);
+
+    /** Admin-only: transitions the car to {@link Car.Status#ADMIN_PAUSED}. Throws when the car does not exist. */
+    void markCarAsAdminPaused(long carId);
+
+    /** Admin-only: transitions a car from {@link Car.Status#ADMIN_PAUSED} back to {@link Car.Status#ACTIVE}.
+     *  Throws when the car is not currently admin-paused. */
+    void releaseAdminCarPause(long carId);
+
+    /** Admin-only: orphans the car from its catalog model (used when the catalog model is rejected and removed). */
+    void clearCarModel(long carId);
 }
