@@ -13,7 +13,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -1105,28 +1104,6 @@ public final class ReservationServiceImpl implements ReservationService {
             return Optional.empty();
         }
         return fileOpt;
-    }
-
-    @Override
-    @Transactional
-    public void setPaymentRefundApprovalByRider(final long riderUserId, final long reservationId, final boolean approved) {
-        final Reservation r = getRiderReservationById(riderUserId, reservationId)
-                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID));
-        if (r.getStatus() != Reservation.Status.CANCELLED_BY_OWNER && r.getStatus() != Reservation.Status.CANCELLED_BY_RIDER) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID);
-        }
-        if (r.getPaymentRefundReceiptFileId().isEmpty()) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID);
-        }
-        final int updated = reservationDao.updatePaymentRefundApproved(reservationId, riderUserId, approved);
-        if (updated == 0) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_REFUND_APPROVAL_INVALID);
-        }
-        LOGGER.atInfo()
-                .addArgument(riderUserId)
-                .addArgument(approved)
-                .addArgument(reservationId)
-                .log("Rider riderUserId={} set refund receipt approved={} for reservation id={}");
     }
 
     @Override

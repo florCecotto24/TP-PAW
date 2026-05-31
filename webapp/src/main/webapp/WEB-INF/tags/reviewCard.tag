@@ -9,7 +9,7 @@
 <%@ attribute name="comment" required="false" type="java.lang.String" %>
 <%@ attribute name="imageId" required="false" type="java.lang.Long" %>
 
-<article class="card border-0 shadow-sm rounded-4 h-100 listing-review-card">
+<article class="card border-0 shadow-sm rounded-4 listing-review-card">
     <div class="card-body p-4 d-flex flex-column gap-2">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
             <div class="d-flex align-items-center gap-3">

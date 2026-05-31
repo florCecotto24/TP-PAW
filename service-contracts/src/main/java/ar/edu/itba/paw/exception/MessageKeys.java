@@ -26,7 +26,6 @@ public final class MessageKeys {
     public static final String RESERVATION_MARK_RETURNED_NOT_ALLOWED = "reservation.carReturned.notAllowed";
     public static final String RESERVATION_REFUND_RECEIPT_INVALID = "reservation.refundReceipt.invalid";
     public static final String RESERVATION_REFUND_RECEIPT_TOO_LARGE = "reservation.refundReceipt.tooLarge";
-    public static final String RESERVATION_REFUND_APPROVAL_INVALID = "reservation.refundApproval.invalid";
     public static final String RESERVATION_CHAT_NOT_AVAILABLE = "reservation.chat.notAvailable";
     public static final String RESERVATION_CHAT_BODY_EMPTY = "reservation.chat.bodyEmpty";
     public static final String RESERVATION_CHAT_BODY_TOO_LONG = "reservation.chat.bodyTooLong";

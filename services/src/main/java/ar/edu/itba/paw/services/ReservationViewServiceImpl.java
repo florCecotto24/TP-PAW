@@ -137,7 +137,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final Optional<String> refundProofDeadlineDisplay = reservation.getRefundProofDeadlineAt()
                 .map(deadline -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(deadline, locale));
         final boolean hasRefundReceipt = reservation.getPaymentRefundReceiptFileId().isPresent();
-        final boolean refundReceiptApproved = reservation.isPaymentRefundApproved();
         return Optional.of(new ReservationDetailPageModel(
                 reservation,
                 reservationPickupLocationDisplay,
@@ -166,7 +165,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 reservation.getPaymentReceiptFileId().isPresent(),
                 canCancelReservation,
                 hasRefundReceipt,
-                refundReceiptApproved,
                 refundProofDeadlineDisplay,
                 reservationMessageService.isChatAvailable(reservation)));
     }

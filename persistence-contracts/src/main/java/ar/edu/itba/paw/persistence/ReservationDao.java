@@ -112,8 +112,6 @@ public interface ReservationDao {
 
     int attachRefundReceipt(long reservationId, long ownerUserId, long storedFileId);
 
-    int updatePaymentRefundApproved(long reservationId, long riderUserId, boolean approved);
-
     List<Reservation> findReservationsWithDuePendingRefundProof(OffsetDateTime now);
 
     int claimPendingRefundEmailSent(long reservationId);

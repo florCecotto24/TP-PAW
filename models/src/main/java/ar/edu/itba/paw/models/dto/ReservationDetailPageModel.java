@@ -40,7 +40,6 @@ public final class ReservationDetailPageModel {
     private final boolean hasPaymentReceipt;
     private final boolean canCancelReservation;
     private final boolean hasRefundReceipt;
-    private final boolean refundReceiptApproved;
     private final Optional<String> refundProofDeadlineDisplay;
     private final boolean chatAvailable;
 
@@ -72,7 +71,6 @@ public final class ReservationDetailPageModel {
             final boolean hasPaymentReceipt,
             final boolean canCancelReservation,
             final boolean hasRefundReceipt,
-            final boolean refundReceiptApproved,
             final Optional<String> refundProofDeadlineDisplay,
             final boolean chatAvailable) {
         this.reservation = reservation;
@@ -102,7 +100,6 @@ public final class ReservationDetailPageModel {
         this.hasPaymentReceipt = hasPaymentReceipt;
         this.canCancelReservation = canCancelReservation;
         this.hasRefundReceipt = hasRefundReceipt;
-        this.refundReceiptApproved = refundReceiptApproved;
         this.refundProofDeadlineDisplay = refundProofDeadlineDisplay;
         this.chatAvailable = chatAvailable;
     }
@@ -140,7 +137,6 @@ public final class ReservationDetailPageModel {
         putObject.accept("hasPaymentReceipt", hasPaymentReceipt);
         putObject.accept("canCancelReservation", canCancelReservation);
         putObject.accept("hasRefundReceipt", hasRefundReceipt);
-        putObject.accept("refundReceiptApproved", refundReceiptApproved);
         refundProofDeadlineDisplay.ifPresent(s -> putObject.accept("refundProofDeadlineDisplay", s));
         putObject.accept("chatAvailable", chatAvailable);
     }

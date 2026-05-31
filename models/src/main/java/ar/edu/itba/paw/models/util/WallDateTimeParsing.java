@@ -10,7 +10,6 @@ import java.time.format.DateTimeParseException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
@@ -47,6 +46,31 @@ public final class WallDateTimeParsing {
     public static OffsetDateTime parseWallLocalDateTimeToUtc(final String value) {
         final LocalDateTime localDateTime = LocalDateTime.parse(value.trim());
         return localDateTime.atZone(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+    }
+
+    /**
+     * Wall-zone calendar day for a date-time coming from a form input (same format as
+     * {@link #parseWallLocalDateTimeToUtc}). Mirrors the null-safe convention of the
+     * {@code parseSearchFilter*} helpers above so callers can use it directly on raw form values.
+     *
+     * @return {@code null} when the input is blank or unparseable
+     */
+    public static LocalDate parseWallLocalDateTimeToWallDate(final String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return parseWallLocalDateTimeToUtc(value)
+                    .atZoneSameInstant(AvailabilityPeriod.WALL_ZONE)
+                    .toLocalDate();
+        } catch (final DateTimeParseException e) {
+            LOG.atDebug()
+                    .setMessage("Unparseable wall date-time [{}]")
+                    .addArgument(value)
+                    .setCause(e)
+                    .log();
+            return null;
+        }
     }
 
     /**

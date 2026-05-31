@@ -50,9 +50,6 @@
     <c:if test="${not empty refundReceiptError}">
         <div class="alert alert-danger" role="alert"><c:out value="${refundReceiptError}"/></div>
     </c:if>
-    <c:if test="${not empty refundApprovalMessage}">
-        <div class="alert alert-success" role="alert"><c:out value="${refundApprovalMessage}"/></div>
-    </c:if>
     <c:if test="${not empty carReturnedMessage}">
         <div class="alert alert-success" role="alert"><c:out value="${carReturnedMessage}"/></div>
     </c:if>
@@ -227,37 +224,11 @@
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.refund.riderTitle"/></h2>
                         <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.refund.riderIntro"/></p>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
                             <c:url var="riderRefundViewUrl" value="/my-reservations/${reservation.id}/refund-receipt/view"/>
                             <a class="btn btn-outline-primary" href="<c:out value='${riderRefundViewUrl}'/>" target="_blank" rel="noopener noreferrer">
                                 <spring:message code="myReservationDetail.refund.viewReceipt"/>
                             </a>
-                            <c:if test="${refundReceiptApproved}">
-                                <span class="badge text-bg-success"><spring:message code="myReservationDetail.refund.reviewedBadge"/></span>
-                            </c:if>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <c:url var="refundApprovalUrl" value="/my-reservations/${reservation.id}/refund-receipt/approval"/>
-                            <c:if test="${not refundReceiptApproved}">
-                                <form method="post" action="<c:out value='${refundApprovalUrl}'/>" class="d-inline">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
-                                    <input type="hidden" name="approved" value="true"/>
-                                    <button type="submit" class="btn btn-primary btn-sm">
-                                        <spring:message code="myReservationDetail.refund.markReviewed"/>
-                                    </button>
-                                </form>
-                            </c:if>
-                            <c:if test="${refundReceiptApproved}">
-                                <form method="post" action="<c:out value='${refundApprovalUrl}'/>" class="d-inline">
-                                    <input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>
-                                    <%@ include file="../includes/fromCarHubHidden.jspf" %>
-                                    <input type="hidden" name="approved" value="false"/>
-                                    <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                        <spring:message code="myReservationDetail.refund.clearReview"/>
-                                    </button>
-                                </form>
-                            </c:if>
                         </div>
                     </div>
                 </article>
@@ -317,22 +288,29 @@
                             <label class="form-label small" for="ownerReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
                             <form:textarea path="comment" id="ownerReviewComment" cssClass="form-control"
                                            rows="3" maxlength="${reviewCommentMaxLength}"/>
-                            <label class="form-label small mt-2" for="ownerReviewPicture">
-                                <spring:message code="myReservationDetail.review.picture.optional"/>
-                            </label>
-                            <form:input path="picture" id="ownerReviewPicture" type="file" accept="image/*"
-                                        cssClass="form-control form-control-sm ryden-review-picture-input"
-                                        data-upload-max-image-bytes="${uploadMaxImageBytes}"
-                                        data-upload-image-too-large="${ownerReviewImageTooLargeMsg}"
-                                        data-upload-not-image-msg="${ownerReviewMustBeImageMsg}"
-                                        data-preview-target="#ownerReviewPicturePreview"
-                                        data-error-target="#ownerReviewPictureError"
-                                        data-remove-label="${ownerReviewRemoveImageLabel}"/>
-                            <small class="text-secondary">
-                                <spring:message code="myReservationDetail.review.picture.hint" arguments="${uploadMaxImageMegabytes}"/>
-                            </small>
-                            <div id="ownerReviewPictureError" class="alert alert-danger d-none mt-1 py-2 small" role="alert"></div>
-                            <div id="ownerReviewPicturePreview" class="d-none mt-1"></div>
+                            <div class="mt-2">
+                                <span class="form-label small d-block">
+                                    <spring:message code="myReservationDetail.review.picture.optional"/>
+                                </span>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                    <form:input path="picture" id="ownerReviewPicture" type="file" accept="image/*"
+                                                cssClass="visually-hidden ryden-review-picture-input"
+                                                data-upload-max-image-bytes="${uploadMaxImageBytes}"
+                                                data-upload-image-too-large="${ownerReviewImageTooLargeMsg}"
+                                                data-upload-not-image-msg="${ownerReviewMustBeImageMsg}"
+                                                data-preview-target="#ownerReviewPicturePreview"
+                                                data-error-target="#ownerReviewPictureError"
+                                                data-remove-label="${ownerReviewRemoveImageLabel}"/>
+                                    <label for="ownerReviewPicture" class="btn btn-outline-secondary mb-0">
+                                        <spring:message code="myReservationDetail.review.picture.choose"/>
+                                    </label>
+                                </div>
+                                <small class="text-secondary d-block mt-2" style="font-size: 0.75rem;">
+                                    <spring:message code="myReservationDetail.review.picture.hint" arguments="${uploadMaxImageMegabytes}"/>
+                                </small>
+                                <div id="ownerReviewPictureError" class="alert alert-danger d-none mt-2 py-2 small" role="alert"></div>
+                                <div id="ownerReviewPicturePreview" class="d-none mt-2"></div>
+                            </div>
                             <div class="d-flex gap-2">
                                 <button type="submit" name="reviewAction" value="SUBMIT" class="btn btn-primary btn-sm">
                                     <spring:message code="myReservationDetail.review.submit"/></button>
@@ -371,22 +349,29 @@
                             <label class="form-label small" for="riderReviewComment"><spring:message code="myReservationDetail.review.commentOptional"/></label>
                             <form:textarea path="comment" id="riderReviewComment" cssClass="form-control"
                                            rows="3" maxlength="${reviewCommentMaxLength}"/>
-                            <label class="form-label small mt-2" for="riderReviewPicture">
-                                <spring:message code="myReservationDetail.review.picture.optional"/>
-                            </label>
-                            <form:input path="picture" id="riderReviewPicture" type="file" accept="image/*"
-                                        cssClass="form-control form-control-sm ryden-review-picture-input"
-                                        data-upload-max-image-bytes="${uploadMaxImageBytes}"
-                                        data-upload-image-too-large="${riderReviewImageTooLargeMsg}"
-                                        data-upload-not-image-msg="${riderReviewMustBeImageMsg}"
-                                        data-preview-target="#riderReviewPicturePreview"
-                                        data-error-target="#riderReviewPictureError"
-                                        data-remove-label="${riderReviewRemoveImageLabel}"/>
-                            <small class="text-secondary">
-                                <spring:message code="myReservationDetail.review.picture.hint" arguments="${uploadMaxImageMegabytes}"/>
-                            </small>
-                            <div id="riderReviewPictureError" class="alert alert-danger d-none mt-1 py-2 small" role="alert"></div>
-                            <div id="riderReviewPicturePreview" class="d-none mt-1"></div>
+                            <div class="mt-2">
+                                <span class="form-label small d-block">
+                                    <spring:message code="myReservationDetail.review.picture.optional"/>
+                                </span>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                    <form:input path="picture" id="riderReviewPicture" type="file" accept="image/*"
+                                                cssClass="visually-hidden ryden-review-picture-input"
+                                                data-upload-max-image-bytes="${uploadMaxImageBytes}"
+                                                data-upload-image-too-large="${riderReviewImageTooLargeMsg}"
+                                                data-upload-not-image-msg="${riderReviewMustBeImageMsg}"
+                                                data-preview-target="#riderReviewPicturePreview"
+                                                data-error-target="#riderReviewPictureError"
+                                                data-remove-label="${riderReviewRemoveImageLabel}"/>
+                                    <label for="riderReviewPicture" class="btn btn-outline-secondary mb-0">
+                                        <spring:message code="myReservationDetail.review.picture.choose"/>
+                                    </label>
+                                </div>
+                                <small class="text-secondary d-block mt-2" style="font-size: 0.75rem;">
+                                    <spring:message code="myReservationDetail.review.picture.hint" arguments="${uploadMaxImageMegabytes}"/>
+                                </small>
+                                <div id="riderReviewPictureError" class="alert alert-danger d-none mt-2 py-2 small" role="alert"></div>
+                                <div id="riderReviewPicturePreview" class="d-none mt-2"></div>
+                            </div>
                             <div class="d-flex gap-2">
                                 <button type="submit" name="reviewAction" value="SUBMIT" class="btn btn-primary btn-sm">
                                     <spring:message code="myReservationDetail.review.submit"/></button>

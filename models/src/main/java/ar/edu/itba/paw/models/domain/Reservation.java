@@ -117,9 +117,6 @@ public class Reservation {
     @JoinColumn(name = "payment_refund_receipt_file_id", nullable = true)
     private StoredFile paymentRefundReceiptFile;
 
-    @Column(name = "payment_refund_approved", nullable = false)
-    private boolean paymentRefundApproved;
-
     @Column(name = "refund_proof_deadline_at")
     private OffsetDateTime refundProofDeadlineAt;
 
@@ -157,7 +154,6 @@ public class Reservation {
         this.carReturned = b.carReturned;
         this.paymentRefundRequired = b.paymentRefundRequired;
         this.paymentRefundReceiptFile = b.paymentRefundReceiptFile;
-        this.paymentRefundApproved = b.paymentRefundApproved;
         this.refundProofDeadlineAt = b.refundProofDeadlineAt;
         this.returnReminderEmailSent = b.returnReminderEmailSent;
         this.returnCheckoutEmailSent = b.returnCheckoutEmailSent;
@@ -185,7 +181,6 @@ public class Reservation {
         private boolean carReturned;
         private boolean paymentRefundRequired;
         private StoredFile paymentRefundReceiptFile;
-        private boolean paymentRefundApproved;
         private OffsetDateTime refundProofDeadlineAt;
         private boolean returnReminderEmailSent;
         private boolean returnCheckoutEmailSent;
@@ -261,11 +256,6 @@ public class Reservation {
 
         public Builder paymentRefundReceiptFile(final StoredFile paymentRefundReceiptFile) {
             this.paymentRefundReceiptFile = paymentRefundReceiptFile;
-            return this;
-        }
-
-        public Builder paymentRefundApproved(final boolean paymentRefundApproved) {
-            this.paymentRefundApproved = paymentRefundApproved;
             return this;
         }
 
@@ -387,10 +377,6 @@ public class Reservation {
         return paymentRefundReceiptFile == null ? Optional.empty() : Optional.of(paymentRefundReceiptFile.getId());
     }
 
-    public boolean isPaymentRefundApproved() {
-        return paymentRefundApproved;
-    }
-
     public Optional<OffsetDateTime> getRefundProofDeadlineAt() {
         return Optional.ofNullable(refundProofDeadlineAt);
     }
@@ -417,10 +403,6 @@ public class Reservation {
 
     public void setPaymentRefundReceiptFile(final StoredFile paymentRefundReceiptFile) {
         this.paymentRefundReceiptFile = paymentRefundReceiptFile;
-    }
-
-    public void setPaymentRefundApproved(final boolean paymentRefundApproved) {
-        this.paymentRefundApproved = paymentRefundApproved;
     }
 
     public void setRefundProofDeadlineAt(final OffsetDateTime refundProofDeadlineAt) {

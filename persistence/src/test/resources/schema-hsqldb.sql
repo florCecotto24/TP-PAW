@@ -131,7 +131,6 @@ CREATE TABLE IF NOT EXISTS reservations (
     payment_refund_receipt_file_id BIGINT,
     pending_refund_email_sent BOOLEAN NOT NULL DEFAULT FALSE,
     refund_proof_deadline_at TIMESTAMP WITH TIME ZONE,
-    payment_refund_approved BOOLEAN NOT NULL DEFAULT FALSE,
 
     FOREIGN KEY (rider_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (car_id) REFERENCES cars(id),

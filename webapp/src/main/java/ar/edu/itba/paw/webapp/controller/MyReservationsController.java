@@ -368,25 +368,6 @@ public final class MyReservationsController {
         return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
     }
 
-    @PostMapping("/my-reservations/{reservationId}/refund-receipt/approval")
-    public ModelAndView setRefundReceiptApproval(
-            @CurrentUser final User currentUser,
-            @PathVariable("reservationId") final long reservationId,
-            @RequestParam("approved") final boolean approved,
-            @RequestParam(required = false) final Long fromCar,
-            final RedirectAttributes redirectAttributes) {
-        final User me = WebAuthUtils.requireUser(currentUser);
-        try {
-            reservationService.setPaymentRefundApprovalByRider(me.getId(), reservationId, approved);
-            redirectAttributes.addFlashAttribute(
-                    "refundApprovalMessage",
-                    localeMessages.msg("myReservationDetail.refund.approvalUpdated"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("refundReceiptError", localeMessages.msg(e));
-        }
-        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "rider", fromCar));
-    }
-
     @PostMapping("/my-reservations/{reservationId}/refund-receipt")
     public ModelAndView uploadRefundReceipt(
             @CurrentUser final User currentUser,

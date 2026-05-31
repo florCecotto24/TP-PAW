@@ -117,9 +117,6 @@ public interface ReservationService {
     /** Refund receipt file when the viewer is rider or owner on a cancelled reservation that has one. */
     Optional<StoredFile> findRefundReceiptForParticipant(long userId, long reservationId);
 
-    /** Rider validates the refund transfer receipt uploaded by the host. */
-    void setPaymentRefundApprovalByRider(long riderUserId, long reservationId, boolean approved);
-
     /** Minimum hours between "now" and the pickup ({@code app.reservation.pickup-lead-hours}). */
     int getConfiguredPickupLeadHours();
 

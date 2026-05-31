@@ -31,12 +31,14 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.util.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.WallDateTimeParsing;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
@@ -59,6 +61,7 @@ public final class ReservationFormController {
     private final WallDateTimeUiFormatter wallDateTimeUiFormatter;
     private final UserService userService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
+    private final ListingAddressFormatter listingAddressFormatter;
 
     public ReservationFormController(
             final CarService carService,
@@ -68,7 +71,8 @@ public final class ReservationFormController {
             final LocaleMessages localeMessages,
             final WallDateTimeUiFormatter wallDateTimeUiFormatter,
             final UserService userService,
-            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy) {
+            final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
+            final ListingAddressFormatter listingAddressFormatter) {
         this.carService = carService;
         this.listingAvailabilityService = listingAvailabilityService;
         this.reservationService = reservationService;
@@ -77,6 +81,7 @@ public final class ReservationFormController {
         this.wallDateTimeUiFormatter = wallDateTimeUiFormatter;
         this.userService = userService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
+        this.listingAddressFormatter = listingAddressFormatter;
     }
 
     @GetMapping("/new")
@@ -96,7 +101,7 @@ public final class ReservationFormController {
         final Car car = carOpt.get();
         form.setCarId(carId);
         form.setCarName(carName != null && !carName.isBlank() ? carName : car.getBrand() + " " + car.getModel());
-        final String loc = resolveCarHandoverLocation(carId);
+        final String loc = resolveCarHandoverLocation(carId, fromDateTime);
         form.setDeliveryLocation(loc);
         form.setFromDateTime(fromDateTime);
         form.setUntilDateTime(untilDateTime);
@@ -243,7 +248,7 @@ public final class ReservationFormController {
         mav.addObject("email", riderDone.getEmail());
         mav.addObject("fromDateTime", form.getFromDateTime());
         mav.addObject("untilDateTime", form.getUntilDateTime());
-        final String confirmLoc = resolveCarHandoverLocation(carId);
+        final String confirmLoc = resolveCarHandoverLocation(carId, form.getFromDateTime());
         mav.addObject("deliveryLocation", confirmLoc == null || confirmLoc.isBlank() ? "" : confirmLoc);
         mav.addObject("reservationId", reservation.getId());
         mav.addObject("carId", carId);
@@ -257,14 +262,24 @@ public final class ReservationFormController {
         return mav;
     }
 
-    private String resolveCarHandoverLocation(final long carId) {
-        return listingAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.now())
-                .map(av -> {
-                    final StringBuilder sb = new StringBuilder(av.getStartPointStreet());
-                    av.getStartPointNumber().ifPresent(n -> sb.append(" ").append(n));
-                    return sb.toString().trim();
-                })
-                .orElse("");
+    /**
+     * Pickup/return address shown on the reservation summary, before any payment has been uploaded.
+     * Uses the rider's chosen pickup date (not "today") to pick the effective availability row, and
+     * falls back to the most recent row when the rider has not picked a valid date yet or the chosen
+     * date is outside any published window. The address is rendered without the door number — this
+     * matches {@link ListingAddressFormatter}'s sensitive-number policy (see
+     * {@code formatPickupForReservationView}): the exact number is only revealed once the rider has
+     * uploaded the payment receipt.
+     */
+    private String resolveCarHandoverLocation(final long carId, final String fromDateTime) {
+        final LocalDate pickupDay = WallDateTimeParsing.parseWallLocalDateTimeToWallDate(fromDateTime);
+        Optional<ListingAvailability> av = (pickupDay == null)
+                ? Optional.empty()
+                : listingAvailabilityService.findEffectiveForDayByCar(carId, pickupDay);
+        if (av.isEmpty()) {
+            av = listingAvailabilityService.findMostRecentByCarId(carId);
+        }
+        return av.map(listingAddressFormatter::formatPublicPickupLocation).orElse("");
     }
 
     private void addReservationPolicyHours(final ModelAndView mav) {

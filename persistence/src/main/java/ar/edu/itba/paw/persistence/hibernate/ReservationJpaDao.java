@@ -111,7 +111,6 @@ public class ReservationJpaDao implements ReservationDao {
                 .paymentProofDeadlineAt(paymentProofDeadlineAt)
                 .carReturned(false)
                 .paymentRefundRequired(false)
-                .paymentRefundApproved(false)
                 .returnReminderEmailSent(false)
                 .returnCheckoutEmailSent(false)
                 .riderReviewInviteEmailSent(false)
@@ -512,7 +511,6 @@ public class ReservationJpaDao implements ReservationDao {
         r.setPaymentRefundRequired(paymentRefundRequired);
         r.setRefundProofDeadlineAt(refundProofDeadlineAtOrNull);
         r.setPaymentRefundReceiptFile(null);
-        r.setPaymentRefundApproved(false);
         r.setPendingRefundEmailSent(false);
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
@@ -534,25 +532,6 @@ public class ReservationJpaDao implements ReservationDao {
         }
         r.setPaymentRefundReceiptFile(em.getReference(StoredFile.class, storedFileId));
         r.setPendingRefundEmailSent(true);
-        r.setUpdatedAt(OffsetDateTime.now());
-        return 1;
-    }
-
-    @Override
-    @Transactional
-    public int updatePaymentRefundApproved(final long reservationId, final long riderUserId, final boolean approved) {
-        final Reservation r = em.find(Reservation.class, reservationId);
-        if (r == null
-                || r.getRiderId() != riderUserId
-                || !r.isPaymentRefundRequired()
-                || r.getPaymentRefundReceiptFile().isEmpty()) {
-            return 0;
-        }
-        final Reservation.Status s = r.getStatus();
-        if (s != Reservation.Status.CANCELLED_BY_OWNER && s != Reservation.Status.CANCELLED_BY_RIDER) {
-            return 0;
-        }
-        r.setPaymentRefundApproved(approved);
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
     }
