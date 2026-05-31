@@ -42,6 +42,14 @@ public class CarJpaDao implements CarDao {
 
     private static final ZoneId WALL_ZONE = AvailabilityPeriod.WALL_ZONE;
 
+    /**
+     * Hides cars whose owner has the {@code blocked} flag set from every public/browse query
+     * (catalog, search, similar, market insight). Inserted right after {@code FROM cars c}.
+     * Owners stay able to see their own listings via separate owner-hub queries.
+     */
+    private static final String OWNER_NOT_BLOCKED_JOIN =
+            "INNER JOIN users u ON u.id = c.owner_id AND u.blocked = FALSE ";
+
     @PersistenceContext
     private EntityManager em;
 
@@ -428,6 +436,7 @@ public class CarJpaDao implements CarDao {
 
         final StringBuilder idSql = new StringBuilder(
                 "SELECT c.id FROM cars c "
+                + OWNER_NOT_BLOCKED_JOIN
                 + "JOIN listing_availability la ON la.car_id = c.id "
                 + "JOIN car_models cm ON cm.id = c.model_id "
                 + "WHERE c.status = 'active' "
@@ -543,6 +552,7 @@ public class CarJpaDao implements CarDao {
         final Map<String, Object> params = new HashMap<>();
         final StringBuilder sql = new StringBuilder(
                 "SELECT COUNT(DISTINCT c.id) FROM cars c "
+                + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
                 + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
@@ -560,6 +570,7 @@ public class CarJpaDao implements CarDao {
         final Map<String, Object> countParams = new HashMap<>();
         final StringBuilder countSql = new StringBuilder(
                 "SELECT COUNT(DISTINCT c.id) FROM cars c "
+                + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
                 + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
@@ -585,6 +596,7 @@ public class CarJpaDao implements CarDao {
         final StringBuilder perCarSql = new StringBuilder(
                 "SELECT c.id, MIN(la.day_price) AS car_min_price "
                 + "FROM cars c "
+                + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
                 + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
@@ -626,6 +638,7 @@ public class CarJpaDao implements CarDao {
         params.put("offset", offset);
         final StringBuilder sql = new StringBuilder(
                 "SELECT c.id, MIN(la.day_price) AS min_price FROM cars c "
+                + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
                 + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "

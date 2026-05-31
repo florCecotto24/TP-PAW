@@ -30,6 +30,7 @@ import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
@@ -77,6 +78,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String OWNER_PAYMENT_PROOF_RECEIVED_TEMPLATE = "html/owner-payment-proof-received";
     private static final String RIDER_DUE_PAYMENT_PROOF_TEMPLATE = "html/reservation-due-payment-reminder-rider";
     private static final String OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE = "html/owner-refund-proof-obligation";
+    private static final String OWNER_BLOCKED_TEMPLATE = "html/owner-blocked";
     private static final String RIDER_REFUND_PROOF_RECEIVED_TEMPLATE = "html/rider-refund-proof-received";
     private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/listing-paused-missing-cbu-owner";
     private static final String LISTING_PAUSED_BY_ADMIN_TEMPLATE = "html/listing-paused-by-admin-owner";
@@ -574,6 +576,62 @@ public final class EmailServiceImpl implements EmailService {
             LOGGER.atError().setCause(e).addArgument(payload.getReservationId())
                     .log("Failed to queue owner refund-proof email (reservation id={})");
         }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendOwnerBlockedEmail(final OwnerBlockedEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendOwnerBlockedEmail")) {
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("ownerFullName", payload.getOwnerFullName());
+        // Adapt domain rows into a view-only structure with pre-formatted deadlines so the template stays free of formatting logic.
+        final List<OwnerBlockedTemplateRow> rows = payload.getOverdueReservations().stream()
+                .map(r -> new OwnerBlockedTemplateRow(
+                        r.getReservationId(),
+                        r.getVehicleLabel(),
+                        formatWallDateTime(r.getRefundProofDeadlineAt(), mailLocale),
+                        r.getReservationTotal()))
+                .collect(java.util.stream.Collectors.toList());
+        ctx.setVariable("overdueReservations", rows);
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/my-reservations?role=owner"));
+        final String to = payload.getRecipientEmail();
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(OWNER_BLOCKED_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage(
+                        "mail.ownerBlocked.subject", new Object[0], mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).addArgument(rows.size()).log("Owner-blocked email queued for {} ({} overdue refund proofs)");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to queue owner-blocked email for {}");
+        }
+    }
+
+    /** View-only DTO for the Thymeleaf {@code overdueReservations} list; deadline is pre-formatted in the request's locale. */
+    public static final class OwnerBlockedTemplateRow {
+        private final long reservationId;
+        private final String vehicleLabel;
+        private final String refundProofDeadlineFormatted;
+        private final String reservationTotal;
+
+        public OwnerBlockedTemplateRow(final long reservationId, final String vehicleLabel,
+                                       final String refundProofDeadlineFormatted, final String reservationTotal) {
+            this.reservationId = reservationId;
+            this.vehicleLabel = vehicleLabel;
+            this.refundProofDeadlineFormatted = refundProofDeadlineFormatted;
+            this.reservationTotal = reservationTotal;
+        }
+
+        public long getReservationId() { return reservationId; }
+        public String getVehicleLabel() { return vehicleLabel; }
+        public String getRefundProofDeadlineFormatted() { return refundProofDeadlineFormatted; }
+        public String getReservationTotal() { return reservationTotal; }
     }
 
     @Override

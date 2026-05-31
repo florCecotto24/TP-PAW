@@ -156,4 +156,15 @@ public interface UserService {
 
     /** Confirms the account with the code the user entered; returns the user id. */
     long completeAccountConfirmation(String email, String code);
+
+    /**
+     * Marks {@code userId} as blocked. Intended for system-driven blocks (e.g. refund-proof overdue sweep);
+     * admin-initiated blocks live in {@link AdminService#blockUser(long, long)} and include extra validations.
+     */
+    void blockUser(long userId);
+
+    /**
+     * Clears the {@code blocked} flag for {@code userId}. Idempotent — a no-op when the user is already unblocked.
+     */
+    void unblockUser(long userId);
 }

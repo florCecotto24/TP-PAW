@@ -116,6 +116,18 @@ public interface ReservationDao {
 
     int claimPendingRefundEmailSent(long reservationId);
 
+    /**
+     * Reservations whose refund-proof deadline has already passed without an uploaded receipt.
+     * Fetches {@code car.owner} eagerly because callers group by owner and dispatch mails per owner.
+     */
+    List<Reservation> findReservationsWithOverdueRefundProof(OffsetDateTime now);
+
+    /**
+     * Count of pending refund proofs (deadline already passed, no receipt) belonging to the cars of
+     * {@code ownerUserId}. Used to decide whether the owner can be unblocked after uploading a proof.
+     */
+    long countOverdueRefundProofsForOwner(long ownerUserId, OffsetDateTime now);
+
     /** All reservations paginated for admin view; ordered by creation date descending. */
     Page<ReservationCard> findAllReservationCards(int page, int pageSize);
 }

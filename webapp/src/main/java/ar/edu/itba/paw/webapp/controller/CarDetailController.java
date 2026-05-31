@@ -111,6 +111,14 @@ public class CarDetailController {
 
         final User owner = car.getOwner();
         final boolean isOwnerRequesting = currentUser != null && currentUser.getId() == owner.getId();
+        final boolean currentUserIsAdmin = authentication != null
+                && authentication.getAuthorities().stream()
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        // Cars whose owner is blocked are hidden from the public catalog; reject direct-URL access too,
+        // unless the viewer is the owner themselves or an admin (who needs to see the listing to act on it).
+        if (owner.isBlocked() && !isOwnerRequesting && !currentUserIsAdmin) {
+            return new ModelAndView(new RedirectView("/search", true));
+        }
         final Long ownerProfileImageId = userService.getUserById(owner.getId())
                 .flatMap(User::getProfilePictureId)
                 .orElse(null);
@@ -163,9 +171,6 @@ public class CarDetailController {
                 + (car.getModel() != null ? car.getModel() : "");
 
         final ModelAndView mav = new ModelAndView("car/carDetail");
-        final boolean currentUserIsAdmin = authentication != null
-                && authentication.getAuthorities().stream()
-                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         mav.addObject("isOwnerRequesting", isOwnerRequesting);
         mav.addObject("currentUserIsAdmin", currentUserIsAdmin);
         if (currentUserIsAdmin) {

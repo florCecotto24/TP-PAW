@@ -40,6 +40,9 @@ public class ReservationJpaDao implements ReservationDao {
     private static final List<Reservation.Status> BLOCKING_STATUSES = Arrays.asList(
             Reservation.Status.PENDING, Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
 
+    private static final List<Reservation.Status> REFUND_ELIGIBLE_CANCELLED_STATUSES = Arrays.asList(
+            Reservation.Status.CANCELLED_BY_OWNER, Reservation.Status.CANCELLED_BY_RIDER);
+
     @PersistenceContext
     private EntityManager em;
 
@@ -564,6 +567,41 @@ public class ReservationJpaDao implements ReservationDao {
         r.setPendingRefundEmailSent(true);
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
+    }
+
+    @Override
+    public List<Reservation> findReservationsWithOverdueRefundProof(final OffsetDateTime now) {
+        // JOIN FETCH car + owner so callers can group by owner and read profile fields without N+1.
+        return em.createQuery(
+                        "SELECT r FROM Reservation r "
+                                + "JOIN FETCH r.car c "
+                                + "JOIN FETCH c.owner "
+                                + "WHERE r.paymentRefundRequired = TRUE "
+                                + "AND r.paymentRefundReceiptFile IS NULL "
+                                + "AND r.refundProofDeadlineAt IS NOT NULL "
+                                + "AND r.refundProofDeadlineAt < :now "
+                                + "AND r.status IN :cancelledStatuses",
+                        Reservation.class)
+                .setParameter("now", now)
+                .setParameter("cancelledStatuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
+                .getResultList();
+    }
+
+    @Override
+    public long countOverdueRefundProofsForOwner(final long ownerUserId, final OffsetDateTime now) {
+        final Number count = (Number) em.createQuery(
+                        "SELECT COUNT(r) FROM Reservation r "
+                                + "WHERE r.car.owner.id = :ownerUserId "
+                                + "AND r.paymentRefundRequired = TRUE "
+                                + "AND r.paymentRefundReceiptFile IS NULL "
+                                + "AND r.refundProofDeadlineAt IS NOT NULL "
+                                + "AND r.refundProofDeadlineAt < :now "
+                                + "AND r.status IN :cancelledStatuses")
+                .setParameter("ownerUserId", ownerUserId)
+                .setParameter("now", now)
+                .setParameter("cancelledStatuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
+                .getSingleResult();
+        return count == null ? 0L : count.longValue();
     }
 
     @Override

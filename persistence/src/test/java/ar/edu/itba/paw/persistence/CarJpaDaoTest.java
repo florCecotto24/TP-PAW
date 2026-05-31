@@ -393,6 +393,55 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(imageId, card.get().getImageId());
     }
 
+    @Test
+    void testSearchCarCardsAndCountExcludeCarsOfBlockedOwners() {
+        // 1. Arrange — two owners, two cars in the same brand/model and same availability period.
+        jdbcTemplate.update(
+                "INSERT INTO users (email, forename, surname, member_since, blocked) VALUES (?, ?, ?, CURRENT_DATE, ?)",
+                "blocked-owner@test.com", "Bad", "Owner", true);
+        final long blockedOwnerId = jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE email = ?", Long.class, "blocked-owner@test.com");
+
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Volkswagen", true);
+        final long brandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Volkswagen");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                brandId, "Gol", true, "HATCHBACK");
+        final long modelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Gol");
+
+        final Car visibleCar = dao.createCar(
+                ownerId, "VIS001", modelId,
+                2022, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        final Car hiddenCar = dao.createCar(
+                blockedOwnerId, "HID001", modelId,
+                2022, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        em.flush();
+
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2030-01-01T00:00:00Z");
+        insertOfferedAvailability(visibleCar.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+                new BigDecimal("40.00"), createdAt);
+        insertOfferedAvailability(hiddenCar.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+                new BigDecimal("40.00"), createdAt);
+
+        final CarSearchCriteria criteria = CarSearchCriteria.builder()
+                .browseWallDate(LocalDate.of(2030, 6, 1))
+                .page(0).uiPageSize(10).dbFetchSize(10)
+                .sortBy("date").sortDirection("desc")
+                .build();
+
+        // 2. Act
+        final Page<CarCard> page = dao.searchCarCards(criteria);
+        final long browseCount = dao.countBrowseEligibleActiveCars(LocalDate.of(2030, 6, 1), null);
+
+        // 3. Assert — only the car owned by the non-blocked owner is visible to consumers.
+        final List<Long> visibleIds = page.getContent().stream().map(CarCard::getCarId).collect(Collectors.toList());
+        Assertions.assertTrue(visibleIds.contains(visibleCar.getId()), "Car of non-blocked owner must be browse-visible");
+        Assertions.assertFalse(visibleIds.contains(hiddenCar.getId()), "Car of blocked owner must be hidden from the catalog");
+        Assertions.assertEquals(1L, browseCount, "countBrowseEligibleActiveCars must also exclude blocked-owner listings");
+    }
+
     private void insertOfferedAvailability(
             final long carId,
             final BigDecimal dayPrice,

@@ -349,6 +349,10 @@ public final class ReservationServiceImpl implements ReservationService {
             final String untilDateTime) {
         final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+        // Defense in depth: the catalog already hides blocked-owner cars, but a direct POST should also fail.
+        if (car.getOwner() != null && car.getOwner().isBlocked()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_OWNER_BLOCKED);
+        }
         final User rider = userService.getUserById(riderId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_USER_NOT_FOUND));
         if (isBlank(fromDateTime) || isBlank(untilDateTime)) {
@@ -1073,10 +1077,35 @@ public final class ReservationServiceImpl implements ReservationService {
         }
         final Reservation after = getOwnerReservationById(ownerUserId, reservationId).orElse(r);
         notifyRiderRefundProofUploaded(reservationId, after);
+        // Owner becomes eligible for auto-unblock as soon as no overdue refund proof remains.
+        unblockOwnerIfNoMoreRefundOverdue(ownerUserId);
         LOGGER.atInfo()
                 .addArgument(ownerUserId)
                 .addArgument(reservationId)
                 .log("Owner ownerUserId={} attached refund receipt for reservation id={}");
+    }
+
+    /**
+     * Unblocks {@code ownerUserId} when no refund-proof deadline remains overdue. Safe to call after every
+     * refund-proof upload; idempotent if the owner is not blocked.
+     */
+    private void unblockOwnerIfNoMoreRefundOverdue(final long ownerUserId) {
+        try {
+            final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            final long remaining = reservationDao.countOverdueRefundProofsForOwner(ownerUserId, now);
+            if (remaining > 0L) {
+                return;
+            }
+            final Optional<User> ownerOpt = userService.getUserById(ownerUserId);
+            if (ownerOpt.isEmpty() || !ownerOpt.get().isBlocked()) {
+                return;
+            }
+            userService.unblockUser(ownerUserId);
+            LOGGER.atInfo().addArgument(ownerUserId).log("Auto-unblocked ownerId={} after all refund-proof debts cleared");
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(ownerUserId)
+                    .log("Failed to evaluate owner auto-unblock after refund-proof upload (ownerId={})");
+        }
     }
 
     @Override
@@ -1359,6 +1388,78 @@ public final class ReservationServiceImpl implements ReservationService {
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Due refund proof reminder run: queued {} email(s)");
+    }
+
+    @Override
+    @Transactional
+    public void sweepRefundOverdueAndBlockOwners() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final List<Reservation> overdue = reservationDao.findReservationsWithOverdueRefundProof(now);
+        LOGGER.atInfo().addArgument(overdue.size()).log("Refund-overdue sweep: {} reservation(s) with lapsed deadline");
+        if (overdue.isEmpty()) {
+            return;
+        }
+        // Group reservations by owner so we issue a single block + single email per owner.
+        final java.util.Map<Long, List<Reservation>> byOwner = new java.util.LinkedHashMap<>();
+        for (final Reservation r : overdue) {
+            final Optional<User> ownerOpt = resolveOwnerFromReservation(r);
+            if (ownerOpt.isEmpty()) {
+                continue;
+            }
+            byOwner.computeIfAbsent(ownerOpt.get().getId(), k -> new java.util.ArrayList<>()).add(r);
+        }
+        int blockedCount = 0;
+        for (final java.util.Map.Entry<Long, List<Reservation>> entry : byOwner.entrySet()) {
+            final long ownerId = entry.getKey();
+            try {
+                final Optional<User> ownerOpt = userService.getUserById(ownerId);
+                if (ownerOpt.isEmpty()) {
+                    continue;
+                }
+                final User owner = ownerOpt.get();
+                if (owner.isBlocked()) {
+                    continue;
+                }
+                userService.blockUser(ownerId);
+                blockedCount++;
+                enqueueOwnerBlockedEmail(owner, entry.getValue());
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(ownerId)
+                        .log("Failed to block ownerId={} during refund-overdue sweep");
+            }
+        }
+        LOGGER.atInfo().addArgument(blockedCount).log("Refund-overdue sweep: blocked {} owner(s)");
+    }
+
+    private void enqueueOwnerBlockedEmail(final User owner, final List<Reservation> overdueReservations) {
+        try {
+            final List<ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload.OverdueRefundReservation> rows = new java.util.ArrayList<>();
+            for (final Reservation r : overdueReservations) {
+                final OffsetDateTime deadline = r.getRefundProofDeadlineAt().orElse(null);
+                if (deadline == null) {
+                    continue;
+                }
+                rows.add(new ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload.OverdueRefundReservation(
+                        r.getId(),
+                        resolveVehicleLabelFromReservation(r),
+                        deadline,
+                        ArsMoneyFormat.format(r.getTotalPrice())));
+            }
+            if (rows.isEmpty()) {
+                return;
+            }
+            final ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload payload =
+                    ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload.builder()
+                            .messageLocale(userService.resolveMailLocale(owner.getId()))
+                            .recipientEmail(owner.getEmail())
+                            .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                            .overdueReservations(rows)
+                            .build();
+            emailService.sendOwnerBlockedEmail(payload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(owner.getId())
+                    .log("Could not enqueue owner-blocked email for ownerId={}");
+        }
     }
 
     private Optional<ReservationMailPayload> buildDuePaymentProofReminderEmailPayload(final Reservation reservation) {

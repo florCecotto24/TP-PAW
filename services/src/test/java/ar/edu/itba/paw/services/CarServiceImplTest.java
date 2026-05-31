@@ -41,6 +41,9 @@ public class CarServiceImplTest {
     @Mock
     private PaginationPolicy paginationPolicy;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private CarServiceImpl carService;
 
@@ -269,6 +272,70 @@ public class CarServiceImplTest {
         Assertions.assertTrue(criteria.isFlexibleSearch());
         Assertions.assertEquals(YearMonth.of(2026, 8), criteria.getFlexibleMonth());
         Assertions.assertEquals(Integer.valueOf(7), criteria.getFlexibleDays());
+    }
+
+    @Test
+    public void testToggleCarStatusFromPausedToActiveThrowsWhenOwnerIsBlocked() {
+        // 1. Arrange
+        final long ownerId = 42L;
+        final long carId = 99L;
+        final User blockedOwner = User.builder()
+                .id(ownerId)
+                .email("o@test.com")
+                .forename("O")
+                .surname("O")
+                .cbu("0000000000000000000000")
+                .blocked(true)
+                .build();
+        final Car pausedCar = Car.builder()
+                .id(carId)
+                .owner(blockedOwner)
+                .plate("AA000AA")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.PAUSED)
+                .build();
+        Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(pausedCar));
+        Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(blockedOwner));
+        Mockito.when(userService.hasValidCbu(blockedOwner)).thenReturn(true);
+
+        // 2. Act + 3. Assert
+        final ar.edu.itba.paw.exception.car.CarValidationException thrown = Assertions.assertThrows(
+                ar.edu.itba.paw.exception.car.CarValidationException.class,
+                () -> carService.toggleCarStatus(ownerId, carId));
+        Assertions.assertEquals(
+                ar.edu.itba.paw.exception.MessageKeys.LISTING_ACTIVATE_OWNER_BLOCKED,
+                thrown.getMessageCode());
+        Mockito.verify(carDao, Mockito.never()).setCarStatus(Mockito.anyLong(), Mockito.any());
+    }
+
+    @Test
+    public void testToggleCarStatusFromActiveToPausedSucceedsRegardlessOfBlocked() {
+        // 1. Arrange — pausing an active listing has no blocked-owner check; only ACTIVE→PAUSED.
+        final long ownerId = 42L;
+        final long carId = 99L;
+        final User blockedOwner = User.builder()
+                .id(ownerId)
+                .email("o@test.com")
+                .forename("O")
+                .surname("O")
+                .blocked(true)
+                .build();
+        final Car activeCar = Car.builder()
+                .id(carId)
+                .owner(blockedOwner)
+                .plate("AA000AA")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.ACTIVE)
+                .build();
+        Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(activeCar));
+
+        // 2. Act
+        final Car.Status next = carService.toggleCarStatus(ownerId, carId);
+
+        // 3. Assert
+        Assertions.assertEquals(Car.Status.PAUSED, next);
     }
 
     @Test

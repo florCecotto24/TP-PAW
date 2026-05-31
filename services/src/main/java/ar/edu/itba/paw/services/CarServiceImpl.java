@@ -205,6 +205,10 @@ public final class CarServiceImpl implements CarService {
                 throw new CarValidationException(
                         MessageKeys.LISTING_ACTIVATE_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
             }
+            // Blocked owners (e.g. unpaid refund proofs) cannot resume their own listings.
+            if (ownerRow.get().isBlocked()) {
+                throw new CarValidationException(MessageKeys.LISTING_ACTIVATE_OWNER_BLOCKED);
+            }
             newCarStatus = Car.Status.ACTIVE;
         } else {
             throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);

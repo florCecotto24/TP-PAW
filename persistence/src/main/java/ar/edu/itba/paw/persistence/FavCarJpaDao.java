@@ -75,6 +75,7 @@ public class FavCarJpaDao implements FavCarDao {
                 + "c.minimum_rental_days, c.owner_id "
                 + "FROM fav_cars fc "
                 + "INNER JOIN cars c ON c.id = fc.car_id "
+                + "INNER JOIN users u ON u.id = c.owner_id AND u.blocked = FALSE "
                 + "INNER JOIN car_models cm ON cm.id = c.model_id "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id "
                 + "WHERE fc.user_id = :userId "
@@ -115,6 +116,7 @@ public class FavCarJpaDao implements FavCarDao {
         final String sql =
                 "SELECT COUNT(*) FROM fav_cars fc "
                 + "INNER JOIN cars c ON c.id = fc.car_id "
+                + "INNER JOIN users u ON u.id = c.owner_id AND u.blocked = FALSE "
                 + "WHERE fc.user_id = :userId AND c.status IN (:allowedStatuses)";
         final Object result = em.createNativeQuery(sql)
                 .setParameter("userId", userId)

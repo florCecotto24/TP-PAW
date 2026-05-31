@@ -181,6 +181,13 @@ public interface ReservationService {
     void dispatchDueRefundProofReminderEmails();
 
     /**
+     * Scheduled job: blocks owners whose refund-proof deadlines have already lapsed without an uploaded receipt.
+     * Idempotent — owners already blocked are skipped. A single email is enqueued per newly-blocked owner with
+     * the full list of overdue reservations.
+     */
+    void sweepRefundOverdueAndBlockOwners();
+
+    /**
      * Reservations in {@code pending}, {@code accepted}, or {@code started} for one car (availability overlap checks).
      */
     List<Reservation> findBlockingReservationsByCarId(long carId);

@@ -559,4 +559,16 @@ public final class UserServiceImpl implements UserService {
     public long completeAccountConfirmation(final String email, final String code) {
         return emailVerificationService.verifyEmailAndConsumeCode(email, code);
     }
+
+    @Override
+    @Transactional
+    public void blockUser(final long userId) {
+        userDao.blockUser(userId);
+    }
+
+    @Override
+    @Transactional
+    public void unblockUser(final long userId) {
+        userDao.unblockUser(userId);
+    }
 }

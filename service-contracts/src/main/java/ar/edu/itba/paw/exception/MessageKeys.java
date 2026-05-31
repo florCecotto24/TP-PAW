@@ -53,6 +53,7 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_USER_NOT_FOUND = "reservation.rider.userNotFound";
     public static final String RESERVATION_OWNER_PAYMENT_DETAILS_UNAVAILABLE = "reservation.rider.ownerPaymentDetailsUnavailable";
     public static final String RESERVATION_RIDER_DOCUMENTATION_REQUIRED = "reservation.rider.documentationRequired";
+    public static final String RESERVATION_OWNER_BLOCKED = "reservation.rider.ownerBlocked";
 
     // user
     public static final String USER_EMAIL_ALREADY_EXISTS = "user.email.alreadyExists";
@@ -109,6 +110,7 @@ public final class MessageKeys {
     public static final String LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS = "listing.pickupStreetNumber.maxDigits";
     public static final String LISTING_PUBLISH_CBU_REQUIRED = "listing.publish.cbuRequired";
     public static final String LISTING_ACTIVATE_CBU_REQUIRED = "listing.activate.cbuRequired";
+    public static final String LISTING_ACTIVATE_OWNER_BLOCKED = "listing.activate.ownerBlocked";
     public static final String LISTING_CREATE_MODEL_PENDING = "listing.create.modelPending";
     // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
