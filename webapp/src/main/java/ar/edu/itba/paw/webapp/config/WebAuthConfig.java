@@ -17,6 +17,7 @@ import org.springframework.security.authentication.RememberMeAuthenticationProvi
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
@@ -97,6 +98,16 @@ public class WebAuthConfig {
         return WebAuthConfig::expireAuthCookies;
     }
 
+    /**
+     * Static asset folders served by {@code WebConfig.addResourceHandlers}. Ignored entirely by Spring
+     * Security so they never traverse the filter chain (no SecurityContext load, no session touch, no
+     * CSRF/cors/headers processing).
+     */
+    @Bean
+    public WebSecurityCustomizer staticResourcesSecurityCustomizer() {
+        return web -> web.ignoring().requestMatchers("/css/**", "/js/**", "/assets/**");
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             final HttpSecurity http,
@@ -118,7 +129,6 @@ public class WebAuthConfig {
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
                 .requestCache(rc -> rc.requestCache(requestCache))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/css/**", "/js/**", "/assets/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/search", "/car-detail").permitAll()
                         .requestMatchers("/image/**").permitAll()
