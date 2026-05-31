@@ -28,7 +28,7 @@
                 </sec:authorize>
                 <sec:authorize access="isAnonymous()">
                     <li class="nav-item px-1">
-                        <a class="nav-link d-flex align-items-center" href="${pageContext.request.contextPath}/login"><spring:message code="navbar.login"/></a>
+                        <a class="nav-link d-flex align-items-center ${activeTab == 'login' ? 'active' : ''}" href="${pageContext.request.contextPath}/login"><spring:message code="navbar.login"/></a>
                     </li>
                 </sec:authorize>
                 <sec:authorize access="isAuthenticated()">

@@ -239,22 +239,23 @@ public final class CarServiceImpl implements CarService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CarCard> getCheapestCarCards(final int page, final int pageSize, final User viewer) {
-        return browseCarCardsPage(page, pageSize, viewer, /*cheapest*/ true);
+    public Page<CarCard> getCheapestCarCards(final int page, final int pageSize) {
+        return browseCarCardsPage(page, pageSize, /*cheapest*/ true);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<CarCard> getMostRecentCarCards(final int page, final int pageSize, final User viewer) {
-        return browseCarCardsPage(page, pageSize, viewer, /*cheapest*/ false);
+    public Page<CarCard> getMostRecentCarCards(final int page, final int pageSize) {
+        return browseCarCardsPage(page, pageSize, /*cheapest*/ false);
     }
 
-    private Page<CarCard> browseCarCardsPage(
-            final int page, final int pageSize, final User viewer, final boolean cheapest) {
+    private Page<CarCard> browseCarCardsPage(final int page, final int pageSize, final boolean cheapest) {
         final LocalDate wall = LocalDate.ofInstant(
                 Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS),
                 AvailabilityPeriod.WALL_ZONE);
-        final Long excludeOwnerId = viewer != null ? viewer.getId() : null;
+        // Home browse intentionally does not exclude the viewer's own cars: owners want to see
+        // how their own listings render alongside the rest of the catalog.
+        final Long excludeOwnerId = null;
         final int offset = page * pageSize;
         final List<CarCard> rows = cheapest
                 ? carDao.getCheapestCarCardsWindow(offset, pageSize, wall, excludeOwnerId)

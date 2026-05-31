@@ -8,16 +8,14 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
-import ar.edu.itba.paw.webapp.support.CurrentUser;
 
-/** Home page: cheapest and most-recent car cards with guest-aware browse exclusions. */
+/** Home page: cheapest and most-recent car cards across the whole catalog (including the viewer's own). */
 @Controller
 public final class HomeController {
 
@@ -37,20 +35,17 @@ public final class HomeController {
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public ModelAndView home(
             @RequestParam(defaultValue = "0") int cheapestPage,
-            @RequestParam(defaultValue = "0") int recentPage,
-            @CurrentUser final User currentUser) {
+            @RequestParam(defaultValue = "0") int recentPage) {
         final ModelAndView mav = new ModelAndView("home");
 
         cheapestPage = Math.max(0, cheapestPage);
         recentPage   = Math.max(0, recentPage);
 
-        final User viewer = currentUser;
-
         final int uiPageSize = paginationPolicy.getUiPageSize();
         final Page<CarCard> cheapestRaw =
-                carService.getCheapestCarCards(cheapestPage, uiPageSize, viewer);
+                carService.getCheapestCarCards(cheapestPage, uiPageSize);
         final Page<CarCard> recentRaw =
-                carService.getMostRecentCarCards(recentPage, uiPageSize, viewer);
+                carService.getMostRecentCarCards(recentPage, uiPageSize);
 
         final Page<VehicleCardView> cheapestCarsPage = mapPage(cheapestRaw);
         final Page<VehicleCardView> recentCarsPage   = mapPage(recentRaw);

@@ -94,15 +94,17 @@ public interface CarService {
 
     /**
      * Public browse: active cars with at least one bookable wall day, ordered by ascending minimum
-     * effective day price, paginated. Excludes the viewer's own cars when present.
+     * effective day price, paginated. Includes the viewer's own cars (owners can see how their
+     * listings show up on the home page).
      */
-    Page<CarCard> getCheapestCarCards(int page, int pageSize, User viewer);
+    Page<CarCard> getCheapestCarCards(int page, int pageSize);
 
     /**
      * Public browse: active cars with at least one bookable wall day, ordered by most recently
-     * published (latest listing creation), paginated. Excludes the viewer's own cars when present.
+     * published (latest listing creation), paginated. Includes the viewer's own cars (owners can
+     * see how their listings show up on the home page).
      */
-    Page<CarCard> getMostRecentCarCards(int page, int pageSize, User viewer);
+    Page<CarCard> getMostRecentCarCards(int page, int pageSize);
 
     /**
      * Public search: paginated car cards for the search results page. {@code criteria} carries
