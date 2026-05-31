@@ -263,7 +263,7 @@ public final class MyReservationsController {
         // accepts VehicleCardView. Converting here keeps the webapp-only mapping out
         // of the models module while still letting the service own the data fetch.
         final List<VehicleCardView> counterpartyActiveListings =
-                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(profile.getActiveOwnerCarCards());
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(profile.getActiveOwnerCarCards(), me.getId());
         mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
         // Star floor for half-star rendering in counterpartyProfileHeader.tag, matching
         // the value CarDetailController exposes on the same JSP.

@@ -18,4 +18,7 @@
         priceMarketPositionModifier="${card.priceMarketPositionModifier}"
         marketAveragePrice="${card.marketAveragePrice}"
         marketSampleCount="${card.marketSampleCount}"
-        minimumRentalDays="${card.minimumRentalDays}"/>
+        minimumRentalDays="${card.minimumRentalDays}"
+        carId="${card.carId}"
+        showFavoriteButton="${card.favoritable}"
+        favorited="${card.favorited}"/>

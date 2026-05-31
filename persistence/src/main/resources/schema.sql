@@ -294,3 +294,13 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_codes_user_id ON password_reset_codes (user_id);
 
+CREATE TABLE IF NOT EXISTS fav_cars (
+    car_id INTEGER NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    favorited_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (car_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fav_cars_user_favorited_at
+    ON fav_cars (user_id, favorited_at DESC);
+

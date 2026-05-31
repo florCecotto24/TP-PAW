@@ -87,7 +87,8 @@ public final class SearchController {
             return new ModelAndView(redirectView);
         }
         final List<VehicleCardView> results =
-                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(resultPage.getContent());
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
+                        resultPage.getContent(), viewer == null ? null : viewer.getId());
 
         final String safeSort = sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
         mav.addObject("results", results);

@@ -192,14 +192,14 @@ public class CarServiceImplTest {
 
     @Test
     public void testResolveConsumerPriceMarketContextsWhenSampleCountBelowTwo() {
-        final CarCard card = new CarCard(
-                5L,
-                "Toyota",
-                "Corolla",
-                1L,
-                new BigDecimal("9000.00"),
-                Car.Status.ACTIVE,
-                null);
+        final CarCard card = CarCard.builder()
+                .carId(5L)
+                .brand("Toyota")
+                .model("Corolla")
+                .imageId(1L)
+                .dayPrice(new BigDecimal("9000.00"))
+                .status(Car.Status.ACTIVE)
+                .build();
         final CarPriceMarketInsight insight = new CarPriceMarketInsight(
                 new BigDecimal("8000.00"),
                 new BigDecimal("12000.00"),
@@ -216,14 +216,14 @@ public class CarServiceImplTest {
 
     @Test
     public void testResolveConsumerPriceMarketContextsReturnsPositionWhenComparable() {
-        final CarCard card = new CarCard(
-                5L,
-                "Toyota",
-                "Corolla",
-                1L,
-                new BigDecimal("9000.00"),
-                Car.Status.ACTIVE,
-                null);
+        final CarCard card = CarCard.builder()
+                .carId(5L)
+                .brand("Toyota")
+                .model("Corolla")
+                .imageId(1L)
+                .dayPrice(new BigDecimal("9000.00"))
+                .status(Car.Status.ACTIVE)
+                .build();
         final CarPriceMarketInsight insight = new CarPriceMarketInsight(
                 new BigDecimal("8000.00"),
                 new BigDecimal("12000.00"),

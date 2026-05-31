@@ -1,0 +1,257 @@
+package ar.edu.itba.paw.persistence;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.security.UserRole;
+import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.persistence.UserDao;
+
+@Transactional(readOnly = true)
+@Repository
+public class UserJpaDao implements UserDao {
+
+    @PersistenceContext
+    private EntityManager em;
+
+    @Override
+    public User createUser(final String email, final String forename, final String surname) {
+        return createUser(email, forename, surname, null);
+    }
+
+    @Override
+    @Transactional
+    public User createUser(final String email, final String forename, final String surname, final String passwordHash) {
+        final String normalizedEmail = EmailNormalizer.normalize(email);
+        final LocalDate memberSince = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final User user = User.builder()
+                .email(normalizedEmail)
+                .forename(forename)
+                .surname(surname)
+                .passwordHash(passwordHash)
+                .emailValidated(Boolean.FALSE)
+                .memberSince(memberSince)
+                .licenseValidated(Boolean.FALSE)
+                .identityValidated(Boolean.FALSE)
+                .userRole(UserRole.USER.persistenceName())
+                .roleAssignedBy(null)
+                .blocked(false)
+                .build();
+        em.persist(user);
+        return user;
+    }
+
+    @Override
+    public Optional<User> getUserById(final long id) {
+        return Optional.ofNullable(em.find(User.class, id));
+    }
+
+    @Override
+    public Optional<User> findByEmail(final String email) {
+        final String normalizedEmail = EmailNormalizer.normalize(email);
+        return em.createQuery("FROM User u WHERE u.email = :email", User.class)
+                .setParameter("email", normalizedEmail)
+                .getResultList().stream().findFirst();
+    }
+
+    @Override
+    public Optional<User> findByEmailForAuthentication(final String email) {
+        return findByEmail(email);
+    }
+
+    @Override
+    @Transactional
+    public void updateUserName(final long userId, final String forename, final String surname) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setForename(forename);
+        user.setSurname(surname);
+    }
+
+    @Override
+    @Transactional
+    public void updatePhoneNumber(final long userId, final String phoneNumber) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setPhoneNumber(phoneNumber);
+    }
+
+    @Override
+    @Transactional
+    public void updateBirthDate(final long userId, final LocalDate birthDate) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setBirthDate(birthDate);
+    }
+
+    @Override
+    @Transactional
+    public void updateAbout(final long userId, final String about) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setAbout(about);
+    }
+
+    @Override
+    @Transactional
+    public void updateProfilePictureId(final long userId, final Long profilePictureImageId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setProfilePicture(
+                profilePictureImageId != null ? em.getReference(Image.class, profilePictureImageId) : null);
+    }
+
+    @Override
+    @Transactional
+    public void updateLicenseDocument(final long userId, final long fileId, final boolean validated) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLicenseFile(em.getReference(StoredFile.class, fileId));
+        user.setLicenseValidated(validated);
+    }
+
+    @Override
+    @Transactional
+    public void clearLicenseDocument(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLicenseFile(null);
+        user.setLicenseValidated(false);
+    }
+
+    @Override
+    @Transactional
+    public void updateIdentityDocument(final long userId, final long fileId, final boolean validated) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setIdentityFile(em.getReference(StoredFile.class, fileId));
+        user.setIdentityValidated(validated);
+    }
+
+    @Override
+    @Transactional
+    public void clearIdentityDocument(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setIdentityFile(null);
+        user.setIdentityValidated(false);
+    }
+
+    @Override
+    @Transactional
+    public void updateEmailValidated(final long userId, final boolean validated) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setEmailValidated(validated);
+    }
+
+    @Override
+    @Transactional
+    public void updatePasswordHash(final long userId, final String passwordHash) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setPasswordHash(passwordHash);
+    }
+
+    @Override
+    @Transactional
+    public void updateLatestLocale(final long userId, final String localeTag) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLatestLocaleTag(localeTag);
+    }
+
+    @Override
+    public List<String> findRoleNamesForUser(final long userId) {
+        return getUserById(userId)
+                .map(u -> java.util.Collections.singletonList(u.getUserRole()))
+                .orElse(java.util.Collections.emptyList());
+    }
+
+    @Override
+    @Transactional
+    public void promoteToAdmin(final long userId, final Long assignedByUserId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setUserRole(UserRole.ADMIN.persistenceName());
+        user.setRoleAssignedBy(assignedByUserId);
+    }
+
+    @Override
+    @Transactional
+    public void blockUser(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setBlocked(true);
+    }
+
+    @Override
+    @Transactional
+    public void unblockUser(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setBlocked(false);
+    }
+
+    @Override
+    public Page<User> findAllUsersPaginated(final int page, final int pageSize) {
+        final long total = em.createQuery("SELECT COUNT(u) FROM User u", Long.class)
+                .getSingleResult();
+        final List<User> users = em.createQuery("FROM User u ORDER BY u.id ASC", User.class)
+                .setFirstResult(page * pageSize)
+                .setMaxResults(pageSize)
+                .getResultList();
+        return new Page<>(users, page, pageSize, total);
+    }
+
+    @Override
+    @Transactional
+    public void updateCbu(final long userId, final String cbu) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setCbu(cbu);
+    }
+}

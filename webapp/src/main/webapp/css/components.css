@@ -595,6 +595,83 @@ body.modal-open {
     z-index: 0;
 }
 
+.carcard-favorite-form {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    z-index: 5;
+    margin: 0;
+    line-height: 1;
+}
+
+.carcard-favorite-btn,
+.car-detail-favorite-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.12s ease, color 0.12s ease;
+}
+
+.carcard-favorite-btn {
+    color: #ffffff;
+    font-size: 1.75rem;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.55));
+}
+
+/* Match Bootstrap's .h2 sizing so the heart shares the title's vertical extent. */
+.car-detail-favorite-btn {
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(1.325rem + 0.9vw);
+}
+
+@media (min-width: 1200px) {
+    .car-detail-favorite-btn {
+        font-size: 2rem;
+    }
+}
+
+.car-detail-favorite-btn .bi {
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Wrapper form for the detail favorite button: collapse to the button's intrinsic
+   size so the parent flex header centers the heart visually against the title text. */
+.car-detail-favorite-form {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.carcard-favorite-btn:hover,
+.carcard-favorite-btn:focus,
+.car-detail-favorite-btn:hover,
+.car-detail-favorite-btn:focus {
+    transform: scale(1.08);
+    color: #e11d48;
+    outline: none;
+}
+
+.carcard-favorite-btn--on,
+.car-detail-favorite-btn--on {
+    color: #e11d48;
+}
+
+.carcard-favorite-btn--on {
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
+}
+
+.carcard-favorite-btn--on:hover,
+.carcard-favorite-btn--on:focus,
+.car-detail-favorite-btn--on:hover,
+.car-detail-favorite-btn--on:focus {
+    color: #be123c;
+}
 
 .no-image-badge i {
     font-size: 6rem;

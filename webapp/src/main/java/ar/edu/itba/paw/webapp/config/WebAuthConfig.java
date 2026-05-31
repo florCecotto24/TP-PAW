@@ -38,6 +38,7 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.access.CarOwnerWebAuthorization;
+import ar.edu.itba.paw.webapp.security.access.FavCarWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ProfileWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
@@ -121,6 +122,7 @@ public class WebAuthConfig {
             final CarOwnerWebAuthorization carOwnerWebAuthorization,
             final ReservationWebAuthorization reservationWebAuthorization,
             final ProfileWebAuthorization profileWebAuthorization,
+            final FavCarWebAuthorization favCarWebAuthorization,
             final SessionRegistry sessionRegistry) throws Exception {
         http
                 .headers(headers -> headers.cacheControl(Customizer.withDefaults()))
@@ -143,6 +145,13 @@ public class WebAuthConfig {
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}/**"))
                         .access(carOwnerWebAuthorization.ownerAccess())
                         .requestMatchers("/my-reservations").authenticated()
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-favorites/toggle"))
+                        .access(favCarWebAuthorization.nonOwnerAccess())
+                        .requestMatchers("/my-favorites", "/my-favorites/**").authenticated()
                         .requestMatchers("/ws", "/ws/**").authenticated()
                         .requestMatchers(
                                 mvc(

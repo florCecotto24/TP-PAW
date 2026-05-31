@@ -216,6 +216,15 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS fav_cars (
+    car_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    favorited_at TIMESTAMP NOT NULL,
+    PRIMARY KEY (car_id, user_id),
+    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 ALTER TABLE users ADD CONSTRAINT fk_users_license_file_id FOREIGN KEY (license_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
 ALTER TABLE users ADD CONSTRAINT fk_users_identity_file_id FOREIGN KEY (identity_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
 ALTER TABLE cars ADD CONSTRAINT fk_cars_insurance_file_id FOREIGN KEY (insurance_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;

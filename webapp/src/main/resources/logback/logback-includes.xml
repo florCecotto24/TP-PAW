@@ -88,6 +88,15 @@
         </filter>
     </appender>
 
+    <!--
+      Silence the false-positive warning emitted once per ignored pattern by
+      org.springframework.security.config.annotation.web.builders.WebSecurity when WebAuthConfig
+      registers WebSecurityCustomizer#ignoring(...). The trade-off (no SecurityContext / no headers
+      on static assets) is intentional and documented at the call site.
+      See: https://github.com/spring-projects/spring-security/issues/10938
+    -->
+    <logger name="org.springframework.security.config.annotation.web.builders.WebSecurity" level="ERROR"/>
+
     <!-- Frameworks / libraries: ERROR only -->
     <appender name="PLATFORM_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <append>true</append>

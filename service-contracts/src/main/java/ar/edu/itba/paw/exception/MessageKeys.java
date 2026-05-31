@@ -85,6 +85,10 @@ public final class MessageKeys {
     public static final String CAR_INSURANCE_INVALID = "car.insurance.invalid";
     public static final String CAR_INSURANCE_TOO_LARGE = "car.insurance.tooLarge";
 
+    // favorite cars
+    public static final String FAV_CAR_NOT_FOUND = "favCar.notFound";
+    public static final String FAV_CAR_CANNOT_FAV_OWN = "favCar.cannotFavOwn";
+
     // listing
     public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
     public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";

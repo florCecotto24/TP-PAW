@@ -83,6 +83,10 @@
                                 <a class="dropdown-item rounded-3 py-2 ${activeTab == 'owner-reservations' ? 'active' : ''}"
                                    href="${pageContext.request.contextPath}/my-cars/reservations"><spring:message code="navbar.ownerReservations"/></a>
                             </li>
+                            <li>
+                                <a class="dropdown-item rounded-3 py-2 ${activeTab == 'my-favorites' ? 'active' : ''}"
+                                   href="${pageContext.request.contextPath}/my-favorites"><spring:message code="navbar.myFavorites"/></a>
+                            </li>
                             <li><hr class="dropdown-divider my-2"></li>
                             <li>
                                 <button type="button"

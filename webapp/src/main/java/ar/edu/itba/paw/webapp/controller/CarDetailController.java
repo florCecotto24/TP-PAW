@@ -14,6 +14,7 @@ import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.models.util.CarGalleryMediaItems;
 import ar.edu.itba.paw.services.CarPictureService;
 import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.services.FavCarService;
 import ar.edu.itba.paw.services.ListingAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReviewService;
@@ -61,6 +62,7 @@ public class CarDetailController {
     private final PaginationPolicy paginationPolicy;
     private final PresentationLimitsPolicy presentationLimitsPolicy;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
+    private final FavCarService favCarService;
 
     @Autowired
     public CarDetailController(
@@ -72,7 +74,8 @@ public class CarDetailController {
             final UserService userService,
             final PaginationPolicy paginationPolicy,
             final PresentationLimitsPolicy presentationLimitsPolicy,
-            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
+            final FavCarService favCarService) {
         this.carService = carService;
         this.carPictureService = carPictureService;
         this.listingAvailabilityService = listingAvailabilityService;
@@ -82,6 +85,7 @@ public class CarDetailController {
         this.paginationPolicy = paginationPolicy;
         this.presentationLimitsPolicy = presentationLimitsPolicy;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
+        this.favCarService = favCarService;
     }
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
@@ -116,7 +120,8 @@ public class CarDetailController {
 
         final List<VehicleCardView> similarListings = consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
                 carService.findSimilarCarCards(
-                        carId, presentationLimitsPolicy.getCarDetailSimilarListingsLimit(), currentUser));
+                        carId, presentationLimitsPolicy.getCarDetailSimilarListingsLimit(), currentUser),
+                currentUser == null ? null : currentUser.getId());
 
         final List<BookableSegmentProjection> bookableSegments =
                 listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
@@ -187,13 +192,19 @@ public class CarDetailController {
                 + "&transmission=" + car.getTransmission().name()
                 + "&powertrain=" + car.getPowertrain().name();
         mav.addObject("similarSearchUrl", similarSearchUrl);
+        final boolean carIsFavoritable = currentUser != null && !isOwnerRequesting;
+        mav.addObject("carIsFavoritable", carIsFavoritable);
+        final boolean carIsFavorited = carIsFavoritable
+                && favCarService.isFavorited(car.getId(), currentUser.getId());
+        mav.addObject("carIsFavorited", carIsFavorited);
         return mav;
     }
 
     @GetMapping("/counterparty-profile")
     public ModelAndView ownerProfile(
             @RequestParam("userId") final long userId,
-            @RequestParam(name = "carId", required = false) final Long currentCarId) {
+            @RequestParam(name = "carId", required = false) final Long currentCarId,
+            @CurrentUser final User viewer) {
         final Optional<User> counterpartyOpt = userService.getUserById(userId);
         if (counterpartyOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/search", true));
@@ -225,7 +236,8 @@ public class CarDetailController {
                 "rating", "desc", currentCarId);
         final Page<CarCard> ownerActiveListingsPage = carService.getOwnerCarCards(counterpartyCriteria);
         final List<VehicleCardView> counterpartyActiveListings =
-                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(ownerActiveListingsPage.getContent());
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
+                        ownerActiveListingsPage.getContent(), viewer == null ? null : viewer.getId());
         final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
                 CounterpartyActiveListingsLoadMore.of(
                         ownerActiveListingsPage.isHasNext(),
@@ -269,6 +281,7 @@ public class CarDetailController {
             @RequestParam("userId") final long userId,
             @RequestParam(name = "carId", required = false) final Long excludeCarId,
             @RequestParam("page") final int page,
+            @CurrentUser final User viewer,
             final HttpServletResponse response) {
         if (page < 1) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -286,7 +299,8 @@ public class CarDetailController {
                 "rating", "desc", excludeCarId);
         final Page<CarCard> listingPage = carService.getOwnerCarCards(pageCriteria);
         final List<VehicleCardView> cards =
-                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(listingPage.getContent());
+                consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
+                        listingPage.getContent(), viewer == null ? null : viewer.getId());
         final ModelAndView mav = new ModelAndView("profile/counterpartyActiveListingCols");
         mav.addObject("counterpartyActiveListings", cards);
         mav.addObject("fragmentHasMore", listingPage.isHasNext());

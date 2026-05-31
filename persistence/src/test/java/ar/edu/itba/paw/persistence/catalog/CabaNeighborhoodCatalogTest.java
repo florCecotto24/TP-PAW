@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.persistence.DaoIntegrationTestSupport;
+import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
 class CabaNeighborhoodCatalogTest extends DaoIntegrationTestSupport {
 

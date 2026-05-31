@@ -16,6 +16,9 @@
 <%@ attribute name="marketAveragePrice" required="false" type="java.lang.Number" %>
 <%@ attribute name="marketSampleCount" required="false" type="java.lang.Number" %>
 <%@ attribute name="minimumRentalDays" required="false" type="java.lang.Integer" %>
+<%@ attribute name="carId" required="false" type="java.lang.Long" %>
+<%@ attribute name="showFavoriteButton" required="false" type="java.lang.Boolean" %>
+<%@ attribute name="favorited" required="false" type="java.lang.Boolean" %>
 
 <fmt:setLocale value="es_AR"/>
 <c:if test="${empty pricePeriod}">
@@ -32,7 +35,8 @@
     </c:otherwise>
 </c:choose>
 
-<div class="carcard<c:if test="${not empty href}"> carcard--clickable position-relative</c:if>">
+<c:set var="hasFavoriteButton" value="${showFavoriteButton and not empty carId}"/>
+<div class="carcard<c:if test="${not empty href}"> carcard--clickable</c:if><c:if test="${not empty href or hasFavoriteButton}"> position-relative</c:if>">
     <div class="carcard-image">
         <c:choose>
             <c:when test="${empty image}">
@@ -49,6 +53,32 @@
             <span class="carcard-view-chip" aria-hidden="true"><c:out value="${viewChipText}"/></span>
         </c:if>
     </div>
+    <c:if test="${hasFavoriteButton}">
+        <c:choose>
+            <c:when test="${favorited}">
+                <spring:message code="carCard.favorite.remove" var="favoriteAriaLabel"/>
+            </c:when>
+            <c:otherwise>
+                <spring:message code="carCard.favorite.add" var="favoriteAriaLabel"/>
+            </c:otherwise>
+        </c:choose>
+        <form method="post" action="${pageContext.request.contextPath}/my-favorites/toggle" class="carcard-favorite-form">
+            <input type="hidden" name="carId" value="<c:out value='${carId}'/>"/>
+            <button type="submit"
+                    class="carcard-favorite-btn<c:if test='${favorited}'> carcard-favorite-btn--on</c:if>"
+                    aria-label="<c:out value='${favoriteAriaLabel}'/>"
+                    title="<c:out value='${favoriteAriaLabel}'/>">
+                <c:choose>
+                    <c:when test="${favorited}">
+                        <i class="bi bi-heart-fill" aria-hidden="true"></i>
+                    </c:when>
+                    <c:otherwise>
+                        <i class="bi bi-heart" aria-hidden="true"></i>
+                    </c:otherwise>
+                </c:choose>
+            </button>
+        </form>
+    </c:if>
     <div class="carcard-info">
         <div class="carcard-info-text text">
             <h4 class="carcard-model"><c:out value="${fn:trim(model)}"/></h4>

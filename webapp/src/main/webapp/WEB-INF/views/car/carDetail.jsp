@@ -31,7 +31,35 @@
 
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
-            <h1 class="h2 fw-bold mb-0"><c:out value="${carTitle}"/></h1>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h1 class="h2 fw-bold mb-0"><c:out value="${carTitle}"/></h1>
+                <c:if test="${carIsFavoritable}">
+                    <c:choose>
+                        <c:when test="${carIsFavorited}">
+                            <spring:message code="carCard.favorite.remove" var="detailFavoriteAriaLabel"/>
+                        </c:when>
+                        <c:otherwise>
+                            <spring:message code="carCard.favorite.add" var="detailFavoriteAriaLabel"/>
+                        </c:otherwise>
+                    </c:choose>
+                    <form method="post" action="${pageContext.request.contextPath}/my-favorites/toggle" class="mb-0 car-detail-favorite-form">
+                        <input type="hidden" name="carId" value="<c:out value='${car.id}'/>"/>
+                        <button type="submit"
+                                class="car-detail-favorite-btn<c:if test='${carIsFavorited}'> car-detail-favorite-btn--on</c:if>"
+                                aria-label="<c:out value='${detailFavoriteAriaLabel}'/>"
+                                title="<c:out value='${detailFavoriteAriaLabel}'/>">
+                            <c:choose>
+                                <c:when test="${carIsFavorited}">
+                                    <i class="bi bi-heart-fill" aria-hidden="true"></i>
+                                </c:when>
+                                <c:otherwise>
+                                    <i class="bi bi-heart" aria-hidden="true"></i>
+                                </c:otherwise>
+                            </c:choose>
+                        </button>
+                    </form>
+                </c:if>
+            </div>
             <ryden:detailListingMeta
                     rating="${carRatingLabel}"
                     reviewCount="${carReviewCountLabel}"/>
