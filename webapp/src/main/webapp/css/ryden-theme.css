@@ -190,6 +190,48 @@ h3 { letter-spacing: -0.015em; }
     color: var(--color-primary) !important;
 }
 
+/* Pill ES/EN language switch in the navbar (visible to anonymous and signed-in users). */
+.ryden-language-toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 999px;
+    margin: 0;
+    line-height: 1;
+}
+
+.ryden-language-toggle__btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background var(--transition-base), color var(--transition-base);
+}
+
+.ryden-language-toggle__btn:hover {
+    color: var(--color-text);
+}
+
+.ryden-language-toggle__btn:focus-visible {
+    outline: 2px solid var(--color-primary-glow);
+    outline-offset: 1px;
+}
+
+.ryden-language-toggle__btn.is-active {
+    background: #FFFFFF;
+    color: var(--color-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    cursor: default;
+}
+
 .my-dropdown-button {
     --bs-btn-border-color: rgba(0, 0, 0, 0.1);
     --bs-btn-bg:           rgba(0, 0, 0, 0.04);

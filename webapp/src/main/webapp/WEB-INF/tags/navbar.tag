@@ -26,6 +26,26 @@
                            href="${pageContext.request.contextPath}/my-reservations"><spring:message code="navbar.myReservations"/></a>
                     </li>
                 </sec:authorize>
+                <%-- Language switch: visible to both anonymous and authenticated users (including auth screens). --%>
+                <spring:eval expression="T(org.springframework.web.servlet.support.RequestContextUtils).getLocale(pageContext.request).getLanguage()"
+                             var="currentLocaleLanguage"/>
+                <spring:message code="navbar.language.ariaLabel" var="languageToggleAria"/>
+                <spring:message code="navbar.language.es" var="languageEsLabel"/>
+                <spring:message code="navbar.language.en" var="languageEnLabel"/>
+                <li class="nav-item px-1">
+                    <form action="${pageContext.request.contextPath}/i18n/locale" method="post"
+                          class="ryden-language-toggle" role="group"
+                          aria-label="<c:out value='${languageToggleAria}'/>">
+                        <button type="submit" name="lang" value="es"
+                                class="ryden-language-toggle__btn ${currentLocaleLanguage == 'es' ? 'is-active' : ''}"
+                                aria-pressed="${currentLocaleLanguage == 'es'}"
+                                title="<c:out value='${languageEsLabel}'/>">ES</button>
+                        <button type="submit" name="lang" value="en"
+                                class="ryden-language-toggle__btn ${currentLocaleLanguage == 'en' ? 'is-active' : ''}"
+                                aria-pressed="${currentLocaleLanguage == 'en'}"
+                                title="<c:out value='${languageEnLabel}'/>">EN</button>
+                    </form>
+                </li>
                 <sec:authorize access="isAnonymous()">
                     <li class="nav-item px-1">
                         <a class="nav-link d-flex align-items-center ${activeTab == 'login' ? 'active' : ''}" href="${pageContext.request.contextPath}/login"><spring:message code="navbar.login"/></a>

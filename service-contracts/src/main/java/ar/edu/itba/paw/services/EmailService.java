@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;

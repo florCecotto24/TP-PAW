@@ -2,9 +2,7 @@ package ar.edu.itba.paw.webapp.config;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.Executor;
 
 import java.util.Properties;
@@ -48,7 +46,8 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
-import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
@@ -60,7 +59,6 @@ import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
-import ar.edu.itba.paw.webapp.interceptor.LatestLocaleSaveInterceptor;
 import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
 import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 
@@ -96,7 +94,6 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
 })
 public class WebConfig implements WebMvcConfigurer {
 
-    private final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor;
     private final ObjectProvider<NoCacheHtmlInterceptor> noCacheHtmlInterceptor;
     private final ObjectMapper objectMapper;
 
@@ -105,10 +102,8 @@ public class WebConfig implements WebMvcConfigurer {
      * proxy interceptors because they are final).
      */
     public WebConfig(
-            final ObjectProvider<LatestLocaleSaveInterceptor> latestLocaleSaveInterceptor,
             final ObjectProvider<NoCacheHtmlInterceptor> noCacheHtmlInterceptor,
             final ObjectMapper objectMapper) {
-        this.latestLocaleSaveInterceptor = latestLocaleSaveInterceptor;
         this.noCacheHtmlInterceptor = noCacheHtmlInterceptor;
         this.objectMapper = objectMapper;
     }
@@ -174,11 +169,10 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public LocaleResolver localeResolver() {
-        final AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
-        resolver.setDefaultLocale(Locale.ENGLISH);
-        resolver.setSupportedLocales(Arrays.asList(Locale.ENGLISH, Locale.forLanguageTag("es")));
-        return resolver;
+    public LocaleResolver localeResolver(final UserService userService) {
+        // Custom resolver: signed-in user's stored preference > cookie > default (Spanish).
+        // Accept-Language is intentionally ignored; the user picks the language explicitly via the navbar toggle.
+        return new RydenLocaleResolver(userService);
     }
 
     @Bean
@@ -277,7 +271,6 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
         registry.addInterceptor(noCacheHtmlInterceptor.getObject()).addPathPatterns("/**");
-        registry.addInterceptor(latestLocaleSaveInterceptor.getObject()).addPathPatterns("/**");
     }
 
     /**

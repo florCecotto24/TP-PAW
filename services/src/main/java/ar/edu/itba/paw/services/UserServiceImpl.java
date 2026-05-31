@@ -35,9 +35,11 @@ import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.util.CbuRules;
 import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.util.SupportedLocales;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+
 
 /**
  * User rows via {@link UserDao}; blobs, mail, verification, and listing side effects use peer services.
@@ -447,6 +449,14 @@ public final class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Locale> findUserPreferredLocale(final long userId) {
+        return getUserById(userId)
+                .flatMap(User::getLatestLocaleTag)
+                .flatMap(SupportedLocales::parse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Locale resolveMailLocale(final long userId) {
         return resolveMailLocaleOrElse(userId, Locale.ENGLISH);
     }
@@ -455,23 +465,7 @@ public final class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public Locale resolveMailLocaleOrElse(final long userId, final Locale fallback) {
         final Locale fb = fallback != null ? fallback : Locale.ENGLISH;
-        return getUserById(userId)
-                .flatMap(User::getLatestLocaleTag)
-                .filter(tag -> tag != null && !tag.isBlank())
-                .map(UserServiceImpl::mailLocaleFromLatestTag)
-                .orElse(fb);
-    }
-
-    private static Locale mailLocaleFromLatestTag(final String tag) {
-        final Locale l = Locale.forLanguageTag(tag.replace('_', '-'));
-        final String lang = l.getLanguage();
-        if (lang == null || lang.isEmpty()) {
-            return Locale.ENGLISH;
-        }
-        if ("es".equalsIgnoreCase(lang)) {
-            return Locale.forLanguageTag("es");
-        }
-        return Locale.ENGLISH;
+        return findUserPreferredLocale(userId).orElse(fb);
     }
 
     @Override

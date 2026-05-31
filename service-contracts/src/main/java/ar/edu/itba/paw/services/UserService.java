@@ -99,6 +99,13 @@ public interface UserService {
     /** Persists the user's preferred UI/mail locale tag (BCP 47, truncated to 32 chars). */
     void updateLatestLocale(long userId, String localeTag);
 
+    /**
+     * The user's explicitly-chosen UI locale (from {@code latest_locale}), if any. Returns {@link Optional#empty()}
+     * when the user has not picked one; callers can then fall back to a cookie or system default. Only returns
+     * locales the application supports; unknown stored tags are normalised to empty.
+     */
+    Optional<Locale> findUserPreferredLocale(long userId);
+
     /** Locale for async mail copy for this user; defaults to English when unknown. */
     Locale resolveMailLocale(long userId);
 
