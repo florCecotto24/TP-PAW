@@ -21,6 +21,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -124,8 +125,8 @@ public class Car {
     @Column(name = "minimum_rental_days", nullable = false)
     private int minimumRentalDays = 1;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "insurance_file_id")
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "insurance_file_id", unique = true)
     private StoredFile insuranceFile;
 
     @OneToMany(mappedBy = "car", fetch = FetchType.LAZY, orphanRemoval = true)

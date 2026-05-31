@@ -34,33 +34,31 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.ReservationCard;
-import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
-import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
-import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.pagination.UiPaging;
-import ar.edu.itba.paw.models.util.MyHubSortSanitizer;
+import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.CounterpartyProfileViewService;
 import ar.edu.itba.paw.services.ReservationViewService;
-import ar.edu.itba.paw.services.ReviewService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.form.ReservationReviewAction;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.MyReservationDetailModelFactory;
-import ar.edu.itba.paw.webapp.support.RiderReservationReviewExceptionMapper;
+import ar.edu.itba.paw.webapp.support.ReservationViewerRole;
+import ar.edu.itba.paw.webapp.support.facade.ReviewSubmissionFacade;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
-import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 /** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
 @Controller
@@ -70,35 +68,32 @@ public final class MyReservationsController {
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
+    private final CounterpartyProfileViewService counterpartyProfileViewService;
     private final LocaleMessages localeMessages;
-    private final ReviewService reviewService;
     private final ReservationReviewFormValidator reservationReviewFormValidator;
     private final MyReservationDetailModelFactory reservationDetailFactory;
-    private final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper;
+    private final ReviewSubmissionFacade reviewSubmissionFacade;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
-    private final MultipartImageValidation multipartImageValidation;
     private final ImageService imageService;
 
     public MyReservationsController(
             final ReservationService reservationService,
             final ReservationViewService reservationViewService,
+            final CounterpartyProfileViewService counterpartyProfileViewService,
             final LocaleMessages localeMessages,
-            final ReviewService reviewService,
             final ReservationReviewFormValidator reservationReviewFormValidator,
             final MyReservationDetailModelFactory reservationDetailFactory,
-            final RiderReservationReviewExceptionMapper riderReservationReviewExceptionMapper,
+            final ReviewSubmissionFacade reviewSubmissionFacade,
             final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
-            final MultipartImageValidation multipartImageValidation,
             final ImageService imageService) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
+        this.counterpartyProfileViewService = counterpartyProfileViewService;
         this.localeMessages = localeMessages;
-        this.reviewService = reviewService;
         this.reservationReviewFormValidator = reservationReviewFormValidator;
         this.reservationDetailFactory = reservationDetailFactory;
-        this.riderReservationReviewExceptionMapper = riderReservationReviewExceptionMapper;
+        this.reviewSubmissionFacade = reviewSubmissionFacade;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
-        this.multipartImageValidation = multipartImageValidation;
         this.imageService = imageService;
     }
 
@@ -116,10 +111,10 @@ public final class MyReservationsController {
 
     private static String myReservationDetailRedirectUrl(
             final long reservationId,
-            final String role,
+            final ReservationViewerRole role,
             final Long fromCar) {
         final StringBuilder sb = new StringBuilder();
-        sb.append("/my-reservations/").append(reservationId).append("?role=").append(role);
+        sb.append("/my-reservations/").append(reservationId).append("?role=").append(role.toLegacyString());
         if (fromCar != null) {
             sb.append("&fromCar=").append(fromCar);
         }
@@ -128,7 +123,7 @@ public final class MyReservationsController {
 
     private static RedirectView redirectToMyReservationDetailView(
             final long reservationId,
-            final String role,
+            final ReservationViewerRole role,
             final Long fromCar) {
         final RedirectView rv = new RedirectView(myReservationDetailRedirectUrl(reservationId, role, fromCar), true);
         rv.setExposeModelAttributes(false);
@@ -191,16 +186,17 @@ public final class MyReservationsController {
     public ModelAndView reservationDetail(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam(defaultValue = "rider") final String role,
+            @RequestParam(name = "role", required = false) final ReservationViewerRole roleParam,
             @RequestParam(required = false) final Long fromCar) {
         final User me = WebAuthUtils.requireUser(currentUser);
+        final ReservationViewerRole role = roleParam != null ? roleParam : ReservationViewerRole.RIDER;
         final Optional<ReservationDetailPageModel> detailOpt = reservationViewService.loadMyReservationDetailForViewer(
-                me.getId(), reservationId, role, LocaleContextHolder.getLocale());
+                me.getId(), reservationId, role.toLegacyString(), LocaleContextHolder.getLocale());
         if (detailOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
         }
         final ReservationDetailPageModel detail = detailOpt.get();
-        final Long hub = MyReservationDetailModelFactory.ownerCarHubIfValid(fromCar, role, detail);
+        final Long hub = MyReservationDetailModelFactory.ownerCarHubIfValid(fromCar, role.toLegacyString(), detail);
         return reservationDetailFactory.detailWithForms(
                 detail,
                 new ReservationReviewForm(),
@@ -214,14 +210,14 @@ public final class MyReservationsController {
     public ModelAndView reservationChat(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam final String role,
+            @RequestParam(name = "role", required = false) final ReservationViewerRole role,
             @RequestParam(required = false) final Long fromCar) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (!"owner".equals(role) && !"rider".equals(role)) {
+        if (role == null) {
             return new ModelAndView(new RedirectView("/my-reservations/" + reservationId, true));
         }
         final Optional<ReservationChatPageModel> chatOpt = reservationViewService.loadReservationChatForParticipant(
-                me.getId(), reservationId, role, LocaleContextHolder.getLocale());
+                me.getId(), reservationId, role.toLegacyString(), LocaleContextHolder.getLocale());
         if (chatOpt.isEmpty()) {
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
@@ -233,7 +229,7 @@ public final class MyReservationsController {
             mav.addObject("fromCar", fromCar);
         }
         final Long hub = MyReservationDetailModelFactory.ownerCarHubIfValid(
-                fromCar, role, chat.getCarId());
+                fromCar, role.toLegacyString(), chat.getCarId());
         if (hub != null) {
             mav.addObject("reservationDetailOwnerCarHubId", hub);
         }
@@ -244,15 +240,15 @@ public final class MyReservationsController {
     public ModelAndView counterpartyProfile(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam final String role,
+            @RequestParam(name = "role", required = false) final ReservationViewerRole role,
             @RequestParam(required = false) final Long fromCar) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (!"owner".equals(role) && !"rider".equals(role)) {
+        if (role == null) {
             return new ModelAndView(new RedirectView("/my-reservations/" + reservationId, true));
         }
         final Optional<CounterpartyProfilePageModel> profileOpt =
-                reservationViewService.loadCounterpartyProfileForReservationParticipant(
-                        me.getId(), reservationId, role, LocaleContextHolder.getLocale());
+                counterpartyProfileViewService.loadCounterpartyProfileForReservationParticipant(
+                        me.getId(), reservationId, role.toLegacyString(), LocaleContextHolder.getLocale());
         if (profileOpt.isEmpty()) {
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
@@ -265,13 +261,6 @@ public final class MyReservationsController {
         final List<VehicleCardView> counterpartyActiveListings =
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(profile.getActiveOwnerCarCards(), me.getId());
         mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
-        // Star floor for half-star rendering in counterpartyProfileHeader.tag, matching
-        // the value CarDetailController exposes on the same JSP.
-        final BigDecimal counterpartyAverageRating =
-                (BigDecimal) mav.getModel().get("counterpartyAverageRating");
-        mav.addObject(
-                "counterpartyRatingFloor",
-                counterpartyAverageRating != null ? counterpartyAverageRating.longValue() : 0L);
         mav.addObject("activeTab", "my-reservations");
         return mav;
     }
@@ -388,7 +377,7 @@ public final class MyReservationsController {
         } catch (final IOException e) {
             redirectAttributes.addFlashAttribute("refundReceiptError", localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
         }
-        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
+        return new ModelAndView(redirectToMyReservationDetailView(reservationId, ReservationViewerRole.OWNER, fromCar));
     }
 
     private static String sanitizeDownloadFileName(final String raw) {
@@ -418,9 +407,7 @@ public final class MyReservationsController {
         } catch (final IOException e) {
             redirectAttributes.addFlashAttribute("paymentReceiptError", localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
         }
-        final RedirectView rv = new RedirectView("/my-reservations/" + reservationId + "?role=rider", true);
-        rv.setExposeModelAttributes(false);
-        return new ModelAndView(rv);
+        return new ModelAndView(redirectToMyReservationDetailView(reservationId, ReservationViewerRole.RIDER, null));
     }
 
     @PostMapping("/my-reservations/{reservationId}/car-returned")
@@ -437,7 +424,7 @@ public final class MyReservationsController {
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("carReturnedError", localeMessages.msg(e));
         }
-        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
+        return new ModelAndView(redirectToMyReservationDetailView(reservationId, ReservationViewerRole.OWNER, fromCar));
     }
 
     @PostMapping("/my-reservations/{reservationId}/owner-review-rider")
@@ -449,49 +436,12 @@ public final class MyReservationsController {
             @RequestParam(required = false) final Long fromCar,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (ownerReviewForm.getReviewAction() == ReservationReviewAction.OMIT) {
-            try {
-                reviewService.submitOwnerReviewOfRider(me.getId(), reservationId, null, null);
-                redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
-            } catch (final RiderReservationException ex) {
-                redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(ex));
-            }
-            return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
-        }
-        validateReviewPicture(ownerReviewForm.getPicture(), ownerBinding);
-        if (ownerBinding.hasErrors()) {
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
-        }
-        final ReviewImagePayload picturePayload;
-        try {
-            picturePayload = readPicturePayload(ownerReviewForm.getPicture());
-        } catch (final IOException e) {
-            ownerBinding.rejectValue("picture", "profile.picture.readFailed",
-                    localeMessages.msg("profile.picture.readFailed"));
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
-        }
-        try {
-            reviewService.submitOwnerReviewOfRider(
-                    me.getId(),
-                    reservationId,
-                    ownerReviewForm.getRating(),
-                    ownerReviewForm.getComment(),
-                    picturePayload.name,
-                    picturePayload.contentType,
-                    picturePayload.bytes);
-            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
-        } catch (final RiderReservationException ex) {
-            riderReservationReviewExceptionMapper.mergeOntoBinding(ex, ownerBinding);
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
-        } catch (final RydenException ex) {
-            ownerBinding.rejectValue("picture", ex.getMessageCode(), ex.getMessageArgs(), localeMessages.msg(ex));
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "owner", ownerReviewForm, ownerBinding, new ReservationReviewForm(), null, fromCar);
-        }
-        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "owner", fromCar));
+        final ReviewSubmissionFacade.SubmissionResult result = reviewSubmissionFacade.submit(
+                me.getId(), reservationId, ReviewSubmissionFacade.Role.OWNER, ownerReviewForm, ownerBinding);
+        return handleReviewSubmissionResult(
+                result, me.getId(), reservationId, ReservationViewerRole.OWNER,
+                ownerReviewForm, ownerBinding, new ReservationReviewForm(), null,
+                fromCar, redirectAttributes);
     }
 
     @PostMapping("/my-reservations/{reservationId}/rider-review-owner")
@@ -503,82 +453,37 @@ public final class MyReservationsController {
             @RequestParam(required = false) final Long fromCar,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (riderReviewForm.getReviewAction() == ReservationReviewAction.OMIT) {
-            try {
-                reviewService.submitRiderReviewOfOwner(me.getId(), reservationId, null, null);
-                redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
-            } catch (final RiderReservationException ex) {
-                redirectAttributes.addFlashAttribute("reviewError", localeMessages.msg(ex));
-            }
-            return new ModelAndView(redirectToMyReservationDetailView(reservationId, "rider", fromCar));
-        }
-        validateReviewPicture(riderReviewForm.getPicture(), riderBinding);
-        if (riderBinding.hasErrors()) {
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
-        }
-        final ReviewImagePayload picturePayload;
-        try {
-            picturePayload = readPicturePayload(riderReviewForm.getPicture());
-        } catch (final IOException e) {
-            riderBinding.rejectValue("picture", "profile.picture.readFailed",
-                    localeMessages.msg("profile.picture.readFailed"));
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
-        }
-        try {
-            reviewService.submitRiderReviewOfOwner(
-                    me.getId(),
-                    reservationId,
-                    riderReviewForm.getRating(),
-                    riderReviewForm.getComment(),
-                    picturePayload.name,
-                    picturePayload.contentType,
-                    picturePayload.bytes);
-            redirectAttributes.addFlashAttribute("reviewMessage", localeMessages.msg("myReservationDetail.review.success"));
-        } catch (final RiderReservationException ex) {
-            riderReservationReviewExceptionMapper.mergeOntoBinding(ex, riderBinding);
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
-        } catch (final RydenException ex) {
-            riderBinding.rejectValue("picture", ex.getMessageCode(), ex.getMessageArgs(), localeMessages.msg(ex));
-            return reservationDetailFactory.detailOrRedirect(
-                    me.getId(), reservationId, "rider", new ReservationReviewForm(), null, riderReviewForm, riderBinding, fromCar);
-        }
-        return new ModelAndView(redirectToMyReservationDetailView(reservationId, "rider", fromCar));
+        final ReviewSubmissionFacade.SubmissionResult result = reviewSubmissionFacade.submit(
+                me.getId(), reservationId, ReviewSubmissionFacade.Role.RIDER, riderReviewForm, riderBinding);
+        return handleReviewSubmissionResult(
+                result, me.getId(), reservationId, ReservationViewerRole.RIDER,
+                new ReservationReviewForm(), null, riderReviewForm, riderBinding,
+                fromCar, redirectAttributes);
     }
 
-    private void validateReviewPicture(final MultipartFile picture, final BindingResult binding) {
-        if (picture == null || picture.isEmpty()) {
-            return;
-        }
-        final MultipartFile[] singleton = new MultipartFile[] { picture };
-        if (!multipartImageValidation.validateFilesAreImages(singleton, binding, "picture")) {
-            return;
-        }
-        multipartImageValidation.validateFilesWithinMaxSize(singleton, binding);
-    }
-
-    private static ReviewImagePayload readPicturePayload(final MultipartFile picture) throws IOException {
-        if (picture == null || picture.isEmpty()) {
-            return ReviewImagePayload.empty();
-        }
-        return new ReviewImagePayload(picture.getOriginalFilename(), picture.getContentType(), picture.getBytes());
-    }
-
-    private static final class ReviewImagePayload {
-        private final String name;
-        private final String contentType;
-        private final byte[] bytes;
-
-        private ReviewImagePayload(final String name, final String contentType, final byte[] bytes) {
-            this.name = name;
-            this.contentType = contentType;
-            this.bytes = bytes;
-        }
-
-        private static ReviewImagePayload empty() {
-            return new ReviewImagePayload(null, null, null);
+    private ModelAndView handleReviewSubmissionResult(
+            final ReviewSubmissionFacade.SubmissionResult result,
+            final long viewerUserId,
+            final long reservationId,
+            final ReservationViewerRole viewerRole,
+            final ReservationReviewForm ownerReviewForm,
+            final BindingResult ownerBinding,
+            final ReservationReviewForm riderReviewForm,
+            final BindingResult riderBinding,
+            final Long fromCar,
+            final RedirectAttributes redirectAttributes) {
+        switch (result.outcome()) {
+            case SUCCESS:
+                redirectAttributes.addFlashAttribute("reviewMessage", result.messageOrNull());
+                return new ModelAndView(redirectToMyReservationDetailView(reservationId, viewerRole, fromCar));
+            case OMIT_FAILED:
+                redirectAttributes.addFlashAttribute("reviewError", result.messageOrNull());
+                return new ModelAndView(redirectToMyReservationDetailView(reservationId, viewerRole, fromCar));
+            case NEEDS_RERENDER:
+            default:
+                return reservationDetailFactory.detailOrRedirect(
+                        viewerUserId, reservationId, viewerRole.toLegacyString(),
+                        ownerReviewForm, ownerBinding, riderReviewForm, riderBinding, fromCar);
         }
     }
 
@@ -586,11 +491,12 @@ public final class MyReservationsController {
     public ModelAndView cancelReservation(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam(defaultValue = "rider") final String role,
+            @RequestParam(name = "role", required = false) final ReservationViewerRole roleParam,
             @RequestParam(required = false) final Long fromCar,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<Reservation> reservationOpt = "owner".equals(role)
+        final ReservationViewerRole role = roleParam != null ? roleParam : ReservationViewerRole.RIDER;
+        final Optional<Reservation> reservationOpt = role == ReservationViewerRole.OWNER
                 ? reservationService.getOwnerReservationById(me.getId(), reservationId)
                 : reservationService.getRiderReservationById(me.getId(), reservationId);
 
@@ -608,7 +514,7 @@ public final class MyReservationsController {
         }
 
         final ModelAndView mav = new ModelAndView("reservation/reservationCancelled");
-        mav.addObject("reservationRole", role);
+        mav.addObject("reservationRole", role.toLegacyString());
         return mav;
     }
 }

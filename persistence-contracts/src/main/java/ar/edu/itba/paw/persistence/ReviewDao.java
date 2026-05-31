@@ -3,7 +3,7 @@ package ar.edu.itba.paw.persistence;
 import java.util.List;
 import java.math.BigDecimal;
 
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
@@ -30,14 +30,19 @@ public interface ReviewDao {
     /** Total reviews stored against the car. */
     long countReviewsForCar(long carId);
 
-    void refreshRiderAverageRating(long riderUserId);
-
-    void refreshOwnerAverageRating(long ownerUserId);
-
-    /** Updates {@code cars.rating_avg} from reservations resolved by {@code car_id}. */
-    void refreshCarRatingAvg(long carId);
-
+    /**
+     * Average rating left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
+     * or as rider ({@code false}). Returns {@code null} when no rated reviews exist; otherwise a
+     * value rounded to two decimals.
+     */
     BigDecimal findAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
+
+    /**
+     * Average rating for a car's reviews (both sides). Returns {@code null} when no rated reviews
+     * exist; otherwise a value rounded to two decimals. The actual persistence of {@code cars.rating_avg}
+     * is the responsibility of {@link CarDao#updateRatingAvg(long, java.math.BigDecimal)}.
+     */
+    BigDecimal findAverageRatingForCar(long carId);
 
     List<ReviewItemDto> findRecentCommentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
 }

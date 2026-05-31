@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;

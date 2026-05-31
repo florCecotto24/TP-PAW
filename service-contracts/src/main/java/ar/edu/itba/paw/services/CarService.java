@@ -230,4 +230,7 @@ public interface CarService {
 
     /** Updates the minimum rental days for a car via dirty-checking. */
     void updateMinimumRentalDays(long carId, int days);
+
+    /** Persists the car's average rating via dirty-checking; {@code null} clears the value. */
+    void updateRatingAvg(long carId, BigDecimal average);
 }

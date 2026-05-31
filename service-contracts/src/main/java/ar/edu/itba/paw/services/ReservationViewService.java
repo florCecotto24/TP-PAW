@@ -3,11 +3,14 @@ package ar.edu.itba.paw.services;
 import java.util.Locale;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.dto.ReservationCard;
-import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
-import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
-import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
+import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
 /**
  * Read-only API for reservation-related UI data: hub list cards, reservation detail, and counterparty profile views.
@@ -27,18 +30,6 @@ public interface ReservationViewService {
      * @return populated model when the reservation exists, the viewer is allowed, and listing detail is available; otherwise empty
      */
     Optional<ReservationDetailPageModel> loadMyReservationDetailForViewer(
-            long viewerUserId, long reservationId, String role, Locale locale);
-
-    /**
-     * Loads the counterparty profile linked to a reservation (the other party: owner or rider), when the viewer is a participant.
-     *
-     * @param viewerUserId id of the logged-in user
-     * @param reservationId reservation primary key
-     * @param role          {@code "rider"} or {@code "owner"}: viewer role for access checks
-     * @param locale        locale for formatted fields
-     * @return profile projection when allowed; otherwise empty
-     */
-    Optional<CounterpartyProfilePageModel> loadCounterpartyProfileForReservationParticipant(
             long viewerUserId, long reservationId, String role, Locale locale);
 
     /**
@@ -69,4 +60,44 @@ public interface ReservationViewService {
      * @return canonical lowercase status token when whitelisted; otherwise {@code null}
      */
     String normalizeReservationStatusQueryParam(String raw);
+
+    /**
+     * Loads the {@code reservation/ownerReservations.jsp} page model used by both
+     * {@code MyCarsController.ownerReservations} (unscoped) and
+     * {@code MyCarsController.ownerReservationsForCar} (scoped to a single car).
+     *
+     * @param criteria        prebuilt {@link ReservationSearchCriteria} (controller still owns
+     *                        query-param normalization through {@code buildReservationSearchCriteria})
+     * @param selectedCarOrNull when present, set as {@code selectedCar} in the model so the JSP can
+     *                          render the per-car breadcrumb
+     * @param currentSort     normalized {@code ownerCurrentSort} (echoed back to the JSP's sort UI)
+     * @param locale          used to format the per-row display strings via
+     *                        {@link #toReservationCardDisplayRow(ReservationCard, Locale)}
+     */
+    OwnerReservationsListPageModel loadOwnerReservationsListPage(
+            ReservationSearchCriteria criteria,
+            Car selectedCarOrNull,
+            String currentSort,
+            Locale locale);
+
+    /**
+     * Loads the {@code car/carReservations.jsp} page model used by
+     * {@code MyCarsController.carReservations}.
+     *
+     * @param ownerUserId    authenticated owner id (used by the underlying
+     *                       {@code getCarReservationCards} guard)
+     * @param car            target car (already resolved + ownership-checked by the controller)
+     * @param page           zero-based page index requested by the user
+     * @param pageSize       configured default page size from {@code PaginationPolicy}
+     * @param statusFilter   normalized status token from
+     *                       {@link #normalizeReservationStatusQueryParam(String)}; may be {@code null}
+     * @param locale         locale used to format the per-row display strings
+     */
+    CarReservationsListPageModel loadCarReservationsListPage(
+            long ownerUserId,
+            Car car,
+            int page,
+            int pageSize,
+            String statusFilter,
+            Locale locale);
 }

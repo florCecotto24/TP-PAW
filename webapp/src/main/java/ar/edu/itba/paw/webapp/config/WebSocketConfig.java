@@ -55,7 +55,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     /**
      * STOMP uses dedicated message converters; use the shared {@link ObjectMapper} so
-     * {@link ar.edu.itba.paw.models.dto.ReservationMessageDto#createdAt} is ISO-8601 in topic payloads.
+     * {@link ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto#createdAt} is ISO-8601 in topic payloads.
      */
     @Override
     public boolean configureMessageConverters(final List<MessageConverter> messageConverters) {

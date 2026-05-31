@@ -9,13 +9,13 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 import ar.edu.itba.paw.persistence.UserDao;
 
 @Transactional(readOnly = true)
@@ -34,7 +34,7 @@ public class UserJpaDao implements UserDao {
     @Transactional
     public User createUser(final String email, final String forename, final String surname, final String passwordHash) {
         final String normalizedEmail = EmailNormalizer.normalize(email);
-        final LocalDate memberSince = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate memberSince = LocalDate.now(AppTimezone.WALL_ZONE);
         final User user = User.builder()
                 .email(normalizedEmail)
                 .forename(forename)
@@ -194,6 +194,26 @@ public class UserJpaDao implements UserDao {
             return;
         }
         user.setLatestLocaleTag(localeTag);
+    }
+
+    @Override
+    @Transactional
+    public void updateRatingAsRider(final long userId, final java.math.BigDecimal average) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setRatingAsRider(average);
+    }
+
+    @Override
+    @Transactional
+    public void updateRatingAsOwner(final long userId, final java.math.BigDecimal average) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setRatingAsOwner(average);
     }
 
     @Override

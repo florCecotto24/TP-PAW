@@ -2,9 +2,7 @@ package ar.edu.itba.paw.persistence;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,7 +19,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.Review;
 import ar.edu.itba.paw.models.domain.ReviewId;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.persistence.ReviewDao;
@@ -46,67 +44,23 @@ public class ReviewJpaDao implements ReviewDao {
             final Integer rating,
             final String comment,
             final Long imageId) {
+        // The Reservation is loaded (not getReference) because Review's builder derives the car
+        // from it to preserve the (car_id, review) invariant in the entity itself; the car has
+        // to be a usable association, not a proxy whose load would happen later. The Image, by
+        // contrast, is a pure FK and stays as a proxy.
         final Reservation reservation = em.find(Reservation.class, reservationId);
         if (reservation == null) {
             return;
         }
-        final Image image = imageId == null ? null : em.find(Image.class, imageId);
+        final Image imageRef = imageId == null ? null : em.getReference(Image.class, imageId);
         em.persist(Review.builder()
                 .reservation(reservation)
                 .madeByRider(madeByRider)
                 .createdAt(OffsetDateTime.now())
                 .rating(rating)
                 .comment(comment)
-                .image(image)
+                .image(imageRef)
                 .build());
-    }
-
-    @Override
-    @Transactional
-    public void refreshRiderAverageRating(final long riderUserId) {
-        final Double avg = em.createQuery(
-                        "SELECT AVG(r.rating) FROM Review r "
-                                + "WHERE r.id.madeByRider = false AND r.reservation.rider.id = :userId "
-                                + "AND r.rating IS NOT NULL",
-                        Double.class)
-                .setParameter("userId", riderUserId)
-                .getSingleResult();
-        final User user = em.find(User.class, riderUserId);
-        if (user != null) {
-            user.setRatingAsRider(round2(avg));
-        }
-    }
-
-    @Override
-    @Transactional
-    public void refreshOwnerAverageRating(final long ownerUserId) {
-        final Double avg = em.createQuery(
-                        "SELECT AVG(r.rating) FROM Review r "
-                                + "WHERE r.id.madeByRider = true AND r.reservation.car.owner.id = :userId "
-                                + "AND r.rating IS NOT NULL",
-                        Double.class)
-                .setParameter("userId", ownerUserId)
-                .getSingleResult();
-        final User user = em.find(User.class, ownerUserId);
-        if (user != null) {
-            user.setRatingAsOwner(round2(avg));
-        }
-    }
-
-    @Override
-    @Transactional
-    public void refreshCarRatingAvg(final long carId) {
-        final Double avg = em.createQuery(
-                        "SELECT AVG(r.rating) FROM Review r "
-                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
-                        Double.class)
-                .setParameter("carId", carId)
-                .getSingleResult();
-        final ar.edu.itba.paw.models.domain.Car car = em.find(ar.edu.itba.paw.models.domain.Car.class, carId);
-        if (car != null) {
-            car.setRatingAvg(round2(avg));
-            car.setUpdatedAt(OffsetDateTime.now());
-        }
     }
 
     @Override
@@ -139,7 +93,7 @@ public class ReviewJpaDao implements ReviewDao {
                 .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
                 .collect(Collectors.toList());
         final List<Review> reviews = em.createQuery(
-                        "SELECT r FROM Review r "
+                        "FROM Review r "
                                 + "JOIN FETCH r.reservation res "
                                 + "JOIN FETCH res.rider rider "
                                 + "JOIN FETCH res.car c "
@@ -179,6 +133,17 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     @Override
+    public BigDecimal findAverageRatingForCar(final long carId) {
+        final Double avg = em.createQuery(
+                        "SELECT AVG(r.rating) FROM Review r "
+                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
+                        Double.class)
+                .setParameter("carId", carId)
+                .getSingleResult();
+        return round2(avg);
+    }
+
+    @Override
     public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final String jpql = counterpartyIsOwner
                 ? "SELECT AVG(r.rating) FROM Review r "
@@ -193,77 +158,73 @@ public class ReviewJpaDao implements ReviewDao {
         return round2(avg);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public List<ReviewItemDto> findRecentCommentReviewsForCounterparty(
             final long counterpartyUserId,
             final boolean counterpartyIsOwner,
             final int limit) {
         /*
-         * Two native SQL branches to avoid CASE WHEN across different association paths.
-         * In each branch the reviewer is statically known (rider vs owner), so the query
-         * projects the right columns directly. LIMIT is applied in SQL, consistent with
-         * the rest of the codebase.
+         * Two JPQL branches to avoid a CASE WHEN over different association paths: in each branch
+         * the reviewer side (rider vs owner) is statically known, so we JOIN FETCH only that side
+         * plus its (nullable) profilePicture. Mapping to {@link ReviewItemDto} happens in code
+         * because {@code LocalDate} is not derivable from {@code OffsetDateTime} inside a JPQL
+         * constructor expression on every provider.
+         *
+         * Note on LEFT JOIN FETCH on profilePicture: navigating {@code rider.profilePicture.id}
+         * directly in JPQL would generate an implicit INNER JOIN and silently drop reviews whose
+         * reviewer has no profile picture (the association is nullable). The explicit LEFT JOIN
+         * FETCH preserves those rows AND eagerly hydrates the image so the mapping loop does not
+         * trigger a per-row N+1.
+         *
+         * Joins are all *-to-one (rider, car, owner, profilePicture), so {@code setMaxResults}
+         * does not collide with the JOIN FETCH multiplicity limitation.
          */
-        final String sql;
+        final String jpql;
         if (counterpartyIsOwner) {
-            // counterparty is the owner → reviews written by riders → reviewer = rider
-            sql = "SELECT rider.id, rider.forename || ' ' || rider.surname, rider.profile_picture_id, "
-                    + "r.rating, r.created_at, r.comment "
-                    + "FROM reviews r "
-                    + "JOIN reservations res ON res.id = r.reservation_id "
-                    + "JOIN users rider ON rider.id = res.rider_id "
-                    + "JOIN cars c ON c.id = res.car_id "
-                    + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId "
-                    + "AND r.rating IS NOT NULL AND NULLIF(TRIM(r.comment), '') IS NOT NULL "
-                    + "ORDER BY r.created_at DESC "
-                    + "LIMIT :limit";
+            // counterparty is the owner -> reviews written by riders -> reviewer = rider
+            jpql = "FROM Review r "
+                    + "JOIN FETCH r.reservation res "
+                    + "JOIN FETCH res.rider rider "
+                    + "LEFT JOIN FETCH rider.profilePicture "
+                    + "JOIN res.car c "
+                    + "JOIN c.owner owner "
+                    + "WHERE r.id.madeByRider = TRUE AND owner.id = :userId "
+                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
+                    + "ORDER BY r.createdAt DESC";
         } else {
-            // counterparty is the rider → reviews written by owners → reviewer = owner
-            sql = "SELECT owner.id, owner.forename || ' ' || owner.surname, owner.profile_picture_id, "
-                    + "r.rating, r.created_at, r.comment "
-                    + "FROM reviews r "
-                    + "JOIN reservations res ON res.id = r.reservation_id "
-                    + "JOIN cars c ON c.id = res.car_id "
-                    + "JOIN users owner ON owner.id = c.owner_id "
-                    + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId "
-                    + "AND r.rating IS NOT NULL AND NULLIF(TRIM(r.comment), '') IS NOT NULL "
-                    + "ORDER BY r.created_at DESC "
-                    + "LIMIT :limit";
+            // counterparty is the rider -> reviews written by owners -> reviewer = owner
+            jpql = "FROM Review r "
+                    + "JOIN FETCH r.reservation res "
+                    + "JOIN res.rider rider "
+                    + "JOIN FETCH res.car c "
+                    + "JOIN FETCH c.owner owner "
+                    + "LEFT JOIN FETCH owner.profilePicture "
+                    + "WHERE r.id.madeByRider = FALSE AND rider.id = :userId "
+                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
+                    + "ORDER BY r.createdAt DESC";
         }
-        final List<Object[]> rows = em.createNativeQuery(sql)
+        final List<Review> reviews = em.createQuery(jpql, Review.class)
                 .setParameter("userId", counterpartyUserId)
-                .setParameter("limit", limit)
+                .setMaxResults(limit)
                 .getResultList();
 
-        final List<ReviewItemDto> result = new ArrayList<>(rows.size());
-        for (final Object[] row : rows) {
-            final Long pictureId = row[2] == null ? null : ((Number) row[2]).longValue();
+        final List<ReviewItemDto> result = new ArrayList<>(reviews.size());
+        for (final Review r : reviews) {
+            final User reviewer = r.getId().isMadeByRider()
+                    ? r.getReservation().getRider()
+                    : r.getReservation().getCar().getOwner();
             result.add(new ReviewItemDto(
-                    ((Number) row[0]).longValue(),
-                    (String) row[1],
-                    pictureId,
-                    ((Number) row[3]).intValue(),
-                    toOffsetDateTime(row[4]).toLocalDate(),
-                    (String) row[5]));
+                    reviewer.getId(),
+                    reviewer.getForename() + " " + reviewer.getSurname(),
+                    reviewer.getProfilePicture().map(Image::getId).orElse(null),
+                    r.getRating().orElse(0),
+                    r.getCreatedAt().toLocalDate(),
+                    r.getComment().orElse(null)));
         }
         return result;
     }
 
     private static BigDecimal round2(final Double avg) {
         return avg == null ? null : BigDecimal.valueOf(avg).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private static OffsetDateTime toOffsetDateTime(final Object o) {
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof OffsetDateTime) {
-            return ((OffsetDateTime) o).withOffsetSameInstant(ZoneOffset.UTC);
-        }
-        if (o instanceof Timestamp) {
-            return ((Timestamp) o).toInstant().atOffset(ZoneOffset.UTC);
-        }
-        return OffsetDateTime.parse(o.toString());
     }
 }

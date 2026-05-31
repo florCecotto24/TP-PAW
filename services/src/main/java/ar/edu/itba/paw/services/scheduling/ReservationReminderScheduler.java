@@ -16,10 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.util.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.domain.User;
@@ -55,11 +55,11 @@ public final class ReservationReminderScheduler {
 
     @Scheduled(
             cron = "${app.scheduler.reservation-reminder.cron:0 0 9 * * ?}",
-            zone = "${app.scheduler.reservation-reminder.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.reservation-reminder.zone:${app.scheduler.default-zone}}")
     public void sendReservationReminders() {
-        final LocalDate tomorrow = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
-        final OffsetDateTime from = tomorrow.atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
-        final OffsetDateTime to = tomorrow.plusDays(1).atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+        final LocalDate tomorrow = LocalDate.now(AppTimezone.WALL_ZONE).plusDays(1);
+        final OffsetDateTime from = tomorrow.atStartOfDay(AppTimezone.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
+        final OffsetDateTime to = tomorrow.plusDays(1).atStartOfDay(AppTimezone.WALL_ZONE).toInstant().atOffset(ZoneOffset.UTC);
         LOGGER.atInfo()
                 .addArgument(tomorrow)
                 .addArgument(from)

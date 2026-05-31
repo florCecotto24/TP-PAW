@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.models.util.CarGalleryMediaContentTypes;
+import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 

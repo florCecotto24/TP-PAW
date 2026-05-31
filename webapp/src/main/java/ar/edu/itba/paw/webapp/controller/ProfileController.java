@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.controller;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
@@ -35,19 +34,24 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.user.InvalidCbuFormatException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.StoredFileService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.webapp.form.CbuUpdateForm;
+import ar.edu.itba.paw.webapp.form.ProfileDocumentUploadForm;
 import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
+import ar.edu.itba.paw.webapp.form.ProfilePictureUploadForm;
 import ar.edu.itba.paw.webapp.form.ProfileUpdateForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.facade.UserBookingDocumentsFacade;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
@@ -68,6 +72,7 @@ public final class ProfileController {
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final StoredFileService storedFileService;
     private final SecurityContextRepository securityContextRepository;
+    private final UserBookingDocumentsFacade userBookingDocumentsFacade;
 
     public ProfileController(
             final UserService userService,
@@ -77,7 +82,8 @@ public final class ProfileController {
             final UserValidationPolicy userValidationPolicy,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final StoredFileService storedFileService,
-            final SecurityContextRepository securityContextRepository) {
+            final SecurityContextRepository securityContextRepository,
+            final UserBookingDocumentsFacade userBookingDocumentsFacade) {
         this.userService = userService;
         this.localeMessages = localeMessages;
         this.imageService = imageService;
@@ -86,6 +92,7 @@ public final class ProfileController {
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.storedFileService = storedFileService;
         this.securityContextRepository = securityContextRepository;
+        this.userBookingDocumentsFacade = userBookingDocumentsFacade;
     }
 
     @ModelAttribute("profilePhoneMaxLength")
@@ -125,7 +132,7 @@ public final class ProfileController {
 
     @ModelAttribute("profileBirthDateMax")
     public String profileBirthDateMax() {
-        return LocalDate.now(AvailabilityPeriod.WALL_ZONE).toString();
+        return LocalDate.now(AppTimezone.WALL_ZONE).toString();
     }
 
     @ModelAttribute("uploadMaxProfileDocumentBytes")
@@ -173,21 +180,12 @@ public final class ProfileController {
             final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
         populateFormFromUser(me.getId(), profileForm);
-        if (profileForm.getBirthDate() != null && !profileForm.getBirthDate().isBlank()) {
-            try {
-                final LocalDate bd = LocalDate.parse(profileForm.getBirthDate());
-                final Locale locale = LocaleContextHolder.getLocale();
-                final String pattern = locale.getLanguage().equals("es") ? "dd/MM/yyyy" : "MM/dd/yyyy";
-                model.addAttribute("profileBirthDateDisplay",
-                        bd.format(DateTimeFormatter.ofPattern(pattern)));
-            } catch (final DateTimeParseException e) {
-                LOG.atDebug()
-                        .setMessage("Could not format profile birth date for display [{}]")
-                        .addArgument(profileForm.getBirthDate())
-                        .setCause(e)
-                        .log();
-                model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
-            }
+        final LocalDate bd = profileForm.getBirthDate();
+        if (bd != null) {
+            final Locale locale = LocaleContextHolder.getLocale();
+            final String pattern = locale.getLanguage().equals("es") ? "dd/MM/yyyy" : "MM/dd/yyyy";
+            model.addAttribute("profileBirthDateDisplay",
+                    bd.format(DateTimeFormatter.ofPattern(pattern)));
         } else {
             model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
         }
@@ -203,16 +201,18 @@ public final class ProfileController {
             final HttpServletResponse response,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final LocalDate birthParsed = parseAndValidateBirthDate(profileForm.getBirthDate(), bindingResult);
         if (bindingResult.hasErrors()) {
             return "profile/profile";
         }
         try {
-            userService.updateDisplayName(me.getId(), profileForm.getForename(), profileForm.getSurname());
-            userService.updatePhoneNumber(me.getId(), profileForm.getPhoneNumber());
-            userService.updateBirthDate(me.getId(), birthParsed);
-            userService.updateAbout(me.getId(), profileForm.getAbout());
-            userService.updateCbu(me.getId(), profileForm.getCbu());
+            userService.updateProfile(me.getId(), ProfileUpdateRequest.builder()
+                    .forename(profileForm.getForename())
+                    .surname(profileForm.getSurname())
+                    .phoneNumberRaw(profileForm.getPhoneNumber())
+                    .birthDate(profileForm.getBirthDate())
+                    .aboutRaw(profileForm.getAbout())
+                    .cbuRaw(profileForm.getCbu())
+                    .build());
         } catch (final RydenException e) {
             if (e instanceof InvalidCbuFormatException ic) {
                 bindingResult.rejectValue("cbu", ic.getMessageCode(), ic.getMessageArgs(), null);
@@ -229,13 +229,15 @@ public final class ProfileController {
     @PostMapping("/picture")
     public String uploadProfilePicture(
             @CurrentUser final User currentUser,
-            @RequestParam("profilePicture") final MultipartFile file,
+            @Validated @ModelAttribute final ProfilePictureUploadForm profilePictureUploadForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (file == null || file.isEmpty()) {
+        if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("profilePictureErrorCode", "profile.picture.required");
             return "redirect:/profile";
         }
+        final MultipartFile file = profilePictureUploadForm.getProfilePicture();
         final var imageIssue = multipartImageValidation.validateNonEmptyFile(file);
         if (imageIssue.isPresent()) {
             final var issue = imageIssue.get();
@@ -282,28 +284,20 @@ public final class ProfileController {
     @PostMapping("/document")
     public String uploadProfileDocument(
             @CurrentUser final User currentUser,
-            @RequestParam("documentType") final String documentTypeRaw,
-            @RequestParam("documentFile") final MultipartFile file,
+            @Validated @ModelAttribute final ProfileDocumentUploadForm profileDocumentUploadForm,
+            final BindingResult bindingResult,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
-        if (documentType == null || file == null || file.isEmpty()) {
+        if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
             return "redirect:/profile";
         }
-        try {
-            userService.uploadValidatedProfileDocument(
-                    me.getId(),
-                    documentType,
-                    file.getOriginalFilename(),
-                    file.getContentType(),
-                    file.getBytes());
-            redirectAttributes.addFlashAttribute("profileDocumentSaved", Boolean.TRUE);
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg(e));
-        } catch (final IOException e) {
-            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.readFailed"));
-        }
+        final var outcome = userBookingDocumentsFacade.attemptUpload(
+                me.getId(),
+                profileDocumentUploadForm.getDocumentType(),
+                profileDocumentUploadForm.getDocumentFile(),
+                false);
+        applyProfileDocumentUploadFlash(outcome, redirectAttributes);
         return "redirect:/profile";
     }
 
@@ -314,33 +308,45 @@ public final class ProfileController {
             @RequestParam(name = "identityFile", required = false) final MultipartFile identityFile,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (isMissingOrEmpty(licenseFile) && isMissingOrEmpty(identityFile)) {
+        final var pair = userBookingDocumentsFacade.attemptBookingPair(me.getId(), licenseFile, identityFile, false);
+        if (pair.nothingAttempted()) {
             redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
             return "redirect:/profile";
         }
-        try {
-            if (!isMissingOrEmpty(licenseFile)) {
-                uploadSingleProfileDocument(me.getId(), UserDocumentType.LICENSE, licenseFile);
-            }
-            if (!isMissingOrEmpty(identityFile)) {
-                uploadSingleProfileDocument(me.getId(), UserDocumentType.IDENTITY, identityFile);
-            }
-            redirectAttributes.addFlashAttribute("profileDocumentSaved", Boolean.TRUE);
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg(e));
-        } catch (final IOException e) {
-            redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.readFailed"));
+        final var firstError = pair.getFirstHardError();
+        if (firstError.isPresent()) {
+            applyProfileDocumentUploadFlash(firstError.get(), redirectAttributes);
+            return "redirect:/profile";
         }
+        redirectAttributes.addFlashAttribute("profileDocumentSaved", Boolean.TRUE);
         return "redirect:/profile";
+    }
+
+    private void applyProfileDocumentUploadFlash(
+            final UserBookingDocumentsFacade.UploadOutcome outcome,
+            final RedirectAttributes redirectAttributes) {
+        switch (outcome.getStatus()) {
+            case OK, SKIPPED_ALREADY_PRESENT ->
+                    redirectAttributes.addFlashAttribute("profileDocumentSaved", Boolean.TRUE);
+            case BUSINESS_ERROR ->
+                    redirectAttributes.addFlashAttribute("profileDocumentError",
+                            outcome.getLocalizedBusinessMessage().orElseGet(
+                                    () -> localeMessages.msg("profile.document.invalid")));
+            case READ_ERROR ->
+                    redirectAttributes.addFlashAttribute("profileDocumentError",
+                            localeMessages.msg("profile.document.readFailed"));
+            case SKIPPED_EMPTY ->
+                    redirectAttributes.addFlashAttribute("profileDocumentError",
+                            localeMessages.msg("profile.document.invalid"));
+        }
     }
 
     @PostMapping("/document/delete")
     public String deleteProfileDocument(
             @CurrentUser final User currentUser,
-            @RequestParam("documentType") final String documentTypeRaw,
+            @RequestParam(name = "documentType", required = false) final UserDocumentType documentType,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
         if (documentType == null) {
             redirectAttributes.addFlashAttribute("profileDocumentError", localeMessages.msg("profile.document.invalid"));
             return "redirect:/profile";
@@ -357,9 +363,8 @@ public final class ProfileController {
     @GetMapping("/document")
     public ResponseEntity<byte[]> downloadProfileDocument(
             @CurrentUser final User currentUser,
-            @RequestParam("documentType") final String documentTypeRaw) {
+            @RequestParam(name = "documentType", required = false) final UserDocumentType documentType) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
         if (documentType == null) {
             return ResponseEntity.notFound().build();
         }
@@ -391,10 +396,9 @@ public final class ProfileController {
     @GetMapping("/document/view")
     public String viewProfileDocument(
             @CurrentUser final User currentUser,
-            @RequestParam("documentType") final String documentTypeRaw,
+            @RequestParam(name = "documentType", required = false) final UserDocumentType documentType,
             final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final UserDocumentType documentType = parseDocumentType(documentTypeRaw);
         if (documentType == null) {
             return "redirect:/profile";
         }
@@ -441,12 +445,31 @@ public final class ProfileController {
         return "redirect:/profile";
     }
 
+    /**
+     * Single AJAX endpoint to persist the user's CBU without a full page reload. Used by the
+     * "missing CBU" modals in the publish-car prerequisites page and the create-listing form;
+     * previously each flow duplicated this handler. Format validation is handled declaratively by
+     * {@link ar.edu.itba.paw.webapp.validation.constraint.ValidCbu} on {@link CbuUpdateForm#getCbu()}.
+     */
+    @PostMapping(value = "/cbu", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<Void> updateCbuAjax(
+            @CurrentUser final User currentUser,
+            @Validated @ModelAttribute final CbuUpdateForm cbuUpdateForm,
+            final BindingResult bindingResult) {
+        WebAuthUtils.requireUser(currentUser);
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().build();
+        }
+        userService.updateCbu(currentUser.getId(), cbuUpdateForm.getCbu().trim());
+        return ResponseEntity.noContent().build();
+    }
+
     private void populateFormFromUser(final long userId, final ProfileUpdateForm form) {
         userService.getUserById(userId).ifPresent(u -> {
             form.setForename(u.getForename());
             form.setSurname(u.getSurname());
             u.getPhoneNumber().ifPresent(form::setPhoneNumber);
-            u.getBirthDate().ifPresent(bd -> form.setBirthDate(bd.toString()));
+            u.getBirthDate().ifPresent(form::setBirthDate);
             u.getAbout().ifPresent(form::setAbout);
             u.getCbu().ifPresent(form::setCbu);
         });
@@ -480,41 +503,6 @@ public final class ProfileController {
         this.securityContextRepository.saveContext(context, request, response);
     }
 
-    private static LocalDate parseAndValidateBirthDate(final String raw, final BindingResult errors) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        final LocalDate parsed;
-        try {
-            parsed = LocalDate.parse(raw.trim());
-        } catch (final DateTimeParseException e) {
-            errors.rejectValue("birthDate", "profile.birthDate.invalid");
-            return null;
-        }
-        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
-        if (parsed.isAfter(today)) {
-            errors.rejectValue("birthDate", "profile.birthDate.future");
-            return null;
-        }
-        return parsed;
-    }
-
-    private static UserDocumentType parseDocumentType(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        try {
-            return UserDocumentType.valueOf(raw.trim().toUpperCase());
-        } catch (final IllegalArgumentException ex) {
-            LOG.atDebug()
-                    .setMessage("Invalid profile documentType query param [{}]")
-                    .addArgument(raw)
-                    .setCause(ex)
-                    .log();
-            return null;
-        }
-    }
-
     private java.util.Optional<StoredFile> findProfileDocument(final long userId, final UserDocumentType documentType) {
         final var userOpt = userService.getUserById(userId);
         if (userOpt.isEmpty()) {
@@ -528,19 +516,4 @@ public final class ProfileController {
         return fileId.flatMap(storedFileService::findById);
     }
 
-    private void uploadSingleProfileDocument(
-            final long userId,
-            final UserDocumentType documentType,
-            final MultipartFile file) throws IOException {
-        userService.uploadValidatedProfileDocument(
-                userId,
-                documentType,
-                file.getOriginalFilename(),
-                file.getContentType(),
-                file.getBytes());
-    }
-
-    private static boolean isMissingOrEmpty(final MultipartFile file) {
-        return file == null || file.isEmpty();
-    }
 }

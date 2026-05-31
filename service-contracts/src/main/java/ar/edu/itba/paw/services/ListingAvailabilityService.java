@@ -10,7 +10,8 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 
 /**
  * Wall-calendar availability segments attached to a car ({@code listing_availability} style persistence).
@@ -188,12 +189,12 @@ public interface ListingAvailabilityService {
 
     /**
      * Publication rule: availability dates must lie within {@link #getConfiguredMaxAvailabilityForwardWallDays()}
-     * of "today" in {@link AvailabilityPeriod#WALL_ZONE}.
+     * of "today" in {@link AppTimezone#WALL_ZONE}.
      */
     void validatePublicationAvailabilityAgainstWallCalendar(List<AvailabilityPeriod> periods);
 
     /**
-     * Max inclusive wall-calendar end date offset from {@code LocalDate.now(AvailabilityPeriod.WALL_ZONE)} for
+     * Max inclusive wall-calendar end date offset from {@code LocalDate.now(AppTimezone.WALL_ZONE)} for
      * published availability ({@code app.listing.max-availability-forward-wall-days}).
      */
     int getConfiguredMaxAvailabilityForwardWallDays();

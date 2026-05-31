@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.FavCarService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;

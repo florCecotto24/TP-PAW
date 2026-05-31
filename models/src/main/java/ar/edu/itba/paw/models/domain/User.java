@@ -14,8 +14,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -57,8 +57,8 @@ public class User {
     @Column(length = 500)
     private String about;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_picture_id")
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "profile_picture_id", unique = true)
     private Image profilePicture;
 
     /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
@@ -78,15 +78,15 @@ public class User {
     @Column(name = "rating_as_owner", precision = 4, scale = 2)
     private BigDecimal ratingAsOwner;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "license_file_id")
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "license_file_id", unique = true)
     private StoredFile licenseFile;
 
     @Column(name = "license_validated")
     private Boolean licenseValidated;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "identity_file_id")
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "identity_file_id", unique = true)
     private StoredFile identityFile;
 
     @Column(name = "identity_validated")
@@ -98,7 +98,7 @@ public class User {
     @Column(name = "role_assigned_by")
     private Long roleAssignedBy;
 
-    @Column(name = "blocked", nullable = false)
+    @Column(nullable = false)
     private boolean blocked;
 
     @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)

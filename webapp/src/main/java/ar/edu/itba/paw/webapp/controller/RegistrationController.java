@@ -148,15 +148,15 @@ public final class RegistrationController {
     public String verifyForm(
             @CurrentUser final User currentUser,
             @RequestParam(value = "email", required = false) final String email,
-            @RequestParam(value = "fromLogin", required = false) final String fromLogin,
+            @RequestParam(value = "fromLogin", required = false) final Boolean fromLogin,
             final HttpServletRequest request,
             final Model model) {
         if (WebAuthUtils.isSignedIn(currentUser)) {
             return "redirect:" + WebAuthUtils.guestOnlyPageRedirectTarget(request, "/verify-email");
         }
-        final boolean fromLoginFlow = StringUtils.hasText(fromLogin)
-                && ("1".equals(fromLogin) || "true".equalsIgnoreCase(fromLogin));
-        if (fromLoginFlow) {
+        // Spring's StringToBooleanConverter already accepts "true"/"false"/"1"/"0"/"on"/"off"
+        // (case-insensitive), which covers the legacy query-param tokens that landed here.
+        if (Boolean.TRUE.equals(fromLogin)) {
             model.addAttribute("verifyFromLogin", Boolean.TRUE);
             final HttpSession session = request.getSession(false);
             if (session != null) {

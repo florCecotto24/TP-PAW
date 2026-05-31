@@ -3,7 +3,6 @@ package ar.edu.itba.paw.services;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.FavoriteValidationException;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.FavCarDao;
 
@@ -63,13 +62,7 @@ public final class FavCarServiceImpl implements FavCarService {
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> findMyFavorites(final long userId, final int page, final int pageSize) {
-        final int safePage = Math.max(page, 0);
-        final int safePageSize = Math.max(pageSize, 1);
-        final long total = favCarDao.countFavoriteCars(userId, FAVORITES_VISIBLE_STATUSES);
-        final int offset = safePage * safePageSize;
-        final List<CarCard> content = favCarDao.findFavoriteCarCardsWindow(
-                userId, FAVORITES_VISIBLE_STATUSES, offset, safePageSize);
-        return new Page<>(content, safePage, safePageSize, total);
+        return favCarDao.findFavoriteCarCards(userId, FAVORITES_VISIBLE_STATUSES, page, pageSize);
     }
 
     @Override

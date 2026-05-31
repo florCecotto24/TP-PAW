@@ -22,7 +22,7 @@ public final class DueRefundProofReminderScheduler {
 
     @Scheduled(
             cron = "${app.scheduler.refund-proof-reminder.cron:0 0/10 * * * ?}",
-            zone = "${app.scheduler.refund-proof-reminder.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.refund-proof-reminder.zone:${app.scheduler.default-zone}}")
     public void sendDueRefundProofReminders() {
         reservationService.dispatchDueRefundProofReminderEmails();
     }

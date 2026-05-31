@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import java.net.URI;
 import java.util.Locale;
-import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -17,9 +16,9 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.SupportedLocales;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.converter.StringToSupportedLocaleConverter;
 
 /**
  * Handles the navbar language toggle. Persists the chosen locale into the cookie used by the resolver and,
@@ -38,19 +37,22 @@ public final class LocaleController {
         this.userService = userService;
     }
 
+    /**
+     * Spring binds {@code lang} into a {@link Locale} via {@link StringToSupportedLocaleConverter},
+     * which mirrors the previous {@code SupportedLocales.parse(raw)} call and returns {@code null}
+     * for unknown / unsupported tags so this endpoint keeps the "silently ignore" contract.
+     */
     @PostMapping("/locale")
     public ModelAndView changeLocale(
-            @RequestParam("lang") final String langTag,
+            @RequestParam(name = "lang", required = false) final Locale lang,
             @RequestHeader(name = "Referer", required = false) final String referer,
             @CurrentUser final User currentUser,
             final HttpServletRequest request,
             final HttpServletResponse response) {
-        final Optional<Locale> chosen = SupportedLocales.parse(langTag);
-        if (chosen.isPresent()) {
-            final Locale locale = chosen.get();
-            localeResolver.setLocale(request, response, locale);
+        if (lang != null) {
+            localeResolver.setLocale(request, response, lang);
             if (currentUser != null) {
-                userService.updateLatestLocale(currentUser.getId(), locale.toLanguageTag());
+                userService.updateLatestLocale(currentUser.getId(), lang.toLanguageTag());
             }
         }
         return new ModelAndView(new RedirectView(resolveRedirectTarget(referer), false));

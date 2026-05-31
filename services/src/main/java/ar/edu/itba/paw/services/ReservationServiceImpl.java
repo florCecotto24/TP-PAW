@@ -30,12 +30,13 @@ import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.exception.user.CBUNotFoundException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.util.ArsMoneyFormat;
-import ar.edu.itba.paw.models.util.ReservationHubStatusWhitelist;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.search.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
@@ -45,8 +46,8 @@ import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
-import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.persistence.ReservationDao;
@@ -334,8 +335,8 @@ public final class ReservationServiceImpl implements ReservationService {
         if (calculateBillableDays(startDate, endDate) <= 0) {
             return Optional.empty();
         }
-        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         return planReservationByCar(carId, firstBillableDay, lastBillableDay).map(ReservationPlan::total);
     }
 
@@ -406,8 +407,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final Long availabilityId,
             final OffsetDateTime startDate,
             final OffsetDateTime endDate) {
-        final LocalDate firstDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate lastDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate firstDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate lastDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         if (availabilityId != null) {
             final Optional<ListingAvailability> specific = listingAvailabilityService.findById(availabilityId);
             if (specific.isEmpty() || specific.get().getKind() != ListingAvailability.Kind.OFFERED) {
@@ -450,8 +451,8 @@ public final class ReservationServiceImpl implements ReservationService {
         if (reservationDao.hasActiveOverlapByCar(carId, startDate, endDate)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
-        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         final ReservationPlan plan = planReservationByCar(carId, firstBillableDay, lastBillableDay)
                 .filter(p -> p.total().signum() > 0)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID));
@@ -601,14 +602,14 @@ public final class ReservationServiceImpl implements ReservationService {
         if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
             return 0;
         }
-        final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate returnDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+        final LocalDate pickupDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate returnDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         return Math.max(1L, ChronoUnit.DAYS.between(pickupDay, returnDay.plusDays(1)));
     }
 
     private static void validateWallPickupDateNotBeforeToday(final OffsetDateTime startDate) {
-        final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate pickupDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
         if (pickupDay.isBefore(today)) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_NOT_FROM_TODAY);
         }
@@ -637,10 +638,10 @@ public final class ReservationServiceImpl implements ReservationService {
      */
     void validateHandoverTimesMatchEffectiveAvailability(
             final long carId, final OffsetDateTime startDate, final OffsetDateTime endDate) {
-        final LocalDate pickupDay = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalDate returnDay = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
-        final LocalTime submittedCheckIn = startDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalTime();
-        final LocalTime submittedCheckOut = endDate.atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalTime();
+        final LocalDate pickupDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate returnDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalTime submittedCheckIn = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalTime();
+        final LocalTime submittedCheckOut = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalTime();
 
         final ListingAvailability pickupAv = listingAvailabilityService
                 .findEffectiveForDayByCar(carId, pickupDay)

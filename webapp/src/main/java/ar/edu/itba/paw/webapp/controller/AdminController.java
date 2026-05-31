@@ -28,7 +28,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.services.AdminService;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;

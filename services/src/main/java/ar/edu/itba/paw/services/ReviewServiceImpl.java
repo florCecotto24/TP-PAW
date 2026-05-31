@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.Image;
@@ -19,13 +19,18 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.persistence.ReviewDao;
 
-/** Uses only {@link ReviewDao}; reservation, car reads and image persistence go through peer services. */
+/**
+ * Uses only {@link ReviewDao} for review rows; mutations on {@code users.rating_as_*} and
+ * {@code cars.rating_avg} are delegated to {@link UserService} and {@link CarService} so each
+ * entity stays owned by its respective DAO.
+ */
 @Service
 public final class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
     private final ReservationService reservationService;
     private final CarService carService;
+    private final UserService userService;
     private final ImageService imageService;
     private final ReviewValidationPolicy reviewValidationPolicy;
 
@@ -34,11 +39,13 @@ public final class ReviewServiceImpl implements ReviewService {
             final ReviewDao reviewDao,
             final ReservationService reservationService,
             final CarService carService,
+            final UserService userService,
             final ImageService imageService,
             final ReviewValidationPolicy reviewValidationPolicy) {
         this.reviewDao = reviewDao;
         this.reservationService = reservationService;
         this.carService = carService;
+        this.userService = userService;
         this.imageService = imageService;
         this.reviewValidationPolicy = reviewValidationPolicy;
     }
@@ -112,8 +119,7 @@ public final class ReviewServiceImpl implements ReviewService {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
             reviewDao.insertReview(reservationId, false, null, null, null);
-            reviewDao.refreshRiderAverageRating(r.getRiderId());
-            reviewDao.refreshCarRatingAvg(r.getCarId());
+            refreshAggregatesAfterOwnerReview(r);
             return;
         }
 
@@ -135,8 +141,7 @@ public final class ReviewServiceImpl implements ReviewService {
         }
         final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
         reviewDao.insertReview(reservationId, false, rating, storedComment, imageId);
-        reviewDao.refreshRiderAverageRating(r.getRiderId());
-        reviewDao.refreshCarRatingAvg(r.getCarId());
+        refreshAggregatesAfterOwnerReview(r);
     }
 
     @Override
@@ -163,11 +168,7 @@ public final class ReviewServiceImpl implements ReviewService {
                 throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
             }
             reviewDao.insertReview(reservationId, true, null, null, null);
-            final long carId = r.getCarId();
-            carService.getCarById(carId)
-                    .map(ar.edu.itba.paw.models.domain.Car::getOwner)
-                    .ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
-            reviewDao.refreshCarRatingAvg(carId);
+            refreshAggregatesAfterRiderReview(r);
             return;
         }
 
@@ -189,11 +190,34 @@ public final class ReviewServiceImpl implements ReviewService {
         }
         final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
         reviewDao.insertReview(reservationId, true, rating, storedComment, imageId);
+        refreshAggregatesAfterRiderReview(r);
+    }
+
+    /**
+     * After an owner-side review (owner reviews rider): recompute rider's average and the car
+     * average. The persistence of each side stays in its own DAO via the corresponding service.
+     */
+    private void refreshAggregatesAfterOwnerReview(final Reservation r) {
+        final BigDecimal riderAvg = reviewDao.findAverageRatingForCounterparty(r.getRiderId(), false);
+        userService.updateRatingAsRider(r.getRiderId(), riderAvg);
+        final BigDecimal carAvg = reviewDao.findAverageRatingForCar(r.getCarId());
+        carService.updateRatingAvg(r.getCarId(), carAvg);
+    }
+
+    /**
+     * After a rider-side review (rider reviews owner): recompute owner's average (resolved via
+     * the car's owner) and the car average.
+     */
+    private void refreshAggregatesAfterRiderReview(final Reservation r) {
         final long carId = r.getCarId();
         carService.getCarById(carId)
                 .map(ar.edu.itba.paw.models.domain.Car::getOwner)
-                .ifPresent(owner -> reviewDao.refreshOwnerAverageRating(owner.getId()));
-        reviewDao.refreshCarRatingAvg(carId);
+                .ifPresent(owner -> {
+                    final BigDecimal ownerAvg = reviewDao.findAverageRatingForCounterparty(owner.getId(), true);
+                    userService.updateRatingAsOwner(owner.getId(), ownerAvg);
+                });
+        final BigDecimal carAvg = reviewDao.findAverageRatingForCar(carId);
+        carService.updateRatingAvg(carId, carAvg);
     }
 
     /**

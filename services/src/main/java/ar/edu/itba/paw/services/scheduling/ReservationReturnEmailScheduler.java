@@ -22,21 +22,21 @@ public final class ReservationReturnEmailScheduler {
 
     @Scheduled(
             cron = "${app.scheduler.return-emails.reminder-cron:0 0/10 * * * ?}",
-            zone = "${app.scheduler.return-emails.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.return-emails.zone:${app.scheduler.default-zone}}")
     public void sendReturnReminders() {
         reservationService.dispatchReturnReminderEmails();
     }
 
     @Scheduled(
             cron = "${app.scheduler.return-emails.checkout-cron:0 0/10 * * * ?}",
-            zone = "${app.scheduler.return-emails.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.return-emails.zone:${app.scheduler.default-zone}}")
     public void sendReturnCheckoutEmails() {
         reservationService.dispatchReturnCheckoutEmails();
     }
 
     @Scheduled(
             cron = "${app.scheduler.return-emails.review-invite-cron:0 0/10 * * * ?}",
-            zone = "${app.scheduler.return-emails.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.return-emails.zone:${app.scheduler.default-zone}}")
     public void sendRiderReviewInvites() {
         reservationService.dispatchRiderReviewInviteEmails();
     }

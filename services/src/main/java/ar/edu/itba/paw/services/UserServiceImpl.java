@@ -26,16 +26,17 @@ import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
-import ar.edu.itba.paw.models.util.CbuRules;
-import ar.edu.itba.paw.models.util.EmailNormalizer;
-import ar.edu.itba.paw.models.util.SupportedLocales;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.rules.CbuRules;
+import ar.edu.itba.paw.models.util.format.EmailNormalizer;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
@@ -170,7 +171,7 @@ public final class UserServiceImpl implements UserService {
     public void updateBirthDate(final long userId, final LocalDate birthDate) {
         userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         if (birthDate != null) {
-            final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+            final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
             if (birthDate.isAfter(today)) {
                 throw new InvalidProfileBirthDateException(MessageKeys.USER_PROFILE_BIRTH_DATE_FUTURE);
             }
@@ -189,6 +190,21 @@ public final class UserServiceImpl implements UserService {
                     validationPolicy.getProfileAboutMaxLength());
         }
         userDao.updateAbout(userId, about);
+    }
+
+    @Override
+    @Transactional
+    public void updateProfile(final long userId, final ProfileUpdateRequest request) {
+        // Single-transaction wrapper around the five per-field updaters. Calling them via `this.`
+        // bypasses the AOP proxy, so the @Transactional annotations on the inner methods are NOT
+        // re-applied — which is exactly what we want: everything participates in the outer tx and
+        // a failure halfway through rolls back the whole batch (the bug the controller used to have
+        // when it called each updater in sequence outside a tx).
+        updateDisplayName(userId, request.getForename(), request.getSurname());
+        updatePhoneNumber(userId, request.getPhoneNumberRaw());
+        updateBirthDate(userId, request.getBirthDate().orElse(null));
+        updateAbout(userId, request.getAboutRaw());
+        updateCbu(userId, request.getCbuRaw());
     }
 
     @Override
@@ -445,6 +461,18 @@ public final class UserServiceImpl implements UserService {
             t = t.substring(0, 32);
         }
         userDao.updateLatestLocale(userId, t);
+    }
+
+    @Override
+    @Transactional
+    public void updateRatingAsRider(final long userId, final java.math.BigDecimal average) {
+        userDao.updateRatingAsRider(userId, average);
+    }
+
+    @Override
+    @Transactional
+    public void updateRatingAsOwner(final long userId, final java.math.BigDecimal average) {
+        userDao.updateRatingAsOwner(userId, average);
     }
 
     @Override

@@ -27,19 +27,19 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
+import ar.edu.itba.paw.dto.PublishCarOutcome;
+import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
-import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
-import ar.edu.itba.paw.models.util.CbuRules;
-import ar.edu.itba.paw.services.AdminService;
+import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.services.CarBrandService;
 import ar.edu.itba.paw.services.CarModelService;
-import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.services.CarPublishingService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
@@ -48,6 +48,7 @@ import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedInsurance;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.facade.UserBookingDocumentsFacade;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.PublishCarInsuranceSessionStash;
@@ -64,7 +65,7 @@ public final class PublishCarFormController {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublishCarFormController.class);
 
-    private final CarService carService;
+    private final CarPublishingService carPublishingService;
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
     private final LocaleMessages localeMessages;
@@ -76,11 +77,11 @@ public final class PublishCarFormController {
     private final CarEnumOptions carEnumOptions;
     private final UserService userService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
-    private final AdminService adminService;
     private final PublishCarFormValidator publishCarFormValidator;
+    private final UserBookingDocumentsFacade userBookingDocumentsFacade;
 
     public PublishCarFormController(
-            final CarService carService,
+            final CarPublishingService carPublishingService,
             final CarBrandService carBrandService,
             final CarModelService carModelService,
             final LocaleMessages localeMessages,
@@ -92,9 +93,9 @@ public final class PublishCarFormController {
             final CarEnumOptions carEnumOptions,
             final UserService userService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
-            final AdminService adminService,
-            final PublishCarFormValidator publishCarFormValidator) {
-        this.carService = carService;
+            final PublishCarFormValidator publishCarFormValidator,
+            final UserBookingDocumentsFacade userBookingDocumentsFacade) {
+        this.carPublishingService = carPublishingService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
         this.localeMessages = localeMessages;
@@ -106,8 +107,8 @@ public final class PublishCarFormController {
         this.carEnumOptions = carEnumOptions;
         this.userService = userService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
-        this.adminService = adminService;
         this.publishCarFormValidator = publishCarFormValidator;
+        this.userBookingDocumentsFacade = userBookingDocumentsFacade;
     }
 
     @ModelAttribute("allBrands")
@@ -290,7 +291,11 @@ public final class PublishCarFormController {
         pictureStash.trySyncFromForm(form, session, errors);
         pictureStash.validatePicturePresence(form, session, errors);
         if (errors.hasErrors()) {
-            insuranceStash.trySyncFromForm(form, session);
+            // Only stash a fresh insurance file when it itself is valid (e.g. another field failed);
+            // an over-sized upload must NOT replace the previously stashed file.
+            if (!errors.hasFieldErrors("insuranceFile")) {
+                insuranceStash.trySyncFromForm(form, session);
+            }
             return publishCarFormView(session);
         }
 
@@ -331,22 +336,13 @@ public final class PublishCarFormController {
             return publishCarFormView(session);
         }
 
-        // Optional insurance file: when present, must fit the profile-document size limit.
-        // If the form does not bring a fresh file, fall back to the previously stashed one (if any).
+        // Optional insurance file: presence is optional, but when supplied the size constraint is
+        // already enforced by @MaxFileSize on PublishCarForm.insuranceFile (see ValidCbu / NotEmptyFile
+        // siblings under webapp.validation.constraint). We only need to fall back to the previously
+        // stashed file when the form does not bring a fresh one, and to persist a fresh upload so it
+        // survives subsequent retries on the same session.
         final MultipartFile insuranceFile = form.getInsuranceFile();
         final boolean hasFreshInsurance = insuranceFile != null && !insuranceFile.isEmpty();
-        if (hasFreshInsurance && insuranceFile.getSize() > profileDocumentUploadPolicy.getMaxBytes()) {
-            final int maxMb = profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
-            errors.rejectValue(
-                    "insuranceFile",
-                    MessageKeys.CAR_INSURANCE_TOO_LARGE,
-                    new Object[] { maxMb },
-                    localeMessages.msg(MessageKeys.CAR_INSURANCE_TOO_LARGE, maxMb));
-            pictureStash.trySyncFromForm(form, session, errors);
-            // Do NOT stash the oversized file; keep any previously stashed (valid) one untouched.
-            return publishCarFormView(session);
-        }
-        // Persist the freshly uploaded insurance so we can recover it on subsequent retries.
         if (hasFreshInsurance) {
             insuranceStash.trySyncFromForm(form, session);
         }
@@ -354,15 +350,8 @@ public final class PublishCarFormController {
         try {
             final long ownerId = WebAuthUtils.requireUser(currentUser).getId();
 
-            // Resolve brand/model strings (validated non-blank by JSR-303) to a catalog CarModel
-            final CarBrand resolvedBrand = carBrandService.findOrCreateUnvalidated(form.getBrand())
-                    .orElseThrow(() -> new IllegalStateException("Could not resolve brand: " + form.getBrand()));
-            final CarModel resolvedModel = carModelService.findOrCreateUnvalidated(
-                            resolvedBrand.getId(), form.getModel(), form.getType())
-                    .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + form.getModel()));
-
-            // Resolve insurance from this submission or from the session stash (so a file uploaded on a
-            // previous failed attempt is not lost when re-submitting).
+            // Resolve insurance bytes here (web concern: fresh upload vs session stash). Brand /
+            // model resolution + the admin-vs-owner publishing branch live in CarPublishingService.
             final byte[] insuranceBytes;
             final String insuranceName;
             final String insuranceType;
@@ -372,17 +361,13 @@ public final class PublishCarFormController {
                 insuranceType = insuranceFile.getContentType();
             } else {
                 final PublishCarRetainedInsurance retained = insuranceStash.getOrNull(session);
-                if (retained != null) {
-                    final Optional<byte[]> stashed = insuranceStash.readRetainedBytes(session);
-                    if (stashed.isPresent()) {
-                        insuranceBytes = stashed.get();
-                        insuranceName = retained.filename();
-                        insuranceType = retained.contentType();
-                    } else {
-                        insuranceBytes = null;
-                        insuranceName = null;
-                        insuranceType = null;
-                    }
+                final Optional<byte[]> stashed = retained == null
+                        ? Optional.empty()
+                        : insuranceStash.readRetainedBytes(session);
+                if (retained != null && stashed.isPresent()) {
+                    insuranceBytes = stashed.get();
+                    insuranceName = retained.filename();
+                    insuranceType = retained.contentType();
                 } else {
                     insuranceBytes = null;
                     insuranceName = null;
@@ -390,57 +375,34 @@ public final class PublishCarFormController {
                 }
             }
 
-            final boolean newCatalogEntry = !resolvedBrand.isValidated() || !resolvedModel.isValidated();
-            if (newCatalogEntry) {
-                if (fresh.isAdmin()) {
-                    adminService.validateCatalogEntry(resolvedModel.getId(), locale);
-                } else {
-                    // Create the car now so it appears in /my-cars under "pending validation".
-                    final Car pendingCar = carService.publishCar(
-                            ownerId,
-                            form.getPlate(),
-                            resolvedModel.getId(),
-                            form.getYear(),
-                            form.getPowertrain(),
-                            form.getTransmission(),
-                            form.getDescription(),
-                            uploads,
-                            insuranceName,
-                            insuranceType,
-                            insuranceBytes);
-                    pictureStash.clear(session);
-                    insuranceStash.clear(session);
-                    final ModelAndView pendingMav = new ModelAndView("listing/publishCarPending");
-                    pendingMav.addObject("createdCarId", pendingCar.getId());
-                    if (!resolvedBrand.isValidated()) {
-                        pendingMav.addObject("pendingBrand", resolvedBrand.getName());
-                    }
-                    if (!resolvedModel.isValidated()) {
-                        pendingMav.addObject("pendingModel", resolvedModel.getName());
-                    }
-                    return pendingMav;
-                }
-            }
-
-            final Car car = carService.publishCar(
-                    ownerId,
-                    form.getPlate(),
-                    resolvedModel.getId(),
-                    form.getYear(),
-                    form.getPowertrain(),
-                    form.getTransmission(),
-                    form.getDescription(),
-                    uploads,
-                    insuranceName,
-                    insuranceType,
-                    insuranceBytes);
+            final PublishCarOutcome outcome = carPublishingService.publishCar(ownerId,
+                    PublishCarRequest.builder()
+                            .brand(form.getBrand())
+                            .model(form.getModel())
+                            .type(form.getType())
+                            .plate(form.getPlate())
+                            .year(form.getYear())
+                            .powertrain(form.getPowertrain())
+                            .transmission(form.getTransmission())
+                            .description(form.getDescription())
+                            .galleryUploads(uploads)
+                            .insurance(insuranceName, insuranceType, insuranceBytes)
+                            .build(),
+                    locale);
 
             pictureStash.clear(session);
             insuranceStash.clear(session);
 
+            if (outcome.getKind() == PublishCarOutcome.Kind.PENDING_VALIDATION) {
+                final ModelAndView pendingMav = new ModelAndView("listing/publishCarPending");
+                pendingMav.addObject("createdCarId", outcome.getCar().getId());
+                outcome.getPendingBrandName().ifPresent(name -> pendingMav.addObject("pendingBrand", name));
+                outcome.getPendingModelName().ifPresent(name -> pendingMav.addObject("pendingModel", name));
+                return pendingMav;
+            }
             final ModelAndView mav = new ModelAndView("listing/publishCarConfirmation");
-            mav.addObject("car", car);
-            if (newCatalogEntry) {
+            mav.addObject("car", outcome.getCar());
+            if (outcome.isNewCatalogEntry()) {
                 mav.addObject("newCatalogEntry", true);
             }
             return mav;
@@ -495,22 +457,6 @@ public final class PublishCarFormController {
     }
 
     /**
-     * AJAX endpoint used by the prerequisites screen modal to save the CBU without a full reload.
-     */
-    @PostMapping(value = "/quick-cbu", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public ResponseEntity<Void> quickCbu(
-            @CurrentUser final User currentUser,
-            @RequestParam("cbu") final String cbuRaw) {
-        WebAuthUtils.requireUser(currentUser);
-        final String trimmed = cbuRaw == null ? "" : cbuRaw.trim();
-        if (!userService.isValidCbuFormat(cbuRaw)) {
-            return ResponseEntity.badRequest().build();
-        }
-        userService.updateCbu(currentUser.getId(), trimmed);
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
      * AJAX endpoint used by the prerequisites screen modal to save the identity document
      * without a full reload (same validation as the profile flow).
      */
@@ -519,32 +465,26 @@ public final class PublishCarFormController {
             @CurrentUser final User currentUser,
             @RequestParam(name = "identityFile", required = false) final MultipartFile identityFile) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (identityFile == null || identityFile.isEmpty()) {
-            return ResponseEntity.badRequest().build();
-        }
-        final User fresh = userService.getUserById(me.getId()).orElse(me);
-        if (fresh.getIdentityFileId().isPresent()) {
-            // Idempotency: already uploaded; treat as success.
-            return ResponseEntity.noContent().build();
-        }
-        try {
-            userService.uploadValidatedProfileDocument(
-                    me.getId(),
-                    UserDocumentType.IDENTITY,
-                    identityFile.getOriginalFilename(),
-                    identityFile.getContentType(),
-                    identityFile.getBytes());
-            return ResponseEntity.noContent().build();
-        } catch (final RydenException e) {
-            final HttpHeaders headers = new HttpHeaders();
-            headers.add("X-Ryden-Error", localeMessages.msg(e));
-            return new ResponseEntity<>(null, headers, HttpStatus.BAD_REQUEST);
-        } catch (final IOException e) {
-            LOG.atWarn().setMessage("Could not read uploaded identity document for userId={}")
-                    .addArgument(me.getId())
-                    .setCause(e)
-                    .log();
-            return ResponseEntity.badRequest().build();
+        final var outcome = userBookingDocumentsFacade.attemptUpload(
+                me.getId(), UserDocumentType.IDENTITY, identityFile, true);
+        switch (outcome.getStatus()) {
+            case OK:
+            case SKIPPED_ALREADY_PRESENT:
+                return ResponseEntity.noContent().build();
+            case BUSINESS_ERROR:
+                final HttpHeaders headers = new HttpHeaders();
+                outcome.getLocalizedBusinessMessage().ifPresent(msg -> headers.add("X-Ryden-Error", msg));
+                return new ResponseEntity<>(null, headers, HttpStatus.BAD_REQUEST);
+            case READ_ERROR:
+                outcome.getReadException().ifPresent(ex -> LOG.atWarn()
+                        .setMessage("Could not read uploaded identity document for userId={}")
+                        .addArgument(me.getId())
+                        .setCause(ex)
+                        .log());
+                return ResponseEntity.badRequest().build();
+            case SKIPPED_EMPTY:
+            default:
+                return ResponseEntity.badRequest().build();
         }
     }
 

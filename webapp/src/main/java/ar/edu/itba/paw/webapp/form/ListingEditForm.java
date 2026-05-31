@@ -17,6 +17,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
@@ -127,7 +128,7 @@ public final class ListingEditForm implements ListingTimeWindow {
 
     public void populateDefaultAvailability(final List<ListingAvailability> existing) {
         if (availabilityRows.isEmpty()) {
-            final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+            final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
             for (final ListingAvailability la : existing) {
                 if (!la.getEndInclusive().isBefore(today)) {
                     final AvailabilityRow row = new AvailabilityRow();

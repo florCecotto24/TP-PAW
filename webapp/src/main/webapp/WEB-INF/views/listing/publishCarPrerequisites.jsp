@@ -25,7 +25,7 @@
                      id="publishPrereqRoot"
                      data-ryden-publisher-has-cbu="${publisherHasCbu ? 'true' : 'false'}"
                      data-ryden-publisher-has-identity="${publisherHasIdentity ? 'true' : 'false'}"
-                     data-ryden-quick-cbu-url="${pageContext.request.contextPath}/publish-car/quick-cbu"
+                     data-ryden-quick-cbu-url="${pageContext.request.contextPath}/profile/cbu"
                      data-ryden-quick-identity-url="${pageContext.request.contextPath}/publish-car/quick-identity"
                      data-ryden-publish-url="${pageContext.request.contextPath}/publish-car"
                      data-ryden-cbu-invalid="${publishMissingCbuInvalidMsg}"

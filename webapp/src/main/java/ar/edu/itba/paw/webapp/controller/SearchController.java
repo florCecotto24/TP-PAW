@@ -1,9 +1,10 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
+import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.LocationService;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
@@ -21,15 +22,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
 
 /** Public listing search and filters with canonical sort tokens and pagination. */
 @Controller
 public final class SearchController {
 
     private static final String DEFAULT_SORT = "date,desc";
-    private static final Set<String> VALID_SORTS = Set.of(
-            "date,desc", "date,asc", "price,asc", "price,desc", "rating,asc", "rating,desc");
 
     private final CarService carService;
     private final LocationService locationService;
@@ -90,7 +88,7 @@ public final class SearchController {
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
                         resultPage.getContent(), viewer == null ? null : viewer.getId());
 
-        final String safeSort = sort != null && VALID_SORTS.contains(sort) ? sort : DEFAULT_SORT;
+        final String safeSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         mav.addObject("results", results);
         mav.addObject("searchPage", resultPage);
         mav.addObject("currentSort", safeSort);

@@ -19,12 +19,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
-import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
@@ -245,9 +245,9 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
         // Search range of 1 day: only fitsMin (minDays=1) should appear; exceedsMin (minDays=5) excluded.
         final Instant rangeStart = LocalDate.of(2030, 6, 10)
-                .atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant();
+                .atStartOfDay(AppTimezone.WALL_ZONE).toInstant();
         final Instant rangeEndExclusive = LocalDate.of(2030, 6, 11)
-                .atStartOfDay(AvailabilityPeriod.WALL_ZONE).toInstant();
+                .atStartOfDay(AppTimezone.WALL_ZONE).toInstant();
         final CarSearchCriteria criteria = CarSearchCriteria.builder()
                 .availabilityRange(rangeStart, rangeEndExclusive)
                 .browseWallDate(LocalDate.of(2030, 6, 1))
@@ -301,10 +301,10 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                 createdAt.plusMinutes(1));
 
         final Instant rangeStart = LocalDate.of(2026, 6, 15)
-                .atStartOfDay(AvailabilityPeriod.WALL_ZONE)
+                .atStartOfDay(AppTimezone.WALL_ZONE)
                 .toInstant();
         final Instant rangeEndExclusive = LocalDate.of(2026, 6, 19)
-                .atStartOfDay(AvailabilityPeriod.WALL_ZONE)
+                .atStartOfDay(AppTimezone.WALL_ZONE)
                 .toInstant();
         final CarSearchCriteria criteria = CarSearchCriteria.builder()
                 .availabilityRange(rangeStart, rangeEndExclusive)
@@ -431,15 +431,15 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                 .sortBy("date").sortDirection("desc")
                 .build();
 
-        // 2. Act
+        // 2. Act — exercise the public browse pagination API, which owns the COUNT internally.
         final Page<CarCard> page = dao.searchCarCards(criteria);
-        final long browseCount = dao.countBrowseEligibleActiveCars(LocalDate.of(2030, 6, 1), null);
+        final long browseCount = dao.getMostRecentCarCards(0, 10, LocalDate.of(2030, 6, 1), null).getTotalItems();
 
         // 3. Assert — only the car owned by the non-blocked owner is visible to consumers.
         final List<Long> visibleIds = page.getContent().stream().map(CarCard::getCarId).collect(Collectors.toList());
         Assertions.assertTrue(visibleIds.contains(visibleCar.getId()), "Car of non-blocked owner must be browse-visible");
         Assertions.assertFalse(visibleIds.contains(hiddenCar.getId()), "Car of blocked owner must be hidden from the catalog");
-        Assertions.assertEquals(1L, browseCount, "countBrowseEligibleActiveCars must also exclude blocked-owner listings");
+        Assertions.assertEquals(1L, browseCount, "Browse-page total must also exclude blocked-owner listings");
     }
 
     private void insertOfferedAvailability(

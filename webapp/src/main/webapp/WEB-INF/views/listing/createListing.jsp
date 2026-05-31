@@ -55,7 +55,7 @@
                                novalidate="novalidate"
                                data-ryden-user-has-cbu="${userHasCbu ? 'true' : 'false'}"
                                data-ryden-context-path="${pageContext.request.contextPath}"
-                               data-ryden-quick-cbu-url="${pageContext.request.contextPath}/my-cars/quick-cbu"
+                               data-ryden-quick-cbu-url="${pageContext.request.contextPath}/profile/cbu"
                                data-ryden-cbu-invalid="${fn:escapeXml(createMissingCbuInvalidMsg)}"
                                data-ryden-cbu-save-failed="${fn:escapeXml(createMissingCbuSaveFailedMsg)}"
                                data-ryden-nb-invalid="${fn:escapeXml(createNbInvalidMsg)}"

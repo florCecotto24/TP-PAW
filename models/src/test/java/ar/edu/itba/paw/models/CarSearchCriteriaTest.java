@@ -5,7 +5,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 
 public final class CarSearchCriteriaTest {
 

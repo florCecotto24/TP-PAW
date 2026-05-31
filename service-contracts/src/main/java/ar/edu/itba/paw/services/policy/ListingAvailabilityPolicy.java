@@ -4,10 +4,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 
 /**
  * Limits how far into the future listing availability may extend on the publication wall calendar
- * ({@link AvailabilityPeriod#WALL_ZONE}), measured from {@code referenceWallDay} (normally "today" in that zone):
+ * ({@link AppTimezone#WALL_ZONE}), measured from {@code referenceWallDay} (normally "today" in that zone):
  * inclusive start/end dates must not fall after {@code referenceWallDay + configuredForwardDays}.
  */
 public interface ListingAvailabilityPolicy {

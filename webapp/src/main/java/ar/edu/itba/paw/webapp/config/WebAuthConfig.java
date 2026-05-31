@@ -37,8 +37,8 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.webapp.security.access.CarNotOwnedByCallerAuthorization;
 import ar.edu.itba.paw.webapp.security.access.CarOwnerWebAuthorization;
-import ar.edu.itba.paw.webapp.security.access.FavCarWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ProfileWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ReservationWebAuthorization;
 import ar.edu.itba.paw.webapp.security.auth.RydenAuthenticationProvider;
@@ -122,7 +122,7 @@ public class WebAuthConfig {
             final CarOwnerWebAuthorization carOwnerWebAuthorization,
             final ReservationWebAuthorization reservationWebAuthorization,
             final ProfileWebAuthorization profileWebAuthorization,
-            final FavCarWebAuthorization favCarWebAuthorization,
+            final CarNotOwnedByCallerAuthorization carNotOwnedByCallerAuthorization,
             final SessionRegistry sessionRegistry) throws Exception {
         http
                 .headers(headers -> headers.cacheControl(Customizer.withDefaults()))
@@ -139,26 +139,45 @@ public class WebAuthConfig {
                                 "/register", "/verify-email", "/verify-email/**", "/forgot-password", "/forgot-password/**")
                         .permitAll()
                         .requestMatchers("/publish-car", "/publish-car/**").authenticated()
-                        .requestMatchers("/my-cars", "/my-cars/car/**", "/my-cars/quick-cbu").authenticated()
+                        .requestMatchers("/my-cars", "/my-cars/car/**").authenticated()
                         .requestMatchers(
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}"),
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}/**"))
                         .access(carOwnerWebAuthorization.ownerAccess())
+                        // Owner-only filter-side check for the "owner reservations filtered by carId"
+                        // family. Mirrors the controller-level OwnerCarLookup branch as defense-in-depth.
+                        .requestMatchers(
+                                mvc(handlerMappingIntrospector, HttpMethod.GET, "/my-cars/reservations/{carId}"))
+                        .access(carOwnerWebAuthorization.ownerAccessForPrefix("/my-cars/reservations/"))
                         .requestMatchers("/my-reservations").authenticated()
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.POST,
                                         "/my-favorites/toggle"))
-                        .access(favCarWebAuthorization.nonOwnerAccess())
+                        .access(carNotOwnedByCallerAuthorization.nonOwnerAccess())
                         .requestMatchers("/my-favorites", "/my-favorites/**").authenticated()
+                        // GET /reservation/new?carId=X: filter-chain defense-in-depth for the rider-cannot-
+                        // reserve-own-car rule that the service layer enforces in submitRiderReservationByCar.
+                        // The POST /reservation submit keeps service-level enforcement only because its carId
+                        // travels in the form body (would force the filter to consume the multipart stream).
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/reservation/new"))
+                        .access(carNotOwnedByCallerAuthorization.nonOwnerAccess())
                         .requestMatchers("/ws", "/ws/**").authenticated()
+                        // Chat-style GETs are also reachable by admins (read-only audit access);
+                        // every POST against the same family stays participant-only so admins
+                        // cannot impersonate a rider/owner. The STOMP-side equivalent lives in
+                        // ReservationChatChannelInterceptor (SUBSCRIBE allowed for admins, SEND not).
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/messages"))
-                        .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantOrAdminReadAccess())
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
@@ -170,13 +189,13 @@ public class WebAuthConfig {
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/messages/{messageId}/attachment/download"))
-                        .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantOrAdminReadAccess())
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/messages/{messageId}/attachment/view"))
-                        .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantOrAdminReadAccess())
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
@@ -248,7 +267,7 @@ public class WebAuthConfig {
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/chat"))
-                        .access(reservationWebAuthorization.participantAccess())
+                        .access(reservationWebAuthorization.participantOrAdminReadAccess())
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,

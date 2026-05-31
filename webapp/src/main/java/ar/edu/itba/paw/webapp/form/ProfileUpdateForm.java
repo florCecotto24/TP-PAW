@@ -1,6 +1,11 @@
 package ar.edu.itba.paw.webapp.form;
 
+import java.time.LocalDate;
+
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.PastOrPresent;
+
+import org.springframework.format.annotation.DateTimeFormat;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
@@ -30,7 +35,15 @@ public final class ProfileUpdateForm {
 
     @PhoneNumber(groups = ValidationGroups.OnProfileUpdate.class)
     private String phoneNumber = "";
-    private String birthDate = "";
+
+    /**
+     * Optional date of birth. Bound from the HTML5 {@code <input type="date">} (ISO {@code yyyy-MM-dd})
+     * via {@link DateTimeFormat}. {@link PastOrPresent} forbids future dates; conversion failures are
+     * caught by Spring's standard {@code typeMismatch.java.time.LocalDate} message.
+     */
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    @PastOrPresent(message = "{profile.birthDate.future}", groups = ValidationGroups.OnProfileUpdate.class)
+    private LocalDate birthDate;
 
     @UserValidationMaxLength(
             kind = Kind.PROFILE_ABOUT,
@@ -65,12 +78,12 @@ public final class ProfileUpdateForm {
         this.phoneNumber = phoneNumber != null ? phoneNumber : "";
     }
 
-    public String getBirthDate() {
+    public LocalDate getBirthDate() {
         return birthDate;
     }
 
-    public void setBirthDate(final String birthDate) {
-        this.birthDate = birthDate != null ? birthDate : "";
+    public void setBirthDate(final LocalDate birthDate) {
+        this.birthDate = birthDate;
     }
 
     public String getAbout() {

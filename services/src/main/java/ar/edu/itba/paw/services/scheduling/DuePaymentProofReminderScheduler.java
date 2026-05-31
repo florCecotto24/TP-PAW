@@ -23,7 +23,7 @@ public final class DuePaymentProofReminderScheduler {
 
     @Scheduled(
             cron = "${app.scheduler.payment-proof-reminder.cron:0 0/10 * * * ?}",
-            zone = "${app.scheduler.payment-proof-reminder.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.payment-proof-reminder.zone:${app.scheduler.default-zone}}")
     public void sendDuePaymentProofReminders() {
         reservationService.dispatchDuePaymentProofReminderEmails();
     }

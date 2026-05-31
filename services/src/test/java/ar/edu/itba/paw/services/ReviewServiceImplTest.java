@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 
 import org.junit.jupiter.api.Assertions;
@@ -46,6 +46,9 @@ class ReviewServiceImplTest {
     private CarService carService;
 
     @Mock
+    private UserService userService;
+
+    @Mock
     private ImageService imageService;
 
     private ReviewServiceImpl service;
@@ -56,6 +59,7 @@ class ReviewServiceImplTest {
                 reviewDao,
                 reservationService,
                 carService,
+                userService,
                 imageService,
                 ReviewValidationPolicy.fromValidatedCommentMaxLength(500));
     }

@@ -9,18 +9,30 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
 
 /**
  * Authorization helpers for {@code /my-reservations/**} (used with {@link AuthorizationManager} in security config).
+ *
+ * Roles considered:
+ * <b>Participant</b> (rider or owner of the reservation): full read + write access.
+ * <b>Admin</b> ({@link UserRole#ADMIN}): <em>read-only</em> access to the chat-related endpoints
+ * so the admin reservation-chat view can reuse the same HTTP surface (messages REST list,
+ * attachment download/view, chat HTML page). Admins are intentionally excluded from write
+ * endpoints (POST messages, cancel, receipts, reviews) so the support role cannot impersonate
+ * a participant.
  */
 @Component("reservationWebAuth")
 public final class ReservationWebAuthorization {
+
+    private static final String ROLE_ADMIN_AUTHORITY = UserRole.ADMIN.springAuthorityName();
 
     private final ReservationService reservationService;
 
@@ -80,6 +92,16 @@ public final class ReservationWebAuthorization {
         return authenticatedManager(this::isOwner);
     }
 
+    /**
+     * Read-only access manager for chat-style endpoints: grants access to the reservation
+     * participants or to any caller with the {@link UserRole#ADMIN} authority. Use this
+     * for {@code GET}-only matchers so admins can audit conversations without being able to send
+     * messages, cancel, upload receipts, or post reviews on behalf of a participant.
+     */
+    public AuthorizationManager<RequestAuthorizationContext> participantOrAdminReadAccess() {
+        return authenticatedManager((auth, request) -> hasAdminAuthority(auth) || isParticipant(auth, request));
+    }
+
     private static AuthorizationManager<RequestAuthorizationContext> authenticatedManager(
             final ReservationAuthCheck check) {
         return (Supplier<Authentication> authentication, RequestAuthorizationContext context) -> {
@@ -89,6 +111,20 @@ public final class ReservationWebAuthorization {
             }
             return new AuthorizationDecision(check.allow(auth, context.getRequest()));
         };
+    }
+
+    private static boolean hasAdminAuthority(final Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return false;
+        }
+        for (final GrantedAuthority authority : authentication.getAuthorities()) {
+            if (ROLE_ADMIN_AUTHORITY.equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @FunctionalInterface

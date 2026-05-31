@@ -26,7 +26,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.ReservationMessageDto;
+import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.persistence.ReservationMessageDao;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;

@@ -22,7 +22,7 @@ public final class ReservationChatDigestScheduler {
 
     @Scheduled(
             cron = "${app.scheduler.chat-digest.cron:0 0 * * * ?}",
-            zone = "${app.scheduler.chat-digest.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.chat-digest.zone:${app.scheduler.default-zone}}")
     public void sendChatDigestEmails() {
         reservationMessageService.dispatchChatDigestEmails();
     }

@@ -16,7 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 import ar.edu.itba.paw.persistence.FavCarDao;
 
@@ -70,7 +71,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
                 "INSERT INTO cars (owner_id, model_id, plate, powertrain, transmission, status, created_at, updated_at, minimum_rental_days) "
-                + "VALUES (?, ?, ?, 'gasoline', 'manual', ?, ?, ?, 1)",
+                + "VALUES (?, ?, ?, 'GASOLINE', 'MANUAL', ?, ?, ?, 1)",
                 ownerId, modelId, plate, status, Timestamp.from(now.toInstant()),
                 Timestamp.from(now.toInstant()));
         return jdbcTemplate.queryForObject(
@@ -149,7 +150,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findFavoriteCarCardsWindowReturnsMostRecentFirst_andRespectsStatusFilter() {
+    void findFavoriteCarCardsReturnsMostRecentFirst_andRespectsStatusFilter() {
         // 1. Arrange — three favorites: one each in ACTIVE, PAUSED and DEACTIVATED. The
         // deactivated one must be filtered out; the remaining two must come back in
         // most-recently-favorited-first order.
@@ -163,19 +164,22 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
         final Set<Car.Status> allowed = Set.of(Car.Status.ACTIVE, Car.Status.PAUSED);
 
         // 2. Act
-        final List<CarCard> page = dao.findFavoriteCarCardsWindow(viewerId, allowed, 0, 10);
+        final Page<CarCard> page = dao.findFavoriteCarCards(viewerId, allowed, 0, 10);
 
         // 3. Assert
-        Assertions.assertEquals(2, page.size());
-        Assertions.assertEquals(pausedCarId, page.get(0).getCarId(),
+        final List<CarCard> content = page.getContent();
+        Assertions.assertEquals(2, content.size());
+        Assertions.assertEquals(2L, page.getTotalItems(),
+                "DAO must compute total ignoring filtered statuses (DEACTIVATED)");
+        Assertions.assertEquals(pausedCarId, content.get(0).getCarId(),
                 "Most recently favorited (PAUSED) must come first");
-        Assertions.assertEquals(activeCarId, page.get(1).getCarId(),
+        Assertions.assertEquals(activeCarId, content.get(1).getCarId(),
                 "Earlier-favorited ACTIVE comes second");
-        Assertions.assertEquals(Long.valueOf(ownerId), page.get(0).getOwnerId());
+        Assertions.assertEquals(Long.valueOf(ownerId), content.get(0).getOwnerId());
     }
 
     @Test
-    void countFavoriteCarsIgnoresFavoritesPointingToFilteredStatuses() {
+    void findFavoriteCarCardsTotalCountIgnoresFavoritesPointingToFilteredStatuses() {
         // 1. Arrange
         final long activeCarId = insertCar("FAVC01", "active");
         final long deactivatedCarId = insertCar("FAVC02", "deactivated");
@@ -183,16 +187,16 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
         insertFavorite(activeCarId, viewerId, now);
         insertFavorite(deactivatedCarId, viewerId, now);
 
-        // 2. Act
-        final long total = dao.countFavoriteCars(
-                viewerId, Set.of(Car.Status.ACTIVE, Car.Status.PAUSED));
+        // 2. Act — DAO owns the total-count side of the 1+1 pagination pattern.
+        final long total = dao.findFavoriteCarCards(
+                viewerId, Set.of(Car.Status.ACTIVE, Car.Status.PAUSED), 0, 10).getTotalItems();
 
         // 3. Assert
         Assertions.assertEquals(1L, total);
     }
 
     @Test
-    void findFavoriteCarCardsWindowPaginatesAtSqlLevel() {
+    void findFavoriteCarCardsPaginatesAtSqlLevel() {
         // 1. Arrange — three favorites with ascending timestamps so the desired order is C, B, A.
         final long carA = insertCar("FAVP01", "active");
         final long carB = insertCar("FAVP02", "active");
@@ -203,15 +207,16 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
         insertFavorite(carC, viewerId, base.plusMinutes(10));
         final Set<Car.Status> allowed = Set.of(Car.Status.ACTIVE, Car.Status.PAUSED);
 
-        // 2. Act
-        final List<CarCard> firstPage = dao.findFavoriteCarCardsWindow(viewerId, allowed, 0, 2);
-        final List<CarCard> secondPage = dao.findFavoriteCarCardsWindow(viewerId, allowed, 2, 2);
+        // 2. Act — page numbers (not offsets) are what the DAO API exposes now.
+        final Page<CarCard> firstPage = dao.findFavoriteCarCards(viewerId, allowed, 0, 2);
+        final Page<CarCard> secondPage = dao.findFavoriteCarCards(viewerId, allowed, 1, 2);
 
         // 3. Assert
+        Assertions.assertEquals(3L, firstPage.getTotalItems());
         Assertions.assertEquals(List.of(carC, carB),
-                firstPage.stream().map(CarCard::getCarId).collect(Collectors.toList()));
+                firstPage.getContent().stream().map(CarCard::getCarId).collect(Collectors.toList()));
         Assertions.assertEquals(List.of(carA),
-                secondPage.stream().map(CarCard::getCarId).collect(Collectors.toList()));
+                secondPage.getContent().stream().map(CarCard::getCarId).collect(Collectors.toList()));
     }
 
     @Test

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -20,10 +20,10 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.models.dto.PriceMarketPosition;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;

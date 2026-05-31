@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.util.List;
 
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 

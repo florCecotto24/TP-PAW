@@ -7,9 +7,10 @@ import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
-import ar.edu.itba.paw.models.util.BookableWallAvailabilityCalendar;
-import ar.edu.itba.paw.models.util.RiderPickupLeadTime;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.time.BookableWallAvailabilityCalendar;
+import ar.edu.itba.paw.models.util.time.RiderPickupLeadTime;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
@@ -312,7 +313,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         final int leadHours = reservationService.getConfiguredPickupLeadHours();
         final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
         return BookableWallAvailabilityCalendar.clipPeriodsToMinPickupInstant(
-                merged, checkInTime, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+                merged, checkInTime, AppTimezone.WALL_ZONE, minPickupExclusive);
     }
 
     @Override
@@ -342,11 +343,11 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         final List<BookableSegmentProjection> merged = mergeContiguousIdenticalProjections(singleDay);
         final int leadHours = reservationService.getConfiguredPickupLeadHours();
         final Instant minPickupExclusive = now.plus(leadHours, ChronoUnit.HOURS);
-        return clipSegmentsByPickupLead(merged, AvailabilityPeriod.WALL_ZONE, minPickupExclusive);
+        return clipSegmentsByPickupLead(merged, AppTimezone.WALL_ZONE, minPickupExclusive);
     }
 
     private SortedSet<LocalDate> computeBookableWallDaysByCar(final long carId) {
-        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
+        final ZoneId wall = AppTimezone.WALL_ZONE;
         final SortedSet<LocalDate> days = new TreeSet<>();
         for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
             if (la.getKind() != ListingAvailability.Kind.OFFERED) {
@@ -435,7 +436,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Override
     @Transactional(readOnly = true)
     public BigDecimal resolveMinEffectiveDayPriceByCar(final long carId, final BigDecimal defaultPrice) {
-        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
         BigDecimal min = defaultPrice;
         for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
             if (la.getKind() != ListingAvailability.Kind.OFFERED) {
@@ -455,7 +456,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Override
     @Transactional(readOnly = true)
     public boolean isCarPriceVariableByCar(final long carId, final BigDecimal defaultPrice) {
-        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
         for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
             if (la.getKind() != ListingAvailability.Kind.OFFERED) {
                 continue;
@@ -499,7 +500,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         if (chunks.isEmpty()) {
             return;
         }
-        final ZoneId wall = AvailabilityPeriod.WALL_ZONE;
+        final ZoneId wall = AppTimezone.WALL_ZONE;
         final OffsetDateTime fromUtc = chunks.get(0).start.atStartOfDay(wall).toOffsetDateTime();
         final OffsetDateTime toUtc = chunks.get(chunks.size() - 1).end.plusDays(1).atStartOfDay(wall).toOffsetDateTime();
         final List<Reservation> blocking =
@@ -547,7 +548,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         final LocalTime pickup = checkInTime != null ? checkInTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
         return RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
                 pickup,
-                AvailabilityPeriod.WALL_ZONE,
+                AppTimezone.WALL_ZONE,
                 now,
                 reservationTimingPolicy.getPickupLeadHours());
     }
@@ -562,7 +563,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         final int pickupLeadHours = reservationTimingPolicy.getPickupLeadHours();
         final LocalTime pickup = checkInTime != null ? checkInTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
         final LocalDate minStart = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
-                pickup, AvailabilityPeriod.WALL_ZONE, now, pickupLeadHours);
+                pickup, AppTimezone.WALL_ZONE, now, pickupLeadHours);
         for (int i = 0; i < periods.size(); i++) {
             final LocalDate from = periods.get(i).getStartInclusive();
             if (from.isBefore(minStart)) {
@@ -596,7 +597,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Transactional(readOnly = true)
     public void validatePublicationAvailabilityAgainstWallCalendar(final List<AvailabilityPeriod> periods) {
         listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
-                LocalDate.now(AvailabilityPeriod.WALL_ZONE), periods);
+                LocalDate.now(AppTimezone.WALL_ZONE), periods);
     }
 
     @Override

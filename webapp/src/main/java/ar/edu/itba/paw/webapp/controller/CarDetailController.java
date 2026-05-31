@@ -1,31 +1,14 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
-import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsLoadMore;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
+import ar.edu.itba.paw.models.dto.car.detail.CarDetailPageModel;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsFragment;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
-import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
-import ar.edu.itba.paw.models.util.CarGalleryMediaItems;
-import ar.edu.itba.paw.services.CarPictureService;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.FavCarService;
-import ar.edu.itba.paw.services.ListingAvailabilityService;
-import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.services.ReviewService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.policy.PaginationPolicy;
-import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
+import ar.edu.itba.paw.services.CarDetailViewService;
+import ar.edu.itba.paw.services.CounterpartyProfileViewService;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
-import ar.edu.itba.paw.webapp.dto.ListingReviewRowView;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.util.BookableWallRangesJson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
@@ -40,65 +23,26 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.math.BigDecimal;
-import java.text.NumberFormat;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /** Public car detail, reviews pagination, similar cars, and bookable availability JSON for pickers. */
 @Controller
 public class CarDetailController {
 
-    private final CarService carService;
-    private final CarPictureService carPictureService;
-    private final ListingAvailabilityService listingAvailabilityService;
-    private final ReservationService reservationService;
-    private final ReviewService reviewService;
-    private final UserService userService;
-    private final PaginationPolicy paginationPolicy;
-    private final PresentationLimitsPolicy presentationLimitsPolicy;
+    private final CarDetailViewService carDetailViewService;
+    private final CounterpartyProfileViewService counterpartyProfileViewService;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
-    private final FavCarService favCarService;
 
     @Autowired
     public CarDetailController(
-            final CarService carService,
-            final CarPictureService carPictureService,
-            final ListingAvailabilityService listingAvailabilityService,
-            final ReservationService reservationService,
-            final ReviewService reviewService,
-            final UserService userService,
-            final PaginationPolicy paginationPolicy,
-            final PresentationLimitsPolicy presentationLimitsPolicy,
-            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
-            final FavCarService favCarService) {
-        this.carService = carService;
-        this.carPictureService = carPictureService;
-        this.listingAvailabilityService = listingAvailabilityService;
-        this.reservationService = reservationService;
-        this.reviewService = reviewService;
-        this.userService = userService;
-        this.paginationPolicy = paginationPolicy;
-        this.presentationLimitsPolicy = presentationLimitsPolicy;
+            final CarDetailViewService carDetailViewService,
+            final CounterpartyProfileViewService counterpartyProfileViewService,
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
+        this.carDetailViewService = carDetailViewService;
+        this.counterpartyProfileViewService = counterpartyProfileViewService;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
-        this.favCarService = favCarService;
     }
-
-    /**
-     * Reviews section UI mode. Two flavours, both backed by the same paginated DB query:
-     * <ul>
-     *   <li>{@code carousel} (default) — a Bootstrap carousel showing the first page (max
-     *       {@link ar.edu.itba.paw.services.policy.PaginationPolicy#getListingPublicReviewsPageSize()} reviews).
-     *       The "view all" button is shown when more pages exist; it switches to {@code list}.</li>
-     *   <li>{@code list} — the classic grid + numbered pagination. The "view less" button switches back.</li>
-     * </ul>
-     */
-    private static final String REVIEWS_VIEW_LIST = "list";
-    private static final String REVIEWS_VIEW_CAROUSEL = "carousel";
 
     @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
     public ModelAndView carDetail(
@@ -115,111 +59,36 @@ public class CarDetailController {
         if (carIdParam == null) {
             return new ModelAndView(new RedirectView("/search", true));
         }
-        final Optional<Car> carOpt = carService.getCarById(carIdParam);
-        if (carOpt.isEmpty()) {
-            return new ModelAndView(new RedirectView("/search", true));
-        }
-        final Car car = carOpt.get();
-        final long carId = car.getId();
-
-        final User owner = car.getOwner();
-        final boolean isOwnerRequesting = currentUser != null && currentUser.getId() == owner.getId();
         final boolean currentUserIsAdmin = authentication != null
                 && authentication.getAuthorities().stream()
                         .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        // Cars whose owner is blocked are hidden from the public catalog; reject direct-URL access too,
-        // unless the viewer is the owner themselves or an admin (who needs to see the listing to act on it).
-        if (owner.isBlocked() && !isOwnerRequesting && !currentUserIsAdmin) {
+        // Page model assembly (8 services + visibility rules + review formatting + favorite
+        // flag) lives in CarDetailViewService; the controller stays focused on HTTP concerns:
+        // request params (date defaults, search context, admin action form) and the view-layer
+        // VehicleCardView conversion that the JSP tag requires.
+        final Optional<CarDetailPageModel> pageOpt = carDetailViewService.loadCarDetailPage(
+                carIdParam,
+                currentUser,
+                currentUserIsAdmin,
+                reviewPage,
+                reviewsViewParam,
+                RequestContextUtils.getLocale(request));
+        if (pageOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/search", true));
         }
-        final Long ownerProfileImageId = userService.getUserById(owner.getId())
-                .flatMap(User::getProfilePictureId)
-                .orElse(null);
-
-        final var carGalleryMedia = CarGalleryMediaItems.fromPictures(
-                carPictureService.getCarPicturesByCarId(carId));
-
-        final List<VehicleCardView> similarListings = consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
-                carService.findSimilarCarCards(
-                        carId, presentationLimitsPolicy.getCarDetailSimilarListingsLimit(), currentUser),
-                currentUser == null ? null : currentUser.getId());
-
-        final List<BookableSegmentProjection> bookableSegments =
-                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
-        final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
-        final boolean hasBookableDays = !bookableSegments.isEmpty();
-
-        final BigDecimal minEffectiveDayPrice = listingAvailabilityService.resolveMinEffectiveDayPriceByCar(carId, null);
-        final boolean priceIsVariable = minEffectiveDayPrice != null
-                && listingAvailabilityService.isCarPriceVariableByCar(carId, minEffectiveDayPrice);
-
-        final Locale locale = RequestContextUtils.getLocale(request);
-        final long reviewTotal = reviewService.countReviewsForCar(carId);
-        // Carousel always renders page 0 (it is a "teaser"); the list view respects ?reviewPage.
-        final String reviewsView =
-                REVIEWS_VIEW_LIST.equalsIgnoreCase(reviewsViewParam) ? REVIEWS_VIEW_LIST : REVIEWS_VIEW_CAROUSEL;
-        final int effectiveReviewPage = REVIEWS_VIEW_LIST.equals(reviewsView) ? Math.max(0, reviewPage) : 0;
-        final Page<ListingPublicReview> reviewSource =
-                reviewService.getCarPublicReviews(
-                        carId, effectiveReviewPage, paginationPolicy.getListingPublicReviewsPageSize());
-        final List<ListingReviewRowView> reviewRows = reviewSource.getContent().stream()
-                .map(r -> new ListingReviewRowView(
-                        r.getReviewerForename(),
-                        r.getReviewerSurname(),
-                        WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(r.getCreatedAt(), locale),
-                        r.getRating(),
-                        r.getComment().orElse(""),
-                        r.getImageId().orElse(null)))
-                .collect(Collectors.toList());
-        final Page<ListingReviewRowView> carReviewPage = new Page<>(
-                reviewRows,
-                reviewSource.getCurrentPage(),
-                reviewSource.getPageSize(),
-                reviewSource.getTotalItems());
-
-        final String reviewCountLabel = reviewTotal > 0 ? Long.toString(reviewTotal) : null;
-        final String ratingLabel =
-                reviewTotal > 0 && car.getRatingAvg().isPresent()
-                        ? formatOneDecimal(car.getRatingAvg().get(), locale)
-                        : null;
-
-        final String carTitle = (car.getBrand() != null ? car.getBrand() : "")
-                + (car.getBrand() != null && car.getModel() != null ? " " : "")
-                + (car.getModel() != null ? car.getModel() : "");
-
+        final CarDetailPageModel pageModel = pageOpt.get();
         final ModelAndView mav = new ModelAndView("car/carDetail");
-        mav.addObject("isOwnerRequesting", isOwnerRequesting);
-        mav.addObject("currentUserIsAdmin", currentUserIsAdmin);
-        if (currentUserIsAdmin) {
-            mav.addObject("adminActionForm", new java.util.HashMap<>());
-        }
-        mav.addObject("maxReservationBillableDays", reservationService.getConfiguredMaxReservationBillableDays());
-        mav.addObject("car", car);
-        mav.addObject("carTitle", carTitle);
-        mav.addObject("carMinEffectiveDayPrice", minEffectiveDayPrice);
-        mav.addObject("carPriceIsVariable", priceIsVariable);
-        mav.addObject("carRatingLabel", ratingLabel);
-        mav.addObject("carReviewCountLabel", reviewCountLabel);
-        mav.addObject("carReviewPage", carReviewPage);
-        mav.addObject("reviewsView", reviewsView);
-        mav.addObject("owner", owner);
-        mav.addObject("ownerProfileImageId", ownerProfileImageId);
-        mav.addObject("carGalleryMedia", carGalleryMedia);
-        mav.addObject("hasBookableDays", hasBookableDays);
-        mav.addObject("bookableWallRangesJson", bookableWallRangesJson);
+        pageModel.populateModel(mav::addObject);
+        // Webapp-only concerns that the service deliberately does not know about:
+        final List<VehicleCardView> similarListings = consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
+                pageModel.getSimilarListings(), currentUser == null ? null : currentUser.getId());
+        mav.addObject("similarListings", similarListings);
         mav.addObject("reservationFromDefault", fromDateParam != null ? fromDateParam : "");
         mav.addObject("reservationUntilDefault", untilDateParam != null ? untilDateParam : "");
         mav.addObject("searchNeighborhoodIds", searchNeighborhoodIds != null ? searchNeighborhoodIds : List.of());
-        mav.addObject("similarListings", similarListings);
-        final String similarSearchUrl = "/search?category=" + car.getType().name()
-                + "&transmission=" + car.getTransmission().name()
-                + "&powertrain=" + car.getPowertrain().name();
-        mav.addObject("similarSearchUrl", similarSearchUrl);
-        final boolean carIsFavoritable = currentUser != null && !isOwnerRequesting;
-        mav.addObject("carIsFavoritable", carIsFavoritable);
-        final boolean carIsFavorited = carIsFavoritable
-                && favCarService.isFavorited(car.getId(), currentUser.getId());
-        mav.addObject("carIsFavorited", carIsFavorited);
+        if (currentUserIsAdmin) {
+            mav.addObject("adminActionForm", new java.util.HashMap<>());
+        }
         return mav;
     }
 
@@ -228,71 +97,23 @@ public class CarDetailController {
             @RequestParam("userId") final long userId,
             @RequestParam(name = "carId", required = false) final Long currentCarId,
             @CurrentUser final User viewer) {
-        final Optional<User> counterpartyOpt = userService.getUserById(userId);
-        if (counterpartyOpt.isEmpty()) {
+        // Page model assembly (counterparty header + reviews + active listings + load-more state)
+        // lives in CounterpartyProfileViewService; the controller only redirects on miss and wires
+        // the view-layer card conversion that the JSP demands.
+        final Optional<CounterpartyProfilePageModel> profileOpt =
+                counterpartyProfileViewService.loadPublicCounterpartyProfile(
+                        userId, currentCarId, LocaleContextHolder.getLocale());
+        if (profileOpt.isEmpty()) {
             return new ModelAndView(new RedirectView("/search", true));
         }
-
-        final User counterparty = counterpartyOpt.get();
-        final Locale locale = LocaleContextHolder.getLocale();
-        final DateTimeFormatter memberSinceFormatter = DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale);
-        final BigDecimal averageRating = reviewService.getAverageRatingForCounterparty(counterparty.getId(), true);
-        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
-                counterparty.getId(),
-                true,
-                presentationLimitsPolicy.getCounterpartyRecentReviewsLimit());
-        final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
-                counterparty.getForename() + " " + counterparty.getSurname(),
-                counterparty.getForename(),
-                counterparty.getSurname(),
-                null,
-                averageRating,
-                0L,
-                counterparty.getAbout().map(String::trim).orElse(null),
-                counterparty.getMemberSince().orElse(null),
-                counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
-                counterparty.getProfilePictureId().orElse(null));
-        final int counterpartyListingsPageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
-        final OwnerCarSearchCriteria counterpartyCriteria = new OwnerCarSearchCriteria(
-                counterparty.getId(), 0, counterpartyListingsPageSize,
-                List.of("active"), null, null, null, null, null, null, null,
-                "rating", "desc", currentCarId);
-        final Page<CarCard> ownerActiveListingsPage = carService.getOwnerCarCards(counterpartyCriteria);
+        final CounterpartyProfilePageModel profile = profileOpt.get();
+        final ModelAndView mav = new ModelAndView("profile/counterpartyProfile");
+        profile.populateModel(mav::addObject);
         final List<VehicleCardView> counterpartyActiveListings =
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
-                        ownerActiveListingsPage.getContent(), viewer == null ? null : viewer.getId());
-        final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
-                CounterpartyActiveListingsLoadMore.of(
-                        ownerActiveListingsPage.isHasNext(),
-                        counterparty.getId(),
-                        currentCarId,
-                        1,
-                        counterpartyListingsPageSize);
-
-        final ModelAndView mav = new ModelAndView("profile/counterpartyProfile");
-        mav.addObject("activeTab", "explore");
-        mav.addObject("counterpartyForename", headerDto.getForename());
-        mav.addObject("counterpartySurname", headerDto.getSurname());
-        mav.addObject("counterpartyAbout", headerDto.getAbout().orElse(""));
-        mav.addObject("counterpartyProfileImageId", headerDto.getProfileImageId().orElse(null));
-        mav.addObject("counterpartyMemberSinceDisplay", headerDto.getMemberSinceDisplay().orElse(null));
-        final BigDecimal avgRating = headerDto.getAverageRating();
-        mav.addObject("counterpartyAverageRating", avgRating);
-        mav.addObject(
-                "counterpartyRatingFloor",
-                avgRating != null ? avgRating.longValue() : 0L);
-        mav.addObject(
-                "counterpartyLicenseValidated",
-                counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent());
-        mav.addObject(
-                "counterpartyIdentityValidated",
-                counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent());
-        mav.addObject(
-                "recentReviewComments",
-                recentReviewItems);
-        mav.addObject("showCounterpartyActiveListings", true);
+                        profile.getActiveOwnerCarCards(), viewer == null ? null : viewer.getId());
         mav.addObject("counterpartyActiveListings", counterpartyActiveListings);
-        mav.addObject("counterpartyActiveListingsLoadMore", counterpartyActiveListingsLoadMore);
+        mav.addObject("activeTab", "explore");
         return mav;
     }
 
@@ -306,28 +127,22 @@ public class CarDetailController {
             @RequestParam("page") final int page,
             @CurrentUser final User viewer,
             final HttpServletResponse response) {
-        if (page < 1) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        final Optional<CounterpartyActiveListingsFragment> fragmentOpt =
+                counterpartyProfileViewService.loadCounterpartyActiveListingsPage(userId, excludeCarId, page);
+        if (fragmentOpt.isEmpty()) {
+            // Service rejected the request: bad page number or unknown user. Mirror the previous
+            // controller-side behaviour for the two error responses.
+            response.setStatus(page < 1 ? HttpServletResponse.SC_BAD_REQUEST : HttpServletResponse.SC_NOT_FOUND);
             return emptyCounterpartyListingsFragment();
         }
-        if (userService.getUserById(userId).isEmpty()) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return emptyCounterpartyListingsFragment();
-        }
-
-        final int pageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
-        final OwnerCarSearchCriteria pageCriteria = new OwnerCarSearchCriteria(
-                userId, page, pageSize,
-                List.of("active"), null, null, null, null, null, null, null,
-                "rating", "desc", excludeCarId);
-        final Page<CarCard> listingPage = carService.getOwnerCarCards(pageCriteria);
+        final CounterpartyActiveListingsFragment fragment = fragmentOpt.get();
         final List<VehicleCardView> cards =
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
-                        listingPage.getContent(), viewer == null ? null : viewer.getId());
+                        fragment.getCards(), viewer == null ? null : viewer.getId());
         final ModelAndView mav = new ModelAndView("profile/counterpartyActiveListingCols");
         mav.addObject("counterpartyActiveListings", cards);
-        mav.addObject("fragmentHasMore", listingPage.isHasNext());
-        mav.addObject("fragmentNextPage", listingPage.isHasNext() ? page + 1 : page);
+        mav.addObject("fragmentHasMore", fragment.isHasMore());
+        mav.addObject("fragmentNextPage", fragment.getNextPage());
         return mav;
     }
 
@@ -337,13 +152,6 @@ public class CarDetailController {
         mav.addObject("fragmentHasMore", false);
         mav.addObject("fragmentNextPage", 0);
         return mav;
-    }
-
-    private static String formatOneDecimal(final BigDecimal value, final Locale locale) {
-        final NumberFormat nf = NumberFormat.getNumberInstance(locale != null ? locale : Locale.ENGLISH);
-        nf.setMinimumFractionDigits(1);
-        nf.setMaximumFractionDigits(1);
-        return nf.format(value);
     }
 
 }

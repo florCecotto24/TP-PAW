@@ -43,6 +43,12 @@ public interface UserDao {
 
     void updateLatestLocale(long userId, String localeTag);
 
+    /** Persists the user's average rating as rider; {@code null} clears the value. */
+    void updateRatingAsRider(long userId, java.math.BigDecimal average);
+
+    /** Persists the user's average rating as owner; {@code null} clears the value. */
+    void updateRatingAsOwner(long userId, java.math.BigDecimal average);
+
     List<String> findRoleNamesForUser(long userId);
 
     void promoteToAdmin(long userId, Long assignedByUserId);

@@ -9,7 +9,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.MaxFileSize;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
+import ar.edu.itba.paw.webapp.validation.support.ProfileDocumentFileSizeLimitProvider;
 
 /** Step 1 of the two-step publish flow: vehicle attributes and pictures only. */
 public final class PublishCarForm {
@@ -56,7 +58,16 @@ public final class PublishCarForm {
     @Size(max = 8, message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
 
-    /** Optional insurance document; if missing, the car is created in {@link Car.Status#LACK_DOC}. */
+    /**
+     * Optional insurance document; if missing, the car is created in {@link Car.Status#LACK_DOC}.
+     * {@link MaxFileSize} resolves the upper bound at runtime via the
+     * {@link ProfileDocumentFileSizeLimitProvider} bean so the size cap stays sourced from
+     * {@code app.upload.max-profile-document-megabytes} (no duplicated literal here).
+     */
+    @MaxFileSize(
+            sizeProvider = ProfileDocumentFileSizeLimitProvider.class,
+            message = "{car.insurance.tooLarge}",
+            groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile insuranceFile;
 
     public String getBrand() {

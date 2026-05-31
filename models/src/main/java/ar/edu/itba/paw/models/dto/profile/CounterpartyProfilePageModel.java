@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 
 /**
  * Model attributes for the {@code counterpartyProfile} JSP; built in the service layer.
@@ -77,6 +77,11 @@ public final class CounterpartyProfilePageModel {
         putObject.accept("counterpartyProfileImageId", counterpartyProfileImageId);
         putObject.accept("counterpartyMemberSinceDisplay", counterpartyMemberSinceDisplay);
         putObject.accept("counterpartyAverageRating", counterpartyAverageRating);
+        // Star floor used by counterpartyProfileHeader.tag for half-star rendering. Centralised
+        // here so callers do not each compute `avg.longValue()` themselves.
+        putObject.accept(
+                "counterpartyRatingFloor",
+                counterpartyAverageRating != null ? counterpartyAverageRating.longValue() : 0L);
         putObject.accept("counterpartyLicenseValidated", counterpartyLicenseValidated);
         putObject.accept("counterpartyIdentityValidated", counterpartyIdentityValidated);
         putObject.accept("recentReviewComments", recentReviewComments);

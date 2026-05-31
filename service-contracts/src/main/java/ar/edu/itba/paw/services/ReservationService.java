@@ -9,8 +9,8 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.ReservationCard;
-import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
 /**
  * Reservation lifecycle, pricing, participant checks, and mail side effects. The implementation uses only

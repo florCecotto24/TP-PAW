@@ -1,9 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,12 +23,13 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.ReservationCard;
-import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.persistence.ReservationDao;
 
 @Transactional(readOnly = true)
@@ -40,8 +39,21 @@ public class ReservationJpaDao implements ReservationDao {
     private static final List<Reservation.Status> BLOCKING_STATUSES = Arrays.asList(
             Reservation.Status.PENDING, Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
 
+    private final CarPictureDao carPictureDao;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ReservationJpaDao(final CarPictureDao carPictureDao) {
+        this.carPictureDao = carPictureDao;
+    }
+
     private static final List<Reservation.Status> REFUND_ELIGIBLE_CANCELLED_STATUSES = Arrays.asList(
             Reservation.Status.CANCELLED_BY_OWNER, Reservation.Status.CANCELLED_BY_RIDER);
+
+    private static final List<Reservation.Status> RETURN_EMAIL_ACTIVE_STATUSES = Arrays.asList(
+            Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
+
+    private static final List<Reservation.Status> RIDER_REVIEW_INVITE_STATUSES = Arrays.asList(
+            Reservation.Status.ACCEPTED, Reservation.Status.STARTED, Reservation.Status.FINISHED);
 
     @PersistenceContext
     private EntityManager em;
@@ -157,7 +169,7 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public Optional<Reservation> getOwnerReservationById(final long ownerId, final long reservationId) {
         return em.createQuery(
-                        "SELECT r FROM Reservation r "
+                        "FROM Reservation r "
                                 + "WHERE r.id = :reservationId AND r.car.owner.id = :ownerId",
                         Reservation.class)
                 .setParameter("reservationId", reservationId)
@@ -183,15 +195,14 @@ public class ReservationJpaDao implements ReservationDao {
         listParams.put("riderId", criteria.getRiderId());
         listParams.put("limit", pageSize);
         listParams.put("offset", offset);
-        final StringBuilder listSql = new StringBuilder(reservationCardSelectSql()
-                + "FROM reservations r "
+        final StringBuilder idSql = new StringBuilder(
+                "SELECT r.id FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
-                + reservationCardCatalogJoins()
                 + "WHERE r.rider_id = :riderId ");
-        appendReservationFilters(listSql, listParams, criteria);
-        listSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
-               .append(" LIMIT :limit OFFSET :offset");
-        final List<ReservationCard> content = runReservationCardNativeQuery(listSql.toString(), listParams);
+        appendReservationFilters(idSql, listParams, criteria);
+        idSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+             .append(" LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql.toString(), listParams);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
     }
 
@@ -224,15 +235,14 @@ public class ReservationJpaDao implements ReservationDao {
         listParams.put("ownerId", criteria.getOwnerId());
         listParams.put("limit", pageSize);
         listParams.put("offset", offset);
-        final StringBuilder listSql = new StringBuilder(reservationCardSelectSql()
-                + "FROM reservations r "
+        final StringBuilder idSql = new StringBuilder(
+                "SELECT r.id FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
-                + reservationCardCatalogJoins()
                 + "WHERE c.owner_id = :ownerId ");
-        appendReservationFilters(listSql, listParams, criteria);
-        listSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
-               .append(" LIMIT :limit OFFSET :offset");
-        final List<ReservationCard> content = runReservationCardNativeQuery(listSql.toString(), listParams);
+        appendReservationFilters(idSql, listParams, criteria);
+        idSql.append("ORDER BY ").append(buildReservationOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+             .append(" LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql.toString(), listParams);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
     }
 
@@ -274,35 +284,33 @@ public class ReservationJpaDao implements ReservationDao {
         listParams.put("carId", carId);
         listParams.put("limit", pageSize);
         listParams.put("offset", offset);
-        final StringBuilder listSql = new StringBuilder(reservationCardSelectSql()
-                + "FROM reservations r "
+        final StringBuilder idSql = new StringBuilder(
+                "SELECT r.id FROM reservations r "
                 + "JOIN cars c ON c.id = r.car_id "
-                + reservationCardCatalogJoins()
                 + "WHERE c.owner_id = :ownerId AND r.car_id = :carId ");
         if (statusFilter != null) {
-            listSql.append("AND LOWER(r.status) = :statusFilter ");
+            idSql.append("AND LOWER(r.status) = :statusFilter ");
             listParams.put("statusFilter", statusFilter);
         }
-        listSql.append("ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset");
-        final List<ReservationCard> content = runReservationCardNativeQuery(listSql.toString(), listParams);
+        idSql.append("ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset");
+        final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql.toString(), listParams);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
     }
 
     @Override
     public Map<String, Long> countCarReservationsByStatus(final long ownerId, final long carId) {
-        @SuppressWarnings("unchecked")
-        final List<Object[]> rows = em.createNativeQuery(
-                        "SELECT LOWER(r.status) AS status, COUNT(*) AS cnt "
-                                + "FROM reservations r "
-                                + "JOIN cars c ON c.id = r.car_id "
-                                + "WHERE c.owner_id = :ownerId AND r.car_id = :carId "
-                                + "GROUP BY LOWER(r.status)")
+        final List<Object[]> rows = em.createQuery(
+                        "SELECT r.status, COUNT(r) FROM Reservation r "
+                                + "WHERE r.car.id = :carId AND r.car.owner.id = :ownerId "
+                                + "GROUP BY r.status",
+                        Object[].class)
                 .setParameter("ownerId", ownerId)
                 .setParameter("carId", carId)
                 .getResultList();
         final Map<String, Long> result = new LinkedHashMap<>();
         for (final Object[] row : rows) {
-            result.put((String) row[0], ((Number) row[1]).longValue());
+            final Reservation.Status status = (Reservation.Status) row[0];
+            result.put(status.name().toLowerCase(Locale.ROOT), ((Number) row[1]).longValue());
         }
         return result;
     }
@@ -313,14 +321,17 @@ public class ReservationJpaDao implements ReservationDao {
         if (statuses == null || statuses.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        final Object result = em.createNativeQuery(
-                        "SELECT COALESCE(SUM(r.total_price), 0) FROM reservations r "
-                                + "JOIN cars c ON c.id = r.car_id "
-                                + "WHERE c.owner_id = :ownerId AND r.car_id = :carId "
-                                + "AND LOWER(r.status) IN (:statuses)")
+        final List<Reservation.Status> statusEnums = new ArrayList<>(statuses.size());
+        for (final String s : statuses) {
+            statusEnums.add(Reservation.Status.valueOf(s.toUpperCase(Locale.ROOT)));
+        }
+        final Object result = em.createQuery(
+                        "SELECT COALESCE(SUM(r.totalPrice), 0) FROM Reservation r "
+                                + "WHERE r.car.id = :carId AND r.car.owner.id = :ownerId "
+                                + "AND r.status IN :statuses")
                 .setParameter("ownerId", ownerId)
                 .setParameter("carId", carId)
-                .setParameter("statuses", statuses)
+                .setParameter("statuses", statusEnums)
                 .getSingleResult();
         if (result == null) {
             return BigDecimal.ZERO;
@@ -369,7 +380,7 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public List<Reservation> findCarFinishedReservations(final long ownerId, final long carId) {
         return em.createQuery(
-                        "SELECT r FROM Reservation r "
+                        "FROM Reservation r "
                                 + "WHERE r.car.owner.id = :ownerId AND r.car.id = :carId "
                                 + "AND r.status = :status",
                         Reservation.class)
@@ -392,46 +403,49 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsForReturnReminderEmail(final OffsetDateTime now, final int hoursBeforeCheckout) {
         final OffsetDateTime windowEnd = now.plusHours(hoursBeforeCheckout);
-        return em.createNativeQuery(
-                        "SELECT * FROM reservations r "
-                                + "WHERE LOWER(r.status) IN ('accepted','started') "
-                                + "AND r.return_reminder_email_sent = FALSE "
-                                + "AND r.end_date > :now "
-                                + "AND r.end_date <= :windowEnd",
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.status IN :statuses "
+                                + "AND r.returnReminderEmailSent = FALSE "
+                                + "AND r.endDate > :now "
+                                + "AND r.endDate <= :windowEnd",
                         Reservation.class)
-                .setParameter("now", toTimestamp(now))
-                .setParameter("windowEnd", toTimestamp(windowEnd))
+                .setParameter("statuses", RETURN_EMAIL_ACTIVE_STATUSES)
+                .setParameter("now", now)
+                .setParameter("windowEnd", windowEnd)
                 .getResultList();
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsForReturnCheckoutEmail(final OffsetDateTime now) {
-        return em.createNativeQuery(
-                        "SELECT * FROM reservations r "
-                                + "WHERE LOWER(r.status) IN ('accepted','started') "
-                                + "AND r.return_checkout_email_sent = FALSE "
-                                + "AND r.car_returned = FALSE "
-                                + "AND r.end_date <= :now",
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.status IN :statuses "
+                                + "AND r.returnCheckoutEmailSent = FALSE "
+                                + "AND r.carReturned = FALSE "
+                                + "AND r.endDate <= :now",
                         Reservation.class)
-                .setParameter("now", toTimestamp(now))
+                .setParameter("statuses", RETURN_EMAIL_ACTIVE_STATUSES)
+                .setParameter("now", now)
                 .getResultList();
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsForRiderReviewInviteEmail(final OffsetDateTime now) {
-        return em.createNativeQuery(
-                        "SELECT r.* FROM reservations r "
-                                + "WHERE LOWER(r.status) IN ('accepted','started','finished') "
-                                + "AND r.rider_review_invite_email_sent = FALSE "
-                                + "AND r.end_date < :now "
-                                + "AND NOT EXISTS (SELECT 1 FROM reviews rv WHERE rv.reservation_id = r.id AND rv.made_by_rider = TRUE)",
+        // NOT EXISTS sub-query navigates the Review entity (no native join to the reviews table).
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.status IN :statuses "
+                                + "AND r.riderReviewInviteEmailSent = FALSE "
+                                + "AND r.endDate < :now "
+                                + "AND NOT EXISTS ("
+                                + "  SELECT 1 FROM Review rv "
+                                + "  WHERE rv.reservation = r AND rv.id.madeByRider = TRUE)",
                         Reservation.class)
-                .setParameter("now", toTimestamp(now))
+                .setParameter("statuses", RIDER_REVIEW_INVITE_STATUSES)
+                .setParameter("now", now)
                 .getResultList();
     }
 
@@ -472,18 +486,17 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsWithDuePendingPaymentProof(final OffsetDateTime now) {
         final int leadHours = Math.max(1, paymentProofReminderLeadHours);
         final OffsetDateTime windowEnd = now.plusHours(leadHours);
-        return em.createNativeQuery(
-                        "SELECT * FROM reservations r "
-                                + "WHERE r.payment_proof_deadline_at IS NOT NULL "
-                                + "AND r.payment_proof_deadline_at <= :windowEnd "
-                                + "AND r.payment_receipt_file_id IS NULL "
-                                + "AND r.pending_paymentproof_email_sent = FALSE",
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.paymentProofDeadlineAt IS NOT NULL "
+                                + "AND r.paymentProofDeadlineAt <= :windowEnd "
+                                + "AND r.paymentReceiptFile IS NULL "
+                                + "AND r.pendingPaymentproofEmailSent = FALSE",
                         Reservation.class)
-                .setParameter("windowEnd", toTimestamp(windowEnd))
+                .setParameter("windowEnd", windowEnd)
                 .getResultList();
     }
 
@@ -540,20 +553,20 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public List<Reservation> findReservationsWithDuePendingRefundProof(final OffsetDateTime now) {
         final int leadHours = Math.max(1, paymentProofReminderLeadHours);
         final OffsetDateTime windowEnd = now.plusHours(leadHours);
-        return em.createNativeQuery(
-                        "SELECT * FROM reservations r "
-                                + "WHERE r.payment_refund_required = TRUE "
-                                + "AND r.payment_refund_receipt_file_id IS NULL "
-                                + "AND r.refund_proof_deadline_at IS NOT NULL "
-                                + "AND r.refund_proof_deadline_at <= :windowEnd "
-                                + "AND r.pending_refund_email_sent = FALSE "
-                                + "AND LOWER(TRIM(r.status)) IN ('cancelled_by_owner', 'cancelled_by_rider')",
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.paymentRefundRequired = TRUE "
+                                + "AND r.paymentRefundReceiptFile IS NULL "
+                                + "AND r.refundProofDeadlineAt IS NOT NULL "
+                                + "AND r.refundProofDeadlineAt <= :windowEnd "
+                                + "AND r.pendingRefundEmailSent = FALSE "
+                                + "AND r.status IN :statuses",
                         Reservation.class)
-                .setParameter("windowEnd", toTimestamp(windowEnd))
+                .setParameter("windowEnd", windowEnd)
+                .setParameter("statuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
                 .getResultList();
     }
 
@@ -573,7 +586,7 @@ public class ReservationJpaDao implements ReservationDao {
     public List<Reservation> findReservationsWithOverdueRefundProof(final OffsetDateTime now) {
         // JOIN FETCH car + owner so callers can group by owner and read profile fields without N+1.
         return em.createQuery(
-                        "SELECT r FROM Reservation r "
+                        "FROM Reservation r "
                                 + "JOIN FETCH r.car c "
                                 + "JOIN FETCH c.owner "
                                 + "WHERE r.paymentRefundRequired = TRUE "
@@ -606,35 +619,16 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
-        final String countSql = "SELECT COUNT(*) FROM reservations";
-        final Number total = (Number) em.createNativeQuery(countSql).getSingleResult();
-        final String listSql = reservationCardSelectSql()
-                + "FROM reservations r "
-                + "JOIN cars c ON c.id = r.car_id "
-                + reservationCardCatalogJoins()
-                + "ORDER BY r.created_at DESC "
-                + "LIMIT :limit OFFSET :offset";
+        final Number total = (Number) em.createQuery("SELECT COUNT(r) FROM Reservation r").getSingleResult();
+        final String idSql = "SELECT r.id FROM reservations r ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset";
         final Map<String, Object> params = new java.util.LinkedHashMap<>();
         params.put("limit", pageSize);
         params.put("offset", page * pageSize);
-        final List<ReservationCard> content = runReservationCardNativeQuery(listSql, params);
+        final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql, params);
         return new Page<>(content, page, pageSize, total != null ? total.longValue() : 0L);
     }
 
     // ---- SQL helpers ----
-
-    private static String reservationCardSelectSql() {
-        return "SELECT r.id AS reservation_id, c.id AS car_id, r.start_date, r.end_date, r.status, "
-                + "cb.name AS brand, cm.name AS model, r.total_price, "
-                + "(SELECT cp.image_id FROM car_pictures cp WHERE cp.car_id = c.id "
-                +    "ORDER BY cp.display_order ASC LIMIT 1) AS image_id ";
-    }
-
-    /** Joins required by {@link #reservationCardSelectSql()} (brand/model display columns). */
-    private static String reservationCardCatalogJoins() {
-        return "LEFT JOIN car_models cm ON cm.id = c.model_id "
-                + "LEFT JOIN car_brands cb ON cb.id = cm.brand_id ";
-    }
 
     private static void appendReservationFilters(
             final StringBuilder sql,
@@ -715,45 +709,56 @@ public class ReservationJpaDao implements ReservationDao {
         return raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
-    @SuppressWarnings("unchecked")
-    private List<ReservationCard> runReservationCardNativeQuery(final String sql, final Map<String, Object> params) {
-        final List<Object[]> rows = bindParams(em.createNativeQuery(sql), params).getResultList();
-        final List<ReservationCard> result = new ArrayList<>(rows.size());
-        for (final Object[] row : rows) {
-            result.add(mapReservationCard(row));
+    /**
+     * Real "1+1" pattern: a NATIVE query selects just the reservation IDs (the only place where
+     * pagination forces native SQL because we need to keep dialect-specific {@code LIMIT/OFFSET}
+     * and the filter SQL), and then JPQL with {@code JOIN FETCH} hydrates each {@link Reservation}
+     * along with its catalog associations. The cover image is asked to {@link CarPictureDao} so
+     * this DAO does not touch the {@code car_pictures} table itself.
+     */
+    private List<ReservationCard> loadReservationCardsByIdNativeQuery(
+            final String idSql, final Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        final List<Number> rawIds = bindParams(em.createNativeQuery(idSql), params).getResultList();
+        if (rawIds.isEmpty()) {
+            return List.of();
         }
-        return result;
-    }
-
-    private static ReservationCard mapReservationCard(final Object[] row) {
-        final long reservationId = ((Number) row[0]).longValue();
-        final long carId = ((Number) row[1]).longValue();
-        final OffsetDateTime startDate = toOffsetDateTime(row[2]);
-        final OffsetDateTime endDate = toOffsetDateTime(row[3]);
-        final String statusStr = (String) row[4];
-        final Reservation.Status status = Reservation.Status.valueOf(statusStr.toUpperCase());
-        final String brand = (String) row[5];
-        final String model = (String) row[6];
-        final BigDecimal totalPrice = (BigDecimal) row[7];
-        final Object rawImageId = row[8];
-        final long imageId = rawImageId == null ? 0L : ((Number) rawImageId).longValue();
-        return new ReservationCard(reservationId, carId, brand, model, totalPrice, imageId, startDate, endDate, status);
-    }
-
-    private static Timestamp toTimestamp(final OffsetDateTime odt) {
-        if (odt == null) {
-            return null;
+        final List<Long> orderedIds = new ArrayList<>(rawIds.size());
+        for (final Number n : rawIds) {
+            orderedIds.add(n.longValue());
         }
-        return Timestamp.from(odt.toInstant());
-    }
-
-    private static OffsetDateTime toOffsetDateTime(final Object o) {
-        if (o instanceof OffsetDateTime) {
-            return ((OffsetDateTime) o).withOffsetSameInstant(ZoneOffset.UTC);
+        final List<Reservation> reservations = em.createQuery(
+                        "FROM Reservation r "
+                                + "JOIN FETCH r.car c "
+                                + "LEFT JOIN FETCH c.carModel cm "
+                                + "LEFT JOIN FETCH cm.brand "
+                                + "WHERE r.id IN :ids",
+                        Reservation.class)
+                .setParameter("ids", orderedIds)
+                .getResultList();
+        final Map<Long, Reservation> byId = new HashMap<>(reservations.size());
+        final java.util.LinkedHashSet<Long> carIds = new java.util.LinkedHashSet<>(reservations.size());
+        for (final Reservation r : reservations) {
+            byId.put(r.getId(), r);
+            carIds.add(r.getCar().getId());
         }
-        if (o instanceof Timestamp) {
-            return ((Timestamp) o).toInstant().atOffset(ZoneOffset.UTC);
+        final Map<Long, Long> coverByCar = carPictureDao.findCoverImageIdsByCarIds(carIds);
+        final List<ReservationCard> cards = new ArrayList<>(orderedIds.size());
+        for (final Long id : orderedIds) {
+            final Reservation r = byId.get(id);
+            if (r == null) {
+                continue;
+            }
+            final Car c = r.getCar();
+            final CarModel model = c.getCarModel().orElse(null);
+            final String brandName = model == null || model.getBrand() == null ? null : model.getBrand().getName();
+            final String modelName = model == null ? null : model.getName();
+            final long imageId = coverByCar.getOrDefault(c.getId(), 0L);
+            cards.add(new ReservationCard(
+                    r.getId(), c.getId(), brandName, modelName,
+                    r.getTotalPrice(), imageId,
+                    r.getStartDate(), r.getEndDate(), r.getStatus()));
         }
-        return OffsetDateTime.parse(o.toString());
+        return cards;
     }
 }

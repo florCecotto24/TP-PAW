@@ -16,7 +16,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.FavoriteValidationException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.FavCarDao;
 
@@ -126,24 +126,25 @@ class FavCarServiceImplTest {
     }
 
     @Test
-    void testFindMyFavoritesReturnsPageWithDaoContentTotalAndRequestedCoordinates() {
-        // 1. Arrange
+    void testFindMyFavoritesDelegatesPaginationToDao() {
+        // 1. Arrange — pagination (offset/limit + total count) lives in the DAO; the service
+        // is now a thin delegator that returns whatever the DAO produces.
         final CarCard card = CarCard.builder()
                 .carId(CAR_ID)
                 .brand("Toyota")
                 .model("Etios")
                 .status(Car.Status.ACTIVE)
                 .build();
-        Mockito.when(favCarDao.countFavoriteCars(Mockito.anyLong(), Mockito.anyCollection()))
-                .thenReturn(1L);
-        Mockito.when(favCarDao.findFavoriteCarCardsWindow(
+        final Page<CarCard> daoPage = new Page<>(List.of(card), 0, 10, 1L);
+        Mockito.when(favCarDao.findFavoriteCarCards(
                 Mockito.anyLong(), Mockito.anyCollection(), Mockito.anyInt(), Mockito.anyInt()))
-                .thenReturn(List.of(card));
+                .thenReturn(daoPage);
 
         // 2. Act
         final Page<CarCard> page = service.findMyFavorites(OTHER_USER_ID, 0, 10);
 
-        // 3. Assert
+        // 3. Assert — service returns DAO page as-is.
+        Assertions.assertSame(daoPage, page);
         Assertions.assertEquals(List.of(card), page.getContent());
         Assertions.assertEquals(1L, page.getTotalItems());
         Assertions.assertEquals(0, page.getCurrentPage());
@@ -151,37 +152,20 @@ class FavCarServiceImplTest {
     }
 
     @Test
-    void testFindMyFavoritesClampsNegativePageToZero() {
-        // 1. Arrange
-        Mockito.when(favCarDao.countFavoriteCars(Mockito.anyLong(), Mockito.anyCollection()))
-                .thenReturn(0L);
-        Mockito.when(favCarDao.findFavoriteCarCardsWindow(
+    void testFindMyFavoritesForwardsRawPageCoordinatesToDao() {
+        // 1. Arrange — page bounds checks (negative page, zero page size) are the DAO's
+        // responsibility. The service must pass the raw coordinates straight through.
+        final Page<CarCard> daoPage = new Page<>(List.of(), 0, 10, 0L);
+        Mockito.when(favCarDao.findFavoriteCarCards(
                 Mockito.anyLong(), Mockito.anyCollection(), Mockito.anyInt(), Mockito.anyInt()))
-                .thenReturn(List.of());
+                .thenReturn(daoPage);
 
         // 2. Act
-        final Page<CarCard> page = service.findMyFavorites(OTHER_USER_ID, -3, 10);
+        service.findMyFavorites(OTHER_USER_ID, -3, 0);
 
-        // 3. Assert
-        Assertions.assertEquals(0, page.getCurrentPage());
-        Assertions.assertEquals(10, page.getPageSize());
-    }
-
-    @Test
-    void testFindMyFavoritesClampsNonPositivePageSizeToOne() {
-        // 1. Arrange
-        Mockito.when(favCarDao.countFavoriteCars(Mockito.anyLong(), Mockito.anyCollection()))
-                .thenReturn(0L);
-        Mockito.when(favCarDao.findFavoriteCarCardsWindow(
-                Mockito.anyLong(), Mockito.anyCollection(), Mockito.anyInt(), Mockito.anyInt()))
-                .thenReturn(List.of());
-
-        // 2. Act
-        final Page<CarCard> page = service.findMyFavorites(OTHER_USER_ID, 0, 0);
-
-        // 3. Assert
-        Assertions.assertEquals(0, page.getCurrentPage());
-        Assertions.assertEquals(1, page.getPageSize());
+        // 3. Assert — service did not pre-clamp before delegating; the DAO sees the request as-is.
+        Mockito.verify(favCarDao).findFavoriteCarCards(
+                Mockito.eq(OTHER_USER_ID), Mockito.anyCollection(), Mockito.eq(-3), Mockito.eq(0));
     }
 
     @Test

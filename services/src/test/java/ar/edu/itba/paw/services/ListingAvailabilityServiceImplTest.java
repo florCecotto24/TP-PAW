@@ -17,10 +17,10 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.car.CarValidationException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
-import ar.edu.itba.paw.models.dto.BookableSegmentProjection;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
@@ -140,7 +140,7 @@ public class ListingAvailabilityServiceImplTest {
     }
 
     private static Instant farFutureInstant(final LocalDate baseDay) {
-        return ZonedDateTime.of(baseDay.minusDays(10), LocalTime.of(0, 0), AvailabilityPeriod.WALL_ZONE).toInstant();
+        return ZonedDateTime.of(baseDay.minusDays(10), LocalTime.of(0, 0), AppTimezone.WALL_ZONE).toInstant();
     }
 
     @Test

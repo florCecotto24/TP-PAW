@@ -22,7 +22,7 @@ public final class RefundProofOverdueSweepScheduler {
 
     @Scheduled(
             cron = "${app.scheduler.refund-proof-overdue-sweep.cron:0 5/15 * * * ?}",
-            zone = "${app.scheduler.refund-proof-overdue-sweep.zone:America/Argentina/Buenos_Aires}")
+            zone = "${app.scheduler.refund-proof-overdue-sweep.zone:${app.scheduler.default-zone}}")
     public void sweepRefundOverdueAndBlockOwners() {
         reservationService.sweepRefundOverdueAndBlockOwners();
     }

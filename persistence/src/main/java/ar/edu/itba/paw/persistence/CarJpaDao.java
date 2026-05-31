@@ -24,15 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarModel;
-import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
-import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 
@@ -40,7 +39,7 @@ import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 @Repository
 public class CarJpaDao implements CarDao {
 
-    private static final ZoneId WALL_ZONE = AvailabilityPeriod.WALL_ZONE;
+    private static final ZoneId WALL_ZONE = AppTimezone.WALL_ZONE;
 
     /**
      * Hides cars whose owner has the {@code blocked} flag set from every public/browse query
@@ -52,6 +51,16 @@ public class CarJpaDao implements CarDao {
 
     @PersistenceContext
     private EntityManager em;
+
+    private final CarPictureDao carPictureDao;
+    private final ListingAvailabilityDao listingAvailabilityDao;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CarJpaDao(final CarPictureDao carPictureDao,
+                     final ListingAvailabilityDao listingAvailabilityDao) {
+        this.carPictureDao = carPictureDao;
+        this.listingAvailabilityDao = listingAvailabilityDao;
+    }
 
     @Override
     @Transactional
@@ -155,20 +164,8 @@ public class CarJpaDao implements CarDao {
     }
 
     private Map<Long, Long> loadCoverImageIdByCarIds(final Collection<Long> carIds) {
-        if (carIds.isEmpty()) {
-            return Map.of();
-        }
-        final List<CarPicture> pictures = bindParams(em.createQuery(
-                "FROM CarPicture cp WHERE cp.car.id IN :carIds ORDER BY cp.car.id ASC, cp.displayOrder ASC",
-                CarPicture.class), Map.of("carIds", carIds)).getResultList();
-        final Map<Long, Long> result = new HashMap<>();
-        for (final CarPicture picture : pictures) {
-            if (picture.getImageId() == null) {
-                continue;
-            }
-            result.putIfAbsent(picture.getCar().getId(), picture.getImageId());
-        }
-        return result;
+        // Pictures belong to CarPicture, so we delegate ownership of that query to its DAO.
+        return carPictureDao.findCoverImageIdsByCarIds(carIds);
     }
 
     // -------------------------------------------------------------------------
@@ -213,11 +210,15 @@ public class CarJpaDao implements CarDao {
         }
         if (!criteria.getTransmissions().isEmpty()) {
             jpql.append("AND c.transmission IN (:ownerTransmissions) ");
-            params.put("ownerTransmissions", criteria.getTransmissions());
+            params.put("ownerTransmissions", criteria.getTransmissions().stream()
+                    .map(s -> Car.Transmission.valueOf(s.toUpperCase()))
+                    .collect(Collectors.toList()));
         }
         if (!criteria.getPowertrains().isEmpty()) {
             jpql.append("AND c.powertrain IN (:ownerPowertrains) ");
-            params.put("ownerPowertrains", criteria.getPowertrains());
+            params.put("ownerPowertrains", criteria.getPowertrains().stream()
+                    .map(s -> Car.Powertrain.valueOf(s.toUpperCase()))
+                    .collect(Collectors.toList()));
         }
         if (criteria.getMinPrice() != null || criteria.getMaxPrice() != null) {
             params.put("ownerOfferedKind", ar.edu.itba.paw.models.domain.ListingAvailability.Kind.OFFERED);
@@ -417,6 +418,16 @@ public class CarJpaDao implements CarDao {
     }
 
     @Override
+    @Transactional
+    public void updateRatingAvg(final long carId, final BigDecimal average) {
+        final Car car = em.find(Car.class, carId);
+        if (car != null) {
+            car.setRatingAvg(average);
+            car.setUpdatedAt(OffsetDateTime.now());
+        }
+    }
+
+    @Override
     public List<CarCard> findSimilarCarCards(
             final long carId,
             final int limit,
@@ -469,43 +480,16 @@ public class CarJpaDao implements CarDao {
         final List<Long> idLongs = ids.stream().map(Number::longValue).collect(Collectors.toList());
         @SuppressWarnings("unchecked")
         final List<Car> cars = em.createQuery(
-                        "SELECT c FROM Car c LEFT JOIN FETCH c.carModel cm LEFT JOIN FETCH cm.brand "
+                        "FROM Car c LEFT JOIN FETCH c.carModel cm LEFT JOIN FETCH cm.brand "
                         + "WHERE c.id IN :ids", Car.class)
                 .setParameter("ids", idLongs)
                 .getResultList();
 
         final Map<Long, Car> carById = cars.stream().collect(Collectors.toMap(Car::getId, Function.identity()));
 
-        // Load first image per car
-        @SuppressWarnings("unchecked")
-        final List<Object[]> imgRows = em.createNativeQuery(
-                        "SELECT cp.car_id, cp.image_id FROM car_pictures cp "
-                                + "INNER JOIN ("
-                                + "  SELECT car_id, MIN(display_order) AS min_order FROM car_pictures "
-                                + "  WHERE image_id IS NOT NULL GROUP BY car_id"
-                                + ") first ON first.car_id = cp.car_id AND first.min_order = cp.display_order "
-                                + "WHERE cp.car_id IN :ids AND cp.image_id IS NOT NULL")
-                .setParameter("ids", idLongs)
-                .getResultList();
-        final Map<Long, Long> imageMap = new HashMap<>();
-        for (final Object[] row : imgRows) {
-            imageMap.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
-        }
-
-        // Load min availability price per car
-        @SuppressWarnings("unchecked")
-        final List<Object[]> priceRows = em.createNativeQuery(
-                        "SELECT la.car_id, MIN(la.day_price) FROM listing_availability la "
-                        + "WHERE la.car_id IN :ids AND la.kind = 'offered' GROUP BY la.car_id")
-                .setParameter("ids", idLongs)
-                .getResultList();
-        final Map<Long, BigDecimal> priceMap = new HashMap<>();
-        for (final Object[] row : priceRows) {
-            if (row[1] != null) {
-                priceMap.put(((Number) row[0]).longValue(),
-                        row[1] instanceof BigDecimal ? (BigDecimal) row[1] : new BigDecimal(row[1].toString()));
-            }
-        }
+        // Cover image and "from" price are owned by other DAOs; delegate to them.
+        final Map<Long, Long> imageMap = carPictureDao.findCoverImageIdsByCarIds(idLongs);
+        final Map<Long, BigDecimal> priceMap = listingAvailabilityDao.findMinOfferedDayPriceByCarIds(idLongs);
 
         return idLongs.stream()
                 .limit(limit)
@@ -534,32 +518,67 @@ public class CarJpaDao implements CarDao {
     );
 
     @Override
-    public List<CarCard> getCheapestCarCardsWindow(
-            final int offset, final int limit,
+    public Page<CarCard> getCheapestCarCards(
+            final int page, final int pageSize,
             final LocalDate browseWallDate, final Long excludeOwnerUserId) {
-        return loadCarCardsWindow("min_price ASC, c.id ASC", offset, limit, browseWallDate, excludeOwnerUserId, null);
+        return browseCarCardsPage(
+                "min_price ASC, c.id ASC", page, pageSize, browseWallDate, excludeOwnerUserId);
     }
 
     @Override
-    public List<CarCard> getMostRecentCarCardsWindow(
-            final int offset, final int limit,
+    public Page<CarCard> getMostRecentCarCards(
+            final int page, final int pageSize,
             final LocalDate browseWallDate, final Long excludeOwnerUserId) {
-        return loadCarCardsWindow("c.created_at DESC, c.id ASC", offset, limit, browseWallDate, excludeOwnerUserId, null);
+        return browseCarCardsPage(
+                "c.created_at DESC, c.id ASC", page, pageSize, browseWallDate, excludeOwnerUserId);
     }
 
-    @Override
-    public long countBrowseEligibleActiveCars(final LocalDate browseWallDate, final Long excludeOwnerUserId) {
+    /**
+     * Owns the full browse-page pipeline: the COUNT (JPQL navigating entities), the paginated
+     * window (native SQL only for {@code LIMIT/OFFSET}) and the assembly into {@link CarCard}.
+     * Callers receive a ready-to-render {@link Page}; the service layer does not compute offsets
+     * or assemble the page object.
+     */
+    private Page<CarCard> browseCarCardsPage(
+            final String orderBy,
+            final int page,
+            final int pageSize,
+            final LocalDate browseWallDate,
+            final Long excludeOwnerUserId) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        final long total = countBrowseEligibleActiveCars(browseWallDate, excludeOwnerUserId);
+        final List<CarCard> content = loadCarCardsWindow(
+                orderBy, safePage * safePageSize, safePageSize,
+                browseWallDate, excludeOwnerUserId, null);
+        return new Page<>(content, safePage, safePageSize, total);
+    }
+
+    private long countBrowseEligibleActiveCars(final LocalDate browseWallDate, final Long excludeOwnerUserId) {
         final Map<String, Object> params = new HashMap<>();
-        final StringBuilder sql = new StringBuilder(
-                "SELECT COUNT(DISTINCT c.id) FROM cars c "
-                + OWNER_NOT_BLOCKED_JOIN
-                + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
-                + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
-                + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
-                + "WHERE c.status = 'active' ");
-        appendBrowseEligibilityFilters(sql, params, browseWallDate, excludeOwnerUserId);
-        final Object result = bindParams(em.createNativeQuery(sql.toString()), params).getSingleResult();
-        return result == null ? 0L : ((Number) result).longValue();
+        final StringBuilder jpql = new StringBuilder(
+                "SELECT COUNT(DISTINCT la.car) FROM ListingAvailability la "
+                + "JOIN la.car c "
+                + "JOIN c.owner u "
+                + "JOIN c.carModel cm "
+                + "JOIN cm.brand cb "
+                + "WHERE u.blocked = FALSE "
+                + "AND cm.validated = TRUE "
+                + "AND cb.validated = TRUE "
+                + "AND la.kind = :offeredKind "
+                + "AND c.status = :activeStatus ");
+        params.put("offeredKind", ar.edu.itba.paw.models.domain.ListingAvailability.Kind.OFFERED);
+        params.put("activeStatus", Car.Status.ACTIVE);
+        if (browseWallDate != null) {
+            jpql.append("AND la.endInclusive >= :browseWallDate ");
+            params.put("browseWallDate", browseWallDate);
+        }
+        if (excludeOwnerUserId != null) {
+            jpql.append("AND c.owner.id <> :excludeOwnerUserId ");
+            params.put("excludeOwnerUserId", excludeOwnerUserId);
+        }
+        final Number count = (Number) bindParams(em.createQuery(jpql.toString()), params).getSingleResult();
+        return count == null ? 0L : count.longValue();
     }
 
     @Override
@@ -590,36 +609,58 @@ public class CarJpaDao implements CarDao {
     @Override
     public Optional<CarPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
             final String brand, final String model, final Long excludeCarId) {
-        final Map<String, Object> params = new HashMap<>();
-        params.put("brand", brand);
-        params.put("model", model);
-        final StringBuilder perCarSql = new StringBuilder(
-                "SELECT c.id, MIN(la.day_price) AS car_min_price "
-                + "FROM cars c "
-                + OWNER_NOT_BLOCKED_JOIN
-                + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
-                + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
-                + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
-                + "WHERE c.status = 'active' "
+        // Step 1: per-car min price among eligible active listings matching the brand+model. JPQL.
+        final Map<String, Object> perCarParams = new HashMap<>();
+        perCarParams.put("brand", brand);
+        perCarParams.put("model", model);
+        perCarParams.put("offeredKind", ar.edu.itba.paw.models.domain.ListingAvailability.Kind.OFFERED);
+        perCarParams.put("activeStatus", Car.Status.ACTIVE);
+        final StringBuilder perCarJpql = new StringBuilder(
+                "SELECT MIN(la.dayPrice) FROM ListingAvailability la "
+                + "JOIN la.car c "
+                + "JOIN c.owner u "
+                + "JOIN c.carModel cm "
+                + "JOIN cm.brand cb "
+                + "WHERE u.blocked = FALSE "
+                + "AND cm.validated = TRUE "
+                + "AND cb.validated = TRUE "
+                + "AND la.kind = :offeredKind "
+                + "AND c.status = :activeStatus "
                 + "AND LOWER(TRIM(cb.name)) = LOWER(TRIM(:brand)) "
                 + "AND LOWER(TRIM(cm.name)) = LOWER(TRIM(:model)) ");
         if (excludeCarId != null) {
-            perCarSql.append("AND c.id <> :excludeCarId ");
-            params.put("excludeCarId", excludeCarId);
+            perCarJpql.append("AND c.id <> :excludeCarId ");
+            perCarParams.put("excludeCarId", excludeCarId);
         }
-        perCarSql.append("GROUP BY c.id");
-        final String sql = "SELECT MIN(car_min_price), MAX(car_min_price), AVG(car_min_price), COUNT(*) "
-                + "FROM (" + perCarSql + ") per_car";
-        final Object[] row = (Object[]) bindParams(em.createNativeQuery(sql), params).getSingleResult();
-        if (row == null || row[0] == null || row[1] == null || row[2] == null) {
+        perCarJpql.append("GROUP BY c.id");
+        final List<BigDecimal> perCarMinPrices = bindParams(
+                em.createQuery(perCarJpql.toString(), BigDecimal.class), perCarParams).getResultList();
+        if (perCarMinPrices.isEmpty()) {
             return Optional.empty();
         }
-        final long count = ((Number) row[3]).longValue();
-        if (count == 0L) {
+        // Step 2: aggregate across cars in memory; the small per-car set keeps this trivial.
+        BigDecimal min = null;
+        BigDecimal max = null;
+        BigDecimal sum = BigDecimal.ZERO;
+        long count = 0L;
+        for (final BigDecimal price : perCarMinPrices) {
+            if (price == null) {
+                continue;
+            }
+            if (min == null || price.compareTo(min) < 0) {
+                min = price;
+            }
+            if (max == null || price.compareTo(max) > 0) {
+                max = price;
+            }
+            sum = sum.add(price);
+            count++;
+        }
+        if (count == 0L || min == null || max == null) {
             return Optional.empty();
         }
-        return Optional.of(new CarPriceMarketInsight(
-                toBigDecimal(row[0]), toBigDecimal(row[1]), toBigDecimal(row[2]), count));
+        final BigDecimal avg = sum.divide(BigDecimal.valueOf(count), 4, java.math.RoundingMode.HALF_UP);
+        return Optional.of(new CarPriceMarketInsight(min, max, avg, count));
     }
 
     // -------------------------------------------------------------------------
@@ -806,12 +847,13 @@ public class CarJpaDao implements CarDao {
                     .append("    SELECT 1 FROM reservations r ")
                     .append("    WHERE r.car_id = c.id ")
                     .append("    AND r.status IN ('pending', 'accepted', 'started') ")
-                    .append("    AND r.start_date < ((w.window_start + (:flexibleDays * INTERVAL '1 day')) AT TIME ZONE 'America/Argentina/Buenos_Aires') ")
-                    .append("    AND r.end_date > (w.window_start AT TIME ZONE 'America/Argentina/Buenos_Aires')")
+                    .append("    AND r.start_date < ((w.window_start + (:flexibleDays * INTERVAL '1 day')) AT TIME ZONE :wallZone) ")
+                    .append("    AND r.end_date > (w.window_start AT TIME ZONE :wallZone)")
                     .append(")) ");
             params.put("flexMonthStart", java.sql.Date.valueOf(monthStart));
             params.put("flexMonthEnd", java.sql.Date.valueOf(monthEnd));
             params.put("flexibleDays", flexDays);
+            params.put("wallZone", AppTimezone.ID);
         }
     }
 

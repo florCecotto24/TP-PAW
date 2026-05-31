@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
-import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 
 /** JPA-backed access to {@code cars} and catalogue queries joined to active listings. */
 public interface CarDao {
@@ -55,14 +55,17 @@ public interface CarDao {
      */
     boolean updateCarStatusIfCurrent(long carId, Car.Status newStatus, Car.Status expected);
 
-    /** Public browse cheapest cars window. Caller composes UI pagination with {@link #countBrowseEligibleActiveCars}. */
-    List<CarCard> getCheapestCarCardsWindow(int offset, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
+    /**
+     * Public browse: page of cheapest cars. Pagination (offset/limit) and total count are computed
+     * inside the DAO so callers do not have to compose them.
+     */
+    Page<CarCard> getCheapestCarCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
 
-    /** Public browse most-recent cars window. */
-    List<CarCard> getMostRecentCarCardsWindow(int offset, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
-
-    /** Counts active cars with at least one offered availability ending on or after {@code browseWallDate}. */
-    long countBrowseEligibleActiveCars(LocalDate browseWallDate, Long excludeOwnerUserId);
+    /**
+     * Public browse: page of most-recent cars. Pagination (offset/limit) and total count are computed
+     * inside the DAO so callers do not have to compose them.
+     */
+    Page<CarCard> getMostRecentCarCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
 
     /** Public car-card search across {@code cars} joined with {@code listing_availability}. */
     Page<CarCard> searchCarCards(CarSearchCriteria criteria);
@@ -78,4 +81,7 @@ public interface CarDao {
 
     /** Updates the minimum rental days for a car via dirty-checking (load + mutate). */
     void updateMinimumRentalDays(long carId, int days);
+
+    /** Persists the car's average rating via dirty-checking; {@code null} clears the value. */
+    void updateRatingAvg(long carId, java.math.BigDecimal average);
 }

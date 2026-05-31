@@ -13,7 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
-import ar.edu.itba.paw.models.util.SupportedLocales;
+import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 

@@ -22,11 +22,11 @@ import ar.edu.itba.paw.exception.user.InvalidProfileDocumentException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicyImpl;
@@ -195,7 +195,7 @@ public class UserServiceImplTest {
         // 1. Arrange
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-        final LocalDate today = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+        final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
 
         // 2. Execute and 3. Assert
         Assertions.assertDoesNotThrow(() -> userService.updateBirthDate(1L, today));
@@ -206,7 +206,7 @@ public class UserServiceImplTest {
         // 1. Arrange
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.of(user));
-        final LocalDate future = LocalDate.now(AvailabilityPeriod.WALL_ZONE).plusDays(1);
+        final LocalDate future = LocalDate.now(AppTimezone.WALL_ZONE).plusDays(1);
 
         // 2. Execute and 3. Assert
         final InvalidProfileBirthDateException thrown = Assertions.assertThrows(InvalidProfileBirthDateException.class,

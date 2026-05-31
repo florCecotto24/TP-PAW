@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.Set;
 
 import ar.edu.itba.paw.exception.car.FavoriteValidationException;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 
 /**

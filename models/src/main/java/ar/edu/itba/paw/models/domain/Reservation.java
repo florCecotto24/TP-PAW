@@ -16,6 +16,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
@@ -100,8 +101,8 @@ public class Reservation {
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_receipt_file_id", nullable = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "payment_receipt_file_id", nullable = true, unique = true)
     private StoredFile paymentReceiptFile;
 
     @Column(name = "payment_proof_deadline_at")
@@ -113,8 +114,8 @@ public class Reservation {
     @Column(name = "payment_refund_required", nullable = false)
     private boolean paymentRefundRequired;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payment_refund_receipt_file_id", nullable = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "payment_refund_receipt_file_id", nullable = true, unique = true)
     private StoredFile paymentRefundReceiptFile;
 
     @Column(name = "refund_proof_deadline_at")

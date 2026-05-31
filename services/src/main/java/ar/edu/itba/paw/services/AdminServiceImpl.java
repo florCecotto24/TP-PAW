@@ -20,7 +20,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;

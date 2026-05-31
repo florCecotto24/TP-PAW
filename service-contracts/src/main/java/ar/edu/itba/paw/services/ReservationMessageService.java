@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.dto.ReservationMessageDto;
+import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 
 public interface ReservationMessageService {
 

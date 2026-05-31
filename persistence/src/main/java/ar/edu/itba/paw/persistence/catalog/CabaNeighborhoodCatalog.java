@@ -35,7 +35,7 @@ public final class CabaNeighborhoodCatalog implements LocationDao {
     @PostConstruct
     private void load() {
         final List<Neighborhood> rows = em.createQuery(
-                "SELECT n FROM Neighborhood n ORDER BY n.id", Neighborhood.class)
+                "FROM Neighborhood n ORDER BY n.id", Neighborhood.class)
                 .getResultList();
         if (rows.isEmpty()) {
             throw new IllegalStateException(

@@ -40,6 +40,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.multipart.commons.CommonsMultipartResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ViewResolver;
+import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -48,6 +49,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;
+import ar.edu.itba.paw.webapp.support.converter.StringToReservationViewerRoleConverter;
+import ar.edu.itba.paw.webapp.support.converter.StringToSupportedLocaleConverter;
+import ar.edu.itba.paw.webapp.support.converter.StringToUserDocumentTypeConverter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
@@ -271,6 +275,20 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
         registry.addInterceptor(noCacheHtmlInterceptor.getObject()).addPathPatterns("/**");
+    }
+
+    /**
+     * Registers explicit {@code String → Enum/Locale} converters for {@code @RequestParam} binding,
+     * replacing the manual {@code parseDocumentType(raw)} / {@code if (!"owner".equals(role))} /
+     * {@code SupportedLocales.parse(raw)} dance that controllers used to perform. Each converter
+     * returns {@code null} for blank or unrecognized inputs so the existing "silently ignore" /
+     * "swap to default" semantics of those endpoints is preserved.
+     */
+    @Override
+    public void addFormatters(final FormatterRegistry registry) {
+        registry.addConverter(new StringToReservationViewerRoleConverter());
+        registry.addConverter(new StringToUserDocumentTypeConverter());
+        registry.addConverter(new StringToSupportedLocaleConverter());
     }
 
     /**

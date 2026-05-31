@@ -9,8 +9,8 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.ReservationCard;
-import ar.edu.itba.paw.models.util.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
 /** Reservations, overlap checks, analytics, and mail-claim flags. */
 public interface ReservationDao {

@@ -52,7 +52,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
     public List<ReservationMessage> findByReservationIdOrderByCreatedAtAsc(
             final long reservationId, final int offset, final int limit) {
         return em.createQuery(
-                        "SELECT m FROM ReservationMessage m "
+                        "FROM ReservationMessage m "
                                 + "LEFT JOIN FETCH m.attachment "
                                 + "WHERE m.reservation.id = :reservationId ORDER BY m.createdAt ASC",
                         ReservationMessage.class)
@@ -74,7 +74,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
     @Override
     public Optional<ReservationMessage> findByIdAndReservationId(final long messageId, final long reservationId) {
         final List<ReservationMessage> results = em.createQuery(
-                        "SELECT m FROM ReservationMessage m "
+                        "FROM ReservationMessage m "
                                 + "LEFT JOIN FETCH m.attachment "
                                 + "WHERE m.id = :messageId AND m.reservation.id = :reservationId",
                         ReservationMessage.class)
@@ -105,7 +105,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
             return 0;
         }
         final List<ReservationMessage> messages = em.createQuery(
-                        "SELECT m FROM ReservationMessage m WHERE m.id IN :ids AND m.emailNotified = false",
+                        "FROM ReservationMessage m WHERE m.id IN :ids AND m.emailNotified = false",
                         ReservationMessage.class)
                 .setParameter("ids", messageIds)
                 .getResultList();

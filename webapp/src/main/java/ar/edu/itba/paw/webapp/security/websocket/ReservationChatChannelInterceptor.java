@@ -14,11 +14,24 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.ReservationMessageService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
+/**
+ * STOMP {@link ChannelInterceptor} that mirrors the HTTP-side {@code ReservationWebAuthorization} rules
+ * for the reservation chat channel:
+ * <ul>
+ *   <li><b>SEND</b> to {@code /app/reservations/{id}/messages}: rider/owner of the reservation only.
+ *       Admins are excluded so they cannot impersonate a participant when posting messages.</li>
+ *   <li><b>SUBSCRIBE</b> to {@code /topic/reservations/{id}}: rider/owner <em>or</em> any caller
+ *       carrying the {@link UserRole#ADMIN} authority. This gives admins the read-only audit view
+ *       expected by the {@code /admin/reservations/{id}/chat} surface.</li>
+ * </ul>
+ */
 @Component
 public final class ReservationChatChannelInterceptor implements ChannelInterceptor {
 
@@ -26,6 +39,8 @@ public final class ReservationChatChannelInterceptor implements ChannelIntercept
             Pattern.compile("^/topic/reservations/(\\d+)$");
     private static final Pattern APP_SEND_MESSAGE =
             Pattern.compile("^/app/reservations/(\\d+)/messages$");
+
+    private static final String ROLE_ADMIN_AUTHORITY = UserRole.ADMIN.springAuthorityName();
 
     private final ReservationMessageService reservationMessageService;
 
@@ -52,7 +67,13 @@ public final class ReservationChatChannelInterceptor implements ChannelIntercept
         if (reservationId == null) {
             return message;
         }
-        final long viewerUserId = resolveUserId(accessor.getUser());
+        final Authentication authentication = authenticationOrNull(accessor.getUser());
+        final long viewerUserId = resolveUserId(authentication);
+        // SUBSCRIBE is a read-only operation: admins are allowed to audit any reservation chat.
+        // SEND remains participant-only so the admin role cannot impersonate a rider/owner.
+        if (command == StompCommand.SUBSCRIBE && hasAdminAuthority(authentication)) {
+            return message;
+        }
         if (!reservationMessageService.canParticipantAccessReservationChat(viewerUserId, reservationId)) {
             throw new AccessDeniedException("Reservation chat not allowed for user " + viewerUserId);
         }
@@ -72,13 +93,27 @@ public final class ReservationChatChannelInterceptor implements ChannelIntercept
         return null;
     }
 
-    private static long resolveUserId(@Nullable final Principal principal) {
-        if (principal instanceof Authentication authentication) {
-            final Object authenticatedPrincipal = authentication.getPrincipal();
-            if (authenticatedPrincipal instanceof RydenUserDetails details) {
-                return details.getUserId();
-            }
+    @Nullable
+    private static Authentication authenticationOrNull(@Nullable final Principal principal) {
+        return principal instanceof Authentication auth ? auth : null;
+    }
+
+    private static long resolveUserId(@Nullable final Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof RydenUserDetails details) {
+            return details.getUserId();
         }
         throw new AccessDeniedException("Unauthenticated WebSocket session");
+    }
+
+    private static boolean hasAdminAuthority(@Nullable final Authentication authentication) {
+        if (authentication == null) {
+            return false;
+        }
+        for (final GrantedAuthority authority : authentication.getAuthorities()) {
+            if (ROLE_ADMIN_AUTHORITY.equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

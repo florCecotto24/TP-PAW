@@ -2,11 +2,11 @@ package ar.edu.itba.paw.persistence;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.Page;
 
 /**
  * Persistence operations backing the "Favorite cars" feature. Every method is read- or write-only:
@@ -27,18 +27,13 @@ public interface FavCarDao {
     void removeFavorite(long carId, long userId);
 
     /**
-     * Returns a paginated window of car cards favorited by {@code userId}, ordered by
+     * Returns the {@link Page} of car cards favorited by {@code userId}, ordered by
      * {@code favorited_at DESC}. Only cars whose {@link Car.Status} belongs to
-     * {@code allowedStatuses} are returned. Pagination is enforced at SQL level.
+     * {@code allowedStatuses} are returned. Pagination (offset/limit) and total count are
+     * computed inside the DAO so callers do not have to compose them.
      */
-    List<CarCard> findFavoriteCarCardsWindow(
-            long userId, Collection<Car.Status> allowedStatuses, int offset, int limit);
-
-    /**
-     * Total number of favorited cars for {@code userId} restricted to {@code allowedStatuses};
-     * used to compute the total page count.
-     */
-    long countFavoriteCars(long userId, Collection<Car.Status> allowedStatuses);
+    Page<CarCard> findFavoriteCarCards(
+            long userId, Collection<Car.Status> allowedStatuses, int page, int pageSize);
 
     /**
      * Returns the subset of {@code carIds} already favorited by {@code userId}. Used to annotate

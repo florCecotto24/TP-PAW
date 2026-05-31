@@ -34,19 +34,20 @@ import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.dto.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.models.dto.OwnerCarDetailPageModel;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
-import ar.edu.itba.paw.models.util.ArsMoneyFormat;
-import ar.edu.itba.paw.models.util.CbuRules;
-import ar.edu.itba.paw.models.util.CarGalleryMediaContentTypes;
-import ar.edu.itba.paw.models.util.CarSearchCriteria;
-import ar.edu.itba.paw.models.util.OwnerCarSearchCriteria;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
-import ar.edu.itba.paw.models.util.WallDateTimeParsing;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
+import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.rules.CbuRules;
+import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
+import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
+import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.persistence.CarDao;
 import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
@@ -236,7 +237,7 @@ public final class CarServiceImpl implements CarService {
         }
         final LocalDate wall = LocalDate.ofInstant(
                 Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS),
-                AvailabilityPeriod.WALL_ZONE);
+                AppTimezone.WALL_ZONE);
         final Long excludeOwnerId = null;
         return carDao.findSimilarCarCards(carId, limit, wall, excludeOwnerId);
     }
@@ -244,28 +245,15 @@ public final class CarServiceImpl implements CarService {
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> getCheapestCarCards(final int page, final int pageSize) {
-        return browseCarCardsPage(page, pageSize, /*cheapest*/ true);
+        // Home browse intentionally does not exclude the viewer's own cars: owners want to see
+        // how their own listings render alongside the rest of the catalog.
+        return carDao.getCheapestCarCards(page, pageSize, publicBrowseMinBookableWallDate(), null);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> getMostRecentCarCards(final int page, final int pageSize) {
-        return browseCarCardsPage(page, pageSize, /*cheapest*/ false);
-    }
-
-    private Page<CarCard> browseCarCardsPage(final int page, final int pageSize, final boolean cheapest) {
-        final LocalDate wall = LocalDate.ofInstant(
-                Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS),
-                AvailabilityPeriod.WALL_ZONE);
-        // Home browse intentionally does not exclude the viewer's own cars: owners want to see
-        // how their own listings render alongside the rest of the catalog.
-        final Long excludeOwnerId = null;
-        final int offset = page * pageSize;
-        final List<CarCard> rows = cheapest
-                ? carDao.getCheapestCarCardsWindow(offset, pageSize, wall, excludeOwnerId)
-                : carDao.getMostRecentCarCardsWindow(offset, pageSize, wall, excludeOwnerId);
-        final long total = carDao.countBrowseEligibleActiveCars(wall, excludeOwnerId);
-        return new Page<>(rows, page, pageSize, total);
+        return carDao.getMostRecentCarCards(page, pageSize, publicBrowseMinBookableWallDate(), null);
     }
 
     @Override
@@ -564,6 +552,12 @@ public final class CarServiceImpl implements CarService {
         carDao.updateMinimumRentalDays(carId, days);
     }
 
+    @Override
+    @Transactional
+    public void updateRatingAvg(final long carId, final java.math.BigDecimal average) {
+        carDao.updateRatingAvg(carId, average);
+    }
+
     private static String carLabel(final Car car) {
         final String brand = car.getBrand() != null ? car.getBrand() : "";
         final String model = car.getModel() != null ? car.getModel() : "";
@@ -654,7 +648,7 @@ public final class CarServiceImpl implements CarService {
                     .map(dt -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(dt, locale))
                     .orElse(null);
             final int forwardDays = listingAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
-            final LocalDate wallToday = LocalDate.now(AvailabilityPeriod.WALL_ZONE);
+            final LocalDate wallToday = LocalDate.now(AppTimezone.WALL_ZONE);
             final List<ListingAvailability> editPastAvailabilities = availabilities.stream()
                     .filter(la -> la.getEndInclusive().isBefore(wallToday))
                     .collect(Collectors.toList());
@@ -726,7 +720,7 @@ public final class CarServiceImpl implements CarService {
     private LocalDate publicBrowseMinBookableWallDate() {
         return LocalDate.ofInstant(
                 Instant.now().plus(reservationTimingPolicy.getPickupLeadHours(), ChronoUnit.HOURS),
-                AvailabilityPeriod.WALL_ZONE);
+                AppTimezone.WALL_ZONE);
     }
 
     private static final Set<String> LISTING_STATUSES = Set.of("active", "paused", "finished");

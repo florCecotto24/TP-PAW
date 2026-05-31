@@ -1,0 +1,97 @@
+package ar.edu.itba.paw.models.util.time;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZonedDateTime;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
+
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+
+class RiderPickupLeadTimeTest {
+
+    @Test
+    void testMinListingAvailabilityFirstDayInclusiveRejectsZeroLeadHours() {
+        // 1.Arrange
+        final Instant now = Instant.parse("2026-05-03T13:00:00Z");
+
+        // 2.Exercise
+        final Executable call = () -> RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 0);
+
+        // 3.Assert
+        Assertions.assertThrows(IllegalArgumentException.class, call);
+    }
+
+    @Test
+    void testMinListingAvailabilityFirstDayInclusiveRejectsNegativeLeadHours() {
+        // 1.Arrange
+        final Instant now = Instant.parse("2026-05-03T13:00:00Z");
+
+        // 2.Exercise
+        final Executable call = () -> RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, -5);
+
+        // 3.Assert
+        Assertions.assertThrows(IllegalArgumentException.class, call);
+    }
+
+    @Test
+    void testMinListingAvailabilityFirstDayInclusiveReturnsTomorrowWhenTodayPickupAlreadyPast() {
+        // 1.Arrange
+        final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(13, 0),
+                AppTimezone.WALL_ZONE).toInstant();
+
+        // 2.Exercise
+        final LocalDate first = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 1);
+
+        // 3.Assert
+        Assertions.assertEquals(LocalDate.of(2026, 5, 4), first);
+    }
+
+    @Test
+    void testMinListingAvailabilityFirstDayInclusiveReturnsTodayWhenLeadStillFits() {
+        // 1.Arrange
+        final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(6, 0),
+                AppTimezone.WALL_ZONE).toInstant();
+
+        // 2.Exercise
+        final LocalDate first = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 1);
+
+        // 3.Assert
+        Assertions.assertEquals(LocalDate.of(2026, 5, 3), first);
+    }
+
+    @Test
+    void testMinListingAvailabilityFirstDayInclusiveSkipsDaysToHonourLargeLead() {
+        // 1.Arrange
+        final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(9, 0),
+                AppTimezone.WALL_ZONE).toInstant();
+
+        // 2.Exercise
+        final LocalDate first = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 48);
+
+        // 3.Assert
+        Assertions.assertEquals(LocalDate.of(2026, 5, 5), first);
+    }
+
+    @Test
+    void testMinListingAvailabilityFirstDayInclusiveUsesListingDefaultPickupWhenNull() {
+        // 1.Arrange
+        final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(11, 0),
+                AppTimezone.WALL_ZONE).toInstant();
+
+        // 2.Exercise
+        final LocalDate first = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+                null, AppTimezone.WALL_ZONE, now, 25);
+
+        // 3.Assert
+        Assertions.assertEquals(LocalDate.of(2026, 5, 5), first);
+    }
+}

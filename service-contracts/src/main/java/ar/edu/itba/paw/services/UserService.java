@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 
 /**
  * Account, profile, credentials, CBU, and user rows needed elsewhere (e.g. listing owner resolution for mail/UI).
@@ -49,7 +50,7 @@ public interface UserService {
     void updatePhoneNumber(long userId, String phoneRaw);
 
     /**
-     * {@code birthDate} may be {@code null} to clear. Must not be after today in {@link ar.edu.itba.paw.models.domain.AvailabilityPeriod#WALL_ZONE}.
+     * {@code birthDate} may be {@code null} to clear. Must not be after today in {@link ar.edu.itba.paw.models.util.time.AppTimezone#WALL_ZONE}.
      */
     void updateBirthDate(long userId, LocalDate birthDate);
 
@@ -57,6 +58,16 @@ public interface UserService {
      * About text shown in profile. Blank input is stored as {@code null}.
      */
     void updateAbout(long userId, String aboutRaw);
+
+    /**
+     * Atomically applies every "edit profile" field in a single transaction. Use this from the
+     * profile form handler instead of calling each {@code updateXxx} sequentially, otherwise a
+     * mid-flight failure leaves the profile in a half-updated state.
+     *
+     * @throws ar.edu.itba.paw.exception.RydenException when any field fails validation; the whole
+     *         operation rolls back.
+     */
+    void updateProfile(long userId, ProfileUpdateRequest request);
 
     /**
      * Stores a new profile picture and removes the previous image row when present.
@@ -99,6 +110,12 @@ public interface UserService {
     /** Persists the user's preferred UI/mail locale tag (BCP 47, truncated to 32 chars). */
     void updateLatestLocale(long userId, String localeTag);
 
+    /** Persists the user's average rating as rider; {@code null} clears the value. */
+    void updateRatingAsRider(long userId, java.math.BigDecimal average);
+
+    /** Persists the user's average rating as owner; {@code null} clears the value. */
+    void updateRatingAsOwner(long userId, java.math.BigDecimal average);
+
     /**
      * The user's explicitly-chosen UI locale (from {@code latest_locale}), if any. Returns {@link Optional#empty()}
      * when the user has not picked one; callers can then fall back to a cookie or system default. Only returns
@@ -132,7 +149,7 @@ public interface UserService {
     /** Owner CBU for the given car, when present and non-blank. */
     Optional<String> findOwnerCbuForCar(long carId);
 
-    /** Whether {@code user} has a persisted CBU that satisfies {@link ar.edu.itba.paw.models.util.CbuRules}. */
+    /** Whether {@code user} has a persisted CBU that satisfies {@link ar.edu.itba.paw.models.util.rules.CbuRules}. */
     boolean hasValidCbu(User user);
 
     /**
@@ -141,7 +158,7 @@ public interface UserService {
      */
     boolean hasUploadedLicenseAndIdentity(User user);
 
-    /** Whether {@code cbuRaw} is acceptable as a CBU per {@link ar.edu.itba.paw.models.util.CbuRules}. */
+    /** Whether {@code cbuRaw} is acceptable as a CBU per {@link ar.edu.itba.paw.models.util.rules.CbuRules}. */
     boolean isValidCbuFormat(String cbuRaw);
 
     /**

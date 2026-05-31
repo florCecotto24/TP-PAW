@@ -3,7 +3,7 @@ package ar.edu.itba.paw.models;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import ar.edu.itba.paw.models.util.EmailNormalizer;
+import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 
 class EmailNormalizerTest {
 

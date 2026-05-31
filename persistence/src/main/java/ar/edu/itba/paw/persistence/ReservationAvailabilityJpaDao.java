@@ -15,10 +15,10 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationAvailabilityCoverage;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.persistence.ReservationAvailabilityDao;
 
 @Transactional(readOnly = true)
@@ -46,13 +46,12 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
 
     @Override
     public Optional<BigDecimal> sumReservationTotal(final long reservationId) {
-        final Reservation reservation = em.find(Reservation.class, reservationId);
-        if (reservation == null) {
-            return Optional.empty();
-        }
+        // Single JPQL with JOIN FETCH hydrates both the reservation (for the date range) and its
+        // covering availabilities (for per-day pricing); no extra em.find on a sibling DAO entity.
         final List<ReservationAvailabilityCoverage> coverages = em.createQuery(
                         "FROM ReservationAvailabilityCoverage ra "
                                 + "JOIN FETCH ra.availability "
+                                + "JOIN FETCH ra.reservation "
                                 + "WHERE ra.reservation.id = :reservationId",
                         ReservationAvailabilityCoverage.class)
                 .setParameter("reservationId", reservationId)
@@ -60,13 +59,14 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
         if (coverages.isEmpty()) {
             return Optional.empty();
         }
+        final Reservation reservation = coverages.get(0).getReservation();
         final List<ListingAvailability> candidates = coverages.stream()
                 .map(ReservationAvailabilityCoverage::getAvailability)
                 .toList();
         final LocalDate firstDay = reservation.getStartDate()
-                .atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+                .atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         final LocalDate lastDay = reservation.getEndDate()
-                .atZoneSameInstant(AvailabilityPeriod.WALL_ZONE).toLocalDate();
+                .atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         return sumDayPricesByEffectiveCandidate(candidates, firstDay, lastDay);
     }
 

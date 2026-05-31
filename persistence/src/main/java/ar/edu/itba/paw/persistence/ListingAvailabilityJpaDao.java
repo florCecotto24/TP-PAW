@@ -6,7 +6,9 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
@@ -128,5 +130,29 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
         for (final ListingAvailability la : toRemove) {
             em.remove(la);
         }
+    }
+
+    @Override
+    public Map<Long, BigDecimal> findMinOfferedDayPriceByCarIds(final Collection<Long> carIds) {
+        if (carIds == null || carIds.isEmpty()) {
+            return Map.of();
+        }
+        final List<Object[]> rows = em.createQuery(
+                        "SELECT la.car.id, MIN(la.dayPrice) FROM ListingAvailability la "
+                                + "WHERE la.car.id IN :carIds AND la.kind = :offeredKind "
+                                + "GROUP BY la.car.id",
+                        Object[].class)
+                .setParameter("carIds", carIds)
+                .setParameter("offeredKind", ListingAvailability.Kind.OFFERED)
+                .getResultList();
+        final Map<Long, BigDecimal> result = new HashMap<>();
+        for (final Object[] row : rows) {
+            final long carId = ((Number) row[0]).longValue();
+            final BigDecimal price = (BigDecimal) row[1];
+            if (price != null) {
+                result.put(carId, price);
+            }
+        }
+        return result;
     }
 }

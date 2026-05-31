@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Set;
 
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.dto.PriceMarketPosition;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 
 /**
  * Car teaser for home and search grids, optionally enriched with status and average rating.

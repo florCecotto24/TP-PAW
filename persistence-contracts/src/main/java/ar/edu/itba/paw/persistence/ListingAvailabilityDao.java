@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** Wall-calendar availability segments attached to a car. */
@@ -56,4 +57,11 @@ public interface ListingAvailabilityDao {
 
     /** Removes every availability row for {@code carId} (e.g. before replacing the whole wall). */
     void deleteByCarId(long carId);
+
+    /**
+     * Minimum {@link ListingAvailability.Kind#OFFERED OFFERED} day price for each given car. Cars
+     * without any offered availability are absent from the returned map. Useful for "from" pricing
+     * displays.
+     */
+    Map<Long, BigDecimal> findMinOfferedDayPriceByCarIds(Collection<Long> carIds);
 }

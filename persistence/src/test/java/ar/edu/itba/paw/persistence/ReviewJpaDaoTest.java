@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import ar.edu.itba.paw.models.dto.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
@@ -94,9 +94,9 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
                 Timestamp.from(now.minusDays(1).toInstant()),
                 Timestamp.from(now.minusDays(6).toInstant()),
                 Timestamp.from(now.toInstant()));
-        return jdbcTemplate.queryForObject(
-                "SELECT id FROM reservations WHERE rider_id = ? AND car_id = ? "
-                        + "ORDER BY created_at DESC LIMIT 1", Long.class, aRiderId, carId);
+        // MAX(id) returns the just-inserted row deterministically; ORDER BY created_at can tie
+        // when multiple inserts share the same timestamp, which produced flaky duplicates.
+        return jdbcTemplate.queryForObject("SELECT MAX(id) FROM reservations", Long.class);
     }
 
     private void insertRiderReview(

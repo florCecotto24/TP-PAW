@@ -1,9 +1,7 @@
 package ar.edu.itba.paw.services;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -13,25 +11,22 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.util.ArsMoneyFormat;
-import ar.edu.itba.paw.models.util.ReservationHubStatusWhitelist;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.search.ReservationHubStatusWhitelist;
+import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.ListingAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
-import ar.edu.itba.paw.models.dto.ReservationCard;
-import ar.edu.itba.paw.models.dto.ReservationCardDisplayRow;
-import ar.edu.itba.paw.models.dto.ReservationChatPageModel;
-import ar.edu.itba.paw.models.dto.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
+import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsLoadMore;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyHeaderDto;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
-import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
+import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
-import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
 import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 
 /** Read-only reservation views; domain reads and billable-day math go through {@link ReservationService}. */
@@ -47,7 +42,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     private final ImageService imageService;
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
-    private final PresentationLimitsPolicy presentationLimitsPolicy;
     private final ReservationMessageService reservationMessageService;
 
     @Autowired
@@ -61,7 +55,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             final ImageService imageService,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             @Lazy final ReviewService reviewService,
-            final PresentationLimitsPolicy presentationLimitsPolicy,
             final ReservationMessageService reservationMessageService) {
         this.reservationService = reservationService;
         this.carService = carService;
@@ -72,7 +65,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         this.imageService = imageService;
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
-        this.presentationLimitsPolicy = presentationLimitsPolicy;
         this.reservationMessageService = reservationMessageService;
     }
 
@@ -217,95 +209,6 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<CounterpartyProfilePageModel> loadCounterpartyProfileForReservationParticipant(
-            final long viewerUserId,
-            final long reservationId,
-            final String role,
-            final Locale locale) {
-        final Optional<Reservation> reservationOpt = "owner".equals(role)
-                ? reservationService.getOwnerReservationById(viewerUserId, reservationId)
-                : reservationService.getRiderReservationById(viewerUserId, reservationId);
-        if (reservationOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        final Reservation reservation = reservationOpt.get();
-        final long reservationCarId = reservation.getCarId();
-        final Optional<User> counterpartyOpt = "owner".equals(role)
-                ? userService.getUserById(reservation.getRiderId())
-                : carService.getCarById(reservationCarId).map(Car::getOwner);
-        if (counterpartyOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        final User counterparty = counterpartyOpt.get();
-        final boolean counterpartyIsOwner = "rider".equals(role);
-        final DateTimeFormatter memberSinceFormatter = DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale);
-        final BigDecimal averageRating =
-                reviewService.getAverageRatingForCounterparty(counterparty.getId(), counterpartyIsOwner);
-        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
-                counterparty.getId(),
-                counterpartyIsOwner,
-                presentationLimitsPolicy.getCounterpartyRecentReviewsLimit());
-        final CounterpartyHeaderDto headerDto = new CounterpartyHeaderDto(
-                counterparty.getForename() + " " + counterparty.getSurname(),
-                counterparty.getForename(),
-                counterparty.getSurname(),
-                null,
-                averageRating,
-                0L,
-                counterparty.getAbout().map(String::trim).orElse(null),
-                counterparty.getMemberSince().orElse(null),
-                counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
-                counterparty.getProfilePictureId().orElse(null));
-        final int ownerListingsPageSize = presentationLimitsPolicy.getCounterpartyOwnerActiveListingsPageSize();
-        final Page<CarCard> ownerCarsPage =
-                counterpartyIsOwner
-                        ? carService.getOwnerCarCards(
-                                carService.buildOwnerCarSearchCriteria(
-                                        counterparty.getId(),
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        null,
-                                        List.of("active"),
-                                        null,
-                                        null,
-                                        0,
-                                        CarService.COUNTERPARTY_OTHER_ACTIVE_CARS_SORT,
-                                        ownerListingsPageSize,
-                                        reservationCarId))
-                        : null;
-        // Pass raw CarCard rows; the controller converts them to VehicleCardView so
-        // the JSP's <ryden:consumerCarCard> tag receives the type it requires.
-        final List<CarCard> activeCarCards =
-                ownerCarsPage == null ? List.of() : ownerCarsPage.getContent();
-        final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore =
-                counterpartyIsOwner && ownerCarsPage != null
-                        ? CounterpartyActiveListingsLoadMore.of(
-                                ownerCarsPage.isHasNext(),
-                                counterparty.getId(),
-                                reservationCarId,
-                                1,
-                                ownerListingsPageSize)
-                        : CounterpartyActiveListingsLoadMore.none();
-        return Optional.of(
-                new CounterpartyProfilePageModel(
-                        headerDto.getForename(),
-                        headerDto.getSurname(),
-                        headerDto.getAbout().orElse(""),
-                        headerDto.getProfileImageId().orElse(null),
-                        headerDto.getMemberSinceDisplay().orElse(null),
-                        headerDto.getAverageRating(),
-                        counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent(),
-                        counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent(),
-                        recentReviewItems,
-                        counterpartyIsOwner,
-                        activeCarCards,
-                        counterpartyActiveListingsLoadMore));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public ReservationCardDisplayRow toReservationCardDisplayRow(final ReservationCard card, final Locale locale) {
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getEndDate(), locale);
@@ -328,5 +231,36 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     @Transactional(readOnly = true)
     public String normalizeReservationStatusQueryParam(final String raw) {
         return ReservationHubStatusWhitelist.normalizeStatusQueryParam(raw);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OwnerReservationsListPageModel loadOwnerReservationsListPage(
+            final ReservationSearchCriteria criteria,
+            final Car selectedCarOrNull,
+            final String currentSort,
+            final Locale locale) {
+        final Page<ReservationCard> resultPage = reservationService.getOwnerReservationCards(criteria);
+        final List<ReservationCardDisplayRow> rows = resultPage.getContent().stream()
+                .map(card -> toReservationCardDisplayRow(card, locale))
+                .toList();
+        return new OwnerReservationsListPageModel(rows, resultPage, selectedCarOrNull, currentSort);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CarReservationsListPageModel loadCarReservationsListPage(
+            final long ownerUserId,
+            final Car car,
+            final int page,
+            final int pageSize,
+            final String statusFilter,
+            final Locale locale) {
+        final Page<ReservationCard> resultPage = reservationService.getCarReservationCards(
+                ownerUserId, car.getId(), page, pageSize, statusFilter);
+        final List<ReservationCardDisplayRow> rows = resultPage.getContent().stream()
+                .map(card -> toReservationCardDisplayRow(card, locale))
+                .toList();
+        return new CarReservationsListPageModel(car, rows, resultPage, statusFilter);
     }
 }

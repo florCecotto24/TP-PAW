@@ -11,7 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 
-import ar.edu.itba.paw.models.dto.ReservationMessageDto;
+import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.services.ReservationMessageService;
 import ar.edu.itba.paw.webapp.dto.PostReservationMessageRequest;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;

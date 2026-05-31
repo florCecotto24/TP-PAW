@@ -63,7 +63,13 @@ webapp → services → persistence → models
 
 ### Module responsibilities
 
-- **models** — JPA entities (`@Entity`): `Car`, `User`, `Listing`, `ListingAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, etc., plus DTOs (`ListingCard`, `ListingDetail`, …), search criteria, and shared utilities (wall-clock parsing, `AvailabilityPeriod` with `America/Argentina/Buenos_Aires`).
+- **models** — Organised by *feature/role* rather than by type:
+  - `domain/` — JPA entities (`@Entity`): `Car`, `User`, `Listing`, `ListingAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, `AvailabilityPeriod`, etc.
+  - `dto/` — transport objects grouped by business domain: `dto/car/` (cards, projections, market insight + `dto/car/detail/` for the public car page), `dto/listing/` (editor page model), `dto/profile/` (counterparty + profile page models), `dto/reservation/` (cards, page models, message DTOs). `dto/Page<T>` is the only generic that stays in the root.
+  - `email/` — typed mail payloads consumed by `services/mail/`.
+  - `pagination/` — `Page` windowing, `UiPaging`, fallback sizes.
+  - `security/` — `UserRole`.
+  - `util/` — split by concern: `util/time/` (`AppTimezone`, wall-clock parsing/format, bookable calendar), `util/search/` (search criteria + sort sanitisers), `util/format/` (money, email normalisation), `util/rules/` (CBU, supported locales), `util/media/` (gallery + chat attachment content types). Business timezone single source of truth is `util/time/AppTimezone.WALL_ZONE`.
 - **persistence-contracts** — DAO interfaces (`ListingDao`, `ReservationDao`, …).
 - **persistence** — Hibernate/JPA DAOs under `persistence/hibernate/` (`*HibernateDao`). Tests run against HSQLDB. The legacy `persistence/jdbc/` tree remains as **reference** (typically not registered as Spring beans when Hibernate is active).
 - **service-contracts** — Service interfaces, shared exceptions, `MessageKeys` for i18n codes.
@@ -131,7 +137,7 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 
 ## Dates and business rules (high level)
 
-- Listing availability and reservation datetimes use wall zone `AvailabilityPeriod.WALL_ZONE` (Argentina) when parsing server-side.
+- Listing availability and reservation datetimes use wall zone `AppTimezone.WALL_ZONE` (Argentina) when parsing server-side. `AppTimezone` (in `models/util/`) is the single source of truth — never hardcode `ZoneId.of("America/Argentina/Buenos_Aires")` again.
 - **Publishing**: valid date order; period start not before **today** in that zone (`ListingServiceImpl`).
 - **Reserving**: pickup day not before **today**; interval must fit published availability (`ReservationServiceImpl`).
 - **Flatpickr**: `minDate: 'today'` in `components.js` complements server validation.

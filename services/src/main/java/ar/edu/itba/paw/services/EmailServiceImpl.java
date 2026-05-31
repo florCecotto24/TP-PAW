@@ -38,8 +38,8 @@ import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.util.CbuRules;
-import ar.edu.itba.paw.models.util.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.models.util.rules.CbuRules;
+import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 
 /** Thymeleaf + JavaMail; {@code @Async} on send methods; no JDBC DAOs. */
 @Service

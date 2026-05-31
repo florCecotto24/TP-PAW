@@ -1,7 +1,10 @@
 package ar.edu.itba.paw.persistence;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
@@ -54,7 +57,7 @@ public class CarPictureJpaDao implements CarPictureDao {
     @Override
     public List<CarPicture> getCarPicturesByCarId(final long carId) {
         return em.createQuery(
-                        "SELECT cp FROM CarPicture cp "
+                        "FROM CarPicture cp "
                                 + "LEFT JOIN FETCH cp.image "
                                 + "LEFT JOIN FETCH cp.storedFile "
                                 + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
@@ -71,5 +74,29 @@ public class CarPictureJpaDao implements CarPictureDao {
                 .setParameter("storedFileId", storedFileId)
                 .getSingleResult();
         return count != null && count > 0;
+    }
+
+    @Override
+    public Map<Long, Long> findCoverImageIdsByCarIds(final Collection<Long> carIds) {
+        if (carIds == null || carIds.isEmpty()) {
+            return Map.of();
+        }
+        // Multi-select projection (carId, imageId) ordered by displayOrder; the first row per car
+        // is the cover. Avoids loading the full entities and any LAZY proxy access for ids.
+        final List<Object[]> rows = em.createQuery(
+                        "SELECT cp.car.id, cp.image.id FROM CarPicture cp "
+                                + "WHERE cp.car.id IN :carIds AND cp.image IS NOT NULL "
+                                + "ORDER BY cp.car.id ASC, cp.displayOrder ASC",
+                        Object[].class)
+                .setParameter("carIds", carIds)
+                .getResultList();
+        final Map<Long, Long> result = new HashMap<>();
+        for (final Object[] row : rows) {
+            final long carId = ((Number) row[0]).longValue();
+            final long imageId = ((Number) row[1]).longValue();
+            // First row per car wins (lowest displayOrder thanks to ORDER BY).
+            result.putIfAbsent(carId, imageId);
+        }
+        return result;
     }
 }

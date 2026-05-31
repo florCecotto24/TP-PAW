@@ -4,8 +4,11 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -13,14 +16,17 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.FavCar;
 import ar.edu.itba.paw.models.domain.FavCarId;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.FavCarDao;
 
 @Transactional(readOnly = true)
@@ -29,6 +35,16 @@ public class FavCarJpaDao implements FavCarDao {
 
     @PersistenceContext
     private EntityManager em;
+
+    private final CarPictureDao carPictureDao;
+    private final ListingAvailabilityDao listingAvailabilityDao;
+
+    @Autowired
+    public FavCarJpaDao(final CarPictureDao carPictureDao,
+                        final ListingAvailabilityDao listingAvailabilityDao) {
+        this.carPictureDao = carPictureDao;
+        this.listingAvailabilityDao = listingAvailabilityDao;
+    }
 
     @Override
     public boolean isFavorited(final long carId, final long userId) {
@@ -53,76 +69,118 @@ public class FavCarJpaDao implements FavCarDao {
     }
 
     @Override
-    public List<CarCard> findFavoriteCarCardsWindow(
+    public Page<CarCard> findFavoriteCarCards(
+            final long userId,
+            final Collection<Car.Status> allowedStatuses,
+            final int page,
+            final int pageSize) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        if (allowedStatuses == null || allowedStatuses.isEmpty()) {
+            return new Page<>(List.of(), safePage, safePageSize, 0L);
+        }
+        final long total = countFavoriteCars(userId, allowedStatuses);
+        if (total == 0L) {
+            return new Page<>(List.of(), safePage, safePageSize, 0L);
+        }
+        final List<CarCard> content = loadFavoriteCarCardsWindow(
+                userId, allowedStatuses, safePage * safePageSize, safePageSize);
+        return new Page<>(content, safePage, safePageSize, total);
+    }
+
+    /**
+     * COUNT in JPQL navigating the {@link FavCar} entity graph (not the raw table). Used as the
+     * "+1" of the 1+1 pagination pattern that {@link #loadFavoriteCarCardsWindow} closes.
+     */
+    private long countFavoriteCars(final long userId, final Collection<Car.Status> allowedStatuses) {
+        final Number count = (Number) em.createQuery(
+                "SELECT COUNT(fc) FROM FavCar fc "
+                + "WHERE fc.id.userId = :userId "
+                + "AND fc.car.status IN :allowedStatuses "
+                + "AND fc.car.owner.blocked = FALSE")
+                .setParameter("userId", userId)
+                .setParameter("allowedStatuses", allowedStatuses)
+                .getSingleResult();
+        return count == null ? 0L : count.longValue();
+    }
+
+    /**
+     * Real "1+1" pattern:
+     *   1. NATIVE query to fetch only the favourited car IDs ordered by favorited_at (the only
+     *      reason native SQL is needed here is the dialect-specific LIMIT/OFFSET pagination).
+     *   2. JPQL with JOIN FETCH hydrates the Car entities (and their CarModel + CarBrand).
+     *   3. Cover image and "from" day price are asked to the DAOs that own those entities,
+     *      so this DAO never touches car_pictures or listing_availability directly.
+     */
+    private List<CarCard> loadFavoriteCarCardsWindow(
             final long userId,
             final Collection<Car.Status> allowedStatuses,
             final int offset,
             final int limit) {
-        if (allowedStatuses == null || allowedStatuses.isEmpty() || limit <= 0) {
-            return List.of();
-        }
-        // Single native query that joins fav_cars with the catalog tables and computes the cover
-        // image and minimum day price via correlated subqueries. Pagination is enforced at SQL
-        // level via LIMIT/OFFSET and ordering matches the feature spec (most recent first).
-        final String sql =
-                "SELECT c.id, cb.name AS brand, cm.name AS model, "
-                + "(SELECT cp.image_id FROM car_pictures cp "
-                + "  WHERE cp.car_id = c.id AND cp.image_id IS NOT NULL "
-                + "  ORDER BY cp.display_order ASC, cp.id ASC LIMIT 1) AS image_id, "
-                + "(SELECT MIN(la.day_price) FROM listing_availability la "
-                + "  WHERE la.car_id = c.id AND la.kind = 'offered') AS min_price, "
-                + "c.status, c.rating_avg, cm.validated AS model_validated, "
-                + "c.minimum_rental_days, c.owner_id "
-                + "FROM fav_cars fc "
+        final List<String> statusDbValues = toStatusDbValues(allowedStatuses);
+        final String idSql =
+                "SELECT c.id FROM fav_cars fc "
                 + "INNER JOIN cars c ON c.id = fc.car_id "
                 + "INNER JOIN users u ON u.id = c.owner_id AND u.blocked = FALSE "
-                + "INNER JOIN car_models cm ON cm.id = c.model_id "
-                + "INNER JOIN car_brands cb ON cb.id = cm.brand_id "
                 + "WHERE fc.user_id = :userId "
                 + "AND c.status IN (:allowedStatuses) "
                 + "ORDER BY fc.favorited_at DESC, c.id DESC "
                 + "LIMIT :limit OFFSET :offset";
-        final Query q = em.createNativeQuery(sql)
+        final Query q = em.createNativeQuery(idSql)
                 .setParameter("userId", userId)
-                .setParameter("allowedStatuses", toStatusDbValues(allowedStatuses))
+                .setParameter("allowedStatuses", statusDbValues)
                 .setParameter("limit", limit)
                 .setParameter("offset", offset);
         @SuppressWarnings("unchecked")
-        final List<Object[]> rows = q.getResultList();
-        final List<CarCard> cards = new ArrayList<>(rows.size());
-        for (final Object[] row : rows) {
-            final boolean modelValidated = row[7] != null && (Boolean) row[7];
-            cards.add(CarCard.builder()
-                    .carId(((Number) row[0]).longValue())
-                    .brand((String) row[1])
-                    .model((String) row[2])
-                    .imageId(row[3] == null ? 0L : ((Number) row[3]).longValue())
-                    .dayPrice(row[4] == null ? null : toBigDecimal(row[4]))
-                    .status(Car.Status.valueOf(((String) row[5]).toUpperCase()))
-                    .ratingAvg(row[6] == null ? null : toBigDecimal(row[6]))
+        final List<Number> rawIds = q.getResultList();
+        if (rawIds.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> orderedIds = new ArrayList<>(rawIds.size());
+        for (final Number n : rawIds) {
+            orderedIds.add(n.longValue());
+        }
+
+        final List<Car> cars = em.createQuery(
+                        "FROM Car c "
+                                + "JOIN FETCH c.carModel cm "
+                                + "JOIN FETCH cm.brand "
+                                + "WHERE c.id IN :ids",
+                        Car.class)
+                .setParameter("ids", orderedIds)
+                .getResultList();
+        final Map<Long, Car> byId = new HashMap<>(cars.size());
+        for (final Car c : cars) {
+            byId.put(c.getId(), c);
+        }
+        final Set<Long> carIdSet = new LinkedHashSet<>(orderedIds);
+        final Map<Long, Long> coverByCar = carPictureDao.findCoverImageIdsByCarIds(carIdSet);
+        final Map<Long, BigDecimal> priceByCar = listingAvailabilityDao.findMinOfferedDayPriceByCarIds(carIdSet);
+
+        final List<CarCard> result = new ArrayList<>(orderedIds.size());
+        for (final Long id : orderedIds) {
+            final Car c = byId.get(id);
+            if (c == null) {
+                continue;
+            }
+            final CarModel model = c.getCarModel().orElse(null);
+            final boolean modelValidated = model != null && model.isValidated();
+            final String brand = model == null || model.getBrand() == null ? null : model.getBrand().getName();
+            final String modelName = model == null ? null : model.getName();
+            result.add(CarCard.builder()
+                    .carId(c.getId())
+                    .brand(brand)
+                    .model(modelName)
+                    .imageId(coverByCar.getOrDefault(c.getId(), 0L))
+                    .dayPrice(priceByCar.get(c.getId()))
+                    .status(c.getStatus())
+                    .ratingAvg(c.getRatingAvg().orElse(null))
                     .modelPendingValidation(!modelValidated)
-                    .minimumRentalDays(row[8] == null ? 1 : ((Number) row[8]).intValue())
-                    .ownerId(row[9] == null ? null : ((Number) row[9]).longValue())
+                    .minimumRentalDays(c.getMinimumRentalDays())
+                    .ownerId(c.getOwner() == null ? null : c.getOwner().getId())
                     .build());
         }
-        return cards;
-    }
-
-    @Override
-    public long countFavoriteCars(final long userId, final Collection<Car.Status> allowedStatuses) {
-        if (allowedStatuses == null || allowedStatuses.isEmpty()) {
-            return 0L;
-        }
-        final String sql =
-                "SELECT COUNT(*) FROM fav_cars fc "
-                + "INNER JOIN cars c ON c.id = fc.car_id "
-                + "INNER JOIN users u ON u.id = c.owner_id AND u.blocked = FALSE "
-                + "WHERE fc.user_id = :userId AND c.status IN (:allowedStatuses)";
-        final Object result = em.createNativeQuery(sql)
-                .setParameter("userId", userId)
-                .setParameter("allowedStatuses", toStatusDbValues(allowedStatuses))
-                .getSingleResult();
-        return result == null ? 0L : ((Number) result).longValue();
+        return result;
     }
 
     @Override
@@ -147,18 +205,5 @@ public class FavCarJpaDao implements FavCarDao {
     private static List<String> toStatusDbValues(final Collection<Car.Status> statuses) {
         // Car.StatusConverter stores enum names as lowercase; the IN clause must match that format.
         return statuses.stream().map(s -> s.name().toLowerCase()).collect(Collectors.toList());
-    }
-
-    private static BigDecimal toBigDecimal(final Object value) {
-        if (value instanceof BigDecimal bigDecimalValue) {
-            return bigDecimalValue;
-        }
-        if (value instanceof Number numberValue) {
-            return BigDecimal.valueOf(numberValue.doubleValue());
-        }
-        if (value == null) {
-            return null;
-        }
-        return new BigDecimal(value.toString());
     }
 }

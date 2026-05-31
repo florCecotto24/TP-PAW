@@ -1,0 +1,94 @@
+package ar.edu.itba.paw.webapp.security.access;
+
+import java.util.function.Supplier;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.stereotype.Component;
+
+import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+
+/**
+ * Authorization helper for endpoints whose business rule requires the authenticated caller to
+ * not be the owner of the {@code Car} identified by the {@code carId} request parameter
+ * (e.g. {@code POST /my-favorites/toggle} — you cannot favourite your own car; {@code GET /reservation/new} —
+ * you cannot reserve your own car). Adds filter-chain defense-in-depth on top of the equivalent
+ * service-level checks ({@code FavCarService#toggleFavorite},
+ * {@code ReservationService#submitRiderReservationByCar}).
+ *
+ * Reads {@code carId} from the request query/form parameter (not from the path) so it
+ * fits both endpoints uniformly. Malformed / missing / unknown {@code carId} is intentionally
+ * allowed through so the controller can surface a coherent validation error (e.g.
+ * {@code favCar.notFound}, {@code reservation.invalidCar}) rather than a generic 403.
+ */
+@Component("carNotOwnedByCallerAuth")
+public final class CarNotOwnedByCallerAuthorization {
+
+    private static final String CAR_ID_PARAM = "carId";
+
+    private final CarService carService;
+
+    public CarNotOwnedByCallerAuthorization(final CarService carService) {
+        this.carService = carService;
+    }
+
+    /**
+     * {@code true} when the caller is authenticated and is NOT the owner of the car referenced by
+     * the {@code carId} request parameter. See class javadoc for the "missing/unknown is allowed"
+     * rationale.
+     */
+    public boolean isNotOwnerOfRequestCar(final Authentication authentication, final HttpServletRequest request) {
+        final Long userId = authenticatedUserId(authentication);
+        if (userId == null) {
+            return false;
+        }
+        final Long carId = parseCarIdParam(request);
+        if (carId == null) {
+            return true;
+        }
+        return carService.getCarById(carId)
+                .map(c -> c.getOwnerId() != userId)
+                .orElse(true);
+    }
+
+    public AuthorizationManager<RequestAuthorizationContext> nonOwnerAccess() {
+        return (Supplier<Authentication> authentication, RequestAuthorizationContext context) -> {
+            final Authentication auth = authentication.get();
+            if (auth == null || !auth.isAuthenticated()) {
+                return new AuthorizationDecision(false);
+            }
+            return new AuthorizationDecision(isNotOwnerOfRequestCar(auth, context.getRequest()));
+        };
+    }
+
+    private static Long authenticatedUserId(final Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        if (!(authentication.getPrincipal() instanceof RydenUserDetails details)) {
+            return null;
+        }
+        return details.getUserId();
+    }
+
+    private static Long parseCarIdParam(final HttpServletRequest request) {
+        final String raw = request.getParameter(CAR_ID_PARAM);
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            final long id = Long.parseLong(raw.trim());
+            return id > 0 ? id : null;
+        } catch (final NumberFormatException e) {
+            return null;
+        }
+    }
+}

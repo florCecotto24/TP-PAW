@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.form;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
@@ -21,7 +22,9 @@ public final class ReservationForm {
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
     private String deliveryLocation;
 
-    @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
+    @NotBlank(
+            message = "{reservation.form.carNameRequired}",
+            groups = ValidationGroups.OnReservationSubmit.class)
     private String carName;
 
     public Long getCarId() {
