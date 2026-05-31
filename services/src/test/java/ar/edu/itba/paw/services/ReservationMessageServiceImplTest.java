@@ -31,6 +31,7 @@ import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.persistence.ReservationMessageDao;
 import ar.edu.itba.paw.services.mail.MailPublicUrls;
 import ar.edu.itba.paw.services.policy.ChatAttachmentUploadPolicy;
+import ar.edu.itba.paw.services.policy.ChatAttachmentUploadPolicyImpl;
 import ar.edu.itba.paw.services.policy.ReservationChatPolicy;
 import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
@@ -86,7 +87,7 @@ class ReservationMessageServiceImplTest {
                 .thenReturn(1048576);
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_CHAT_ATTACHMENT_MB, Long.class))
                 .thenReturn(25L);
-        final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy = new ChatAttachmentUploadPolicy(environment);
+        final ChatAttachmentUploadPolicy chatAttachmentUploadPolicy = new ChatAttachmentUploadPolicyImpl(environment);
         service = new ReservationMessageServiceImpl(
                 reservationMessageDao,
                 reservationService,

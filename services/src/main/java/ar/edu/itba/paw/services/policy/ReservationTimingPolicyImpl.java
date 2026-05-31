@@ -4,11 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-/**
- * Business time windows for reservations, read from {@code application/application.properties}.
- */
+/** Reads {@code app.reservation.*} properties to back {@link ReservationTimingPolicy}. */
 @Component
-public final class ReservationTimingPolicy {
+public final class ReservationTimingPolicyImpl implements ReservationTimingPolicy {
 
     private final int pickupLeadHours;
     private final int paymentProofDeadlineHours;
@@ -17,7 +15,7 @@ public final class ReservationTimingPolicy {
     private final int maxBillableDaysPerReservation;
 
     @Autowired
-    public ReservationTimingPolicy(final Environment environment) {
+    public ReservationTimingPolicyImpl(final Environment environment) {
         this.pickupLeadHours = readPositiveInt(environment, "app.reservation.pickup-lead-hours", 24);
         this.paymentProofDeadlineHours =
                 readPositiveInt(environment, "app.reservation.payment-proof-deadline-hours", 12);
@@ -36,24 +34,27 @@ public final class ReservationTimingPolicy {
         return v;
     }
 
+    @Override
     public int getPickupLeadHours() {
         return pickupLeadHours;
     }
 
+    @Override
     public int getPaymentProofDeadlineHours() {
         return paymentProofDeadlineHours;
     }
 
-    /** Lead window for the pending payment-proof rider email ({@code app.reservation.payment-proof-reminder-lead-hours}). */
+    @Override
     public int getPaymentProofReminderLeadHours() {
         return paymentProofReminderLeadHours;
     }
 
+    @Override
     public int getReturnReminderHoursBeforeCheckout() {
         return returnReminderHoursBeforeCheckout;
     }
 
-    /** Inclusive wall-calendar billable days allowed for one reservation ({@code app.reservation.max-billable-days}). */
+    @Override
     public int getMaxBillableDaysPerReservation() {
         return maxBillableDaysPerReservation;
     }

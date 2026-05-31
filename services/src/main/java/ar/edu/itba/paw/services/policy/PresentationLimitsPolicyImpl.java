@@ -4,11 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-/**
- * Caps for teaser-style UI snippets (not SQL pagination windows).
- */
+/** Resolves {@link PresentationLimitsPolicy} from {@code app.presentation.*} properties. */
 @Component
-public final class PresentationLimitsPolicy {
+public final class PresentationLimitsPolicyImpl implements PresentationLimitsPolicy {
 
     private static final String COUNTERPARTY_RECENT_REVIEWS =
             "app.presentation.counterparty-recent-reviews-limit";
@@ -17,11 +15,8 @@ public final class PresentationLimitsPolicy {
     private static final String COUNTERPARTY_OWNER_ACTIVE_LISTINGS_PAGE =
             "app.presentation.counterparty-owner-active-listings-page-size";
 
-    /** When {@link #COUNTERPARTY_RECENT_REVIEWS} is unset or invalid. */
     private static final int FALLBACK_COUNTERPARTY_RECENT_REVIEWS_LIMIT = 3;
-    /** When {@link #CAR_DETAIL_SIMILAR_LISTINGS} is unset or invalid. */
     private static final int FALLBACK_CAR_DETAIL_SIMILAR_LISTINGS_LIMIT = 4;
-    /** When {@link #COUNTERPARTY_OWNER_ACTIVE_LISTINGS_PAGE} is unset or invalid. */
     private static final int FALLBACK_COUNTERPARTY_OWNER_ACTIVE_LISTINGS_PAGE_SIZE = 6;
 
     private final int counterpartyRecentReviewsLimit;
@@ -29,7 +24,7 @@ public final class PresentationLimitsPolicy {
     private final int counterpartyOwnerActiveListingsPageSize;
 
     @Autowired
-    public PresentationLimitsPolicy(final Environment environment) {
+    public PresentationLimitsPolicyImpl(final Environment environment) {
         this.counterpartyRecentReviewsLimit =
                 readPositiveInt(environment, COUNTERPARTY_RECENT_REVIEWS, FALLBACK_COUNTERPARTY_RECENT_REVIEWS_LIMIT);
         this.carDetailSimilarListingsLimit =
@@ -52,19 +47,17 @@ public final class PresentationLimitsPolicy {
         return v;
     }
 
-    /**
-     * How many comment-bearing reviews to show for counterparty profile sidebars (/car-detail and /my-reservations).
-     */
+    @Override
     public int getCounterpartyRecentReviewsLimit() {
         return counterpartyRecentReviewsLimit;
     }
 
-    /** Max similar listing cards on {@code /car-detail}. */
+    @Override
     public int getCarDetailSimilarListingsLimit() {
         return carDetailSimilarListingsLimit;
     }
 
-    /** Page size for counterparty profile “other active listings” grid and load-more batches. */
+    @Override
     public int getCounterpartyOwnerActiveListingsPageSize() {
         return counterpartyOwnerActiveListingsPageSize;
     }

@@ -24,7 +24,7 @@ class ListingCheckInOutPolicyTest {
     @Test
     void testConstructorAppliesDefaultWhenPropertyMissing() {
         // 1.Arrange / 2.Exercise
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(6, policy.getMinHoursBetweenCheckInAndCheckOut());
@@ -36,7 +36,7 @@ class ListingCheckInOutPolicyTest {
         Mockito.when(environment.getProperty(KEY, Integer.class)).thenReturn(0);
 
         // 2.Exercise
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(6, policy.getMinHoursBetweenCheckInAndCheckOut());
@@ -48,7 +48,7 @@ class ListingCheckInOutPolicyTest {
         Mockito.when(environment.getProperty(KEY, Integer.class)).thenReturn(8);
 
         // 2.Exercise
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(8, policy.getMinHoursBetweenCheckInAndCheckOut());
@@ -57,7 +57,7 @@ class ListingCheckInOutPolicyTest {
     @Test
     void testHasMinimumGapReturnsTrueWhenEitherTimeIsNull() {
         // 1.Arrange
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 2.Exercise / 3.Assert
         Assertions.assertTrue(policy.hasMinimumGap(null, LocalTime.of(18, 0)));
@@ -68,7 +68,7 @@ class ListingCheckInOutPolicyTest {
     @Test
     void testHasMinimumGapReturnsTrueWhenCheckOutNotAfterCheckInToDelegateToOtherValidators() {
         // 1.Arrange
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 2.Exercise / 3.Assert
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(10, 0), LocalTime.of(10, 0)));
@@ -78,7 +78,7 @@ class ListingCheckInOutPolicyTest {
     @Test
     void testHasMinimumGapReturnsTrueAtExactGap() {
         // 1.Arrange: default gap = 6h.
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 2.Exercise / 3.Assert
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(14, 0)));
@@ -87,7 +87,7 @@ class ListingCheckInOutPolicyTest {
     @Test
     void testHasMinimumGapReturnsFalseWhenGapIsTooSmall() {
         // 1.Arrange: default gap = 6h; difference here is 5h59m.
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 2.Exercise / 3.Assert
         Assertions.assertFalse(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(13, 59)));
@@ -97,7 +97,7 @@ class ListingCheckInOutPolicyTest {
     void testHasMinimumGapHonoursConfiguredHoursFromEnvironment() {
         // 1.Arrange: override min hours to 4.
         Mockito.when(environment.getProperty(KEY, Integer.class)).thenReturn(4);
-        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicy(environment);
+        final ListingCheckInOutPolicy policy = new ListingCheckInOutPolicyImpl(environment);
 
         // 2.Exercise / 3.Assert: 4h exact passes; 3h59m fails.
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(12, 0)));

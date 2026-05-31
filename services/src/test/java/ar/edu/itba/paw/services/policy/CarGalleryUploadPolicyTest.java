@@ -26,11 +26,11 @@ class CarGalleryUploadPolicyTest {
                 .thenReturn(1_048_576);
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class))
                 .thenReturn(20L);
-        Mockito.when(environment.getProperty(CarGalleryUploadPolicy.PROPERTY_MAX_VIDEO_MB, Long.class))
+        Mockito.when(environment.getProperty(CarGalleryUploadPolicyImpl.PROPERTY_MAX_VIDEO_MB, Long.class))
                 .thenReturn(25L);
 
         // 2.Exercise
-        final CarGalleryUploadPolicy policy = new CarGalleryUploadPolicy(environment);
+        final CarGalleryUploadPolicy policy = new CarGalleryUploadPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(8, policy.getMaxItems());

@@ -7,13 +7,11 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
 /**
- * Limits for car publish gallery uploads: up to 8 mixed photos/videos with per-type byte caps from
- * {@code app.upload.max-image-megabytes} and {@code app.upload.max-car-gallery-video-megabytes}.
+ * Reads {@code app.upload.max-image-megabytes} and {@code app.upload.max-car-gallery-video-megabytes}
+ * to back the {@link CarGalleryUploadPolicy} contract.
  */
 @Component
-public final class CarGalleryUploadPolicy {
-
-    public static final int MAX_ITEMS = 8;
+public final class CarGalleryUploadPolicyImpl implements CarGalleryUploadPolicy {
 
     public static final String PROPERTY_MAX_VIDEO_MB = "app.upload.max-car-gallery-video-megabytes";
 
@@ -22,7 +20,7 @@ public final class CarGalleryUploadPolicy {
     private final long bytesPerBinaryMegabyte;
 
     @Autowired
-    public CarGalleryUploadPolicy(final Environment environment) {
+    public CarGalleryUploadPolicyImpl(final Environment environment) {
         this.bytesPerBinaryMegabyte = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
         this.maxImageBytes = toPositiveInt(UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, 20L));
@@ -30,22 +28,27 @@ public final class CarGalleryUploadPolicy {
                 environment, PROPERTY_MAX_VIDEO_MB, 25L));
     }
 
+    @Override
     public int getMaxItems() {
         return MAX_ITEMS;
     }
 
+    @Override
     public int getMaxImageBytes() {
         return maxImageBytes;
     }
 
+    @Override
     public int getMaxVideoBytes() {
         return maxVideoBytes;
     }
 
+    @Override
     public int getMaxImageMegabytesRoundedUp() {
         return megabytesRoundedUp(maxImageBytes);
     }
 
+    @Override
     public int getMaxVideoMegabytesRoundedUp() {
         return megabytesRoundedUp(maxVideoBytes);
     }

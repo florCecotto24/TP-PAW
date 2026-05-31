@@ -22,7 +22,7 @@ class ProfileDocumentUploadPolicyTest {
     @Test
     void testConstructorUsesDefaultMegabytesWhenPropertyMissing() {
         // 1.Arrange / 2.Exercise
-        final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicy(environment);
+        final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(5 * UploadBinaryMegabyte.DEFAULT_BYTES_PER_BINARY_MB, policy.getMaxBytes());
@@ -38,7 +38,7 @@ class ProfileDocumentUploadPolicyTest {
                 .thenReturn(1000);
 
         // 2.Exercise
-        final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicy(environment);
+        final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(2_000, policy.getMaxBytes());
@@ -54,7 +54,7 @@ class ProfileDocumentUploadPolicyTest {
                 .thenReturn(3L);
 
         // 2.Exercise
-        final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicy(environment);
+        final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(3 * 1024, policy.getMaxBytes());
@@ -69,6 +69,6 @@ class ProfileDocumentUploadPolicyTest {
 
         // 2.Exercise / 3.Assert
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new ProfileDocumentUploadPolicy(environment));
+                () -> new ProfileDocumentUploadPolicyImpl(environment));
     }
 }

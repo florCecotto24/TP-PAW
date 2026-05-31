@@ -7,17 +7,17 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
 /**
- * Max byte size for reservation chat attachment uploads, from {@code app.upload.max-chat-attachment-megabytes}
- * and {@code app.upload.bytes-per-binary-megabyte}.
+ * Reads {@code app.upload.max-chat-attachment-megabytes} and {@code app.upload.bytes-per-binary-megabyte}
+ * to back the {@link ChatAttachmentUploadPolicy} contract.
  */
 @Component
-public final class ChatAttachmentUploadPolicy {
+public final class ChatAttachmentUploadPolicyImpl implements ChatAttachmentUploadPolicy {
 
     private final int maxBytes;
     private final long bytesPerBinaryMegabyte;
 
     @Autowired
-    public ChatAttachmentUploadPolicy(final Environment environment) {
+    public ChatAttachmentUploadPolicyImpl(final Environment environment) {
         this.bytesPerBinaryMegabyte = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
         final long raw = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_CHAT_ATTACHMENT_MB, 25L);
@@ -28,10 +28,12 @@ public final class ChatAttachmentUploadPolicy {
         this.maxBytes = (int) raw;
     }
 
+    @Override
     public int getMaxBytes() {
         return maxBytes;
     }
 
+    @Override
     public int getMaxMegabytesRoundedUp() {
         return (int) ((maxBytes + bytesPerBinaryMegabyte - 1) / bytesPerBinaryMegabyte);
     }

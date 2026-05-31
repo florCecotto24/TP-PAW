@@ -29,6 +29,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicyImpl;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,7 +65,7 @@ public class UserServiceImplTest {
         final Environment environment = Mockito.mock(Environment.class);
         Mockito.when(environment.getProperty("app.upload.bytes-per-binary-megabyte", Integer.class)).thenReturn(1048576);
         Mockito.when(environment.getProperty("app.upload.max-profile-document-megabytes", Long.class)).thenReturn(5L);
-        profileDocumentUploadPolicy = new ProfileDocumentUploadPolicy(environment);
+        profileDocumentUploadPolicy = new ProfileDocumentUploadPolicyImpl(environment);
         userService = new UserServiceImpl(
                 userDao,
                 imageService,

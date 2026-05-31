@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.common.util;
+package ar.edu.itba.paw.services.util;
 
 /**
  * Levenshtein edit distance between two strings (cost of one insertion, deletion or substitution).

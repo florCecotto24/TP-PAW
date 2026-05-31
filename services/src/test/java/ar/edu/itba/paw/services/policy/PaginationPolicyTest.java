@@ -22,7 +22,7 @@ class PaginationPolicyTest {
     @Test
     void testConstructorAppliesAllFallbacksWhenEnvironmentIsEmpty() {
         // 1.Arrange / 2.Exercise
-        final PaginationPolicy policy = new PaginationPolicy(environment);
+        final PaginationPolicy policy = new PaginationPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(PaginationFallbackSizes.UI_PAGE_SIZE, policy.getUiPageSize());
@@ -43,7 +43,7 @@ class PaginationPolicyTest {
                 .thenReturn(7);
 
         // 2.Exercise
-        final PaginationPolicy policy = new PaginationPolicy(environment);
+        final PaginationPolicy policy = new PaginationPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(10, policy.getUiPageSize());
@@ -59,7 +59,7 @@ class PaginationPolicyTest {
         Mockito.when(environment.getProperty("app.pagination.db-fetch-size", Integer.class)).thenReturn(5);
 
         // 2.Exercise
-        final PaginationPolicy policy = new PaginationPolicy(environment);
+        final PaginationPolicy policy = new PaginationPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(20, policy.getUiPageSize());
@@ -77,7 +77,7 @@ class PaginationPolicyTest {
                 .thenReturn(-1);
 
         // 2.Exercise
-        final PaginationPolicy policy = new PaginationPolicy(environment);
+        final PaginationPolicy policy = new PaginationPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(PaginationFallbackSizes.UI_PAGE_SIZE, policy.getUiPageSize());

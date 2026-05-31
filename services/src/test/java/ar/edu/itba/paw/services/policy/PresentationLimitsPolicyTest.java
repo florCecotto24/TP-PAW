@@ -25,7 +25,7 @@ class PresentationLimitsPolicyTest {
     @Test
     void testConstructorAppliesFallbacksWhenPropertiesMissing() {
         // 1.Arrange / 2.Exercise
-        final PresentationLimitsPolicy policy = new PresentationLimitsPolicy(environment);
+        final PresentationLimitsPolicy policy = new PresentationLimitsPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(3, policy.getCounterpartyRecentReviewsLimit());
@@ -41,7 +41,7 @@ class PresentationLimitsPolicyTest {
         Mockito.when(environment.getProperty(OWNER_ACTIVE_LISTINGS_KEY, Integer.class)).thenReturn(0);
 
         // 2.Exercise
-        final PresentationLimitsPolicy policy = new PresentationLimitsPolicy(environment);
+        final PresentationLimitsPolicy policy = new PresentationLimitsPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(3, policy.getCounterpartyRecentReviewsLimit());
@@ -57,7 +57,7 @@ class PresentationLimitsPolicyTest {
         Mockito.when(environment.getProperty(OWNER_ACTIVE_LISTINGS_KEY, Integer.class)).thenReturn(9);
 
         // 2.Exercise
-        final PresentationLimitsPolicy policy = new PresentationLimitsPolicy(environment);
+        final PresentationLimitsPolicy policy = new PresentationLimitsPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(5, policy.getCounterpartyRecentReviewsLimit());

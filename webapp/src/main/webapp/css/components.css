@@ -490,12 +490,12 @@ body.modal-open {
     font-weight: normal;
 }
 
-.carcard-model {
+.carcard-brand {
     color: #808080FF;
 }
 
 /* Full-width title: do not share a row with price (long ARS amounts were squeezing this to "P…"). */
-.carcard-brand {
+.carcard-model {
     white-space: normal;
     overflow-wrap: anywhere;
     word-break: break-word;

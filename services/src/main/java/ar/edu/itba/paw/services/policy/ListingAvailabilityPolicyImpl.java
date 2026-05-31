@@ -13,17 +13,16 @@ import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
- * Limits how far into the future listing availability may extend on the publication wall calendar
- * ({@link AvailabilityPeriod#WALL_ZONE}), measured from {@code referenceWallDay} (normally “today” in that zone):
- * inclusive start/end dates must not fall after {@code referenceWallDay + configuredForwardDays}.
+ * Reads {@code app.listing.max-availability-forward-wall-days} (or the legacy
+ * {@code app.listing.max-availability-total-days}) to back {@link ListingAvailabilityPolicy}.
  */
 @Component
-public final class ListingAvailabilityPolicy {
+public final class ListingAvailabilityPolicyImpl implements ListingAvailabilityPolicy {
 
     private final int maxAvailabilityForwardWallDays;
 
     @Autowired
-    public ListingAvailabilityPolicy(final Environment environment) {
+    public ListingAvailabilityPolicyImpl(final Environment environment) {
         this.maxAvailabilityForwardWallDays = resolveForwardWallDays(environment);
     }
 
@@ -39,10 +38,12 @@ public final class ListingAvailabilityPolicy {
         return 365;
     }
 
+    @Override
     public int getMaxAvailabilityForwardWallDays() {
         return maxAvailabilityForwardWallDays;
     }
 
+    @Override
     public void validateAvailabilityWithinPublishHorizon(
             final LocalDate referenceWallDay,
             final List<AvailabilityPeriod> periods) {

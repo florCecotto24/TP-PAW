@@ -22,7 +22,7 @@ class ReservationTimingPolicyTest {
         // 1.Arrange
 
         // 2.Exercise
-        final ReservationTimingPolicy policy = new ReservationTimingPolicy(environment);
+        final ReservationTimingPolicy policy = new ReservationTimingPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(24, policy.getPickupLeadHours());
@@ -45,7 +45,7 @@ class ReservationTimingPolicyTest {
         Mockito.when(environment.getProperty("app.reservation.max-billable-days", Integer.class)).thenReturn(60);
 
         // 2.Exercise
-        final ReservationTimingPolicy policy = new ReservationTimingPolicy(environment);
+        final ReservationTimingPolicy policy = new ReservationTimingPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(48, policy.getPickupLeadHours());
@@ -68,7 +68,7 @@ class ReservationTimingPolicyTest {
         Mockito.when(environment.getProperty("app.reservation.max-billable-days", Integer.class)).thenReturn(0);
 
         // 2.Exercise
-        final ReservationTimingPolicy policy = new ReservationTimingPolicy(environment);
+        final ReservationTimingPolicy policy = new ReservationTimingPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(24, policy.getPickupLeadHours());

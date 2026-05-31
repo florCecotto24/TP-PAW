@@ -11,22 +11,20 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.services.LocationService;
 
 /**
- * Builds human-readable pickup and return address lines from a {@link ListingAvailability} row.
- * Combines street, optional door number, and neighborhood label from {@link LocationService}.
- * Intended for JSPs, reservation detail views, and email payloads; does not read or write persistence.
+ * {@link ListingAddressFormatter} implementation backed by {@link LocationService} for neighborhood lookups.
  * Transaction boundaries are provided by callers; this type stays {@code final} and is not proxied for AOP.
  */
 @Component
-public final class ListingAddressFormatter {
+public final class ListingAddressFormatterImpl implements ListingAddressFormatter {
 
     private final LocationService locationService;
 
     @Autowired
-    public ListingAddressFormatter(final LocationService locationService) {
+    public ListingAddressFormatterImpl(final LocationService locationService) {
         this.locationService = locationService;
     }
 
-    /** Public pickup line (street + neighborhood, no door number) read from a {@link ListingAvailability}. */
+    @Override
     public String formatPublicPickupLocation(final ListingAvailability availability) {
         return formatPublicPickupLocation(
                 availability.getStartPointStreet(),
@@ -55,7 +53,7 @@ public final class ListingAddressFormatter {
         return reservation.getPaymentReceiptFileId().isPresent();
     }
 
-    /** Full pickup line (street, optional number, neighborhood) read from a {@link ListingAvailability}. */
+    @Override
     public String formatFullPickupLocation(final ListingAvailability availability) {
         final String street = availability.getStartPointStreet() == null ? "" : availability.getStartPointStreet().trim();
         final Optional<String> numberOpt = availability.getStartPointNumber();
@@ -80,17 +78,17 @@ public final class ListingAddressFormatter {
         return streetWithNumber + ", " + neighborhoodName.trim();
     }
 
-    /** Return leg mirrors {@link #formatFullPickupLocation(ListingAvailability)} when pickup and return share one place. */
+    @Override
     public String formatFullDeliveryLocation(final ListingAvailability availability) {
         return formatFullPickupLocation(availability);
     }
 
-    /** Return leg mirrors {@link #formatPublicPickupLocation(ListingAvailability)}. */
+    @Override
     public String formatPublicDeliveryLocation(final ListingAvailability availability) {
         return formatPublicPickupLocation(availability);
     }
 
-    /** Pickup line for the reservation view; honours owner/rider visibility rules. */
+    @Override
     public String formatPickupForReservationView(
             final ListingAvailability availability,
             final Reservation reservation,
@@ -101,7 +99,7 @@ public final class ListingAddressFormatter {
         return formatPublicPickupLocation(availability);
     }
 
-    /** Return line for the reservation view; honours owner/rider visibility rules. */
+    @Override
     public String formatDeliveryForReservationView(
             final ListingAvailability availability,
             final Reservation reservation,
@@ -112,7 +110,7 @@ public final class ListingAddressFormatter {
         return formatPublicPickupLocation(availability);
     }
 
-    /** Single-line handover summary for rider-facing emails; collapses when pickup and return share one place. */
+    @Override
     public String formatRiderReservationHandoverSummary(
             final ListingAvailability availability, final Reservation reservation) {
         final String p = formatPickupForReservationView(availability, reservation, false);
@@ -126,7 +124,7 @@ public final class ListingAddressFormatter {
         return p + " · " + d;
     }
 
-    /** Single-line handover summary for owner-facing emails; always uses the full pickup/return lines. */
+    @Override
     public String formatOwnerReservationHandoverSummary(final ListingAvailability availability) {
         final String p = formatFullPickupLocation(availability);
         final String d = formatFullDeliveryLocation(availability);

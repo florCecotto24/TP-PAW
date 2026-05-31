@@ -6,12 +6,9 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 
-/**
- * Listing grids: DB fetch window vs UI page size (e.g. fetch 24 rows per query, show 8 per view).
- * Other screens use {@link #getDefaultPageSize()} as the SQL/UI page size (single-layer pagination).
- */
+/** Resolves {@link PaginationPolicy} from {@code app.pagination.*} properties. */
 @Component
-public final class PaginationPolicy {
+public final class PaginationPolicyImpl implements PaginationPolicy {
 
     private static final String UI_PAGE_SIZE = "app.pagination.ui-page-size";
     private static final String DB_FETCH_SIZE = "app.pagination.db-fetch-size";
@@ -24,7 +21,7 @@ public final class PaginationPolicy {
     private final int listingPublicReviewsPageSize;
 
     @Autowired
-    public PaginationPolicy(final Environment environment) {
+    public PaginationPolicyImpl(final Environment environment) {
         int ui = readPositiveInt(environment, UI_PAGE_SIZE, PaginationFallbackSizes.UI_PAGE_SIZE);
         int db = readPositiveInt(environment, DB_FETCH_SIZE, PaginationFallbackSizes.DB_FETCH_SIZE);
         if (db < ui) {
@@ -51,24 +48,22 @@ public final class PaginationPolicy {
         return v;
     }
 
-    /** Items per UI page for home search-style grids (paired with {@link #getDbFetchSize()} for SQL windows). */
+    @Override
     public int getUiPageSize() {
         return uiPageSize;
     }
 
-    /** Max rows fetched per query when using dual-layer (UI) + (DB) pagination for listing cards. */
+    @Override
     public int getDbFetchSize() {
         return dbFetchSize;
     }
 
-    /**
-     * Single page size for owner/reservation grids and legacy callers (SQL {@code LIMIT} equals UI page).
-     */
+    @Override
     public int getDefaultPageSize() {
         return defaultPageSize;
     }
 
-    /** Listing detail → public reviews block. */
+    @Override
     public int getListingPublicReviewsPageSize() {
         return listingPublicReviewsPageSize;
     }

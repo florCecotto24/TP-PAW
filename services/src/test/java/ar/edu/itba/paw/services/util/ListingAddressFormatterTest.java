@@ -24,7 +24,7 @@ public class ListingAddressFormatterTest {
     private LocationService locationService;
 
     @InjectMocks
-    private ListingAddressFormatter listingAddressFormatter;
+    private ListingAddressFormatterImpl listingAddressFormatter;
 
     private static ListingAvailability.Builder baseAvailability() {
         final Car carRef = Mockito.mock(Car.class);

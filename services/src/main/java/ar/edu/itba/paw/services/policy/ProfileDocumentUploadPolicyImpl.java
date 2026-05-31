@@ -1,22 +1,23 @@
 package ar.edu.itba.paw.services.policy;
 
-import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
+
 /**
- * Max byte size for profile verification uploads, derived from {@code app.upload.max-profile-document-megabytes}
- * and {@code app.upload.bytes-per-binary-megabyte}.
+ * Reads {@code app.upload.max-profile-document-megabytes} and {@code app.upload.bytes-per-binary-megabyte}
+ * to back the {@link ProfileDocumentUploadPolicy} contract.
  */
 @Component
-public final class ProfileDocumentUploadPolicy {
+public final class ProfileDocumentUploadPolicyImpl implements ProfileDocumentUploadPolicy {
 
     private final int maxBytes;
     private final long bytesPerBinaryMegabyte;
 
     @Autowired
-    public ProfileDocumentUploadPolicy(final Environment environment) {
+    public ProfileDocumentUploadPolicyImpl(final Environment environment) {
         this.bytesPerBinaryMegabyte = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
         final long raw = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_PROFILE_DOCUMENT_MB, 5L);
@@ -27,10 +28,12 @@ public final class ProfileDocumentUploadPolicy {
         this.maxBytes = (int) raw;
     }
 
+    @Override
     public int getMaxBytes() {
         return maxBytes;
     }
 
+    @Override
     public int getMaxMegabytesRoundedUp() {
         return (int) ((maxBytes + bytesPerBinaryMegabyte - 1) / bytesPerBinaryMegabyte);
     }

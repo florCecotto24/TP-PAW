@@ -59,7 +59,13 @@
     </dependency>
     <dependency>
       <groupId>ar.edu.itba.paw</groupId>
+      <artifactId>persistence</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>ar.edu.itba.paw</groupId>
       <artifactId>services</artifactId>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>

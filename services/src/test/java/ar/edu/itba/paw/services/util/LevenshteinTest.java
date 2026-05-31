@@ -1,4 +1,4 @@
-package ar.edu.itba.paw.common.util;
+package ar.edu.itba.paw.services.util;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

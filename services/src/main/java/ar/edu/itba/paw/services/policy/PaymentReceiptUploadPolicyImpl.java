@@ -7,17 +7,17 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.services.util.UploadBinaryMegabyte;
 
 /**
- * Max byte size for reservation payment receipt uploads, from {@code app.upload.max-payment-receipt-megabytes}
- * and {@code app.upload.bytes-per-binary-megabyte}.
+ * Reads {@code app.upload.max-payment-receipt-megabytes} and {@code app.upload.bytes-per-binary-megabyte}
+ * to back the {@link PaymentReceiptUploadPolicy} contract.
  */
 @Component
-public final class PaymentReceiptUploadPolicy {
+public final class PaymentReceiptUploadPolicyImpl implements PaymentReceiptUploadPolicy {
 
     private final int maxBytes;
     private final long bytesPerBinaryMegabyte;
 
     @Autowired
-    public PaymentReceiptUploadPolicy(final Environment environment) {
+    public PaymentReceiptUploadPolicyImpl(final Environment environment) {
         this.bytesPerBinaryMegabyte = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
         final long raw = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_PAYMENT_RECEIPT_MB, 5L);
@@ -28,10 +28,12 @@ public final class PaymentReceiptUploadPolicy {
         this.maxBytes = (int) raw;
     }
 
+    @Override
     public int getMaxBytes() {
         return maxBytes;
     }
 
+    @Override
     public int getMaxMegabytesRoundedUp() {
         return (int) ((maxBytes + bytesPerBinaryMegabyte - 1) / bytesPerBinaryMegabyte);
     }

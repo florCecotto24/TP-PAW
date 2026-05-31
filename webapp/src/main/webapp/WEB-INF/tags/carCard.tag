@@ -1,6 +1,7 @@
-<%@ tag language="java" pageEncoding="UTF-8" %>
+<%@ tag language="java" pageEncoding="UTF-8" trimDirectiveWhitespaces="true" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <%@ attribute name="model" required="true" %>
@@ -50,8 +51,8 @@
     </div>
     <div class="carcard-info">
         <div class="carcard-info-text text">
-            <h4 class="carcard-brand"><c:out value="${brand}"/></h4>
-            <p class="carcard-model"><c:out value="${model}"/></p>
+            <h4 class="carcard-model"><c:out value="${fn:trim(model)}"/></h4>
+            <p class="carcard-brand"><c:out value="${fn:trim(brand)}"/></p>
             <c:choose>
                 <c:when test="${not empty ratingAvg and reviewCount > 0}">
                     <p class="carcard-rating small text-secondary mb-0 mt-1">

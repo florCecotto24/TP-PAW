@@ -22,7 +22,7 @@ class PaymentReceiptUploadPolicyTest {
     @Test
     void testConstructorUsesDefaultWhenPropertyMissing() {
         // 1.Arrange / 2.Exercise
-        final PaymentReceiptUploadPolicy policy = new PaymentReceiptUploadPolicy(environment);
+        final PaymentReceiptUploadPolicy policy = new PaymentReceiptUploadPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(5 * UploadBinaryMegabyte.DEFAULT_BYTES_PER_BINARY_MB, policy.getMaxBytes());
@@ -36,7 +36,7 @@ class PaymentReceiptUploadPolicyTest {
                 .thenReturn(10L);
 
         // 2.Exercise
-        final PaymentReceiptUploadPolicy policy = new PaymentReceiptUploadPolicy(environment);
+        final PaymentReceiptUploadPolicy policy = new PaymentReceiptUploadPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(10 * UploadBinaryMegabyte.DEFAULT_BYTES_PER_BINARY_MB, policy.getMaxBytes());
@@ -51,6 +51,6 @@ class PaymentReceiptUploadPolicyTest {
 
         // 2.Exercise / 3.Assert
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new PaymentReceiptUploadPolicy(environment));
+                () -> new PaymentReceiptUploadPolicyImpl(environment));
     }
 }
