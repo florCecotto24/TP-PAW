@@ -56,11 +56,14 @@
                                         <td><c:out value="${car.owner.forename} ${car.owner.surname}"/></td>
                                         <td>
                                             <c:choose>
-                                                <c:when test="${car.status.name() == 'ADMIN_PAUSED'}">
+                                                <c:when test="${car.status.name() == 'ADMIN_PAUSED' || car.status.name() == 'PAUSED'}">
                                                     <span class="badge text-bg-warning"><c:out value="${carStatusLabel}"/></span>
                                                 </c:when>
-                                                <c:otherwise>
+                                                <c:when test="${car.status.name() == 'DEACTIVATED'}">
                                                     <span class="badge text-bg-secondary"><c:out value="${carStatusLabel}"/></span>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <span class="badge text-bg-success"><c:out value="${carStatusLabel}"/></span>
                                                 </c:otherwise>
                                             </c:choose>
                                         </td>

@@ -35,7 +35,22 @@
                                 <td><c:out value="${r.brand} ${r.model}"/></td>
                                 <td><c:out value="${r.startDate}"/></td>
                                 <td><c:out value="${r.endDate}"/></td>
-                                <td><span class="badge text-bg-secondary"><c:out value="${r.status}"/></span></td>
+                                <td>
+                                    <c:choose>
+                                        <c:when test="${r.status == 'PENDING'}">
+                                            <span class="badge text-bg-secondary"><c:out value="${r.status}"/></span>
+                                        </c:when>
+                                        <c:when test="${r.status == 'CANCELLED' || r.status == 'CANCELLED_BY_RIDER' || r.status == 'CANCELLED_BY_OWNER' || r.status == 'CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF'}">
+                                            <span class="badge text-bg-warning"><c:out value="${r.status}"/></span>
+                                        </c:when>
+                                        <c:when test="${r.status == 'FINISHED'}">
+                                            <span class="badge text-bg-secondary"><c:out value="${r.status}"/></span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="badge text-bg-success"><c:out value="${r.status}"/></span>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </td>
                                 <td>$<c:out value="${r.totalPrice}"/></td>
                                 <td class="text-end">
                                     <a href="${pageContext.request.contextPath}/admin/reservations/${r.reservationId}/chat"
