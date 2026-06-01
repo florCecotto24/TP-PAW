@@ -295,7 +295,7 @@
                     <c:if test="${not empty licenseFileName}">
                         <p class="small mb-2">
                             <a class="link-primary text-break"
-                               href="<c:url value='/profile/document/view'><c:param name='documentType' value='LICENSE'/></c:url>"
+                               href="<c:url value='/profile/documents/LICENSE/view'/>"
                                target="_blank" rel="noopener noreferrer">
                                 <c:out value="${licenseFileName}"/>
                             </a>
@@ -345,7 +345,7 @@
                     <c:if test="${not empty identityFileName}">
                         <p class="small mb-2">
                             <a class="link-primary text-break"
-                               href="<c:url value='/profile/document/view'><c:param name='documentType' value='IDENTITY'/></c:url>"
+                               href="<c:url value='/profile/documents/IDENTITY/view'/>"
                                target="_blank" rel="noopener noreferrer">
                                 <c:out value="${identityFileName}"/>
                             </a>

@@ -218,9 +218,7 @@
                                     </div>
 
                                     <div class="d-flex flex-column gap-3 px-2">
-                                        <c:url var="carDetailUrl" value="/car-detail">
-                                            <c:param name="carId"><c:out value="${car.id}"/></c:param>
-                                        </c:url>
+                                        <c:url var="carDetailUrl" value="/cars/${car.id}"/>
                                         <a href="<c:out value='${carDetailUrl}'/>" class="btn btn-outline-warm w-100">
                                             <i class="bi bi-eye me-2"></i><spring:message code="myCarDetail.actions.viewCar"/>
                                         </a>

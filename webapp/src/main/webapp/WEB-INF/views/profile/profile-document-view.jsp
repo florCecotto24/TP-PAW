@@ -30,7 +30,7 @@
 <script>
     (function () {
         var frame = document.getElementById('docFrame');
-        var url = "<c:url value='/profile/document'><c:param name='documentType' value='${documentType}'/></c:url>";
+        var url = "<c:url value='/profile/documents/${documentType}'/>";
         fetch(url, { credentials: 'same-origin' })
             .then(function (response) {
                 if (!response.ok) {

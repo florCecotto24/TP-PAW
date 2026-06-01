@@ -15,7 +15,7 @@
 <%@ attribute name="minimumRentalDays" required="false" type="java.lang.Integer" %>
 <%@ attribute name="defaultMonthFirstDay" required="false" type="java.lang.String" %>
 
-<c:url var="newReservationUrl" value="/reservation/new" />
+<c:url var="newReservationUrl" value="/cars/${carId}/reservation/new" />
 <spring:message code="validation.reservationForm.maxBillableDays" arguments="${maxBillableDays}" var="maxBillableExceededMsg" htmlEscape="true"/>
 <c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">
     <spring:message code="validation.reservationForm.minRentalDays" arguments="${minimumRentalDays}" var="minRentalDaysMsg" htmlEscape="true"/>
@@ -37,7 +37,6 @@
           <c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">data-min-rental-days="<c:out value='${minimumRentalDays}'/>" data-min-rental-days-msg="<c:out value='${minRentalDaysMsg}'/>"</c:if>
           data-search-nb-ids='<c:out value="${nbIdsJson}" escapeXml="false"/>'
           <c:if test="${not empty defaultMonthFirstDay}">data-default-month="<c:out value='${defaultMonthFirstDay}'/>"</c:if>>
-    <input type="hidden" name="carId" value="<c:out value='${carId}'/>" />
     <input type="hidden" name="carName" value="<c:out value='${carName}'/>" />
     <input type="hidden" name="reservationTotal" id="detail_reservation_total_hint" value="" />
 

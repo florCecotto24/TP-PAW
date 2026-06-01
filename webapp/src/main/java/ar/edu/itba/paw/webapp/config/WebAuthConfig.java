@@ -132,7 +132,7 @@ public class WebAuthConfig {
                 .requestCache(rc -> rc.requestCache(requestCache))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/search", "/car-detail").permitAll()
+                        .requestMatchers("/search", "/cars/*").permitAll()
                         .requestMatchers("/image/**").permitAll()
                         .requestMatchers("/car-media/**").permitAll()
                         .requestMatchers(
@@ -157,7 +157,7 @@ public class WebAuthConfig {
                                         "/my-favorites/toggle"))
                         .access(carNotOwnedByCallerAuthorization.nonOwnerAccess())
                         .requestMatchers("/my-favorites", "/my-favorites/**").authenticated()
-                        // GET /reservation/new?carId=X: filter-chain defense-in-depth for the rider-cannot-
+                        // GET /cars/{carId}/reservation/new: filter-chain defense-in-depth for the rider-cannot-
                         // reserve-own-car rule that the service layer enforces in submitRiderReservationByCar.
                         // The POST /reservation submit keeps service-level enforcement only because its carId
                         // travels in the form body (would force the filter to consume the multipart stream).
@@ -165,7 +165,7 @@ public class WebAuthConfig {
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
-                                        "/reservation/new"))
+                                        "/cars/{carId}/reservation/new"))
                         .access(carNotOwnedByCallerAuthorization.nonOwnerAccess())
                         .requestMatchers("/ws", "/ws/**").authenticated()
                         // Chat-style GETs are also reachable by admins (read-only audit access);

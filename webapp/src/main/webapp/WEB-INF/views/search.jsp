@@ -138,8 +138,7 @@
                                             </c:otherwise>
                                         </c:choose>
 
-                                        <c:url var="searchCarDetailHref" value="/car-detail">
-                                            <c:param name="carId"><c:out value="${car.carId}"/></c:param>
+                                        <c:url var="searchCarDetailHref" value="/cars/${car.carId}">
                                             <c:param name="src" value="search"/>
                                             <c:choose>
                                                 <c:when test="${searchFlexible and not empty searchFlexMonth}">

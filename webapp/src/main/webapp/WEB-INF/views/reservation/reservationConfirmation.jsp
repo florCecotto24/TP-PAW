@@ -98,9 +98,7 @@
                         <a href="${riderReservationDetailUrl}" class="btn btn-sm btn-outline-primary px-3">
                             <spring:message code="reservationConfirmation.viewReservation"/>
                         </a>
-                        <c:url var="listingUrl" value="/car-detail">
-                            <c:param name="carId" value="${carId}"/>
-                        </c:url>
+                        <c:url var="listingUrl" value="/cars/${carId}"/>
                         <a href="<c:out value='${listingUrl}'/>" class="btn btn-sm btn-outline-secondary px-3">
                             <spring:message code="reservationConfirmation.viewCar"/>
                         </a>

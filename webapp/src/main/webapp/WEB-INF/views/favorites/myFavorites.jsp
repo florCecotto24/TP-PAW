@@ -52,8 +52,7 @@
                                         <c:set var="imageUrl" value="" />
                                     </c:otherwise>
                                 </c:choose>
-                                <c:url var="favoriteCarDetailHref" value="/car-detail">
-                                    <c:param name="carId"><c:out value="${car.carId}"/></c:param>
+                                <c:url var="favoriteCarDetailHref" value="/cars/${car.carId}">
                                     <c:param name="src" value="my-favorites"/>
                                 </c:url>
                                 <ryden:consumerCarCard card="${car}" image="${imageUrl}" href="${favoriteCarDetailHref}"/>

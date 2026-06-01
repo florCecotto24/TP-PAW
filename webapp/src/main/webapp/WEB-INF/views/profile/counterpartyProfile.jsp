@@ -34,7 +34,7 @@
 
                 <c:if test="${showCounterpartyActiveListings}">
                     <section class="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4"
-                             data-counterparty-listings-endpoint="${pageContext.request.contextPath}/counterparty-profile/active-listings-page">
+                             data-counterparty-listings-endpoint="${pageContext.request.contextPath}/users/${counterpartyActiveCarsLoadMore.ownerUserId}/active-listings">
                         <div class="card-body p-4">
                             <div class="mb-3">
                                 <h2 class="h5 fw-semibold mb-1">
@@ -56,9 +56,7 @@
                                                         <c:set var="counterpartyListingImageUrl" value=""/>
                                                     </c:otherwise>
                                                 </c:choose>
-                                                <c:url var="counterpartyListingHref" value="/car-detail">
-                                                    <c:param name="carId"><c:out value="${car.carId}"/></c:param>
-                                                </c:url>
+                                                <c:url var="counterpartyListingHref" value="/cars/${car.carId}"/>
                                                 <ryden:consumerCarCard card="${car}"
                                                                        image="${counterpartyListingImageUrl}"
                                                                        href="${counterpartyListingHref}"/>

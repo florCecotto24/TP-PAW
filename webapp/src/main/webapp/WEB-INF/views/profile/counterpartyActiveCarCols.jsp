@@ -11,9 +11,7 @@
                 <c:set var="counterpartyListingImageUrl" value=""/>
             </c:otherwise>
         </c:choose>
-        <c:url var="counterpartyListingHref" value="/car-detail">
-            <c:param name="carId"><c:out value="${car.carId}"/></c:param>
-        </c:url>
+        <c:url var="counterpartyListingHref" value="/cars/${car.carId}"/>
         <ryden:consumerCarCard card="${car}"
                                image="${counterpartyListingImageUrl}"
                                href="${counterpartyListingHref}"/>

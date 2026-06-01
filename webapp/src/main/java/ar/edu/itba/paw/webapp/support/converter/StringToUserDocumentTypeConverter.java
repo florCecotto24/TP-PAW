@@ -8,7 +8,7 @@ import ar.edu.itba.paw.models.domain.UserDocumentType;
 
 /**
  * Case-insensitive {@code String → UserDocumentType} converter. JSPs always emit the canonical
- * uppercase token ({@code LICENSE} / {@code IDENTITY}), but URL-driven downloads ({@code /profile/document?documentType=…})
+ * uppercase token ({@code LICENSE} / {@code IDENTITY}), but URL-driven downloads ({@code /profile/documents/{documentType}})
  * may receive any casing. Returning {@code null} for unknown values lets controllers respond with
  * 404 / redirect without dealing with {@link IllegalArgumentException}. Wired in
  * {@link ar.edu.itba.paw.webapp.config.WebConfig#addFormatters}.

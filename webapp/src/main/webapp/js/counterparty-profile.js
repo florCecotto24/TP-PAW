@@ -20,14 +20,11 @@
                         : btn.textContent.trim();
 
         btn.addEventListener('click', function () {
-            var ownerId = btn.getAttribute('data-owner-user-id');
             var nextPage = btn.getAttribute('data-next-page');
             var excludeRaw = btn.getAttribute('data-exclude-car-id');
             var url =
                     endpoint +
-                    '?userId=' +
-                    encodeURIComponent(ownerId) +
-                    '&page=' +
+                    '?page=' +
                     encodeURIComponent(nextPage);
             if (excludeRaw != null && excludeRaw !== '') {
                 url += '&carId=' + encodeURIComponent(excludeRaw);

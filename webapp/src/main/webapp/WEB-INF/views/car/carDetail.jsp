@@ -74,8 +74,7 @@
                     vehicleLabel="${carTitle}"/>
 
             <!-- Owner contact info -->
-            <c:url var="ownerProfileUrl" value="/counterparty-profile">
-                <c:param name="userId" value="${owner.id}"/>
+            <c:url var="ownerProfileUrl" value="/users/${owner.id}/profile">
                 <c:param name="carId" value="${car.id}"/>
             </c:url>
             <div class="d-flex align-items-center gap-2">
@@ -132,8 +131,7 @@
                 <c:set var="reviewsHasMoreThanOnePage" value="${carReviewPage.totalPages > 1}"/>
                 <%-- Toggle target: 'list' when in carousel, 'carousel' when expanded. --%>
                 <c:set var="reviewsToggleView" value="${reviewsIsListView ? 'carousel' : 'list'}"/>
-                <c:url var="reviewsToggleUrl" value="/car-detail">
-                    <c:param name="carId" value="${car.id}"/>
+                <c:url var="reviewsToggleUrl" value="/cars/${car.id}">
                     <c:param name="reviewsView" value="${reviewsToggleView}"/>
                     <%-- Always reset to page 0 when switching modes (the user expects "all reviews from the start"). --%>
                     <c:if test="${reviewsIsListView}"><c:param name="reviewPage" value="0"/></c:if>
@@ -195,16 +193,14 @@
                         </div>
                         <c:if test="${carReviewPage.totalPages > 1}">
                             <div class="d-flex justify-content-between align-items-center gap-2 mt-3">
-                                <c:url var="reviewsPrevUrl" value="/car-detail">
-                                    <c:param name="carId" value="${car.id}"/>
+                                <c:url var="reviewsPrevUrl" value="/cars/${car.id}">
                                     <c:param name="reviewsView" value="list"/>
                                     <c:param name="reviewPage" value="${carReviewPage.currentPage - 1}"/>
                                     <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
                                     <c:if test="${not empty param.from}"><c:param name="from"><c:out value="${param.from}"/></c:param></c:if>
                                     <c:if test="${not empty param.until}"><c:param name="until"><c:out value="${param.until}"/></c:param></c:if>
                                 </c:url>
-                                <c:url var="reviewsNextUrl" value="/car-detail">
-                                    <c:param name="carId" value="${car.id}"/>
+                                <c:url var="reviewsNextUrl" value="/cars/${car.id}">
                                     <c:param name="reviewsView" value="list"/>
                                     <c:param name="reviewPage" value="${carReviewPage.currentPage + 1}"/>
                                     <c:if test="${param.src eq 'search'}"><c:param name="src" value="search"/></c:if>
@@ -300,7 +296,7 @@
                                 </c:otherwise>
                             </c:choose>
 
-                            <c:url var="similarCarDetailUrl" value="/car-detail"><c:param name="carId" value="${similar.carId}"/></c:url>
+                            <c:url var="similarCarDetailUrl" value="/cars/${similar.carId}"/>
                             <ryden:consumerCarCard card="${similar}" image="${similarImageUrl}" href="${similarCarDetailUrl}"/>
                         </div>
                     </c:forEach>

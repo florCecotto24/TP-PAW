@@ -206,7 +206,7 @@ public final class AdminController {
             redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
         }
         if (fromCarDetail && carDetailId != null) {
-            return "redirect:/car-detail?carId=" + carDetailId;
+            return "redirect:/cars/" + carDetailId;
         }
         return "redirect:/admin/cars";
     }
@@ -226,7 +226,7 @@ public final class AdminController {
             redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
         }
         if (fromCarDetail && carDetailId != null) {
-            return "redirect:/car-detail?carId=" + carDetailId;
+            return "redirect:/cars/" + carDetailId;
         }
         return "redirect:/admin/cars";
     }

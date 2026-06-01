@@ -252,6 +252,12 @@ rg "this\\.[a-zA-Z0-9_]+\\(" services/src/main/java/ar/edu/itba/paw/services
 
 Use `@ControllerAdvice` to expose `@ModelAttribute` beans across controllers.
 
+### REST URL routing
+
+- **Resource identity on GET**: Identifiers that name the resource being accessed (`carId`, `userId`, `reservationId`, `documentType`, …) belong in the path as `@PathVariable`s — e.g. `GET /cars/{carId}`, `GET /users/{userId}/profile`, `GET /profile/documents/{documentType}` — not as `@RequestParam` query parameters. Prefer `/cars/123` over `/car-detail?carId=123`.
+- **Query params for everything else**: Pagination, sorting, filters, and UI/breadcrumb state (`page`, `sort`, `status`, `role`, `src`, `fromCar`, `tab`, …) stay as query params.
+- **Consistency**: New controllers, JSP/tag links, mail CTA URLs, JS fetch endpoints, and `redirect:` strings must follow the same shape. Canonical examples already in the app: `/my-cars/car/{carId}`, `/my-reservations/{reservationId}`.
+
 ## Spring AOP (enabled in `WebConfig`)
 
 - **`@Async`**: fire-and-forget (e.g. mail). Pass locale/user as arguments; **do not** use `LocaleContextHolder` or `SecurityContextHolder` inside `@Async` (different thread).

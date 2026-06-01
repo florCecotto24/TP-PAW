@@ -7,7 +7,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.detail.CarDetailPageModel;
 
 /**
- * Builds the {@link CarDetailPageModel} consumed by {@code /car-detail}. Encapsulates the
+ * Builds the {@link CarDetailPageModel} consumed by {@code GET /cars/{carId}}. Encapsulates the
  * orchestration that used to live in {@code CarDetailController.carDetail}: car lookup,
  * owner-blocked visibility rule, owner profile picture, gallery, similar listings, bookable
  * segments + JSON serialization, rating / review labels, paged reviews (with localized dates),

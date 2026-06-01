@@ -45,7 +45,7 @@
                         </c:choose>
 
                         <ryden:consumerCarCard card="${car}" image="${imageUrl}"
-                                               href="${pageContext.request.contextPath}/car-detail?carId=${car.carId}"/>
+                                               href="${pageContext.request.contextPath}/cars/${car.carId}"/>
                     </div>
 
                     <c:if test="${status.index % 4 == 3 || status.last}">

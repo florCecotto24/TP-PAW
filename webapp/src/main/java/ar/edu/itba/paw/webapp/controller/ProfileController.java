@@ -26,6 +26,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -360,10 +361,10 @@ public final class ProfileController {
         return "redirect:/profile";
     }
 
-    @GetMapping("/document")
+    @GetMapping("/documents/{documentType}")
     public ResponseEntity<byte[]> downloadProfileDocument(
             @CurrentUser final User currentUser,
-            @RequestParam(name = "documentType", required = false) final UserDocumentType documentType) {
+            @PathVariable final UserDocumentType documentType) {
         final User me = WebAuthUtils.requireUser(currentUser);
         if (documentType == null) {
             return ResponseEntity.notFound().build();
@@ -393,10 +394,10 @@ public final class ProfileController {
         return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
     }
 
-    @GetMapping("/document/view")
+    @GetMapping("/documents/{documentType}/view")
     public String viewProfileDocument(
             @CurrentUser final User currentUser,
-            @RequestParam(name = "documentType", required = false) final UserDocumentType documentType,
+            @PathVariable final UserDocumentType documentType,
             final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
         if (documentType == null) {

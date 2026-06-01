@@ -533,9 +533,7 @@
                             </div>
                         </div>
                     </section>
-                    <c:url var="listingUrl" value="/car-detail">
-                        <c:param name="carId"><c:out value="${reservation.carId}"/></c:param>
-                    </c:url>
+                    <c:url var="listingUrl" value="/cars/${reservation.carId}"/>
                     <div class="d-flex flex-column gap-2">
                         <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
                             <i class="bi bi-eye me-2"></i><spring:message code="myReservationDetail.actions.viewCar"/>

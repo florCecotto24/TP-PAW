@@ -15,9 +15,7 @@
 
 <main class="container py-5">
     <spring:message code="reservationForm.title" var="reservationFormLabel"/>
-    <c:url var="carDetailBreadcrumbUrl" value="/car-detail">
-        <c:param name="carId" value="${reservationForm.carId}"/>
-    </c:url>
+    <c:url var="carDetailBreadcrumbUrl" value="/cars/${reservationForm.carId}"/>
     <ryden:breadcrumbTrail midLabel="${reservationForm.carName}" midHref="${carDetailBreadcrumbUrl}" currentLabel="${reservationFormLabel}"/>
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
@@ -98,10 +96,10 @@
                         <div class="d-flex gap-2 mt-2">
                             <c:choose>
                                 <c:when test="${not empty reservationForm.carId}">
-                                    <a href="<c:url value='/car-detail'><c:param name='carId' value='${reservationForm.carId}'/></c:url>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
+                                    <a href="<c:url value='/cars/${reservationForm.carId}'/>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
                                 </c:when>
                                 <c:otherwise>
-                                    <a href="<c:url value='/car-detail'/>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
+                                    <a href="<c:url value='/search'/>" class="btn btn-outline-secondary w-50"><spring:message code="common.back"/></a>
                                 </c:otherwise>
                             </c:choose>
                             <button type="submit" class="btn btn-primary w-50"><spring:message code="reservationForm.confirm"/></button>

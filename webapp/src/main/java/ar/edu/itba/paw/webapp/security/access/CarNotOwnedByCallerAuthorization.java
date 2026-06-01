@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.security.access;
 
+import java.util.OptionalLong;
 import java.util.function.Supplier;
 
 import javax.servlet.http.HttpServletRequest;
@@ -13,24 +14,26 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
 
 /**
  * Authorization helper for endpoints whose business rule requires the authenticated caller to
- * not be the owner of the {@code Car} identified by the {@code carId} request parameter
- * (e.g. {@code POST /my-favorites/toggle} — you cannot favourite your own car; {@code GET /reservation/new} —
- * you cannot reserve your own car). Adds filter-chain defense-in-depth on top of the equivalent
- * service-level checks ({@code FavCarService#toggleFavorite},
+ * not be the owner of the {@code Car} identified by {@code carId}
+ * (e.g. {@code POST /my-favorites/toggle} — you cannot favourite your own car;
+ * {@code GET /cars/{carId}/reservation/new} — you cannot reserve your own car). Adds filter-chain
+ * defense-in-depth on top of the equivalent service-level checks ({@code FavCarService#toggleFavorite},
  * {@code ReservationService#submitRiderReservationByCar}).
  *
- * Reads {@code carId} from the request query/form parameter (not from the path) so it
- * fits both endpoints uniformly. Malformed / missing / unknown {@code carId} is intentionally
- * allowed through so the controller can surface a coherent validation error (e.g.
- * {@code favCar.notFound}, {@code reservation.invalidCar}) rather than a generic 403.
+ * Reads {@code carId} from the request query/form parameter or from the {@code /cars/{carId}/…}
+ * path prefix. Malformed / missing / unknown {@code carId} is intentionally allowed through so the
+ * controller can surface a coherent validation error (e.g. {@code favCar.notFound},
+ * {@code reservation.invalidCar}) rather than a generic 403.
  */
 @Component("carNotOwnedByCallerAuth")
 public final class CarNotOwnedByCallerAuthorization {
 
     private static final String CAR_ID_PARAM = "carId";
+    private static final String PUBLIC_CAR_PATH_PREFIX = "/cars/";
 
     private final CarService carService;
 
@@ -40,15 +43,14 @@ public final class CarNotOwnedByCallerAuthorization {
 
     /**
      * {@code true} when the caller is authenticated and is NOT the owner of the car referenced by
-     * the {@code carId} request parameter. See class javadoc for the "missing/unknown is allowed"
-     * rationale.
+     * {@code carId}. See class javadoc for the "missing/unknown is allowed" rationale.
      */
     public boolean isNotOwnerOfRequestCar(final Authentication authentication, final HttpServletRequest request) {
         final Long userId = authenticatedUserId(authentication);
         if (userId == null) {
             return false;
         }
-        final Long carId = parseCarIdParam(request);
+        final Long carId = resolveCarId(request);
         if (carId == null) {
             return true;
         }
@@ -77,6 +79,15 @@ public final class CarNotOwnedByCallerAuthorization {
             return null;
         }
         return details.getUserId();
+    }
+
+    private static Long resolveCarId(final HttpServletRequest request) {
+        final Long fromParam = parseCarIdParam(request);
+        if (fromParam != null) {
+            return fromParam;
+        }
+        final OptionalLong fromPath = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, PUBLIC_CAR_PATH_PREFIX);
+        return fromPath.isPresent() ? fromPath.getAsLong() : null;
     }
 
     private static Long parseCarIdParam(final HttpServletRequest request) {

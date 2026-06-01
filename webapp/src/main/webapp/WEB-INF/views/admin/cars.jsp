@@ -49,7 +49,7 @@
                                             <span class="badge text-bg-warning"><c:out value="${carStatusLabel}"/></span>
                                         </td>
                                         <td class="text-end">
-                                            <a href="${pageContext.request.contextPath}/car-detail?carId=${car.id}"
+                                            <a href="${pageContext.request.contextPath}/cars/${car.id}"
                                                class="btn btn-sm btn-outline-secondary rounded-3 me-1">
                                                 <spring:message code="admin.cars.viewCar"/>
                                             </a>

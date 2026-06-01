@@ -14,8 +14,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.support.RequestContextUtils;
@@ -44,9 +43,9 @@ public class CarDetailController {
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
     }
 
-    @RequestMapping(value = "/car-detail", method = RequestMethod.GET)
+    @GetMapping("/cars/{carId}")
     public ModelAndView carDetail(
-            @RequestParam(name = "carId", required = false) final Long carIdParam,
+            @PathVariable final long carId,
             @RequestParam(name = "reviewPage", defaultValue = "0") final int reviewPage,
             @RequestParam(name = "reviewsView", required = false) final String reviewsViewParam,
             @RequestParam(name = "from", required = false) final String fromDateParam,
@@ -56,9 +55,6 @@ public class CarDetailController {
             final Authentication authentication,
             final HttpServletRequest request) {
 
-        if (carIdParam == null) {
-            return new ModelAndView(new RedirectView("/search", true));
-        }
         final boolean currentUserIsAdmin = authentication != null
                 && authentication.getAuthorities().stream()
                         .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
@@ -67,7 +63,7 @@ public class CarDetailController {
         // request params (date defaults, search context, admin action form) and the view-layer
         // VehicleCardView conversion that the JSP tag requires.
         final Optional<CarDetailPageModel> pageOpt = carDetailViewService.loadCarDetailPage(
-                carIdParam,
+                carId,
                 currentUser,
                 currentUserIsAdmin,
                 reviewPage,
@@ -92,9 +88,9 @@ public class CarDetailController {
         return mav;
     }
 
-    @GetMapping("/counterparty-profile")
+    @GetMapping("/users/{userId}/profile")
     public ModelAndView ownerProfile(
-            @RequestParam("userId") final long userId,
+            @PathVariable final long userId,
             @RequestParam(name = "carId", required = false) final Long currentCarId,
             @CurrentUser final User viewer) {
         // Page model assembly (counterparty header + reviews + active listings + load-more state)
@@ -120,9 +116,9 @@ public class CarDetailController {
     /**
      * HTML fragment: next page of active listings for the counterparty profile grid (see {@code counterparty-profile.js}).
      */
-    @GetMapping("/counterparty-profile/active-listings-page")
+    @GetMapping("/users/{userId}/active-listings")
     public ModelAndView counterpartyActiveListingsPage(
-            @RequestParam("userId") final long userId,
+            @PathVariable final long userId,
             @RequestParam(name = "carId", required = false) final Long excludeCarId,
             @RequestParam("page") final int page,
             @CurrentUser final User viewer,

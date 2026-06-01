@@ -14,8 +14,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
@@ -42,7 +42,6 @@ import ar.edu.itba.paw.webapp.validation.ValidationGroups;
  * domain call.
  */
 @Controller
-@RequestMapping("/reservation")
 public final class ReservationFormController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationFormController.class);
@@ -66,10 +65,10 @@ public final class ReservationFormController {
         this.userBookingDocumentsFacade = userBookingDocumentsFacade;
     }
 
-    @GetMapping("/new")
+    @GetMapping("/cars/{carId}/reservation/new")
     public ModelAndView index(
             @CurrentUser final User currentUser,
-            @RequestParam(name = "carId") final long carId,
+            @PathVariable final long carId,
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "carName", required = false) final String carName,
             @RequestParam(value = "fromDateTime", required = false) final String fromDateTime,
@@ -88,7 +87,7 @@ public final class ReservationFormController {
     /**
      * Saves identity/license from the reservation modal (same validation as profile); responds without a full page reload.
      */
-    @PostMapping(value = "/booking-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/reservation/booking-documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> bookingDocuments(
             @CurrentUser final User currentUser,
             @RequestParam(name = "licenseFile", required = false) final MultipartFile licenseFile,
@@ -111,7 +110,7 @@ public final class ReservationFormController {
         return new ResponseEntity<>(null, headers, HttpStatus.ACCEPTED);
     }
 
-    @PostMapping
+    @PostMapping("/reservation")
     public ModelAndView formSubmit(
             @CurrentUser final User currentUser,
             @Validated(ValidationGroups.OnReservationSubmit.class) @ModelAttribute("reservationForm") final ReservationForm form,

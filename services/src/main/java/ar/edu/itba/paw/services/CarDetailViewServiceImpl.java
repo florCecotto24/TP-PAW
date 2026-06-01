@@ -27,7 +27,7 @@ import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
 
 /**
- * Owns the orchestration the {@code /car-detail} handler used to do by hand: car lookup,
+ * Owns the orchestration the {@code GET /cars/{carId}} handler used to do by hand: car lookup,
  * owner visibility, gallery, bookable-day JSON, paged reviews with localized dates, similar
  * listings, and viewer-specific flags (admin / owner / favorited). The controller is left
  * only with the parts that genuinely belong to it: parsing query params, applying the
