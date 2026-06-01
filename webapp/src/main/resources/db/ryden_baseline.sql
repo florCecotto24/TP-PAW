@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS listings (
     FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS car_availability(
+CREATE TABLE IF NOT EXISTS listing_availability(
     id SERIAL PRIMARY KEY,
     listing_id INTEGER NOT NULL,
     start_date DATE NOT NULL,
