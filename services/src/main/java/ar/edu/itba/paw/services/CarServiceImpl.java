@@ -613,6 +613,9 @@ public final class CarServiceImpl implements CarService {
     public void markCarAsAdminPaused(final long carId) {
         final Car car = carDao.getCarById(carId)
                 .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+        if (car.getStatus() == Car.Status.DEACTIVATED) {
+            throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+        }
         car.setStatus(Car.Status.ADMIN_PAUSED);
     }
 

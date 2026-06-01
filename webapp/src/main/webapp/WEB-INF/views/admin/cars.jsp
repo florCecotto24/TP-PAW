@@ -28,6 +28,7 @@
     <spring:message code="admin.cars.resumeModal.title" var="resumeModalTitle"/>
     <spring:message code="admin.cars.resumeModal.confirm" var="resumeModalConfirm"/>
     <spring:message code="admin.cars.resumeModal.back" var="resumeModalBack"/>
+    <spring:message code="admin.cars.deactivatedLocked" var="deactivatedLockedLabel"/>
 
     <c:choose>
         <c:when test="${empty cars.content}">
@@ -75,6 +76,9 @@
                                             <c:choose>
                                                 <c:when test="${car.owner.admin}">
                                                     <span class="text-secondary small"><c:out value="${adminOwnedLabel}"/></span>
+                                                </c:when>
+                                                <c:when test="${car.status.name() == 'DEACTIVATED'}">
+                                                    <span/>
                                                 </c:when>
                                                 <c:when test="${car.status.name() == 'ADMIN_PAUSED'}">
                                                     <button type="button"
