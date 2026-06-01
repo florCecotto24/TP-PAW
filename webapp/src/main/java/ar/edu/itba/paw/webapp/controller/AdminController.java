@@ -182,8 +182,9 @@ public final class AdminController {
     }
 
     @GetMapping("/cars")
-    public ModelAndView listAdminPausedCars() {
-        final List<Car> cars = adminService.findAdminPausedCars();
+    public ModelAndView listCars(
+            @RequestParam(defaultValue = "0") final int page) {
+        final Page<Car> cars = adminService.listCars(page, DEFAULT_PAGE_SIZE);
         final ModelAndView mav = new ModelAndView("admin/cars");
         mav.addObject("cars", cars);
         mav.addObject("adminActionForm", new HashMap<>());
@@ -195,6 +196,7 @@ public final class AdminController {
             @PathVariable final long carId,
             @RequestParam(required = false, defaultValue = "false") final boolean fromCarDetail,
             @RequestParam(required = false) final Long carDetailId,
+            @RequestParam(required = false) final Integer page,
             final Authentication authentication,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
@@ -208,6 +210,9 @@ public final class AdminController {
         if (fromCarDetail && carDetailId != null) {
             return "redirect:/cars/" + carDetailId;
         }
+        if (page != null && page >= 0) {
+            return "redirect:/admin/cars?page=" + page;
+        }
         return "redirect:/admin/cars";
     }
 
@@ -216,6 +221,7 @@ public final class AdminController {
             @PathVariable final long carId,
             @RequestParam(required = false, defaultValue = "false") final boolean fromCarDetail,
             @RequestParam(required = false) final Long carDetailId,
+            @RequestParam(required = false) final Integer page,
             final Authentication authentication,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
@@ -227,6 +233,9 @@ public final class AdminController {
         }
         if (fromCarDetail && carDetailId != null) {
             return "redirect:/cars/" + carDetailId;
+        }
+        if (page != null && page >= 0) {
+            return "redirect:/admin/cars?page=" + page;
         }
         return "redirect:/admin/cars";
     }

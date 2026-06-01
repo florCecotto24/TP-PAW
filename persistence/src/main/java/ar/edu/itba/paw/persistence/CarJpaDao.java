@@ -378,6 +378,41 @@ public class CarJpaDao implements CarDao {
     }
 
     @Override
+    public Page<Car> findAllCarsPaginated(final int page, final int pageSize) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        final long total = em.createQuery("SELECT COUNT(c) FROM Car c", Long.class)
+                .getSingleResult();
+        if (total == 0L) {
+            return new Page<>(List.of(), safePage, safePageSize, 0L);
+        }
+        final List<Long> carIds = em.createQuery(
+                        "SELECT c.id FROM Car c ORDER BY c.createdAt DESC, c.id DESC", Long.class)
+                .setFirstResult(safePage * safePageSize)
+                .setMaxResults(safePageSize)
+                .getResultList();
+        if (carIds.isEmpty()) {
+            return new Page<>(List.of(), safePage, safePageSize, total);
+        }
+        final List<Car> cars = em.createQuery(
+                        "FROM Car c "
+                                + "LEFT JOIN FETCH c.owner o "
+                                + "LEFT JOIN FETCH c.carModel m "
+                                + "LEFT JOIN FETCH m.brand "
+                                + "WHERE c.id IN :ids",
+                        Car.class)
+                .setParameter("ids", carIds)
+                .getResultList();
+        final Map<Long, Car> carsById = cars.stream()
+                .collect(Collectors.toMap(Car::getId, Function.identity(), (left, right) -> left));
+        final List<Car> orderedCars = carIds.stream()
+                .map(carsById::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        return new Page<>(orderedCars, safePage, safePageSize, total);
+    }
+
+    @Override
     public List<Car> findCarsByModelId(final long modelId) {
         return em.createQuery(
                         "FROM Car c WHERE c.carModel.id = :modelId", Car.class)

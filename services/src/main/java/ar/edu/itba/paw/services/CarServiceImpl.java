@@ -598,6 +598,12 @@ public final class CarServiceImpl implements CarService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<Car> findAllCarsPaginated(final int page, final int pageSize) {
+        return carDao.findAllCarsPaginated(page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Car> findCarsByModelId(final long modelId) {
         return carDao.findCarsByModelId(modelId);
     }

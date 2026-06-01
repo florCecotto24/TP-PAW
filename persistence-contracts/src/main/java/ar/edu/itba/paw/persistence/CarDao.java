@@ -46,6 +46,9 @@ public interface CarDao {
     /** All cars whose status equals {@code status}. */
     List<Car> findCarsByStatus(Car.Status status);
 
+    /** Admin-only: paginated list of all cars in the catalog. */
+    Page<Car> findAllCarsPaginated(int page, int pageSize);
+
     /** All cars whose catalog model id equals {@code modelId}. */
     List<Car> findCarsByModelId(long modelId);
 

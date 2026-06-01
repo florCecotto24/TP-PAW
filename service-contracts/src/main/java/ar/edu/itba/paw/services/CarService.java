@@ -246,6 +246,9 @@ public interface CarService {
     /** Admin-only: all cars currently in {@link Car.Status#ADMIN_PAUSED}. */
     List<Car> findAdminPausedCars();
 
+    /** Admin-only: paginated list of all cars in the catalog. */
+    Page<Car> findAllCarsPaginated(int page, int pageSize);
+
     /** All cars in the catalog linked to the given model id. Admin uses it to enumerate cars affected by a
      *  catalog validation/rejection. */
     List<Car> findCarsByModelId(long modelId);

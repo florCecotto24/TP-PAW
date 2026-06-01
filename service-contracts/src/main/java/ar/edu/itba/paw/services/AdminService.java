@@ -57,6 +57,8 @@ public interface AdminService {
 
     List<CarModel> findPendingModels();
 
+    Page<Car> listCars(int page, int pageSize);
+
     List<Car> findAdminPausedCars();
 
     Page<ReservationCard> listAllReservations(int page, int pageSize);

@@ -268,6 +268,12 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<Car> listCars(final int page, final int pageSize) {
+        return carService.findAllCarsPaginated(page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Car> findAdminPausedCars() {
         return carService.findAdminPausedCars();
     }
