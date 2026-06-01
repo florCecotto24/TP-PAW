@@ -309,6 +309,7 @@ public final class EmailServiceImpl implements EmailService {
         final Context ctx = new Context(mailLocale);
         setHtmlLangFromLocale(ctx, mailLocale);
         ctx.setVariable("plainPassword", plainPassword);
+        ctx.setVariable("loginUrl", mailPublicUrls.absolutePath("/login"));
         try {
             runMail(() -> {
                 final String htmlContent = this.htmlTemplateEngine.process(MIGRATED_PASSWORD_TEMPLATE, ctx);
