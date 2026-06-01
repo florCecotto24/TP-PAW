@@ -54,6 +54,10 @@ context/
 # === CLAUDE ===
 .claude/
 
+# === AGENTS ===
+.agents/
+skills-lock.json
+
 # === MACOS ===
 .DS_Store
 .AppleDouble
