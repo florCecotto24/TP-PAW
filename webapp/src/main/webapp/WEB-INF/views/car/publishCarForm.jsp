@@ -391,14 +391,14 @@
                         </div>
 
                         <%-- Photos --%>
-                        <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="publishImageTooLargeMsg" htmlEscape="true"/>
-                        <spring:message code="validation.carGallery.videoTooLarge" arguments="${uploadMaxGalleryVideoMegabytes}" var="publishVideoTooLargeMsg" htmlEscape="true"/>
-                        <spring:message code="validation.pictures.mustBeGalleryMedia" var="publishMustBeGalleryMediaMsg" htmlEscape="true"/>
+                        <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="publishImageTooLargeMsg" htmlEscape="false"/>
+                        <spring:message code="validation.carGallery.videoTooLarge" arguments="${uploadMaxGalleryVideoMegabytes}" var="publishVideoTooLargeMsg" htmlEscape="false"/>
+                        <spring:message code="validation.pictures.mustBeGalleryMedia" var="publishMustBeGalleryMediaMsg" htmlEscape="false"/>
                         <spring:message code="publishCar.form.removeImage" var="removeImageLabel"/>
-                        <spring:message code="publishCar.form.cover.badge" var="coverBadgeLabel"/>
-                        <spring:message code="publishCar.form.cover.set" var="coverSetLabel"/>
-                        <spring:message code="publishCar.form.cover.tooltip" var="coverTooltipLabel"/>
-                        <spring:message code="publishCar.form.cover.changed" var="coverChangedLabel"/>
+                        <spring:message code="publishCar.form.cover.badge" var="coverBadgeLabel" htmlEscape="false"/>
+                        <spring:message code="publishCar.form.cover.set" var="coverSetLabel" htmlEscape="false"/>
+                        <spring:message code="publishCar.form.cover.tooltip" var="coverTooltipLabel" htmlEscape="false"/>
+                        <spring:message code="publishCar.form.cover.changed" var="coverChangedLabel" htmlEscape="false"/>
                         <c:set var="initialCoverIndex" value="${empty coverPictureIndex ? 0 : coverPictureIndex}"/>
                         <div class="mb-4" id="publishPicturesSection"
                              data-cover-badge="<c:out value='${coverBadgeLabel}'/>"
