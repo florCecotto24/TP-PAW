@@ -16,7 +16,7 @@ import ar.edu.itba.paw.models.util.search.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
@@ -27,7 +27,7 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
 /** Read-only reservation views; domain reads and billable-day math go through {@link ReservationService}. */
 @Service
@@ -35,9 +35,9 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
 
     private final ReservationService reservationService;
     private final CarService carService;
-    private final ListingAvailabilityService listingAvailabilityService;
+    private final CarAvailabilityService carAvailabilityService;
     private final CarPictureService carPictureService;
-    private final ListingAddressFormatter listingAddressFormatter;
+    private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
     private final UserService userService;
     private final ImageService imageService;
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
@@ -48,9 +48,9 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     public ReservationViewServiceImpl(
             final ReservationService reservationService,
             final CarService carService,
-            final ListingAvailabilityService listingAvailabilityService,
+            final CarAvailabilityService carAvailabilityService,
             final CarPictureService carPictureService,
-            final ListingAddressFormatter listingAddressFormatter,
+            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
             final UserService userService,
             final ImageService imageService,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
@@ -58,9 +58,9 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             final ReservationMessageService reservationMessageService) {
         this.reservationService = reservationService;
         this.carService = carService;
-        this.listingAvailabilityService = listingAvailabilityService;
+        this.carAvailabilityService = carAvailabilityService;
         this.carPictureService = carPictureService;
-        this.listingAddressFormatter = listingAddressFormatter;
+        this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
         this.userService = userService;
         this.imageService = imageService;
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
@@ -99,12 +99,12 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         }
         final User counterpartyMinimal = counterpartyOpt.get();
         final User counterparty = userService.getUserById(counterpartyMinimal.getId()).orElse(counterpartyMinimal);
-        final Optional<ListingAvailability> effectiveAvailability =
-                listingAvailabilityService.findEffectiveForDayByCar(
+        final Optional<CarAvailability> effectiveAvailability =
+                carAvailabilityService.findEffectiveForDayByCar(
                         carId,
                         reservation.getStartDate().atZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDate());
         final String reservationPickupLocationDisplay = effectiveAvailability
-                .map(av -> listingAddressFormatter.formatPickupForReservationView(av, reservation, viewerIsOwner))
+                .map(av -> carAvailabilityAddressFormatter.formatPickupForReservationView(av, reservation, viewerIsOwner))
                 .orElse("");
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);

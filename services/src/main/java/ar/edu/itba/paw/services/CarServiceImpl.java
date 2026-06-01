@@ -30,7 +30,7 @@ import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
@@ -39,7 +39,7 @@ import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
@@ -49,7 +49,7 @@ import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.persistence.CarDao;
-import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
+import ar.edu.itba.paw.services.policy.CarAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.services.util.NeighborhoodNameMatcher;
@@ -64,11 +64,11 @@ public final class CarServiceImpl implements CarService {
     private final CarPictureService carPictureService;
     private final UserService userService;
     private final ReservationTimingPolicy reservationTimingPolicy;
-    private final ListingAvailabilityService listingAvailabilityService;
+    private final CarAvailabilityService carAvailabilityService;
     private final EmailService emailService;
     private final ReservationService reservationService;
     private final LocationService locationService;
-    private final ListingAvailabilityPolicy listingAvailabilityPolicy;
+    private final CarAvailabilityPolicy carAvailabilityPolicy;
     private final PaginationPolicy paginationPolicy;
     private final StoredFileService storedFileService;
 
@@ -79,11 +79,11 @@ public final class CarServiceImpl implements CarService {
             final CarPictureService carPictureService,
             final UserService userService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            @Lazy final ListingAvailabilityService listingAvailabilityService,
+            @Lazy final CarAvailabilityService carAvailabilityService,
             final EmailService emailService,
             @Lazy final ReservationService reservationService,
             final LocationService locationService,
-            final ListingAvailabilityPolicy listingAvailabilityPolicy,
+            final CarAvailabilityPolicy carAvailabilityPolicy,
             final PaginationPolicy paginationPolicy,
             final StoredFileService storedFileService) {
         this.carDao = carDao;
@@ -91,11 +91,11 @@ public final class CarServiceImpl implements CarService {
         this.carPictureService = carPictureService;
         this.userService = userService;
         this.reservationTimingPolicy = reservationTimingPolicy;
-        this.listingAvailabilityService = listingAvailabilityService;
+        this.carAvailabilityService = carAvailabilityService;
         this.emailService = emailService;
         this.reservationService = reservationService;
         this.locationService = locationService;
-        this.listingAvailabilityPolicy = listingAvailabilityPolicy;
+        this.carAvailabilityPolicy = carAvailabilityPolicy;
         this.paginationPolicy = paginationPolicy;
         this.storedFileService = storedFileService;
     }
@@ -204,11 +204,11 @@ public final class CarServiceImpl implements CarService {
             final Optional<User> ownerRow = userService.getUserById(ownerId);
             if (ownerRow.isEmpty() || !userService.hasValidCbu(ownerRow.get())) {
                 throw new CarValidationException(
-                        MessageKeys.LISTING_ACTIVATE_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
+                        MessageKeys.CAR_ACTIVATE_CBU_REQUIRED, CbuRules.REQUIRED_DIGIT_LENGTH);
             }
             // Blocked owners (e.g. unpaid refund proofs) cannot resume their own listings.
             if (ownerRow.get().isBlocked()) {
-                throw new CarValidationException(MessageKeys.LISTING_ACTIVATE_OWNER_BLOCKED);
+                throw new CarValidationException(MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED);
             }
             newCarStatus = Car.Status.ACTIVE;
         } else {
@@ -425,7 +425,7 @@ public final class CarServiceImpl implements CarService {
         for (final Car car : activeCars) {
             final long carId = car.getId();
             final List<AvailabilityPeriod> bookable =
-                    listingAvailabilityService.getBookableWallAvailabilityPeriodsByCar(carId);
+                    carAvailabilityService.getBookableWallAvailabilityPeriodsByCar(carId);
             if (bookable.isEmpty()) {
                 if (carDao.updateCarStatusIfCurrent(carId, Car.Status.PAUSED, Car.Status.ACTIVE)) {
                     paused++;
@@ -462,7 +462,7 @@ public final class CarServiceImpl implements CarService {
                 continue;
             }
             final String label = carLabel(car);
-            emailService.sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload.builder()
+            emailService.sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload.builder()
                     .messageLocale(ownerMailLocale)
                     .ownerEmail(ownerEmail)
                     .ownerFullName(ownerFullName)
@@ -650,7 +650,7 @@ public final class CarServiceImpl implements CarService {
     public Optional<OwnerCarDetailPageModel> buildOwnerCarDetailPageModel(
             final long carId, final Locale locale) {
         return getCarById(carId).map(car -> {
-            final List<ListingAvailability> availabilities = listingAvailabilityService.findEffectiveOfferedByCar(carId);
+            final List<CarAvailability> availabilities = carAvailabilityService.findEffectiveOfferedByCar(carId);
             final long carImageId = carPictureService.getCarPicturesByCarId(carId).stream()
                     .map(p -> p.getImageId())
                     .filter(java.util.Objects::nonNull)
@@ -659,8 +659,8 @@ public final class CarServiceImpl implements CarService {
             final User owner = car.getOwner();
             final long ownerId = owner.getId();
             final List<Neighborhood> allNeighborhoods = locationService.findAllNeighborhoods();
-            final ListingAvailability mostRecent = availabilities.stream()
-                    .max(java.util.Comparator.comparing(ListingAvailability::getCreatedAt))
+            final CarAvailability mostRecent = availabilities.stream()
+                    .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt))
                     .orElse(null);
             final Long carNbId = mostRecent != null ? mostRecent.getNeighborhoodId().orElse(null) : null;
             final String carNeighborhoodName = carNbId == null
@@ -684,9 +684,9 @@ public final class CarServiceImpl implements CarService {
             final String nextReservationDisplay = reservationService.getCarNextReservationDate(ownerId, carId)
                     .map(dt -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(dt, locale))
                     .orElse(null);
-            final int forwardDays = listingAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
+            final int forwardDays = carAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
             final LocalDate wallToday = LocalDate.now(AppTimezone.WALL_ZONE);
-            final List<ListingAvailability> editPastAvailabilities = availabilities.stream()
+            final List<CarAvailability> editPastAvailabilities = availabilities.stream()
                     .filter(la -> la.getEndInclusive().isBefore(wallToday))
                     .collect(Collectors.toList());
             final String carCreatedAtDisplay = mostRecent != null

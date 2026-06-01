@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${htmlLang}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="#{mail.carDeleted.emailTitle}">Listing Deleted</title>
+</head>
+<body style="margin:0; padding:0; background-color:#eef2ff;
+             font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+             color:#1e1b4b;">
+
+<div style="max-width:620px; margin:40px auto; padding:0 20px 40px;">
+
+    <!-- LOGO -->
+    <div style="padding:36px 0 28px;">
+        <span style="font-size:22px; font-weight:800; color:#1e1b4b;">
+            <img src="cid:logo" alt="Ryden"
+                 style="height:32px; width:auto; vertical-align:middle;"/> Ryden
+        </span>
+    </div>
+
+    <!-- TITLE -->
+    <p style="font-size:16px; font-weight:700; color:#3730a3; margin-bottom:6px;"
+       th:text="#{mail.carDeleted.emailTitle}">
+        Car deleted
+    </p>
+    <p style="font-size:14px; color:#4b5563; line-height:1.6; margin-bottom:0;"
+       th:text="#{mail.common.greeting(${ownerFullName})}">
+        Hello,
+    </p>
+
+    <!-- INTRO -->
+    <p style="font-size:14px; color:#374151; line-height:1.6; margin-bottom:20px;"
+       th:text="#{mail.carDeleted.intro(${vehicleLabel})}">
+        Intro
+    </p>
+
+    <!-- DIVIDER -->
+    <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
+
+    <!-- RESERVATION DETAILS CARD -->
+    <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:10px;
+                padding:20px; margin-bottom:24px;">
+
+        <p style="font-size:14px; font-weight:700; color:#1e1b4b; margin-bottom:16px;">
+            <span th:text="#{mail.carDeleted.carDetails}">Car details</span>
+        </p>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+               style="font-size:13px; border-collapse:collapse;">
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; width:42%; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.reservationConfirmation.vehicle}">Vehicle</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; word-break:break-word; border-top:1px solid #f3f4f6;"
+                    th:text="${vehicleLabel}">—</td>
+            </tr>
+            <tr>
+                <td style="color:#6b7280; padding:10px 16px 10px 0; vertical-align:top; border-top:1px solid #f3f4f6;"
+                    th:text="#{mail.carDeleted.pricePerDay}">Price per Day</td>
+                <td style="font-weight:600; color:#1e1b4b; padding:10px 0; vertical-align:top; border-top:1px solid #f3f4f6;">
+                    <span th:text="${pricePerDay}">—</span>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+    <!-- CTA BUTTON -->
+    <div style="margin-bottom:20px;">
+        <div style="margin-bottom:10px;">
+        <a th:href="${ctaUrl}"
+           style="display:inline-block; padding:12px 24px; background-color:#4338ca;
+                  color:#ffffff; text-decoration:none; border-radius:8px;
+                  font-size:14px; font-weight:600;"
+           th:text="#{mail.carDeleted.viewCar}">
+            View car
+        </a>
+        </div>
+        <p style="font-size:12px; color:#4b5563; line-height:1.6; margin:0;">
+            <span th:text="#{mail.common.fallbackAuthLinkCopy}">If the button does not work</span><br/>
+            <a th:href="${ctaUrl}" th:text="${ctaUrl}" style="word-break:break-all; color:#4338ca;">https://</a>
+        </p>
+    </div>
+
+    <!-- FOOTER -->
+    <hr style="border:none; border-top:1px solid #d1d5db; margin:20px 0;"/>
+    <p style="font-size:12px; color:#9ca3af; line-height:1.8;"
+       th:text="#{mail.common.footer}">
+        Footer
+    </p>
+
+    <p style="font-size:18px; color:#9ca3af; letter-spacing:2px; margin-top:16px;">···</p>
+
+</div>
+</body>
+</html>

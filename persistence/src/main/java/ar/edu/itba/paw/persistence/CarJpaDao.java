@@ -53,13 +53,13 @@ public class CarJpaDao implements CarDao {
     private EntityManager em;
 
     private final CarPictureDao carPictureDao;
-    private final ListingAvailabilityDao listingAvailabilityDao;
+    private final CarAvailabilityDao carAvailabilityDao;
 
     @org.springframework.beans.factory.annotation.Autowired
     public CarJpaDao(final CarPictureDao carPictureDao,
-                     final ListingAvailabilityDao listingAvailabilityDao) {
+                     final CarAvailabilityDao carAvailabilityDao) {
         this.carPictureDao = carPictureDao;
-        this.listingAvailabilityDao = listingAvailabilityDao;
+        this.carAvailabilityDao = carAvailabilityDao;
     }
 
     @Override
@@ -128,7 +128,7 @@ public class CarJpaDao implements CarDao {
         appendOwnerCarJpqlFilters(countJpql, countParams, criteria);
         final long total = (Long) bindParams(em.createQuery(countJpql.toString()), countParams).getSingleResult();
 
-        // Step 2: paginated car IDs + min price via native SQL (LEFT JOIN listing_availability for ordering/price)
+        // Step 2: paginated car IDs + min price via native SQL (LEFT JOIN car_availability for ordering/price)
         final int offset = page * pageSize;
         final Map<String, Object> idsParams = new HashMap<>();
         idsParams.put("ownerId", criteria.getOwnerId());
@@ -136,7 +136,7 @@ public class CarJpaDao implements CarDao {
         idsParams.put("offset", offset);
         final StringBuilder idsSql = new StringBuilder(
                 "SELECT c.id, MIN(la.day_price) AS min_price FROM cars c "
-                + "LEFT JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
+                + "LEFT JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
                 + "LEFT JOIN car_models cm ON cm.id = c.model_id "
                 + "LEFT JOIN car_brands cb ON cb.id = cm.brand_id "
                 + "WHERE c.owner_id = :ownerId ");
@@ -221,15 +221,15 @@ public class CarJpaDao implements CarDao {
                     .collect(Collectors.toList()));
         }
         if (criteria.getMinPrice() != null || criteria.getMaxPrice() != null) {
-            params.put("ownerOfferedKind", ar.edu.itba.paw.models.domain.ListingAvailability.Kind.OFFERED);
+            params.put("ownerOfferedKind", ar.edu.itba.paw.models.domain.CarAvailability.Kind.OFFERED);
         }
         if (criteria.getMinPrice() != null) {
-            jpql.append("AND EXISTS (SELECT 1 FROM ListingAvailability la WHERE la.car = c "
+            jpql.append("AND EXISTS (SELECT 1 FROM CarAvailability la WHERE la.car = c "
                     + "AND la.kind = :ownerOfferedKind AND la.dayPrice >= :ownerMinPrice) ");
             params.put("ownerMinPrice", criteria.getMinPrice());
         }
         if (criteria.getMaxPrice() != null) {
-            jpql.append("AND EXISTS (SELECT 1 FROM ListingAvailability la WHERE la.car = c "
+            jpql.append("AND EXISTS (SELECT 1 FROM CarAvailability la WHERE la.car = c "
                     + "AND la.kind = :ownerOfferedKind AND la.dayPrice <= :ownerMaxPrice) ");
             params.put("ownerMaxPrice", criteria.getMaxPrice());
         }
@@ -448,7 +448,7 @@ public class CarJpaDao implements CarDao {
         final StringBuilder idSql = new StringBuilder(
                 "SELECT c.id FROM cars c "
                 + OWNER_NOT_BLOCKED_JOIN
-                + "JOIN listing_availability la ON la.car_id = c.id "
+                + "JOIN car_availability la ON la.car_id = c.id "
                 + "JOIN car_models cm ON cm.id = c.model_id "
                 + "WHERE c.status = 'active' "
                 + "AND c.id <> :carId "
@@ -489,7 +489,7 @@ public class CarJpaDao implements CarDao {
 
         // Cover image and "from" price are owned by other DAOs; delegate to them.
         final Map<Long, Long> imageMap = carPictureDao.findCoverImageIdsByCarIds(idLongs);
-        final Map<Long, BigDecimal> priceMap = listingAvailabilityDao.findMinOfferedDayPriceByCarIds(idLongs);
+        final Map<Long, BigDecimal> priceMap = carAvailabilityDao.findMinOfferedDayPriceByCarIds(idLongs);
 
         return idLongs.stream()
                 .limit(limit)
@@ -557,7 +557,7 @@ public class CarJpaDao implements CarDao {
     private long countBrowseEligibleActiveCars(final LocalDate browseWallDate, final Long excludeOwnerUserId) {
         final Map<String, Object> params = new HashMap<>();
         final StringBuilder jpql = new StringBuilder(
-                "SELECT COUNT(DISTINCT la.car) FROM ListingAvailability la "
+                "SELECT COUNT(DISTINCT la.car) FROM CarAvailability la "
                 + "JOIN la.car c "
                 + "JOIN c.owner u "
                 + "JOIN c.carModel cm "
@@ -567,7 +567,7 @@ public class CarJpaDao implements CarDao {
                 + "AND cb.validated = TRUE "
                 + "AND la.kind = :offeredKind "
                 + "AND c.status = :activeStatus ");
-        params.put("offeredKind", ar.edu.itba.paw.models.domain.ListingAvailability.Kind.OFFERED);
+        params.put("offeredKind", ar.edu.itba.paw.models.domain.CarAvailability.Kind.OFFERED);
         params.put("activeStatus", Car.Status.ACTIVE);
         if (browseWallDate != null) {
             jpql.append("AND la.endInclusive >= :browseWallDate ");
@@ -592,7 +592,7 @@ public class CarJpaDao implements CarDao {
                 + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
-                + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
+                + "INNER JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
                 + "WHERE c.status = 'active' ");
         appendBrowseEligibilityFilters(countSql, countParams, criteria.getBrowseWallDate(), criteria.getExcludeOwnerUserId());
         appendCarSearchFilters(countSql, countParams, criteria);
@@ -613,10 +613,10 @@ public class CarJpaDao implements CarDao {
         final Map<String, Object> perCarParams = new HashMap<>();
         perCarParams.put("brand", brand);
         perCarParams.put("model", model);
-        perCarParams.put("offeredKind", ar.edu.itba.paw.models.domain.ListingAvailability.Kind.OFFERED);
+        perCarParams.put("offeredKind", ar.edu.itba.paw.models.domain.CarAvailability.Kind.OFFERED);
         perCarParams.put("activeStatus", Car.Status.ACTIVE);
         final StringBuilder perCarJpql = new StringBuilder(
-                "SELECT MIN(la.dayPrice) FROM ListingAvailability la "
+                "SELECT MIN(la.dayPrice) FROM CarAvailability la "
                 + "JOIN la.car c "
                 + "JOIN c.owner u "
                 + "JOIN c.carModel cm "
@@ -682,7 +682,7 @@ public class CarJpaDao implements CarDao {
                 + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
-                + "INNER JOIN listing_availability la ON la.car_id = c.id AND la.kind = 'offered' "
+                + "INNER JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
                 + "WHERE c.status = 'active' ");
         appendBrowseEligibilityFilters(sql, params, browseWallDate, excludeOwnerUserId);
         if (searchCriteria != null) {
@@ -798,7 +798,7 @@ public class CarJpaDao implements CarDao {
                 params.put("rangeLengthDays", (int) rangeDays);
             }
             sql.append("AND EXISTS (")
-                    .append("SELECT 1 FROM listing_availability la_cover ")
+                    .append("SELECT 1 FROM car_availability la_cover ")
                     .append("WHERE la_cover.car_id = c.id ")
                     .append("AND la_cover.kind = 'offered' ")
                     .append("AND la_cover.start_date <= :searchFromWallDate ")
@@ -823,7 +823,7 @@ public class CarJpaDao implements CarDao {
         final Integer flexDays = criteria.getFlexibleDays();
         if (flexDays == null) {
             sql.append("AND EXISTS (")
-                    .append("SELECT 1 FROM listing_availability la_month ")
+                    .append("SELECT 1 FROM car_availability la_month ")
                     .append("WHERE la_month.car_id = c.id ")
                     .append("AND la_month.kind = 'offered' ")
                     .append("AND la_month.start_date <= :flexMonthEnd ")
@@ -833,7 +833,7 @@ public class CarJpaDao implements CarDao {
         } else {
             sql.append("AND c.minimum_rental_days <= :flexibleDays ");
             sql.append("AND EXISTS (")
-                    .append("SELECT 1 FROM listing_availability la ")
+                    .append("SELECT 1 FROM car_availability la ")
                     .append("CROSS JOIN LATERAL generate_series(")
                     .append("    GREATEST(la.start_date, :flexMonthStart),")
                     .append("    LEAST(la.end_date, :flexMonthEnd) - (:flexibleDays - 1),")

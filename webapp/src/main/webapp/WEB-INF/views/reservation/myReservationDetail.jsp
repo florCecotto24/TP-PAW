@@ -17,7 +17,7 @@
     <c:choose>
         <c:when test="${not empty reservationDetailOwnerCarHubId}">
             <%-- 4-level: My Cars > Reservations for my cars > Brand Model > #reservationId --%>
-            <spring:message code="navbar.myListings" var="bcHomeLabel"/>
+            <spring:message code="navbar.myCars" var="bcHomeLabel"/>
             <spring:message code="ownerReservations.heading" var="bcMidLabel"/>
             <c:url var="bcMid2Href" value="/my-cars/reservations/${reservationDetailOwnerCarHubId}"/>
             <ryden:breadcrumbTrail
@@ -538,7 +538,7 @@
                     </c:url>
                     <div class="d-flex flex-column gap-2">
                         <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
-                            <i class="bi bi-eye me-2"></i><spring:message code="myReservationDetail.actions.viewListing"/>
+                            <i class="bi bi-eye me-2"></i><spring:message code="myReservationDetail.actions.viewCar"/>
                         </a>
                         <c:set var="canCancel" value="${canCancelReservation}"/>
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>

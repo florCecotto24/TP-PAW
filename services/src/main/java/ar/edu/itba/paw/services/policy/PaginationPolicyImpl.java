@@ -18,7 +18,7 @@ public final class PaginationPolicyImpl implements PaginationPolicy {
     private final int uiPageSize;
     private final int dbFetchSize;
     private final int defaultPageSize;
-    private final int listingPublicReviewsPageSize;
+    private final int carPublicReviewsPageSize;
 
     @Autowired
     public PaginationPolicyImpl(final Environment environment) {
@@ -33,7 +33,7 @@ public final class PaginationPolicyImpl implements PaginationPolicy {
         this.defaultPageSize = legacyDefault != null && legacyDefault > 0
                 ? legacyDefault
                 : ui;
-        this.listingPublicReviewsPageSize =
+        this.carPublicReviewsPageSize =
                 readPositiveInt(
                         environment,
                         LISTING_PUBLIC_REVIEWS_PAGE_SIZE,
@@ -64,7 +64,7 @@ public final class PaginationPolicyImpl implements PaginationPolicy {
     }
 
     @Override
-    public int getListingPublicReviewsPageSize() {
-        return listingPublicReviewsPageSize;
+    public int getCarPublicReviewsPageSize() {
+        return carPublicReviewsPageSize;
     }
 }

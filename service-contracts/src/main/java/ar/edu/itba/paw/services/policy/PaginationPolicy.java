@@ -18,5 +18,5 @@ public interface PaginationPolicy {
     int getDefaultPageSize();
 
     /** Listing detail → public reviews block. */
-    int getListingPublicReviewsPageSize();
+    int getCarPublicReviewsPageSize();
 }

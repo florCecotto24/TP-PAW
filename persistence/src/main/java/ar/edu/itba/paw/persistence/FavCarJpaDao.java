@@ -37,13 +37,13 @@ public class FavCarJpaDao implements FavCarDao {
     private EntityManager em;
 
     private final CarPictureDao carPictureDao;
-    private final ListingAvailabilityDao listingAvailabilityDao;
+    private final CarAvailabilityDao carAvailabilityDao;
 
     @Autowired
     public FavCarJpaDao(final CarPictureDao carPictureDao,
-                        final ListingAvailabilityDao listingAvailabilityDao) {
+                        final CarAvailabilityDao carAvailabilityDao) {
         this.carPictureDao = carPictureDao;
-        this.listingAvailabilityDao = listingAvailabilityDao;
+        this.carAvailabilityDao = carAvailabilityDao;
     }
 
     @Override
@@ -110,7 +110,7 @@ public class FavCarJpaDao implements FavCarDao {
      *      reason native SQL is needed here is the dialect-specific LIMIT/OFFSET pagination).
      *   2. JPQL with JOIN FETCH hydrates the Car entities (and their CarModel + CarBrand).
      *   3. Cover image and "from" day price are asked to the DAOs that own those entities,
-     *      so this DAO never touches car_pictures or listing_availability directly.
+     *      so this DAO never touches car_pictures or car_availability directly.
      */
     private List<CarCard> loadFavoriteCarCardsWindow(
             final long userId,
@@ -155,7 +155,7 @@ public class FavCarJpaDao implements FavCarDao {
         }
         final Set<Long> carIdSet = new LinkedHashSet<>(orderedIds);
         final Map<Long, Long> coverByCar = carPictureDao.findCoverImageIdsByCarIds(carIdSet);
-        final Map<Long, BigDecimal> priceByCar = listingAvailabilityDao.findMinOfferedDayPriceByCarIds(carIdSet);
+        final Map<Long, BigDecimal> priceByCar = carAvailabilityDao.findMinOfferedDayPriceByCarIds(carIdSet);
 
         final List<CarCard> result = new ArrayList<>(orderedIds.size());
         for (final Long id : orderedIds) {

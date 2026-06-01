@@ -15,15 +15,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
+import ar.edu.itba.paw.persistence.CarAvailabilityDao;
 
 /** Phase 7 coverage: layered availability rows with kind and "most recent createdAt wins" lookup. */
-class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
+class CarAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
-    private ListingAvailabilityDao dao;
+    private CarAvailabilityDao dao;
 
     @PersistenceContext
     private EntityManager em;
@@ -32,7 +32,7 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedCar() {
-        jdbcTemplate.update("DELETE FROM listing_availability");
+        jdbcTemplate.update("DELETE FROM car_availability");
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM users WHERE email = ?", "la-owner@test.com");
 
@@ -52,13 +52,13 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
             final LocalDate start, final LocalDate end, final BigDecimal dayPrice,
             final String kind, final OffsetDateTime createdAt) {
         jdbcTemplate.update(
-                "INSERT INTO listing_availability (car_id, start_date, end_date, day_price, "
+                "INSERT INTO car_availability (car_id, start_date, end_date, day_price, "
                         + "start_point_street, check_in_time, check_out_time, kind, created_at, updated_at) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 carId, start, end, dayPrice,
                 "Belgrano", LocalTime.of(10, 0), LocalTime.of(18, 0), kind, createdAt, createdAt);
         return jdbcTemplate.queryForObject(
-                "SELECT id FROM listing_availability WHERE car_id = ? AND start_date = ? AND end_date = ? AND created_at = ?",
+                "SELECT id FROM car_availability WHERE car_id = ? AND start_date = ? AND end_date = ? AND created_at = ?",
                 Long.class, carId, start, end, createdAt);
     }
 
@@ -75,8 +75,8 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 new BigDecimal("150.00"), "offered", t2);
 
         // 2. Act
-        final Optional<ListingAvailability> winnerDay5 = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 8, 5));
-        final Optional<ListingAvailability> winnerDay1 = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 8, 1));
+        final Optional<CarAvailability> winnerDay5 = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 8, 5));
+        final Optional<CarAvailability> winnerDay1 = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 8, 1));
 
         // 3. Assert — day 5 only the more recent covers it (and even if both did, more recent wins).
         Assertions.assertTrue(winnerDay5.isPresent());
@@ -98,12 +98,12 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 new BigDecimal("100.00"), "withdrawn", t2);
 
         // 2. Act
-        final Optional<ListingAvailability> winner = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 9, 3));
+        final Optional<CarAvailability> winner = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 9, 3));
 
         // 3. Assert
         Assertions.assertTrue(winner.isPresent());
         Assertions.assertEquals(withdrawnId, winner.get().getId());
-        Assertions.assertEquals(ListingAvailability.Kind.WITHDRAWN, winner.get().getKind());
+        Assertions.assertEquals(CarAvailability.Kind.WITHDRAWN, winner.get().getKind());
     }
 
     @Test
@@ -114,7 +114,7 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 new BigDecimal("100.00"), "offered", t);
 
         // 2. Act
-        final Optional<ListingAvailability> winner = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 10, 6));
+        final Optional<CarAvailability> winner = dao.findEffectiveForDayByCar(carId, LocalDate.of(2026, 10, 6));
 
         // 3. Assert
         Assertions.assertTrue(winner.isEmpty());
@@ -129,7 +129,7 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 new BigDecimal("100.00"), "offered", t);
 
         // 2. Act
-        final Optional<ListingAvailability> result = dao.findById(id);
+        final Optional<CarAvailability> result = dao.findById(id);
 
         // 3. Assert
         Assertions.assertTrue(result.isPresent());
@@ -141,7 +141,7 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange — no rows.
 
         // 2. Act
-        final Optional<ListingAvailability> result = dao.findById(999_999L);
+        final Optional<CarAvailability> result = dao.findById(999_999L);
 
         // 3. Assert
         Assertions.assertTrue(result.isEmpty());
@@ -161,13 +161,13 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 new BigDecimal("110.00"), "withdrawn", t3);
 
         // 2. Act
-        final List<ListingAvailability> result =
+        final List<CarAvailability> result =
                 dao.findOverlappingRangeByCar(carId, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
 
         // 3. Assert — only the two August rows match, newest first.
         Assertions.assertEquals(2, result.size());
-        Assertions.assertEquals(ListingAvailability.Kind.WITHDRAWN, result.get(0).getKind());
-        Assertions.assertEquals(ListingAvailability.Kind.OFFERED, result.get(1).getKind());
+        Assertions.assertEquals(CarAvailability.Kind.WITHDRAWN, result.get(0).getKind());
+        Assertions.assertEquals(CarAvailability.Kind.OFFERED, result.get(1).getKind());
     }
 
     @Test
@@ -175,7 +175,7 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
         // 1. Arrange — no extra setup beyond @BeforeEach.
 
         // 2. Act
-        final ListingAvailability created = dao.createFullForCar(
+        final CarAvailability created = dao.createFullForCar(
                 carId,
                 LocalDate.of(2026, 11, 1),
                 LocalDate.of(2026, 11, 5),
@@ -185,12 +185,12 @@ class ListingAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 null,
                 LocalTime.of(10, 0),
                 LocalTime.of(18, 0),
-                ListingAvailability.Kind.OFFERED);
+                CarAvailability.Kind.OFFERED);
         em.flush();
 
         // 3. Assert
         final Long persistedCarId = jdbcTemplate.queryForObject(
-                "SELECT car_id FROM listing_availability WHERE id = ?", Long.class, created.getId());
+                "SELECT car_id FROM car_availability WHERE id = ?", Long.class, created.getId());
         Assertions.assertEquals(carId, persistedCarId.longValue());
         Assertions.assertEquals(carId, created.getCarId());
     }

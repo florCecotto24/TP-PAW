@@ -1,10 +1,10 @@
 package ar.edu.itba.paw.services.scheduling;
 
 import ar.edu.itba.paw.services.EmailService;
-import ar.edu.itba.paw.services.ListingAvailabilityService;
+import ar.edu.itba.paw.services.CarAvailabilityService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.domain.User;
@@ -34,21 +34,21 @@ public final class ReservationReminderScheduler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationReminderScheduler.class);
 
     private final ReservationService reservationService;
-    private final ListingAvailabilityService listingAvailabilityService;
-    private final ListingAddressFormatter listingAddressFormatter;
+    private final CarAvailabilityService carAvailabilityService;
+    private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
     private final UserService userService;
     private final EmailService emailService;
 
     @Autowired
     public ReservationReminderScheduler(
             final ReservationService reservationService,
-            final ListingAvailabilityService listingAvailabilityService,
-            final ListingAddressFormatter listingAddressFormatter,
+            final CarAvailabilityService carAvailabilityService,
+            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
             final UserService userService,
             final EmailService emailService) {
         this.reservationService = reservationService;
-        this.listingAvailabilityService = listingAvailabilityService;
-        this.listingAddressFormatter = listingAddressFormatter;
+        this.carAvailabilityService = carAvailabilityService;
+        this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
         this.userService = userService;
         this.emailService = emailService;
     }
@@ -89,13 +89,13 @@ public final class ReservationReminderScheduler {
                 final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
                         + " "
                         + (car.getModel() != null ? car.getModel() : "");
-                final Optional<ListingAvailability> mostRecentAv =
-                        listingAvailabilityService.findMostRecentByCarId(car.getId());
+                final Optional<CarAvailability> mostRecentAv =
+                        carAvailabilityService.findMostRecentByCarId(car.getId());
                 final String riderLoc = mostRecentAv
-                        .map(a -> listingAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))
+                        .map(a -> carAvailabilityAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))
                         .orElse(null);
                 final String ownerLoc = mostRecentAv
-                        .map(listingAddressFormatter::formatOwnerReservationHandoverSummary)
+                        .map(carAvailabilityAddressFormatter::formatOwnerReservationHandoverSummary)
                         .orElse(null);
                 final ReservationMailPayload payload = ReservationMailPayload.builder()
                         .recipientEmail(rider.getEmail())

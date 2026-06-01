@@ -285,7 +285,7 @@
         <ryden:similarVehiclesHeader seeAllHref="${pageContext.request.contextPath}${similarSearchUrl}"/>
         <c:choose>
             <c:when test="${empty similarListings}">
-                <p class="text-secondary text-center mb-0"><spring:message code="carDetail.similarListingsWhenAvailable"/></p>
+                <p class="text-secondary text-center mb-0"><spring:message code="carDetail.similarCarsWhenAvailable"/></p>
             </c:when>
             <c:otherwise>
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">

@@ -97,7 +97,7 @@
                             <li><hr class="dropdown-divider my-2"></li>
                             <li>
                                 <a class="dropdown-item rounded-3 py-2 ${activeTab == 'my-cars' ? 'active' : ''}"
-                                   href="${pageContext.request.contextPath}/my-cars"><spring:message code="navbar.myListings"/></a>
+                                   href="${pageContext.request.contextPath}/my-cars"><spring:message code="navbar.myCars"/></a>
                             </li>
                             <li>
                                 <a class="dropdown-item rounded-3 py-2 ${activeTab == 'owner-reservations' ? 'active' : ''}"

@@ -12,7 +12,7 @@ import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
  *
  * <p>Segment generation, day-effective resolution (most recently created OFFERED availability that covers
  * the day), and pickup-lead clipping live in the service layer
- * ({@code ListingAvailabilityService#getBookableSegmentsForRiderDatePickerByCar}).</p>
+ * ({@code CarAvailabilityService#getBookableSegmentsForRiderDatePickerByCar}).</p>
  */
 public final class BookableWallRangesJson {
 

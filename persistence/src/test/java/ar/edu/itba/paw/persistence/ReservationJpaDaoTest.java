@@ -34,7 +34,7 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
     @BeforeEach
     void seedCatalog() {
         jdbcTemplate.update("DELETE FROM reservations");
-        jdbcTemplate.update("DELETE FROM listing_availability");
+        jdbcTemplate.update("DELETE FROM car_availability");
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM car_models");
         jdbcTemplate.update("DELETE FROM car_brands");

@@ -10,7 +10,7 @@ import java.util.Objects;
  * every day shares the same effective attributes (price, check-in/out times, public location, and
  * neighbourhood).
  *
- * <p>Because a car may have multiple overlapping {@code ListingAvailability} rows, the day-effective
+ * <p>Because a car may have multiple overlapping {@code CarAvailability} rows, the day-effective
  * values come from the most recently created OFFERED availability that covers each day. Adjacent days
  * are merged into the same segment iff their full projection ({@code dayPrice}, {@code checkInTime},
  * {@code checkOutTime}, {@code publicLocation}, {@code neighborhoodId}) is identical.</p>

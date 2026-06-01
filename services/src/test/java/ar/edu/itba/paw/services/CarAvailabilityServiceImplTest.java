@@ -18,19 +18,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
-import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
+import ar.edu.itba.paw.persistence.CarAvailabilityDao;
+import ar.edu.itba.paw.services.policy.CarAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
 @ExtendWith(MockitoExtension.class)
-public class ListingAvailabilityServiceImplTest {
+public class CarAvailabilityServiceImplTest {
 
     @Mock
-    private ListingAvailabilityDao listingAvailabilityDao;
+    private CarAvailabilityDao carAvailabilityDao;
 
     @Mock
     private ReservationService reservationService;
@@ -39,31 +39,31 @@ public class ListingAvailabilityServiceImplTest {
     private ReservationTimingPolicy reservationTimingPolicy;
 
     @Mock
-    private ListingAvailabilityPolicy listingAvailabilityPolicy;
+    private CarAvailabilityPolicy carAvailabilityPolicy;
 
     @Mock
-    private ListingAddressFormatter listingAddressFormatter;
+    private CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
 
     @Mock
     private CarService carService;
 
     @InjectMocks
-    private ListingAvailabilityServiceImpl listingAvailabilityService;
+    private CarAvailabilityServiceImpl carAvailabilityService;
 
     private static final long CAR_ID = 42L;
     private static final BigDecimal PRICE = new BigDecimal("100.00");
     private static final LocalTime CHECK_IN = LocalTime.of(10, 0);
     private static final LocalTime CHECK_OUT = LocalTime.of(18, 0);
 
-    private static ListingAvailability buildAvailability(
+    private static CarAvailability buildAvailability(
             final long id,
             final long carId,
             final LocalDate start,
             final LocalDate end,
-            final ListingAvailability.Kind kind) {
+            final CarAvailability.Kind kind) {
         final Car carRef = Mockito.mock(Car.class);
         Mockito.lenient().when(carRef.getId()).thenReturn(carId);
-        return ListingAvailability.builder()
+        return CarAvailability.builder()
                 .id(id)
                 .car(carRef)
                 .startInclusive(start)
@@ -78,11 +78,11 @@ public class ListingAvailabilityServiceImplTest {
 
     @Test
     public void testFindByIdDelegatesToDao() {
-        final ListingAvailability row = buildAvailability(900L, CAR_ID,
-                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), ListingAvailability.Kind.OFFERED);
-        Mockito.when(listingAvailabilityDao.findById(900L)).thenReturn(Optional.of(row));
+        final CarAvailability row = buildAvailability(900L, CAR_ID,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), CarAvailability.Kind.OFFERED);
+        Mockito.when(carAvailabilityDao.findById(900L)).thenReturn(Optional.of(row));
 
-        final Optional<ListingAvailability> result = listingAvailabilityService.findById(900L);
+        final Optional<CarAvailability> result = carAvailabilityService.findById(900L);
 
         Assertions.assertTrue(result.isPresent());
         Assertions.assertSame(row, result.get());
@@ -90,13 +90,13 @@ public class ListingAvailabilityServiceImplTest {
 
     @Test
     public void testFindByCarIdReturnsListFromDao() {
-        final ListingAvailability a = buildAvailability(1L, CAR_ID,
-                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10), ListingAvailability.Kind.OFFERED);
-        final ListingAvailability b = buildAvailability(2L, CAR_ID,
-                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), ListingAvailability.Kind.OFFERED);
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
+        final CarAvailability a = buildAvailability(1L, CAR_ID,
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10), CarAvailability.Kind.OFFERED);
+        final CarAvailability b = buildAvailability(2L, CAR_ID,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 15), CarAvailability.Kind.OFFERED);
+        Mockito.when(carAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
 
-        final List<ListingAvailability> result = listingAvailabilityService.findByCarId(CAR_ID);
+        final List<CarAvailability> result = carAvailabilityService.findByCarId(CAR_ID);
 
         Assertions.assertEquals(2, result.size());
         Assertions.assertEquals(a, result.get(0));
@@ -107,26 +107,26 @@ public class ListingAvailabilityServiceImplTest {
     public void testFindByCarIdsEndingOnOrAfterReturnsListFromDao() {
         final List<Long> ids = List.of(10L, 20L);
         final LocalDate minEnd = LocalDate.of(2026, 7, 1);
-        final ListingAvailability row = buildAvailability(3L, 10L,
-                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 1), ListingAvailability.Kind.OFFERED);
-        Mockito.when(listingAvailabilityDao.findByCarIdsEndingOnOrAfter(ids, minEnd)).thenReturn(List.of(row));
+        final CarAvailability row = buildAvailability(3L, 10L,
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 1), CarAvailability.Kind.OFFERED);
+        Mockito.when(carAvailabilityDao.findByCarIdsEndingOnOrAfter(ids, minEnd)).thenReturn(List.of(row));
 
-        final List<ListingAvailability> result =
-                listingAvailabilityService.findByCarIdsEndingOnOrAfter(ids, minEnd);
+        final List<CarAvailability> result =
+                carAvailabilityService.findByCarIdsEndingOnOrAfter(ids, minEnd);
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(row, result.get(0));
     }
 
 
-    private static ListingAvailability buildAvailabilityWith(
+    private static CarAvailability buildAvailabilityWith(
             final long id, final long carId,
             final LocalDate start, final LocalDate end,
             final BigDecimal price, final LocalTime checkIn, final LocalTime checkOut,
             final String street) {
         final Car carRef = Mockito.mock(Car.class);
         Mockito.lenient().when(carRef.getId()).thenReturn(carId);
-        return ListingAvailability.builder()
+        return CarAvailability.builder()
                 .id(id)
                 .car(carRef)
                 .startInclusive(start)
@@ -135,7 +135,7 @@ public class ListingAvailabilityServiceImplTest {
                 .startPointStreet(street)
                 .checkInTime(checkIn)
                 .checkOutTime(checkOut)
-                .kind(ListingAvailability.Kind.OFFERED)
+                .kind(CarAvailability.Kind.OFFERED)
                 .build();
     }
 
@@ -145,11 +145,11 @@ public class ListingAvailabilityServiceImplTest {
 
     @Test
     public void testGetBookableSegmentsReturnsEmptyWhenNoAvailabilities() {
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of());
+        Mockito.when(carAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
 
         final List<BookableSegmentProjection> result =
-                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, Instant.now());
+                carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, Instant.now());
 
         Assertions.assertTrue(result.isEmpty());
     }
@@ -161,24 +161,24 @@ public class ListingAvailabilityServiceImplTest {
         final LocalDate aEnd = LocalDate.of(2030, 9, 3);
         final LocalDate bStart = LocalDate.of(2030, 9, 4);
         final LocalDate bEnd = LocalDate.of(2030, 9, 6);
-        final ListingAvailability a = buildAvailabilityWith(
+        final CarAvailability a = buildAvailabilityWith(
                 20L, CAR_ID, aStart, aEnd, PRICE, CHECK_IN, CHECK_OUT, "Av. Centro");
-        final ListingAvailability b = buildAvailabilityWith(
+        final CarAvailability b = buildAvailabilityWith(
                 21L, CAR_ID, bStart, bEnd, PRICE, CHECK_IN, CHECK_OUT, "Av. Centro");
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
+        Mockito.when(carAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
         for (LocalDate d = aStart; !d.isAfter(aEnd); d = d.plusDays(1)) {
-            Mockito.when(listingAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
+            Mockito.when(carAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
         }
         for (LocalDate d = bStart; !d.isAfter(bEnd); d = d.plusDays(1)) {
-            Mockito.when(listingAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
+            Mockito.when(carAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
         }
-        Mockito.when(listingAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
-        Mockito.when(listingAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
 
         final List<BookableSegmentProjection> result =
-                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
+                carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(aStart, result.get(0).getFrom());
@@ -192,24 +192,24 @@ public class ListingAvailabilityServiceImplTest {
         final LocalDate bStart = LocalDate.of(2030, 10, 4);
         final LocalDate bEnd = LocalDate.of(2030, 10, 6);
         final BigDecimal priceB = new BigDecimal("200.00");
-        final ListingAvailability a = buildAvailabilityWith(
+        final CarAvailability a = buildAvailabilityWith(
                 30L, CAR_ID, aStart, aEnd, PRICE, CHECK_IN, CHECK_OUT, "Av. Centro");
-        final ListingAvailability b = buildAvailabilityWith(
+        final CarAvailability b = buildAvailabilityWith(
                 31L, CAR_ID, bStart, bEnd, priceB, CHECK_IN, CHECK_OUT, "Av. Centro");
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
+        Mockito.when(carAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
         for (LocalDate d = aStart; !d.isAfter(aEnd); d = d.plusDays(1)) {
-            Mockito.when(listingAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
+            Mockito.when(carAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
         }
         for (LocalDate d = bStart; !d.isAfter(bEnd); d = d.plusDays(1)) {
-            Mockito.when(listingAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
+            Mockito.when(carAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
         }
-        Mockito.when(listingAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
-        Mockito.when(listingAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
 
         final List<BookableSegmentProjection> result =
-                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
+                carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
 
         Assertions.assertEquals(2, result.size());
         Assertions.assertEquals(aStart, result.get(0).getFrom());
@@ -226,24 +226,24 @@ public class ListingAvailabilityServiceImplTest {
         final LocalDate aEnd = LocalDate.of(2030, 11, 3);
         final LocalDate bStart = LocalDate.of(2030, 11, 4);
         final LocalDate bEnd = LocalDate.of(2030, 11, 6);
-        final ListingAvailability a = buildAvailabilityWith(
+        final CarAvailability a = buildAvailabilityWith(
                 40L, CAR_ID, aStart, aEnd, PRICE, CHECK_IN, CHECK_OUT, "Av. Centro");
-        final ListingAvailability b = buildAvailabilityWith(
+        final CarAvailability b = buildAvailabilityWith(
                 41L, CAR_ID, bStart, bEnd, PRICE, LocalTime.of(8, 0), CHECK_OUT, "Av. Centro");
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
+        Mockito.when(carAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
         for (LocalDate d = aStart; !d.isAfter(aEnd); d = d.plusDays(1)) {
-            Mockito.when(listingAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
+            Mockito.when(carAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
         }
         for (LocalDate d = bStart; !d.isAfter(bEnd); d = d.plusDays(1)) {
-            Mockito.when(listingAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
+            Mockito.when(carAvailabilityDao.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
         }
-        Mockito.when(listingAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
-        Mockito.when(listingAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
+        Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
 
         final List<BookableSegmentProjection> result =
-                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
+                carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(CAR_ID, farFutureInstant(aStart));
 
         Assertions.assertEquals(2, result.size());
         Assertions.assertEquals(CHECK_IN, result.get(0).getCheckInTime());
@@ -254,10 +254,10 @@ public class ListingAvailabilityServiceImplTest {
     public void testFindOverlappingRangeByCarDelegatesToDao() {
         final LocalDate from = LocalDate.of(2026, 8, 1);
         final LocalDate to = LocalDate.of(2026, 8, 31);
-        final ListingAvailability row = buildAvailability(88L, CAR_ID, from, to, ListingAvailability.Kind.OFFERED);
-        Mockito.when(listingAvailabilityDao.findOverlappingRangeByCar(CAR_ID, from, to)).thenReturn(List.of(row));
+        final CarAvailability row = buildAvailability(88L, CAR_ID, from, to, CarAvailability.Kind.OFFERED);
+        Mockito.when(carAvailabilityDao.findOverlappingRangeByCar(CAR_ID, from, to)).thenReturn(List.of(row));
 
-        final List<ListingAvailability> result = listingAvailabilityService.findOverlappingRangeByCar(CAR_ID, from, to);
+        final List<CarAvailability> result = carAvailabilityService.findOverlappingRangeByCar(CAR_ID, from, to);
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertSame(row, result.get(0));
@@ -267,10 +267,10 @@ public class ListingAvailabilityServiceImplTest {
     public void testUpdateMinimumRentalDaysWhenMinDaysExceedsPeriodThrowsException() {
         final LocalDate start = LocalDate.of(2026, 7, 1);
         final LocalDate end = LocalDate.of(2026, 7, 3); // 3-day period
-        final ListingAvailability row = buildAvailability(201L, CAR_ID, start, end, ListingAvailability.Kind.OFFERED);
-        Mockito.when(listingAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(row));
+        final CarAvailability row = buildAvailability(201L, CAR_ID, start, end, CarAvailability.Kind.OFFERED);
+        Mockito.when(carAvailabilityDao.findByCarId(CAR_ID)).thenReturn(List.of(row));
 
         Assertions.assertThrows(CarValidationException.class,
-                () -> listingAvailabilityService.updateMinimumRentalDays(CAR_ID, 5));
+                () -> carAvailabilityService.updateMinimumRentalDays(CAR_ID, 5));
     }
 }

@@ -67,15 +67,15 @@
 
             <div class="d-flex justify-content-between align-items-start gap-2 mt-2 small">
                 <div class="text-danger fw-semibold">
-                    <spring:message code="listing.price.insight.min"/>
+                    <spring:message code="car.price.insight.min"/>
                     <div class="text-body fw-normal"><c:out value="${minPriceFormatted}"/></div>
                 </div>
                 <div class="text-success fw-semibold text-center">
-                    <spring:message code="listing.price.insight.avg"/>
+                    <spring:message code="car.price.insight.avg"/>
                     <div class="text-body fw-normal"><c:out value="${avgPriceFormatted}"/></div>
                 </div>
                 <div class="text-danger fw-semibold text-end">
-                    <spring:message code="listing.price.insight.max"/>
+                    <spring:message code="car.price.insight.max"/>
                     <div class="text-body fw-normal"><c:out value="${maxPriceFormatted}"/></div>
                 </div>
             </div>

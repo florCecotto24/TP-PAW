@@ -39,7 +39,7 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
     void seedCarAndAvailabilities() {
         jdbcTemplate.update("DELETE FROM reservations_availabilities");
         jdbcTemplate.update("DELETE FROM reservations");
-        jdbcTemplate.update("DELETE FROM listing_availability");
+        jdbcTemplate.update("DELETE FROM car_availability");
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM users WHERE email IN (?, ?)",
                 "ra-bridge@test.com", "rider-bridge@test.com");
@@ -126,13 +126,13 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
             final BigDecimal dayPrice,
             final OffsetDateTime createdAt) {
         jdbcTemplate.update(
-                "INSERT INTO listing_availability (car_id, start_date, end_date, created_at, updated_at, "
+                "INSERT INTO car_availability (car_id, start_date, end_date, created_at, updated_at, "
                         + "day_price, start_point_street, check_in_time, check_out_time, kind) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 carId, start, end, createdAt, createdAt, dayPrice,
                 "Street", LocalTime.of(10, 0), LocalTime.of(18, 0), "offered");
         return jdbcTemplate.queryForObject(
-                "SELECT id FROM listing_availability WHERE car_id = ? AND start_date = ? AND day_price = ?",
+                "SELECT id FROM car_availability WHERE car_id = ? AND start_date = ? AND day_price = ?",
                 Long.class,
                 carId,
                 start,

@@ -41,7 +41,7 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedOwner() {
-        jdbcTemplate.update("DELETE FROM listing_availability");
+        jdbcTemplate.update("DELETE FROM car_availability");
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM car_models");
         jdbcTemplate.update("DELETE FROM car_brands");
@@ -461,7 +461,7 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
             final BigDecimal dayPrice,
             final OffsetDateTime createdAt) {
         jdbcTemplate.update(
-                "INSERT INTO listing_availability (car_id, start_date, end_date, day_price, "
+                "INSERT INTO car_availability (car_id, start_date, end_date, day_price, "
                         + "start_point_street, check_in_time, check_out_time, kind, created_at, updated_at) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 carId,

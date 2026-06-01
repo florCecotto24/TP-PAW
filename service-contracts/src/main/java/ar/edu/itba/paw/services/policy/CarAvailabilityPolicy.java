@@ -11,7 +11,7 @@ import ar.edu.itba.paw.models.util.time.AppTimezone;
  * ({@link AppTimezone#WALL_ZONE}), measured from {@code referenceWallDay} (normally "today" in that zone):
  * inclusive start/end dates must not fall after {@code referenceWallDay + configuredForwardDays}.
  */
-public interface ListingAvailabilityPolicy {
+public interface CarAvailabilityPolicy {
 
     int getMaxAvailabilityForwardWallDays();
 

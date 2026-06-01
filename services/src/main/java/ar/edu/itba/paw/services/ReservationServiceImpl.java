@@ -49,12 +49,12 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
 
 /**
@@ -68,8 +68,8 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private final ReservationDao reservationDao;
     private final ReservationAvailabilityService reservationAvailabilityService;
-    private final ListingAvailabilityService listingAvailabilityService;
-    private final ListingAddressFormatter listingAddressFormatter;
+    private final CarAvailabilityService carAvailabilityService;
+    private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
     private final UserService userService;
     private final EmailService emailService;
     private final StoredFileService storedFileService;
@@ -82,8 +82,8 @@ public final class ReservationServiceImpl implements ReservationService {
     public ReservationServiceImpl(
             final ReservationDao reservationDao,
             final ReservationAvailabilityService reservationAvailabilityService,
-            final ListingAvailabilityService listingAvailabilityService,
-            final ListingAddressFormatter listingAddressFormatter,
+            final CarAvailabilityService carAvailabilityService,
+            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
             final UserService userService,
             final EmailService emailService,
             final StoredFileService storedFileService,
@@ -93,8 +93,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final CarService carService) {
         this.reservationDao = reservationDao;
         this.reservationAvailabilityService = reservationAvailabilityService;
-        this.listingAvailabilityService = listingAvailabilityService;
-        this.listingAddressFormatter = listingAddressFormatter;
+        this.carAvailabilityService = carAvailabilityService;
+        this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
         this.userService = userService;
         this.emailService = emailService;
         this.storedFileService = storedFileService;
@@ -410,16 +410,16 @@ public final class ReservationServiceImpl implements ReservationService {
         final LocalDate firstDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         final LocalDate lastDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
         if (availabilityId != null) {
-            final Optional<ListingAvailability> specific = listingAvailabilityService.findById(availabilityId);
-            if (specific.isEmpty() || specific.get().getKind() != ListingAvailability.Kind.OFFERED) {
+            final Optional<CarAvailability> specific = carAvailabilityService.findById(availabilityId);
+            if (specific.isEmpty() || specific.get().getKind() != CarAvailability.Kind.OFFERED) {
                 return false;
             }
-            final ListingAvailability av = specific.get();
+            final CarAvailability av = specific.get();
             return !firstDay.isBefore(av.getStartInclusive()) && !lastDay.isAfter(av.getEndInclusive());
         }
         for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
-            final Optional<ListingAvailability> eff = listingAvailabilityService.findEffectiveForDayByCar(carId, day);
-            if (eff.isEmpty() || eff.get().getKind() == ListingAvailability.Kind.WITHDRAWN) {
+            final Optional<CarAvailability> eff = carAvailabilityService.findEffectiveForDayByCar(carId, day);
+            if (eff.isEmpty() || eff.get().getKind() == CarAvailability.Kind.WITHDRAWN) {
                 return false;
             }
         }
@@ -473,7 +473,7 @@ public final class ReservationServiceImpl implements ReservationService {
     /**
      * Day-by-day pricing plan for a reservation: for each wall-calendar day in
      * {@code [firstBillableDay, lastBillableDay]}, picks the {@code OFFERED} availability of the car
-     * that wins by latest {@code createdAt} ({@link ListingAvailabilityService#findEffectiveForDayByCar}),
+     * that wins by latest {@code createdAt} ({@link CarAvailabilityService#findEffectiveForDayByCar}),
      * accumulating the running total and the distinct set of winning availability ids in their first
      * appearance order. Returns empty when any day lacks an effective offered availability.
      */
@@ -483,14 +483,14 @@ public final class ReservationServiceImpl implements ReservationService {
             final LocalDate lastBillableDay) {
         BigDecimal total = BigDecimal.ZERO;
         final java.util.LinkedHashSet<Long> coveringIds = new java.util.LinkedHashSet<>();
-        ListingAvailability firstDayAvailability = null;
+        CarAvailability firstDayAvailability = null;
         for (LocalDate day = firstBillableDay; !day.isAfter(lastBillableDay); day = day.plusDays(1)) {
-            final Optional<ListingAvailability> effective =
-                    listingAvailabilityService.findEffectiveForDayByCar(carId, day);
-            if (effective.isEmpty() || effective.get().getKind() == ListingAvailability.Kind.WITHDRAWN) {
+            final Optional<CarAvailability> effective =
+                    carAvailabilityService.findEffectiveForDayByCar(carId, day);
+            if (effective.isEmpty() || effective.get().getKind() == CarAvailability.Kind.WITHDRAWN) {
                 return Optional.empty();
             }
-            final ListingAvailability av = effective.get();
+            final CarAvailability av = effective.get();
             if (firstDayAvailability == null) {
                 firstDayAvailability = av;
             }
@@ -506,14 +506,14 @@ public final class ReservationServiceImpl implements ReservationService {
     private record ReservationPlan(
             BigDecimal total,
             java.util.LinkedHashSet<Long> coveringAvailabilityIds,
-            ListingAvailability firstDayAvailability) {
+            CarAvailability firstDayAvailability) {
     }
 
     private void enqueueReservationConfirmationEmailForCar(
             final long riderId,
             final long carId,
             final Reservation reservation,
-            final ListingAvailability pickupAvailability,
+            final CarAvailability pickupAvailability,
             final String ownerCbu) {
         try {
             final Optional<User> riderOpt = userService.getUserById(riderId);
@@ -560,7 +560,7 @@ public final class ReservationServiceImpl implements ReservationService {
         }
     }
 
-    private static String formatHandoverLocation(final ListingAvailability availability) {
+    private static String formatHandoverLocation(final CarAvailability availability) {
         if (availability == null) {
             return null;
         }
@@ -580,10 +580,10 @@ public final class ReservationServiceImpl implements ReservationService {
      * Most-recent availability row for the reservation's car, used to format
      * pickup/return address lines in transactional emails.
      */
-    private Optional<ListingAvailability> resolveAvailabilityForReservation(final Reservation reservation) {
+    private Optional<CarAvailability> resolveAvailabilityForReservation(final Reservation reservation) {
         return Optional.ofNullable(reservation.getCar())
                 .map(Car::getId)
-                .flatMap(listingAvailabilityService::findMostRecentByCarId);
+                .flatMap(carAvailabilityService::findMostRecentByCarId);
     }
 
     /**
@@ -625,14 +625,14 @@ public final class ReservationServiceImpl implements ReservationService {
 
     /**
      * Defensive check against a tampered client payload: the wall-time component of {@code startDate}
-     * must equal the {@code checkInTime} of the effective {@link ListingAvailability} for the pickup day,
+     * must equal the {@code checkInTime} of the effective {@link CarAvailability} for the pickup day,
      * and the wall-time component of {@code endDate} must equal the {@code checkOutTime} of the effective
      * availability for the return day. The UI fixes these times from the bookable segment shown to the
      * rider, so any mismatch indicates the rider submitted hand-edited values or the effective
      * availability changed between picking dates and submitting.
      *
      * <p>Callers must have already validated that every day in the range is covered by an
-     * {@link ar.edu.itba.paw.models.domain.ListingAvailability.Kind#OFFERED} availability (see
+     * {@link ar.edu.itba.paw.models.domain.CarAvailability.Kind#OFFERED} availability (see
      * {@code reservationIntervalFitsCarAvailability}). This method assumes that precondition and only
      * checks the two boundary times.
      */
@@ -643,20 +643,20 @@ public final class ReservationServiceImpl implements ReservationService {
         final LocalTime submittedCheckIn = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalTime();
         final LocalTime submittedCheckOut = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalTime();
 
-        final ListingAvailability pickupAv = listingAvailabilityService
+        final CarAvailability pickupAv = carAvailabilityService
                 .findEffectiveForDayByCar(carId, pickupDay)
-                .filter(a -> a.getKind() == ListingAvailability.Kind.OFFERED)
+                .filter(a -> a.getKind() == CarAvailability.Kind.OFFERED)
                 .orElseThrow(() -> new RiderReservationException(
                         MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY));
         if (!submittedCheckIn.equals(pickupAv.getCheckInTime())) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_HANDOVER_TIME_MISMATCH);
         }
 
-        final ListingAvailability returnAv = pickupDay.equals(returnDay)
+        final CarAvailability returnAv = pickupDay.equals(returnDay)
                 ? pickupAv
-                : listingAvailabilityService
+                : carAvailabilityService
                         .findEffectiveForDayByCar(carId, returnDay)
-                        .filter(a -> a.getKind() == ListingAvailability.Kind.OFFERED)
+                        .filter(a -> a.getKind() == CarAvailability.Kind.OFFERED)
                         .orElseThrow(() -> new RiderReservationException(
                                 MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY));
         if (!submittedCheckOut.equals(returnAv.getCheckOutTime())) {
@@ -766,7 +766,7 @@ public final class ReservationServiceImpl implements ReservationService {
         try {
             final long riderId = reservation.getRiderId();
             final Optional<User> riderOpt = userService.getUserById(riderId);
-            final Optional<ListingAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
+            final Optional<CarAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
             final Optional<User> listingOwnerOpt = resolveOwnerFromReservation(reservation);
             if (riderOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId())
@@ -782,8 +782,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final User listingOwner = listingOwnerOpt.get();
             final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
             final String riderFullName = rider.getForename() + " " + rider.getSurname();
-            final String riderLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))).orElse(null);
-            final String ownerLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatOwnerReservationHandoverSummary(a))).orElse(null);
+            final String riderLoc = availabilityOpt.map(a -> trimToNull(carAvailabilityAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))).orElse(null);
+            final String ownerLoc = availabilityOpt.map(a -> trimToNull(carAvailabilityAddressFormatter.formatOwnerReservationHandoverSummary(a))).orElse(null);
             final ReservationMailPayload mail = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(riderFullName)
@@ -875,7 +875,7 @@ public final class ReservationServiceImpl implements ReservationService {
     private void enqueueRiderReservationConfirmedAfterPaymentProof(final long riderId, final Reservation reservation) {
         try {
             final Optional<User> riderOpt = userService.getUserById(riderId);
-            final Optional<ListingAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
+            final Optional<CarAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
             final Optional<User> listingOwnerOpt = resolveOwnerFromReservation(reservation);
             if (riderOpt.isEmpty() || listingOwnerOpt.isEmpty()) {
                 LOGGER.atWarn().addArgument(reservation.getId()).log(
@@ -885,8 +885,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final User rider = riderOpt.get();
             final User listingOwner = listingOwnerOpt.get();
             final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
-            final String riderLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))).orElse(null);
-            final String ownerLoc = availabilityOpt.map(a -> trimToNull(listingAddressFormatter.formatOwnerReservationHandoverSummary(a))).orElse(null);
+            final String riderLoc = availabilityOpt.map(a -> trimToNull(carAvailabilityAddressFormatter.formatRiderReservationHandoverSummary(a, reservation))).orElse(null);
+            final String ownerLoc = availabilityOpt.map(a -> trimToNull(carAvailabilityAddressFormatter.formatOwnerReservationHandoverSummary(a))).orElse(null);
             final ReservationMailPayload payload = ReservationMailPayload.builder()
                     .recipientEmail(rider.getEmail())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
@@ -1506,7 +1506,7 @@ public final class ReservationServiceImpl implements ReservationService {
 
     private Optional<RiderCarReturnEmailPayload> buildRiderCarReturnEmailPayload(final Reservation reservation) {
         final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
-        final Optional<ListingAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
+        final Optional<CarAvailability> availabilityOpt = resolveAvailabilityForReservation(reservation);
         final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
         if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
             return Optional.empty();
@@ -1516,7 +1516,7 @@ public final class ReservationServiceImpl implements ReservationService {
         final Locale locale = userService.resolveMailLocale(rider.getId());
         final String checkout = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
         final String returnLine = availabilityOpt
-                .map(a -> listingAddressFormatter.formatPickupForReservationView(a, reservation, false))
+                .map(a -> carAvailabilityAddressFormatter.formatPickupForReservationView(a, reservation, false))
                 .orElse(null);
         final String path = "/my-reservations/" + reservation.getId();
         final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);

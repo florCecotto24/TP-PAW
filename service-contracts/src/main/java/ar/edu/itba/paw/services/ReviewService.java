@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services;
 import java.math.BigDecimal;
 import java.util.List;
 
-import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
@@ -18,7 +18,7 @@ public interface ReviewService {
     int getReviewCommentMaxLength();
 
     /** Public car page: paginated reviews with reviewer display fields. */
-    Page<ListingPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
+    Page<CarPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
 
     /** Total public reviews stored for the car. */
     long countReviewsForCar(long carId);

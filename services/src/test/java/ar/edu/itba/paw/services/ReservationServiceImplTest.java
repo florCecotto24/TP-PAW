@@ -20,7 +20,7 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import static ar.edu.itba.paw.exception.MessageKeys.RESERVATION_OWNER_BLOCKED;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
@@ -28,7 +28,7 @@ import ar.edu.itba.paw.persistence.ReservationDao;
 import ar.edu.itba.paw.services.policy.PaginationPolicy;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
 /**
  * Sanity coverage for the car-centric ReservationServiceImpl: focuses on small pure-logic methods
@@ -51,10 +51,10 @@ public class ReservationServiceImplTest {
     private ReservationAvailabilityService reservationAvailabilityService;
 
     @Mock
-    private ListingAvailabilityService listingAvailabilityService;
+    private CarAvailabilityService carAvailabilityService;
 
     @Mock
-    private ListingAddressFormatter listingAddressFormatter;
+    private CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
 
     @Mock
     private UserService userService;
@@ -221,7 +221,7 @@ public class ReservationServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .minimumRentalDays(5)
                 .build();
-        final ListingAvailability avRow = ListingAvailability.builder()
+        final CarAvailability avRow = CarAvailability.builder()
                 .id(availabilityId)
                 .car(car)
                 .startInclusive(LocalDate.of(2030, 5, 1))
@@ -230,16 +230,16 @@ public class ReservationServiceImplTest {
                 .startPointStreet("Av. Test")
                 .checkInTime(LocalTime.of(10, 0))
                 .checkOutTime(LocalTime.of(18, 0))
-                .kind(ListingAvailability.Kind.OFFERED)
+                .kind(CarAvailability.Kind.OFFERED)
                 .build();
 
         Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(rider));
         Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
-        Mockito.when(listingAvailabilityService.findById(availabilityId)).thenReturn(Optional.of(avRow));
-        Mockito.when(listingAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2030, 6, 1)))
+        Mockito.when(carAvailabilityService.findById(availabilityId)).thenReturn(Optional.of(avRow));
+        Mockito.when(carAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2030, 6, 1)))
                 .thenReturn(Optional.of(avRow));
-        Mockito.when(listingAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2030, 6, 2)))
+        Mockito.when(carAvailabilityService.findEffectiveForDayByCar(carId, LocalDate.of(2030, 6, 2)))
                 .thenReturn(Optional.of(avRow));
         Mockito.when(userService.hasUploadedLicenseAndIdentity(rider)).thenReturn(true);
         Mockito.when(userService.getUserCbu(ownerId)).thenReturn("12345678901234567890123");

@@ -34,10 +34,10 @@ import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
-import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
-import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 
@@ -71,7 +71,7 @@ public final class EmailServiceImpl implements EmailService {
     private static final String MIGRATED_PASSWORD_TEMPLATE = "html/migrated-password";
     private static final String PASSWORD_RESET_TEMPLATE = "html/password-reset-code";
     private static final String RESERVATION_REMINDER_TEMPLATE = "html/reservation-reminder-rider";
-    private static final String LISTING_DELETION_TEMPLATE = "html/listing-deleted-owner";
+    private static final String LISTING_DELETION_TEMPLATE = "html/car-deleted-owner";
     private static final String RIDER_RETURN_REMINDER_TEMPLATE = "html/rider-return-reminder";
     private static final String RIDER_RETURN_CHECKOUT_TEMPLATE = "html/rider-return-checkout";
     private static final String RIDER_REVIEW_INVITE_TEMPLATE = "html/rider-review-invite";
@@ -80,10 +80,10 @@ public final class EmailServiceImpl implements EmailService {
     private static final String OWNER_REFUND_PROOF_OBLIGATION_TEMPLATE = "html/owner-refund-proof-obligation";
     private static final String OWNER_BLOCKED_TEMPLATE = "html/owner-blocked";
     private static final String RIDER_REFUND_PROOF_RECEIVED_TEMPLATE = "html/rider-refund-proof-received";
-    private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/listing-paused-missing-cbu-owner";
-    private static final String LISTING_PAUSED_BY_ADMIN_TEMPLATE = "html/listing-paused-by-admin-owner";
-    private static final String LISTING_REJECTED_BY_ADMIN_TEMPLATE = "html/listing-rejected-by-admin-owner";
-    private static final String LISTING_VALIDATED_BY_ADMIN_TEMPLATE = "html/listing-validated-by-admin-owner";
+    private static final String LISTING_PAUSED_MISSING_CBU_TEMPLATE = "html/car-paused-missing-cbu-owner";
+    private static final String LISTING_PAUSED_BY_ADMIN_TEMPLATE = "html/car-paused-by-admin-owner";
+    private static final String LISTING_REJECTED_BY_ADMIN_TEMPLATE = "html/car-rejected-by-admin-owner";
+    private static final String LISTING_VALIDATED_BY_ADMIN_TEMPLATE = "html/car-validated-by-admin-owner";
     private static final String RESERVATION_CHAT_DIGEST_TEMPLATE = "html/reservation-chat-digest";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
@@ -766,7 +766,7 @@ public final class EmailServiceImpl implements EmailService {
             final String htmlContent = this.htmlTemplateEngine.process(LISTING_DELETION_TEMPLATE, ctx);
 
             final String subject = emailMessageSource.getMessage(
-                    "mail.listingDeleted.subject",
+                    "mail.carDeleted.subject",
                     new Object[]{payload.getVehicleLabel()},
                     payload.getOwnerMailLocale());
             sendEmail(payload.getOwnerEmail(), subject, htmlContent);
@@ -806,7 +806,7 @@ public final class EmailServiceImpl implements EmailService {
     @Override
     @Transactional
     @Async("mailTaskExecutor")
-    public void sendListingPausedDueToMissingCbu(final ListingPausedMissingCbuOwnerEmailPayload payload) {
+    public void sendListingPausedDueToMissingCbu(final CarPausedMissingCbuOwnerEmailPayload payload) {
         final String ownerEmail = payload.getOwnerEmail();
         if (ownerEmail == null || ownerEmail.isBlank()) {
             LOGGER.atWarn().log("Skipping listing-paused-CBU email: missing recipient");
@@ -826,7 +826,7 @@ public final class EmailServiceImpl implements EmailService {
             runMail(() -> {
                 final String htmlContent = this.htmlTemplateEngine.process(LISTING_PAUSED_MISSING_CBU_TEMPLATE, ctx);
                 final String subject = emailMessageSource.getMessage(
-                        "mail.listingPausedMissingCbu.subject",
+                        "mail.carPausedMissingCbu.subject",
                         new Object[] { vehicleLabel },
                         locale);
                 sendEmail(ownerEmail, subject, htmlContent);
@@ -841,7 +841,7 @@ public final class EmailServiceImpl implements EmailService {
     @Override
     @Transactional
     @Async("mailTaskExecutor")
-    public void sendListingPausedByAdmin(final ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload payload) {
+    public void sendCarPausedByAdmin(final ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload payload) {
         final String ownerEmail = payload.getOwnerEmail();
         if (ownerEmail == null || ownerEmail.isBlank()) {
             LOGGER.atWarn().log("Skipping listing-paused-by-admin email: missing recipient");
@@ -859,7 +859,7 @@ public final class EmailServiceImpl implements EmailService {
             runMail(() -> {
                 final String htmlContent = this.htmlTemplateEngine.process(LISTING_PAUSED_BY_ADMIN_TEMPLATE, ctx);
                 final String subject = emailMessageSource.getMessage(
-                        "mail.listingPausedByAdmin.subject",
+                        "mail.carPausedByAdmin.subject",
                         new Object[] { vehicleLabel },
                         locale);
                 sendEmail(ownerEmail, subject, htmlContent);
@@ -874,8 +874,8 @@ public final class EmailServiceImpl implements EmailService {
     @Override
     @Transactional
     @Async("mailTaskExecutor")
-    public void sendListingRejectedByAdmin(final ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload payload) {
-        if (skipBecauseNullPayload(payload, "sendListingRejectedByAdmin")) {
+    public void sendCarRejectedByAdmin(final ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendCarRejectedByAdmin")) {
             return;
         }
         final String ownerEmail = payload.getOwnerEmail();
@@ -899,7 +899,7 @@ public final class EmailServiceImpl implements EmailService {
             runMail(() -> {
                 final String htmlContent = this.htmlTemplateEngine.process(LISTING_REJECTED_BY_ADMIN_TEMPLATE, ctx);
                 final String subject = emailMessageSource.getMessage(
-                        "mail.listingRejectedByAdmin.subject",
+                        "mail.carRejectedByAdmin.subject",
                         new Object[] { vehicleLabel },
                         locale);
                 sendEmail(ownerEmail, subject, htmlContent);
@@ -914,8 +914,8 @@ public final class EmailServiceImpl implements EmailService {
     @Override
     @Transactional
     @Async("mailTaskExecutor")
-    public void sendListingValidatedByAdmin(final ListingValidatedByAdminOwnerEmailPayload payload) {
-        if (skipBecauseNullPayload(payload, "sendListingValidatedByAdmin")) {
+    public void sendCarValidatedByAdmin(final CarValidatedByAdminOwnerEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendCarValidatedByAdmin")) {
             return;
         }
         final String ownerEmail = payload.getOwnerEmail();
@@ -938,7 +938,7 @@ public final class EmailServiceImpl implements EmailService {
             runMail(() -> {
                 final String htmlContent = this.htmlTemplateEngine.process(LISTING_VALIDATED_BY_ADMIN_TEMPLATE, ctx);
                 final String subject = emailMessageSource.getMessage(
-                        "mail.listingValidatedByAdmin.subject",
+                        "mail.carValidatedByAdmin.subject",
                         new Object[] { vehicleLabel },
                         locale);
                 sendEmail(ownerEmail, subject, htmlContent);

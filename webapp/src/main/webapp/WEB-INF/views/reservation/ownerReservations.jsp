@@ -13,7 +13,7 @@
 <ryden:navbar/>
 
 <main class="container pt-5 pb-4">
-    <spring:message code="navbar.myListings" var="myCarsLabel"/>
+    <spring:message code="navbar.myCars" var="myCarsLabel"/>
     <spring:message code="ownerReservations.heading" var="ownerReservationsHeading"/>
     <c:choose>
         <c:when test="${not empty selectedCar}">
@@ -126,9 +126,9 @@
                         <div class="d-flex align-items-center ryden-search-pill rounded-4 px-3 py-1 flex-grow-1 gap-2">
                             <i class="bi bi-search text-secondary flex-shrink-0" aria-hidden="true"></i>
                             <input type="search" class="form-control" id="ownerRes_q" name="ownerQ" value="<c:out value='${param.ownerQ}'/>"
-                                   placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                                   placeholder="<spring:message code='myCars.filter.query.placeholder'/>"/>
                         </div>
-                        <button type="submit" class="btn btn-primary rounded-3 flex-shrink-0"><spring:message code="myListings.filter.search"/></button>
+                        <button type="submit" class="btn btn-primary rounded-3 flex-shrink-0"><spring:message code="myCars.filter.search"/></button>
                         <c:if test="${showOwnClear}">
                             <a href="<c:out value='${ownerResClearUrl}' escapeXml='false'/>" class="btn btn-outline-secondary flex-shrink-0">
                                 <spring:message code="search.filters.clear"/>
@@ -176,7 +176,7 @@
                     <%-- On the car-specific view the search row is hidden, so put Search/Clear here --%>
                     <c:if test="${not empty selectedCar}">
                         <button type="submit" class="btn btn-primary rounded-4 mx-1 my-1 flex-shrink-0">
-                            <spring:message code="myListings.filter.search"/>
+                            <spring:message code="myCars.filter.search"/>
                         </button>
                         <c:if test="${showOwnClear}">
                             <a href="<c:out value='${ownerResClearUrl}' escapeXml='false'/>" class="btn btn-outline-secondary rounded-4 mx-1 my-1 flex-shrink-0">

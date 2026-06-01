@@ -24,7 +24,7 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
 @ExtendWith(MockitoExtension.class)
 public class ReservationViewServiceImplTest {
@@ -42,13 +42,13 @@ public class ReservationViewServiceImplTest {
     private CarService carService;
 
     @Mock
-    private ListingAvailabilityService listingAvailabilityService;
+    private CarAvailabilityService carAvailabilityService;
 
     @Mock
     private CarPictureService carPictureService;
 
     @Mock
-    private ListingAddressFormatter listingAddressFormatter;
+    private CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
 
     @Mock
     private UserService userService;

@@ -13,7 +13,7 @@
 <ryden:navbar/>
 
 <main class="container pt-5 pb-4">
-    <spring:message code="navbar.myListings" var="myListingsLabel"/>
+    <spring:message code="navbar.myCars" var="myListingsLabel"/>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
             homeHref="${pageContext.request.contextPath}/my-cars"
@@ -139,7 +139,7 @@
                 </div>
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
-                <button type="submit" class="btn btn-primary"><spring:message code="myListings.filter.search"/></button>
+                <button type="submit" class="btn btn-primary"><spring:message code="myCars.filter.search"/></button>
                 <a href="${pageContext.request.contextPath}/my-cars/car/${car.id}/reservations" class="btn btn-outline-secondary"><spring:message code="search.filters.clear"/></a>
             </div>
         </form>

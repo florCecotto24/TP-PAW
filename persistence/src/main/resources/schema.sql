@@ -127,7 +127,7 @@ SELECT setval(
     COALESCE((SELECT MAX(id) FROM neighborhoods), 1)
 );
 
-CREATE TABLE IF NOT EXISTS listing_availability(
+CREATE TABLE IF NOT EXISTS car_availability(
     id SERIAL PRIMARY KEY,
     car_id INTEGER NOT NULL,
     start_date DATE NOT NULL,
@@ -145,8 +145,8 @@ CREATE TABLE IF NOT EXISTS listing_availability(
     FOREIGN KEY (car_id) REFERENCES cars(id)
 );
 
-CREATE INDEX IF NOT EXISTS listing_availability_car_id_lookup
-    ON listing_availability (car_id, start_date, end_date, created_at DESC);
+CREATE INDEX IF NOT EXISTS car_availability_car_id_lookup
+    ON car_availability (car_id, start_date, end_date, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS images (
     id SERIAL PRIMARY KEY,
@@ -222,7 +222,7 @@ CREATE INDEX IF NOT EXISTS reservations_car_id_idx ON reservations (car_id);
 
 CREATE TABLE IF NOT EXISTS reservations_availabilities (
     reservation_id INTEGER NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
-    availability_id INTEGER NOT NULL REFERENCES listing_availability(id),
+    availability_id INTEGER NOT NULL REFERENCES car_availability(id),
     PRIMARY KEY (reservation_id, availability_id)
 );
 

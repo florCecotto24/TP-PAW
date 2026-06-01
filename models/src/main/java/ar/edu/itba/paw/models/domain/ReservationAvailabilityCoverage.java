@@ -11,7 +11,7 @@ import javax.persistence.MapsId;
 import javax.persistence.Table;
 
 /**
- * N:N bridge between a {@link Reservation} and the {@link ListingAvailability} rows considered when
+ * N:N bridge between a {@link Reservation} and the {@link CarAvailability} rows considered when
  * pricing the reservation ({@code reservations_availabilities}). The per-day winner is resolved at
  * read time by filtering by date range and picking the {@code MAX(created_at)}; no per-row date
  * segmentation is persisted.
@@ -31,14 +31,14 @@ public class ReservationAvailabilityCoverage {
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("availabilityId")
     @JoinColumn(name = "availability_id")
-    private ListingAvailability availability;
+    private CarAvailability availability;
 
     /* package */ ReservationAvailabilityCoverage() {
         // For Hibernate
     }
 
     public ReservationAvailabilityCoverage(
-            final Reservation reservation, final ListingAvailability availability) {
+            final Reservation reservation, final CarAvailability availability) {
         this.reservation = Objects.requireNonNull(reservation);
         this.availability = Objects.requireNonNull(availability);
         this.id = new ReservationAvailabilityCoverageId(reservation.getId(), availability.getId());
@@ -52,7 +52,7 @@ public class ReservationAvailabilityCoverage {
         return reservation;
     }
 
-    public ListingAvailability getAvailability() {
+    public CarAvailability getAvailability() {
         return availability;
     }
 }

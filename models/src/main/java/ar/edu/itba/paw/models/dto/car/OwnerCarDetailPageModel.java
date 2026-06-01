@@ -8,14 +8,14 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 
 /**
  * Model attributes for the owner {@code myCarDetail} JSP (analytics, neighborhood labels, availability helpers);
- * built in the service layer from a {@link Car} and its {@link ListingAvailability} rows. The controller still adds
+ * built in the service layer from a {@link Car} and its {@link CarAvailability} rows. The controller still adds
  * {@code editForm} and {@code activeTab}.
  */
 public final class OwnerCarDetailPageModel {
@@ -32,7 +32,7 @@ public final class OwnerCarDetailPageModel {
     private final String carCreatedAtDisplay;
     private final Car car;
     private final User owner;
-    private final List<ListingAvailability> availabilities;
+    private final List<CarAvailability> availabilities;
     private final long carImageId;
     private final String statusKey;
     private final Map<String, Long> reservationStatusCounts;
@@ -43,7 +43,7 @@ public final class OwnerCarDetailPageModel {
     private final long carReservationsThisMonth;
     private final String carCancellationRate;
     private final String carNextReservationDisplay;
-    private final List<ListingAvailability> editPastAvailabilities;
+    private final List<CarAvailability> editPastAvailabilities;
     private final String editAvailMaxYmd;
     private final LocalDate editAvailWallToday;
     private final CarPriceMarketInsight priceMarketInsight;
@@ -61,7 +61,7 @@ public final class OwnerCarDetailPageModel {
             final String carCreatedAtDisplay,
             final Car car,
             final User owner,
-            final List<ListingAvailability> availabilities,
+            final List<CarAvailability> availabilities,
             final long carImageId,
             final String statusKey,
             final Map<String, Long> reservationStatusCounts,
@@ -72,7 +72,7 @@ public final class OwnerCarDetailPageModel {
             final long carReservationsThisMonth,
             final String carCancellationRate,
             final String carNextReservationDisplay,
-            final List<ListingAvailability> editPastAvailabilities,
+            final List<CarAvailability> editPastAvailabilities,
             final String editAvailMaxYmd,
             final LocalDate editAvailWallToday,
             final CarPriceMarketInsight priceMarketInsight) {
@@ -105,7 +105,7 @@ public final class OwnerCarDetailPageModel {
         this.priceMarketInsight = priceMarketInsight;
     }
 
-    public List<ListingAvailability> getAvailabilities() {
+    public List<CarAvailability> getAvailabilities() {
         return availabilities;
     }
 

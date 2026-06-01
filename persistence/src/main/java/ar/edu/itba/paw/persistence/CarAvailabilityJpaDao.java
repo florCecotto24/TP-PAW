@@ -18,36 +18,36 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
+import ar.edu.itba.paw.persistence.CarAvailabilityDao;
 
 @Transactional(readOnly = true)
 @Repository
-public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
+public class CarAvailabilityJpaDao implements CarAvailabilityDao {
 
     @PersistenceContext
     private EntityManager em;
 
     @Override
-    public Optional<ListingAvailability> findById(final long availabilityId) {
-        return Optional.ofNullable(em.find(ListingAvailability.class, availabilityId));
+    public Optional<CarAvailability> findById(final long availabilityId) {
+        return Optional.ofNullable(em.find(CarAvailability.class, availabilityId));
     }
 
     @Override
-    public Optional<ListingAvailability> findEffectiveForDayByCar(final long carId, final LocalDate day) {
+    public Optional<CarAvailability> findEffectiveForDayByCar(final long carId, final LocalDate day) {
         /*
          * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
          * - Step 1 (native): filter, order by {@code (created_at DESC, id DESC)} and apply
-         *   {@code LIMIT 1} on {@code listing_availability} to get the most recent availability
+         *   {@code LIMIT 1} on {@code car_availability} to get the most recent availability
          *   that covers the given day. The WHERE does NOT guarantee uniqueness (multiple
          *   availabilities may overlap the same day; we deliberately want the most recently
          *   created one), so this is a "top 1" pagination case and must use the 1+1 pattern.
-         * - Step 2 (JPQL):   hydrate the {@link ListingAvailability} entity by id.
+         * - Step 2 (JPQL):   hydrate the {@link CarAvailability} entity by id.
          */
         @SuppressWarnings("unchecked")
         final List<Number> ids = em.createNativeQuery(
-                        "SELECT la.id FROM listing_availability la "
+                        "SELECT la.id FROM car_availability la "
                                 + "WHERE la.car_id = :carId "
                                 + "AND la.start_date <= :day AND la.end_date >= :day "
                                 + "ORDER BY la.created_at DESC, la.id DESC "
@@ -59,16 +59,16 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
             return Optional.empty();
         }
         final long availabilityId = ids.get(0).longValue();
-        return Optional.ofNullable(em.find(ListingAvailability.class, availabilityId));
+        return Optional.ofNullable(em.find(CarAvailability.class, availabilityId));
     }
 
     @Override
-    public List<ListingAvailability> findOverlappingRangeByCar(final long carId, final LocalDate from, final LocalDate to) {
+    public List<CarAvailability> findOverlappingRangeByCar(final long carId, final LocalDate from, final LocalDate to) {
         return em.createQuery(
-                        "FROM ListingAvailability la WHERE la.car.id = :carId "
+                        "FROM CarAvailability la WHERE la.car.id = :carId "
                                 + "AND la.startInclusive <= :to AND la.endInclusive >= :from "
                                 + "ORDER BY la.createdAt DESC, la.id DESC",
-                        ListingAvailability.class)
+                        CarAvailability.class)
                 .setParameter("carId", carId)
                 .setParameter("from", from)
                 .setParameter("to", to)
@@ -77,7 +77,7 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
 
     @Override
     @Transactional
-    public ListingAvailability createFullForCar(
+    public CarAvailability createFullForCar(
             final long carId,
             final LocalDate startInclusive,
             final LocalDate endInclusive,
@@ -87,13 +87,13 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
             final Long neighborhoodId,
             final LocalTime checkInTime,
             final LocalTime checkOutTime,
-            final ListingAvailability.Kind kind) {
+            final CarAvailability.Kind kind) {
         final Car carRef = em.getReference(Car.class, carId);
         final Neighborhood neighborhoodRef = neighborhoodId == null
                 ? null
                 : em.getReference(Neighborhood.class, neighborhoodId);
         final OffsetDateTime now = OffsetDateTime.now();
-        final ListingAvailability availability = ListingAvailability.builder()
+        final CarAvailability availability = CarAvailability.builder()
                 .car(carRef)
                 .startInclusive(startInclusive)
                 .endInclusive(endInclusive)
@@ -112,22 +112,22 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
     }
 
     @Override
-    public List<ListingAvailability> findByCarId(final long carId) {
+    public List<CarAvailability> findByCarId(final long carId) {
         return em.createQuery(
-                        "FROM ListingAvailability la WHERE la.car.id = :carId ORDER BY la.startInclusive ASC",
-                        ListingAvailability.class)
+                        "FROM CarAvailability la WHERE la.car.id = :carId ORDER BY la.startInclusive ASC",
+                        CarAvailability.class)
                 .setParameter("carId", carId)
                 .getResultList();
     }
 
     @Override
-    public List<ListingAvailability> findByCarIdsEndingOnOrAfter(final Collection<Long> carIds, final LocalDate minEndDate) {
+    public List<CarAvailability> findByCarIdsEndingOnOrAfter(final Collection<Long> carIds, final LocalDate minEndDate) {
         if (carIds == null || carIds.isEmpty()) {
             return Collections.emptyList();
         }
         return em.createQuery(
-                        "FROM ListingAvailability la WHERE la.car.id IN :carIds AND la.endInclusive >= :minEndDate",
-                        ListingAvailability.class)
+                        "FROM CarAvailability la WHERE la.car.id IN :carIds AND la.endInclusive >= :minEndDate",
+                        CarAvailability.class)
                 .setParameter("carIds", carIds)
                 .setParameter("minEndDate", minEndDate)
                 .getResultList();
@@ -136,12 +136,12 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
     @Override
     @Transactional
     public void deleteByCarId(final long carId) {
-        final List<ListingAvailability> toRemove = em.createQuery(
-                        "FROM ListingAvailability la WHERE la.car.id = :carId",
-                        ListingAvailability.class)
+        final List<CarAvailability> toRemove = em.createQuery(
+                        "FROM CarAvailability la WHERE la.car.id = :carId",
+                        CarAvailability.class)
                 .setParameter("carId", carId)
                 .getResultList();
-        for (final ListingAvailability la : toRemove) {
+        for (final CarAvailability la : toRemove) {
             em.remove(la);
         }
     }
@@ -152,12 +152,12 @@ public class ListingAvailabilityJpaDao implements ListingAvailabilityDao {
             return Map.of();
         }
         final List<Object[]> rows = em.createQuery(
-                        "SELECT la.car.id, MIN(la.dayPrice) FROM ListingAvailability la "
+                        "SELECT la.car.id, MIN(la.dayPrice) FROM CarAvailability la "
                                 + "WHERE la.car.id IN :carIds AND la.kind = :offeredKind "
                                 + "GROUP BY la.car.id",
                         Object[].class)
                 .setParameter("carIds", carIds)
-                .setParameter("offeredKind", ListingAvailability.Kind.OFFERED)
+                .setParameter("offeredKind", CarAvailability.Kind.OFFERED)
                 .getResultList();
         final Map<Long, BigDecimal> result = new HashMap<>();
         for (final Object[] row : rows) {

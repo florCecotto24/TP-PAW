@@ -27,7 +27,7 @@ public final class CounterpartyProfilePageModel {
     private final List<ReviewItemDto> recentReviewComments;
     private final boolean showCounterpartyActiveListings;
     private final List<CarCard> activeOwnerCarCards;
-    private final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore;
+    private final CounterpartyActiveCarsLoadMore counterpartyActiveCarsLoadMore;
 
     public CounterpartyProfilePageModel(
             final String counterpartyForename,
@@ -41,7 +41,7 @@ public final class CounterpartyProfilePageModel {
             final List<ReviewItemDto> recentReviewComments,
             final boolean showCounterpartyActiveListings,
             final List<CarCard> activeOwnerCarCards,
-            final CounterpartyActiveListingsLoadMore counterpartyActiveListingsLoadMore) {
+            final CounterpartyActiveCarsLoadMore counterpartyActiveCarsLoadMore) {
         this.counterpartyForename = counterpartyForename;
         this.counterpartySurname = counterpartySurname;
         this.counterpartyAbout = counterpartyAbout;
@@ -53,10 +53,10 @@ public final class CounterpartyProfilePageModel {
         this.recentReviewComments = List.copyOf(recentReviewComments);
         this.showCounterpartyActiveListings = showCounterpartyActiveListings;
         this.activeOwnerCarCards = List.copyOf(activeOwnerCarCards);
-        this.counterpartyActiveListingsLoadMore =
-                counterpartyActiveListingsLoadMore != null
-                        ? counterpartyActiveListingsLoadMore
-                        : CounterpartyActiveListingsLoadMore.none();
+        this.counterpartyActiveCarsLoadMore =
+                counterpartyActiveCarsLoadMore != null
+                        ? counterpartyActiveCarsLoadMore
+                        : CounterpartyActiveCarsLoadMore.none();
     }
 
     /** Raw owner car rows for the controller to convert into {@code VehicleCardView}s. */
@@ -86,6 +86,6 @@ public final class CounterpartyProfilePageModel {
         putObject.accept("counterpartyIdentityValidated", counterpartyIdentityValidated);
         putObject.accept("recentReviewComments", recentReviewComments);
         putObject.accept("showCounterpartyActiveListings", showCounterpartyActiveListings);
-        putObject.accept("counterpartyActiveListingsLoadMore", counterpartyActiveListingsLoadMore);
+        putObject.accept("counterpartyActiveCarsLoadMore", counterpartyActiveCarsLoadMore);
     }
 }

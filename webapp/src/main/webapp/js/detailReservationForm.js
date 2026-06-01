@@ -1,7 +1,7 @@
 /**
  * Car detail reservation (GET /reservation/new): Flatpickr range limited to bookable wall-day segments,
  * derives the actual pickup/return wall times and pickup/return locations from the EFFECTIVE segment that
- * covers each end of the rider-selected range (a car has many ListingAvailability rows with potentially
+ * covers each end of the rider-selected range (a car has many CarAvailability rows with potentially
  * different prices, hours and locations; for a given day the row with the most recent createdAt wins).
  *
  * Each bookable segment in data-bookable-ranges carries: { from, to, dayPrice, checkInTime, checkOutTime,

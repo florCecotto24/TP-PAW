@@ -16,10 +16,10 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.dto.car.CarGalleryMediaItem;
-import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.detail.CarDetailPageModel;
-import ar.edu.itba.paw.models.dto.car.detail.ListingReviewRow;
+import ar.edu.itba.paw.models.dto.car.detail.CarReviewRow;
 import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaItems;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
@@ -42,7 +42,7 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
 
     private final CarService carService;
     private final CarPictureService carPictureService;
-    private final ListingAvailabilityService listingAvailabilityService;
+    private final CarAvailabilityService carAvailabilityService;
     private final ReservationService reservationService;
     private final ReviewService reviewService;
     private final UserService userService;
@@ -54,7 +54,7 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
     public CarDetailViewServiceImpl(
             final CarService carService,
             final CarPictureService carPictureService,
-            final ListingAvailabilityService listingAvailabilityService,
+            final CarAvailabilityService carAvailabilityService,
             final ReservationService reservationService,
             final ReviewService reviewService,
             final UserService userService,
@@ -63,7 +63,7 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
             final PresentationLimitsPolicy presentationLimitsPolicy) {
         this.carService = carService;
         this.carPictureService = carPictureService;
-        this.listingAvailabilityService = listingAvailabilityService;
+        this.carAvailabilityService = carAvailabilityService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
         this.userService = userService;
@@ -102,14 +102,14 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
                 carPictureService.getCarPicturesByCarId(carId));
 
         final List<BookableSegmentProjection> bookableSegments =
-                listingAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
+                carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
 
         final BigDecimal minEffectiveDayPrice =
-                listingAvailabilityService.resolveMinEffectiveDayPriceByCar(carId, null);
+                carAvailabilityService.resolveMinEffectiveDayPriceByCar(carId, null);
         final boolean carPriceIsVariable = minEffectiveDayPrice != null
-                && listingAvailabilityService.isCarPriceVariableByCar(carId, minEffectiveDayPrice);
+                && carAvailabilityService.isCarPriceVariableByCar(carId, minEffectiveDayPrice);
 
         final long reviewTotal = reviewService.countReviewsForCar(carId);
         // The carousel always renders page 0 (it is a "teaser"). Only the list view honours
@@ -117,10 +117,10 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
         final String reviewsView =
                 REVIEWS_VIEW_LIST.equalsIgnoreCase(reviewsViewParam) ? REVIEWS_VIEW_LIST : REVIEWS_VIEW_CAROUSEL;
         final int effectiveReviewPage = REVIEWS_VIEW_LIST.equals(reviewsView) ? Math.max(0, reviewPageParam) : 0;
-        final Page<ListingPublicReview> reviewSource = reviewService.getCarPublicReviews(
-                carId, effectiveReviewPage, paginationPolicy.getListingPublicReviewsPageSize());
-        final List<ListingReviewRow> reviewRows = reviewSource.getContent().stream()
-                .map(r -> new ListingReviewRow(
+        final Page<CarPublicReview> reviewSource = reviewService.getCarPublicReviews(
+                carId, effectiveReviewPage, paginationPolicy.getCarPublicReviewsPageSize());
+        final List<CarReviewRow> reviewRows = reviewSource.getContent().stream()
+                .map(r -> new CarReviewRow(
                         r.getReviewerForename(),
                         r.getReviewerSurname(),
                         WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(r.getCreatedAt(), locale),
@@ -128,7 +128,7 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
                         r.getComment().orElse(""),
                         r.getImageId().orElse(null)))
                 .collect(Collectors.toList());
-        final Page<ListingReviewRow> carReviewPage = new Page<>(
+        final Page<CarReviewRow> carReviewPage = new Page<>(
                 reviewRows,
                 reviewSource.getCurrentPage(),
                 reviewSource.getPageSize(),

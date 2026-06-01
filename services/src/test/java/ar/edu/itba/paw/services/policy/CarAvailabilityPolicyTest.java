@@ -20,7 +20,7 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class ListingAvailabilityPolicyTest {
+class CarAvailabilityPolicyTest {
 
     private static final String NEW_KEY = "app.listing.max-availability-forward-wall-days";
     private static final String LEGACY_KEY = "app.listing.max-availability-total-days";
@@ -35,7 +35,7 @@ class ListingAvailabilityPolicyTest {
         Mockito.when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(60);
 
         // 2.Exercise
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(120, policy.getMaxAvailabilityForwardWallDays());
@@ -47,7 +47,7 @@ class ListingAvailabilityPolicyTest {
         Mockito.when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(60);
 
         // 2.Exercise
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(60, policy.getMaxAvailabilityForwardWallDays());
@@ -60,7 +60,7 @@ class ListingAvailabilityPolicyTest {
         Mockito.when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(-1);
 
         // 2.Exercise
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 3.Assert
         Assertions.assertEquals(365, policy.getMaxAvailabilityForwardWallDays());
@@ -69,7 +69,7 @@ class ListingAvailabilityPolicyTest {
     @Test
     void testValidateAvailabilityWithinPublishHorizonAllowsEmptyPeriods() {
         // 1.Arrange
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
         final LocalDate today = LocalDate.of(2026, 5, 3);
 
         // 2.Exercise / 3.Assert (no exception)
@@ -80,7 +80,7 @@ class ListingAvailabilityPolicyTest {
     @Test
     void testValidateAvailabilityWithinPublishHorizonRejectsNullReferenceDay() {
         // 1.Arrange
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 2.Exercise / 3.Assert
         Assertions.assertThrows(NullPointerException.class,
@@ -90,7 +90,7 @@ class ListingAvailabilityPolicyTest {
     @Test
     void testValidateAvailabilityWithinPublishHorizonAcceptsPeriodsWithinWindow() {
         // 1.Arrange: horizon = 365 (default), today + 100 days well inside.
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
         final LocalDate today = LocalDate.of(2026, 5, 3);
         final List<AvailabilityPeriod> periods = List.of(
                 new AvailabilityPeriod(today.plusDays(10), today.plusDays(50)),
@@ -104,7 +104,7 @@ class ListingAvailabilityPolicyTest {
     void testValidateAvailabilityWithinPublishHorizonThrowsWhenStartIsBeyondHorizon() {
         // 1.Arrange
         Mockito.when(environment.getProperty(NEW_KEY, Integer.class)).thenReturn(30);
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
         final LocalDate today = LocalDate.of(2026, 5, 3);
         final List<AvailabilityPeriod> periods = List.of(
                 new AvailabilityPeriod(today.plusDays(31), today.plusDays(40)));
@@ -114,7 +114,7 @@ class ListingAvailabilityPolicyTest {
                 () -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
 
         // 3.Assert
-        Assertions.assertEquals(MessageKeys.LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON, ex.getMessageCode());
+        Assertions.assertEquals(MessageKeys.CAR_AVAILABILITY_BEYOND_PUBLISH_HORIZON, ex.getMessageCode());
         Assertions.assertArrayEquals(new Object[]{30}, ex.getMessageArgs());
     }
 
@@ -122,7 +122,7 @@ class ListingAvailabilityPolicyTest {
     void testValidateAvailabilityWithinPublishHorizonThrowsWhenEndIsBeyondHorizon() {
         // 1.Arrange
         Mockito.when(environment.getProperty(NEW_KEY, Integer.class)).thenReturn(30);
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
         final LocalDate today = LocalDate.of(2026, 5, 3);
         final List<AvailabilityPeriod> periods = List.of(
                 new AvailabilityPeriod(today.plusDays(20), today.plusDays(40)));
@@ -136,7 +136,7 @@ class ListingAvailabilityPolicyTest {
     void testValidateAvailabilityWithinPublishHorizonSkipsInvalidOrderedPeriods() {
         // 1.Arrange: end-before-start period would normally be beyond horizon, but the policy must skip it.
         Mockito.when(environment.getProperty(NEW_KEY, Integer.class)).thenReturn(10);
-        final ListingAvailabilityPolicy policy = new ListingAvailabilityPolicyImpl(environment);
+        final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
         final LocalDate today = LocalDate.of(2026, 5, 3);
         final List<AvailabilityPeriod> periods = new ArrayList<>();
         periods.add(new AvailabilityPeriod(today.plusDays(99), today.plusDays(50)));

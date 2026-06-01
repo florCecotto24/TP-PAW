@@ -304,7 +304,7 @@ public class CarServiceImplTest {
                 ar.edu.itba.paw.exception.car.CarValidationException.class,
                 () -> carService.toggleCarStatus(ownerId, carId));
         Assertions.assertEquals(
-                ar.edu.itba.paw.exception.MessageKeys.LISTING_ACTIVATE_OWNER_BLOCKED,
+                ar.edu.itba.paw.exception.MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED,
                 thrown.getMessageCode());
     }
 

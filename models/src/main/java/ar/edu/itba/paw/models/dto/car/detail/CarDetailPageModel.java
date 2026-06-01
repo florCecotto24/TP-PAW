@@ -28,7 +28,7 @@ public final class CarDetailPageModel {
     private final boolean carPriceIsVariable;
     private final String carRatingLabel;
     private final String carReviewCountLabel;
-    private final Page<ListingReviewRow> carReviewPage;
+    private final Page<CarReviewRow> carReviewPage;
     private final String reviewsView;
     private final User owner;
     private final Long ownerProfileImageId;
@@ -108,7 +108,7 @@ public final class CarDetailPageModel {
         private boolean carPriceIsVariable;
         private String carRatingLabel;
         private String carReviewCountLabel;
-        private Page<ListingReviewRow> carReviewPage;
+        private Page<CarReviewRow> carReviewPage;
         private String reviewsView;
         private User owner;
         private Long ownerProfileImageId;
@@ -129,7 +129,7 @@ public final class CarDetailPageModel {
         public Builder carPriceIsVariable(final boolean v) { this.carPriceIsVariable = v; return this; }
         public Builder carRatingLabel(final String v) { this.carRatingLabel = v; return this; }
         public Builder carReviewCountLabel(final String v) { this.carReviewCountLabel = v; return this; }
-        public Builder carReviewPage(final Page<ListingReviewRow> v) { this.carReviewPage = v; return this; }
+        public Builder carReviewPage(final Page<CarReviewRow> v) { this.carReviewPage = v; return this; }
         public Builder reviewsView(final String v) { this.reviewsView = v; return this; }
         public Builder owner(final User v) { this.owner = v; return this; }
         public Builder ownerProfileImageId(final Long v) { this.ownerProfileImageId = v; return this; }

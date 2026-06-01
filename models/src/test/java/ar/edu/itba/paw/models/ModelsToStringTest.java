@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 
@@ -77,11 +77,11 @@ class ModelsToStringTest {
     }
 
     @Test
-    void testListingAvailabilityToStringIncludesAllFields() {
+    void testCarAvailabilityToStringIncludesAllFields() {
         // Arrange
         final Car laCarRef = Mockito.mock(Car.class);
         Mockito.when(laCarRef.getId()).thenReturn(11L);
-        final ListingAvailability availability = ListingAvailability.builder()
+        final CarAvailability availability = CarAvailability.builder()
                 .id(8L)
                 .car(laCarRef)
                 .startInclusive(LocalDate.of(2026, 4, 20))
@@ -92,7 +92,7 @@ class ModelsToStringTest {
         // Exercise
         final String result = availability.toString();
         // Assert
-        final String expected = "ListingAvailability{id=8, carId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
+        final String expected = "CarAvailability{id=8, carId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
                 + "dayPrice=null, kind=OFFERED, createdAt=2026-04-05T09:00Z, updatedAt=2026-04-05T09:30Z}";
         Assertions.assertEquals(expected, result);
     }

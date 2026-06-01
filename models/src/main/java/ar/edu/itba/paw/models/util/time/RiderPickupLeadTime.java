@@ -7,7 +7,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 
 /**
  * First availability wall-calendar day consistent with the pickup lead-time rule
@@ -24,7 +24,7 @@ public final class RiderPickupLeadTime {
      *
      * @param pickupLeadHours minimum hours between "now" and pickup instant (≥ 1)
      */
-    public static LocalDate minListingAvailabilityFirstDayInclusive(
+    public static LocalDate minCarAvailabilityFirstDayInclusive(
             final LocalTime listingPickupWallTime,
             final ZoneId wallZone,
             final Instant nowInstant,
@@ -33,7 +33,7 @@ public final class RiderPickupLeadTime {
             throw new IllegalArgumentException("pickupLeadHours must be >= 1");
         }
         final LocalTime pickup =
-                listingPickupWallTime != null ? listingPickupWallTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
+                listingPickupWallTime != null ? listingPickupWallTime : CarAvailability.DEFAULT_CHECK_IN_TIME;
         final Instant threshold = nowInstant.plus(pickupLeadHours, ChronoUnit.HOURS);
         LocalDate d = nowInstant.atZone(wallZone).toLocalDate();
         for (int i = 0; i < 800; i++) {

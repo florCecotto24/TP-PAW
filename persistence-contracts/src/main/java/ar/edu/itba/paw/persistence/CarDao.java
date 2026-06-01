@@ -67,12 +67,12 @@ public interface CarDao {
      */
     Page<CarCard> getMostRecentCarCards(int page, int pageSize, LocalDate browseWallDate, Long excludeOwnerUserId);
 
-    /** Public car-card search across {@code cars} joined with {@code listing_availability}. */
+    /** Public car-card search across {@code cars} joined with {@code car_availability}. */
     Page<CarCard> searchCarCards(CarSearchCriteria criteria);
 
     /**
      * Min, max, average and count of per-car minimum {@code day_price} values from active cars with
-     * validated catalog brand/model and at least one {@code listing_availability} row (kind = 'offered').
+     * validated catalog brand/model and at least one {@code car_availability} row (kind = 'offered').
      * Each car contributes one price ({@code MIN(day_price)} across its offered segments), matching browse-card
      * pricing. {@code excludeCarId} omits one car when editing (typically the current one).
      */

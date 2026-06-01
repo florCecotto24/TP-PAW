@@ -53,9 +53,9 @@
                     <div class="d-flex align-items-center ryden-search-pill rounded-4 px-3 py-1 flex-grow-1 gap-2">
                         <i class="bi bi-search text-secondary flex-shrink-0" aria-hidden="true"></i>
                         <input type="search" class="form-control" id="myReservations_q" name="q" value="<c:out value='${param.q}'/>"
-                               placeholder="<spring:message code='myListings.filter.query.placeholder'/>"/>
+                               placeholder="<spring:message code='myCars.filter.query.placeholder'/>"/>
                     </div>
-                    <button type="submit" class="btn btn-primary rounded-3 flex-shrink-0"><spring:message code="myListings.filter.search"/></button>
+                    <button type="submit" class="btn btn-primary rounded-3 flex-shrink-0"><spring:message code="myCars.filter.search"/></button>
                     <c:if test="${showRiderClear}">
                         <a href="${pageContext.request.contextPath}/my-reservations" class="btn btn-outline-secondary flex-shrink-0"><spring:message code="search.filters.clear"/></a>
                     </c:if>

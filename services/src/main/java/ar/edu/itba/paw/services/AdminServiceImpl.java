@@ -21,9 +21,9 @@ import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
-import ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 
 /**
@@ -134,8 +134,8 @@ public class AdminServiceImpl implements AdminService {
         final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
                 + (car.getBrand() != null && car.getModel() != null ? " " : "")
                 + (car.getModel() != null ? car.getModel() : "");
-        emailService.sendListingPausedByAdmin(
-                ListingPausedByAdminOwnerEmailPayload.builder()
+        emailService.sendCarPausedByAdmin(
+                CarPausedByAdminOwnerEmailPayload.builder()
                         .messageLocale(locale)
                         .ownerEmail(owner.getEmail())
                         .ownerFullName(owner.getForename() + " " + owner.getSurname())
@@ -196,8 +196,8 @@ public class AdminServiceImpl implements AdminService {
         for (final Car car : affectedCars) {
             final User owner = car.getOwner();
             final String vehicleLabel = brandName + " " + modelName;
-            emailService.sendListingValidatedByAdmin(
-                    ListingValidatedByAdminOwnerEmailPayload.builder()
+            emailService.sendCarValidatedByAdmin(
+                    CarValidatedByAdminOwnerEmailPayload.builder()
                             .messageLocale(locale != null ? locale : Locale.ENGLISH)
                             .ownerEmail(owner.getEmail())
                             .ownerFullName(owner.getForename() + " " + owner.getSurname())
@@ -221,12 +221,12 @@ public class AdminServiceImpl implements AdminService {
         final String brandName = brand.getName();
         final String modelName = model.getName();
         final List<Car> affectedCars = carService.findCarsByModelId(modelId);
-        final List<ListingRejectedByAdminOwnerEmailPayload> notifications = new java.util.ArrayList<>(affectedCars.size());
+        final List<CarRejectedByAdminOwnerEmailPayload> notifications = new java.util.ArrayList<>(affectedCars.size());
         for (final Car car : affectedCars) {
             final User owner = car.getOwner();
             final String vehicleLabel = brandName + " " + modelName;
             notifications.add(
-                    ListingRejectedByAdminOwnerEmailPayload.builder()
+                    CarRejectedByAdminOwnerEmailPayload.builder()
                             .messageLocale(locale != null ? locale : Locale.ENGLISH)
                             .ownerEmail(owner.getEmail())
                             .ownerFullName(owner.getForename() + " " + owner.getSurname())
@@ -243,8 +243,8 @@ public class AdminServiceImpl implements AdminService {
         if (brandWillBeRejected) {
             carBrandService.deleteById(brand.getId());
         }
-        for (final ListingRejectedByAdminOwnerEmailPayload payload : notifications) {
-            emailService.sendListingRejectedByAdmin(payload);
+        for (final CarRejectedByAdminOwnerEmailPayload payload : notifications) {
+            emailService.sendCarRejectedByAdmin(payload);
         }
     }
 

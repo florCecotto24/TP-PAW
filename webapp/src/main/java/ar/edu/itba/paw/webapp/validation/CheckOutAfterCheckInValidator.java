@@ -10,26 +10,26 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.services.policy.ListingCheckInOutPolicy;
-import ar.edu.itba.paw.webapp.form.ListingTimeWindow;
+import ar.edu.itba.paw.services.policy.CarAvailabilityCheckInOutPolicy;
+import ar.edu.itba.paw.webapp.form.CarAvailabilityTimeWindow;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 
-/** Bean Validation engine for {@link CheckOutAfterCheckIn} on {@link ListingTimeWindow} forms. */
+/** Bean Validation engine for {@link CheckOutAfterCheckIn} on {@link CarAvailabilityTimeWindow} forms. */
 @Component
-public final class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, ListingTimeWindow> {
+public final class CheckOutAfterCheckInValidator implements ConstraintValidator<CheckOutAfterCheckIn, CarAvailabilityTimeWindow> {
 
     private final MessageSource messageSource;
-    private final ListingCheckInOutPolicy listingCheckInOutPolicy;
+    private final CarAvailabilityCheckInOutPolicy carAvailabilityCheckInOutPolicy;
 
     public CheckOutAfterCheckInValidator(
             final MessageSource messageSource,
-            final ListingCheckInOutPolicy listingCheckInOutPolicy) {
+            final CarAvailabilityCheckInOutPolicy carAvailabilityCheckInOutPolicy) {
         this.messageSource = messageSource;
-        this.listingCheckInOutPolicy = listingCheckInOutPolicy;
+        this.carAvailabilityCheckInOutPolicy = carAvailabilityCheckInOutPolicy;
     }
 
     @Override
-    public boolean isValid(final ListingTimeWindow form, final ConstraintValidatorContext context) {
+    public boolean isValid(final CarAvailabilityTimeWindow form, final ConstraintValidatorContext context) {
         if (form == null) {
             return true;
         }
@@ -45,11 +45,11 @@ public final class CheckOutAfterCheckInValidator implements ConstraintValidator<
                     .addConstraintViolation();
             return false;
         }
-        if (!listingCheckInOutPolicy.hasMinimumGap(form.getCheckInTime(), form.getCheckOutTime())) {
+        if (!carAvailabilityCheckInOutPolicy.hasMinimumGap(form.getCheckInTime(), form.getCheckOutTime())) {
             final Locale locale = LocaleContextHolder.getLocale();
             final String msg = messageSource.getMessage(
-                    MessageKeys.LISTING_CHECKINOUT_MIN_GAP,
-                    new Object[] {listingCheckInOutPolicy.getMinHoursBetweenCheckInAndCheckOut()},
+                    MessageKeys.CAR_AVAILABILITY_CHECKINOUT_MIN_GAP,
+                    new Object[] {carAvailabilityCheckInOutPolicy.getMinHoursBetweenCheckInAndCheckOut()},
                     locale);
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate(msg)

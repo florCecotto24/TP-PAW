@@ -51,7 +51,7 @@
                                         <td class="text-end">
                                             <a href="${pageContext.request.contextPath}/car-detail?carId=${car.id}"
                                                class="btn btn-sm btn-outline-secondary rounded-3 me-1">
-                                                <spring:message code="admin.cars.viewListing"/>
+                                                <spring:message code="admin.cars.viewCar"/>
                                             </a>
                                             <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/resume" method="post" modelAttribute="adminActionForm" cssClass="d-inline">
                                                 <button type="submit" class="btn btn-sm btn-outline-success rounded-3">

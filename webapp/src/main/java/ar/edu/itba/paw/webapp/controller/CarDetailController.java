@@ -139,7 +139,7 @@ public class CarDetailController {
         final List<VehicleCardView> cards =
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
                         fragment.getCards(), viewer == null ? null : viewer.getId());
-        final ModelAndView mav = new ModelAndView("profile/counterpartyActiveListingCols");
+        final ModelAndView mav = new ModelAndView("profile/counterpartyActiveCarCols");
         mav.addObject("counterpartyActiveListings", cards);
         mav.addObject("fragmentHasMore", fragment.isHasMore());
         mav.addObject("fragmentNextPage", fragment.getNextPage());
@@ -147,7 +147,7 @@ public class CarDetailController {
     }
 
     private static ModelAndView emptyCounterpartyListingsFragment() {
-        final ModelAndView mav = new ModelAndView("profile/counterpartyActiveListingCols");
+        final ModelAndView mav = new ModelAndView("profile/counterpartyActiveCarCols");
         mav.addObject("counterpartyActiveListings", List.of());
         mav.addObject("fragmentHasMore", false);
         mav.addObject("fragmentNextPage", 0);

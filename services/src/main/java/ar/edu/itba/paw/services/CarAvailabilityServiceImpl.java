@@ -5,16 +5,16 @@ import ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.BookableWallAvailabilityCalendar;
 import ar.edu.itba.paw.models.util.time.RiderPickupLeadTime;
-import ar.edu.itba.paw.persistence.ListingAvailabilityDao;
-import ar.edu.itba.paw.services.policy.ListingAvailabilityPolicy;
+import ar.edu.itba.paw.persistence.CarAvailabilityDao;
+import ar.edu.itba.paw.services.policy.CarAvailabilityPolicy;
 import ar.edu.itba.paw.services.policy.ReservationTimingPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -41,54 +41,54 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-/** Pass-through to {@link ListingAvailabilityDao}; joins the caller's transaction when one is active. */
+/** Pass-through to {@link CarAvailabilityDao}; joins the caller's transaction when one is active. */
 @Service
-public final class ListingAvailabilityServiceImpl implements ListingAvailabilityService {
+public final class CarAvailabilityServiceImpl implements CarAvailabilityService {
 
-    private final ListingAvailabilityDao listingAvailabilityDao;
+    private final CarAvailabilityDao carAvailabilityDao;
     private final ReservationService reservationService;
     private final CarService carService;
     private final ReservationTimingPolicy reservationTimingPolicy;
-    private final ListingAvailabilityPolicy listingAvailabilityPolicy;
-    private final ListingAddressFormatter listingAddressFormatter;
+    private final CarAvailabilityPolicy carAvailabilityPolicy;
+    private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
 
     @Autowired
-    public ListingAvailabilityServiceImpl(
-            final ListingAvailabilityDao listingAvailabilityDao,
+    public CarAvailabilityServiceImpl(
+            final CarAvailabilityDao carAvailabilityDao,
             @Lazy final ReservationService reservationService,
             @Lazy final CarService carService,
             final ReservationTimingPolicy reservationTimingPolicy,
-            final ListingAvailabilityPolicy listingAvailabilityPolicy,
-            final ListingAddressFormatter listingAddressFormatter) {
-        this.listingAvailabilityDao = listingAvailabilityDao;
+            final CarAvailabilityPolicy carAvailabilityPolicy,
+            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter) {
+        this.carAvailabilityDao = carAvailabilityDao;
         this.reservationService = reservationService;
         this.carService = carService;
         this.reservationTimingPolicy = reservationTimingPolicy;
-        this.listingAvailabilityPolicy = listingAvailabilityPolicy;
-        this.listingAddressFormatter = listingAddressFormatter;
+        this.carAvailabilityPolicy = carAvailabilityPolicy;
+        this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<ListingAvailability> findById(final long availabilityId) {
-        return listingAvailabilityDao.findById(availabilityId);
+    public Optional<CarAvailability> findById(final long availabilityId) {
+        return carAvailabilityDao.findById(availabilityId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<ListingAvailability> findEffectiveForDayByCar(final long carId, final LocalDate day) {
-        return listingAvailabilityDao.findEffectiveForDayByCar(carId, day);
+    public Optional<CarAvailability> findEffectiveForDayByCar(final long carId, final LocalDate day) {
+        return carAvailabilityDao.findEffectiveForDayByCar(carId, day);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ListingAvailability> findOverlappingRangeByCar(final long carId, final LocalDate from, final LocalDate to) {
-        return listingAvailabilityDao.findOverlappingRangeByCar(carId, from, to);
+    public List<CarAvailability> findOverlappingRangeByCar(final long carId, final LocalDate from, final LocalDate to) {
+        return carAvailabilityDao.findOverlappingRangeByCar(carId, from, to);
     }
 
     @Override
     @Transactional
-    public List<ListingAvailability> createCarAvailabilityPeriods(
+    public List<CarAvailability> createCarAvailabilityPeriods(
             final long carId,
             final BigDecimal dayPrice,
             final String street,
@@ -100,16 +100,16 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             final List<BigDecimal> periodPrices,
             final int minimumRentalDays) {
         if (carService.isModelPendingValidation(carId)) {
-            throw new CarValidationException(MessageKeys.LISTING_CREATE_MODEL_PENDING);
+            throw new CarValidationException(MessageKeys.CAR_CREATE_MODEL_PENDING);
         }
         validateMinimumRentalDaysAgainstPeriods(minimumRentalDays, periods);
-        final List<ListingAvailability> result = new ArrayList<>();
+        final List<CarAvailability> result = new ArrayList<>();
         for (int i = 0; i < periods.size(); i++) {
             final AvailabilityPeriod period = periods.get(i);
             final BigDecimal periodPrice = (periodPrices != null && i < periodPrices.size() && periodPrices.get(i) != null)
                     ? periodPrices.get(i)
                     : dayPrice;
-            final ListingAvailability row = listingAvailabilityDao.createFullForCar(
+            final CarAvailability row = carAvailabilityDao.createFullForCar(
                     carId,
                     period.getStartInclusive(),
                     period.getEndInclusive(),
@@ -119,7 +119,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                     neighborhoodId,
                     checkInTime,
                     checkOutTime,
-                    ListingAvailability.Kind.OFFERED);
+                    CarAvailability.Kind.OFFERED);
             result.add(row);
         }
         carService.updateMinimumRentalDays(carId, minimumRentalDays);
@@ -144,7 +144,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             final long periodLength = ChronoUnit.DAYS.between(period.getStartInclusive(), period.getEndInclusive()) + 1;
             if (minDays > periodLength) {
                 throw new CarValidationException(
-                        MessageKeys.LISTING_MIN_RENTAL_DAYS_EXCEEDS_PERIOD,
+                        MessageKeys.CAR_MIN_RENTAL_DAYS_EXCEEDS_PERIOD,
                         new Object[]{minDays});
             }
         }
@@ -152,14 +152,14 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
 
     @Override
     @Transactional(readOnly = true)
-    public List<ListingAvailability> findByCarId(final long carId) {
-        return listingAvailabilityDao.findByCarId(carId);
+    public List<CarAvailability> findByCarId(final long carId) {
+        return carAvailabilityDao.findByCarId(carId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ListingAvailability> findEffectiveOfferedByCar(final long carId) {
-        final List<ListingAvailability> all = listingAvailabilityDao.findByCarId(carId);
+    public List<CarAvailability> findEffectiveOfferedByCar(final long carId) {
+        final List<CarAvailability> all = carAvailabilityDao.findByCarId(carId);
         if (all.isEmpty()) {
             return List.of();
         }
@@ -170,19 +170,19 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         // against days claimed by *previous* (newer) groups only; peers are independent.
         // WITHDRAWN rows participate in claiming days so that edits — which always produce
         // WITHDRAWN rows for removed chunks — correctly invalidate overlapping older OFFERED rows.
-        final Map<OffsetDateTime, List<ListingAvailability>> byTime = all.stream()
-                .collect(Collectors.groupingBy(ListingAvailability::getCreatedAt));
+        final Map<OffsetDateTime, List<CarAvailability>> byTime = all.stream()
+                .collect(Collectors.groupingBy(CarAvailability::getCreatedAt));
         final List<OffsetDateTime> times = byTime.keySet().stream()
                 .sorted(Comparator.reverseOrder())
                 .collect(Collectors.toList());
         final Set<LocalDate> claimed = new HashSet<>();
         final Set<Long> effectiveIds = new HashSet<>();
         for (final OffsetDateTime time : times) {
-            final List<ListingAvailability> group = byTime.get(time);
+            final List<CarAvailability> group = byTime.get(time);
             // First pass: identify OFFERED rows in this group that have at least one day
             // not yet claimed by any newer group.
-            for (final ListingAvailability la : group) {
-                if (la.getKind() != ListingAvailability.Kind.OFFERED) {
+            for (final CarAvailability la : group) {
+                if (la.getKind() != CarAvailability.Kind.OFFERED) {
                     continue;
                 }
                 LocalDate d = la.getStartInclusive();
@@ -196,7 +196,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             }
             // Second pass: claim every day in this group (OFFERED and WITHDRAWN alike)
             // so that older groups cannot reuse these days.
-            for (final ListingAvailability la : group) {
+            for (final CarAvailability la : group) {
                 LocalDate d = la.getStartInclusive();
                 while (!d.isAfter(la.getEndInclusive())) {
                     claimed.add(d);
@@ -206,27 +206,27 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         }
         return all.stream()
                 .filter(la -> effectiveIds.contains(la.getId()))
-                .sorted(Comparator.comparing(ListingAvailability::getStartInclusive))
+                .sorted(Comparator.comparing(CarAvailability::getStartInclusive))
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ListingAvailability> findByCarIdsEndingOnOrAfter(
+    public List<CarAvailability> findByCarIdsEndingOnOrAfter(
             final Collection<Long> carIds,
             final LocalDate minEndDate) {
-        return listingAvailabilityDao.findByCarIdsEndingOnOrAfter(carIds, minEndDate);
+        return carAvailabilityDao.findByCarIdsEndingOnOrAfter(carIds, minEndDate);
     }
 
     @Override
     @Transactional
     public void deleteByCarId(final long carId) {
-        listingAvailabilityDao.deleteByCarId(carId);
+        carAvailabilityDao.deleteByCarId(carId);
     }
 
     @Override
     @Transactional
-    public ListingAvailability applyOwnerEditByCar(
+    public CarAvailability applyOwnerEditByCar(
             final long carId,
             final LocalDate oldStartInclusive,
             final LocalDate oldEndInclusive,
@@ -249,18 +249,18 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         final List<DateRange> removed = subtractDayRange(oldStartInclusive, oldEndInclusive,
                 newStartInclusive, newEndInclusive);
 
-        rejectIfReservationsOverlapAnyChunkByCar(carId, removed, MessageKeys.LISTING_AVAILABILITY_EDIT_CONFLICT);
+        rejectIfReservationsOverlapAnyChunkByCar(carId, removed, MessageKeys.CAR_AVAILABILITY_EDIT_CONFLICT);
 
-        final ListingAvailability offered = listingAvailabilityDao.createFullForCar(
+        final CarAvailability offered = carAvailabilityDao.createFullForCar(
                 carId, newStartInclusive, newEndInclusive, dayPrice,
                 startPointStreet, startPointNumber, neighborhoodId,
-                checkInTime, checkOutTime, ListingAvailability.Kind.OFFERED);
+                checkInTime, checkOutTime, CarAvailability.Kind.OFFERED);
 
         for (final DateRange chunk : removed) {
-            listingAvailabilityDao.createFullForCar(
+            carAvailabilityDao.createFullForCar(
                     carId, chunk.start, chunk.end, dayPrice,
                     startPointStreet, startPointNumber, neighborhoodId,
-                    checkInTime, checkOutTime, ListingAvailability.Kind.WITHDRAWN);
+                    checkInTime, checkOutTime, CarAvailability.Kind.WITHDRAWN);
         }
 
         return offered;
@@ -268,22 +268,22 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
 
     @Override
     @Transactional
-    public ListingAvailability applyOwnerWithdrawByCar(final long carId, final long availabilityId) {
-        final ListingAvailability target = listingAvailabilityDao.findById(availabilityId)
-                .orElseThrow(() -> new CarValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_FOUND));
+    public CarAvailability applyOwnerWithdrawByCar(final long carId, final long availabilityId) {
+        final CarAvailability target = carAvailabilityDao.findById(availabilityId)
+                .orElseThrow(() -> new CarValidationException(MessageKeys.CAR_AVAILABILITY_NOT_FOUND));
         if (target.getCarId() != carId) {
-            throw new CarValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OWNED);
+            throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_NOT_OWNED);
         }
-        if (target.getKind() != ListingAvailability.Kind.OFFERED) {
-            throw new CarValidationException(MessageKeys.LISTING_AVAILABILITY_NOT_OFFERED);
+        if (target.getKind() != CarAvailability.Kind.OFFERED) {
+            throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_NOT_OFFERED);
         }
 
         final List<DateRange> withdrawnChunks = List.of(
                 new DateRange(target.getStartInclusive(), target.getEndInclusive()));
         rejectIfReservationsOverlapAnyChunkByCar(carId, withdrawnChunks,
-                MessageKeys.LISTING_AVAILABILITY_WITHDRAW_CONFLICT);
+                MessageKeys.CAR_AVAILABILITY_WITHDRAW_CONFLICT);
 
-        return listingAvailabilityDao.createFullForCar(
+        return carAvailabilityDao.createFullForCar(
                 carId,
                 target.getStartInclusive(),
                 target.getEndInclusive(),
@@ -293,7 +293,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
                 target.getNeighborhoodId().orElse(null),
                 target.getCheckInTime(),
                 target.getCheckOutTime(),
-                ListingAvailability.Kind.WITHDRAWN);
+                CarAvailability.Kind.WITHDRAWN);
     }
 
     @Override
@@ -326,18 +326,18 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         }
         final List<BookableSegmentProjection> singleDay = new ArrayList<>(bookableDays.size());
         for (final LocalDate day : bookableDays) {
-            final Optional<ListingAvailability> effOpt = listingAvailabilityDao.findEffectiveForDayByCar(carId, day);
-            if (effOpt.isEmpty() || effOpt.get().getKind() != ListingAvailability.Kind.OFFERED) {
+            final Optional<CarAvailability> effOpt = carAvailabilityDao.findEffectiveForDayByCar(carId, day);
+            if (effOpt.isEmpty() || effOpt.get().getKind() != CarAvailability.Kind.OFFERED) {
                 continue;
             }
-            final ListingAvailability eff = effOpt.get();
+            final CarAvailability eff = effOpt.get();
             singleDay.add(new BookableSegmentProjection(
                     day,
                     day,
                     eff.getDayPriceValue(),
                     eff.getCheckInTime(),
                     eff.getCheckOutTime(),
-                    listingAddressFormatter.formatPublicPickupLocation(eff),
+                    carAvailabilityAddressFormatter.formatPublicPickupLocation(eff),
                     eff.getNeighborhoodId().orElse(null)));
         }
         final List<BookableSegmentProjection> merged = mergeContiguousIdenticalProjections(singleDay);
@@ -349,8 +349,8 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     private SortedSet<LocalDate> computeBookableWallDaysByCar(final long carId) {
         final ZoneId wall = AppTimezone.WALL_ZONE;
         final SortedSet<LocalDate> days = new TreeSet<>();
-        for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
-            if (la.getKind() != ListingAvailability.Kind.OFFERED) {
+        for (final CarAvailability la : carAvailabilityDao.findByCarId(carId)) {
+            if (la.getKind() != CarAvailability.Kind.OFFERED) {
                 continue;
             }
             LocalDate d = la.getStartInclusive();
@@ -411,7 +411,7 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
         for (final BookableSegmentProjection seg : merged) {
             final LocalTime pickup = seg.getCheckInTime() != null
                     ? seg.getCheckInTime()
-                    : ListingAvailability.DEFAULT_CHECK_IN_TIME;
+                    : CarAvailability.DEFAULT_CHECK_IN_TIME;
             LocalDate d = seg.getFrom();
             while (!d.isAfter(seg.getTo())) {
                 final Instant pickupInstant = ZonedDateTime.of(d, pickup, wallZone).toInstant();
@@ -438,8 +438,8 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     public BigDecimal resolveMinEffectiveDayPriceByCar(final long carId, final BigDecimal defaultPrice) {
         final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
         BigDecimal min = defaultPrice;
-        for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
-            if (la.getKind() != ListingAvailability.Kind.OFFERED) {
+        for (final CarAvailability la : carAvailabilityDao.findByCarId(carId)) {
+            if (la.getKind() != CarAvailability.Kind.OFFERED) {
                 continue;
             }
             if (la.getEndInclusive().isBefore(today)) {
@@ -457,8 +457,8 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Transactional(readOnly = true)
     public boolean isCarPriceVariableByCar(final long carId, final BigDecimal defaultPrice) {
         final LocalDate today = LocalDate.now(AppTimezone.WALL_ZONE);
-        for (final ListingAvailability la : listingAvailabilityDao.findByCarId(carId)) {
-            if (la.getKind() != ListingAvailability.Kind.OFFERED) {
+        for (final CarAvailability la : carAvailabilityDao.findByCarId(carId)) {
+            if (la.getKind() != CarAvailability.Kind.OFFERED) {
                 continue;
             }
             if (la.getEndInclusive().isBefore(today)) {
@@ -536,17 +536,17 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<ListingAvailability> findMostRecentByCarId(final long carId) {
-        return listingAvailabilityDao.findByCarId(carId).stream()
-                .max(java.util.Comparator.comparing(ListingAvailability::getCreatedAt));
+    public Optional<CarAvailability> findMostRecentByCarId(final long carId) {
+        return carAvailabilityDao.findByCarId(carId).stream()
+                .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt));
     }
 
     @Override
     @Transactional(readOnly = true)
     public LocalDate getPublicationMinAvailabilityFirstWallDay(
             final LocalTime checkInTime, final Instant now) {
-        final LocalTime pickup = checkInTime != null ? checkInTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
-        return RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+        final LocalTime pickup = checkInTime != null ? checkInTime : CarAvailability.DEFAULT_CHECK_IN_TIME;
+        return RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 pickup,
                 AppTimezone.WALL_ZONE,
                 now,
@@ -561,8 +561,8 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
             return;
         }
         final int pickupLeadHours = reservationTimingPolicy.getPickupLeadHours();
-        final LocalTime pickup = checkInTime != null ? checkInTime : ListingAvailability.DEFAULT_CHECK_IN_TIME;
-        final LocalDate minStart = RiderPickupLeadTime.minListingAvailabilityFirstDayInclusive(
+        final LocalTime pickup = checkInTime != null ? checkInTime : CarAvailability.DEFAULT_CHECK_IN_TIME;
+        final LocalDate minStart = RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 pickup, AppTimezone.WALL_ZONE, now, pickupLeadHours);
         for (int i = 0; i < periods.size(); i++) {
             final LocalDate from = periods.get(i).getStartInclusive();
@@ -596,13 +596,13 @@ public final class ListingAvailabilityServiceImpl implements ListingAvailability
     @Override
     @Transactional(readOnly = true)
     public void validatePublicationAvailabilityAgainstWallCalendar(final List<AvailabilityPeriod> periods) {
-        listingAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
+        carAvailabilityPolicy.validateAvailabilityWithinPublishHorizon(
                 LocalDate.now(AppTimezone.WALL_ZONE), periods);
     }
 
     @Override
     public int getConfiguredMaxAvailabilityForwardWallDays() {
-        return listingAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
+        return carAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
     }
 
     private static final class DateRange {

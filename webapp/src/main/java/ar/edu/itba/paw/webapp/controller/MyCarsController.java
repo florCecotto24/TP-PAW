@@ -2,19 +2,19 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
-import ar.edu.itba.paw.models.dto.listing.ListingEditorPageModel;
+import ar.edu.itba.paw.models.dto.car.CarAvailabilityEditorPageModel;
 import ar.edu.itba.paw.models.dto.car.MyCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
 import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.ListingAvailabilityService;
-import ar.edu.itba.paw.services.ListingEditorViewService;
+import ar.edu.itba.paw.services.CarAvailabilityService;
+import ar.edu.itba.paw.services.CarAvailabilityEditorViewService;
 import ar.edu.itba.paw.services.MyCarDetailViewService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
@@ -29,10 +29,10 @@ import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.OwnerCarLookup;
 import ar.edu.itba.paw.webapp.support.PageClampRedirect;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
-import ar.edu.itba.paw.webapp.form.CreateListingForm;
-import ar.edu.itba.paw.webapp.form.ListingEditForm;
+import ar.edu.itba.paw.webapp.form.CreateCarAvailabilityForm;
+import ar.edu.itba.paw.webapp.form.CarAvailabilityEditForm;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
-import ar.edu.itba.paw.webapp.validation.ListingNeighborhoodFormValidator;
+import ar.edu.itba.paw.webapp.validation.CarAvailabilityNeighborhoodFormValidator;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -74,13 +74,13 @@ public final class MyCarsController {
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
-    private final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator;
+    private final CarAvailabilityNeighborhoodFormValidator carAvailabilityNeighborhoodFormValidator;
     private final PaginationPolicy paginationPolicy;
     private final LocaleMessages localeMessages;
     private final CarService carService;
     private final UserService userService;
-    private final ListingAvailabilityService listingAvailabilityService;
-    private final ListingEditorViewService listingEditorViewService;
+    private final CarAvailabilityService carAvailabilityService;
+    private final CarAvailabilityEditorViewService carAvailabilityEditorViewService;
     private final MyCarDetailViewService myCarDetailViewService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final OwnerCarLookup ownerCarLookup;
@@ -89,26 +89,26 @@ public final class MyCarsController {
     public MyCarsController(
             final ReservationService reservationService,
             final ReservationViewService reservationViewService,
-            final ListingNeighborhoodFormValidator listingNeighborhoodFormValidator,
+            final CarAvailabilityNeighborhoodFormValidator carAvailabilityNeighborhoodFormValidator,
             final PaginationPolicy paginationPolicy,
             final LocaleMessages localeMessages,
             final CarService carService,
             final UserService userService,
-            final ListingAvailabilityService listingAvailabilityService,
-            final ListingEditorViewService listingEditorViewService,
+            final CarAvailabilityService carAvailabilityService,
+            final CarAvailabilityEditorViewService carAvailabilityEditorViewService,
             final MyCarDetailViewService myCarDetailViewService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final OwnerCarLookup ownerCarLookup,
             final CarInsuranceUploadFacade carInsuranceUploadFacade) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
-        this.listingNeighborhoodFormValidator = listingNeighborhoodFormValidator;
+        this.carAvailabilityNeighborhoodFormValidator = carAvailabilityNeighborhoodFormValidator;
         this.paginationPolicy = paginationPolicy;
         this.localeMessages = localeMessages;
         this.carService = carService;
         this.userService = userService;
-        this.listingAvailabilityService = listingAvailabilityService;
-        this.listingEditorViewService = listingEditorViewService;
+        this.carAvailabilityService = carAvailabilityService;
+        this.carAvailabilityEditorViewService = carAvailabilityEditorViewService;
         this.myCarDetailViewService = myCarDetailViewService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.ownerCarLookup = ownerCarLookup;
@@ -117,12 +117,12 @@ public final class MyCarsController {
 
     @InitBinder("editForm")
     public void initEditFormBinder(final WebDataBinder binder) {
-        binder.addValidators(listingNeighborhoodFormValidator);
+        binder.addValidators(carAvailabilityNeighborhoodFormValidator);
     }
 
-    @InitBinder("createListingForm")
-    public void initCreateListingFormBinder(final WebDataBinder binder) {
-        binder.addValidators(listingNeighborhoodFormValidator);
+    @InitBinder("createCarAvailabilityForm")
+    public void initCreateCarAvailabilityFormBinder(final WebDataBinder binder) {
+        binder.addValidators(carAvailabilityNeighborhoodFormValidator);
     }
 
     @ModelAttribute("uploadMaxProfileDocumentMegabytes")
@@ -157,7 +157,7 @@ public final class MyCarsController {
         if (clamp.isPresent()) {
             return clamp.get();
         }
-        final ModelAndView mav = new ModelAndView("listing/myListings");
+        final ModelAndView mav = new ModelAndView("car/myCars");
         mav.addObject("results", resultPage.getContent());
         mav.addObject("myListingsPage", resultPage);
         mav.addObject("activeTab", "my-cars");
@@ -249,7 +249,7 @@ public final class MyCarsController {
     public ModelAndView editCar(
             @CurrentUser final User currentUser,
             @PathVariable("carId") final long carId,
-            @Validated(ValidationGroups.OnListingEdit.class) @ModelAttribute("editForm") final ListingEditForm editForm,
+            @Validated(ValidationGroups.OnListingEdit.class) @ModelAttribute("editForm") final CarAvailabilityEditForm editForm,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
@@ -263,7 +263,7 @@ public final class MyCarsController {
         if (errors.hasErrors()) {
             return renderMyCarDetailOrRedirect(me, car, editForm, /* withPreview */ true);
         }
-        final List<ListingAvailability> existing = listingAvailabilityService.findByCarId(carId);
+        final List<CarAvailability> existing = carAvailabilityService.findByCarId(carId);
         final List<AvailabilityPeriod> newPeriods = editForm.toAvailabilityPeriods();
         final List<BigDecimal> newPeriodPrices = editForm.toPeriodPrices();
         if (newPeriods.isEmpty()) {
@@ -271,7 +271,7 @@ public final class MyCarsController {
         }
         if (existing.isEmpty()) {
             try {
-                listingAvailabilityService.createCarAvailabilityPeriods(
+                carAvailabilityService.createCarAvailabilityPeriods(
                         carId,
                         editForm.getPricePerDay(),
                         editForm.getStartPointStreet(),
@@ -287,8 +287,8 @@ public final class MyCarsController {
                 return renderMyCarDetailOrRedirect(me, car, editForm, /* withPreview */ false);
             }
         } else {
-            final ListingAvailability mostRecent = existing.stream()
-                    .max(java.util.Comparator.comparing(ListingAvailability::getCreatedAt))
+            final CarAvailability mostRecent = existing.stream()
+                    .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt))
                     .get();
             try {
                 for (int i = 0; i < newPeriods.size(); i++) {
@@ -296,7 +296,7 @@ public final class MyCarsController {
                     final BigDecimal price = (i < newPeriodPrices.size() && newPeriodPrices.get(i) != null)
                             ? newPeriodPrices.get(i)
                             : editForm.getPricePerDay();
-                    listingAvailabilityService.applyOwnerEditByCar(
+                    carAvailabilityService.applyOwnerEditByCar(
                             carId,
                             mostRecent.getStartInclusive(),
                             mostRecent.getEndInclusive(),
@@ -323,7 +323,7 @@ public final class MyCarsController {
      * the original handler's pre-refactor behaviour.
      */
     private ModelAndView renderMyCarDetailOrRedirect(
-            final User me, final Car car, final ListingEditForm editForm, final boolean withPreview) {
+            final User me, final Car car, final CarAvailabilityEditForm editForm, final boolean withPreview) {
         final MyCarDetailPageModel pm = myCarDetailViewService.loadMyCarDetailPage(
                 me.getId(), car, LocaleContextHolder.getLocale(), 3);
         if (pm.getVariant() != MyCarDetailPageModel.Variant.RICH) {
@@ -405,7 +405,7 @@ public final class MyCarsController {
                 me.getId(), car, LocaleContextHolder.getLocale(), 3);
         if (pm.getVariant() == MyCarDetailPageModel.Variant.RICH) {
             final OwnerCarDetailPageModel owner = pm.getOwnerPageModel().orElseThrow();
-            final ListingEditForm editForm = new ListingEditForm();
+            final CarAvailabilityEditForm editForm = new CarAvailabilityEditForm();
             applyEditFormDefaultsFromAvailabilities(editForm, owner.getAvailabilities());
             final ModelAndView mav = new ModelAndView("car/myCarDetail");
             owner.populateModel(mav::addObject);
@@ -424,7 +424,7 @@ public final class MyCarsController {
     }
 
     @GetMapping("/car/{carId}/create")
-    public ModelAndView createListingForm(
+    public ModelAndView createCarAvailabilityForm(
             @CurrentUser final User currentUser,
             @PathVariable final long carId) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -435,8 +435,8 @@ public final class MyCarsController {
         if (carService.isModelPendingValidation(carId)) {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
-        final CreateListingForm form = new CreateListingForm();
-        listingAvailabilityService.findMostRecentByCarId(carId)
+        final CreateCarAvailabilityForm form = new CreateCarAvailabilityForm();
+        carAvailabilityService.findMostRecentByCarId(carId)
                 .ifPresent(la -> prefillLocationAndTimes(form, la));
         return buildCreateListingView(lookup.car().orElseThrow(), form, me);
     }
@@ -451,7 +451,7 @@ public final class MyCarsController {
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
-        final Optional<ListingAvailability> avOpt = listingAvailabilityService.findById(availabilityId);
+        final Optional<CarAvailability> avOpt = carAvailabilityService.findById(availabilityId);
         if (avOpt.isEmpty() || avOpt.get().getCarId() != carId) {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
@@ -464,7 +464,7 @@ public final class MyCarsController {
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
             @PathVariable final long availabilityId,
-            @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createListingForm") final CreateListingForm form,
+            @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createCarAvailabilityForm") final CreateCarAvailabilityForm form,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
@@ -472,14 +472,14 @@ public final class MyCarsController {
             return lookup.redirect().get();
         }
         final Car car = lookup.car().orElseThrow();
-        final Optional<ListingAvailability> avOpt = listingAvailabilityService.findById(availabilityId);
+        final Optional<CarAvailability> avOpt = carAvailabilityService.findById(availabilityId);
         if (avOpt.isEmpty() || avOpt.get().getCarId() != carId) {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
-        final ListingAvailability old = avOpt.get();
+        final CarAvailability old = avOpt.get();
         if (!errors.hasErrors()) {
             try {
-                listingAvailabilityService.validateEditAvailabilityRiderLead(
+                carAvailabilityService.validateEditAvailabilityRiderLead(
                         form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now(),
                         old.getStartInclusive());
             } catch (final AvailabilityRiderLeadViolationException e) {
@@ -490,7 +490,7 @@ public final class MyCarsController {
         }
         if (!errors.hasErrors()) {
             try {
-                listingAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
+                carAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
             } catch (final CarValidationException e) {
                 errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             }
@@ -500,7 +500,7 @@ public final class MyCarsController {
         }
         final AvailabilityPeriod newPeriod = form.toAvailabilityPeriods().get(0);
         try {
-            listingAvailabilityService.applyOwnerEditByCar(
+            carAvailabilityService.applyOwnerEditByCar(
                     carId,
                     old.getStartInclusive(), old.getEndInclusive(),
                     newPeriod.getStartInclusive(), newPeriod.getEndInclusive(),
@@ -519,7 +519,7 @@ public final class MyCarsController {
     public ModelAndView createListing(
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
-            @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createListingForm") final CreateListingForm form,
+            @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createCarAvailabilityForm") final CreateCarAvailabilityForm form,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
@@ -535,12 +535,12 @@ public final class MyCarsController {
         }
         final User freshUser = userService.getUserById(me.getId()).orElse(me);
         if (!userService.hasValidCbu(freshUser)) {
-            errors.reject(MessageKeys.LISTING_PUBLISH_CBU_REQUIRED, localeMessages.msg(MessageKeys.LISTING_PUBLISH_CBU_REQUIRED));
+            errors.reject(MessageKeys.CAR_PUBLISH_CBU_REQUIRED, localeMessages.msg(MessageKeys.CAR_PUBLISH_CBU_REQUIRED));
             return buildCreateListingView(car, form, freshUser);
         }
         if (!errors.hasErrors()) {
             try {
-                listingAvailabilityService.validatePublicationAvailabilityRiderLead(
+                carAvailabilityService.validatePublicationAvailabilityRiderLead(
                         form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now());
             } catch (final AvailabilityRiderLeadViolationException e) {
                 errors.rejectValue(
@@ -550,7 +550,7 @@ public final class MyCarsController {
         }
         if (!errors.hasErrors()) {
             try {
-                listingAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
+                carAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
             } catch (final CarValidationException e) {
                 errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             }
@@ -559,7 +559,7 @@ public final class MyCarsController {
             return buildCreateListingView(car, form, freshUser);
         }
         try {
-            listingAvailabilityService.createCarAvailabilityPeriods(
+            carAvailabilityService.createCarAvailabilityPeriods(
                     carId,
                     form.getPricePerDay(),
                     form.getStartPointStreet(),
@@ -585,8 +585,8 @@ public final class MyCarsController {
             @RequestParam(name = "checkIn", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) final LocalTime checkIn) {
         WebAuthUtils.requireUser(currentUser);
-        final LocalTime lt = checkIn != null ? checkIn : ListingAvailability.DEFAULT_CHECK_IN_TIME;
-        final LocalDate minFrom = listingAvailabilityService.getPublicationMinAvailabilityFirstWallDay(lt, Instant.now());
+        final LocalTime lt = checkIn != null ? checkIn : CarAvailability.DEFAULT_CHECK_IN_TIME;
+        final LocalDate minFrom = carAvailabilityService.getPublicationMinAvailabilityFirstWallDay(lt, Instant.now());
         return Map.of("minFrom", minFrom.toString());
     }
 
@@ -648,25 +648,25 @@ public final class MyCarsController {
         return rv;
     }
 
-    private ModelAndView buildCreateListingView(final Car car, final CreateListingForm form, final User user) {
-        final ListingEditorPageModel context = listingEditorViewService.loadEditorContext(
+    private ModelAndView buildCreateListingView(final Car car, final CreateCarAvailabilityForm form, final User user) {
+        final CarAvailabilityEditorPageModel context = carAvailabilityEditorViewService.loadEditorContext(
                 car, user.getId(), form.getCheckInTime());
-        final ModelAndView mav = new ModelAndView("listing/createListing");
+        final ModelAndView mav = new ModelAndView("car/createCarAvailability");
         context.populateModel(mav::addObject);
-        mav.addObject("createListingForm", form);
+        mav.addObject("createCarAvailabilityForm", form);
         mav.addObject("userHasCbu", context.isUserHasCbu());
         mav.addObject("activeTab", "my-cars");
         return mav;
     }
 
     private static void applyEditFormDefaultsFromAvailabilities(
-            final ListingEditForm editForm,
-            final List<ListingAvailability> availabilities) {
+            final CarAvailabilityEditForm editForm,
+            final List<CarAvailability> availabilities) {
         if (availabilities == null || availabilities.isEmpty()) {
             return;
         }
-        final ListingAvailability mostRecent = availabilities.stream()
-                .max(java.util.Comparator.comparing(ListingAvailability::getCreatedAt))
+        final CarAvailability mostRecent = availabilities.stream()
+                .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt))
                 .get();
         if (editForm.getPricePerDay() == null) {
             editForm.setPricePerDay(mostRecent.getDayPriceValue());
@@ -689,7 +689,7 @@ public final class MyCarsController {
         editForm.populateDefaultAvailability(availabilities);
     }
 
-    private static void prefillLocationAndTimes(final CreateListingForm form, final ListingAvailability la) {
+    private static void prefillLocationAndTimes(final CreateCarAvailabilityForm form, final CarAvailability la) {
         form.setStartPointStreet(la.getStartPointStreet());
         form.setStartPointNumber(la.getStartPointNumber().orElse(null));
         form.setNeighborhoodId(la.getNeighborhoodId().orElse(null));
@@ -697,15 +697,15 @@ public final class MyCarsController {
         form.setCheckOutTime(la.getCheckOutTime());
     }
 
-    private static CreateListingForm buildEditAvailabilityForm(final ListingAvailability av) {
-        final CreateListingForm form = new CreateListingForm();
+    private static CreateCarAvailabilityForm buildEditAvailabilityForm(final CarAvailability av) {
+        final CreateCarAvailabilityForm form = new CreateCarAvailabilityForm();
         form.setPricePerDay(av.getDayPriceValue());
         form.setStartPointStreet(av.getStartPointStreet());
         form.setStartPointNumber(av.getStartPointNumber().orElse(null));
         form.setNeighborhoodId(av.getNeighborhoodId().orElse(null));
         form.setCheckInTime(av.getCheckInTime());
         form.setCheckOutTime(av.getCheckOutTime());
-        final CreateListingForm.AvailabilityRow row = new CreateListingForm.AvailabilityRow();
+        final CreateCarAvailabilityForm.AvailabilityRow row = new CreateCarAvailabilityForm.AvailabilityRow();
         row.setFrom(av.getStartInclusive());
         row.setUntil(av.getEndInclusive());
         form.setAvailabilityRows(List.of(row));
@@ -713,12 +713,12 @@ public final class MyCarsController {
     }
 
     private ModelAndView buildEditAvailabilityView(
-            final Car car, final long availabilityId, final CreateListingForm form, final User user) {
-        final ListingEditorPageModel context = listingEditorViewService.loadEditorContext(
+            final Car car, final long availabilityId, final CreateCarAvailabilityForm form, final User user) {
+        final CarAvailabilityEditorPageModel context = carAvailabilityEditorViewService.loadEditorContext(
                 car, user.getId(), form.getCheckInTime());
-        final ModelAndView mav = new ModelAndView("listing/editAvailability");
+        final ModelAndView mav = new ModelAndView("car/editCarAvailability");
         context.populateModel(mav::addObject);
-        mav.addObject("createListingForm", form);
+        mav.addObject("createCarAvailabilityForm", form);
         mav.addObject("availabilityId", availabilityId);
         mav.addObject("activeTab", "my-cars");
         return mav;

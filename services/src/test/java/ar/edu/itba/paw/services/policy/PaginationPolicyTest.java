@@ -30,7 +30,7 @@ class PaginationPolicyTest {
         Assertions.assertEquals(PaginationFallbackSizes.UI_PAGE_SIZE, policy.getDefaultPageSize(),
                 "default-page-size legacy key absent → mirrors uiPageSize");
         Assertions.assertEquals(PaginationFallbackSizes.LISTING_PUBLIC_REVIEWS_PAGE_SIZE,
-                policy.getListingPublicReviewsPageSize());
+                policy.getCarPublicReviewsPageSize());
     }
 
     @Test
@@ -49,7 +49,7 @@ class PaginationPolicyTest {
         Assertions.assertEquals(10, policy.getUiPageSize());
         Assertions.assertEquals(40, policy.getDbFetchSize());
         Assertions.assertEquals(20, policy.getDefaultPageSize());
-        Assertions.assertEquals(7, policy.getListingPublicReviewsPageSize());
+        Assertions.assertEquals(7, policy.getCarPublicReviewsPageSize());
     }
 
     @Test
@@ -84,6 +84,6 @@ class PaginationPolicyTest {
         Assertions.assertEquals(PaginationFallbackSizes.DB_FETCH_SIZE, policy.getDbFetchSize());
         Assertions.assertEquals(PaginationFallbackSizes.UI_PAGE_SIZE, policy.getDefaultPageSize());
         Assertions.assertEquals(PaginationFallbackSizes.LISTING_PUBLIC_REVIEWS_PAGE_SIZE,
-                policy.getListingPublicReviewsPageSize());
+                policy.getCarPublicReviewsPageSize());
     }
 }

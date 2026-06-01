@@ -12,7 +12,7 @@
                 <span class="text-dark fw-semibold"><c:out value="${rating}"/></span>
                 <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
             </c:if>
-            <spring:message code="detailListingMeta.reviewsCount" arguments="${reviewCount}" var="reviewsCntText"/>
+            <spring:message code="detailCarMeta.reviewsCount" arguments="${reviewCount}" var="reviewsCntText"/>
             <span class="text-muted"><c:out value="${reviewsCntText}"/></span>
         </span>
     </c:if>

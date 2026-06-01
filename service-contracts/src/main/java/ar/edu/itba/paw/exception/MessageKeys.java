@@ -90,28 +90,27 @@ public final class MessageKeys {
     public static final String FAV_CAR_NOT_FOUND = "favCar.notFound";
     public static final String FAV_CAR_CANNOT_FAV_OWN = "favCar.cannotFavOwn";
 
-    // listing
-    public static final String LISTING_AVAILABILITY_REQUIRED = "listing.availability.required";
-    public static final String LISTING_AVAILABILITY_INVALID_ORDER = "listing.availability.invalidOrder";
-    public static final String LISTING_AVAILABILITY_INCLUDES_PAST_DATES = "listing.availability.includesPastDates";
-    public static final String LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON = "listing.availability.beyondPublishHorizon";
-    public static final String LISTING_AVAILABILITY_EDIT_CONFLICT = "listing.availability.editConflict";
-    public static final String LISTING_AVAILABILITY_WITHDRAW_CONFLICT = "listing.availability.withdrawConflict";
-    public static final String LISTING_AVAILABILITY_NOT_FOUND = "listing.availability.notFound";
-    public static final String LISTING_AVAILABILITY_NOT_OWNED = "listing.availability.notOwned";
-    public static final String LISTING_AVAILABILITY_NOT_OFFERED = "listing.availability.notOffered";
-    public static final String LISTING_CHECKOUT_NOT_AFTER_CHECKIN = "listing.times.checkOutNotAfterCheckIn";
-    public static final String LISTING_CHECKINOUT_MIN_GAP = "listing.times.minGapHours";
-    public static final String LISTING_CAR_NOT_FOUND = "listing.carNotFound";
-    public static final String LISTING_CAR_NOT_OWNED = "listing.carNotOwned";
-    public static final String LISTING_LIMIT_POSITIVE = "listing.limit.positive";
-    public static final String LISTING_PICKUP_LOCATION_REQUIRED = "listing.pickupLocation.required";
-    public static final String LISTING_PICKUP_STREET_NUMBER_DIGITS_ONLY = "listing.pickupStreetNumber.digitsOnly";
-    public static final String LISTING_PICKUP_STREET_NUMBER_MAX_DIGITS = "listing.pickupStreetNumber.maxDigits";
-    public static final String LISTING_PUBLISH_CBU_REQUIRED = "listing.publish.cbuRequired";
-    public static final String LISTING_ACTIVATE_CBU_REQUIRED = "listing.activate.cbuRequired";
-    public static final String LISTING_ACTIVATE_OWNER_BLOCKED = "listing.activate.ownerBlocked";
-    public static final String LISTING_CREATE_MODEL_PENDING = "listing.create.modelPending";
+    // car availability (period of offering for a car)
+    public static final String CAR_AVAILABILITY_REQUIRED = "carAvailability.required";
+    public static final String CAR_AVAILABILITY_INVALID_ORDER = "carAvailability.invalidOrder";
+    public static final String CAR_AVAILABILITY_INCLUDES_PAST_DATES = "carAvailability.includesPastDates";
+    public static final String CAR_AVAILABILITY_BEYOND_PUBLISH_HORIZON = "carAvailability.beyondPublishHorizon";
+    public static final String CAR_AVAILABILITY_EDIT_CONFLICT = "carAvailability.editConflict";
+    public static final String CAR_AVAILABILITY_WITHDRAW_CONFLICT = "carAvailability.withdrawConflict";
+    public static final String CAR_AVAILABILITY_NOT_FOUND = "carAvailability.notFound";
+    public static final String CAR_AVAILABILITY_NOT_OWNED = "carAvailability.notOwned";
+    public static final String CAR_AVAILABILITY_NOT_OFFERED = "carAvailability.notOffered";
+    public static final String CAR_AVAILABILITY_CHECKOUT_NOT_AFTER_CHECKIN = "carAvailability.times.checkOutNotAfterCheckIn";
+    public static final String CAR_AVAILABILITY_CHECKINOUT_MIN_GAP = "carAvailability.times.minGapHours";
+    public static final String CAR_NOT_OWNED = "car.notOwned";
+    public static final String PAGINATION_LIMIT_POSITIVE = "pagination.limit.positive";
+    public static final String CAR_AVAILABILITY_PICKUP_LOCATION_REQUIRED = "carAvailability.pickupLocation.required";
+    public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_DIGITS_ONLY = "carAvailability.pickupStreetNumber.digitsOnly";
+    public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_MAX_DIGITS = "carAvailability.pickupStreetNumber.maxDigits";
+    public static final String CAR_PUBLISH_CBU_REQUIRED = "car.publish.cbuRequired";
+    public static final String CAR_ACTIVATE_CBU_REQUIRED = "car.activate.cbuRequired";
+    public static final String CAR_ACTIVATE_OWNER_BLOCKED = "car.activate.ownerBlocked";
+    public static final String CAR_CREATE_MODEL_PENDING = "car.create.modelPending";
     // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";
@@ -129,8 +128,8 @@ public final class MessageKeys {
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_SELF = "admin.block.cannotBlockSelf";
 
     // minimum rental days
-    public static final String LISTING_MIN_RENTAL_DAYS_EXCEEDS_PERIOD = "listing.minRentalDays.exceedsPeriod";
-    public static final String LISTING_MIN_RENTAL_DAYS_INVALID = "listing.minRentalDays.invalid";
+    public static final String CAR_MIN_RENTAL_DAYS_EXCEEDS_PERIOD = "car.minRentalDays.exceedsPeriod";
+    public static final String CAR_MIN_RENTAL_DAYS_INVALID = "car.minRentalDays.invalid";
     public static final String RESERVATION_RIDER_BELOW_MINIMUM_DAYS = "reservation.rider.belowMinimumDays";
     public static final String SEARCH_FLEXIBLE_MONTH_REQUIRED = "search.flexible.monthRequired";
 }

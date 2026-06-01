@@ -14,15 +14,15 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 
 /**
  * Reads {@code app.listing.max-availability-forward-wall-days} (or the legacy
- * {@code app.listing.max-availability-total-days}) to back {@link ListingAvailabilityPolicy}.
+ * {@code app.listing.max-availability-total-days}) to back {@link CarAvailabilityPolicy}.
  */
 @Component
-public final class ListingAvailabilityPolicyImpl implements ListingAvailabilityPolicy {
+public final class CarAvailabilityPolicyImpl implements CarAvailabilityPolicy {
 
     private final int maxAvailabilityForwardWallDays;
 
     @Autowired
-    public ListingAvailabilityPolicyImpl(final Environment environment) {
+    public CarAvailabilityPolicyImpl(final Environment environment) {
         this.maxAvailabilityForwardWallDays = resolveForwardWallDays(environment);
     }
 
@@ -59,7 +59,7 @@ public final class ListingAvailabilityPolicyImpl implements ListingAvailabilityP
             if (period.getStartInclusive().isAfter(latestAllowedInclusive)
                     || period.getEndInclusive().isAfter(latestAllowedInclusive)) {
                 throw new CarValidationException(
-                        MessageKeys.LISTING_AVAILABILITY_BEYOND_PUBLISH_HORIZON,
+                        MessageKeys.CAR_AVAILABILITY_BEYOND_PUBLISH_HORIZON,
                         maxAvailabilityForwardWallDays);
             }
         }

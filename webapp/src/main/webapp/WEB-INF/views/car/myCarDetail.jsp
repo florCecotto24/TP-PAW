@@ -22,7 +22,7 @@
 <ryden:navbar/>
 
 <main class="container pt-5 pb-4">
-    <spring:message code="navbar.myListings" var="myListingsLabel"/>
+    <spring:message code="navbar.myCars" var="myListingsLabel"/>
     <c:set var="carLabel"><c:out value="${car.brand} ${car.model}"/></c:set>
     <ryden:breadcrumbTrail
             homeLabel="${myListingsLabel}"
@@ -215,7 +215,7 @@
                                             <c:param name="carId"><c:out value="${car.id}"/></c:param>
                                         </c:url>
                                         <a href="<c:out value='${carDetailUrl}'/>" class="btn btn-outline-warm w-100">
-                                            <i class="bi bi-eye me-2"></i><spring:message code="myCarDetail.actions.viewListing"/>
+                                            <i class="bi bi-eye me-2"></i><spring:message code="myCarDetail.actions.viewCar"/>
                                         </a>
 
                                         <%-- Insurance document section: shows current state and lets the owner (re)upload. --%>

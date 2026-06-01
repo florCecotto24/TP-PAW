@@ -64,7 +64,7 @@ webapp → services → persistence → models
 ### Module responsibilities
 
 - **models** — Organised by *feature/role* rather than by type:
-  - `domain/` — JPA entities (`@Entity`): `Car`, `User`, `Listing`, `ListingAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, `AvailabilityPeriod`, etc.
+  - `domain/` — JPA entities (`@Entity`): `Car`, `User`, `Listing`, `CarAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, `AvailabilityPeriod`, etc.
   - `dto/` — transport objects grouped by business domain: `dto/car/` (cards, projections, market insight + `dto/car/detail/` for the public car page), `dto/listing/` (editor page model), `dto/profile/` (counterparty + profile page models), `dto/reservation/` (cards, page models, message DTOs). `dto/Page<T>` is the only generic that stays in the root.
   - `email/` — typed mail payloads consumed by `services/mail/`.
   - `pagination/` — `Page` windowing, `UiPaging`, fallback sizes.
@@ -91,7 +91,7 @@ webapp → services → persistence → models
 
 ### Domain overview
 
-A `User` owns `Car`s. A `Car` can have a `Listing` with price and availability (`listing_availability`). Other users create `Reservation`s. `Image`s are stored as byte arrays and linked via `CarPicture`.
+A `User` owns `Car`s. A `Car` can have a `Listing` with price and availability (`car_availability`). Other users create `Reservation`s. `Image`s are stored as byte arrays and linked via `CarPicture`.
 
 Key enums (on model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, `Listing.Status` (active/paused/finished), `Reservation.Status` (pending, accepted, started, participant/automated cancellation variants, finished — see `Reservation.Status` in code).
 

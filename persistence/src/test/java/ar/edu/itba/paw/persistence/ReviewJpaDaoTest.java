@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
@@ -36,7 +36,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         jdbcTemplate.update("DELETE FROM reservations_availabilities");
         jdbcTemplate.update("DELETE FROM reservations");
         jdbcTemplate.update("DELETE FROM car_pictures");
-        jdbcTemplate.update("DELETE FROM listing_availability");
+        jdbcTemplate.update("DELETE FROM car_availability");
         jdbcTemplate.update("DELETE FROM cars");
         jdbcTemplate.update("DELETE FROM car_models");
         jdbcTemplate.update("DELETE FROM car_brands");
@@ -137,7 +137,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         insertRiderReview(resOmitted, carId, null, null, base.plusHours(4));
 
         // 2. Act
-        final Page<ListingPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
+        final Page<CarPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
 
         // 3. Assert
         Assertions.assertEquals(2, page.getContent().size(), "Reviews with rating=null must be excluded");
@@ -161,7 +161,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         insertRiderReview(resOnB, carB, 3, "On B", now);
 
         // 2. Act
-        final Page<ListingPublicReview> page = dao.findCarPublicReviews(carA, 0, 10);
+        final Page<CarPublicReview> page = dao.findCarPublicReviews(carA, 0, 10);
 
         // 3. Assert
         Assertions.assertEquals(1L, page.getTotalItems());
@@ -181,8 +181,8 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         insertRiderReview(resC, carId, 5, "C", base.plusHours(2));
 
         // 2. Act
-        final Page<ListingPublicReview> firstPage = dao.findCarPublicReviews(carId, 0, 2);
-        final Page<ListingPublicReview> secondPage = dao.findCarPublicReviews(carId, 1, 2);
+        final Page<CarPublicReview> firstPage = dao.findCarPublicReviews(carId, 0, 2);
+        final Page<CarPublicReview> secondPage = dao.findCarPublicReviews(carId, 1, 2);
 
         // 3. Assert — newest-first ordering means firstPage = [C, B], secondPage = [A].
         Assertions.assertEquals(3L, firstPage.getTotalItems());
@@ -202,7 +202,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         linkReviewImage(reservationId, imageId);
 
         // 2. Act
-        final Page<ListingPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
+        final Page<CarPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
 
         // 3. Assert
         Assertions.assertEquals(1L, page.getTotalItems());
@@ -216,7 +216,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         final long carId = insertCar("REV040");
 
         // 2. Act
-        final Page<ListingPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
+        final Page<CarPublicReview> page = dao.findCarPublicReviews(carId, 0, 10);
 
         // 3. Assert
         Assertions.assertTrue(page.getContent().isEmpty());

@@ -38,11 +38,11 @@
                         <div class="card-body p-4">
                             <div class="mb-3">
                                 <h2 class="h5 fw-semibold mb-1">
-                                    <spring:message code="counterpartyProfile.activeListings.title"/>
+                                    <spring:message code="counterpartyProfile.activeCars.title"/>
                                 </h2>
                             </div>
-                            <span id="counterpartyListingsLoadErr" class="d-none"><spring:message code="counterpartyProfile.activeListings.loadError"/></span>
-                            <span id="counterpartyListingsLoadLoadingText" class="d-none"><spring:message code="counterpartyProfile.activeListings.loading"/></span>
+                            <span id="counterpartyListingsLoadErr" class="d-none"><spring:message code="counterpartyProfile.activeCars.loadError"/></span>
+                            <span id="counterpartyListingsLoadLoadingText" class="d-none"><spring:message code="counterpartyProfile.activeCars.loading"/></span>
                             <c:choose>
                                 <c:when test="${not empty counterpartyActiveListings}">
                                     <div id="counterpartyActiveListingsRow" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 gy-4">
@@ -65,24 +65,24 @@
                                             </div>
                                         </c:forEach>
                                     </div>
-                                    <c:if test="${counterpartyActiveListingsLoadMore.hasNext}">
+                                    <c:if test="${counterpartyActiveCarsLoadMore.hasNext}">
                                         <div class="text-center mt-4">
-                                            <spring:message code="counterpartyProfile.activeListings.viewMore" var="counterpartyViewMoreListingsLabel" htmlEscape="true"/>
+                                            <spring:message code="counterpartyProfile.activeCars.viewMore" var="counterpartyViewMoreListingsLabel" htmlEscape="true"/>
                                             <button type="button"
                                                     class="btn btn-outline-primary"
                                                     id="counterpartyListingsLoadMoreBtn"
-                                                    data-owner-user-id="${counterpartyActiveListingsLoadMore.ownerUserId}"
-                                                    data-exclude-car-id="<c:out value='${counterpartyActiveListingsLoadMore.excludeCarId}'/>"
-                                                    data-next-page="${counterpartyActiveListingsLoadMore.nextPageToLoad}"
+                                                    data-owner-user-id="${counterpartyActiveCarsLoadMore.ownerUserId}"
+                                                    data-exclude-car-id="<c:out value='${counterpartyActiveCarsLoadMore.excludeCarId}'/>"
+                                                    data-next-page="${counterpartyActiveCarsLoadMore.nextPageToLoad}"
                                                     data-default-label="<c:out value='${counterpartyViewMoreListingsLabel}'/>">
-                                                <spring:message code="counterpartyProfile.activeListings.viewMore"/>
+                                                <spring:message code="counterpartyProfile.activeCars.viewMore"/>
                                             </button>
                                         </div>
                                     </c:if>
                                 </c:when>
                                 <c:otherwise>
                                     <p class="mb-0 text-secondary small">
-                                        <spring:message code="counterpartyProfile.activeListings.empty"/>
+                                        <spring:message code="counterpartyProfile.activeCars.empty"/>
                                     </p>
                                 </c:otherwise>
                             </c:choose>

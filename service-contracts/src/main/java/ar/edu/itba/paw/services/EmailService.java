@@ -11,7 +11,7 @@ import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
 import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
-import ar.edu.itba.paw.models.email.ListingPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 
@@ -70,16 +70,16 @@ public interface EmailService {
     void sendRiderRefundProofReceivedEmail(RiderRefundProofReceivedEmailPayload payload);
 
     /** Owner notified when an active listing was paused because CBU was removed or invalid. */
-    void sendListingPausedDueToMissingCbu(ListingPausedMissingCbuOwnerEmailPayload payload);
+    void sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator pauses their listing. */
-    void sendListingPausedByAdmin(ar.edu.itba.paw.models.email.ListingPausedByAdminOwnerEmailPayload payload);
+    void sendCarPausedByAdmin(ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator rejects the catalog entry (brand, model, or both) used by their car. */
-    void sendListingRejectedByAdmin(ar.edu.itba.paw.models.email.ListingRejectedByAdminOwnerEmailPayload payload);
+    void sendCarRejectedByAdmin(ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator validates the catalog entry (brand, model, or both) used by their car. */
-    void sendListingValidatedByAdmin(ar.edu.itba.paw.models.email.ListingValidatedByAdminOwnerEmailPayload payload);
+    void sendCarValidatedByAdmin(ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload payload);
 
     /** Hourly digest of reservation chat messages for one recipient. */
     void sendReservationChatDigestEmail(ReservationChatDigestEmailPayload payload);

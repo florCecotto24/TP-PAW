@@ -15,7 +15,7 @@ import javax.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationAvailabilityCoverage;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
@@ -38,8 +38,8 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
         final Reservation reservationRef = em.getReference(Reservation.class, reservationId);
         final Set<Long> uniqueIds = new LinkedHashSet<>(availabilityIds);
         for (final long availabilityId : uniqueIds) {
-            final ListingAvailability availabilityRef =
-                    em.getReference(ListingAvailability.class, availabilityId);
+            final CarAvailability availabilityRef =
+                    em.getReference(CarAvailability.class, availabilityId);
             em.persist(new ReservationAvailabilityCoverage(reservationRef, availabilityRef));
         }
     }
@@ -60,7 +60,7 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
             return Optional.empty();
         }
         final Reservation reservation = coverages.get(0).getReservation();
-        final List<ListingAvailability> candidates = coverages.stream()
+        final List<CarAvailability> candidates = coverages.stream()
                 .map(ReservationAvailabilityCoverage::getAvailability)
                 .toList();
         final LocalDate firstDay = reservation.getStartDate()
@@ -76,19 +76,19 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
      * {@code day_price}. Returns empty when any day lacks coverage among the candidates.
      */
     static Optional<BigDecimal> sumDayPricesByEffectiveCandidate(
-            final List<ListingAvailability> candidates,
+            final List<CarAvailability> candidates,
             final LocalDate firstDay,
             final LocalDate lastDay) {
         BigDecimal total = BigDecimal.ZERO;
         for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
             final LocalDate currentDay = day;
-            final Optional<ListingAvailability> winner = candidates.stream()
-                    .filter(a -> a.getKind() == ListingAvailability.Kind.OFFERED)
+            final Optional<CarAvailability> winner = candidates.stream()
+                    .filter(a -> a.getKind() == CarAvailability.Kind.OFFERED)
                     .filter(a -> !currentDay.isBefore(a.getStartInclusive())
                             && !currentDay.isAfter(a.getEndInclusive()))
                     .max(Comparator
-                            .comparing(ListingAvailability::getCreatedAt)
-                            .thenComparing(ListingAvailability::getId));
+                            .comparing(CarAvailability::getCreatedAt)
+                            .thenComparing(CarAvailability::getId));
             if (winner.isEmpty()) {
                 return Optional.empty();
             }

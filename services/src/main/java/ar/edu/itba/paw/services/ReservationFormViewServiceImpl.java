@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationConfirmationPageModel;
@@ -18,11 +18,11 @@ import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
-import ar.edu.itba.paw.services.util.ListingAddressFormatter;
+import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
 /**
  * Builds the reservation-form and confirmation page models. Moves the orchestration that used
- * to live in {@code ReservationFormController} (CarService + ListingAvailabilityService +
+ * to live in {@code ReservationFormController} (CarService + CarAvailabilityService +
  * ReservationService + UserService + ImageService + WallDateTimeUiFormatter + the rider-docs
  * helper + the day-effective handover-location helper) into a single transactional facade.
  *
@@ -33,29 +33,29 @@ import ar.edu.itba.paw.services.util.ListingAddressFormatter;
 public final class ReservationFormViewServiceImpl implements ReservationFormViewService {
 
     private final CarService carService;
-    private final ListingAvailabilityService listingAvailabilityService;
+    private final CarAvailabilityService carAvailabilityService;
     private final ReservationService reservationService;
     private final ImageService imageService;
     private final UserService userService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
-    private final ListingAddressFormatter listingAddressFormatter;
+    private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
 
     @Autowired
     public ReservationFormViewServiceImpl(
             final CarService carService,
-            final ListingAvailabilityService listingAvailabilityService,
+            final CarAvailabilityService carAvailabilityService,
             final ReservationService reservationService,
             final ImageService imageService,
             final UserService userService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
-            final ListingAddressFormatter listingAddressFormatter) {
+            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter) {
         this.carService = carService;
-        this.listingAvailabilityService = listingAvailabilityService;
+        this.carAvailabilityService = carAvailabilityService;
         this.reservationService = reservationService;
         this.imageService = imageService;
         this.userService = userService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
-        this.listingAddressFormatter = listingAddressFormatter;
+        this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
     }
 
     @Override
@@ -141,17 +141,17 @@ public final class ReservationFormViewServiceImpl implements ReservationFormView
      * the rider's chosen pickup date (not "today") to pick the effective availability row, and
      * falls back to the most recent row when the rider has not picked a valid date yet or the
      * chosen date is outside any published window. The address is rendered without the door
-     * number — {@link ListingAddressFormatter#formatPublicPickupLocation} enforces that policy.
+     * number — {@link CarAvailabilityAddressFormatter#formatPublicPickupLocation} enforces that policy.
      */
     private String resolveCarHandoverLocation(final long carId, final String fromDateTime) {
         final LocalDate pickupDay = WallDateTimeParsing.parseWallLocalDateTimeToWallDate(fromDateTime);
-        Optional<ListingAvailability> av = (pickupDay == null)
+        Optional<CarAvailability> av = (pickupDay == null)
                 ? Optional.empty()
-                : listingAvailabilityService.findEffectiveForDayByCar(carId, pickupDay);
+                : carAvailabilityService.findEffectiveForDayByCar(carId, pickupDay);
         if (av.isEmpty()) {
-            av = listingAvailabilityService.findMostRecentByCarId(carId);
+            av = carAvailabilityService.findMostRecentByCarId(carId);
         }
-        return av.map(listingAddressFormatter::formatPublicPickupLocation).orElse("");
+        return av.map(carAvailabilityAddressFormatter::formatPublicPickupLocation).orElse("");
     }
 
     private static String formatDateTimeInput(final String raw, final Locale locale) {

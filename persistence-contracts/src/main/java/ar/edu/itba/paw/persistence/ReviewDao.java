@@ -3,7 +3,7 @@ package ar.edu.itba.paw.persistence;
 import java.util.List;
 import java.math.BigDecimal;
 
-import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
@@ -25,7 +25,7 @@ public interface ReviewDao {
     void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment, Long imageId);
 
     /** Public reviews for a car, paginated. */
-    Page<ListingPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
+    Page<CarPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
 
     /** Total reviews stored against the car. */
     long countReviewsForCar(long carId);

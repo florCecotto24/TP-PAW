@@ -28,8 +28,8 @@ import javax.persistence.Table;
  * wins (see {@link Kind} for the offered/withdrawn discriminator).
  */
 @Entity
-@Table(name = "listing_availability")
-public class ListingAvailability {
+@Table(name = "car_availability")
+public class CarAvailability {
 
     /**
      * Default wall-time pickup hour used as fallback when an availability row, publication form, or rider
@@ -69,8 +69,8 @@ public class ListingAvailability {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "listing_availability_id_seq")
-    @SequenceGenerator(name = "listing_availability_id_seq", sequenceName = "listing_availability_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "car_availability_id_seq")
+    @SequenceGenerator(name = "car_availability_id_seq", sequenceName = "car_availability_id_seq", allocationSize = 1)
     private long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -112,11 +112,11 @@ public class ListingAvailability {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    /* package */ ListingAvailability() {
+    /* package */ CarAvailability() {
         // For Hibernate
     }
 
-    private ListingAvailability(final Builder b) {
+    private CarAvailability(final Builder b) {
         this.id = b.id;
         this.car = b.car;
         this.startInclusive = b.startInclusive;
@@ -220,11 +220,11 @@ public class ListingAvailability {
             return this;
         }
 
-        public ListingAvailability build() {
+        public CarAvailability build() {
             Objects.requireNonNull(car, "car");
             Objects.requireNonNull(startInclusive, "startInclusive");
             Objects.requireNonNull(endInclusive, "endInclusive");
-            return new ListingAvailability(this);
+            return new CarAvailability(this);
         }
     }
 
@@ -295,7 +295,7 @@ public class ListingAvailability {
 
     @Override
     public String toString() {
-        return "ListingAvailability{"
+        return "CarAvailability{"
                 + "id=" + id
                 + ", carId=" + (car != null ? car.getId() : null)
                 + ", startInclusive=" + startInclusive

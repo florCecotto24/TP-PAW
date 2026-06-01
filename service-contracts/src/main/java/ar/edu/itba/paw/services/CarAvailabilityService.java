@@ -9,34 +9,34 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.ListingAvailability;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 
 /**
- * Wall-calendar availability segments attached to a car ({@code listing_availability} style persistence).
+ * Wall-calendar availability segments attached to a car ({@code car_availability} style persistence).
  * Dates are interpreted in the car wall zone when combined with reservation rules elsewhere; this contract only
  * moves rows in and out of storage. Callers own validation and transaction boundaries.
- * Implementations use {@code ListingAvailabilityDao} only.
+ * Implementations use {@code CarAvailabilityDao} only.
  */
-public interface ListingAvailabilityService {
+public interface CarAvailabilityService {
 
     /** Availability row by id, when present. */
-    Optional<ListingAvailability> findById(long availabilityId);
+    Optional<CarAvailability> findById(long availabilityId);
 
     /**
      * The single availability row that is effective for {@code day} on a given car: the most recent row whose window
-     * contains it. When the effective row is {@link ListingAvailability.Kind#WITHDRAWN}, the day is not
+     * contains it. When the effective row is {@link CarAvailability.Kind#WITHDRAWN}, the day is not
      * bookable; otherwise its {@code dayPrice} is the effective price.
      */
-    Optional<ListingAvailability> findEffectiveForDayByCar(long carId, LocalDate day);
+    Optional<CarAvailability> findEffectiveForDayByCar(long carId, LocalDate day);
 
     /** All availability rows for {@code carId} whose window overlaps {@code [from, to]}, ordered by {@code createdAt} descending. */
-    List<ListingAvailability> findOverlappingRangeByCar(long carId, LocalDate from, LocalDate to);
+    List<CarAvailability> findOverlappingRangeByCar(long carId, LocalDate from, LocalDate to);
 
     /**
      * Creates a full set of availability periods for a car without creating a {@code Listing} entity.
-     * Each period gets a {@link ar.edu.itba.paw.models.domain.ListingAvailability.Kind#OFFERED} row
+     * Each period gets a {@link ar.edu.itba.paw.models.domain.CarAvailability.Kind#OFFERED} row
      * with the given price/location/time defaults. Per-period prices override the default when provided.
      * Also persists {@code minimumRentalDays} on the car after validating it does not exceed any period.
      *
@@ -52,7 +52,7 @@ public interface ListingAvailabilityService {
      * @param minimumRentalDays minimum consecutive days a rider must book (≥ 1)
      * @return the list of persisted offered rows
      */
-    List<ListingAvailability> createCarAvailabilityPeriods(
+    List<CarAvailability> createCarAvailabilityPeriods(
             long carId,
             BigDecimal dayPrice,
             String street,
@@ -73,29 +73,29 @@ public interface ListingAvailabilityService {
     void updateMinimumRentalDays(long carId, int minDays);
 
     /** All availability segments for the car. */
-    List<ListingAvailability> findByCarId(long carId);
+    List<CarAvailability> findByCarId(long carId);
 
     /**
-     * Returns only the currently-effective {@link ListingAvailability.Kind#OFFERED} rows for the car —
+     * Returns only the currently-effective {@link CarAvailability.Kind#OFFERED} rows for the car —
      * those that still "win" at least one calendar day under the "most recent {@code createdAt} wins" rule.
      * Superseded rows (fully covered by newer rows of any kind) are excluded, as are
-     * {@link ListingAvailability.Kind#WITHDRAWN} rows (internal bookkeeping).
+     * {@link CarAvailability.Kind#WITHDRAWN} rows (internal bookkeeping).
      * Intended for the owner's availability list view.
      */
-    List<ListingAvailability> findEffectiveOfferedByCar(long carId);
+    List<CarAvailability> findEffectiveOfferedByCar(long carId);
 
     /** Batch load: rows for the given car ids whose {@code end_inclusive} is on or after {@code minEndDate}. */
-    List<ListingAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
+    List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
     /** Removes every availability row for {@code carId} (e.g. before replacing the whole wall). */
     void deleteByCarId(long carId);
 
     /**
      * Applies an owner edit to an availability window on a car. Mirrors {@link #applyOwnerWithdrawByCar}
-     * but for an edit: inserts a new {@link ListingAvailability.Kind#OFFERED} row and one
-     * {@link ListingAvailability.Kind#WITHDRAWN} row per removed-day chunk.
+     * but for an edit: inserts a new {@link CarAvailability.Kind#OFFERED} row and one
+     * {@link CarAvailability.Kind#WITHDRAWN} row per removed-day chunk.
      */
-    ListingAvailability applyOwnerEditByCar(
+    CarAvailability applyOwnerEditByCar(
             long carId,
             LocalDate oldStartInclusive,
             LocalDate oldEndInclusive,
@@ -110,11 +110,11 @@ public interface ListingAvailabilityService {
 
     /**
      * Soft-deletes an availability period from the owner's calendar by inserting a brand new
-     * {@link ListingAvailability.Kind#WITHDRAWN} row covering the target's full window. The target row is
+     * {@link CarAvailability.Kind#WITHDRAWN} row covering the target's full window. The target row is
      * not mutated or deleted; the "most recent createdAt wins" resolution rule makes the days unbookable.
      * Aborts when blocking reservations intersect the target or when the target does not belong to {@code carId}.
      */
-    ListingAvailability applyOwnerWithdrawByCar(long carId, long availabilityId);
+    CarAvailability applyOwnerWithdrawByCar(long carId, long availabilityId);
 
     /**
      * Computes the set of bookable wall-calendar days for the car.
@@ -154,10 +154,10 @@ public interface ListingAvailabilityService {
     boolean isCarPriceVariableByCar(long carId, BigDecimal defaultPrice);
 
     /**
-     * Returns the most recent {@link ListingAvailability} row for the car (highest {@code createdAt}).
+     * Returns the most recent {@link CarAvailability} row for the car (highest {@code createdAt}).
      * Useful to read the owner's last-published location and check-in/out times when {@code Listing} is gone.
      */
-    Optional<ListingAvailability> findMostRecentByCarId(long carId);
+    Optional<CarAvailability> findMostRecentByCarId(long carId);
 
     /**
      * First wall-calendar day allowed for a new availability "from" field, taking the configured

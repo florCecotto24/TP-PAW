@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.Optional;
 
 /**
- * N:N bridge rows between reservations and the {@code listing_availability} rows that were considered
+ * N:N bridge rows between reservations and the {@code car_availability} rows that were considered
  * when pricing the reservation. The per-day winning availability is resolved at read time by date
  * range and {@code MAX(created_at)}; no per-row date segmentation is persisted.
  *

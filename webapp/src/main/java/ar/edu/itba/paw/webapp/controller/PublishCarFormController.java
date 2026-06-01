@@ -394,13 +394,13 @@ public final class PublishCarFormController {
             insuranceStash.clear(session);
 
             if (outcome.getKind() == PublishCarOutcome.Kind.PENDING_VALIDATION) {
-                final ModelAndView pendingMav = new ModelAndView("listing/publishCarPending");
+                final ModelAndView pendingMav = new ModelAndView("car/publishCarPending");
                 pendingMav.addObject("createdCarId", outcome.getCar().getId());
                 outcome.getPendingBrandName().ifPresent(name -> pendingMav.addObject("pendingBrand", name));
                 outcome.getPendingModelName().ifPresent(name -> pendingMav.addObject("pendingModel", name));
                 return pendingMav;
             }
-            final ModelAndView mav = new ModelAndView("listing/publishCarConfirmation");
+            final ModelAndView mav = new ModelAndView("car/publishCarConfirmation");
             mav.addObject("car", outcome.getCar());
             if (outcome.isNewCatalogEntry()) {
                 mav.addObject("newCatalogEntry", true);
@@ -443,7 +443,7 @@ public final class PublishCarFormController {
     }
 
     private ModelAndView publishCarFormView(final HttpSession session) {
-        final ModelAndView mav = new ModelAndView("listing/publishCarForm");
+        final ModelAndView mav = new ModelAndView("car/publishCarForm");
         mav.addObject("activeTab", "publish-car");
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
@@ -493,7 +493,7 @@ public final class PublishCarFormController {
     }
 
     private ModelAndView publishCarPrerequisitesView(final User user) {
-        final ModelAndView mav = new ModelAndView("listing/publishCarPrerequisites");
+        final ModelAndView mav = new ModelAndView("car/publishCarPrerequisites");
         mav.addObject("activeTab", "publish-car");
         mav.addObject("publisherHasCbu", userService.hasValidCbu(user));
         mav.addObject("publisherHasIdentity", user.getIdentityFileId().isPresent());

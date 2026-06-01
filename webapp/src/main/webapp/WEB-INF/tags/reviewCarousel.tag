@@ -5,7 +5,7 @@
   Reviews carousel for the public car detail page.
   Groups review cards into slides (2 per slide on md+, 1 per slide on small screens) and lets the user
   navigate slides client-side via Bootstrap. Server-side pagination still applies: the caller passes the
-  first page of reviews (e.g. PaginationPolicy#getListingPublicReviewsPageSize) and the "view all"
+  first page of reviews (e.g. PaginationPolicy#getCarPublicReviewsPageSize) and the "view all"
   control on the surrounding section bumps the user into the paginated list view.
 --%>
 <%@ attribute name="reviews" required="true" type="java.util.List" %>

@@ -17,7 +17,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsFragment;
-import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsLoadMore;
+import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveCarsLoadMore;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.services.policy.PresentationLimitsPolicy;
@@ -147,14 +147,14 @@ public final class CounterpartyProfileViewServiceImpl implements CounterpartyPro
                 : null;
         final List<CarCard> activeCarCards =
                 ownerCarsPage == null ? List.of() : ownerCarsPage.getContent();
-        final CounterpartyActiveListingsLoadMore loadMore = counterpartyIsOwner && ownerCarsPage != null
-                ? CounterpartyActiveListingsLoadMore.of(
+        final CounterpartyActiveCarsLoadMore loadMore = counterpartyIsOwner && ownerCarsPage != null
+                ? CounterpartyActiveCarsLoadMore.of(
                         ownerCarsPage.isHasNext(),
                         counterparty.getId(),
                         excludeCarId,
                         1,
                         ownerListingsPageSize)
-                : CounterpartyActiveListingsLoadMore.none();
+                : CounterpartyActiveCarsLoadMore.none();
         return new CounterpartyProfilePageModel(
                 counterparty.getForename(),
                 counterparty.getSurname(),

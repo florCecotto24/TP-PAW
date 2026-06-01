@@ -21,7 +21,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.Review;
 import ar.edu.itba.paw.models.domain.ReviewId;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.listing.ListingPublicReview;
+import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.persistence.ReviewDao;
@@ -67,7 +67,7 @@ public class ReviewJpaDao implements ReviewDao {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Page<ListingPublicReview> findCarPublicReviews(final long carId, final int page, final int pageSize) {
+    public Page<CarPublicReview> findCarPublicReviews(final long carId, final int page, final int pageSize) {
         final Long total = em.createQuery(
                         "SELECT COUNT(r) FROM Review r "
                                 + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
@@ -107,12 +107,12 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("ids", ids)
                 .getResultList();
 
-        final List<ListingPublicReview> content = reviews.stream()
+        final List<CarPublicReview> content = reviews.stream()
                 .map(r -> {
                     final User reviewer = r.getId().isMadeByRider()
                             ? r.getReservation().getRider()
                             : r.getReservation().getCar().getOwner();
-                    return new ListingPublicReview(
+                    return new CarPublicReview(
                             reviewer.getForename(),
                             reviewer.getSurname(),
                             r.getCreatedAt(),

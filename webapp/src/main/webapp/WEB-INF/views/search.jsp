@@ -111,13 +111,13 @@
                                     </div>
                                 </c:when>
                                 <c:otherwise>
-                                    <h2 class="h4 fw-semibold mb-2"><spring:message code="search.empty.noListings.title"/></h2>
+                                    <h2 class="h4 fw-semibold mb-2"><spring:message code="search.empty.noCars.title"/></h2>
                                     <p class="text-secondary mb-0 search-empty-state__text">
-                                        <spring:message code="search.empty.noListings.description"/>
+                                        <spring:message code="search.empty.noCars.description"/>
                                     </p>
                                     <div class="search-empty-state__actions mt-4">
                                         <a href="${resetSearchUrl}" class="btn btn-primary btn-action btn-action-md">
-                                            <spring:message code="search.empty.noListings.cta"/>
+                                            <spring:message code="search.empty.noCars.cta"/>
                                         </a>
                                     </div>
                                 </c:otherwise>
