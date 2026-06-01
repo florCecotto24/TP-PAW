@@ -46,6 +46,9 @@ public final class PublishCarPictureSessionStash {
     private static final String SESSION_ATTRIBUTE =
             "ar.edu.itba.paw.webapp.controller.PublishCarFormController.RETAINED_PICTURES";
 
+    private static final String SESSION_COVER_INDEX_ATTRIBUTE =
+            "ar.edu.itba.paw.webapp.controller.PublishCarFormController.COVER_PICTURE_INDEX";
+
     private static final Path STASH_ROOT =
             Path.of(System.getProperty("java.io.tmpdir"), "ryden-publish-stash");
 
@@ -85,6 +88,34 @@ public final class PublishCarPictureSessionStash {
     public void clear(final HttpSession session) {
         deleteStashFilesForSessionId(session.getId());
         session.removeAttribute(SESSION_ATTRIBUTE);
+        session.removeAttribute(SESSION_COVER_INDEX_ATTRIBUTE);
+    }
+
+    public int getCoverPictureIndex(final HttpSession session) {
+        final Object raw = session.getAttribute(SESSION_COVER_INDEX_ATTRIBUTE);
+        if (raw instanceof Integer idx && idx >= 0) {
+            return idx;
+        }
+        return 0;
+    }
+
+    public void setCoverPictureIndex(final HttpSession session, final int coverIndex) {
+        session.setAttribute(SESSION_COVER_INDEX_ATTRIBUTE, Math.max(0, coverIndex));
+    }
+
+    /**
+     * Reorders the session stash so the cover image is first (retained-only retry path).
+     */
+    public void applyCoverFromForm(final PublishCarForm form, final HttpSession session) {
+        final List<PublishCarRetainedImage> list = new ArrayList<>(readStash(session));
+        if (list.isEmpty()) {
+            return;
+        }
+        final int cover = resolveCoverIndexForRetained(list, form.getCoverPictureIndex());
+        if (cover != 0) {
+            session.setAttribute(SESSION_ATTRIBUTE, reorderToCover(list, cover));
+        }
+        setCoverPictureIndex(session, 0);
     }
 
     /**
@@ -132,6 +163,14 @@ public final class PublishCarPictureSessionStash {
         });
         if (removed) {
             session.setAttribute(SESSION_ATTRIBUTE, list);
+            if (list.isEmpty()) {
+                session.removeAttribute(SESSION_COVER_INDEX_ATTRIBUTE);
+            } else {
+                final int cover = getCoverPictureIndex(session);
+                if (cover >= list.size()) {
+                    setCoverPictureIndex(session, defaultCoverIndexForRetained(list));
+                }
+            }
         }
         return removed;
     }
@@ -189,7 +228,9 @@ public final class PublishCarPictureSessionStash {
             writeStashFile(session.getId(), token, u.getData());
             retained.add(new PublishCarRetainedImage(token, u.getFilename(), u.getContentType()));
         }
-        session.setAttribute(SESSION_ATTRIBUTE, retained);
+        final int cover = resolveCoverIndexForUploads(fromForm, form.getCoverPictureIndex());
+        session.setAttribute(SESSION_ATTRIBUTE, reorderToCover(retained, cover));
+        setCoverPictureIndex(session, 0);
     }
 
     public void trySyncFromForm(final PublishCarForm form, final HttpSession session, final BindingResult errors) {
@@ -205,22 +246,26 @@ public final class PublishCarPictureSessionStash {
     public List<GalleryMediaUpload> resolveUploads(final PublishCarForm form, final HttpSession session)
             throws IOException {
         final List<GalleryMediaUpload> fromForm = toGalleryMediaUploads(form.getPictures());
+        final List<GalleryMediaUpload> uploads;
         if (!fromForm.isEmpty()) {
-            return fromForm;
-        }
-        final List<PublishCarRetainedImage> stashed = readStash(session);
-        if (stashed.isEmpty()) {
-            return Collections.emptyList();
-        }
-        final List<GalleryMediaUpload> out = new ArrayList<>(stashed.size());
-        for (final PublishCarRetainedImage r : stashed) {
-            final Path file = stashFile(session.getId(), r.stashToken());
-            if (!Files.isRegularFile(file)) {
-                throw new IOException("Missing stashed publish-car gallery media file");
+            uploads = fromForm;
+        } else {
+            final List<PublishCarRetainedImage> stashed = readStash(session);
+            if (stashed.isEmpty()) {
+                return Collections.emptyList();
             }
-            out.add(new GalleryMediaUpload(r.filename(), r.contentType(), Files.readAllBytes(file)));
+            uploads = new ArrayList<>(stashed.size());
+            for (final PublishCarRetainedImage r : stashed) {
+                final Path file = stashFile(session.getId(), r.stashToken());
+                if (!Files.isRegularFile(file)) {
+                    throw new IOException("Missing stashed publish-car gallery media file");
+                }
+                uploads.add(new GalleryMediaUpload(r.filename(), r.contentType(), Files.readAllBytes(file)));
+            }
         }
-        return out;
+        final int cover = resolveCoverIndexForUploads(uploads, form.getCoverPictureIndex());
+        setCoverPictureIndex(session, 0);
+        return reorderToCover(uploads, cover);
     }
 
     public void validatePicturePresence(final PublishCarForm form, final HttpSession session, final BindingResult errors) {
@@ -332,5 +377,71 @@ public final class PublishCarPictureSessionStash {
         } catch (final NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private static boolean isCoverEligible(final GalleryMediaUpload upload) {
+        return upload != null && CarGalleryMediaContentTypes.isImageContentType(upload.getContentType());
+    }
+
+    private static boolean isCoverEligible(final PublishCarRetainedImage retained) {
+        return retained != null && CarGalleryMediaContentTypes.isImageContentType(retained.contentType());
+    }
+
+    private static int defaultCoverIndexForUploads(final List<GalleryMediaUpload> items) {
+        for (int i = 0; i < items.size(); i++) {
+            if (isCoverEligible(items.get(i))) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    private static int defaultCoverIndexForRetained(final List<PublishCarRetainedImage> items) {
+        for (int i = 0; i < items.size(); i++) {
+            if (isCoverEligible(items.get(i))) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    private static int resolveCoverIndexForUploads(
+            final List<GalleryMediaUpload> items,
+            final Integer requestedIndex) {
+        if (items.isEmpty()) {
+            return 0;
+        }
+        final int defaultIdx = defaultCoverIndexForUploads(items);
+        if (requestedIndex == null || requestedIndex < 0 || requestedIndex >= items.size()) {
+            return defaultIdx;
+        }
+        return isCoverEligible(items.get(requestedIndex)) ? requestedIndex : defaultIdx;
+    }
+
+    private static int resolveCoverIndexForRetained(
+            final List<PublishCarRetainedImage> items,
+            final Integer requestedIndex) {
+        if (items.isEmpty()) {
+            return 0;
+        }
+        final int defaultIdx = defaultCoverIndexForRetained(items);
+        if (requestedIndex == null || requestedIndex < 0 || requestedIndex >= items.size()) {
+            return defaultIdx;
+        }
+        return isCoverEligible(items.get(requestedIndex)) ? requestedIndex : defaultIdx;
+    }
+
+    private static <T> List<T> reorderToCover(final List<T> items, final int coverIndex) {
+        if (items.isEmpty() || coverIndex <= 0 || coverIndex >= items.size()) {
+            return new ArrayList<>(items);
+        }
+        final List<T> out = new ArrayList<>(items.size());
+        out.add(items.get(coverIndex));
+        for (int i = 0; i < items.size(); i++) {
+            if (i != coverIndex) {
+                out.add(items.get(i));
+            }
+        }
+        return out;
     }
 }

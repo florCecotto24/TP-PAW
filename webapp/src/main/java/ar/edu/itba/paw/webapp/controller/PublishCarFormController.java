@@ -294,7 +294,7 @@ public final class PublishCarFormController {
             return publishCarPrerequisitesView(fresh);
         }
         publishCarFormValidator.validate(form, errors);
-        pictureStash.trySyncFromForm(form, session, errors);
+        syncPicturesFromPublishForm(form, session, errors);
         pictureStash.validatePicturePresence(form, session, errors);
         if (errors.hasErrors()) {
             // Only stash a fresh insurance file when it itself is valid (e.g. another field failed);
@@ -302,20 +302,20 @@ public final class PublishCarFormController {
             if (!errors.hasFieldErrors("insuranceFile")) {
                 insuranceStash.trySyncFromForm(form, session);
             }
-            return publishCarFormView(session);
+            return publishCarFormView(session, form);
         }
 
         final int fromForm = PublishCarPictureSessionStash.countNonEmptyMultipart(form.getPictures());
         if (fromForm > 0) {
             if (!multipartGalleryMediaValidation.validateFilesAreGalleryMedia(form.getPictures(), errors, "pictures")) {
-                pictureStash.trySyncFromForm(form, session, errors);
+                syncPicturesFromPublishForm(form, session, errors);
                 insuranceStash.trySyncFromForm(form, session);
-                return publishCarFormView(session);
+                return publishCarFormView(session, form);
             }
             if (!multipartGalleryMediaValidation.validateFilesWithinMaxSize(form.getPictures(), errors)) {
-                pictureStash.trySyncFromForm(form, session, errors);
+                syncPicturesFromPublishForm(form, session, errors);
                 insuranceStash.trySyncFromForm(form, session);
-                return publishCarFormView(session);
+                return publishCarFormView(session, form);
             }
         }
 
@@ -326,20 +326,20 @@ public final class PublishCarFormController {
             errors.reject(
                     MessageKeys.PUBLISH_IMAGES_READ,
                     localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
-            pictureStash.trySyncFromForm(form, session, errors);
+            syncPicturesFromPublishForm(form, session, errors);
             insuranceStash.trySyncFromForm(form, session);
-            return publishCarFormView(session);
+            return publishCarFormView(session, form);
         }
 
         if (!multipartGalleryMediaValidation.validateGalleryMediaUploadsAreAllowed(uploads, errors, "pictures")) {
-            pictureStash.trySyncFromForm(form, session, errors);
+            syncPicturesFromPublishForm(form, session, errors);
             insuranceStash.trySyncFromForm(form, session);
-            return publishCarFormView(session);
+            return publishCarFormView(session, form);
         }
         if (!multipartGalleryMediaValidation.validateGalleryMediaUploadsWithinMaxSize(uploads, errors)) {
-            pictureStash.trySyncFromForm(form, session, errors);
+            syncPicturesFromPublishForm(form, session, errors);
             insuranceStash.trySyncFromForm(form, session);
-            return publishCarFormView(session);
+            return publishCarFormView(session, form);
         }
 
         // Optional insurance file: presence is optional, but when supplied the size constraint is
@@ -418,8 +418,8 @@ public final class PublishCarFormController {
                     e.getMessageCode(),
                     e.getMessageArgs(),
                     localeMessages.msg(e));
-            pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(session);
+            syncPicturesFromPublishForm(form, session, errors);
+            return publishCarFormView(session, form);
         } catch (final RydenException e) {
             // Typed domain failures (e.g. ImageValidationException) get repainted on the form with
             // their specific i18n message so the user sees what to fix without losing the stash.
@@ -433,8 +433,8 @@ public final class PublishCarFormController {
                     .setCause(e)
                     .log();
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            pictureStash.trySyncFromForm(form, session, errors);
-            return publishCarFormView(session);
+            syncPicturesFromPublishForm(form, session, errors);
+            return publishCarFormView(session, form);
         } catch (final IOException e) {
             // Reading the freshly uploaded insurance file or its stashed copy failed.
             // Repaint the form with the same generic "upload read" message used elsewhere
@@ -442,19 +442,38 @@ public final class PublishCarFormController {
             errors.reject(
                     MessageKeys.PUBLISH_IMAGES_READ,
                     localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
-            pictureStash.trySyncFromForm(form, session, errors);
+            syncPicturesFromPublishForm(form, session, errors);
             insuranceStash.trySyncFromForm(form, session);
-            return publishCarFormView(session);
+            return publishCarFormView(session, form);
+        }
+    }
+
+    private void syncPicturesFromPublishForm(
+            final PublishCarForm form,
+            final HttpSession session,
+            final BindingResult errors) {
+        pictureStash.trySyncFromForm(form, session, errors);
+        if (PublishCarPictureSessionStash.countNonEmptyMultipart(form.getPictures()) == 0) {
+            pictureStash.applyCoverFromForm(form, session);
         }
     }
 
     private ModelAndView publishCarFormView(final HttpSession session) {
+        return publishCarFormView(session, null);
+    }
+
+    private ModelAndView publishCarFormView(final HttpSession session, final PublishCarForm form) {
         final ModelAndView mav = new ModelAndView("car/publishCarForm");
         mav.addObject("activeTab", "publish-car");
         final List<String> stashedTokens = pictureStash.getStashedTokens(session);
         mav.addObject("retainedPictureTokens", stashedTokens);
         mav.addObject("retainedPictures", pictureStash.getStashedRetainedImages(session));
         mav.addObject("publishPicturesClientRequired", stashedTokens.isEmpty());
+        final int coverIndex = pictureStash.getCoverPictureIndex(session);
+        mav.addObject("coverPictureIndex", coverIndex);
+        if (form != null) {
+            form.setCoverPictureIndex(coverIndex);
+        }
         final PublishCarRetainedInsurance retainedInsurance = insuranceStash.getOrNull(session);
         if (retainedInsurance != null) {
             mav.addObject("retainedInsuranceFilename", retainedInsurance.filename());

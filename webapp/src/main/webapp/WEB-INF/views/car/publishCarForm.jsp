@@ -8,6 +8,7 @@
 <html>
 <head>
     <%@include file="../header.jsp" %>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/publish-car-gallery.css"/>
 </head>
 <body class="has-fixed-navbar">
 <ryden:navbar/>
@@ -394,7 +395,18 @@
                         <spring:message code="validation.carGallery.videoTooLarge" arguments="${uploadMaxGalleryVideoMegabytes}" var="publishVideoTooLargeMsg" htmlEscape="true"/>
                         <spring:message code="validation.pictures.mustBeGalleryMedia" var="publishMustBeGalleryMediaMsg" htmlEscape="true"/>
                         <spring:message code="publishCar.form.removeImage" var="removeImageLabel"/>
-                        <div class="mb-4">
+                        <spring:message code="publishCar.form.cover.badge" var="coverBadgeLabel"/>
+                        <spring:message code="publishCar.form.cover.set" var="coverSetLabel"/>
+                        <spring:message code="publishCar.form.cover.tooltip" var="coverTooltipLabel"/>
+                        <spring:message code="publishCar.form.cover.changed" var="coverChangedLabel"/>
+                        <c:set var="initialCoverIndex" value="${empty coverPictureIndex ? 0 : coverPictureIndex}"/>
+                        <div class="mb-4" id="publishPicturesSection"
+                             data-cover-badge="<c:out value='${coverBadgeLabel}'/>"
+                             data-cover-set="<c:out value='${coverSetLabel}'/>"
+                             data-cover-tooltip="<c:out value='${coverTooltipLabel}'/>"
+                             data-cover-changed="<c:out value='${coverChangedLabel}'/>"
+                             data-initial-cover-index="<c:out value='${initialCoverIndex}'/>">
+                            <form:hidden path="coverPictureIndex" id="publishCoverPictureIndex"/>
                             <span class="form-label required-label d-block"><spring:message code="publishCar.form.pictures"/></span>
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
                                 <input id="picturesInput" type="file" name="pictures" class="visually-hidden"
@@ -407,23 +419,26 @@
                                        data-upload-not-image-msg="<c:out value='${publishMustBeGalleryMediaMsg}'/>"/>
                                 <label id="picturesChooseLabel" for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
                             </div>
-                            <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint" arguments="${uploadMaxImageMegabytes}, ${uploadMaxGalleryVideoMegabytes}"/></small>
+                            <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint"/></small>
                             <c:if test="${not empty retainedPictures}">
                                 <div id="publishRetainedPictures" class="row g-2 mt-2">
-                                    <c:forEach var="rp" items="${retainedPictures}">
-                                        <div class="col-6 col-md-4" data-retained-picture-col>
-                                            <div class="border rounded p-2 position-relative">
+                                    <c:forEach var="rp" items="${retainedPictures}" varStatus="rpStatus">
+                                        <c:set var="rpIsVideo" value="${fn:startsWith(rp.contentType(), 'video/')}"/>
+                                        <c:set var="rpIsCover" value="${not rpIsVideo and rpStatus.index eq initialCoverIndex}"/>
+                                        <div class="col-6 col-md-4" data-retained-picture-col data-gallery-item
+                                             data-gallery-index="${rpStatus.index}"
+                                             data-is-image="${not rpIsVideo}"
+                                             data-stash-token="<c:out value='${rp.stashToken()}'/>">
+                                            <div class="publish-gallery-item border rounded p-2 position-relative${rpIsCover ? ' publish-gallery-item--cover' : ''}">
                                                 <c:choose>
-                                                    <c:when test="${fn:startsWith(rp.contentType(), 'video/')}">
-                                                        <video class="img-fluid rounded w-100"
-                                                               style="height:130px;object-fit:cover"
+                                                    <c:when test="${rpIsVideo}">
+                                                        <video class="img-fluid rounded w-100 publish-gallery-media"
                                                                muted playsinline preload="metadata"
                                                                src="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}"></video>
                                                         <span class="position-absolute top-50 start-50 translate-middle text-white fs-2" aria-hidden="true"><i class="bi bi-play-circle"></i></span>
                                                     </c:when>
                                                     <c:otherwise>
-                                                        <img class="img-fluid rounded"
-                                                             style="height:130px;object-fit:cover;width:100%"
+                                                        <img class="img-fluid rounded publish-gallery-media"
                                                              alt=""
                                                              src="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}"/>
                                                     </c:otherwise>
@@ -439,6 +454,7 @@
                             </c:if>
                             <div id="publishPicturesClientError" class="alert alert-danger d-none mt-2 py-2 small" role="alert"></div>
                             <form:errors path="pictures" cssClass="text-danger d-block"/>
+                            <div id="publishCoverConfirm" class="publish-gallery-cover-confirm d-none mt-2 py-2 small" role="status" aria-live="polite"></div>
                             <div id="picturesPreview" class="row g-2 mt-2"></div>
                         </div>
 

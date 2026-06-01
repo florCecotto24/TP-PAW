@@ -434,7 +434,7 @@
     document.addEventListener('DOMContentLoaded', initCarDetailGalleryModal);
 })();
 
-/* Publish car form: early image validation (red message, no alert) + submission */
+/* Publish car form: gallery validation, cover photo selection, submission */
 (function () {
     function rydenParseMaxImageBytes(inputEl) {
         if (!inputEl) {
@@ -469,6 +469,21 @@
     var errEl = document.getElementById("publishPicturesClientError");
     var labelEl = document.getElementById("picturesChooseLabel");
     var requiredMsg = (input && input.getAttribute("data-publish-pictures-required")) || "";
+    var picturesSection = document.getElementById("publishPicturesSection");
+    var coverHidden = document.getElementById("publishCoverPictureIndex");
+    var coverConfirmEl = document.getElementById("publishCoverConfirm");
+    var coverBadgeText = picturesSection ? (picturesSection.getAttribute("data-cover-badge") || "") : "";
+    var coverSetText = picturesSection ? (picturesSection.getAttribute("data-cover-set") || "") : "";
+    var coverTooltipText = picturesSection ? (picturesSection.getAttribute("data-cover-tooltip") || "") : "";
+    var coverChangedText = picturesSection ? (picturesSection.getAttribute("data-cover-changed") || "") : "";
+
+    var coverIndex = 0;
+    if (picturesSection) {
+        var parsedCover = parseInt(picturesSection.getAttribute("data-initial-cover-index") || "0", 10);
+        if (!isNaN(parsedCover) && parsedCover >= 0) {
+            coverIndex = parsedCover;
+        }
+    }
 
     function hidePublishPicturesClientError() {
         if (errEl) {
@@ -517,6 +532,10 @@
         return t === "video/mp4" || t === "video/webm" || t === "video/quicktime";
     }
 
+    function isImageFile(file) {
+        return (file.type || "").toLowerCase().indexOf("image/") === 0;
+    }
+
     function validatePublishPictureFiles(files) {
         if (!files || files.length === 0) {
             return requiredMsg || "";
@@ -548,6 +567,212 @@
 
     var selectedFiles = [];
 
+    function getGalleryRoot() {
+        if (selectedFiles.length > 0 && preview) {
+            return preview;
+        }
+        return retainedBlock;
+    }
+
+    function getGalleryCols(root) {
+        if (!root) {
+            return [];
+        }
+        return Array.prototype.slice.call(root.querySelectorAll("[data-gallery-item]"));
+    }
+
+    function syncCoverHidden() {
+        if (coverHidden) {
+            coverHidden.value = String(coverIndex);
+        }
+    }
+
+    function defaultCoverIndex() {
+        var cols = getGalleryCols(getGalleryRoot());
+        var i;
+        for (i = 0; i < cols.length; i++) {
+            if (cols[i].getAttribute("data-is-image") === "true") {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    function ensureCoverIndex() {
+        var cols = getGalleryCols(getGalleryRoot());
+        if (cols.length === 0) {
+            coverIndex = 0;
+            syncCoverHidden();
+            return;
+        }
+        var valid = coverIndex >= 0 && coverIndex < cols.length
+            && cols[coverIndex].getAttribute("data-is-image") === "true";
+        if (!valid) {
+            coverIndex = defaultCoverIndex();
+        }
+        syncCoverHidden();
+    }
+
+    function showCoverConfirm() {
+        if (!coverConfirmEl || !coverChangedText) {
+            return;
+        }
+        coverConfirmEl.textContent = coverChangedText;
+        coverConfirmEl.classList.remove("d-none");
+    }
+
+    function hideCoverConfirm() {
+        if (coverConfirmEl) {
+            coverConfirmEl.classList.add("d-none");
+        }
+    }
+
+    function galleryHasAnyItems() {
+        if (selectedFiles.length > 0) {
+            return true;
+        }
+        return retainedBlock && retainedBlock.querySelectorAll("[data-retained-picture-col]").length > 0;
+    }
+
+    function initCoverPhotoClickDelegation() {
+        if (!picturesSection || picturesSection.getAttribute("data-cover-click-bound")) {
+            return;
+        }
+        picturesSection.setAttribute("data-cover-click-bound", "true");
+        picturesSection.addEventListener("click", function (ev) {
+            if (ev.target.closest(".btn-danger, .ryden-publish-remove-retained-btn")) {
+                return;
+            }
+            var col = ev.target.closest('[data-gallery-item][data-is-image="true"]');
+            if (!col) {
+                return;
+            }
+            var card = col.querySelector(".publish-gallery-item");
+            if (!card || card.classList.contains("publish-gallery-item--cover")) {
+                return;
+            }
+            var idx = parseInt(col.getAttribute("data-gallery-index"), 10);
+            if (!isNaN(idx)) {
+                setCover(idx, true);
+            }
+        });
+        picturesSection.addEventListener("keydown", function (ev) {
+            if (ev.key !== "Enter" && ev.key !== " ") {
+                return;
+            }
+            var card = ev.target.closest(".publish-gallery-item:not(.publish-gallery-item--cover)");
+            if (!card) {
+                return;
+            }
+            var col = card.closest('[data-gallery-item][data-is-image="true"]');
+            if (!col) {
+                return;
+            }
+            ev.preventDefault();
+            var idx = parseInt(col.getAttribute("data-gallery-index"), 10);
+            if (!isNaN(idx)) {
+                setCover(idx, true);
+            }
+        });
+    }
+
+    function setCover(index, showConfirm) {
+        var cols = getGalleryCols(getGalleryRoot());
+        if (index < 0 || index >= cols.length) {
+            return;
+        }
+        if (cols[index].getAttribute("data-is-image") !== "true") {
+            return;
+        }
+        if (index === coverIndex) {
+            return;
+        }
+        coverIndex = index;
+        applyCoverStyles();
+        if (showConfirm) {
+            showCoverConfirm();
+        }
+    }
+
+    function applyCoverStyles() {
+        var root = getGalleryRoot();
+        var cols = getGalleryCols(root);
+        var idx;
+        for (idx = 0; idx < cols.length; idx++) {
+            var col = cols[idx];
+            var card = col.querySelector(".publish-gallery-item");
+            if (!card) {
+                continue;
+            }
+            var isImage = col.getAttribute("data-is-image") === "true";
+            var isCover = isImage && idx === coverIndex;
+            col.setAttribute("data-gallery-index", String(idx));
+            card.classList.toggle("publish-gallery-item--cover", isCover);
+            if (isImage && !isCover) {
+                card.setAttribute("tabindex", "0");
+                card.setAttribute("role", "button");
+                card.setAttribute("aria-label", coverSetText);
+            } else {
+                card.removeAttribute("tabindex");
+                card.removeAttribute("role");
+                card.removeAttribute("aria-label");
+            }
+
+            var existingBadge = card.querySelector(".publish-gallery-cover-badge");
+            var existingOverlay = card.querySelector(".publish-gallery-cover-overlay");
+            if (existingBadge) {
+                existingBadge.remove();
+            }
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            if (isCover) {
+                var badge = document.createElement("span");
+                badge.className = "publish-gallery-cover-badge";
+                badge.title = coverTooltipText;
+                badge.innerHTML = '<i class="bi bi-star-fill" aria-hidden="true"></i> ' + coverBadgeText;
+                card.appendChild(badge);
+            } else if (isImage) {
+                var overlay = document.createElement("div");
+                overlay.className = "publish-gallery-cover-overlay";
+                overlay.setAttribute("aria-hidden", "true");
+                var setBtn = document.createElement("span");
+                setBtn.className = "btn btn-light btn-sm publish-gallery-cover-set-btn";
+                setBtn.textContent = coverSetText;
+                overlay.appendChild(setBtn);
+                card.appendChild(overlay);
+            }
+        }
+        syncCoverHidden();
+    }
+
+    function reorderGalleryForSubmit() {
+        if (selectedFiles.length > 0) {
+            if (coverIndex > 0 && coverIndex < selectedFiles.length) {
+                var coverFile = selectedFiles[coverIndex];
+                selectedFiles.splice(coverIndex, 1);
+                selectedFiles.unshift(coverFile);
+            }
+            coverIndex = 0;
+            var dt = new DataTransfer();
+            selectedFiles.forEach(function (f) {
+                dt.items.add(f);
+            });
+            input.files = dt.files;
+            return;
+        }
+        if (retainedBlock) {
+            var cols = getGalleryCols(retainedBlock);
+            if (coverIndex > 0 && coverIndex < cols.length) {
+                var coverCol = cols[coverIndex];
+                retainedBlock.insertBefore(coverCol, retainedBlock.firstElementChild);
+            }
+            coverIndex = 0;
+            applyCoverStyles();
+        }
+    }
+
     function renderPreview() {
         preview.innerHTML = "";
         if (retainedBlock) {
@@ -559,10 +784,17 @@
         }
 
         var dt = new DataTransfer();
-        selectedFiles.forEach(function(f) { dt.items.add(f); });
+        selectedFiles.forEach(function (f) {
+            dt.items.add(f);
+        });
         input.files = dt.files;
 
         if (selectedFiles.length === 0) {
+            if (!galleryHasAnyItems()) {
+                hideCoverConfirm();
+            }
+            ensureCoverIndex();
+            applyCoverStyles();
             return;
         }
 
@@ -578,17 +810,18 @@
         selectedFiles.forEach(function (file, index) {
             var col = document.createElement("div");
             col.className = "col-6 col-md-4";
+            col.setAttribute("data-gallery-item", "");
+            col.setAttribute("data-gallery-index", String(index));
+            col.setAttribute("data-is-image", isImageFile(file) ? "true" : "false");
 
             var card = document.createElement("div");
-            card.className = "border rounded p-2 position-relative";
+            card.className = "publish-gallery-item border rounded p-2 position-relative";
 
             var isVideo = (file.type || "").toLowerCase().indexOf("video/") === 0;
             var mediaEl;
             if (isVideo) {
                 mediaEl = document.createElement("video");
-                mediaEl.className = "img-fluid rounded w-100";
-                mediaEl.style.height = "130px";
-                mediaEl.style.objectFit = "cover";
+                mediaEl.className = "img-fluid rounded w-100 publish-gallery-media";
                 mediaEl.muted = true;
                 mediaEl.playsInline = true;
                 mediaEl.preload = "metadata";
@@ -599,16 +832,9 @@
                 card.appendChild(playOverlay);
             } else {
                 mediaEl = document.createElement("img");
-                mediaEl.className = "img-fluid rounded";
-                mediaEl.style.height = "130px";
-                mediaEl.style.objectFit = "cover";
-                mediaEl.style.width = "100%";
+                mediaEl.className = "img-fluid rounded publish-gallery-media";
             }
             mediaEl.alt = file.name;
-
-            var name = document.createElement("small");
-            name.className = "d-block text-truncate mt-1";
-            name.textContent = file.name;
 
             var removeBtn = document.createElement("button");
             removeBtn.type = "button";
@@ -616,83 +842,113 @@
             removeBtn.setAttribute("aria-label", "Remove file");
             removeBtn.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
 
-            removeBtn.addEventListener("click", function() {
-                selectedFiles.splice(index, 1);
+            removeBtn.addEventListener("click", function () {
+                var idx = parseInt(col.getAttribute("data-gallery-index"), 10);
+                if (!isNaN(idx)) {
+                    selectedFiles.splice(idx, 1);
+                    if (coverIndex === idx) {
+                        coverIndex = -1;
+                    } else if (coverIndex > idx) {
+                        coverIndex--;
+                    }
+                }
                 renderPreview();
             });
 
             card.appendChild(mediaEl);
-            card.appendChild(name);
             card.appendChild(removeBtn);
             col.appendChild(card);
             preview.appendChild(col);
 
             var reader = new FileReader();
             reader.onload = function (e) {
-                if (isVideo) {
-                    mediaEl.src = e.target.result;
-                } else {
-                    mediaEl.src = e.target.result;
-                }
+                mediaEl.src = e.target.result;
             };
             reader.readAsDataURL(file);
         });
+
+        ensureCoverIndex();
+        applyCoverStyles();
     }
 
     if (input && preview) {
         input.addEventListener("change", function (event) {
             hidePublishPicturesClientError();
             var newFiles = event.target.files;
+            var hadItems = selectedFiles.length > 0;
 
             if (newFiles && newFiles.length > 0) {
-                for (var i = 0; i < newFiles.length; i++) {
+                var ni;
+                for (ni = 0; ni < newFiles.length; ni++) {
                     var isDuplicate = false;
-                    for (var j = 0; j < selectedFiles.length; j++) {
-                        if (selectedFiles[j].name === newFiles[i].name && selectedFiles[j].size === newFiles[i].size) {
+                    var dj;
+                    for (dj = 0; dj < selectedFiles.length; dj++) {
+                        if (selectedFiles[dj].name === newFiles[ni].name
+                            && selectedFiles[dj].size === newFiles[ni].size) {
                             isDuplicate = true;
                             break;
                         }
                     }
                     if (!isDuplicate) {
-                        selectedFiles.push(newFiles[i]);
+                        selectedFiles.push(newFiles[ni]);
                     }
                 }
             }
+            if (!hadItems && selectedFiles.length > 0) {
+                coverIndex = defaultCoverIndex();
+            }
             renderPreview();
+            if (!hadItems && selectedFiles.length > 0) {
+                showCoverConfirm();
+            }
         });
     }
 
     if (retainedBlock) {
-        var btnNodes = retainedBlock.querySelectorAll('.ryden-publish-remove-retained-btn');
-        for (var i = 0; i < btnNodes.length; i++) {
-            btnNodes[i].addEventListener('click', function(e) {
+        var btnNodes = retainedBlock.querySelectorAll(".ryden-publish-remove-retained-btn");
+        var ri;
+        for (ri = 0; ri < btnNodes.length; ri++) {
+            btnNodes[ri].addEventListener("click", function (e) {
                 e.preventDefault();
                 var btn = e.currentTarget;
-                var url = btn.getAttribute('data-remove-url');
-                var col = btn.closest('[data-retained-picture-col]');
+                var url = btn.getAttribute("data-remove-url");
+                var col = btn.closest("[data-retained-picture-col]");
 
                 var csrfInput = form ? form.querySelector('input[name="_csrf"]') : null;
                 var formData = new URLSearchParams();
                 if (csrfInput) {
-                    formData.append('_csrf', csrfInput.value);
+                    formData.append("_csrf", csrfInput.value);
                 }
 
                 if (url && col) {
+                    var removedIdx = parseInt(col.getAttribute("data-gallery-index"), 10);
                     btn.disabled = true;
                     fetch(url, {
-                        method: 'POST',
+                        method: "POST",
                         body: formData
-                    }).then(function(res) {
+                    }).then(function (res) {
                         if (res.ok) {
                             col.remove();
-                            // If it's the last one, hide the container.
-                            if (retainedBlock.querySelectorAll('[data-retained-picture-col]').length === 0) {
+                            if (!isNaN(removedIdx)) {
+                                if (coverIndex === removedIdx) {
+                                    coverIndex = -1;
+                                } else if (coverIndex > removedIdx) {
+                                    coverIndex--;
+                                }
+                            }
+                            if (retainedBlock.querySelectorAll("[data-retained-picture-col]").length === 0) {
                                 retainedBlock.classList.add("d-none");
+                                if (!galleryHasAnyItems()) {
+                                    hideCoverConfirm();
+                                }
+                            } else {
+                                ensureCoverIndex();
+                                applyCoverStyles();
                             }
                         } else {
                             btn.disabled = false;
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         btn.disabled = false;
                     });
                 }
@@ -700,11 +956,21 @@
         }
     }
 
+    initCoverPhotoClickDelegation();
+
+    if (retainedBlock && selectedFiles.length === 0) {
+        ensureCoverIndex();
+        applyCoverStyles();
+        if (galleryHasAnyItems()) {
+            showCoverConfirm();
+        }
+    }
+
     function publishCarRetainedPictureDomCount() {
         if (!retainedBlock) {
             return 0;
         }
-        return retainedBlock.querySelectorAll('[data-retained-picture-col]').length;
+        return retainedBlock.querySelectorAll("[data-retained-picture-col]").length;
     }
 
     if (form && submitBtn) {
@@ -715,6 +981,7 @@
             if (e.defaultPrevented) {
                 return;
             }
+            reorderGalleryForSubmit();
             if (input) {
                 var retainedAttr = 0;
                 if (form && form.getAttribute) {

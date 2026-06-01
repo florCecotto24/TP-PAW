@@ -58,6 +58,9 @@ public final class PublishCarForm {
     @Size(max = 8, message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
 
+    /** 0-based index in the gallery at submit time; normalized server-side to the first eligible image. */
+    private Integer coverPictureIndex;
+
     /**
      * Optional insurance document; if missing, the car is created in {@link Car.Status#LACK_DOC}.
      * {@link MaxFileSize} resolves the upper bound at runtime via the
@@ -148,6 +151,14 @@ public final class PublishCarForm {
 
     public void setPictures(final MultipartFile[] pictures) {
         this.pictures = pictures;
+    }
+
+    public Integer getCoverPictureIndex() {
+        return coverPictureIndex;
+    }
+
+    public void setCoverPictureIndex(final Integer coverPictureIndex) {
+        this.coverPictureIndex = coverPictureIndex;
     }
 
     public String getDescription() {
