@@ -113,7 +113,7 @@
                             <div class="card-body p-4">
                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                     <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarDetail.availability.title"/></h2>
-                                    <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
+                                    <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED' && !owner.blocked}">
                                         <c:url var="createPeriodUrl" value="/my-cars/car/${car.id}/create"/>
                                         <a href="<c:out value='${createPeriodUrl}'/>" class="btn btn-outline-primary btn-sm">
                                             <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -138,7 +138,7 @@
                                                             <fmt:setLocale value="es_AR"/>
                                                             <span class="text-secondary small text-nowrap"><fmt:formatNumber value="${availability.dayPriceValue}" type="currency" currencyCode="ARS"/></span>
                                                         </c:if>
-                                                        <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED'}">
+                                                        <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED' && !owner.blocked}">
                                                             <c:url var="editAvailabilityUrl" value="/my-cars/car/${car.id}/availability/${availability.id}/edit"/>
                                                             <a href="<c:out value='${editAvailabilityUrl}'/>" class="btn btn-sm btn-outline-secondary"
                                                                aria-label="<spring:message code='myCarDetail.availability.edit.aria'/>">
@@ -192,6 +192,13 @@
                                             <spring:message code="myCarDetail.status.label"/>
                                         </span>
                                         <c:choose>
+                                            <%-- Owner-blocked (e.g. refund-proof deadline missed) supersedes ACTIVE/PAUSED/LACK_DOC
+                                                 in the sidebar so the owner immediately sees why the car is no longer bookable. --%>
+                                            <c:when test="${owner.blocked and statusKey ne 'DEACTIVATED' and statusKey ne 'ADMIN_PAUSED'}">
+                                                <span class="badge text-bg-danger w-100 py-2 text-wrap" style="font-size:.8rem; white-space: normal;">
+                                                    <spring:message code="myCars.badge.ownerBlocked"/>
+                                                </span>
+                                            </c:when>
                                             <c:when test="${statusKey == 'ACTIVE'}">
                                                 <span class="badge text-bg-success w-100 py-2 text-wrap fs-6" style="white-space: normal;"><c:out value="${carStatusLabel}"/></span>
                                             </c:when>
@@ -254,6 +261,17 @@
                                         </div>
 
                                         <c:choose>
+                                            <%-- Owner-blocked: hide resume/pause toggles (the service would reject them anyway,
+                                                 see CarServiceImpl#toggleListing CAR_ACTIVATE_OWNER_BLOCKED). Keep "finish/deactivate"
+                                                 since deactivating an unbookable car is always safe. --%>
+                                            <c:when test="${owner.blocked and statusKey ne 'DEACTIVATED' and statusKey ne 'ADMIN_PAUSED'}">
+                                                <p class="text-secondary small mb-2">
+                                                    <spring:message code="myCarDetail.status.ownerBlockedHint"/>
+                                                </p>
+                                                <button type="button" class="btn btn-outline-danger w-100" data-modal-open="finishListingModal" aria-label="<c:out value='${finishBtnLabel}'/>">
+                                                    <i class="bi bi-x-circle me-2"></i><c:out value="${finishBtnLabel}"/>
+                                                </button>
+                                            </c:when>
                                             <c:when test="${statusKey == 'ACTIVE'}">
                                                 <button type="button" class="btn btn-pause w-100" data-modal-open="pauseListingModal" aria-label="<c:out value='${pauseBtnLabel}'/>">
                                                     <i class="bi bi-pause-fill me-2"></i><c:out value="${pauseBtnLabel}"/>

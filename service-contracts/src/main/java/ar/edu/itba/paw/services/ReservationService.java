@@ -214,4 +214,25 @@ public interface ReservationService {
 
     /** Admin-only: paginated list of every reservation in the system as display cards. */
     Page<ReservationCard> findAllReservationCards(int page, int pageSize);
+
+    /**
+     * Identifiers of reservations whose refund-proof deadline has lapsed for {@code ownerUserId} (no receipt yet).
+     * Used by the navbar blocked-account banner to deep-link the CTA at the single reservation when only one
+     * is pending. Ordered by deadline ascending (most overdue first).
+     */
+    List<Long> findOverdueRefundProofReservationIdsForOwner(long ownerUserId);
+
+    /**
+     * Reservation ids belonging to {@code ownerUserId} that still require a refund proof upload (no receipt
+     * yet), independently of whether the deadline has lapsed. Used by owner-side hub views to render a
+     * per-reservation "you must upload a refund receipt" badge.
+     */
+    java.util.Set<Long> findOwnerReservationIdsRequiringRefundProof(long ownerUserId);
+
+    /**
+     * Car ids of {@code ownerUserId} that have at least one reservation still requiring a refund proof.
+     * Used by the {@code /my-cars} grid to surface a per-car "you have a reservation requiring a refund
+     * receipt" badge regardless of whether the owner is already blocked.
+     */
+    java.util.Set<Long> findOwnerCarIdsWithReservationRequiringRefundProof(long ownerUserId);
 }

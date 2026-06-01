@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.security.auth.userdetails;
 
 import java.util.List;
 
-import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,9 +26,12 @@ public final class RydenUserDetailsService implements UserDetailsService {
         if (!Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
             throw new UsernameNotFoundException("Email not validated");
         }
-        if (user.isBlocked()) {
-            throw new DisabledException("Account is blocked");
-        }
+        // NOTE: blocked users are intentionally allowed to authenticate so that owners blocked by the
+        // overdue-refund-proof sweep can still log in, see the dashboard banner, and upload the missing
+        // refund receipts (which auto-unblocks them, see ReservationServiceImpl#unblockOwnerIfNoMore...).
+        // Defense-in-depth: every owner-side mutation that could re-introduce bookability is guarded at
+        // the service layer (publishCar, createCarAvailabilityPeriods, applyOwnerEditByCar, uploadValidatedCarInsuranceDocument)
+        // and "GET /publish-car" redirects blocked owners away from the publish form.
         final String hash = user.getPasswordHash()
                 .filter(h -> !h.isBlank())
                 .orElseThrow(() -> new UsernameNotFoundException("User has no password"));

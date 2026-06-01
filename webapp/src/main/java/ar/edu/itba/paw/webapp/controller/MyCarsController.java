@@ -162,6 +162,11 @@ public final class MyCarsController {
         mav.addObject("myListingsPage", resultPage);
         mav.addObject("activeTab", "my-cars");
         mav.addObject("listingsCurrentSort", listingsSort);
+        mav.addObject("currentUserBlocked", me.isBlocked());
+        // Per-car badge "you have a reservation requiring a refund receipt": independent of whether the
+        // owner is already blocked, so it surfaces the obligation even before the deadline expires.
+        mav.addObject("pendingRefundCarIds",
+                reservationService.findOwnerCarIdsWithReservationRequiringRefundProof(me.getId()));
         return mav;
     }
 
@@ -242,6 +247,10 @@ public final class MyCarsController {
         final ModelAndView mav = new ModelAndView("reservation/ownerReservations");
         pageModel.populateModel(mav::addObject);
         mav.addObject("activeTab", "owner-reservations");
+        // Per-reservation badge "you must upload a refund receipt for this reservation": same condition
+        // as the per-car badge in /my-cars but indexed by reservation id for the cards on this page.
+        mav.addObject("pendingRefundReservationIds",
+                reservationService.findOwnerReservationIdsRequiringRefundProof(me.getId()));
         return mav;
     }
 

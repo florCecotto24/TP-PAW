@@ -639,6 +639,49 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
+    public List<Reservation> findReservationsRequiringRefundProofForOwner(final long ownerUserId) {
+        // Entity-shaped JPQL. NO deadline filter on purpose: callers want to surface a "you must upload
+        // a refund receipt" badge even before the deadline expires (the owner-blocked state is a separate,
+        // stricter check). JOIN FETCH r.car so callers can read r.getCar().getId() in the streaming map
+        // without a per-row lazy load. Ordered by deadline ascending so callers can prioritise the most
+        // urgent ones if they need a single one.
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "JOIN FETCH r.car c "
+                                + "WHERE c.owner.id = :ownerUserId "
+                                + "AND r.paymentRefundRequired = TRUE "
+                                + "AND r.paymentRefundReceiptFile IS NULL "
+                                + "AND r.status IN :cancelledStatuses "
+                                + "ORDER BY r.refundProofDeadlineAt ASC",
+                        Reservation.class)
+                .setParameter("ownerUserId", ownerUserId)
+                .setParameter("cancelledStatuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
+                .getResultList();
+    }
+
+    @Override
+    public List<Reservation> findOverdueRefundProofReservationsForOwner(final long ownerUserId, final OffsetDateTime now) {
+        // Entity-shaped JPQL ("entities not tables" rule). Ordered by deadline so the first row is the
+        // most overdue one — the navbar banner advice uses that to deep-link the CTA when exactly one
+        // overdue refund proof is pending. No JOIN FETCH: callers only read the id (the @Transactional
+        // scope keeps Hibernate happy without forcing eager hydration of car/owner here).
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.car.owner.id = :ownerUserId "
+                                + "AND r.paymentRefundRequired = TRUE "
+                                + "AND r.paymentRefundReceiptFile IS NULL "
+                                + "AND r.refundProofDeadlineAt IS NOT NULL "
+                                + "AND r.refundProofDeadlineAt < :now "
+                                + "AND r.status IN :cancelledStatuses "
+                                + "ORDER BY r.refundProofDeadlineAt ASC",
+                        Reservation.class)
+                .setParameter("ownerUserId", ownerUserId)
+                .setParameter("now", now)
+                .setParameter("cancelledStatuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
+                .getResultList();
+    }
+
+    @Override
     public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
         final Number total = (Number) em.createQuery("SELECT COUNT(r) FROM Reservation r").getSingleResult();
         final String idSql = "SELECT r.id FROM reservations r ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset";

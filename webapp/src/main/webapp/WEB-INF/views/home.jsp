@@ -25,23 +25,21 @@
             </div>
 
 
-            <div class="sticky-top w-100 pt-2 pb-3" style="top: 55px; z-index: 1020; background-color: var(--color-bg, #FAF9F7);">
-                <c:url var="homeSearchFiltersClearHref" value="/"/>
-                <c:set var="hasActiveSearchFilters"
-                       value="${not empty param.query or not empty param.from or not empty param.until or not empty searchSanitizedNeighborhoodIds or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
-                <ryden:searchWithFilters
-                        formId="homeSearchForm"
-                        formClass="search-menu w-100"
-                        actionPath="/search"
-                        showFilters="true"
-                        allowFlexibleSearch="true"
-                        autoSubmitOnFilterChange="false"
-                        clearFiltersHref="${homeSearchFiltersClearHref}"
-                        showClearFilters="${hasActiveSearchFilters}"
-                        categoryFilterOptions="${categoryFilterOptions}"
-                        transmissionFilterOptions="${transmissionFilterOptions}"
-                        powertrainFilterOptions="${powertrainFilterOptions}"/>
-            </div>
+            <c:url var="homeSearchFiltersClearHref" value="/"/>
+            <c:set var="hasActiveSearchFilters"
+                   value="${not empty param.query or not empty param.from or not empty param.until or not empty searchSanitizedNeighborhoodIds or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
+            <ryden:searchWithFilters
+                    formId="homeSearchForm"
+                    formClass="search-menu sticky-top w-100"
+                    actionPath="/search"
+                    showFilters="true"
+                    allowFlexibleSearch="true"
+                    autoSubmitOnFilterChange="false"
+                    clearFiltersHref="${homeSearchFiltersClearHref}"
+                    showClearFilters="${hasActiveSearchFilters}"
+                    categoryFilterOptions="${categoryFilterOptions}"
+                    transmissionFilterOptions="${transmissionFilterOptions}"
+                    powertrainFilterOptions="${powertrainFilterOptions}"/>
 
 
             <div class="container mt-5">

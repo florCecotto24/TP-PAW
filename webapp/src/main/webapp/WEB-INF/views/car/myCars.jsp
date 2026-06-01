@@ -160,6 +160,13 @@
                                             <i class="bi bi-clock me-1"></i><spring:message code="myCars.modelPendingValidation.badge"/>
                                         </span>
                                     </c:when>
+                                    <%-- Owner-blocked overrides any owner-controlled status (ACTIVE/PAUSED/LACK_DOC/UNAVAILABLE)
+                                         to make it obvious why the car is no longer bookable. Terminal/admin states keep their badge. --%>
+                                    <c:when test="${currentUserBlocked and car.statusKey ne 'DEACTIVATED' and car.statusKey ne 'ADMIN_PAUSED'}">
+                                        <span class="position-absolute top-0 end-0 m-3" style="background-color:#b91c1c; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                            <i class="bi bi-shield-exclamation me-1"></i><spring:message code="myCars.badge.ownerBlocked"/>
+                                        </span>
+                                    </c:when>
                                     <c:when test="${car.hasListing}">
                                         <c:choose>
                                             <c:when test="${car.statusKey == 'ACTIVE'}">
@@ -224,6 +231,16 @@
                                         </c:choose>
                                     </c:otherwise>
                                 </c:choose>
+                                <%-- "Refund proof pending" notice: stacked vertically right under the status badge,
+                                     right-aligned with it (same right edge). Uses an explicit top offset (2.75rem)
+                                     so it clears the ~1.5rem-tall status badge plus its m-3 (1rem) top margin. --%>
+                                <c:if test="${not empty pendingRefundCarIds and pendingRefundCarIds.contains(car.carId)}">
+                                    <span class="position-absolute end-0 me-3 d-inline-flex align-items-center gap-2 text-end small fw-semibold"
+                                          style="top: 2.75rem; max-width: 55%; background-color:#b91c1c; color:#ffffff; padding:.4rem .75rem; border-radius:.5rem; white-space:normal; word-break:break-word; line-height:1.25;">
+                                        <i class="bi bi-cash-coin flex-shrink-0" aria-hidden="true"></i>
+                                        <span><spring:message code="myCars.badge.refundProofPending"/></span>
+                                    </span>
+                                </c:if>
                                             <div class="row g-0 align-items-stretch">
                                                 <div class="col-12 col-md-3 reservation-card__media-wrap">
                                                     <c:choose>

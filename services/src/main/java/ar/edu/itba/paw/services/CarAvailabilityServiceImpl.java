@@ -48,6 +48,7 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     private final CarAvailabilityDao carAvailabilityDao;
     private final ReservationService reservationService;
     private final CarService carService;
+    private final UserService userService;
     private final ReservationTimingPolicy reservationTimingPolicy;
     private final CarAvailabilityPolicy carAvailabilityPolicy;
     private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
@@ -57,12 +58,14 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
             final CarAvailabilityDao carAvailabilityDao,
             @Lazy final ReservationService reservationService,
             @Lazy final CarService carService,
+            final UserService userService,
             final ReservationTimingPolicy reservationTimingPolicy,
             final CarAvailabilityPolicy carAvailabilityPolicy,
             final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter) {
         this.carAvailabilityDao = carAvailabilityDao;
         this.reservationService = reservationService;
         this.carService = carService;
+        this.userService = userService;
         this.reservationTimingPolicy = reservationTimingPolicy;
         this.carAvailabilityPolicy = carAvailabilityPolicy;
         this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
@@ -99,6 +102,9 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
             final List<AvailabilityPeriod> periods,
             final List<BigDecimal> periodPrices,
             final int minimumRentalDays) {
+        // Defense-in-depth: opening a new availability window makes the car bookable again. The UI hides
+        // the entry point for blocked owners (myCarDetail.jsp), but a direct POST must still be rejected.
+        requireOwnerOfCarNotBlocked(carId);
         if (carService.isModelPendingValidation(carId)) {
             throw new CarValidationException(MessageKeys.CAR_CREATE_MODEL_PENDING);
         }
@@ -245,6 +251,10 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
         if (newEndInclusive.isBefore(newStartInclusive)) {
             throw new IllegalArgumentException("newEndInclusive before newStartInclusive");
         }
+        // Defense-in-depth: an edit can extend a window or move it forward, which both re-introduce
+        // bookable days. applyOwnerWithdrawByCar is intentionally left unguarded — it only ever
+        // *reduces* bookability and is the safety valve that a blocked owner may need to use.
+        requireOwnerOfCarNotBlocked(carId);
 
         final List<DateRange> removed = subtractDayRange(oldStartInclusive, oldEndInclusive,
                 newStartInclusive, newEndInclusive);
@@ -603,6 +613,21 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     @Override
     public int getConfiguredMaxAvailabilityForwardWallDays() {
         return carAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
+    }
+
+    /**
+     * Throws {@link CarValidationException} with {@link MessageKeys#CAR_MUTATION_OWNER_BLOCKED} when the
+     * owner of {@code carId} is currently blocked. Used by mutations that could re-introduce a bookable car
+     * (create / edit availability). Reads the car through {@link CarService} and the owner through
+     * {@link UserService} to respect the "service may only call its own DAO" rule.
+     */
+    private void requireOwnerOfCarNotBlocked(final long carId) {
+        final long ownerId = carService.getCarById(carId)
+                .map(c -> c.getOwnerId())
+                .orElseThrow(() -> new CarValidationException(MessageKeys.CAR_NOT_FOUND));
+        if (userService.getUserById(ownerId).map(u -> u.isBlocked()).orElse(false)) {
+            throw new CarValidationException(MessageKeys.CAR_MUTATION_OWNER_BLOCKED);
+        }
     }
 
     private static final class DateRange {

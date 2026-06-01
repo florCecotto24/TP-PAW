@@ -1576,6 +1576,38 @@ public final class ReservationServiceImpl implements ReservationService {
         return reservationDao.findAllReservationCards(page, pageSize);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> findOverdueRefundProofReservationIdsForOwner(final long ownerUserId) {
+        // DAO returns entities to respect the "JPQL: entities not tables" rule; map to ids at the
+        // service boundary so the web layer (NavModelAdvice) does not depend on Reservation.
+        return reservationDao.findOverdueRefundProofReservationsForOwner(
+                        ownerUserId, OffsetDateTime.now(ZoneOffset.UTC))
+                .stream()
+                .map(Reservation::getId)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> findOwnerReservationIdsRequiringRefundProof(final long ownerUserId) {
+        return reservationDao.findReservationsRequiringRefundProofForOwner(ownerUserId)
+                .stream()
+                .map(Reservation::getId)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Set<Long> findOwnerCarIdsWithReservationRequiringRefundProof(final long ownerUserId) {
+        // r.getCar().getId() is safe inside this readOnly transaction (no extra round-trip: r.car is the FK
+        // already loaded with the reservation row).
+        return reservationDao.findReservationsRequiringRefundProofForOwner(ownerUserId)
+                .stream()
+                .map(r -> r.getCar().getId())
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
     private static String trimName(final String forename, final String surname) {
         final String f = forename == null ? "" : forename.trim();
         final String s = surname == null ? "" : surname.trim();

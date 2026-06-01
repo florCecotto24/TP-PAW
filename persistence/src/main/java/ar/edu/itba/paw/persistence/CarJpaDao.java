@@ -25,14 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
-import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
-import ar.edu.itba.paw.persistence.CarDao;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 
 @Transactional(readOnly = true)
@@ -134,15 +133,31 @@ public class CarJpaDao implements CarDao {
         idsParams.put("ownerId", criteria.getOwnerId());
         idsParams.put("limit", pageSize);
         idsParams.put("offset", offset);
+        // When prioritizeRefundPending is set, expose a 0/1 column via EXISTS on the reservations table
+        // and prepend it to the ORDER BY. The EXISTS subquery only touches reservations rows for this
+        // car so it stays cheap with the (car_id, status) index. Keeping it in the same paginated query
+        // (rather than a separate fetch + in-memory shuffle) preserves correctness across pages.
+        final String pendingRefundProjection = criteria.isPrioritizeRefundPending()
+                ? ", MAX(CASE WHEN EXISTS (SELECT 1 FROM reservations r WHERE r.car_id = c.id "
+                        + "AND r.payment_refund_required = TRUE "
+                        + "AND r.payment_refund_receipt_file_id IS NULL "
+                        + "AND r.status IN ('cancelled_by_owner', 'cancelled_by_rider')) THEN 1 ELSE 0 END) AS pending_refund "
+                : "";
         final StringBuilder idsSql = new StringBuilder(
-                "SELECT c.id, MIN(la.day_price) AS min_price FROM cars c "
+                "SELECT c.id, MIN(la.day_price) AS min_price")
+                .append(pendingRefundProjection)
+                .append(" FROM cars c "
                 + "LEFT JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
                 + "LEFT JOIN car_models cm ON cm.id = c.model_id "
                 + "LEFT JOIN car_brands cb ON cb.id = cm.brand_id "
                 + "WHERE c.owner_id = :ownerId ");
         appendOwnerCarNativeSqlFilters(idsSql, idsParams, criteria);
         idsSql.append("GROUP BY c.id, c.created_at, c.rating_avg ")
-              .append("ORDER BY ").append(buildCarOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
+              .append("ORDER BY ");
+        if (criteria.isPrioritizeRefundPending()) {
+            idsSql.append("pending_refund DESC, ");
+        }
+        idsSql.append(buildCarOrderBy(criteria.getSortBy(), criteria.getSortDirection()))
               .append(" LIMIT :limit OFFSET :offset");
         @SuppressWarnings("unchecked")
         final List<Object[]> rows = bindParams(em.createNativeQuery(idsSql.toString()), idsParams).getResultList();
@@ -626,8 +641,8 @@ public class CarJpaDao implements CarDao {
                 + "AND cb.validated = TRUE "
                 + "AND la.kind = :offeredKind "
                 + "AND c.status = :activeStatus "
-                + "AND LOWER(TRIM(cb.name)) = LOWER(TRIM(:brand)) "
-                + "AND LOWER(TRIM(cm.name)) = LOWER(TRIM(:model)) ");
+                + "AND LOWER(cb.name) = LOWER(:brand) "
+                + "AND LOWER(cm.name) = LOWER(:model) ");
         if (excludeCarId != null) {
             perCarJpql.append("AND c.id <> :excludeCarId ");
             perCarParams.put("excludeCarId", excludeCarId);

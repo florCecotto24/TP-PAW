@@ -377,10 +377,13 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
         insertOfferedAvailability(car.getId(), new BigDecimal("30.00"), now);
 
-        final OwnerCarSearchCriteria criteria = new OwnerCarSearchCriteria(
-                ownerId, 0, 10,
-                List.of("active"), null, null, null, null, null, null, null,
-                "date", "desc", null);
+        final OwnerCarSearchCriteria criteria = OwnerCarSearchCriteria.builderFor(ownerId)
+                .page(0)
+                .pageSize(10)
+                .carStatusFilters(List.of("active"))
+                .sortBy("date")
+                .sortDirection("desc")
+                .build();
 
         // 2. Exercise
         final Page<CarCard> result = dao.getOwnerCarCards(criteria);

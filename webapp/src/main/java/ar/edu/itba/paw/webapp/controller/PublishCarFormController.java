@@ -177,6 +177,12 @@ public final class PublishCarFormController {
             final HttpSession session) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final User fresh = userService.getUserById(me.getId()).orElse(me);
+        // Defense-in-depth (matches the service-layer guard in CarServiceImpl#publishCar): blocked owners
+        // cannot publish a new car, so we don't even show them the form. They are redirected to /my-cars
+        // where the global navbar banner explains why and points them at the refund-proof upload.
+        if (fresh.isBlocked()) {
+            return new ModelAndView("redirect:/my-cars");
+        }
         if (!hasPublishPrerequisites(fresh)) {
             return publishCarPrerequisitesView(fresh);
         }

@@ -26,8 +26,12 @@
                            href="${pageContext.request.contextPath}/my-reservations"><spring:message code="navbar.myReservations"/></a>
                     </li>
                 </sec:authorize>
-                <%-- Language switch: visible to both anonymous and authenticated users (including auth screens). --%>
-                <spring:eval expression="T(org.springframework.web.servlet.support.RequestContextUtils).getLocale(pageContext.request).getLanguage()"
+                <%-- Language switch: visible to both anonymous and authenticated users (including auth screens).
+                     Uses the SAME locale source as <spring:message> (LocaleContextHolder, populated once per
+                     request by the DispatcherServlet) so the toggle's active button is always consistent with
+                     the rendered copy. Calling RequestContextUtils.getLocale(request) would re-invoke the
+                     resolver here and could drift from the cached value if the request mutated the source. --%>
+                <spring:eval expression="T(org.springframework.context.i18n.LocaleContextHolder).getLocale().getLanguage()"
                              var="currentLocaleLanguage"/>
                 <spring:message code="navbar.language.ariaLabel" var="languageToggleAria"/>
                 <spring:message code="navbar.language.es" var="languageEsLabel"/>
@@ -123,6 +127,48 @@
         </div>
     </div>
 </nav>
+
+<%-- Global "your account is blocked" banner. Always rendered when the signed-in user is blocked
+     (computed by NavModelAdvice on every request, so a freshly applied block by the overdue-refund-proof
+     sweep takes effect on the next page load without re-login). The CTA points at the single overdue
+     reservation when exactly one is pending; otherwise it falls back to the owner reservations list. --%>
+<sec:authorize access="isAuthenticated()">
+    <c:if test="${navUserBlocked}">
+        <%-- The .ryden-blocked-banner class adds margin-top equal to --navbar-height by default so the
+             banner clears the fixed navbar on pages that do NOT use body.has-fixed-navbar (e.g. home,
+             where the hero section is intentionally placed flush against the top of the viewport).
+             On pages that DO use body.has-fixed-navbar, the same CSS neutralises that margin because
+             the body padding already reserves the navbar's slice. --%>
+        <div class="alert alert-danger border-0 rounded-0 mb-0 d-flex flex-wrap align-items-center gap-2 px-3 py-2 ryden-blocked-banner"
+             role="alert"
+             aria-live="polite">
+            <i class="bi bi-shield-exclamation fs-5 me-1" aria-hidden="true"></i>
+            <div class="flex-grow-1">
+                <strong class="d-block"><spring:message code="navbar.blockedBanner.title"/></strong>
+                <span class="small"><spring:message code="navbar.blockedBanner.body"/></span>
+            </div>
+            <%-- Deep-link CTA: when exactly one reservation has an overdue refund proof, go straight to
+                 its detail page (where the upload button lives). Otherwise (0 — race with auto-unblock —
+                 or many) point at the owner reservations list so the owner can pick which to upload. --%>
+            <c:choose>
+                <c:when test="${not empty navBlockedSingleReservationId}">
+                    <a class="btn btn-light btn-sm fw-semibold border"
+                       href="${pageContext.request.contextPath}/my-reservations/${navBlockedSingleReservationId}?role=OWNER">
+                        <i class="bi bi-upload me-1" aria-hidden="true"></i>
+                        <spring:message code="navbar.blockedBanner.cta.uploadSingle"/>
+                    </a>
+                </c:when>
+                <c:otherwise>
+                    <a class="btn btn-light btn-sm fw-semibold border"
+                       href="${pageContext.request.contextPath}/my-cars/reservations">
+                        <i class="bi bi-receipt me-1" aria-hidden="true"></i>
+                        <spring:message code="navbar.blockedBanner.cta"/>
+                    </a>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </c:if>
+</sec:authorize>
 
 <sec:authorize access="isAuthenticated()">
     <div class="modal fade" id="navbarLogoutModal" tabindex="-1" aria-hidden="true" aria-labelledby="navbarLogoutModalLabel">

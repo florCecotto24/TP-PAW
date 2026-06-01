@@ -111,6 +111,10 @@ public final class MessageKeys {
     public static final String CAR_ACTIVATE_CBU_REQUIRED = "car.activate.cbuRequired";
     public static final String CAR_ACTIVATE_OWNER_BLOCKED = "car.activate.ownerBlocked";
     public static final String CAR_CREATE_MODEL_PENDING = "car.create.modelPending";
+    // Owner-blocked guards for owner-side mutations that could re-introduce bookability.
+    // Reused across publishCar, createCarAvailabilityPeriods, applyOwnerEditByCar, and insurance upload —
+    // the message body is the same ("upload the missing refund proof to unblock") regardless of entry point.
+    public static final String CAR_MUTATION_OWNER_BLOCKED = "car.mutation.ownerBlocked";
     // image
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";

@@ -1194,8 +1194,28 @@ hr {
     width: 100%;
 }
 
+/* Stack all slides on the same grid cell so the wrapper takes the height of the tallest slide
+   (the one with the largest image/comment). Only the .active slide is visible; transitions are
+   driven by opacity instead of Bootstrap's default translateX so the height stays constant. */
+.ryden-review-carousel .carousel-inner {
+    display: grid;
+    grid-template-areas: "stack";
+}
+
 .ryden-review-carousel .carousel-item {
-    transition: transform 0.4s ease-in-out;
+    grid-area: stack;
+    display: block !important;
+    opacity: 0;
+    visibility: hidden;
+    transform: none !important;
+    transition: opacity 0.4s ease-in-out;
+    pointer-events: none;
+}
+
+.ryden-review-carousel .carousel-item.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 /* ------------------------------------------------------------------

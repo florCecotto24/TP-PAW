@@ -106,6 +106,25 @@ body.has-fixed-navbar {
     padding-top: var(--navbar-height);
 }
 
+/* Global "your account is blocked" banner injected by navbar.tag.
+   Stays in the normal document flow (scrolls away with the rest of the content) and only needs to
+   clear the .fixed-top navbar on its initial render.
+   - On pages with body.has-fixed-navbar the body already reserves padding-top equal to --navbar-height,
+     so the banner naturally sits right below it (margin-top is neutralised below).
+   - On pages without that class (e.g. home.jsp, where the hero is intentionally flush against the
+     top of the viewport) the banner needs an explicit margin-top equal to --navbar-height. The
+     paired padding-top: 0.1px on the body prevents that margin from collapsing into the body's
+     own margin (which would leave the banner hidden behind the fixed navbar). */
+.ryden-blocked-banner {
+    margin-top: var(--navbar-height);
+}
+body.has-fixed-navbar .ryden-blocked-banner {
+    margin-top: 0;
+}
+body:not(.has-fixed-navbar):has(.ryden-blocked-banner) {
+    padding-top: 0.1px;
+}
+
 /* Login / register: fit viewport; scroll only on very short screens inside main */
 body.auth-page {
     overflow: hidden;
@@ -694,7 +713,11 @@ body.modal-open {
     top: 55px;
     z-index: 1000;
     padding-top: 1.5rem;
-    padding-bottom: 1rem;
+    /* The bottom breathing space below the search card lives in margin (not padding) so the
+       background colour does not paint an ugly rectangle below the inner card when the menu
+       sticks on scroll over content with a different background. */
+    padding-bottom: 0;
+    margin-bottom: 1rem;
     background-color: var(--color-bg, #FAF9F7);
 }
 

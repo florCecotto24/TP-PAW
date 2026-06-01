@@ -128,6 +128,23 @@ public interface ReservationDao {
      */
     long countOverdueRefundProofsForOwner(long ownerUserId, OffsetDateTime now);
 
+    /**
+     * Reservations with an overdue refund-proof for {@code ownerUserId}. Returns the entities (JPQL
+     * "entities not tables" rule) so callers can read whatever fields they need — the navbar banner
+     * advice maps these to ids to deep-link the CTA when exactly one is pending. Ordered by deadline
+     * ascending so the first row is the most overdue one. In practice a blocked owner has a very small
+     * number of pending refund proofs (typically 1), so loading entities here is cheap.
+     */
+    List<Reservation> findOverdueRefundProofReservationsForOwner(long ownerUserId, OffsetDateTime now);
+
+    /**
+     * Reservations of {@code ownerUserId} that still require a refund-proof upload (no receipt yet),
+     * irrespective of whether the deadline has already lapsed. Used by the owner-side hub views
+     * (my-cars, owner reservations) to surface a "you must upload a refund receipt" badge for the
+     * affected cars/reservations, regardless of whether the owner is already blocked.
+     */
+    List<Reservation> findReservationsRequiringRefundProofForOwner(long ownerUserId);
+
     /** All reservations paginated for admin view; ordered by creation date descending. */
     Page<ReservationCard> findAllReservationCards(int page, int pageSize);
 }

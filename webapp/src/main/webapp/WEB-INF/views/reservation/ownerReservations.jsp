@@ -248,11 +248,22 @@
                     </c:url>
                     <a href="<c:out value='${ownerResDetailUrl}'/>" class="reservation-card text-decoration-none text-reset">
                         <article class="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
-                            <span class="position-absolute top-0 end-0 m-2 z-1">
+                            <%-- Top-right badge stack: status badge first, refund-pending notice (if any)
+                                 stacked vertically right-aligned underneath. max-width caps the stack at
+                                 ~half the card width so it never crowds the title/pickup/return fields. --%>
+                            <div class="position-absolute top-0 end-0 m-2 z-1 d-flex flex-column align-items-end gap-2"
+                                 style="max-width: 55%;">
                                 <span class="badge ${reservation.statusKey eq 'accepted' ? 'bg-success' : fn:startsWith(reservation.statusKey, 'cancelled') ? 'bg-danger' : reservation.statusKey eq 'started' ? 'bg-info' : reservation.statusKey eq 'pending' ? 'bg-warning text-dark' : 'bg-secondary'}">
                                     <spring:message code="enum.reservation.status.${reservation.statusKey}"/>
                                 </span>
-                            </span>
+                                <c:if test="${not empty pendingRefundReservationIds and pendingRefundReservationIds.contains(reservation.reservationId)}">
+                                    <span class="d-inline-flex align-items-center gap-2 text-end small fw-semibold"
+                                          style="background-color:#b91c1c; color:#ffffff; padding:.4rem .75rem; border-radius:.5rem; max-width:100%; white-space:normal; word-break:break-word; line-height:1.25;">
+                                        <i class="bi bi-cash-coin flex-shrink-0" aria-hidden="true"></i>
+                                        <span><spring:message code="ownerReservations.badge.refundProofPending"/></span>
+                                    </span>
+                                </c:if>
+                            </div>
                             <div class="row g-0 align-items-stretch">
                                 <div class="col-12 col-md-3 reservation-card__media-wrap">
                                     <c:choose>

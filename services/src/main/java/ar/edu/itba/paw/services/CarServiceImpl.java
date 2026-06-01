@@ -126,6 +126,10 @@ public final class CarServiceImpl implements CarService {
             final String insuranceFilename,
             final String insuranceContentType,
             final byte[] insuranceData) {
+        // Defense-in-depth: the UI hides the publish entry point and the controller redirects blocked
+        // owners away from GET /publish-car. A direct POST still needs the same guard because the form
+        // could be replayed from a cached page or hit via cURL.
+        requireOwnerNotBlocked(ownerId);
         if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
             throw new DuplicatePlateException(plate);
         }
@@ -352,9 +356,12 @@ public final class CarServiceImpl implements CarService {
             final String textQuery,
             final int page,
             final String sort) {
-        return buildOwnerCarSearchCriteria(
+        // The 11-arg public overload is only used by MyCarsController (the owner's own /my-cars hub),
+        // where surfacing cars with pending refund-proof obligations at the top is the desired UX. The
+        // 13-arg overload (used by the counterparty profile grid) intentionally keeps the flag false.
+        return buildOwnerCarSearchCriteriaInternal(
                 ownerId, category, transmission, powertrain, priceMin, priceMax,
-                carStatus, rating, textQuery, page, sort, 0, null);
+                carStatus, rating, textQuery, page, sort, 0, null, /* prioritizeRefundPending */ true);
     }
 
     @Override
@@ -373,6 +380,27 @@ public final class CarServiceImpl implements CarService {
             final String sort,
             final int pageSizeOrZero,
             final Long excludeCarId) {
+        return buildOwnerCarSearchCriteriaInternal(
+                ownerId, category, transmission, powertrain, priceMin, priceMax,
+                carStatus, rating, textQuery, page, sort, pageSizeOrZero, excludeCarId,
+                /* prioritizeRefundPending */ false);
+    }
+
+    private OwnerCarSearchCriteria buildOwnerCarSearchCriteriaInternal(
+            final long ownerId,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final List<String> carStatus,
+            final List<String> rating,
+            final String textQuery,
+            final int page,
+            final String sort,
+            final int pageSizeOrZero,
+            final Long excludeCarId,
+            final boolean prioritizeRefundPending) {
         final List<String> carTypes = collectCarTypeParams(category);
         final List<String> transmissions = collectTransmissionParams(transmission);
         final List<String> powertrains = collectPowertrainParams(powertrain);
@@ -396,21 +424,22 @@ public final class CarServiceImpl implements CarService {
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         final int pageSize =
                 pageSizeOrZero > 0 ? pageSizeOrZero : paginationPolicy.getDefaultPageSize();
-        return new OwnerCarSearchCriteria(
-                ownerId,
-                page,
-                pageSize,
-                statuses,
-                textQuery,
-                carTypes,
-                transmissions,
-                powertrains,
-                minPrice,
-                maxPrice,
-                ratingBands,
-                sortBy,
-                sortDir,
-                excludeCarId);
+        return OwnerCarSearchCriteria.builderFor(ownerId)
+                .page(page)
+                .pageSize(pageSize)
+                .carStatusFilters(statuses)
+                .textQuery(textQuery)
+                .carTypes(carTypes)
+                .transmissions(transmissions)
+                .powertrains(powertrains)
+                .minPrice(minPrice)
+                .maxPrice(maxPrice)
+                .ratingBands(ratingBands)
+                .sortBy(sortBy)
+                .sortDirection(sortDir)
+                .excludeCarId(excludeCarId)
+                .prioritizeRefundPending(prioritizeRefundPending)
+                .build();
     }
 
     @Override
@@ -494,6 +523,9 @@ public final class CarServiceImpl implements CarService {
             final String originalFilename,
             final String contentType,
             final byte[] data) {
+        // Defense-in-depth: insurance upload can promote a LACK_DOC car back to ACTIVE, so a blocked
+        // owner could re-introduce a bookable car this way. Reject before touching storage.
+        requireOwnerNotBlocked(ownerId);
         final Optional<Car> carOpt = carDao.getCarById(carId);
         if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
             throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
@@ -762,6 +794,19 @@ public final class CarServiceImpl implements CarService {
 
     private static final Set<String> LISTING_STATUSES = Set.of("active", "paused", "finished");
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
+
+    /**
+     * Throws {@link CarValidationException} with {@link MessageKeys#CAR_MUTATION_OWNER_BLOCKED} when
+     * {@code ownerId} is currently blocked (e.g. by the overdue-refund-proof sweep). Used as a guard
+     * by every owner-side mutation that could re-introduce a bookable car/listing. Reads through
+     * {@link UserService} (not {@code UserDao}) to respect the "service may only call its own DAO" rule.
+     */
+    private void requireOwnerNotBlocked(final long ownerId) {
+        final Optional<User> ownerOpt = userService.getUserById(ownerId);
+        if (ownerOpt.isPresent() && ownerOpt.get().isBlocked()) {
+            throw new CarValidationException(MessageKeys.CAR_MUTATION_OWNER_BLOCKED);
+        }
+    }
 
     private static List<String> collectCarTypeParams(final List<String> raw) {
         if (raw == null) {
