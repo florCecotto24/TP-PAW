@@ -12,13 +12,19 @@
 <body>
 <ryden:navbar/>
 <div class="container py-5 mt-5" style="max-width: 720px;">
-    <div class="d-flex align-items-center mb-4 gap-3">
-        <a href="${pageContext.request.contextPath}/admin/reservations" class="btn btn-light border rounded-3">&larr;</a>
-        <h1 class="h2 fw-bold mb-0">
-            <spring:message code="admin.reservationChat.title"/>
-            <small class="fs-6 text-secondary ms-2">#<c:out value="${reservation.id}"/></small>
-        </h1>
-    </div>
+    <spring:message code="admin.panel.title" var="adminPanelLabel"/>
+    <spring:message code="admin.reservations.title" var="adminReservationsLabel"/>
+    <spring:message code="admin.reservationChat.title" var="adminReservationChatLabel"/>
+    <ryden:breadcrumbTrail
+            homeLabel="${adminPanelLabel}"
+            homeHref="${pageContext.request.contextPath}/admin"
+            midLabel="${adminReservationsLabel}"
+            midHref="${pageContext.request.contextPath}/admin/reservations"
+            currentLabel="${adminReservationChatLabel}"/>
+    <h1 class="h2 fw-bold mb-4">
+        <spring:message code="admin.reservationChat.title"/>
+        <small class="fs-6 text-secondary ms-2">#<c:out value="${reservation.id}"/></small>
+    </h1>
 
     <c:choose>
         <c:when test="${empty messages}">

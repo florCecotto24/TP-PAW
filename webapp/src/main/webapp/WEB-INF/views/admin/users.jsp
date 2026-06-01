@@ -13,6 +13,12 @@
 <body>
 <ryden:navbar/>
 <div class="container py-5 mt-5">
+    <spring:message code="admin.panel.title" var="adminPanelLabel"/>
+    <spring:message code="admin.users.title" var="adminUsersLabel"/>
+    <ryden:breadcrumbTrail
+            homeLabel="${adminPanelLabel}"
+            homeHref="${pageContext.request.contextPath}/admin"
+            currentLabel="${adminUsersLabel}"/>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h2 fw-bold mb-0"><spring:message code="admin.users.title"/></h1>
         <a href="${pageContext.request.contextPath}/admin/users/create" class="btn btn-primary rounded-3">

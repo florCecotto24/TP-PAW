@@ -12,6 +12,12 @@
 <body>
 <ryden:navbar/>
 <div class="container py-5 mt-5">
+    <spring:message code="admin.panel.title" var="adminPanelLabel"/>
+    <spring:message code="admin.cars.title" var="adminCarsLabel"/>
+    <ryden:breadcrumbTrail
+            homeLabel="${adminPanelLabel}"
+            homeHref="${pageContext.request.contextPath}/admin"
+            currentLabel="${adminCarsLabel}"/>
     <h1 class="h2 fw-bold mb-4"><spring:message code="admin.cars.title"/></h1>
 
     <c:if test="${not empty successMessage}">

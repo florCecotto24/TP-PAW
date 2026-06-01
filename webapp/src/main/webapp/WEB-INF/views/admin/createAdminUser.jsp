@@ -13,6 +13,15 @@
 <body>
 <ryden:navbar/>
 <div class="container py-5 mt-5" style="max-width: 520px;">
+    <spring:message code="admin.panel.title" var="adminPanelLabel"/>
+    <spring:message code="admin.users.title" var="adminUsersLabel"/>
+    <spring:message code="admin.createAdmin.title" var="adminCreateAdminLabel"/>
+    <ryden:breadcrumbTrail
+            homeLabel="${adminPanelLabel}"
+            homeHref="${pageContext.request.contextPath}/admin"
+            midLabel="${adminUsersLabel}"
+            midHref="${pageContext.request.contextPath}/admin/users"
+            currentLabel="${adminCreateAdminLabel}"/>
     <h1 class="h2 fw-bold mb-4"><spring:message code="admin.createAdmin.title"/></h1>
 
     <c:if test="${not empty errorMessage}">

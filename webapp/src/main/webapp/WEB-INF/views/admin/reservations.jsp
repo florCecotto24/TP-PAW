@@ -13,6 +13,12 @@
 <body>
 <ryden:navbar/>
 <div class="container py-5 mt-5">
+    <spring:message code="admin.panel.title" var="adminPanelLabel"/>
+    <spring:message code="admin.reservations.title" var="adminReservationsLabel"/>
+    <ryden:breadcrumbTrail
+            homeLabel="${adminPanelLabel}"
+            homeHref="${pageContext.request.contextPath}/admin"
+            currentLabel="${adminReservationsLabel}"/>
     <h1 class="h2 fw-bold mb-4"><spring:message code="admin.reservations.title"/></h1>
 
     <div class="card border-0 shadow-sm rounded-4" style="overflow: hidden;">
