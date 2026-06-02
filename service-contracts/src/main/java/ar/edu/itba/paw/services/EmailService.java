@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services;
 
 import java.util.List;
+import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
+import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
@@ -36,6 +38,12 @@ public interface EmailService {
 
     /** One-time plain password for legacy migrated accounts. */
     void sendMigratedUserPassword(MigratedUserPasswordEmailPayload payload);
+
+    /** Invitation to a newly created administrator account with a one-time temporary password. */
+    void sendAdminInvitation(AdminInvitationEmailPayload payload);
+
+    /** Notifies a user that they have been promoted to administrator by another administrator. */
+    void sendAdminPromoted(AdminPromotedEmailPayload payload);
 
     /** Password reset flow: code and link. */
     void sendPasswordResetCode(PasswordResetCodeEmailPayload payload);

@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
+import ar.edu.itba.paw.exception.admin.UserAlreadyAdminException;
 import ar.edu.itba.paw.exception.user.CBUNotFoundException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.IncorrectCurrentPasswordException;
@@ -32,6 +34,7 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
+import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
@@ -597,7 +600,26 @@ public final class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void promoteToAdmin(final long targetUserId, final long assignedByUserId) {
+        final User granting = userDao.getUserById(assignedByUserId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!granting.isAdmin()) {
+            throw new AdminPromoterNotAdminException();
+        }
+        final User target = userDao.getUserById(targetUserId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (target.isAdmin()) {
+            throw new UserAlreadyAdminException();
+        }
         userDao.promoteToAdmin(targetUserId, assignedByUserId);
+        final Locale mailLocale = resolveMailLocaleOrElse(targetUserId, Locale.ENGLISH);
+        emailService.sendAdminPromoted(AdminPromotedEmailPayload.builder()
+                .messageLocale(mailLocale)
+                .recipientEmail(target.getEmail())
+                .recipientFullName(target.getForename() + " " + target.getSurname())
+                .grantedByFullName(granting.getForename() + " " + granting.getSurname())
+                .targetUserId(targetUserId)
+                .grantedByUserId(assignedByUserId)
+                .build());
     }
 
     @Override

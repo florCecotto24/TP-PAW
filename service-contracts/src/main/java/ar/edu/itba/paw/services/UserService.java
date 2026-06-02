@@ -202,7 +202,14 @@ public interface UserService {
 
     /**
      * Promotes {@code targetUserId} to admin role, recording {@code assignedByUserId} as the granting admin.
-     * Idempotent at the persistence layer.
+     * Sends a notification email to the promoted user mentioning the granting admin's name.
+     *
+     * @throws ar.edu.itba.paw.exception.user.UserNotFoundException when either the granting admin
+     *         or the target user does not exist
+     * @throws ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException when
+     *         {@code assignedByUserId} is not an administrator
+     * @throws ar.edu.itba.paw.exception.admin.UserAlreadyAdminException when
+     *         {@code targetUserId} is already an administrator
      */
     void promoteToAdmin(long targetUserId, long assignedByUserId);
 

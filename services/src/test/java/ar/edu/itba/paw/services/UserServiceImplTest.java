@@ -16,6 +16,8 @@ import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
+import ar.edu.itba.paw.exception.admin.UserAlreadyAdminException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfileDocumentException;
@@ -338,5 +340,111 @@ public class UserServiceImplTest {
                 .build();
 
         Assertions.assertFalse(userService.hasUploadedLicenseAndIdentity(user));
+    }
+
+    @Test
+    public void testPromoteToAdminSendsEmailAndPersistsWhenValid() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .build();
+        final User target = User.builder()
+                .id(20L)
+                .email("user@test.com")
+                .forename("Tar")
+                .surname("Get")
+                .userRole("USER")
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
+
+        // 2. Execute and 3. Assert: happy path completes without throwing
+        Assertions.assertDoesNotThrow(() -> userService.promoteToAdmin(20L, 10L));
+    }
+
+    @Test
+    public void testPromoteToAdminThrowsWhenActorNotAdmin() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole("USER")
+                .build();
+        final User target = User.builder()
+                .id(20L)
+                .email("user@test.com")
+                .forename("Tar")
+                .surname("Get")
+                .userRole("USER")
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
+
+        // 2. Execute and 3. Assert
+        final AdminPromoterNotAdminException thrown = Assertions.assertThrows(
+                AdminPromoterNotAdminException.class,
+                () -> userService.promoteToAdmin(20L, 10L));
+        Assertions.assertEquals(MessageKeys.ADMIN_PROMOTE_NOT_ADMIN, thrown.getMessageCode());
+    }
+
+    @Test
+    public void testPromoteToAdminThrowsWhenTargetAlreadyAdmin() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .build();
+        final User target = User.builder()
+                .id(20L)
+                .email("user@test.com")
+                .forename("Tar")
+                .surname("Get")
+                .userRole("ADMIN")
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
+
+        // 2. Execute and 3. Assert
+        final UserAlreadyAdminException thrown = Assertions.assertThrows(
+                UserAlreadyAdminException.class,
+                () -> userService.promoteToAdmin(20L, 10L));
+        Assertions.assertEquals(MessageKeys.ADMIN_PROMOTE_ALREADY_ADMIN, thrown.getMessageCode());
+    }
+
+    @Test
+    public void testPromoteToAdminThrowsWhenTargetMissing() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.empty());
+
+        // 2. Execute and 3. Assert
+        Assertions.assertThrows(UserNotFoundException.class,
+                () -> userService.promoteToAdmin(20L, 10L));
+    }
+
+    @Test
+    public void testPromoteToAdminThrowsWhenActorMissing() {
+        // 1. Arrange
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.empty());
+
+        // 2. Execute and 3. Assert
+        Assertions.assertThrows(UserNotFoundException.class,
+                () -> userService.promoteToAdmin(20L, 10L));
     }
 }

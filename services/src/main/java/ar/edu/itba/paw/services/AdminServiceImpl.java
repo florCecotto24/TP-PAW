@@ -21,10 +21,10 @@ import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 
 /**
  * Admin operations: user management, car moderation, catalog validation, and reservation inspection.
@@ -86,10 +86,11 @@ public class AdminServiceImpl implements AdminService {
                 email, forename, surname, passwordEncoder.encode(temporaryPassword));
         userService.promoteToAdmin(newUser.getId(), assignedByUserId);
         userService.markEmailVerified(newUser.getId());
-        emailService.sendMigratedUserPassword(
-                MigratedUserPasswordEmailPayload.builder()
+        emailService.sendAdminInvitation(
+                AdminInvitationEmailPayload.builder()
                         .messageLocale(locale)
                         .recipientEmail(email)
+                        .recipientFullName(forename + " " + surname)
                         .plainPassword(temporaryPassword)
                         .build());
         return newUser;

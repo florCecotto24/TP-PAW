@@ -22,6 +22,8 @@ import org.thymeleaf.context.Context;
 
 import ar.edu.itba.paw.exception.email.EmailMessagingException;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
+import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
@@ -85,6 +87,8 @@ public final class EmailServiceImpl implements EmailService {
     private static final String LISTING_REJECTED_BY_ADMIN_TEMPLATE = "html/car-rejected-by-admin-owner";
     private static final String LISTING_VALIDATED_BY_ADMIN_TEMPLATE = "html/car-validated-by-admin-owner";
     private static final String RESERVATION_CHAT_DIGEST_TEMPLATE = "html/reservation-chat-digest";
+    private static final String ADMIN_INVITATION_TEMPLATE = "html/admin-invitation";
+    private static final String ADMIN_PROMOTED_TEMPLATE = "html/admin-promoted";
 
     private static String formatWallDateTime(final java.time.OffsetDateTime dateTime, final Locale messageLocale) {
         final Locale locale = messageLocale != null ? messageLocale : Locale.ENGLISH;
@@ -319,6 +323,64 @@ public final class EmailServiceImpl implements EmailService {
             LOGGER.atInfo().addArgument(to).log("Migrated user password email sent to {}");
         } catch (final EmailMessagingException | RuntimeException e) {
             LOGGER.atError().setCause(e).addArgument(to).log("Failed to send migrated password email to {}");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendAdminInvitation(final AdminInvitationEmailPayload payload) {
+        final String to = payload.getRecipientEmail();
+        final String plainPassword = payload.getPlainPassword();
+        if (to == null || to.isBlank() || plainPassword == null || plainPassword.isBlank()) {
+            LOGGER.atError().log("sendAdminInvitation: missing to or password");
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("recipientFullName", payload.getRecipientFullName());
+        ctx.setVariable("plainPassword", plainPassword);
+        ctx.setVariable("loginUrl", mailPublicUrls.absolutePath("/login"));
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(ADMIN_INVITATION_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.adminInvitation.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).log("Admin invitation email sent to {}");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send admin invitation email to {}");
+        }
+    }
+
+    @Override
+    @Transactional
+    @Async("mailTaskExecutor")
+    public void sendAdminPromoted(final AdminPromotedEmailPayload payload) {
+        if (skipBecauseNullPayload(payload, "sendAdminPromoted")) {
+            return;
+        }
+        final String to = payload.getRecipientEmail();
+        if (to == null || to.isBlank()) {
+            LOGGER.atWarn().log("Skipping admin-promoted email: missing recipient");
+            return;
+        }
+        final Locale mailLocale = payload.getMessageLocale();
+        final Context ctx = new Context(mailLocale);
+        setHtmlLangFromLocale(ctx, mailLocale);
+        ctx.setVariable("recipientFullName", payload.getRecipientFullName());
+        ctx.setVariable("grantedByFullName", payload.getGrantedByFullName());
+        ctx.setVariable("ctaUrl", mailPublicUrls.absolutePath("/admin/panel"));
+        try {
+            runMail(() -> {
+                final String htmlContent = this.htmlTemplateEngine.process(ADMIN_PROMOTED_TEMPLATE, ctx);
+                final String subject = emailMessageSource.getMessage("mail.adminPromoted.subject", null, mailLocale);
+                sendEmail(to, subject, htmlContent);
+            });
+            LOGGER.atInfo().addArgument(to).addArgument(payload.getTargetUserId()).log("Admin promoted email sent to {} (target user id={})");
+        } catch (final EmailMessagingException | RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(to).log("Failed to send admin promoted email to {}");
         }
     }
 

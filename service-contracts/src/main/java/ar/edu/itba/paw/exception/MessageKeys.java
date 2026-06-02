@@ -130,6 +130,8 @@ public final class MessageKeys {
     // admin
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_GRANTOR = "admin.block.cannotBlockGrantor";
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_SELF = "admin.block.cannotBlockSelf";
+    public static final String ADMIN_PROMOTE_NOT_ADMIN = "admin.promote.notAdmin";
+    public static final String ADMIN_PROMOTE_ALREADY_ADMIN = "admin.promote.alreadyAdmin";
 
     // minimum rental days
     public static final String CAR_MIN_RENTAL_DAYS_EXCEEDS_PERIOD = "car.minRentalDays.exceedsPeriod";
