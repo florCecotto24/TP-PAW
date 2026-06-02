@@ -55,6 +55,29 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
+    @Transactional
+    public User createAdminUser(final String email, final String forename, final String surname,
+                                final String passwordHash, final Long assignedByUserId) {
+        final String normalizedEmail = EmailNormalizer.normalize(email);
+        final LocalDate memberSince = LocalDate.now(AppTimezone.WALL_ZONE);
+        final User user = User.builder()
+                .email(normalizedEmail)
+                .forename(forename)
+                .surname(surname)
+                .passwordHash(passwordHash)
+                .emailValidated(Boolean.TRUE)
+                .memberSince(memberSince)
+                .licenseValidated(Boolean.FALSE)
+                .identityValidated(Boolean.FALSE)
+                .userRole(UserRole.ADMIN.persistenceName())
+                .roleAssignedBy(assignedByUserId)
+                .blocked(false)
+                .build();
+        em.persist(user);
+        return user;
+    }
+
+    @Override
     public Optional<User> getUserById(final long id) {
         return Optional.ofNullable(em.find(User.class, id));
     }

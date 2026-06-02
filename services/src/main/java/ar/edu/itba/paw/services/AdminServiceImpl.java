@@ -82,10 +82,8 @@ public class AdminServiceImpl implements AdminService {
             final String temporaryPassword,
             final long assignedByUserId,
             final Locale locale) {
-        final User newUser = userService.createUserWithEncodedPassword(
-                email, forename, surname, passwordEncoder.encode(temporaryPassword));
-        userService.promoteToAdmin(newUser.getId(), assignedByUserId);
-        userService.markEmailVerified(newUser.getId());
+        final User newUser = userService.createAdminUserWithEncodedPassword(
+                email, forename, surname, passwordEncoder.encode(temporaryPassword), assignedByUserId);
         emailService.sendAdminInvitation(
                 AdminInvitationEmailPayload.builder()
                         .messageLocale(locale)

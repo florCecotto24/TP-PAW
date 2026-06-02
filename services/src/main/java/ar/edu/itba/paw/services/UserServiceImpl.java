@@ -630,6 +630,19 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public User createAdminUserWithEncodedPassword(
+            final String email, final String forename, final String surname,
+            final String bcryptEncodedHash, final long assignedByUserId) {
+        final User granting = userDao.getUserById(assignedByUserId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!granting.isAdmin()) {
+            throw new AdminPromoterNotAdminException();
+        }
+        return userDao.createAdminUser(email, forename, surname, bcryptEncodedHash, assignedByUserId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public ar.edu.itba.paw.models.dto.Page<User> findAllUsersPaginated(final int page, final int pageSize) {
         return userDao.findAllUsersPaginated(page, pageSize);

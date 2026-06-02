@@ -447,4 +447,113 @@ public class UserServiceImplTest {
         Assertions.assertThrows(UserNotFoundException.class,
                 () -> userService.promoteToAdmin(20L, 10L));
     }
+
+    @Test
+    public void testCreateAdminUserWithEncodedPasswordSucceedsWhenActorIsAdmin() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .build();
+        final User created = User.builder()
+                .id(99L)
+                .email("newadmin@test.com")
+                .forename("New")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .roleAssignedBy(10L)
+                .emailValidated(true)
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.createAdminUser(
+                        Mockito.eq("newadmin@test.com"),
+                        Mockito.eq("New"),
+                        Mockito.eq("Admin"),
+                        Mockito.eq("HASH"),
+                        Mockito.eq(10L)))
+                .thenReturn(created);
+
+        // 2. Execute
+        final User result = userService.createAdminUserWithEncodedPassword(
+                "newadmin@test.com", "New", "Admin", "HASH", 10L);
+
+        // 3. Assert
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(99L, result.getId());
+        Assertions.assertEquals("ADMIN", result.getUserRole());
+        Assertions.assertEquals(10L, result.getRoleAssignedBy().orElse(null));
+    }
+
+    @Test
+    public void testCreateAdminUserWithEncodedPasswordThrowsWhenActorMissing() {
+        // 1. Arrange
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.empty());
+
+        // 2. Execute and 3. Assert
+        Assertions.assertThrows(UserNotFoundException.class,
+                () -> userService.createAdminUserWithEncodedPassword(
+                        "x@test.com", "X", "Y", "HASH", 10L));
+    }
+
+    @Test
+    public void testCreateAdminUserWithEncodedPasswordThrowsWhenActorNotAdmin() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("notadmin@test.com")
+                .forename("Not")
+                .surname("Admin")
+                .userRole("USER")
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+
+        // 2. Execute and 3. Assert
+        final AdminPromoterNotAdminException thrown = Assertions.assertThrows(
+                AdminPromoterNotAdminException.class,
+                () -> userService.createAdminUserWithEncodedPassword(
+                        "x@test.com", "X", "Y", "HASH", 10L));
+        Assertions.assertEquals(MessageKeys.ADMIN_PROMOTE_NOT_ADMIN, thrown.getMessageCode());
+    }
+
+    @Test
+    public void testCreateAdminUserWithEncodedPasswordReturnsAdminFromDao() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .build();
+        final User created = User.builder()
+                .id(99L)
+                .email("newadmin@test.com")
+                .forename("New")
+                .surname("Admin")
+                .userRole("ADMIN")
+                .roleAssignedBy(10L)
+                .emailValidated(true)
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.createAdminUser(
+                        Mockito.eq("newadmin@test.com"),
+                        Mockito.eq("New"),
+                        Mockito.eq("Admin"),
+                        Mockito.eq("HASH"),
+                        Mockito.eq(10L)))
+                .thenReturn(created);
+
+        // 2. Execute
+        final User result = userService.createAdminUserWithEncodedPassword(
+                "newadmin@test.com", "New", "Admin", "HASH", 10L);
+
+        // 3. Assert: returned user reflects DAO output (admin role, pre-verified email, grantor recorded)
+        Assertions.assertEquals(99L, result.getId());
+        Assertions.assertEquals("ADMIN", result.getUserRole());
+        Assertions.assertEquals(10L, result.getRoleAssignedBy().orElse(null));
+        Assertions.assertTrue(result.getEmailValidated().orElse(false));
+    }
 }

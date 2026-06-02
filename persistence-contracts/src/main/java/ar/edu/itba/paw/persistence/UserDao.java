@@ -15,6 +15,13 @@ public interface UserDao {
         return createUser(email, forename, surname, null);
     }
 
+    /**
+     * Creates a user row with the admin role, the email pre-verified, and {@code assignedByUserId}
+     * recorded as the granting admin. Intended for admin-initiated account creation only.
+     */
+    User createAdminUser(String email, String forename, String surname,
+                         String passwordHash, Long assignedByUserId);
+
     Optional<User> getUserById(final long id);
 
     Optional<User> findByEmail(final String email);

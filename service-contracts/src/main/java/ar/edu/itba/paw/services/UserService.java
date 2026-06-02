@@ -220,6 +220,16 @@ public interface UserService {
     User createUserWithEncodedPassword(String email, String forename, String surname, String bcryptEncodedHash);
 
     /**
+     * Creates a user row with admin role, a pre-encoded password hash, and the email pre-verified.
+     * {@code assignedByUserId} is recorded as the granting admin. Intended for admin-initiated account creation.
+     *
+     * @throws ar.edu.itba.paw.exception.user.UserNotFoundException when {@code assignedByUserId} does not exist
+     * @throws ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException when {@code assignedByUserId} is not an administrator
+     */
+    User createAdminUserWithEncodedPassword(String email, String forename, String surname,
+                                            String bcryptEncodedHash, long assignedByUserId);
+
+    /**
      * Paginated list of every user in the system, ordered by id. Admin-only listing.
      */
     ar.edu.itba.paw.models.dto.Page<User> findAllUsersPaginated(int page, int pageSize);
