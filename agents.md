@@ -17,6 +17,12 @@ mvn test
 # Run tests for a specific module
 mvn test -pl persistence
 
+# Webapp module runs Java unit tests plus reservation-chat Vitest (via frontend-maven-plugin)
+mvn test -pl webapp
+
+# Reservation-chat JS tests only (fast iteration)
+cd webapp && npm test
+
 # Run a single test class
 mvn test -pl persistence -Dtest=ListingHibernateDaoTest
 ```

@@ -1,7 +1,19 @@
 (function () {
     'use strict';
 
-    var WALL_TIMEZONE = 'America/Argentina/Buenos_Aires';
+    var wallTime = window.ReservationChatWallTime;
+    var sendGuardApi = window.ReservationChatSendGuard;
+    var messageMerge = window.ReservationChatMessageMerge;
+    var reconnectApi = window.ReservationChatReconnect;
+    var uploadHelpers = window.ReservationChatUpload;
+
+    if (!wallTime || !sendGuardApi || !messageMerge || !reconnectApi || !uploadHelpers) {
+        return;
+    }
+
+    var STOMP_HEARTBEAT_MS = 10000;
+    var POLL_INTERVAL_MS = 5000;
+    var UPLOAD_MAX_RETRIES = 1;
 
     var ALLOWED_EXTENSIONS = {
         jpg: true,
@@ -42,6 +54,9 @@
     var errorLoadLabel = root.getAttribute('data-error-load') || 'Could not load chat. Try again later.';
     var errorConnectionLabel = root.getAttribute('data-error-connection') || 'Connection lost. Refresh the page.';
     var errorSendLabel = root.getAttribute('data-error-send') || 'Could not send the message. Try again.';
+    var errorUploadTimeoutLabel =
+        root.getAttribute('data-error-upload-timeout') || 'Upload timed out. Try again.';
+    var labelReconnecting = root.getAttribute('data-label-reconnecting') || 'Reconnecting…';
     var labelUploading = root.getAttribute('data-uploading-label') || 'Uploading…';
     var labelTooLarge = root.getAttribute('data-too-large-label') || 'File must be at most {0} MB.';
     var labelInvalidType = root.getAttribute('data-invalid-type-label') || 'This file type is not allowed.';
@@ -71,16 +86,25 @@
     var lastStickyDayKey = null;
     var pendingFile = null;
     var uploading = false;
-    // Dedupe by message id: when STOMP is broken (typical in deploy behind some
-    // reverse proxies) the server still broadcasts after the HTTP POST resolves,
-    // so the sender renders the response DTO locally and the broadcast (if any)
-    // must not duplicate the bubble.
     var renderedMessageIds = Object.create(null);
-    // Exponential backoff state for STOMP reconnect attempts.
-    var reconnectAttempts = 0;
-    var reconnectTimer = null;
-    var stompFatallyFailed = false;
-    var MAX_RECONNECT_ATTEMPTS = 6;
+    var pollTimer = null;
+    var sendGuard = sendGuardApi.createSendGuard();
+
+    var stompReconnect = reconnectApi.createReconnectScheduler({
+        maxDelayMs: 30000,
+        baseDelayMs: 1000,
+        onReconnect: function () {
+            return connectStomp();
+        }
+    });
+
+    function wallTimeOptions() {
+        return {
+            labelToday: labelToday,
+            labelYesterday: labelYesterday,
+            intlLocale: intlLocale()
+        };
+    }
 
     function showError(msg) {
         if (!errorEl) {
@@ -93,6 +117,18 @@
         }
         errorEl.textContent = msg;
         errorEl.classList.remove('d-none');
+    }
+
+    function setComposerEnabled(enabled) {
+        if (inputEl) {
+            inputEl.disabled = !enabled;
+        }
+        if (sendBtn) {
+            sendBtn.disabled = !enabled;
+        }
+        if (attachBtn) {
+            attachBtn.disabled = !enabled;
+        }
     }
 
     function formatTemplate(template, arg0) {
@@ -268,88 +304,25 @@
         }
     }
 
-    function parseTimestamp(value) {
-        if (value == null || value === '') {
-            return null;
-        }
-        if (typeof value === 'number' && isFinite(value)) {
-            return new Date(value < 1e12 ? value * 1000 : value);
-        }
-        if (typeof value === 'string') {
-            var parsed = Date.parse(value);
-            return isNaN(parsed) ? null : new Date(parsed);
-        }
-        return null;
-    }
-
     function intlLocale() {
         var lang = document.documentElement.lang;
         return lang && lang.trim() ? lang.trim() : undefined;
     }
 
-    function wallDayKeyFromDate(date) {
-        if (!date || isNaN(date.getTime())) {
-            return '';
-        }
-        return new Intl.DateTimeFormat('en-CA', {
-            timeZone: WALL_TIMEZONE,
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        }).format(date);
-    }
-
     function wallDayKey(value) {
-        return wallDayKeyFromDate(parseTimestamp(value));
+        return wallTime.wallDayKey(value);
     }
 
     function wallTodayKey() {
-        return wallDayKeyFromDate(new Date());
-    }
-
-    function wallYesterdayKey() {
-        var todayKey = wallTodayKey();
-        var parts = todayKey.split('-');
-        if (parts.length !== 3) {
-            return '';
-        }
-        var prior = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) - 1));
-        return wallDayKeyFromDate(prior);
+        return wallTime.wallTodayKey();
     }
 
     function formatDayLabel(dayKey) {
-        if (!dayKey) {
-            return '';
-        }
-        if (dayKey === wallTodayKey()) {
-            return labelToday;
-        }
-        if (dayKey === wallYesterdayKey()) {
-            return labelYesterday;
-        }
-        try {
-            return new Intl.DateTimeFormat(intlLocale(), {
-                timeZone: WALL_TIMEZONE,
-                dateStyle: 'medium'
-            }).format(new Date(dayKey + 'T12:00:00'));
-        } catch (e) {
-            return dayKey;
-        }
+        return wallTime.formatDayLabel(dayKey, wallTimeOptions());
     }
 
     function formatMessageTime(value) {
-        var date = parseTimestamp(value);
-        if (!date || isNaN(date.getTime())) {
-            return '';
-        }
-        try {
-            return new Intl.DateTimeFormat(intlLocale(), {
-                timeZone: WALL_TIMEZONE,
-                timeStyle: 'short'
-            }).format(date);
-        } catch (e) {
-            return '';
-        }
+        return wallTime.formatMessageTime(value, { intlLocale: intlLocale() });
     }
 
     function setDayBarVisible(visible) {
@@ -712,53 +685,83 @@
         afterMessagesChanged(true);
     }
 
+    function appendMergedMessages(messages) {
+        var merged = messageMerge.mergeIncomingMessages(renderedMessageIds, messages);
+        if (!merged.length) {
+            return;
+        }
+        merged.forEach(function (dto) {
+            renderMessage(dto);
+        });
+        afterMessagesChanged(true);
+    }
+
+    function fetchMessagesPage() {
+        return fetch(contextPath + '/my-reservations/' + reservationId + '/messages?page=0', {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' }
+        }).then(function (response) {
+            if (!response.ok) {
+                throw new Error('history');
+            }
+            return response.json();
+        });
+    }
+
     function loadHistory() {
         if (historyLoaded) {
             return Promise.resolve();
         }
-        return fetch(contextPath + '/my-reservations/' + reservationId + '/messages?page=0', {
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' }
-        })
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('history');
-                }
-                return response.json();
-            })
+        return fetchMessagesPage().then(function (messages) {
+            renderAll(messages);
+            historyLoaded = true;
+        });
+    }
+
+    function pollMessages() {
+        if (!historyLoaded || connected) {
+            return;
+        }
+        fetchMessagesPage()
             .then(function (messages) {
-                renderAll(messages);
-                historyLoaded = true;
+                appendMergedMessages(messages);
+            })
+            .catch(function () {
+                /* polling is best-effort */
             });
+    }
+
+    function startMessagePolling() {
+        if (pollTimer || connected) {
+            return;
+        }
+        pollTimer = setInterval(pollMessages, POLL_INTERVAL_MS);
+    }
+
+    function stopMessagePolling() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
     }
 
     function markDisconnected() {
         connected = false;
-        // Drop any in-flight client; next connectStomp() will rebuild it.
         stompClient = null;
-        scheduleStompReconnect();
+        if (historyLoaded && !uploading) {
+            showError(labelReconnecting);
+        }
+        startMessagePolling();
+        stompReconnect.schedule();
     }
 
-    function scheduleStompReconnect() {
-        if (reconnectTimer || stompFatallyFailed) {
-            return;
+    function onStompConnected() {
+        connected = true;
+        stompReconnect.reset();
+        stopMessagePolling();
+        if (historyLoaded) {
+            showError('');
         }
-        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-            stompFatallyFailed = true;
-            // History is already on screen by this point: show the live-channel
-            // error rather than the misleading "could not load chat" copy.
-            showError(errorConnectionLabel);
-            return;
-        }
-        // 1s, 2s, 4s, 8s, 16s, 16s — exponential with cap.
-        var delay = Math.min(16000, 1000 * Math.pow(2, reconnectAttempts));
-        reconnectAttempts++;
-        reconnectTimer = setTimeout(function () {
-            reconnectTimer = null;
-            connectStomp().catch(function () {
-                scheduleStompReconnect();
-            });
-        }, delay);
     }
 
     function connectStomp() {
@@ -770,32 +773,25 @@
             socket.onclose = markDisconnected;
             stompClient = Stomp.over(socket);
             stompClient.debug = null;
+            stompClient.heartbeat.outgoing = STOMP_HEARTBEAT_MS;
+            stompClient.heartbeat.incoming = STOMP_HEARTBEAT_MS;
             stompClient.connect(
                 {},
                 function () {
-                    connected = true;
-                    reconnectAttempts = 0;
-                    stompFatallyFailed = false;
-                    // Clear the connection-lost banner if a previous retry put it up.
-                    if (historyLoaded) {
-                        showError('');
-                    }
+                    onStompConnected();
                     stompClient.subscribe('/topic/reservations/' + reservationId, function (frame) {
                         try {
                             var dto = JSON.parse(frame.body);
                             appendMessage(dto);
                         } catch (e) {
-                            // Drop a single malformed frame silently: history is already
-                            // loaded, so surfacing "could not load chat" would be misleading.
+                            /* drop malformed frame */
                         }
                     });
                     resolve();
                 },
                 function () {
                     connected = false;
-                    // Schedule a backoff retry: SockJS may not always fire
-                    // `onclose` on a failed CONNECT, so kick the loop here.
-                    scheduleStompReconnect();
+                    stompReconnect.schedule();
                     reject(new Error('stomp'));
                 }
             );
@@ -811,36 +807,21 @@
         } catch (e) {
             /* ignore */
         }
-        // Fallback for upload failures: this path fires on POST /messages, so the
-        // user is sending — never loading. A "could not load chat" copy here was a bug.
         return errorSendLabel;
     }
 
     function tryAppendDtoFromResponse(xhr) {
-        // Render the just-posted message locally so the sender still sees it
-        // even when the STOMP subscribe channel is degraded in the deployed env.
-        // renderMessage() dedupes by id, so the upcoming /topic broadcast (if it
-        // arrives) won't duplicate the bubble.
         try {
             var dto = JSON.parse(xhr.responseText);
             if (dto && dto.id != null) {
                 appendMessage(dto);
             }
         } catch (e) {
-            /* ignore: response is optional, broadcast may still deliver */
+            /* ignore */
         }
     }
 
-    function clearTransientErrorBanner() {
-        // Keep the connection-lost banner visible after retries are exhausted:
-        // the user still needs to refresh to recover the live channel even if
-        // their last message went through via the HTTP fallback.
-        if (!stompFatallyFailed) {
-            showError('');
-        }
-    }
-
-    function uploadMessageWithFile(file, body) {
+    function uploadMessageWithFileOnce(file, body) {
         return new Promise(function (resolve, reject) {
             var formData = new FormData();
             if (body) {
@@ -850,6 +831,7 @@
             var xhr = new XMLHttpRequest();
             xhr.open('POST', contextPath + '/my-reservations/' + reservationId + '/messages', true);
             xhr.setRequestHeader('Accept', 'application/json');
+            xhr.timeout = uploadHelpers.computeUploadTimeoutMs(maxAttachmentMb);
             xhr.upload.onprogress = function (ev) {
                 if (ev.lengthComputable) {
                     setUploadProgress((ev.loaded / ev.total) * 100);
@@ -857,9 +839,7 @@
             };
             xhr.onload = function () {
                 setUploadProgress(null);
-                uploading = false;
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    clearTransientErrorBanner();
                     tryAppendDtoFromResponse(xhr);
                     resolve();
                     return;
@@ -869,22 +849,38 @@
             };
             xhr.onerror = function () {
                 setUploadProgress(null);
-                uploading = false;
-                showError(errorConnectionLabel);
+                showError(errorSendLabel);
                 reject(new Error('network'));
             };
-            uploading = true;
-            showError(labelUploading);
+            xhr.ontimeout = function () {
+                setUploadProgress(null);
+                showError(errorUploadTimeoutLabel);
+                reject(new Error('timeout'));
+            };
             setUploadProgress(0);
             xhr.send(formData);
         });
     }
 
+    function uploadMessageWithFile(file, body, retriesLeft) {
+        if (retriesLeft == null) {
+            retriesLeft = UPLOAD_MAX_RETRIES;
+        }
+        uploading = true;
+        stompReconnect.suspend();
+        showError(labelUploading);
+        return uploadMessageWithFileOnce(file, body).catch(function (err) {
+            if (retriesLeft > 0 && (err.message === 'network' || err.message === 'timeout')) {
+                return uploadMessageWithFile(file, body, retriesLeft - 1);
+            }
+            throw err;
+        }).finally(function () {
+            uploading = false;
+            stompReconnect.resume();
+        });
+    }
+
     function sendTextOverHttp(body) {
-        // HTTP fallback used when the STOMP send path isn't available. Some
-        // deploy environments (reverse proxies, ALBs) accept the SockJS
-        // subscribe channel but block the upstream client→server frame, so
-        // texts would silently fail while file uploads (already HTTP) work.
         return new Promise(function (resolve, reject) {
             var formData = new FormData();
             formData.append('body', body);
@@ -893,7 +889,6 @@
             xhr.setRequestHeader('Accept', 'application/json');
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    clearTransientErrorBanner();
                     tryAppendDtoFromResponse(xhr);
                     resolve();
                     return;
@@ -902,45 +897,58 @@
                 reject(new Error('send'));
             };
             xhr.onerror = function () {
-                showError(errorConnectionLabel);
+                showError(errorSendLabel);
                 reject(new Error('network'));
             };
             xhr.send(formData);
         });
     }
 
+    function releaseSendLock() {
+        sendGuard.release();
+        if (!uploading) {
+            setComposerEnabled(true);
+        }
+    }
+
     function sendMessage() {
-        if (uploading) {
+        if (uploading || !sendGuard.tryAcquire()) {
             return;
         }
+        setComposerEnabled(false);
         showError('');
         var body = (inputEl.value || '').trim();
         if (pendingFile) {
             var fileErr = validateFileClient(pendingFile);
             if (fileErr) {
                 showError(fileErr);
+                releaseSendLock();
                 return;
             }
             var fileToSend = pendingFile;
+            var caption = body;
             clearPendingFile();
-            uploadMessageWithFile(fileToSend, body)
+            inputEl.value = '';
+            uploadMessageWithFile(fileToSend, caption)
                 .then(function () {
-                    if (inputEl) {
-                        inputEl.value = '';
-                    }
                     showError('');
                 })
                 .catch(function () {
                     /* error already shown */
+                })
+                .finally(function () {
+                    releaseSendLock();
                 });
             return;
         }
         if (!body) {
+            releaseSendLock();
             return;
         }
         if (body.length > maxLength) {
             body = body.substring(0, maxLength);
         }
+        inputEl.value = '';
         if (stompClient && stompClient.connected) {
             try {
                 stompClient.send(
@@ -948,23 +956,18 @@
                     {},
                     JSON.stringify({ body: body })
                 );
-                inputEl.value = '';
+                releaseSendLock();
                 return;
             } catch (e) {
-                // STOMP frame failed mid-flight; flag the channel as broken and
-                // fall through to the HTTP fallback so the user still gets the
-                // message delivered instead of a "connection lost" dead end.
                 markDisconnected();
             }
         }
         sendTextOverHttp(body)
-            .then(function () {
-                if (inputEl) {
-                    inputEl.value = '';
-                }
-            })
             .catch(function () {
-                /* error already shown */
+                inputEl.value = body;
+            })
+            .finally(function () {
+                releaseSendLock();
             });
     }
 
@@ -1031,16 +1034,19 @@
                 showDayBarWhileScrolling();
             });
         }
-        // Only "could not load chat" is shown when the history GET fails. A
-        // failed initial STOMP connect goes silent here: the backoff loop
-        // (scheduleStompReconnect) takes over and surfaces the connection
-        // banner only after exhausting retries. Meanwhile, the HTTP fallback
-        // in sendMessage keeps the chat usable for sending text or files.
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && historyLoaded && !connected) {
+                stompReconnect.reset();
+                connectStomp().catch(function () {
+                    /* reconnect scheduler handles retries */
+                });
+            }
+        });
         loadHistory().catch(function () {
             showError(errorLoadLabel);
         });
         connectStomp().catch(function () {
-            /* handled by scheduleStompReconnect; nothing to surface here */
+            /* reconnect scheduler handles retries */
         });
     }
 

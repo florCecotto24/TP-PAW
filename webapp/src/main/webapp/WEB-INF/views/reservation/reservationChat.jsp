@@ -19,6 +19,8 @@
     <spring:message code="reservationChat.error.load" var="chatErrorLoad"/>
     <spring:message code="reservationChat.error.connection" var="chatErrorConnection"/>
     <spring:message code="reservationChat.error.send" var="chatErrorSend"/>
+    <spring:message code="reservationChat.error.uploadTimeout" var="chatErrorUploadTimeout"/>
+    <spring:message code="reservationChat.reconnecting" var="chatReconnecting"/>
     <spring:message code="reservationChat.date.today" var="chatDateToday"/>
     <spring:message code="reservationChat.date.yesterday" var="chatDateYesterday"/>
     <spring:message code="reservationChat.attach.button" var="chatAttachLabel"/>
@@ -91,6 +93,8 @@
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
                  data-error-connection="<c:out value='${chatErrorConnection}'/>"
                  data-error-send="<c:out value='${chatErrorSend}'/>"
+                 data-error-upload-timeout="<c:out value='${chatErrorUploadTimeout}'/>"
+                 data-label-reconnecting="<c:out value='${chatReconnecting}'/>"
                  data-label-today="<c:out value='${chatDateToday}'/>"
                  data-label-yesterday="<c:out value='${chatDateYesterday}'/>">
                 <div id="reservationChatDropZone" class="reservation-chat__drop-zone d-flex flex-column flex-grow-1 min-h-0">
@@ -157,6 +161,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" crossorigin="anonymous"></script>
+<script src="${pageContext.request.contextPath}/js/reservation-chat-wall-time.js"></script>
+<script src="${pageContext.request.contextPath}/js/reservation-chat-send-guard.js"></script>
+<script src="${pageContext.request.contextPath}/js/reservation-chat-message-merge.js"></script>
+<script src="${pageContext.request.contextPath}/js/reservation-chat-reconnect.js"></script>
+<script src="${pageContext.request.contextPath}/js/reservation-chat-upload.js"></script>
 <script src="${pageContext.request.contextPath}/js/reservation-chat.js"></script>
 <%@ include file="../includes/footerScripts.jspf" %>
 </body>

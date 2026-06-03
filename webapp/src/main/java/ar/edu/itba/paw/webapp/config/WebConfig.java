@@ -29,7 +29,9 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -162,6 +164,16 @@ public class WebConfig implements WebMvcConfigurer {
         return appReservationChatProperties.toReservationChatPolicy();
     }
 
+    /** Drives STOMP broker heartbeats configured in {@link WebSocketConfig}. */
+    @Bean
+    public TaskScheduler messageBrokerTaskScheduler() {
+        final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("wss-heartbeat-");
+        scheduler.initialize();
+        return scheduler;
+    }
+
     @Bean
     public LocalValidatorFactoryBean localValidatorFactoryBean(
             final MessageSource messageSource,
@@ -247,13 +259,30 @@ public class WebConfig implements WebMvcConfigurer {
      */
     @Bean
     public CommonsMultipartResolver multipartResolver(final Environment environment) {
-        final long maxRequest = Long.parseLong(
-                environment.getProperty("app.upload.max-multipart-request-bytes", "188743680").trim());
+        final long maxRequest = resolveMaxMultipartRequestBytes(environment);
         final CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
         multipartResolver.setMaxUploadSize(maxRequest);
         multipartResolver.setMaxInMemorySize(1048576);
         multipartResolver.setDefaultEncoding(StandardCharsets.UTF_8.name());
         return multipartResolver;
+    }
+
+    /**
+     * Prefer {@code app.upload.max-multipart-request-megabytes} (aligned with {@code application.properties});
+     * fall back to explicit bytes, then the legacy default (~180 MiB).
+     */
+    static long resolveMaxMultipartRequestBytes(final Environment environment) {
+        final String bytesProperty = environment.getProperty("app.upload.max-multipart-request-bytes");
+        if (bytesProperty != null && !bytesProperty.isBlank()) {
+            return Long.parseLong(bytesProperty.trim());
+        }
+        final Long megabytes = environment.getProperty("app.upload.max-multipart-request-megabytes", Long.class);
+        final int bytesPerMegabyte =
+                environment.getProperty("app.upload.bytes-per-binary-megabyte", Integer.class, 1048576);
+        if (megabytes != null && megabytes > 0) {
+            return megabytes * bytesPerMegabyte;
+        }
+        return 188743680L;
     }
 
     @Override
