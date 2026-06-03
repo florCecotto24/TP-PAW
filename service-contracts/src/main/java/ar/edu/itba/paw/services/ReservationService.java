@@ -169,6 +169,15 @@ public interface ReservationService {
     void dispatchRiderReviewInviteEmails();
 
     /**
+     * Scheduled job: closes stale reviews by inserting a null/commentless "skipped" review row. Rider
+     * window starts at the reservation {@code endDate}; owner window starts at the moment the owner
+     * marked the car returned. Window length is {@code app.reservation.review-auto-skip-days} (a value
+     * less than 1 disables the job). Idempotent — a reservation with an existing review on that side
+     * is skipped, and any per-row failure is logged and the loop continues.
+     */
+    void dispatchReviewAutoSkips();
+
+    /**
      * Scheduled job: sends payment-proof deadline reminders to riders whose deadline falls within the configured lead
      * window ({@code app.reservation.payment-proof-reminder-lead-hours}).
      */

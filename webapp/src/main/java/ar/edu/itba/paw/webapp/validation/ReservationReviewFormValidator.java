@@ -6,7 +6,6 @@ import org.springframework.validation.Validator;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.services.ReviewService;
-import ar.edu.itba.paw.webapp.form.ReservationReviewAction;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 
 @Component
@@ -29,9 +28,6 @@ public final class ReservationReviewFormValidator implements Validator {
             return;
         }
         final ReservationReviewForm form = (ReservationReviewForm) target;
-        if (form.getReviewAction() == ReservationReviewAction.OMIT) {
-            return;
-        }
         final int maxLen = reviewService.getReviewCommentMaxLength();
         final String trimmed = form.getComment() == null ? "" : form.getComment().trim();
         final Integer rating = form.getRating();

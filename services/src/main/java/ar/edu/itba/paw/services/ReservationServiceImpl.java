@@ -22,6 +22,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,6 +78,7 @@ public final class ReservationServiceImpl implements ReservationService {
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final PaginationPolicy paginationPolicy;
     private final CarService carService;
+    private final ReviewService reviewService;
 
     @Autowired
     public ReservationServiceImpl(
@@ -90,7 +92,8 @@ public final class ReservationServiceImpl implements ReservationService {
             final ReservationTimingPolicy reservationTimingPolicy,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             final PaginationPolicy paginationPolicy,
-            final CarService carService) {
+            final CarService carService,
+            @Lazy final ReviewService reviewService) {
         this.reservationDao = reservationDao;
         this.reservationAvailabilityService = reservationAvailabilityService;
         this.carAvailabilityService = carAvailabilityService;
@@ -102,6 +105,7 @@ public final class ReservationServiceImpl implements ReservationService {
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.paginationPolicy = paginationPolicy;
         this.carService = carService;
+        this.reviewService = reviewService;
     }
 
     @Override
@@ -1340,6 +1344,66 @@ public final class ReservationServiceImpl implements ReservationService {
             }
         }
         LOGGER.atInfo().addArgument(queued).log("Rider review invite run: queued {} email(s)");
+    }
+
+    @Override
+    @Transactional
+    public void dispatchReviewAutoSkips() {
+        final int days = reservationTimingPolicy.getReviewAutoSkipDays();
+        if (days < 1) {
+            LOGGER.atInfo().addArgument(days).log("Review auto-skip run skipped: feature disabled (days={})");
+            return;
+        }
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final OffsetDateTime endDateCutoff = now.minusDays(days);
+        final OffsetDateTime carReturnedAtCutoff = now.minusDays(days);
+
+        // Rider side: window starts at the rental endDate.
+        final List<Reservation> riderCandidates =
+                reservationDao.findReservationsForRiderReviewAutoSkip(now, endDateCutoff);
+        LOGGER.atInfo().addArgument(riderCandidates.size()).addArgument(days)
+                .log("Review auto-skip (rider) run: {} candidate reservation(s) (window {} days)");
+        int rDone = 0;
+        for (final Reservation r : riderCandidates) {
+            if (reviewService.hasRiderReview(r.getId())) {
+                continue;
+            }
+            try {
+                reviewService.submitRiderReviewOfOwner(r.getRiderId(), r.getId(), null, null);
+                rDone++;
+            } catch (final RiderReservationException e) {
+                LOGGER.atWarn().setCause(e).addArgument(r.getId())
+                        .log("Auto-skip rider review failed (reservation id={})");
+            }
+        }
+        LOGGER.atInfo().addArgument(rDone).log("Review auto-skip (rider) run: closed {} review(s)");
+
+        // Owner side: window starts at the moment the owner marked the car returned.
+        final List<Reservation> ownerCandidates =
+                reservationDao.findReservationsForOwnerReviewAutoSkip(now, carReturnedAtCutoff);
+        LOGGER.atInfo().addArgument(ownerCandidates.size()).addArgument(days)
+                .log("Review auto-skip (owner) run: {} candidate reservation(s) (window {} days)");
+        int oDone = 0;
+        for (final Reservation r : ownerCandidates) {
+            if (reviewService.hasOwnerReview(r.getId())) {
+                continue;
+            }
+            final long ownerId = Optional.ofNullable(r.getCar())
+                    .map(Car::getOwner)
+                    .map(User::getId)
+                    .orElse(0L);
+            if (ownerId == 0L) {
+                continue;
+            }
+            try {
+                reviewService.submitOwnerReviewOfRider(ownerId, r.getId(), null, null);
+                oDone++;
+            } catch (final RiderReservationException e) {
+                LOGGER.atWarn().setCause(e).addArgument(r.getId())
+                        .log("Auto-skip owner review failed (reservation id={})");
+            }
+        }
+        LOGGER.atInfo().addArgument(oDone).log("Review auto-skip (owner) run: closed {} review(s)");
     }
 
     @Override

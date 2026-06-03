@@ -72,7 +72,7 @@ class ModelsToStringTest {
         final String result = reservation.toString();
         // Assert
         final String expected = "Reservation{id=5, riderId=7, carId=3, startDate=2026-04-10T08:00Z, endDate=2026-04-12T08:00Z, "
-                + "status=ACCEPTED, createdAt=2026-04-01T09:00Z, updatedAt=2026-04-01T10:00Z, totalPrice=300.00, carReturned=false}";
+                + "status=ACCEPTED, createdAt=2026-04-01T09:00Z, updatedAt=2026-04-01T10:00Z, totalPrice=300.00, carReturned=false, carReturnedAt=null}";
         Assertions.assertEquals(expected, result);
     }
 

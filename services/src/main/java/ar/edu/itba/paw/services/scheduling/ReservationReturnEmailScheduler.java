@@ -40,4 +40,11 @@ public final class ReservationReturnEmailScheduler {
     public void sendRiderReviewInvites() {
         reservationService.dispatchRiderReviewInviteEmails();
     }
+
+    @Scheduled(
+            cron = "${app.scheduler.return-emails.review-auto-skip-cron:0 0/30 * * * ?}",
+            zone = "${app.scheduler.return-emails.zone:${app.scheduler.default-zone}}")
+    public void dispatchReviewAutoSkips() {
+        reservationService.dispatchReviewAutoSkips();
+    }
 }

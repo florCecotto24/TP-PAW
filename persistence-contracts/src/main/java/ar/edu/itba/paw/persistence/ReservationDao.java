@@ -74,7 +74,7 @@ public interface ReservationDao {
     /** Finished reservations for the car (owner analytics). */
     List<Reservation> findCarFinishedReservations(long ownerId, long carId);
 
-    /** Sets {@code car_returned}; transitions {@code status} to {@code finished} when the car is marked returned. */
+    /** Sets {@code car_returned} and stamps {@code car_returned_at = now()}; transitions {@code status} to {@code finished} when the car is marked returned. */
     int markCarReturned(long reservationId, long ownerUserId);
 
     List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);
@@ -82,6 +82,21 @@ public interface ReservationDao {
     List<Reservation> findReservationsForReturnCheckoutEmail(OffsetDateTime now);
 
     List<Reservation> findReservationsForRiderReviewInviteEmail(OffsetDateTime now);
+
+    /**
+     * Reservations whose rental period ({@code end_date}) ended at or before {@code endDateCutoff}, with no
+     * rider-side review yet. Used by the review auto-skip scheduler to insert a "skipped" review row after
+     * a configurable grace window. Only statuses that allow a rider review ({@code accepted},
+     * {@code started}, {@code finished}) are considered.
+     */
+    List<Reservation> findReservationsForRiderReviewAutoSkip(OffsetDateTime now, OffsetDateTime endDateCutoff);
+
+    /**
+     * Reservations whose car was marked returned at or before {@code carReturnedAtCutoff}, with no
+     * owner-side review yet. Used by the review auto-skip scheduler. Only statuses where the owner form
+     * is visible ({@code accepted}, {@code started}, {@code finished}) are considered.
+     */
+    List<Reservation> findReservationsForOwnerReviewAutoSkip(OffsetDateTime now, OffsetDateTime carReturnedAtCutoff);
 
     /** Sets {@code return_reminder_email_sent} if still false; returns rows updated (0 or 1). */
     int claimReturnReminderEmailSent(long reservationId);

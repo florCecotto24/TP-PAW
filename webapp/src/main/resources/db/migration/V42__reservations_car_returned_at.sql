@@ -1,0 +1,1 @@
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS car_returned_at TIMESTAMPTZ;

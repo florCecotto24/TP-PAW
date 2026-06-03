@@ -11,15 +11,13 @@ import org.springframework.web.multipart.MultipartFile;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.services.ReviewService;
-import ar.edu.itba.paw.webapp.form.ReservationReviewAction;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 
 /**
- * Encapsulates the OMIT / SUBMIT-WITH-PIC / SUBMIT-WITHOUT-PIC branching that
- * {@code MyReservationsController} used to repeat across the two symmetrical review handlers
- * (owner-reviews-rider and rider-reviews-owner). The facade owns:
+ * Encapsulates the review submission pipeline shared by the two symmetrical review handlers
+ * (owner-reviews-rider and rider-reviews-owner) in {@code MyReservationsController}. The facade owns:
  *
  * <ul>
  *   <li>Image validation (content-type + size) and payload extraction.</li>
@@ -29,7 +27,7 @@ import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
  *   <li>Generic {@link RydenException} → {@code rejectValue("picture", ...)} mapping.</li>
  * </ul>
  *
- * The controller is left with selecting the final view (redirect + flash on success/omit-error,
+ * The controller is left with selecting the final view (redirect + flash on success,
  * detail re-render on validation-error) and supplying request-scoped parameters.
  */
 @Component
@@ -37,7 +35,7 @@ public final class ReviewSubmissionFacade {
 
     public enum Role { OWNER, RIDER }
 
-    public enum Outcome { SUCCESS, OMIT_FAILED, NEEDS_RERENDER }
+    public enum Outcome { SUCCESS, NEEDS_RERENDER }
 
     private final ReviewService reviewService;
     private final MultipartImageValidation multipartImageValidation;
@@ -56,18 +54,13 @@ public final class ReviewSubmissionFacade {
     }
 
     /**
-     * Outcome of a review submission call. {@code messageOrNull} carries either the success
-     * flash message (for {@link Outcome#SUCCESS}) or the OMIT-path error flash message (for
-     * {@link Outcome#OMIT_FAILED}). For {@link Outcome#NEEDS_RERENDER} the binding result has
-     * been populated with field/global errors and the caller should re-render the detail page.
+     * Outcome of a review submission call. {@code messageOrNull} carries the success flash message
+     * for {@link Outcome#SUCCESS}. For {@link Outcome#NEEDS_RERENDER} the binding result has been
+     * populated with field/global errors and the caller should re-render the detail page.
      */
     public record SubmissionResult(Outcome outcome, String messageOrNull) {
         public static SubmissionResult success(final String msg) {
             return new SubmissionResult(Outcome.SUCCESS, msg);
-        }
-
-        public static SubmissionResult omitFailed(final String msg) {
-            return new SubmissionResult(Outcome.OMIT_FAILED, msg);
         }
 
         public static SubmissionResult needsRerender() {
@@ -88,15 +81,6 @@ public final class ReviewSubmissionFacade {
             final ReservationReviewForm form,
             final BindingResult binding) {
         final String successMsg = localeMessages.msg("myReservationDetail.review.success");
-
-        if (form.getReviewAction() == ReservationReviewAction.OMIT) {
-            try {
-                submitWithoutPicture(viewerId, reservationId, viewerRole);
-                return SubmissionResult.success(successMsg);
-            } catch (final RiderReservationException ex) {
-                return SubmissionResult.omitFailed(localeMessages.msg(ex));
-            }
-        }
 
         validatePicture(form.getPicture(), binding);
         if (binding.hasErrors()) {
@@ -121,15 +105,6 @@ public final class ReviewSubmissionFacade {
         } catch (final RydenException ex) {
             binding.rejectValue("picture", ex.getMessageCode(), ex.getMessageArgs(), localeMessages.msg(ex));
             return SubmissionResult.needsRerender();
-        }
-    }
-
-    private void submitWithoutPicture(
-            final long viewerId, final long reservationId, final Role viewerRole) {
-        if (viewerRole == Role.OWNER) {
-            reviewService.submitOwnerReviewOfRider(viewerId, reservationId, null, null);
-        } else {
-            reviewService.submitRiderReviewOfOwner(viewerId, reservationId, null, null);
         }
     }
 

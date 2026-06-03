@@ -111,6 +111,9 @@ public class Reservation {
     @Column(name = "car_returned", nullable = false)
     private boolean carReturned;
 
+    @Column(name = "car_returned_at")
+    private OffsetDateTime carReturnedAt;
+
     @Column(name = "payment_refund_required", nullable = false)
     private boolean paymentRefundRequired;
 
@@ -153,6 +156,7 @@ public class Reservation {
         this.paymentReceiptFile = b.paymentReceiptFile;
         this.paymentProofDeadlineAt = b.paymentProofDeadlineAt;
         this.carReturned = b.carReturned;
+        this.carReturnedAt = b.carReturnedAt;
         this.paymentRefundRequired = b.paymentRefundRequired;
         this.paymentRefundReceiptFile = b.paymentRefundReceiptFile;
         this.refundProofDeadlineAt = b.refundProofDeadlineAt;
@@ -180,6 +184,7 @@ public class Reservation {
         private StoredFile paymentReceiptFile;
         private OffsetDateTime paymentProofDeadlineAt;
         private boolean carReturned;
+        private OffsetDateTime carReturnedAt;
         private boolean paymentRefundRequired;
         private StoredFile paymentRefundReceiptFile;
         private OffsetDateTime refundProofDeadlineAt;
@@ -247,6 +252,11 @@ public class Reservation {
 
         public Builder carReturned(final boolean carReturned) {
             this.carReturned = carReturned;
+            return this;
+        }
+
+        public Builder carReturnedAt(final OffsetDateTime carReturnedAt) {
+            this.carReturnedAt = carReturnedAt;
             return this;
         }
 
@@ -365,6 +375,10 @@ public class Reservation {
         return carReturned;
     }
 
+    public Optional<OffsetDateTime> getCarReturnedAt() {
+        return Optional.ofNullable(carReturnedAt);
+    }
+
     public boolean isPaymentRefundRequired() {
         return paymentRefundRequired;
     }
@@ -396,6 +410,10 @@ public class Reservation {
 
     public void setCarReturned(final boolean carReturned) {
         this.carReturned = carReturned;
+    }
+
+    public void setCarReturnedAt(final OffsetDateTime carReturnedAt) {
+        this.carReturnedAt = carReturnedAt;
     }
 
     public void setPaymentRefundRequired(final boolean paymentRefundRequired) {
@@ -463,6 +481,7 @@ public class Reservation {
                 ", updatedAt=" + updatedAt +
                 ", totalPrice=" + totalPrice +
                 ", carReturned=" + carReturned +
+                ", carReturnedAt=" + carReturnedAt +
                 '}';
     }
 }

@@ -265,7 +265,8 @@
                 <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewOwner.title"/></h2>
-                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewOwner.intro"/></p>
+                        <p class="text-secondary small mb-2"><spring:message code="myReservationDetail.reviewOwner.intro"/></p>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.review.autoSkipNoticeOwner"/></p>
                         <c:url var="ownerReviewUrl" value="/my-reservations/${reservation.id}/owner-review-rider"/>
                         <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="ownerReviewImageTooLargeMsg" htmlEscape="true"/>
                         <spring:message code="validation.pictures.mustBeImage" var="ownerReviewMustBeImageMsg" htmlEscape="true"/>
@@ -311,11 +312,9 @@
                                 <div id="ownerReviewPictureError" class="alert alert-danger d-none mt-2 py-2 small" role="alert"></div>
                                 <div id="ownerReviewPicturePreview" class="d-none mt-2"></div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="submit" name="reviewAction" value="SUBMIT" class="btn btn-primary btn-sm">
+                            <div>
+                                <button type="submit" class="btn btn-primary btn-sm">
                                     <spring:message code="myReservationDetail.review.submit"/></button>
-                                <button type="submit" name="reviewAction" value="OMIT" class="btn btn-outline-secondary btn-sm">
-                                    <spring:message code="myReservationDetail.review.skip"/></button>
                             </div>
                         </form:form>
                     </div>
@@ -326,7 +325,8 @@
                 <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="rider-review-owner">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-semibold mb-2"><spring:message code="myReservationDetail.reviewRider.title"/></h2>
-                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.reviewRider.intro"/></p>
+                        <p class="text-secondary small mb-2"><spring:message code="myReservationDetail.reviewRider.intro"/></p>
+                        <p class="text-secondary small mb-3"><spring:message code="myReservationDetail.review.autoSkipNoticeRider"/></p>
                         <c:url var="riderReviewUrl" value="/my-reservations/${reservation.id}/rider-review-owner"/>
                         <spring:message code="validation.image.fileTooLarge" arguments="${uploadMaxImageMegabytes}" var="riderReviewImageTooLargeMsg" htmlEscape="true"/>
                         <spring:message code="validation.pictures.mustBeImage" var="riderReviewMustBeImageMsg" htmlEscape="true"/>
@@ -372,11 +372,9 @@
                                 <div id="riderReviewPictureError" class="alert alert-danger d-none mt-2 py-2 small" role="alert"></div>
                                 <div id="riderReviewPicturePreview" class="d-none mt-2"></div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="submit" name="reviewAction" value="SUBMIT" class="btn btn-primary btn-sm">
+                            <div>
+                                <button type="submit" class="btn btn-primary btn-sm">
                                     <spring:message code="myReservationDetail.review.submit"/></button>
-                                <button type="submit" name="reviewAction" value="OMIT" class="btn btn-outline-secondary btn-sm">
-                                    <spring:message code="myReservationDetail.review.skip"/></button>
                             </div>
                         </form:form>
                     </div>

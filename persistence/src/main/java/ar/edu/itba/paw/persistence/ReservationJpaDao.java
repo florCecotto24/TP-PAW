@@ -55,6 +55,9 @@ public class ReservationJpaDao implements ReservationDao {
     private static final List<Reservation.Status> RIDER_REVIEW_INVITE_STATUSES = Arrays.asList(
             Reservation.Status.ACCEPTED, Reservation.Status.STARTED, Reservation.Status.FINISHED);
 
+    private static final List<Reservation.Status> REVIEW_AUTO_SKIP_STATUSES = Arrays.asList(
+            Reservation.Status.ACCEPTED, Reservation.Status.STARTED, Reservation.Status.FINISHED);
+
     @PersistenceContext
     private EntityManager em;
 
@@ -419,6 +422,7 @@ public class ReservationJpaDao implements ReservationDao {
             return 0;
         }
         r.setCarReturned(true);
+        r.setCarReturnedAt(OffsetDateTime.now());
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
     }
@@ -467,6 +471,40 @@ public class ReservationJpaDao implements ReservationDao {
                         Reservation.class)
                 .setParameter("statuses", RIDER_REVIEW_INVITE_STATUSES)
                 .setParameter("now", now)
+                .getResultList();
+    }
+
+    @Override
+    public List<Reservation> findReservationsForRiderReviewAutoSkip(
+            final OffsetDateTime now, final OffsetDateTime endDateCutoff) {
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.status IN :statuses "
+                                + "AND r.endDate <= :endDateCutoff "
+                                + "AND NOT EXISTS ("
+                                + "  SELECT 1 FROM Review rv "
+                                + "  WHERE rv.reservation = r AND rv.id.madeByRider = TRUE)",
+                        Reservation.class)
+                .setParameter("statuses", REVIEW_AUTO_SKIP_STATUSES)
+                .setParameter("endDateCutoff", endDateCutoff)
+                .getResultList();
+    }
+
+    @Override
+    public List<Reservation> findReservationsForOwnerReviewAutoSkip(
+            final OffsetDateTime now, final OffsetDateTime carReturnedAtCutoff) {
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.status IN :statuses "
+                                + "AND r.carReturned = TRUE "
+                                + "AND r.carReturnedAt IS NOT NULL "
+                                + "AND r.carReturnedAt <= :carReturnedAtCutoff "
+                                + "AND NOT EXISTS ("
+                                + "  SELECT 1 FROM Review rv "
+                                + "  WHERE rv.reservation = r AND rv.id.madeByRider = FALSE)",
+                        Reservation.class)
+                .setParameter("statuses", REVIEW_AUTO_SKIP_STATUSES)
+                .setParameter("carReturnedAtCutoff", carReturnedAtCutoff)
                 .getResultList();
     }
 

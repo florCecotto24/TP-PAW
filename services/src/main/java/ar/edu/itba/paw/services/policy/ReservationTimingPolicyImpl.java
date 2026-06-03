@@ -13,6 +13,7 @@ public final class ReservationTimingPolicyImpl implements ReservationTimingPolic
     private final int paymentProofReminderLeadHours;
     private final int returnReminderHoursBeforeCheckout;
     private final int maxBillableDaysPerReservation;
+    private final int reviewAutoSkipDays;
 
     @Autowired
     public ReservationTimingPolicyImpl(final Environment environment) {
@@ -24,11 +25,20 @@ public final class ReservationTimingPolicyImpl implements ReservationTimingPolic
         this.returnReminderHoursBeforeCheckout =
                 readPositiveInt(environment, "app.reservation.return-reminder-hours-before-checkout", 2);
         this.maxBillableDaysPerReservation = readPositiveInt(environment, "app.reservation.max-billable-days", 30);
+        this.reviewAutoSkipDays = readNonNegativeInt(environment, "app.reservation.review-auto-skip-days", 15);
     }
 
     private static int readPositiveInt(final Environment env, final String key, final int defaultValue) {
         final Integer v = env.getProperty(key, Integer.class);
         if (v == null || v < 1) {
+            return defaultValue;
+        }
+        return v;
+    }
+
+    private static int readNonNegativeInt(final Environment env, final String key, final int defaultValue) {
+        final Integer v = env.getProperty(key, Integer.class);
+        if (v == null || v < 0) {
             return defaultValue;
         }
         return v;
@@ -57,5 +67,10 @@ public final class ReservationTimingPolicyImpl implements ReservationTimingPolic
     @Override
     public int getMaxBillableDaysPerReservation() {
         return maxBillableDaysPerReservation;
+    }
+
+    @Override
+    public int getReviewAutoSkipDays() {
+        return reviewAutoSkipDays;
     }
 }

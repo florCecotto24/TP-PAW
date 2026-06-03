@@ -476,9 +476,6 @@ public final class MyReservationsController {
             case SUCCESS:
                 redirectAttributes.addFlashAttribute("reviewMessage", result.messageOrNull());
                 return new ModelAndView(redirectToMyReservationDetailView(reservationId, viewerRole, fromCar));
-            case OMIT_FAILED:
-                redirectAttributes.addFlashAttribute("reviewError", result.messageOrNull());
-                return new ModelAndView(redirectToMyReservationDetailView(reservationId, viewerRole, fromCar));
             case NEEDS_RERENDER:
             default:
                 return reservationDetailFactory.detailOrRedirect(
