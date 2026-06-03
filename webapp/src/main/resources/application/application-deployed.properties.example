@@ -16,13 +16,3 @@ app.security.remember-me.key=change-me-remember-me-key
 # Gmail / SMTP app password
 mail.server.password=change-me-smtp
 
-# --- Reverse proxy (Pampero / nginx) — required for stable reservation chat ---
-# WebSocket/SockJS: enable HTTP/1.1 upgrade and long read timeouts (chat STOMP heartbeats every 10s).
-#   proxy_http_version 1.1;
-#   proxy_set_header Upgrade $http_upgrade;
-#   proxy_set_header Connection "upgrade";
-#   proxy_read_timeout 300s;
-# Large chat attachments (up to app.upload.max-chat-attachment-megabytes):
-#   client_max_body_size 30m;
-#   client_body_timeout 300s;
-# Sticky sessions recommended if multiple Tomcat instances share the same hostname (/ws/**).
