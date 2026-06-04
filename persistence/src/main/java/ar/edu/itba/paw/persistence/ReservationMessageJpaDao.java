@@ -90,6 +90,36 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
     }
 
     @Override
+    public List<ReservationMessage> findByReservationIdAfterIdOrderByCreatedAtAsc(
+            final long reservationId, final long afterMessageId, final int limit) {
+        @SuppressWarnings("unchecked")
+        final List<Number> pageIds = em.createNativeQuery(
+                        "SELECT m.id FROM reservation_messages m "
+                                + "WHERE m.reservation_id = :reservationId AND m.id > :afterMessageId "
+                                + "ORDER BY m.created_at ASC, m.id ASC "
+                                + "LIMIT :limit")
+                .setParameter("reservationId", reservationId)
+                .setParameter("afterMessageId", afterMessageId)
+                .setParameter("limit", limit)
+                .getResultList();
+        if (pageIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        final List<Long> ids = pageIds.stream().map(Number::longValue).collect(Collectors.toList());
+        final List<ReservationMessage> hydrated = em.createQuery(
+                        "FROM ReservationMessage m "
+                                + "LEFT JOIN FETCH m.attachment "
+                                + "WHERE m.id IN :ids",
+                        ReservationMessage.class)
+                .setParameter("ids", ids)
+                .getResultList();
+        return hydrated.stream()
+                .sorted(Comparator.comparing(ReservationMessage::getCreatedAt)
+                        .thenComparingLong(ReservationMessage::getId))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public long countByReservationId(final long reservationId) {
         return em.createQuery(
                         "SELECT COUNT(m) FROM ReservationMessage m WHERE m.reservation.id = :reservationId",

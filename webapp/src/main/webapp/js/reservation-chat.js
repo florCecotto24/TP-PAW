@@ -4,14 +4,12 @@
     var wallTime = window.ReservationChatWallTime;
     var sendGuardApi = window.ReservationChatSendGuard;
     var messageMerge = window.ReservationChatMessageMerge;
-    var reconnectApi = window.ReservationChatReconnect;
     var uploadHelpers = window.ReservationChatUpload;
 
-    if (!wallTime || !sendGuardApi || !messageMerge || !reconnectApi || !uploadHelpers) {
+    if (!wallTime || !sendGuardApi || !messageMerge || !uploadHelpers) {
         return;
     }
 
-    var STOMP_HEARTBEAT_MS = 10000;
     var POLL_INTERVAL_MS = 5000;
     var UPLOAD_MAX_RETRIES = 1;
 
@@ -52,11 +50,9 @@
     var labelToday = root.getAttribute('data-label-today') || 'Today';
     var labelYesterday = root.getAttribute('data-label-yesterday') || 'Yesterday';
     var errorLoadLabel = root.getAttribute('data-error-load') || 'Could not load chat. Try again later.';
-    var errorConnectionLabel = root.getAttribute('data-error-connection') || 'Connection lost. Refresh the page.';
     var errorSendLabel = root.getAttribute('data-error-send') || 'Could not send the message. Try again.';
     var errorUploadTimeoutLabel =
         root.getAttribute('data-error-upload-timeout') || 'Upload timed out. Try again.';
-    var labelReconnecting = root.getAttribute('data-label-reconnecting') || 'Reconnecting…';
     var labelUploading = root.getAttribute('data-uploading-label') || 'Uploading…';
     var labelTooLarge = root.getAttribute('data-too-large-label') || 'File must be at most {0} MB.';
     var labelInvalidType = root.getAttribute('data-invalid-type-label') || 'This file type is not allowed.';
@@ -76,9 +72,7 @@
     var uploadProgressEl = document.getElementById('reservationChatUploadProgress');
     var uploadProgressBarEl = document.getElementById('reservationChatUploadProgressBar');
 
-    var stompClient = null;
     var historyLoaded = false;
-    var connected = false;
     var dayGroups = Object.create(null);
     var daySeparators = Object.create(null);
     var dayObserver = null;
@@ -90,13 +84,16 @@
     var pollTimer = null;
     var sendGuard = sendGuardApi.createSendGuard();
 
-    var stompReconnect = reconnectApi.createReconnectScheduler({
-        maxDelayMs: 30000,
-        baseDelayMs: 1000,
-        onReconnect: function () {
-            return connectStomp();
-        }
-    });
+    function maxRenderedMessageId() {
+        var maxId = 0;
+        Object.keys(renderedMessageIds).forEach(function (key) {
+            var id = Number(key);
+            if (!isNaN(id) && id > maxId) {
+                maxId = id;
+            }
+        });
+        return maxId;
+    }
 
     function wallTimeOptions() {
         return {
@@ -696,7 +693,7 @@
         afterMessagesChanged(true);
     }
 
-    function fetchMessagesPage() {
+    function fetchHistoryPage() {
         return fetch(contextPath + '/my-reservations/' + reservationId + '/messages?page=0', {
             credentials: 'same-origin',
             headers: { Accept: 'application/json' }
@@ -708,21 +705,42 @@
         });
     }
 
+    function fetchPollMessages() {
+        var afterId = maxRenderedMessageId();
+        return fetch(
+            contextPath +
+                '/my-reservations/' +
+                reservationId +
+                '/messages/poll?afterId=' +
+                encodeURIComponent(String(afterId)),
+            {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' }
+            }
+        ).then(function (response) {
+            if (!response.ok) {
+                throw new Error('poll');
+            }
+            return response.json();
+        });
+    }
+
     function loadHistory() {
         if (historyLoaded) {
             return Promise.resolve();
         }
-        return fetchMessagesPage().then(function (messages) {
+        return fetchHistoryPage().then(function (messages) {
             renderAll(messages);
             historyLoaded = true;
+            startMessagePolling();
         });
     }
 
     function pollMessages() {
-        if (!historyLoaded || connected) {
+        if (!historyLoaded) {
             return;
         }
-        fetchMessagesPage()
+        fetchPollMessages()
             .then(function (messages) {
                 appendMergedMessages(messages);
             })
@@ -732,70 +750,10 @@
     }
 
     function startMessagePolling() {
-        if (pollTimer || connected) {
+        if (pollTimer) {
             return;
         }
         pollTimer = setInterval(pollMessages, POLL_INTERVAL_MS);
-    }
-
-    function stopMessagePolling() {
-        if (pollTimer) {
-            clearInterval(pollTimer);
-            pollTimer = null;
-        }
-    }
-
-    function markDisconnected() {
-        connected = false;
-        stompClient = null;
-        if (historyLoaded && !uploading) {
-            showError(labelReconnecting);
-        }
-        startMessagePolling();
-        stompReconnect.schedule();
-    }
-
-    function onStompConnected() {
-        connected = true;
-        stompReconnect.reset();
-        stopMessagePolling();
-        if (historyLoaded) {
-            showError('');
-        }
-    }
-
-    function connectStomp() {
-        if (connected && stompClient && stompClient.connected) {
-            return Promise.resolve();
-        }
-        return new Promise(function (resolve, reject) {
-            var socket = new SockJS(contextPath + '/ws');
-            socket.onclose = markDisconnected;
-            stompClient = Stomp.over(socket);
-            stompClient.debug = null;
-            stompClient.heartbeat.outgoing = STOMP_HEARTBEAT_MS;
-            stompClient.heartbeat.incoming = STOMP_HEARTBEAT_MS;
-            stompClient.connect(
-                {},
-                function () {
-                    onStompConnected();
-                    stompClient.subscribe('/topic/reservations/' + reservationId, function (frame) {
-                        try {
-                            var dto = JSON.parse(frame.body);
-                            appendMessage(dto);
-                        } catch (e) {
-                            /* drop malformed frame */
-                        }
-                    });
-                    resolve();
-                },
-                function () {
-                    connected = false;
-                    stompReconnect.schedule();
-                    reject(new Error('stomp'));
-                }
-            );
-        });
     }
 
     function parseErrorResponse(xhr) {
@@ -867,7 +825,6 @@
             retriesLeft = UPLOAD_MAX_RETRIES;
         }
         uploading = true;
-        stompReconnect.suspend();
         showError(labelUploading);
         return uploadMessageWithFileOnce(file, body).catch(function (err) {
             if (retriesLeft > 0 && (err.message === 'network' || err.message === 'timeout')) {
@@ -876,7 +833,6 @@
             throw err;
         }).finally(function () {
             uploading = false;
-            stompReconnect.resume();
         });
     }
 
@@ -949,19 +905,6 @@
             body = body.substring(0, maxLength);
         }
         inputEl.value = '';
-        if (stompClient && stompClient.connected) {
-            try {
-                stompClient.send(
-                    '/app/reservations/' + reservationId + '/messages',
-                    {},
-                    JSON.stringify({ body: body })
-                );
-                releaseSendLock();
-                return;
-            } catch (e) {
-                markDisconnected();
-            }
-        }
         sendTextOverHttp(body)
             .catch(function () {
                 inputEl.value = body;
@@ -1035,18 +978,12 @@
             });
         }
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible' && historyLoaded && !connected) {
-                stompReconnect.reset();
-                connectStomp().catch(function () {
-                    /* reconnect scheduler handles retries */
-                });
+            if (document.visibilityState === 'visible' && historyLoaded) {
+                pollMessages();
             }
         });
         loadHistory().catch(function () {
             showError(errorLoadLabel);
-        });
-        connectStomp().catch(function () {
-            /* reconnect scheduler handles retries */
         });
     }
 

@@ -10,7 +10,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,14 +33,10 @@ public final class ReservationMessageController {
     private static final Logger LOG = LoggerFactory.getLogger(ReservationMessageController.class);
 
     private final ReservationMessageService reservationMessageService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     @Autowired
-    public ReservationMessageController(
-            final ReservationMessageService reservationMessageService,
-            final SimpMessagingTemplate messagingTemplate) {
+    public ReservationMessageController(final ReservationMessageService reservationMessageService) {
         this.reservationMessageService = reservationMessageService;
-        this.messagingTemplate = messagingTemplate;
     }
 
     @GetMapping(value = "/my-reservations/{reservationId}/messages", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -78,7 +73,6 @@ public final class ReservationMessageController {
                     file.getContentType(),
                     file.getBytes());
         }
-        messagingTemplate.convertAndSend("/topic/reservations/" + reservationId, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 

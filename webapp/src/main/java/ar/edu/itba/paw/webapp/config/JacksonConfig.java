@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-/** Shared Jackson setup for REST JSON and STOMP payloads (ISO-8601 dates, not epoch numbers). */
+/** Shared Jackson setup for REST JSON payloads (ISO-8601 dates, not epoch numbers). */
 @Configuration
 public class JacksonConfig {
 

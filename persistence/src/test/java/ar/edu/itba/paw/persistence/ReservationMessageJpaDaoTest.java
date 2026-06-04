@@ -89,6 +89,23 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
+    void testFindByReservationIdAfterIdOrderByCreatedAtAscReturnsOnlyNewerRows() {
+        // 1.Arrange
+        final ReservationMessage first = dao.create(reservationId, riderId, "First");
+        dao.create(reservationId, riderId, "Second");
+        dao.create(reservationId, riderId, "Third");
+        em.flush();
+
+        // 2.Exercise
+        final var messages = dao.findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, first.getId(), 10);
+
+        // 3.Assert
+        Assertions.assertEquals(2, messages.size());
+        Assertions.assertEquals("Second", messages.get(0).getBody());
+        Assertions.assertEquals("Third", messages.get(1).getBody());
+    }
+
+    @Test
     void testFindByReservationIdOrderByCreatedAtAscReturnsInsertedRows() {
         // 1.Arrange
         dao.create(reservationId, riderId, "First");

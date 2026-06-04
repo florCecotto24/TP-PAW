@@ -167,16 +167,20 @@ public class WebAuthConfig {
                                         HttpMethod.GET,
                                         "/cars/{carId}/reservation/new"))
                         .access(carNotOwnedByCallerAuthorization.nonOwnerAccess())
-                        .requestMatchers("/ws", "/ws/**").authenticated()
                         // Chat-style GETs are also reachable by admins (read-only audit access);
                         // every POST against the same family stays participant-only so admins
-                        // cannot impersonate a rider/owner. The STOMP-side equivalent lives in
-                        // ReservationChatChannelInterceptor (SUBSCRIBE allowed for admins, SEND not).
+                        // cannot impersonate a rider/owner.
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
                                         HttpMethod.GET,
                                         "/my-reservations/{reservationId}/messages"))
+                        .access(reservationWebAuthorization.participantOrAdminReadAccess())
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/messages/poll"))
                         .access(reservationWebAuthorization.participantOrAdminReadAccess())
                         .requestMatchers(
                                 mvc(

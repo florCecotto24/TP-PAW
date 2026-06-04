@@ -130,6 +130,24 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<ReservationMessageDto> pollMessagesForParticipant(
+            final long viewerUserId, final long reservationId, final long afterMessageId) {
+        final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
+                .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
+        if (!isChatAvailable(reservation)) {
+            throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
+        }
+        final long safeAfterId = Math.max(0L, afterMessageId);
+        final int limit = chatPolicy.getHistoryPageSize();
+        return reservationMessageDao
+                .findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, safeAfterId, limit)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public ReservationMessageDto postMessage(final long senderUserId, final long reservationId, final String body) {
         final String trimmed = body == null ? "" : body.trim();

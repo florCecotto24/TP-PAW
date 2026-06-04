@@ -14,6 +14,9 @@ public interface ReservationMessageDao {
 
     List<ReservationMessage> findByReservationIdOrderByCreatedAtAsc(long reservationId, int offset, int limit);
 
+    List<ReservationMessage> findByReservationIdAfterIdOrderByCreatedAtAsc(
+            long reservationId, long afterMessageId, int limit);
+
     long countByReservationId(long reservationId);
 
     Optional<ReservationMessage> findByIdAndReservationId(long messageId, long reservationId);

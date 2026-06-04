@@ -20,6 +20,9 @@ public interface ReservationMessageService {
 
     List<ReservationMessageDto> getMessagesForParticipant(long viewerUserId, long reservationId, int page);
 
+    List<ReservationMessageDto> pollMessagesForParticipant(
+            long viewerUserId, long reservationId, long afterMessageId);
+
     ReservationMessageDto postMessage(long senderUserId, long reservationId, String body);
 
     ReservationMessageDto postMessageWithAttachment(

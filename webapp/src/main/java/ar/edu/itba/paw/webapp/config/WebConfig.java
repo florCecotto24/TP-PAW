@@ -29,9 +29,7 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -162,16 +160,6 @@ public class WebConfig implements WebMvcConfigurer {
     public ReservationChatPolicy reservationChatPolicy(
             final AppReservationChatProperties appReservationChatProperties) {
         return appReservationChatProperties.toReservationChatPolicy();
-    }
-
-    /** Drives STOMP broker heartbeats configured in {@link WebSocketConfig}. */
-    @Bean
-    public TaskScheduler messageBrokerTaskScheduler() {
-        final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
-        scheduler.setThreadNamePrefix("wss-heartbeat-");
-        scheduler.initialize();
-        return scheduler;
     }
 
     @Bean

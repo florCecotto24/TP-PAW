@@ -3,7 +3,7 @@ package ar.edu.itba.paw.models.dto.reservation;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
-/** JSON / STOMP payload for a reservation chat message. */
+/** JSON payload for a reservation chat message. */
 public final class ReservationMessageDto {
 
     private final long id;

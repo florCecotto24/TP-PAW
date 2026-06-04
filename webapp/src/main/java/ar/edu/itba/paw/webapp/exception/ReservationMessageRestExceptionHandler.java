@@ -10,11 +10,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
+import ar.edu.itba.paw.webapp.controller.ReservationChatPollController;
 import ar.edu.itba.paw.webapp.controller.ReservationMessageController;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
 /** JSON errors for reservation chat REST endpoints. */
-@RestControllerAdvice(assignableTypes = ReservationMessageController.class)
+@RestControllerAdvice(assignableTypes = {ReservationMessageController.class, ReservationChatPollController.class})
 public final class ReservationMessageRestExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationMessageRestExceptionHandler.class);
