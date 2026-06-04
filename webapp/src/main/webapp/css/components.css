@@ -1233,7 +1233,7 @@ select.form-select.ryden-car-spec-select option {
 }
 
 .reservation-card__media-wrap {
-    min-height: 190px;
+    max-height: 190px;
 }
 
 .reservation-card__media {
