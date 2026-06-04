@@ -40,4 +40,15 @@ class ReservationMessageDtoJsonSerializationTest {
 
         assertEquals(dto.getCreatedAt().toInstant(), parsed.toInstant());
     }
+
+    @Test
+    void testSeenSerializesWhenTrue() throws Exception {
+        final OffsetDateTime createdAt = OffsetDateTime.of(2026, 6, 2, 15, 30, 0, 0, ZoneOffset.UTC);
+        final ReservationMessageDto dto =
+                new ReservationMessageDto(1L, 2L, 3L, "Alice", "hello", createdAt, null, true);
+
+        final JsonNode root = objectMapper.readTree(objectMapper.writeValueAsString(dto));
+
+        assertTrue(root.get("seen").asBoolean());
+    }
 }

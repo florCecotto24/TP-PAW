@@ -13,6 +13,7 @@ public final class ReservationMessageDto {
     private final String body;
     private final OffsetDateTime createdAt;
     private final ReservationMessageAttachmentDto attachment;
+    private final boolean seen;
 
     public ReservationMessageDto(
             final long id,
@@ -21,7 +22,7 @@ public final class ReservationMessageDto {
             final String senderDisplayName,
             final String body,
             final OffsetDateTime createdAt) {
-        this(id, reservationId, senderUserId, senderDisplayName, body, createdAt, null);
+        this(id, reservationId, senderUserId, senderDisplayName, body, createdAt, null, false);
     }
 
     public ReservationMessageDto(
@@ -32,6 +33,18 @@ public final class ReservationMessageDto {
             final String body,
             final OffsetDateTime createdAt,
             final ReservationMessageAttachmentDto attachment) {
+        this(id, reservationId, senderUserId, senderDisplayName, body, createdAt, attachment, false);
+    }
+
+    public ReservationMessageDto(
+            final long id,
+            final long reservationId,
+            final long senderUserId,
+            final String senderDisplayName,
+            final String body,
+            final OffsetDateTime createdAt,
+            final ReservationMessageAttachmentDto attachment,
+            final boolean seen) {
         this.id = id;
         this.reservationId = reservationId;
         this.senderUserId = senderUserId;
@@ -39,6 +52,7 @@ public final class ReservationMessageDto {
         this.body = body == null ? "" : body;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.attachment = attachment;
+        this.seen = seen;
     }
 
     public long getId() {
@@ -67,5 +81,9 @@ public final class ReservationMessageDto {
 
     public ReservationMessageAttachmentDto getAttachment() {
         return attachment;
+    }
+
+    public boolean isSeen() {
+        return seen;
     }
 }

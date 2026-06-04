@@ -386,7 +386,8 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
                 formatDisplayName(sender),
                 message.getBody(),
                 message.getCreatedAt(),
-                attachmentDto);
+                attachmentDto,
+                message.isSeen());
     }
 
     private ReservationMessageAttachmentDto toAttachmentDto(final ReservationMessage message) {

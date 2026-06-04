@@ -596,6 +596,57 @@
         appendFileCard(bubble, att, 'bi-file-earmark');
     }
 
+    function buildMessageMeta(dto, isMine) {
+        var meta = document.createElement('span');
+        meta.className = 'reservation-chat__meta';
+        var time = document.createElement('span');
+        time.className = 'reservation-chat__time';
+        time.textContent = formatMessageTime(dto.createdAt);
+        meta.appendChild(time);
+        if (isMine) {
+            var receipt = document.createElement('span');
+            receipt.className = 'reservation-chat__receipt';
+            receipt.setAttribute('aria-hidden', 'true');
+            receipt.textContent = '\u2713\u2713';
+            if (dto.seen === true) {
+                receipt.classList.add('reservation-chat__receipt--seen');
+            }
+            meta.appendChild(receipt);
+        }
+        return meta;
+    }
+
+    function syncReadReceipts(messages) {
+        if (!messages || !messages.length || !messagesEl) {
+            return;
+        }
+        for (var i = 0; i < messages.length; i++) {
+            var dto = messages[i];
+            if (!dto || dto.id == null || Number(dto.senderUserId) !== viewerUserId) {
+                continue;
+            }
+            var item = messagesEl.querySelector('[data-message-id="' + String(dto.id) + '"]');
+            if (!item) {
+                continue;
+            }
+            var receipt = item.querySelector('.reservation-chat__receipt');
+            if (!receipt) {
+                continue;
+            }
+            if (dto.seen === true) {
+                receipt.classList.add('reservation-chat__receipt--seen');
+            } else {
+                receipt.classList.remove('reservation-chat__receipt--seen');
+            }
+        }
+    }
+
+    function refreshReadReceiptsOnCurrentPage() {
+        return fetchHistoryPage(historyPageIndex).then(function (page) {
+            syncReadReceipts(page.content || []);
+        });
+    }
+
     function renderMessage(dto) {
         if (!dto) {
             return;
@@ -617,6 +668,9 @@
         var item = document.createElement('div');
         item.className =
             'reservation-chat__message mb-2' + (isMine ? ' reservation-chat__message--mine' : '');
+        if (dto.id != null) {
+            item.setAttribute('data-message-id', String(dto.id));
+        }
         var bubble = document.createElement('div');
         bubble.className =
             'reservation-chat__bubble ' +
@@ -633,9 +687,7 @@
             }
             renderAttachment(bubble, dto.attachment);
         }
-        var time = document.createElement('span');
-        time.className = 'reservation-chat__time';
-        time.textContent = formatMessageTime(dto.createdAt);
+        var meta = buildMessageMeta(dto, isMine);
         if (bodyText) {
             var text = document.createElement('span');
             text.className =
@@ -645,14 +697,14 @@
                 var footer = document.createElement('div');
                 footer.className = 'reservation-chat__bubble-footer';
                 footer.appendChild(text);
-                footer.appendChild(time);
+                footer.appendChild(meta);
                 bubble.appendChild(footer);
             } else {
                 bubble.appendChild(text);
-                bubble.appendChild(time);
+                bubble.appendChild(meta);
             }
         } else {
-            bubble.appendChild(time);
+            bubble.appendChild(meta);
         }
         item.appendChild(bubble);
         group.appendChild(item);
@@ -863,6 +915,7 @@
         fetchPollMessages()
             .then(function (messages) {
                 appendMergedMessages(messages);
+                return refreshReadReceiptsOnCurrentPage();
             })
             .catch(function () {
                 /* polling is best-effort */

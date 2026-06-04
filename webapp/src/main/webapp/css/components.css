@@ -1644,7 +1644,7 @@ body.reservation-chat-body.has-fixed-navbar {
     line-height: inherit;
 }
 
-.reservation-chat__bubble-footer .reservation-chat__time {
+.reservation-chat__bubble-footer .reservation-chat__meta {
     flex-shrink: 0;
     margin: 0;
     align-self: auto;
@@ -1657,13 +1657,31 @@ body.reservation-chat-body.has-fixed-navbar {
     padding-right: 0.25rem;
 }
 
-.reservation-chat__time {
+.reservation-chat__meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.2rem;
     align-self: flex-end;
     margin-top: 0.125rem;
+    white-space: nowrap;
+}
+
+.reservation-chat__time {
     font-size: 0.6875rem;
     line-height: 1.2;
     color: rgba(15, 23, 42, 0.45);
-    white-space: nowrap;
+}
+
+.reservation-chat__receipt {
+    font-size: 0.75rem;
+    line-height: 1;
+    letter-spacing: -0.08em;
+    color: #8696a0;
+}
+
+.reservation-chat__receipt--seen {
+    color: #53bdeb;
 }
 
 .reservation-chat__message--mine .reservation-chat__bubble:not(.reservation-chat__bubble--has-attachment) {
@@ -1789,21 +1807,32 @@ body.reservation-chat-body.has-fixed-navbar {
     vertical-align: top;
 }
 
-.reservation-chat__bubble--visual-only .reservation-chat__time {
+.reservation-chat__bubble--visual-only .reservation-chat__meta {
     position: absolute;
     right: 0.375rem;
     bottom: 0.25rem;
     z-index: 1;
     margin: 0;
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__time {
     color: rgba(255, 255, 255, 0.95);
     text-shadow: 0 0 4px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__receipt {
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__receipt--seen {
+    color: #8fd0ff;
 }
 
 .reservation-chat__bubble--media-only:not(.reservation-chat__bubble--visual-only) {
     padding: 0.25rem 0.375rem 0.125rem;
 }
 
-.reservation-chat__bubble--media-only:not(.reservation-chat__bubble--visual-only) .reservation-chat__time {
+.reservation-chat__bubble--media-only:not(.reservation-chat__bubble--visual-only) .reservation-chat__meta {
     align-self: flex-end;
     margin-top: 0.125rem;
 }
