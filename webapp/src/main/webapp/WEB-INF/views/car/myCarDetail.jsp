@@ -158,10 +158,10 @@
 
                 <%-- Modal string variables — declared here so they're available to ryden:modal tags below regardless of sidebar branch --%>
                 <spring:message code="myCarDetail.actions.finish" var="finishBtnLabel"/>
-                <spring:message code="myCarDetail.finishModal.title" var="finishModalTitle"/>
-                <spring:message code="myCarDetail.finishModal.message" var="finishModalMessage"/>
-                <spring:message code="myCarDetail.finishModal.confirm" var="finishModalConfirm"/>
-                <spring:message code="myCarDetail.finishModal.back" var="finishModalBack"/>
+                <spring:message code="myCarDetail.deregisterModal.title" var="finishModalTitle"/>
+                <spring:message code="myCarDetail.deregisterModal.message" var="finishModalMessage"/>
+                <spring:message code="myCarDetail.deregisterModal.confirm" var="finishModalConfirm"/>
+                <spring:message code="myCarDetail.deregisterModal.back" var="finishModalBack"/>
                 <spring:message code="myCarDetail.pauseModal.title" var="pauseModalTitle"/>
                 <spring:message code="myCarDetail.pauseModal.message" var="pauseModalMessage"/>
                 <spring:message code="myCarDetail.pauseModal.confirm" var="pauseModalConfirm"/>

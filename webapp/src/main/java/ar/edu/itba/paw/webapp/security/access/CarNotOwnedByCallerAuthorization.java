@@ -20,9 +20,11 @@ import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
  * Authorization helper for endpoints whose business rule requires the authenticated caller to
  * not be the owner of the {@code Car} identified by {@code carId}
  * (e.g. {@code POST /my-favorites/toggle} — you cannot favourite your own car;
- * {@code GET /cars/{carId}/reservation/new} — you cannot reserve your own car). Adds filter-chain
- * defense-in-depth on top of the equivalent service-level checks ({@code FavCarService#toggleFavorite},
- * {@code ReservationService#submitRiderReservationByCar}).
+ * {@code GET /cars/{carId}/reservation/new} — you cannot reserve your own car). Enforced at the
+ * filter chain so the controller does not have to re-check the rule; the matching service-level
+ * checks ({@code FavCarService#toggleFavorite}, {@code ReservationService#submitRiderReservationByCar})
+ * remain as a domain invariant covering callers that arrive without going through the HTTP filter
+ * (e.g. {@code POST /reservation} where {@code carId} travels in a multipart body).
  *
  * Reads {@code carId} from the request query/form parameter or from the {@code /cars/{carId}/…}
  * path prefix. Malformed / missing / unknown {@code carId} is intentionally allowed through so the

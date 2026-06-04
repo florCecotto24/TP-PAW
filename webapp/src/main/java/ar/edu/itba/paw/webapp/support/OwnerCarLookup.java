@@ -10,11 +10,20 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.services.CarService;
 
 /**
- * Tiny lookup helper used by the owner-only car handlers in {@code MyCarsController}: every
- * such handler used to inline the same {@code carService.getCarById + ownership check + redirect
- * to /my-cars (or /my-cars/car/{id})} block (repeated in 10+ places). The helper returns a
- * resolved {@link Car} or a ready-to-return {@link ModelAndView} redirect so controllers can
- * branch with a single {@code if (result.redirect().isPresent()) return result.redirect().get();}.
+ * Loads a {@link Car} owned by the current viewer for the owner-only handlers in
+ * {@code MyCarsController}.
+ *
+ * <p>Access control (ownership) is enforced by the Spring Security filter chain via
+ * {@link ar.edu.itba.paw.webapp.security.access.CarOwnerWebAuthorization} on the
+ * {@code /my-cars/car/{carId}/**} and {@code /my-cars/reservations/{carId}} matchers
+ * (see {@code WebAuthConfig#securityFilterChain}). By the time a controller calls
+ * {@link #loadOwnedCar(long, String)}, the caller is guaranteed to own {@code carId}.
+ *
+ * <p>This helper exists only to keep loading + the rare not-found redirect out of the
+ * controller body: it does <em>not</em> re-validate ownership. If the row disappeared
+ * between the filter-chain check and the controller call (concurrent deactivation, etc.)
+ * the helper returns a ready-to-use redirect to a safe fallback URL instead of
+ * propagating a {@link RuntimeException}.
  */
 @Component
 public final class OwnerCarLookup {
@@ -26,23 +35,24 @@ public final class OwnerCarLookup {
     }
 
     /**
-     * Resolves {@code carId} as a car owned by {@code viewerUserId}.
+     * Loads the {@link Car} identified by {@code carId}. Ownership is assumed (enforced by the
+     * Spring Security filter chain). Returns either the resolved car or a redirect to
+     * {@code redirectIfMissing} for the rare case where the car no longer exists.
      *
-     * @param viewerUserId       authenticated user id
-     * @param carId              path-variable car id
-     * @param redirectIfMissing  absolute URL (e.g. {@code "/my-cars"}) to redirect to when the
-     *                           car does not exist or is not owned by the viewer
+     * @param carId             path-variable car id
+     * @param redirectIfMissing absolute in-app URL (e.g. {@code "/my-cars"}) to redirect to when
+     *                          the car has been removed between the filter check and the
+     *                          controller call
      */
-    public Result resolveOwnedCar(
-            final long viewerUserId, final long carId, final String redirectIfMissing) {
+    public Result loadOwnedCar(final long carId, final String redirectIfMissing) {
         final Optional<Car> carOpt = carService.getCarById(carId);
-        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != viewerUserId) {
+        if (carOpt.isEmpty()) {
             return Result.redirect(redirectIfMissing);
         }
         return Result.ok(carOpt.get());
     }
 
-    /** Either the resolved {@link Car} (owner matches) or a redirect to take the viewer elsewhere. */
+    /** Either the resolved {@link Car} or a redirect to take the viewer elsewhere. */
     public static final class Result {
 
         private final Car carOrNull;

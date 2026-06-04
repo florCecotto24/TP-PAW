@@ -144,8 +144,9 @@ public class WebAuthConfig {
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}"),
                                 mvc(handlerMappingIntrospector, "/my-cars/car/{carId}/**"))
                         .access(carOwnerWebAuthorization.ownerAccess())
-                        // Owner-only filter-side check for the "owner reservations filtered by carId"
-                        // family. Mirrors the controller-level OwnerCarLookup branch as defense-in-depth.
+                        // Owner-only filter-side check for the "owner reservations filtered by carId" family.
+                        // The owner-only rule is enforced only here; controllers load the Car via
+                        // OwnerCarLookup but do not re-check ownership.
                         .requestMatchers(
                                 mvc(handlerMappingIntrospector, HttpMethod.GET, "/my-cars/reservations/{carId}"))
                         .access(carOwnerWebAuthorization.ownerAccessForPrefix("/my-cars/reservations/"))
@@ -157,10 +158,10 @@ public class WebAuthConfig {
                                         "/my-favorites/toggle"))
                         .access(carNotOwnedByCallerAuthorization.nonOwnerAccess())
                         .requestMatchers("/my-favorites", "/my-favorites/**").authenticated()
-                        // GET /cars/{carId}/reservation/new: filter-chain defense-in-depth for the rider-cannot-
-                        // reserve-own-car rule that the service layer enforces in submitRiderReservationByCar.
-                        // The POST /reservation submit keeps service-level enforcement only because its carId
-                        // travels in the form body (would force the filter to consume the multipart stream).
+                        // GET /cars/{carId}/reservation/new: filter-chain enforcement of the rider-cannot-
+                        // reserve-own-car rule. The service layer (submitRiderReservationByCar) keeps a
+                        // matching check for the POST /reservation submit because its carId travels in the
+                        // form body (would force the filter to consume the multipart stream).
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,
@@ -286,7 +287,7 @@ public class WebAuthConfig {
                         .access(profileWebAuthorization.selfProfileAccess())
                         .anyRequest().permitAll())
                 .exceptionHandling(ex -> ex.accessDeniedHandler((request, response, accessDeniedException) -> {
-                    response.sendRedirect(request.getContextPath() + "/");
+                    response.sendRedirect(request.getContextPath() + accessDeniedRedirectTarget(request));
                 }))
                 .formLogin(form -> form
                         .loginPage("/login")
@@ -352,5 +353,26 @@ public class WebAuthConfig {
     private static MvcRequestMatcher mvc(
             final HandlerMappingIntrospector introspector, final String pattern) {
         return new MvcRequestMatcher(introspector, pattern);
+    }
+
+    /**
+     * Picks a sensible same-hub fallback for {@code accessDeniedHandler} so a viewer that tripped the
+     * filter chain on, say, {@code /my-cars/car/{otherUsersCar}/edit} lands on {@code /my-cars} (not
+     * the unrelated home page). Mirrors the redirect targets that the controllers used to compute
+     * inline before access control moved into the security filter chain.
+     */
+    private static String accessDeniedRedirectTarget(final HttpServletRequest request) {
+        final String servletPath = request.getServletPath();
+        final String path = servletPath != null ? servletPath : "";
+        if (path.startsWith("/my-cars/reservations")) {
+            return "/my-cars/reservations";
+        }
+        if (path.startsWith("/my-cars")) {
+            return "/my-cars";
+        }
+        if (path.startsWith("/my-reservations")) {
+            return "/my-reservations";
+        }
+        return "/";
     }
 }

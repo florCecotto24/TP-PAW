@@ -207,7 +207,7 @@ public final class MyCarsController {
             @RequestParam(required = false) final String ownerSort,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars/reservations");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars/reservations");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -261,7 +261,7 @@ public final class MyCarsController {
             @Validated(ValidationGroups.OnListingEdit.class) @ModelAttribute("editForm") final CarAvailabilityEditForm editForm,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -380,7 +380,7 @@ public final class MyCarsController {
             @RequestParam(required = false) final String reservationStatus,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -405,7 +405,7 @@ public final class MyCarsController {
             @CurrentUser final User currentUser,
             @PathVariable final long carId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -437,7 +437,7 @@ public final class MyCarsController {
             @CurrentUser final User currentUser,
             @PathVariable final long carId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -456,7 +456,7 @@ public final class MyCarsController {
             @PathVariable final long carId,
             @PathVariable final long availabilityId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -476,7 +476,7 @@ public final class MyCarsController {
             @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createCarAvailabilityForm") final CreateCarAvailabilityForm form,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -531,7 +531,7 @@ public final class MyCarsController {
             @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createCarAvailabilityForm") final CreateCarAvailabilityForm form,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -610,7 +610,7 @@ public final class MyCarsController {
             @RequestParam(name = "insuranceFile", required = false) final MultipartFile insuranceFile,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final OwnerCarLookup.Result lookup = ownerCarLookup.resolveOwnedCar(me.getId(), carId, "/my-cars");
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
@@ -624,6 +624,8 @@ public final class MyCarsController {
 
     /**
      * AJAX variant of {@link #uploadInsurance} so the car-detail page can update without a full reload.
+     * Ownership is enforced by {@code CarOwnerWebAuthorization} on {@code /my-cars/car/{carId}/**}
+     * in the Spring Security filter chain, so this handler does not re-check it.
      */
     @PostMapping(value = "/car/{carId}/quick-insurance", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> quickInsurance(
@@ -631,10 +633,6 @@ public final class MyCarsController {
             @PathVariable("carId") final long carId,
             @RequestParam(name = "insuranceFile", required = false) final MultipartFile insuranceFile) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<Car> carOpt = carService.getCarById(carId);
-        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
-            return ResponseEntity.notFound().build();
-        }
         final var outcome = carInsuranceUploadFacade.attemptUpload(me.getId(), carId, insuranceFile);
         switch (outcome.getStatus()) {
             case OK:

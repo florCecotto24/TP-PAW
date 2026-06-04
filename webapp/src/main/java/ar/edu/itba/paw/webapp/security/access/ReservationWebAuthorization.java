@@ -9,12 +9,12 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
 
@@ -31,8 +31,6 @@ import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
  */
 @Component("reservationWebAuth")
 public final class ReservationWebAuthorization {
-
-    private static final String ROLE_ADMIN_AUTHORITY = UserRole.ADMIN.springAuthorityName();
 
     private final ReservationService reservationService;
 
@@ -99,7 +97,8 @@ public final class ReservationWebAuthorization {
      * messages, cancel, upload receipts, or post reviews on behalf of a participant.
      */
     public AuthorizationManager<RequestAuthorizationContext> participantOrAdminReadAccess() {
-        return authenticatedManager((auth, request) -> hasAdminAuthority(auth) || isParticipant(auth, request));
+        return authenticatedManager(
+                (auth, request) -> AuthenticationAuthorities.hasAdminRole(auth) || isParticipant(auth, request));
     }
 
     private static AuthorizationManager<RequestAuthorizationContext> authenticatedManager(
@@ -111,20 +110,6 @@ public final class ReservationWebAuthorization {
             }
             return new AuthorizationDecision(check.allow(auth, context.getRequest()));
         };
-    }
-
-    private static boolean hasAdminAuthority(final Authentication authentication) {
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            return false;
-        }
-        for (final GrantedAuthority authority : authentication.getAuthorities()) {
-            if (ROLE_ADMIN_AUTHORITY.equals(authority.getAuthority())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @FunctionalInterface

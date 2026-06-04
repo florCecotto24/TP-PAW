@@ -6,6 +6,7 @@ import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.CarDetailViewService;
 import ar.edu.itba.paw.services.CounterpartyProfileViewService;
+import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -55,9 +56,7 @@ public class CarDetailController {
             final Authentication authentication,
             final HttpServletRequest request) {
 
-        final boolean currentUserIsAdmin = authentication != null
-                && authentication.getAuthorities().stream()
-                        .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        final boolean currentUserIsAdmin = AuthenticationAuthorities.hasAdminRole(authentication);
         // Page model assembly (8 services + visibility rules + review formatting + favorite
         // flag) lives in CarDetailViewService; the controller stays focused on HTTP concerns:
         // request params (date defaults, search context, admin action form) and the view-layer

@@ -23,8 +23,10 @@ import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;
  * config via {@link AuthorizationManager}.
  *
  * <p>The prefix is parametrised at {@link AuthorizationManager} creation time so different URL
- * families that all encode {@code carId} the same way can reuse the same component (filter-chain
- * defense-in-depth on top of the controller-level {@code OwnerCarLookup} branch).</p>
+ * families that all encode {@code carId} the same way can reuse the same component. This is the
+ * single point of enforcement for the owner-only rule on those URLs; controllers ({@code MyCarsController})
+ * call {@code OwnerCarLookup} to load the {@code Car} for business logic and trust ownership from the
+ * filter-chain decision instead of re-checking it.</p>
  */
 @Component("carOwnerWebAuth")
 public final class CarOwnerWebAuthorization {
