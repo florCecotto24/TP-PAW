@@ -12,8 +12,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
-
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
@@ -30,7 +28,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
-import ar.edu.itba.paw.persistence.ReservationDao;
+import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 
 @Transactional(readOnly = true)
 @Repository
@@ -460,8 +458,15 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public List<Reservation> findReservationsForRiderReviewInviteEmail(final OffsetDateTime now) {
         // NOT EXISTS sub-query navigates the Review entity (no native join to the reviews table).
+        // JOIN FETCH car + carModel + brand so callers that read resolveVehicleLabelFromReservation()
+        // (which touches car.getBrand() and car.getModel()) do not trigger per-row SELECTs on cars,
+        // car_models and car_brands. LEFT JOIN FETCH on the catalog side keeps the query safe for
+        // any pre-backfill cars that still have model_id = NULL.
         return em.createQuery(
                         "FROM Reservation r "
+                                + "JOIN FETCH r.car c "
+                                + "LEFT JOIN FETCH c.carModel cm "
+                                + "LEFT JOIN FETCH cm.brand "
                                 + "WHERE r.status IN :statuses "
                                 + "AND r.riderReviewInviteEmailSent = FALSE "
                                 + "AND r.endDate < :now "
@@ -495,6 +500,7 @@ public class ReservationJpaDao implements ReservationDao {
             final OffsetDateTime now, final OffsetDateTime carReturnedAtCutoff) {
         return em.createQuery(
                         "FROM Reservation r "
+                                + "JOIN FETCH r.car c "
                                 + "WHERE r.status IN :statuses "
                                 + "AND r.carReturned = TRUE "
                                 + "AND r.carReturnedAt IS NOT NULL "
