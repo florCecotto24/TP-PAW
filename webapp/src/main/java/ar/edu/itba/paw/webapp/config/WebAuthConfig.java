@@ -1,6 +1,9 @@
 package ar.edu.itba.paw.webapp.config;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.Cookie;
@@ -11,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.RememberMeAuthenticationProvider;
@@ -32,8 +36,14 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 import ar.edu.itba.paw.services.UserService;
@@ -91,7 +101,9 @@ public class WebAuthConfig {
 
     @Bean
     public RequestCache requestCache() {
-        return new HttpSessionRequestCache();
+        final HttpSessionRequestCache cache = new HttpSessionRequestCache();
+        cache.setRequestMatcher(savedRequestMatcher());
+        return cache;
     }
 
     @Bean
@@ -354,6 +366,24 @@ public class WebAuthConfig {
                 response.addCookie(c);
             }
         }
+    }
+
+    /**
+     * Limits which unauthenticated requests are stored for post-login redirect. Excludes JSON/XHR
+     * APIs (e.g. reservation chat poll) so a background fetch cannot become the login success target.
+     */
+    private static RequestMatcher savedRequestMatcher() {
+        final List<RequestMatcher> matchers = new ArrayList<>();
+        matchers.add(new AntPathRequestMatcher("/**", HttpMethod.GET.name()));
+        matchers.add(new NegatedRequestMatcher(new AntPathRequestMatcher("/**/messages/poll")));
+        matchers.add(new NegatedRequestMatcher(
+                new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")));
+        final MediaTypeRequestMatcher jsonRequest = new MediaTypeRequestMatcher(
+                new HeaderContentNegotiationStrategy(), MediaType.APPLICATION_JSON);
+        jsonRequest.setIgnoredMediaTypes(Collections.singleton(MediaType.ALL));
+        jsonRequest.setUseEquals(true);
+        matchers.add(new NegatedRequestMatcher(jsonRequest));
+        return new AndRequestMatcher(matchers);
     }
 
     private static MvcRequestMatcher mvc(
