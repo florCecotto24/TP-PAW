@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.services;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.search.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarAvailability;
@@ -26,6 +29,10 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationEditPageModel;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
+import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
+import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.services.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.services.util.CarAvailabilityAddressFormatter;
 
@@ -159,6 +166,71 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 hasRefundReceipt,
                 refundProofDeadlineDisplay,
                 reservationMessageService.isChatAvailable(reservation)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReservationEditPageModel> loadRiderEditReservationPage(
+            final long riderUserId, final long reservationId, final Locale locale) {
+        // The security filter chain rejects unauthorized callers via
+        // ReservationWebAuthorization.isRiderUnpaidPending, but we re-load through the rider-scoped
+        // accessor anyway so the view-builder cannot be hoisted out of context.
+        final Optional<Reservation> reservationOpt =
+                reservationService.getRiderReservationById(riderUserId, reservationId);
+        if (reservationOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Reservation reservation = reservationOpt.get();
+        if (reservation.getStatus() != Reservation.Status.PENDING
+                || reservation.getPaymentReceiptFileId().isPresent()) {
+            return Optional.empty();
+        }
+        final Optional<Car> carOpt = carService.getCarById(reservation.getCarId());
+        if (carOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Car car = carOpt.get();
+        // Excluding the reservation itself prevents it from blocking its own days in the bookable
+        // calendar — riders editing a pending reservation must be able to keep or partly reuse
+        // their currently-held window.
+        final List<BookableSegmentProjection> bookableSegments =
+                carAvailabilityService.getBookableSegmentsForRiderDatePickerByCarExcluding(
+                        car.getId(), Instant.now(), reservation.getId());
+        final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
+        final boolean hasBookableDays = !bookableSegments.isEmpty();
+        final List<ar.edu.itba.paw.models.domain.CarPicture> carPictures =
+                carPictureService.getCarPicturesByCarId(car.getId());
+        final long carImageId = carPictures.stream()
+                .map(ar.edu.itba.paw.models.domain.CarPicture::getImageId)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(0L);
+        final String pickupDisplay =
+                WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
+        final String returnDisplay =
+                WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
+        final String totalPriceDisplay = ArsMoneyFormat.format(reservation.getTotalPrice());
+        // Pre-fill the hidden Flatpickr inputs with the current wall-zone values so the form opens
+        // pointing at the user's existing window (which they can then shrink/move/extend).
+        final LocalDateTime startWall =
+                reservation.getStartDate().atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDateTime();
+        final LocalDateTime endWall =
+                reservation.getEndDate().atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDateTime();
+        final String currentFromDateTimeWall = WallDateTimeParsing.WALL_INPUT_DATE_TIME.format(startWall);
+        final String currentUntilDateTimeWall = WallDateTimeParsing.WALL_INPUT_DATE_TIME.format(endWall);
+        return Optional.of(new ReservationEditPageModel(
+                reservation,
+                car,
+                carImageId,
+                pickupDisplay,
+                returnDisplay,
+                totalPriceDisplay,
+                currentFromDateTimeWall,
+                currentUntilDateTimeWall,
+                bookableWallRangesJson,
+                hasBookableDays,
+                reservationService.getConfiguredMaxReservationBillableDays(),
+                car.getMinimumRentalDays()));
     }
 
     @Override

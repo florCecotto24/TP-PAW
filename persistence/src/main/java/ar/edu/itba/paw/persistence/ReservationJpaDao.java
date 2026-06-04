@@ -79,12 +79,47 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
+    public boolean hasActiveOverlapByCarExcluding(
+            final long carId,
+            final OffsetDateTime startDate,
+            final OffsetDateTime endDate,
+            final long excludingReservationId) {
+        final Number count = (Number) em.createQuery(
+                        "SELECT COUNT(r) FROM Reservation r "
+                                + "WHERE r.car.id = :carId "
+                                + "AND r.status IN :statuses "
+                                + "AND r.id <> :excludeId "
+                                + "AND r.startDate < :endDate "
+                                + "AND r.endDate > :startDate")
+                .setParameter("carId", carId)
+                .setParameter("statuses", BLOCKING_STATUSES)
+                .setParameter("excludeId", excludingReservationId)
+                .setParameter("endDate", endDate)
+                .setParameter("startDate", startDate)
+                .getSingleResult();
+        return count != null && count.longValue() > 0;
+    }
+
+    @Override
     public List<Reservation> findBlockingByCarId(final long carId) {
         return em.createQuery(
                         "FROM Reservation r WHERE r.car.id = :carId AND r.status IN :statuses ORDER BY r.startDate ASC",
                         Reservation.class)
                 .setParameter("carId", carId)
                 .setParameter("statuses", BLOCKING_STATUSES)
+                .getResultList();
+    }
+
+    @Override
+    public List<Reservation> findBlockingByCarIdExcluding(final long carId, final long excludingReservationId) {
+        return em.createQuery(
+                        "FROM Reservation r "
+                                + "WHERE r.car.id = :carId AND r.status IN :statuses AND r.id <> :excludeId "
+                                + "ORDER BY r.startDate ASC",
+                        Reservation.class)
+                .setParameter("carId", carId)
+                .setParameter("statuses", BLOCKING_STATUSES)
+                .setParameter("excludeId", excludingReservationId)
                 .getResultList();
     }
 
@@ -255,6 +290,33 @@ public class ReservationJpaDao implements ReservationDao {
             return 0;
         }
         r.setStatus(Reservation.Status.valueOf(status.toUpperCase(Locale.ROOT)));
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
+    }
+
+    @Override
+    @Transactional
+    public int updateRiderPendingReservationPeriod(
+            final long reservationId,
+            final long riderId,
+            final OffsetDateTime newStartDate,
+            final OffsetDateTime newEndDate,
+            final BigDecimal newTotalPrice,
+            final OffsetDateTime newPaymentProofDeadlineAt) {
+        // Pessimistic write lock so a concurrent overlap check / payment-proof upload cannot race with
+        // the period mutation: the row must stay in PENDING + no-receipt while we re-validate and write.
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null
+                || r.getRiderId() != riderId
+                || r.getStatus() != Reservation.Status.PENDING
+                || r.getPaymentReceiptFileId().isPresent()) {
+            return 0;
+        }
+        r.setStartDate(newStartDate);
+        r.setEndDate(newEndDate);
+        r.setTotalPrice(newTotalPrice);
+        r.setPaymentProofDeadlineAt(newPaymentProofDeadlineAt);
+        r.setPendingPaymentproofEmailSent(false);
         r.setUpdatedAt(OffsetDateTime.now());
         return 1;
     }

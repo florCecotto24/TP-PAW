@@ -261,6 +261,21 @@ public class WebAuthConfig {
                                         HttpMethod.POST,
                                         "/my-reservations/{reservationId}/cancel"))
                         .access(reservationWebAuthorization.participantAccess())
+                        // Rider-side period edit: only the rider on a still-unpaid PENDING reservation
+                        // may reach either the GET form or the POST update. The service layer keeps an
+                        // identical guard so a programmatic caller cannot bypass this filter check.
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.GET,
+                                        "/my-reservations/{reservationId}/edit"))
+                        .access(reservationWebAuthorization.riderUnpaidPendingAccess())
+                        .requestMatchers(
+                                mvc(
+                                        handlerMappingIntrospector,
+                                        HttpMethod.POST,
+                                        "/my-reservations/{reservationId}/edit"))
+                        .access(reservationWebAuthorization.riderUnpaidPendingAccess())
                         .requestMatchers(
                                 mvc(
                                         handlerMappingIntrospector,

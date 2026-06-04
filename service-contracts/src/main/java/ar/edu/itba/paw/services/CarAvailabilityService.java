@@ -143,6 +143,16 @@ public interface CarAvailabilityService {
     List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(long carId, Instant now);
 
     /**
+     * Same as {@link #getBookableSegmentsForRiderDatePickerByCar(long, Instant)} but excludes the
+     * reservation whose id matches {@code excludingReservationId} from the "blocking reservations"
+     * subtraction. Used by the rider-side edit flow so the days currently held by the reservation under
+     * edit are still considered bookable for that same reservation (rider can shrink/extend without
+     * conflicting against themselves).
+     */
+    List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCarExcluding(
+            long carId, Instant now, long excludingReservationId);
+
+    /**
      * Returns the minimum effective day price across all future offered availability rows for the car.
      * When {@code defaultPrice} is provided it seeds the minimum (used as a fallback when no availability rows exist).
      */

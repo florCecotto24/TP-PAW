@@ -406,6 +406,142 @@ public final class ReservationServiceImpl implements ReservationService {
                 cbu);
     }
 
+    @Override
+    @Transactional
+    public Reservation editPendingReservationByRider(
+            final long riderId,
+            final long reservationId,
+            final String fromDateTime,
+            final String untilDateTime) {
+        // Defense in depth: the security filter chain enforces that only the rider on a still-unpaid
+        // PENDING reservation can reach this endpoint, but we re-check here so a programmatic caller
+        // cannot bypass the same invariants.
+        final Reservation reservation = getRiderReservationById(riderId, reservationId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_EDIT_NOT_ALLOWED));
+        if (reservation.getStatus() != Reservation.Status.PENDING
+                || reservation.getPaymentReceiptFileId().isPresent()) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_EDIT_NOT_ALLOWED);
+        }
+        if (isBlank(fromDateTime) || isBlank(untilDateTime)) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_REQUIRED);
+        }
+        final OffsetDateTime startDate;
+        final OffsetDateTime endDate;
+        try {
+            startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(fromDateTime);
+            endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(untilDateTime);
+        } catch (final DateTimeParseException e) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_DATES_INVALID_FORMAT);
+        }
+        if (!endDate.isAfter(startDate)) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_END_NOT_AFTER_START);
+        }
+        validateWallPickupDateNotBeforeToday(startDate);
+        validatePickupAtLeastTwentyFourHoursInAdvance(startDate);
+
+        final long carId = reservation.getCarId();
+        if (!reservationIntervalFitsCarAvailability(carId, null, startDate, endDate)) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
+        }
+        validateHandoverTimesMatchEffectiveAvailability(carId, startDate, endDate);
+
+        final long billableDays = calculateBillableDays(startDate, endDate);
+        if (billableDays > reservationTimingPolicy.getMaxBillableDaysPerReservation()) {
+            throw new RiderReservationException(
+                    MessageKeys.RESERVATION_RIDER_MAX_BILLABLE_DAYS,
+                    reservationTimingPolicy.getMaxBillableDaysPerReservation());
+        }
+        final Car car = carService.getCarById(carId)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+        if (billableDays < car.getMinimumRentalDays()) {
+            throw new RiderReservationException(
+                    MessageKeys.RESERVATION_RIDER_BELOW_MINIMUM_DAYS,
+                    car.getMinimumRentalDays());
+        }
+        if (reservationDao.hasActiveOverlapByCarExcluding(carId, startDate, endDate, reservationId)) {
+            throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
+        }
+        final LocalDate firstBillableDay = startDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final LocalDate lastBillableDay = endDate.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        final ReservationPlan plan = planReservationByCar(carId, firstBillableDay, lastBillableDay)
+                .filter(p -> p.total().signum() > 0)
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_TOTAL_PRICE_INVALID));
+
+        final OffsetDateTime newDeadline = OffsetDateTime.ofInstant(
+                Instant.now().plus(reservationTimingPolicy.getPaymentProofDeadlineHours(), ChronoUnit.HOURS),
+                ZoneOffset.UTC);
+        final int updated = reservationDao.updateRiderPendingReservationPeriod(
+                reservationId, riderId, startDate, endDate, plan.total(), newDeadline);
+        if (updated == 0) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_EDIT_NOT_ALLOWED);
+        }
+        // Replace the covering availability bridge so subsequent reads of the per-day plan reflect the
+        // freshly chosen window (the rider may have moved the period onto different availability rows).
+        reservationAvailabilityService.deleteCoveringAvailabilities(reservationId);
+        reservationAvailabilityService.insertCoveringAvailabilities(reservationId, plan.coveringAvailabilityIds());
+
+        final Reservation refreshed = getRiderReservationById(riderId, reservationId).orElse(reservation);
+        enqueueReservationEditedEmail(refreshed, plan.firstDayAvailability());
+        LOGGER.atInfo()
+                .addArgument(reservationId)
+                .addArgument(riderId)
+                .addArgument(startDate)
+                .addArgument(endDate)
+                .log("Rider riderId={} edited reservation id={} new period [{} -> {}]");
+        return refreshed;
+    }
+
+    private void enqueueReservationEditedEmail(
+            final Reservation reservation, final CarAvailability pickupAvailability) {
+        try {
+            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+            final Optional<User> ownerOpt = resolveOwnerFromReservation(reservation);
+            if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
+                return;
+            }
+            final User rider = riderOpt.get();
+            final User owner = ownerOpt.get();
+            final String vehicleLabel = resolveVehicleLabelFromReservation(reservation);
+            final String handoverLocation = formatHandoverLocation(pickupAvailability);
+            final String ownerCbu;
+            try {
+                ownerCbu = userService.getUserCbu(owner.getId());
+            } catch (final UserNotFoundException | CBUNotFoundException e) {
+                LOGGER.atDebug()
+                        .setMessage("Skipping rider-edit confirmation email: owner CBU unavailable reservationId={} ownerId={}")
+                        .addArgument(reservation.getId())
+                        .addArgument(owner.getId())
+                        .setCause(e)
+                        .log();
+                return;
+            }
+            final ReservationMailPayload payload = ReservationMailPayload.builder()
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(rider.getForename() + " " + rider.getSurname())
+                    .reservationId(reservation.getId())
+                    .carId(reservation.getCarId())
+                    .vehicleLabel(vehicleLabel)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .riderHandoverLocation(handoverLocation)
+                    .ownerHandoverLocation(handoverLocation)
+                    .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                    .ownerEmail(owner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .riderMailLocale(userService.resolveMailLocale(rider.getId()))
+                    .ownerMailLocale(userService.resolveMailLocale(owner.getId()))
+                    .ownerCbu(ownerCbu)
+                    .build();
+            // Re-using the confirmation email here is intentional: the rider just chose new dates for a
+            // still-unpaid reservation, so functionally they need the same payment-on-hold copy and the
+            // CBU line as a brand-new pending reservation would receive.
+            emailService.sendReservationConfirmationEmail(payload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue rider-edit confirmation email for reservation id={}");
+        }
+    }
+
     private boolean reservationIntervalFitsCarAvailability(
             final long carId,
             final Long availabilityId,
@@ -1619,6 +1755,13 @@ public final class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public List<Reservation> findBlockingReservationsByCarId(final long carId) {
         return reservationDao.findBlockingByCarId(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Reservation> findBlockingReservationsByCarIdExcluding(
+            final long carId, final long excludingReservationId) {
+        return reservationDao.findBlockingByCarIdExcluding(carId, excludingReservationId);
     }
 
     @Override

@@ -18,6 +18,13 @@ public interface ReservationAvailabilityService {
     void insertCoveringAvailabilities(long reservationId, Collection<Long> availabilityIds);
 
     /**
+     * Removes every bridge row attached to {@code reservationId}; joins the caller's transaction
+     * when one is active. Used by the rider-side reservation edit flow to clear the old covering
+     * availabilities before re-inserting the freshly computed ones.
+     */
+    void deleteCoveringAvailabilities(long reservationId);
+
+    /**
      * Reconstructs the reservation total from the bridge rows by, for each wall-calendar day of the
      * reservation, picking among the bridged availabilities the one whose range covers the day with
      * the most recent {@code createdAt}, and summing its {@code dayPrice}.

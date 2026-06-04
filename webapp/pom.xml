@@ -148,6 +148,14 @@
       <artifactId>spring-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Compile-only: only to silence javac's "unknown enum constant javax.annotation.meta.When.MAYBE"
+         warning that propagates from transitive jars (Guava, JCIP). Marked provided so it does not
+         end up in the war. -->
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
   <build>

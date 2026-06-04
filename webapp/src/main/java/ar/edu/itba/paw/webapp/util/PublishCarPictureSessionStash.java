@@ -209,6 +209,7 @@ public final class PublishCarPictureSessionStash {
     }
 
     /** @deprecated use {@link #safeGalleryMediaType(String)} */
+    @Deprecated
     public static MediaType safeImageMediaType(final String contentType) {
         return safeGalleryMediaType(contentType);
     }

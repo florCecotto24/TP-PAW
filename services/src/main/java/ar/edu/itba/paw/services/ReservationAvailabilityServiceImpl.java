@@ -29,6 +29,12 @@ public final class ReservationAvailabilityServiceImpl implements ReservationAvai
     }
 
     @Override
+    @Transactional
+    public void deleteCoveringAvailabilities(final long reservationId) {
+        reservationAvailabilityDao.deleteCoveringAvailabilities(reservationId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<BigDecimal> sumReservationTotal(final long reservationId) {
         return reservationAvailabilityDao.sumReservationTotal(reservationId);

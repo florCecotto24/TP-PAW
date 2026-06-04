@@ -10,6 +10,7 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationEditPageModel;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
 /**
@@ -31,6 +32,16 @@ public interface ReservationViewService {
      */
     Optional<ReservationDetailPageModel> loadMyReservationDetailForViewer(
             long viewerUserId, long reservationId, String role, Locale locale);
+
+    /**
+     * Builds the page model for the rider-side "edit reservation period" form. Returns empty when
+     * the viewer is not the rider on the reservation, when the reservation is no longer editable
+     * (not {@link ar.edu.itba.paw.models.domain.Reservation.Status#PENDING} or already has a payment
+     * receipt) or when the underlying car has been removed. The bookable-segments JSON is computed
+     * with the current reservation excluded so its existing days remain selectable.
+     */
+    Optional<ReservationEditPageModel> loadRiderEditReservationPage(
+            long riderUserId, long reservationId, Locale locale);
 
     /**
      * Loads the reservation chat page when the viewer is a participant and chat is available for the reservation.

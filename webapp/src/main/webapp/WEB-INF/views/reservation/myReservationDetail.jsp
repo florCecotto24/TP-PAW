@@ -41,6 +41,12 @@
     <c:if test="${not empty cancelReservationError}">
         <div class="alert alert-danger" role="alert"><c:out value="${cancelReservationError}"/></div>
     </c:if>
+    <c:if test="${not empty reservationEditSuccess}">
+        <div class="alert alert-success" role="alert"><c:out value="${reservationEditSuccess}"/></div>
+    </c:if>
+    <c:if test="${not empty reservationEditError}">
+        <div class="alert alert-danger" role="alert"><c:out value="${reservationEditError}"/></div>
+    </c:if>
     <c:if test="${not empty paymentReceiptError}">
         <div class="alert alert-danger" role="alert"><c:out value="${paymentReceiptError}"/></div>
     </c:if>
@@ -536,6 +542,16 @@
                         <a href="<c:out value='${listingUrl}'/>" class="btn btn-outline-warm w-100">
                             <i class="bi bi-eye me-2"></i><spring:message code="myReservationDetail.actions.viewCar"/>
                         </a>
+                        <%-- Rider-only "Edit dates" action: only available while the reservation
+                             is still PENDING and the rider has not uploaded a payment receipt yet.
+                             Mirrors the service-side guard in ReservationServiceImpl.editPendingReservationByRider
+                             and the security filter in ReservationWebAuthorization.isRiderUnpaidPending. --%>
+                        <c:if test="${reservationRole eq 'rider' and statusKey eq 'pending' and not hasPaymentReceipt}">
+                            <c:url var="editReservationUrl" value="/my-reservations/${reservation.id}/edit"/>
+                            <a href="<c:out value='${editReservationUrl}'/>" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-calendar-event me-2"></i><spring:message code="myReservationDetail.actions.edit"/>
+                            </a>
+                        </c:if>
                         <c:set var="canCancel" value="${canCancelReservation}"/>
                         <c:url var="cancelUrl" value="/my-reservations/${reservation.id}/cancel"/>
                         <c:choose>

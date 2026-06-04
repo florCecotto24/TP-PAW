@@ -22,6 +22,12 @@ public interface ReservationAvailabilityDao {
     void insertCoveringAvailabilities(long reservationId, Collection<Long> availabilityIds);
 
     /**
+     * Removes every bridge row attached to {@code reservationId}. Used by the rider-side edit flow
+     * before re-inserting the freshly-computed covering availabilities for the new period.
+     */
+    void deleteCoveringAvailabilities(long reservationId);
+
+    /**
      * Reconstructs the reservation total by, for each wall-calendar day of the reservation, picking
      * among the bridged availabilities the one whose range covers the day with the most recent
      * {@code created_at}, and summing its {@code day_price}.

@@ -45,6 +45,20 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
     }
 
     @Override
+    @Transactional
+    public void deleteCoveringAvailabilities(final long reservationId) {
+        // The bridge table is owned by ReservationAvailabilityCoverage exclusively (no FK fan-out into
+        // other domain rows), so a single JPQL DELETE is the natural way to clear it for a reservation.
+        // The "dirty-checking preferred" rule (AGENTS.md) targets entity tables with rich navigation;
+        // for a join-only bridge with no associations to flush we prefer the bulk DELETE.
+        em.createQuery(
+                        "DELETE FROM ReservationAvailabilityCoverage ra "
+                                + "WHERE ra.reservation.id = :reservationId")
+                .setParameter("reservationId", reservationId)
+                .executeUpdate();
+    }
+
+    @Override
     public Optional<BigDecimal> sumReservationTotal(final long reservationId) {
         // Single JPQL with JOIN FETCH hydrates both the reservation (for the date range) and its
         // covering availabilities (for per-day pricing); no extra em.find on a sibling DAO entity.

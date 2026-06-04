@@ -12,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
@@ -78,6 +79,29 @@ public final class ReservationWebAuthorization {
         return reservationService.getOwnerReservationById(userId, rid).isPresent();
     }
 
+    /**
+     * Filter-side check for the rider-driven "edit reservation period" endpoints: the caller must be
+     * the rider of the reservation, and the reservation must still be {@link Reservation.Status#PENDING}
+     * with no attached payment receipt. Mirrors the service-side guard inside
+     * {@code ReservationServiceImpl#editPendingReservationByRider} so we reject the request before
+     * controller logic runs.
+     */
+    public boolean isRiderUnpaidPending(final Authentication authentication, final HttpServletRequest request) {
+        final Long userId = authenticatedUserId(authentication);
+        if (userId == null) {
+            return false;
+        }
+        final OptionalLong ridOpt = HttpRequestPathIds.firstLongSegmentAfterPrefix(request, "/my-reservations/");
+        if (!ridOpt.isPresent()) {
+            return false;
+        }
+        final long rid = ridOpt.getAsLong();
+        return reservationService.getRiderReservationById(userId, rid)
+                .filter(r -> r.getStatus() == Reservation.Status.PENDING)
+                .filter(r -> r.getPaymentReceiptFileId().isEmpty())
+                .isPresent();
+    }
+
     public AuthorizationManager<RequestAuthorizationContext> participantAccess() {
         return authenticatedManager(this::isParticipant);
     }
@@ -88,6 +112,14 @@ public final class ReservationWebAuthorization {
 
     public AuthorizationManager<RequestAuthorizationContext> ownerAccess() {
         return authenticatedManager(this::isOwner);
+    }
+
+    /**
+     * Access manager for endpoints that may only be exercised by the rider on a pending, still-unpaid
+     * reservation (rider-side period edit). See {@link #isRiderUnpaidPending}.
+     */
+    public AuthorizationManager<RequestAuthorizationContext> riderUnpaidPendingAccess() {
+        return authenticatedManager(this::isRiderUnpaidPending);
     }
 
     /**

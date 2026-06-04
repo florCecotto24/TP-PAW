@@ -330,7 +330,21 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     @Transactional(readOnly = true)
     public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(
             final long carId, final Instant now) {
-        final SortedSet<LocalDate> bookableDays = computeBookableWallDaysByCar(carId);
+        return computeBookableSegmentsForRiderDatePicker(carId, now, /* excludingReservationId */ null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCarExcluding(
+            final long carId, final Instant now, final long excludingReservationId) {
+        return computeBookableSegmentsForRiderDatePicker(carId, now, excludingReservationId);
+    }
+
+    private List<BookableSegmentProjection> computeBookableSegmentsForRiderDatePicker(
+            final long carId, final Instant now, final Long excludingReservationIdOrNull) {
+        final SortedSet<LocalDate> bookableDays = excludingReservationIdOrNull == null
+                ? computeBookableWallDaysByCar(carId)
+                : computeBookableWallDaysByCarExcluding(carId, excludingReservationIdOrNull);
         if (bookableDays.isEmpty()) {
             return List.of();
         }
@@ -357,6 +371,18 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     }
 
     private SortedSet<LocalDate> computeBookableWallDaysByCar(final long carId) {
+        return computeBookableWallDaysByCarInternal(
+                carId, reservationService.findBlockingReservationsByCarId(carId));
+    }
+
+    private SortedSet<LocalDate> computeBookableWallDaysByCarExcluding(
+            final long carId, final long excludingReservationId) {
+        return computeBookableWallDaysByCarInternal(
+                carId, reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationId));
+    }
+
+    private SortedSet<LocalDate> computeBookableWallDaysByCarInternal(
+            final long carId, final List<Reservation> blockingReservations) {
         final ZoneId wall = AppTimezone.WALL_ZONE;
         final SortedSet<LocalDate> days = new TreeSet<>();
         for (final CarAvailability la : carAvailabilityDao.findByCarId(carId)) {
@@ -369,7 +395,7 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
                 d = d.plusDays(1);
             }
         }
-        for (final Reservation r : reservationService.findBlockingReservationsByCarId(carId)) {
+        for (final Reservation r : blockingReservations) {
             LocalDate d = r.getStartDate().toInstant().atZone(wall).toLocalDate();
             final LocalDate until = r.getEndDate().toInstant().atZone(wall).toLocalDate();
             while (!d.isAfter(until)) {

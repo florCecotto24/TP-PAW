@@ -42,6 +42,7 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
+import ar.edu.itba.paw.models.dto.reservation.ReservationEditPageModel;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
@@ -482,6 +483,51 @@ public final class MyReservationsController {
                         viewerUserId, reservationId, viewerRole.toLegacyString(),
                         ownerReviewForm, ownerBinding, riderReviewForm, riderBinding, fromCar);
         }
+    }
+
+    @GetMapping("/my-reservations/{reservationId}/edit")
+    public ModelAndView editReservationForm(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId) {
+        // The Spring Security filter (ReservationWebAuthorization#riderUnpaidPendingAccess)
+        // already enforces that the caller is the rider on a still-unpaid PENDING reservation.
+        // The view-service call below repeats the same check (defense in depth) and quietly
+        // redirects to the detail page when state has shifted between the filter and the handler.
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<ReservationEditPageModel> editOpt =
+                reservationViewService.loadRiderEditReservationPage(
+                        me.getId(), reservationId, LocaleContextHolder.getLocale());
+        if (editOpt.isEmpty()) {
+            return new ModelAndView(redirectToMyReservationDetailView(
+                    reservationId, ReservationViewerRole.RIDER, null));
+        }
+        final ModelAndView mav = new ModelAndView("reservation/myReservationEdit");
+        editOpt.get().populateModel(mav::addObject);
+        mav.addObject("activeTab", "my-reservations");
+        return mav;
+    }
+
+    @PostMapping("/my-reservations/{reservationId}/edit")
+    public ModelAndView submitReservationEdit(
+            @CurrentUser final User currentUser,
+            @PathVariable("reservationId") final long reservationId,
+            @RequestParam(name = "fromDateTime", required = false) final String fromDateTime,
+            @RequestParam(name = "untilDateTime", required = false) final String untilDateTime,
+            final RedirectAttributes redirectAttributes) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        try {
+            reservationService.editPendingReservationByRider(
+                    me.getId(), reservationId, fromDateTime, untilDateTime);
+            redirectAttributes.addFlashAttribute(
+                    "reservationEditSuccess",
+                    localeMessages.msg("myReservationEdit.savedFlash"));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("reservationEditError", localeMessages.msg(e));
+            return new ModelAndView(new RedirectView(
+                    "/my-reservations/" + reservationId + "/edit", true));
+        }
+        return new ModelAndView(redirectToMyReservationDetailView(
+                reservationId, ReservationViewerRole.RIDER, null));
     }
 
     @PostMapping("/my-reservations/{reservationId}/cancel")

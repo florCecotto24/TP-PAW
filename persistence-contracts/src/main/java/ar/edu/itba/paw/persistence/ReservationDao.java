@@ -18,8 +18,24 @@ public interface ReservationDao {
     /** Returns true if any blocking reservation for the car overlaps the given range. */
     boolean hasActiveOverlapByCar(long carId, OffsetDateTime startDate, OffsetDateTime endDate);
 
+    /**
+     * Same overlap query as {@link #hasActiveOverlapByCar}, but ignoring the reservation whose id matches
+     * {@code excludingReservationId}. Used by the rider-side "edit pending reservation period" flow so the
+     * reservation being edited does not collide against its own current dates.
+     */
+    boolean hasActiveOverlapByCarExcluding(
+            long carId, OffsetDateTime startDate, OffsetDateTime endDate, long excludingReservationId);
+
     /** Blocking reservations ({@code pending}, {@code accepted}, {@code started}) for a car. */
     List<Reservation> findBlockingByCarId(long carId);
+
+    /**
+     * Same as {@link #findBlockingByCarId}, but excludes the reservation whose id matches
+     * {@code excludingReservationId}. Used to recompute the bookable wall-day calendar when a rider
+     * is editing its own pending reservation (the reservation under edit must not subtract days
+     * from its own bookable window).
+     */
+    List<Reservation> findBlockingByCarIdExcluding(long carId, long excludingReservationId);
 
     /**
      * Blocking reservations for {@code carId} whose date range intersects {@code [from, to]} (UTC,
@@ -55,6 +71,21 @@ public interface ReservationDao {
     Page<ReservationCard> getOwnerReservationCards(ReservationSearchCriteria criteria);
 
     int updateReservationStatus(long reservationId, String status);
+
+    /**
+     * Rider-driven edit of a pending unpaid reservation: replaces the rental period, total price and
+     * payment-proof deadline through dirty checking on the managed {@link Reservation} entity.
+     * Returns 0 when the row does not exist, is not owned by {@code riderId}, has already attached a
+     * payment receipt or has left the {@link Reservation.Status#PENDING} state — in any of those cases
+     * the row is left untouched.
+     */
+    int updateRiderPendingReservationPeriod(
+            long reservationId,
+            long riderId,
+            OffsetDateTime newStartDate,
+            OffsetDateTime newEndDate,
+            BigDecimal newTotalPrice,
+            OffsetDateTime newPaymentProofDeadlineAt);
 
     /** Owner car dashboard: paginated reservation cards for one car. */
     Page<ReservationCard> getCarReservationCards(long ownerId, long carId, int page, int pageSize, String statusFilter);

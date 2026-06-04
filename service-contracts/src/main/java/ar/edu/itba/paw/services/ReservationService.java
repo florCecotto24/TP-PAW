@@ -75,6 +75,25 @@ public interface ReservationService {
             String fromDateTime,
             String untilDateTime);
 
+    /**
+     * Rider-driven edit of the rental period of an unpaid pending reservation. Re-validates the new
+     * window like a fresh submission (date order, pickup not in the past, configured pickup lead,
+     * fits within the car's offered availability, handover times match the effective availability,
+     * billable days within {@link #getConfiguredMaxReservationBillableDays}, billable days {@code >=}
+     * the car's minimum rental days, no overlap with other blocking reservations), re-computes the
+     * total price from the per-day plan, replaces the covering availability links and resets the
+     * payment-proof deadline relative to the moment of the edit.
+     *
+     * @throws ar.edu.itba.paw.exception.reservation.RiderReservationException for validation errors
+     * @throws ar.edu.itba.paw.exception.reservation.ReservationConflictException when the new interval
+     *         overlaps another blocking reservation for the same car
+     */
+    Reservation editPendingReservationByRider(
+            long riderId,
+            long reservationId,
+            String fromDateTime,
+            String untilDateTime);
+
     /** Total price for the car and UTC interval using configured billable-day rules; empty when inputs are invalid. */
     Optional<BigDecimal> calculateTotalByCar(long carId, OffsetDateTime startDate, OffsetDateTime endDate);
 
@@ -200,6 +219,14 @@ public interface ReservationService {
      * Reservations in {@code pending}, {@code accepted}, or {@code started} for one car (availability overlap checks).
      */
     List<Reservation> findBlockingReservationsByCarId(long carId);
+
+    /**
+     * Same as {@link #findBlockingReservationsByCarId(long)} but excludes the reservation whose id
+     * matches {@code excludingReservationId}. Used to recompute the bookable wall-day calendar for the
+     * rider-side reservation edit flow (the reservation under edit must not subtract days from its
+     * own bookable window).
+     */
+    List<Reservation> findBlockingReservationsByCarIdExcluding(long carId, long excludingReservationId);
 
     /**
      * Blocking reservations for {@code carId} whose date range intersects {@code [from, to)} (UTC).

@@ -404,6 +404,38 @@ public class Reservation {
         this.updatedAt = updatedAt;
     }
 
+    /**
+     * Mutates the reservation period start (UTC). Reserved for rider-side editing of unpaid pending
+     * reservations; callers must keep {@link #startDate} {@code <} {@link #endDate} consistent.
+     */
+    public void setStartDate(final OffsetDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    /**
+     * Mutates the reservation period end (UTC). Reserved for rider-side editing of unpaid pending
+     * reservations; callers must keep {@link #startDate} {@code <} {@link #endDate} consistent.
+     */
+    public void setEndDate(final OffsetDateTime endDate) {
+        this.endDate = endDate;
+    }
+
+    /**
+     * Mutates the total price (ARS). Reserved for rider-side editing of unpaid pending reservations
+     * after re-computing the day-by-day pricing plan.
+     */
+    public void setTotalPrice(final BigDecimal totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
+    /**
+     * Mutates the payment-proof deadline (UTC). Reserved for rider-side editing of unpaid pending
+     * reservations, where the deadline is reset relative to the moment of the edit.
+     */
+    public void setPaymentProofDeadlineAt(final OffsetDateTime paymentProofDeadlineAt) {
+        this.paymentProofDeadlineAt = paymentProofDeadlineAt;
+    }
+
     public void setPaymentReceiptFile(final StoredFile paymentReceiptFile) {
         this.paymentReceiptFile = paymentReceiptFile;
     }
