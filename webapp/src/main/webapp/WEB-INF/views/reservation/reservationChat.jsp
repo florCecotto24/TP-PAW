@@ -156,9 +156,6 @@
                                     <span class="reservation-chat__load-page-label"><c:out value="${chatLoadNewerLabel}"/></span>
                                 </button>
                             </div>
-                            <p id="reservationChatPageIndicator"
-                               class="reservation-chat__page-hint small text-muted text-center mb-0 d-none"
-                               aria-live="polite"></p>
                         </div>
                     </div>
                     <div id="reservationChatPending" class="reservation-chat__pending d-none" aria-live="polite"></div>

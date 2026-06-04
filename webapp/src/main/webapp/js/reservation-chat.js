@@ -76,7 +76,6 @@
     var uploadProgressBarEl = document.getElementById('reservationChatUploadProgressBar');
     var loadOlderBtn = document.getElementById('reservationChatLoadOlder');
     var loadNewerBtn = document.getElementById('reservationChatLoadNewer');
-    var pageIndicatorEl = document.getElementById('reservationChatPageIndicator');
 
     var historyLoaded = false;
     var historyLoading = false;
@@ -794,10 +793,6 @@
         return historyTotalPages <= 1 || historyPageIndex >= historyTotalPages - 1;
     }
 
-    function formatPageHint() {
-        return historyPageIndex + 1 + ' / ' + historyTotalPages;
-    }
-
     function updatePaginationControls() {
         var showNav = historyTotalPages > 1;
         if (loadOlderBtn) {
@@ -816,15 +811,6 @@
             } else {
                 loadNewerBtn.classList.add('d-none');
                 loadNewerBtn.disabled = true;
-            }
-        }
-        if (pageIndicatorEl) {
-            if (showNav) {
-                pageIndicatorEl.textContent = formatPageHint();
-                pageIndicatorEl.classList.remove('d-none');
-            } else {
-                pageIndicatorEl.textContent = '';
-                pageIndicatorEl.classList.add('d-none');
             }
         }
     }
