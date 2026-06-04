@@ -99,12 +99,15 @@
                             <div class="col-md-8">
                                 <label class="form-label required-label" for="editAv_start_point_street"><spring:message code="publishCar.form.pickupStreet"/></label>
                                 <form:input path="startPointStreet" id="editAv_start_point_street" required="required"
+                                            maxlength="${listingAddressStreetMaxLength}"
                                             cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                                 <form:errors path="startPointStreet" cssClass="text-danger d-block"/>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label required-label" for="editAv_start_point_number"><spring:message code="publishCar.form.pickupStreetNumber"/></label>
-                                <form:input path="startPointNumber" id="editAv_start_point_number" maxlength="10" inputmode="numeric" autocomplete="off"
+                                <form:input path="startPointNumber" id="editAv_start_point_number"
+                                            maxlength="${listingAddressNumberMaxLength}"
+                                            inputmode="numeric" autocomplete="off"
                                             required="required" data-ryden-digits-only="true"
                                             cssClass="form-control" cssErrorClass="form-control is-invalid"/>
                                 <form:errors path="startPointNumber" cssClass="text-danger d-block"/>

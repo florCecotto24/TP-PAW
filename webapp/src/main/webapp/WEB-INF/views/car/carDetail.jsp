@@ -32,7 +32,7 @@
     <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3 mb-4">
         <div class="flex-grow-1 min-w-0">
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <h1 class="h2 fw-bold mb-0"><c:out value="${carTitle}"/></h1>
+                <h1 class="h2 fw-bold mb-0 ryden-text-break"><c:out value="${carTitle}"/></h1>
                 <c:if test="${carIsFavoritable}">
                     <c:choose>
                         <c:when test="${carIsFavorited}">
@@ -97,7 +97,7 @@
                         </c:otherwise>
                     </c:choose>
                     <spring:message code="carDetail.owner.nameAriaLabel" var="ownerNameAriaLabel"/>
-                    <span class="fw-semibold text-decoration-underline" aria-label="<c:out value='${ownerNameAriaLabel}'/>">
+                    <span class="fw-semibold text-decoration-underline ryden-text-break" aria-label="<c:out value='${ownerNameAriaLabel}'/>">
                         <c:out value="${owner.forename}"/> <c:out value="${owner.surname}"/>
                     </span>
                 </a>

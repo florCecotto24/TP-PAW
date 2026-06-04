@@ -2,11 +2,11 @@ package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength;
 import ar.edu.itba.paw.webapp.validation.constraint.UserValidationMaxLength.Kind;
+import ar.edu.itba.paw.webapp.validation.constraint.VerificationCode;
 
 public final class VerifyEmailForm {
 
@@ -21,7 +21,7 @@ public final class VerifyEmailForm {
     private String email = "";
 
     @NotBlank(message = "{forgotPassword.code.required}", groups = ValidationGroups.OnVerifyEmail.class)
-    @Pattern(regexp = "[0-9]{6}", message = "{forgotPassword.code.pattern}", groups = ValidationGroups.OnVerifyEmail.class)
+    @VerificationCode(messageKey = "forgotPassword.code.pattern", groups = ValidationGroups.OnVerifyEmail.class)
     private String code = "";
 
     public String getEmail() {

@@ -45,9 +45,10 @@
         </div>
         <div class="mb-3">
             <label for="code" class="form-label"><spring:message code="verifyEmail.code"/></label>
-            <form:input path="code" type="text" cssClass="form-control" id="code" required="required" maxlength="6" pattern="[0-9]{6}"
+            <form:input path="code" type="text" cssClass="form-control" id="code" required="required"
+                        maxlength="${verificationCodeLength}" pattern="${verificationCodePattern}"
                         inputmode="numeric" autocomplete="one-time-code" placeholder="${verifyEmailCodePlaceholder}"
-                        data-ryden-digits-only="true" data-max-len="6"/>
+                        data-ryden-digits-only="true" data-max-len="${verificationCodeLength}"/>
             <form:errors path="code" cssClass="text-danger small d-block" element="div"/>
         </div>
         <button type="submit" class="btn btn-primary w-100 mb-2"><spring:message code="verifyEmail.submit"/></button>

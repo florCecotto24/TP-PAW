@@ -104,15 +104,15 @@
                     </c:if>
                 </div>
             </div>
-            <div class="profile-card__info">
-                <h2 class="profile-card__name"><c:out value="${userForename} ${userSurname}"/></h2>
+            <div class="profile-card__info min-w-0">
+                <h2 class="profile-card__name ryden-text-break"><c:out value="${userForename} ${userSurname}"/></h2>
                 <c:if test="${not empty profileMemberSinceDisplay}">
                     <p class="profile-card__member-since">
                         <span class="profile-card__member-since-label"><spring:message code="profile.memberSince"/></span>
                         <span class="profile-card__member-since-value"><c:out value="${profileMemberSinceDisplay}"/></span>
                     </p>
                 </c:if>
-                <p class="profile-card__email"><c:out value="${userEmail}"/></p>
+                <p class="profile-card__email ryden-text-break"><c:out value="${userEmail}"/></p>
             </div>
         </div>
 
@@ -144,15 +144,15 @@
         <div class="profile-fields-grid">
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.forename"/></span>
-                <span class="profile-field-value"><c:out value="${profileForm.forename}"/></span>
+                <span class="profile-field-value ryden-text-break"><c:out value="${profileForm.forename}"/></span>
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.surname"/></span>
-                <span class="profile-field-value"><c:out value="${profileForm.surname}"/></span>
+                <span class="profile-field-value ryden-text-break"><c:out value="${profileForm.surname}"/></span>
             </div>
             <div class="profile-field-view">
                 <span class="profile-section-label"><spring:message code="profile.phone"/></span>
-                <span class="profile-field-value">
+                <span class="profile-field-value ryden-text-break">
                     <c:choose>
                         <c:when test="${not empty profileForm.phoneNumber}"><c:out value="${profileForm.phoneNumber}"/></c:when>
                         <c:otherwise><spring:message code="common.notSpecified"/></c:otherwise>

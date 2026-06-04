@@ -106,7 +106,7 @@
                             <%-- "Other" text input: visible when brandId == 0 --%>
                             <div id="publishBrandOtherRow" class="mt-2<c:if test="${not brandIsOther}"> d-none</c:if>">
                                 <input type="text" id="publishBrandOtherInput"
-                                       class="form-control" maxlength="50"
+                                       class="form-control" maxlength="${carBrandMaxLength}"
                                        placeholder="<c:out value='${brandOtherPlaceholder}'/>"
                                        value="<c:if test='${brandIsOther}'><c:out value='${publishCarForm.brand}'/></c:if>"/>
                             </div>
@@ -186,7 +186,7 @@
                             <%-- "Other" model text input --%>
                             <div id="publishModelOtherRow" class="mt-2<c:if test="${not brandIsOther and not modelIsOther}"> d-none</c:if>">
                                 <input type="text" id="publishModelOtherInput"
-                                       class="form-control" maxlength="50"
+                                       class="form-control" maxlength="${carModelMaxLength}"
                                        placeholder="<c:out value='${modelOtherPlaceholder}'/>"
                                        value="<c:if test='${modelIsOther}'><c:out value='${publishCarForm.model}'/></c:if>"/>
                             </div>
@@ -196,7 +196,7 @@
                         <div class="mb-3">
                             <label class="form-label required-label"><spring:message code="publishCar.form.plate"/></label>
                             <form:input path="plate" required="required" cssClass="form-control" cssErrorClass="form-control is-invalid"
-                                        maxlength="10" data-ryden-plate="true" data-ryden-no-punctuation="true" style="text-transform:uppercase"/>
+                                        maxlength="${carPlateMaxLength}" data-ryden-plate="true" data-ryden-no-punctuation="true" style="text-transform:uppercase"/>
                             <form:errors path="plate" cssClass="text-danger d-block"/>
                         </div>
 
@@ -360,13 +360,13 @@
                             <form:errors path="transmission" cssClass="text-danger d-block"/>
                         </div>
 
-                        <%-- Optional manufacture year (>= 1886, <= current year). Rendered as type=text (with
-                             inputmode=numeric and digits-only JS) to prevent the browser from silently clamping
-                             out-of-range values to {min,max} on submit, which would mask the rule from the user.
-                             The min message uses the Hibernate Validator {value} template (Spring/MessageFormat
-                             ignores non-positional placeholders); we substitute it client-side. --%>
+                        <%-- Optional manufacture year (carYearMin <= year <= currentYear). Rendered as type=text
+                             (with inputmode=numeric and digits-only JS) to prevent the browser from silently
+                             clamping out-of-range values to {min,max} on submit, which would mask the rule from
+                             the user. Both bounds and their error messages are pre-resolved server-side from the
+                             same CarValidationPolicy used by the validator. --%>
                         <spring:message code="publishCar.form.year.placeholder" var="yearPlaceholder"/>
-                        <spring:message code="validation.year.min" var="yearMinClientTemplate" htmlEscape="true"/>
+                        <spring:message code="validation.year.min" arguments="${carYearMin}" var="yearMinClientMsg" htmlEscape="true"/>
                         <spring:message code="validation.year.max" arguments="${carYearMax}" var="yearMaxClientMsg" htmlEscape="true"/>
                         <div class="mb-3">
                             <label class="form-label" for="publishCarYear"><spring:message code="publishCar.form.year"/></label>
@@ -377,7 +377,7 @@
                                         data-ryden-digits-only="true"
                                         data-year-min="${carYearMin}"
                                         data-year-max="${carYearMax}"
-                                        data-year-min-template="${yearMinClientTemplate}"
+                                        data-year-min-msg="${yearMinClientMsg}"
                                         data-year-max-msg="${yearMaxClientMsg}"/>
                             <div id="publishCarYearClientError" class="text-danger d-block small mt-1 d-none" aria-live="polite"></div>
                             <form:errors path="year" cssClass="text-danger d-block"/>
@@ -386,7 +386,8 @@
                         <%-- Description --%>
                         <div class="mb-3">
                             <label class="form-label"><spring:message code="publishCar.form.description"/></label>
-                            <form:textarea path="description" rows="3" cssClass="form-control" cssErrorClass="form-control is-invalid"/>
+                            <form:textarea path="description" rows="3" cssClass="form-control" cssErrorClass="form-control is-invalid"
+                                           maxlength="${carDescriptionMaxLength}"/>
                             <form:errors path="description" cssClass="text-danger d-block"/>
                         </div>
 
@@ -803,8 +804,7 @@
             var lo = readBound('data-year-min');
             var hi = readBound('data-year-max');
             if (lo !== null && v < lo) {
-                var tpl = yearInput.getAttribute('data-year-min-template') || '';
-                showError(tpl.replace('{value}', String(lo)));
+                showError(yearInput.getAttribute('data-year-min-msg') || '');
                 return false;
             }
             if (hi !== null && v > hi) {

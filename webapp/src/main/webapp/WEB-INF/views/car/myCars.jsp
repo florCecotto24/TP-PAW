@@ -255,10 +255,10 @@
                                                         </c:otherwise>
                                                     </c:choose>
                                                 </div>
-                                                <div class="col-12 col-md-9">
+                                                <div class="col-12 col-md-9 min-w-0">
                                                     <div class="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-3">
-                                                        <div>
-                                                            <h3 class="h5 fw-semibold mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
+                                                        <div class="min-w-0">
+                                                            <h3 class="h5 fw-semibold mb-1 ryden-text-break"><c:out value="${car.brand} ${car.model}"/></h3>
                                                         </div>
                                                         <c:if test="${car.hasListing}">
                                                             <div class="pt-1 d-flex align-items-center justify-content-between gap-2 flex-wrap">

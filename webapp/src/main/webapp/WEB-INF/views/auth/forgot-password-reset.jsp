@@ -36,8 +36,10 @@
 
         <div class="mb-3">
             <label for="code" class="form-label"><spring:message code="forgotPassword.reset.code"/></label>
-            <form:input path="code" id="code" cssClass="form-control" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
-                        placeholder="000000" data-ryden-digits-only="true" data-max-len="6" pattern="[0-9]{6}"/>
+            <form:input path="code" id="code" cssClass="form-control"
+                        maxlength="${verificationCodeLength}" inputmode="numeric" autocomplete="one-time-code"
+                        placeholder="000000" data-ryden-digits-only="true"
+                        data-max-len="${verificationCodeLength}" pattern="${verificationCodePattern}"/>
             <form:errors path="code" cssClass="text-danger small d-block" element="div"/>
         </div>
         <div class="mb-3">

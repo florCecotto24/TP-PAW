@@ -2,13 +2,17 @@ package ar.edu.itba.paw.webapp.config.properties;
 
 import org.springframework.core.env.Environment;
 
+import ar.edu.itba.paw.services.policy.CarValidationPolicy;
+import ar.edu.itba.paw.services.policy.ListingFormValidationPolicy;
+import ar.edu.itba.paw.services.policy.ReservationFormValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.services.policy.VerificationCodePolicy;
 
 /**
  * Bound view of {@code app.validation.*}. Add new keys and defaults here, then expose them via accessors or
- * {@link #toUserValidationPolicy()} / {@link #toReviewValidationPolicy()} (validation stays in the policy factories).
+ * a {@code to*Policy()} factory (validation stays in the policy factories themselves).
  */
 public record AppValidationProperties(
         int registrationPasswordMinLength,
@@ -19,7 +23,23 @@ public record AppValidationProperties(
         int profileAboutMaxLength,
         String profilePhonePattern,
         int reviewCommentMaxLength,
-        int reservationMessageMaxLength) {
+        int reservationMessageMaxLength,
+        int carBrandMinLength,
+        int carBrandMaxLength,
+        int carModelMaxLength,
+        int carPlateMinLength,
+        int carPlateMaxLength,
+        int carDescriptionMaxLength,
+        int carYearMin,
+        int listingAddressStreetMaxLength,
+        int listingAddressNumberMaxLength,
+        int listingAvailabilityRowsMin,
+        int listingAvailabilityRowsMax,
+        int listingMinimumRentalDaysMax,
+        int reservationDeliveryLocationMaxLength,
+        int reservationCarNameMaxLength,
+        int reservationDatetimeInputMaxLength,
+        int verificationCodeLength) {
 
     private static final String REGISTRATION_PASSWORD_MIN_LENGTH = "app.validation.registration-password-min-length";
     private static final String REGISTRATION_PASSWORD_MAX_LENGTH = "app.validation.registration-password-max-length";
@@ -31,6 +51,28 @@ public record AppValidationProperties(
     private static final String REVIEW_COMMENT_MAX_LENGTH = "app.validation.review-comment-max-length";
     private static final String RESERVATION_MESSAGE_MAX_LENGTH = "app.validation.reservation-message-max-length";
 
+    private static final String CAR_BRAND_MIN_LENGTH = "app.validation.car-brand-min-length";
+    private static final String CAR_BRAND_MAX_LENGTH = "app.validation.car-brand-max-length";
+    private static final String CAR_MODEL_MAX_LENGTH = "app.validation.car-model-max-length";
+    private static final String CAR_PLATE_MIN_LENGTH = "app.validation.car-plate-min-length";
+    private static final String CAR_PLATE_MAX_LENGTH = "app.validation.car-plate-max-length";
+    private static final String CAR_DESCRIPTION_MAX_LENGTH = "app.validation.car-description-max-length";
+    private static final String CAR_YEAR_MIN = "app.validation.car-year-min";
+
+    private static final String LISTING_ADDRESS_STREET_MAX_LENGTH = "app.validation.listing-address-street-max-length";
+    private static final String LISTING_ADDRESS_NUMBER_MAX_LENGTH = "app.validation.listing-address-number-max-length";
+    private static final String LISTING_AVAILABILITY_ROWS_MIN = "app.validation.listing-availability-rows-min";
+    private static final String LISTING_AVAILABILITY_ROWS_MAX = "app.validation.listing-availability-rows-max";
+    private static final String LISTING_MINIMUM_RENTAL_DAYS_MAX = "app.validation.listing-minimum-rental-days-max";
+
+    private static final String RESERVATION_DELIVERY_LOCATION_MAX_LENGTH =
+            "app.validation.reservation-delivery-location-max-length";
+    private static final String RESERVATION_CAR_NAME_MAX_LENGTH = "app.validation.reservation-car-name-max-length";
+    private static final String RESERVATION_DATETIME_INPUT_MAX_LENGTH =
+            "app.validation.reservation-datetime-input-max-length";
+
+    private static final String VERIFICATION_CODE_LENGTH = "app.validation.verification-code-length";
+
     public static AppValidationProperties fromEnvironment(final Environment environment) {
         return new AppValidationProperties(
                 environment.getProperty(REGISTRATION_PASSWORD_MIN_LENGTH, Integer.class, 8),
@@ -41,7 +83,23 @@ public record AppValidationProperties(
                 environment.getProperty(PROFILE_ABOUT_MAX_LENGTH, Integer.class, 500),
                 environment.getProperty(PROFILE_PHONE_PATTERN, "^[0-9+]+$"),
                 environment.getProperty(REVIEW_COMMENT_MAX_LENGTH, Integer.class, 200),
-                environment.getProperty(RESERVATION_MESSAGE_MAX_LENGTH, Integer.class, 1000));
+                environment.getProperty(RESERVATION_MESSAGE_MAX_LENGTH, Integer.class, 1000),
+                environment.getProperty(CAR_BRAND_MIN_LENGTH, Integer.class, 2),
+                environment.getProperty(CAR_BRAND_MAX_LENGTH, Integer.class, 50),
+                environment.getProperty(CAR_MODEL_MAX_LENGTH, Integer.class, 50),
+                environment.getProperty(CAR_PLATE_MIN_LENGTH, Integer.class, 6),
+                environment.getProperty(CAR_PLATE_MAX_LENGTH, Integer.class, 10),
+                environment.getProperty(CAR_DESCRIPTION_MAX_LENGTH, Integer.class, 200),
+                environment.getProperty(CAR_YEAR_MIN, Integer.class, 1886),
+                environment.getProperty(LISTING_ADDRESS_STREET_MAX_LENGTH, Integer.class, 250),
+                environment.getProperty(LISTING_ADDRESS_NUMBER_MAX_LENGTH, Integer.class, 10),
+                environment.getProperty(LISTING_AVAILABILITY_ROWS_MIN, Integer.class, 1),
+                environment.getProperty(LISTING_AVAILABILITY_ROWS_MAX, Integer.class, 10),
+                environment.getProperty(LISTING_MINIMUM_RENTAL_DAYS_MAX, Integer.class, 365),
+                environment.getProperty(RESERVATION_DELIVERY_LOCATION_MAX_LENGTH, Integer.class, 250),
+                environment.getProperty(RESERVATION_CAR_NAME_MAX_LENGTH, Integer.class, 120),
+                environment.getProperty(RESERVATION_DATETIME_INPUT_MAX_LENGTH, Integer.class, 40),
+                environment.getProperty(VERIFICATION_CODE_LENGTH, Integer.class, 6));
     }
 
     public UserValidationPolicy toUserValidationPolicy() {
@@ -61,5 +119,36 @@ public record AppValidationProperties(
 
     public ReservationMessageValidationPolicy toReservationMessageValidationPolicy() {
         return ReservationMessageValidationPolicy.fromValidatedBodyMaxLength(reservationMessageMaxLength);
+    }
+
+    public CarValidationPolicy toCarValidationPolicy() {
+        return CarValidationPolicy.fromValidatedConfiguration(
+                carBrandMinLength,
+                carBrandMaxLength,
+                carModelMaxLength,
+                carPlateMinLength,
+                carPlateMaxLength,
+                carDescriptionMaxLength,
+                carYearMin);
+    }
+
+    public ListingFormValidationPolicy toListingFormValidationPolicy() {
+        return ListingFormValidationPolicy.fromValidatedConfiguration(
+                listingAddressStreetMaxLength,
+                listingAddressNumberMaxLength,
+                listingAvailabilityRowsMin,
+                listingAvailabilityRowsMax,
+                listingMinimumRentalDaysMax);
+    }
+
+    public ReservationFormValidationPolicy toReservationFormValidationPolicy() {
+        return ReservationFormValidationPolicy.fromValidatedConfiguration(
+                reservationDeliveryLocationMaxLength,
+                reservationCarNameMaxLength,
+                reservationDatetimeInputMaxLength);
+    }
+
+    public VerificationCodePolicy toVerificationCodePolicy() {
+        return VerificationCodePolicy.fromValidatedCodeLength(verificationCodeLength);
     }
 }

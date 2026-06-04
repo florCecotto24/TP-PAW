@@ -13,7 +13,7 @@
 
 <div class="pickup-location-block mt-5">
     <p class="text-uppercase small text-secondary fw-semibold mb-2 letter-spacing-tight"><c:out value="${label}"/></p>
-    <h3 class="h4 fw-bold mb-2"><c:out value="${address}"/></h3>
+    <h3 class="h4 fw-bold mb-2 ryden-text-break"><c:out value="${address}"/></h3>
     <c:choose>
         <c:when test="${not empty mapLinkHref}">
             <a href="<c:out value='${mapLinkHref}' escapeXml='false'/>" class="d-inline-flex align-items-center gap-1 text-decoration-none mb-3">

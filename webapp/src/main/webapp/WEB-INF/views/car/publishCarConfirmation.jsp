@@ -21,23 +21,23 @@
             <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem;" aria-hidden="true"></i>
           </div>
           <h1 class="h3 fw-bold mb-2"><spring:message code="publishCar.confirmation.title"/></h1>
-          <p class="mb-1">
+          <p class="mb-1 ryden-text-break">
             <spring:message code="publishCar.confirmation.greeting.before"/>
             <c:out value="${currentUser.forename}"/><spring:message code="publishCar.confirmation.greeting.after"/>
           </p>
-          <p class="mb-1">
+          <p class="mb-1 ryden-text-break">
             <spring:message code="publishCar.confirmation.message.before"/> <strong><c:out value="${car.brand}"/> <c:out value="${car.model}"/></strong> <spring:message code="publishCar.confirmation.message.after"/>
           </p>
           <p class="text-secondary mb-4"><spring:message code="publishCar.confirmation.subtitle"/></p>
 
           <div class="card mb-4 bg-cream border-0 text-start">
             <div class="card-body">
-              <p class="mb-2"><strong><spring:message code="publishCar.confirmation.brand"/></strong> <c:out value="${car.brand}"/></p>
-              <p class="mb-2"><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/></p>
+              <p class="mb-2 ryden-text-break"><strong><spring:message code="publishCar.confirmation.brand"/></strong> <c:out value="${car.brand}"/></p>
+              <p class="mb-2 ryden-text-break"><strong><spring:message code="publishCar.confirmation.model"/></strong> <c:out value="${car.model}"/></p>
               <c:if test="${car.year.present}">
                 <p class="mb-2"><strong><spring:message code="publishCar.confirmation.year"/></strong> <c:out value="${car.year.get()}"/></p>
               </c:if>
-              <p class="mb-2"><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
+              <p class="mb-2 ryden-text-break"><strong><spring:message code="publishCar.confirmation.plate"/></strong> <c:out value="${car.plate}"/></p>
               <spring:message code="enum.car.type.${car.type.name()}" var="confirmCarTypeLabel"/>
               <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="confirmPowertrainLabel"/>
               <spring:message code="enum.car.transmission.${car.transmission.name()}" var="confirmTransmissionLabel"/>

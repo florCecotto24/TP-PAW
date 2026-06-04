@@ -19,7 +19,9 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.CarValidationSize;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingFormValidationSize;
 
 /** Owner listing edit: price, handover address, availability periods, and neighborhood. */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnListingEdit.class)
@@ -31,18 +33,27 @@ public final class CarAvailabilityEditForm implements CarAvailabilityTimeWindow 
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "{validation.startPointStreet.notBlank}", groups = ValidationGroups.OnListingEdit.class)
-    @Size(max = 250, message = "{validation.startPointStreet.size}", groups = ValidationGroups.OnListingEdit.class)
+    @ListingFormValidationSize(
+            kind = ListingFormValidationSize.Kind.ADDRESS_STREET,
+            messageKey = "validation.startPointStreet.size",
+            groups = ValidationGroups.OnListingEdit.class)
     private String startPointStreet;
 
     @NotBlank(message = "{validation.startPointNumber.notBlank}", groups = ValidationGroups.OnListingEdit.class)
-    @Size(max = 10, message = "{validation.startPointNumber.size}", groups = ValidationGroups.OnListingEdit.class)
+    @ListingFormValidationSize(
+            kind = ListingFormValidationSize.Kind.ADDRESS_NUMBER,
+            messageKey = "validation.startPointNumber.size",
+            groups = ValidationGroups.OnListingEdit.class)
     @Pattern(regexp = "^[0-9]+$", message = "{validation.startPointNumber.digitsOnly}", groups = ValidationGroups.OnListingEdit.class)
     private String startPointNumber;
 
     @NotNull(message = "{validation.neighborhood.notNull}", groups = ValidationGroups.OnListingEdit.class)
     private Long neighborhoodId;
 
-    @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnListingEdit.class)
+    @CarValidationSize(
+            kind = CarValidationSize.Kind.DESCRIPTION,
+            messageKey = "validation.description.size",
+            groups = ValidationGroups.OnListingEdit.class)
     private String description;
 
     @NotNull(message = "{validation.checkInTime.notNull}", groups = ValidationGroups.OnListingEdit.class)

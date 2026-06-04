@@ -161,11 +161,6 @@ public final class PublishCarFormController {
         return profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
     }
 
-    @ModelAttribute("carYearMin")
-    public int carYearMin() {
-        return 1886;
-    }
-
     @ModelAttribute("carYearMax")
     public int carYearMax() {
         return java.time.Year.now().getValue();

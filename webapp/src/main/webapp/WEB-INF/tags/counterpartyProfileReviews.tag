@@ -17,9 +17,9 @@
                         <c:if test="${not empty review.commentText}">
                             <li class="list-group-item px-0 py-3 bg-transparent">
                                 <div class="d-flex flex-column gap-2">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div>
-                                            <p class="fw-semibold mb-1"><c:out value="${review.reviewerName}"/></p>
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <div class="min-w-0 flex-grow-1">
+                                            <p class="fw-semibold mb-1 ryden-text-break"><c:out value="${review.reviewerName}"/></p>
                                             <div class="d-inline-flex align-items-center gap-1">
                                                 <c:forEach begin="1" end="5" var="star">
                                                     <c:choose>

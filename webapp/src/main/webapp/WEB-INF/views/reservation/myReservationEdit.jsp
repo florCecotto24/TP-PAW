@@ -51,8 +51,8 @@
                                 </c:otherwise>
                             </c:choose>
                         </div>
-                        <div>
-                            <h3 class="h5 mb-1"><c:out value="${car.brand} ${car.model}"/></h3>
+                        <div class="min-w-0">
+                            <h3 class="h5 mb-1 ryden-text-break"><c:out value="${car.brand} ${car.model}"/></h3>
                             <div class="d-flex flex-wrap gap-2">
                                 <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>
                                 <spring:message code="enum.car.powertrain.${car.powertrain.name()}" var="carPowertrainLabel"/>

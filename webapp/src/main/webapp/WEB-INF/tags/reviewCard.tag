@@ -12,13 +12,13 @@
 <article class="card border-0 shadow-sm rounded-4 listing-review-card">
     <div class="card-body p-4 d-flex flex-column gap-2">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
-            <div class="d-flex align-items-center gap-3">
-                <div class="reviewer-avatar"
+            <div class="d-flex align-items-center gap-3 min-w-0 flex-grow-1">
+                <div class="reviewer-avatar flex-shrink-0"
                      data-forename="<c:out value='${forename}'/>"
                      data-surname="<c:out value='${surname}'/>"
                      aria-hidden="true"></div>
-                <div>
-                    <p class="fw-semibold mb-0">
+                <div class="min-w-0">
+                    <p class="fw-semibold mb-0 ryden-text-break">
                         <c:out value="${forename}"/> <c:out value="${surname}"/>
                     </p>
                     <p class="text-secondary small mb-0"><c:out value="${dateLabel}"/></p>

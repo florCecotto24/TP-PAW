@@ -70,9 +70,9 @@
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
-                                <div class="flex-grow-1">
+                                <div class="flex-grow-1 min-w-0">
                                     <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                        <h2 class="h5 fw-semibold mb-0">
+                                        <h2 class="h5 fw-semibold mb-0 ryden-text-break">
                                             <c:out value="${car.brand} ${car.model}"/><c:if test="${car.year.present}"> <span class="text-secondary fw-normal">(<c:out value="${car.year.get()}"/>)</span></c:if>
                                         </h2>
                                     </div>
@@ -84,11 +84,11 @@
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carTransmissionLabel}"/></span>
                                         <span class="badge text-bg-light border" style="background-color: var(--color-surface-elevated) !important;"><c:out value="${carPowertrainLabel}"/></span>
                                     </div>
-                                    <div class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <span class="small text-secondary">
                                             <spring:message code="myCarDetail.carDetails.plate"/>:
                                         </span>
-                                        <span class="small fw-medium"><c:out value="${car.plate}"/></span>
+                                        <span class="small fw-medium ryden-text-break"><c:out value="${car.plate}"/></span>
                                     </div>
                                 </div>
                             </div>
@@ -104,7 +104,7 @@
                                     <h2 class="h6 fw-semibold text-secondary text-uppercase mb-2" style="letter-spacing:.04em;">
                                         <spring:message code="myCarDetail.description.title"/>
                                     </h2>
-                                    <p class="mb-0 text-body" style="white-space:pre-line;"><c:out value="${car.description.get()}"/></p>
+                                    <p class="mb-0 text-body ryden-multiline-plaintext"><c:out value="${car.description.get()}"/></p>
                                 </div>
                             </article>
                         </c:if>

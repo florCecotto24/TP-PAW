@@ -57,10 +57,14 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ar.edu.itba.paw.services.policy.CarValidationPolicy;
+import ar.edu.itba.paw.services.policy.ListingFormValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationChatPolicy;
+import ar.edu.itba.paw.services.policy.ReservationFormValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.services.policy.VerificationCodePolicy;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
@@ -160,6 +164,28 @@ public class WebConfig implements WebMvcConfigurer {
     public ReservationChatPolicy reservationChatPolicy(
             final AppReservationChatProperties appReservationChatProperties) {
         return appReservationChatProperties.toReservationChatPolicy();
+    }
+
+    @Bean
+    public CarValidationPolicy carValidationPolicy(final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toCarValidationPolicy();
+    }
+
+    @Bean
+    public ListingFormValidationPolicy listingFormValidationPolicy(
+            final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toListingFormValidationPolicy();
+    }
+
+    @Bean
+    public ReservationFormValidationPolicy reservationFormValidationPolicy(
+            final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toReservationFormValidationPolicy();
+    }
+
+    @Bean
+    public VerificationCodePolicy verificationCodePolicy(final AppValidationProperties appValidationProperties) {
+        return appValidationProperties.toVerificationCodePolicy();
     }
 
     @Bean

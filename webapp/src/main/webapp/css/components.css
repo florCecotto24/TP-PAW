@@ -2369,6 +2369,15 @@ body.reservation-chat-body.has-fixed-navbar {
     word-break: break-word;
 }
 
+/* Inline user-controlled text (names, titles, plate, email, address, brand/model) shown inside
+   single-line headings / cards. Forces continuous strings without spaces to wrap instead of pushing
+   the layout. Pair with min-width:0 on a flex parent when the text sits inside a flex row. */
+.ryden-text-break {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0;
+}
+
 /* Price market insight card (owner publish / edit listing) */
 .ryden-price-insight {
     transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;

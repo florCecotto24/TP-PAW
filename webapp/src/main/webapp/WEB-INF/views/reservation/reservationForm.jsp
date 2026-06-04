@@ -39,8 +39,8 @@
 
                     <div class="border rounded-3 p-3 bg-cream mb-4 mt-1">
                         <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.summary.title"/></h2>
-                        <p class="mb-1"><strong><spring:message code="reservationForm.summary.car"/></strong> <c:out value="${reservationForm.carName}"/></p>
-                        <p class="mb-1"><strong><spring:message code="reservationForm.summary.pickupReturn"/></strong>
+                        <p class="mb-1 ryden-text-break"><strong><spring:message code="reservationForm.summary.car"/></strong> <c:out value="${reservationForm.carName}"/></p>
+                        <p class="mb-1 ryden-text-break"><strong><spring:message code="reservationForm.summary.pickupReturn"/></strong>
                             <c:choose>
                                 <c:when test="${not empty fromDateTimeDisplay}"><c:out value="${fromDateTimeDisplay}"/></c:when>
                                 <c:otherwise><c:out value="${reservationForm.fromDateTime}"/></c:otherwise>
@@ -51,7 +51,7 @@
                                 <c:otherwise><c:out value="${reservationForm.untilDateTime}"/></c:otherwise>
                             </c:choose>
                         </p>
-                        <p class="mb-1"><strong><spring:message code="reservationForm.summary.location"/></strong> <c:out value="${reservationForm.deliveryLocation}"/></p>
+                        <p class="mb-1 ryden-text-break"><strong><spring:message code="reservationForm.summary.location"/></strong> <c:out value="${reservationForm.deliveryLocation}"/></p>
                         <c:if test="${not empty reservationTotal}">
                             <p class="mb-0"><strong><spring:message code="reservationForm.summary.total"/></strong> <c:out value="${reservationTotal}"/></p>
                         </c:if>
@@ -83,11 +83,11 @@
 
                         <div class="border rounded-3 p-3 bg-cream mb-3">
                             <h2 class="h6 fw-bold mb-2"><spring:message code="reservationForm.account.title"/></h2>
-                            <p class="mb-1">
+                            <p class="mb-1 ryden-text-break">
                                 <strong><spring:message code="reservationForm.account.name"/></strong>
                                 <c:out value="${riderForename}"/> <c:out value="${riderSurname}"/>
                             </p>
-                            <p class="mb-0">
+                            <p class="mb-0 ryden-text-break">
                                 <strong><spring:message code="reservationForm.account.email"/></strong>
                                 <c:out value="${riderEmail}"/>
                             </p>

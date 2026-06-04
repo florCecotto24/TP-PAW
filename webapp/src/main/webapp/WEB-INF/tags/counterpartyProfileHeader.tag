@@ -30,9 +30,9 @@
                     </c:otherwise>
                 </c:choose>
             </div>
-            <div class="flex-grow-1">
+            <div class="flex-grow-1 min-w-0">
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <h1 class="h4 fw-semibold mb-0"><c:out value="${forename} ${surname}"/></h1>
+                    <h1 class="h4 fw-semibold mb-0 ryden-text-break"><c:out value="${forename} ${surname}"/></h1>
                 </div>
                 <div class="d-flex align-items-center gap-2 mt-2">
                     <c:choose>
@@ -64,7 +64,7 @@
                         </c:otherwise>
                     </c:choose>
                 </div>
-                <p class="counterparty-about mt-3 mb-2">
+                <p class="counterparty-about mt-3 mb-2 ryden-multiline-plaintext">
                     <c:choose>
                         <c:when test="${not empty about}">
                             <c:out value="${about}"/>

@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.form;
 
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -9,6 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.CarValidationSize;
+import ar.edu.itba.paw.webapp.validation.constraint.CarValidationSize.Kind;
 import ar.edu.itba.paw.webapp.validation.constraint.MaxFileSize;
 import ar.edu.itba.paw.webapp.validation.constraint.NoPunctuation;
 import ar.edu.itba.paw.webapp.validation.support.ProfileDocumentFileSizeLimitProvider;
@@ -23,14 +24,24 @@ public final class PublishCarForm {
     private Long modelId;
 
     @NotBlank(message = "{validation.brand.notBlank}", groups = ValidationGroups.OnPublishCar.class)
-    @Size(message = "{validation.brand.size}", min = 2, max = 50, groups = ValidationGroups.OnPublishCar.class)
+    @CarValidationSize(
+            kind = Kind.BRAND,
+            messageKey = "validation.brand.size",
+            groups = ValidationGroups.OnPublishCar.class)
     private String brand;
 
     @NotBlank(message = "{validation.model.notBlank}", groups = ValidationGroups.OnPublishCar.class)
+    @CarValidationSize(
+            kind = Kind.MODEL,
+            messageKey = "validation.model.size",
+            groups = ValidationGroups.OnPublishCar.class)
     private String model;
 
-    @Size(min = 6, max = 10, message = "{validation.plate.size}", groups = ValidationGroups.OnPublishCar.class)
     @NotBlank(message = "{validation.plate.notBlank}", groups = ValidationGroups.OnPublishCar.class)
+    @CarValidationSize(
+            kind = Kind.PLATE,
+            messageKey = "validation.plate.size",
+            groups = ValidationGroups.OnPublishCar.class)
     @NoPunctuation(groups = ValidationGroups.OnPublishCar.class)
     private String plate;
 
@@ -47,15 +58,24 @@ public final class PublishCarForm {
     @NotNull(message = "{validation.transmission.notNull}", groups = ValidationGroups.OnPublishCar.class)
     private Car.Transmission transmission;
 
-    /** Optional manufacture year (>= 1886, <= current year). Upper bound checked by {@code PublishCarFormValidator}. */
-    @Min(value = 1886, message = "{validation.year.min}", groups = ValidationGroups.OnPublishCar.class)
+    /**
+     * Optional manufacture year. Lower bound enforced in {@link ar.edu.itba.paw.webapp.validation.PublishCarFormValidator}
+     * (reads {@code CarValidationPolicy#getYearMin()}); the same validator caps the upper bound to the current year.
+     */
     private Integer year;
 
-    @Size(max = 200, message = "{validation.description.size}", groups = ValidationGroups.OnPublishCar.class)
+    @CarValidationSize(
+            kind = Kind.DESCRIPTION,
+            messageKey = "validation.description.size",
+            groups = ValidationGroups.OnPublishCar.class)
     private String description;
 
-    /** Can be empty on retry: pictures may be in session (see {@code PublishCarFormController}). */
-    @Size(max = 8, message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
+    /**
+     * Can be empty on retry: pictures may be in session (see {@code PublishCarFormController}).
+     * Upper bound comes from {@link ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy#MAX_ITEMS}.
+     */
+    @Size(max = ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy.MAX_ITEMS,
+            message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
 
     /** 0-based index in the gallery at submit time; normalized server-side to the first eligible image. */

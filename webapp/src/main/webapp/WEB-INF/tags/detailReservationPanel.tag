@@ -76,17 +76,17 @@
 
     <div class="d-flex align-items-start gap-2 mb-2">
         <i class="bi bi-geo-alt text-secondary mt-1" aria-hidden="true"></i>
-        <div class="flex-grow-1 w-100">
+        <div class="flex-grow-1 min-w-0">
             <small class="text-muted d-block mb-1"><spring:message code="detailReservationPanel.pickupLocation"/></small>
-            <p class="mb-0 fw-medium" id="detail_pickup_location_label">&mdash;</p>
+            <p class="mb-0 fw-medium ryden-text-break" id="detail_pickup_location_label">&mdash;</p>
         </div>
     </div>
 
     <div class="d-flex align-items-start gap-2 mb-3">
         <i class="bi bi-geo-alt-fill text-secondary mt-1" aria-hidden="true"></i>
-        <div class="flex-grow-1 w-100">
+        <div class="flex-grow-1 min-w-0">
             <small class="text-muted d-block mb-1"><spring:message code="detailReservationPanel.returnLocation"/></small>
-            <p class="mb-0 fw-medium" id="detail_return_location_label">&mdash;</p>
+            <p class="mb-0 fw-medium ryden-text-break" id="detail_return_location_label">&mdash;</p>
         </div>
     </div>
 

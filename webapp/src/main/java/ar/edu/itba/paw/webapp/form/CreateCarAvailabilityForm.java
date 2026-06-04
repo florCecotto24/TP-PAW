@@ -22,6 +22,8 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingFormValidationSize;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingFormValidationSize.Kind;
 
 /** Step 2 of the two-step publish flow: listing details and per-period availability. */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnCreateListing.class)
@@ -33,11 +35,17 @@ public final class CreateCarAvailabilityForm implements CarAvailabilityTimeWindo
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "{validation.startPointStreet.notBlank}", groups = ValidationGroups.OnCreateListing.class)
-    @Size(max = 250, message = "{validation.startPointStreet.size}", groups = ValidationGroups.OnCreateListing.class)
+    @ListingFormValidationSize(
+            kind = Kind.ADDRESS_STREET,
+            messageKey = "validation.startPointStreet.size",
+            groups = ValidationGroups.OnCreateListing.class)
     private String startPointStreet;
 
     @NotBlank(message = "{validation.startPointNumber.notBlank}", groups = ValidationGroups.OnCreateListing.class)
-    @Size(max = 10, message = "{validation.startPointNumber.size}", groups = ValidationGroups.OnCreateListing.class)
+    @ListingFormValidationSize(
+            kind = Kind.ADDRESS_NUMBER,
+            messageKey = "validation.startPointNumber.size",
+            groups = ValidationGroups.OnCreateListing.class)
     @Pattern(regexp = "^[0-9]+$", message = "{validation.startPointNumber.digitsOnly}", groups = ValidationGroups.OnCreateListing.class)
     private String startPointNumber;
 

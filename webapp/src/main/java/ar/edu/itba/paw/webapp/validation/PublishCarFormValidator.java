@@ -6,16 +6,26 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
+import ar.edu.itba.paw.services.policy.CarValidationPolicy;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 
 /**
  * Cross-field validator for the publish-car flow:
- * - {@code type} is required only when the user creates a new catalog model (modelId == 0 / null), since
- *   an existing model already carries its body type.
- * - {@code year} (when provided) must be no greater than the current calendar year.
+ * <ul>
+ *   <li>{@code type} is required only when the user creates a new catalog model (modelId == 0 / null), since
+ *       an existing model already carries its body type.</li>
+ *   <li>{@code year} (when provided) must sit within {@code [policy.yearMin, currentYear]}; both bounds come
+ *       from {@link CarValidationPolicy} so the form has no magic numbers.</li>
+ * </ul>
  */
 @Component
 public final class PublishCarFormValidator implements Validator {
+
+    private final CarValidationPolicy carValidationPolicy;
+
+    public PublishCarFormValidator(final CarValidationPolicy carValidationPolicy) {
+        this.carValidationPolicy = carValidationPolicy;
+    }
 
     @Override
     public boolean supports(final Class<?> clazz) {
@@ -34,6 +44,12 @@ public final class PublishCarFormValidator implements Validator {
         }
         final Integer year = form.getYear();
         if (year != null) {
+            final int yearMin = carValidationPolicy.getYearMin();
+            if (year < yearMin) {
+                errors.rejectValue("year", "validation.year.min",
+                        new Object[] { yearMin }, null);
+                return;
+            }
             final int currentYear = Year.now().getValue();
             if (year > currentYear) {
                 errors.rejectValue("year", "validation.year.max",

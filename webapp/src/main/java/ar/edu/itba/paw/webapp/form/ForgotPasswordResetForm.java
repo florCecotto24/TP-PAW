@@ -1,17 +1,17 @@
 package ar.edu.itba.paw.webapp.form;
 
 import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
+import ar.edu.itba.paw.webapp.validation.constraint.VerificationCode;
 
-/** Forgot-password reset: emailed six-digit code plus new password pair. */
+/** Forgot-password reset: emailed numeric code (length per {@code VerificationCodePolicy}) plus new password pair. */
 @RegistrationPasswordRules(groups = ValidationGroups.OnForgotPasswordReset.class)
 public final class ForgotPasswordResetForm implements RegistrationPasswordConfirmFields {
 
     @NotBlank(message = "{forgotPassword.code.required}", groups = ValidationGroups.OnForgotPasswordReset.class)
-    @Pattern(regexp = "[0-9]{6}", message = "{forgotPassword.code.pattern}", groups = ValidationGroups.OnForgotPasswordReset.class)
+    @VerificationCode(messageKey = "forgotPassword.code.pattern", groups = ValidationGroups.OnForgotPasswordReset.class)
     private String code = "";
 
     @NotBlank(message = "{validation.registration.password.required}", groups = ValidationGroups.OnForgotPasswordReset.class)

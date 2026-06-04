@@ -4,9 +4,15 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.ReservationFormValidationSize;
+import ar.edu.itba.paw.webapp.validation.constraint.ReservationFormValidationSize.Kind;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 
-/** Rider reservation request: car, wall-local pickup/return strings, handover labels, and vehicle label for display. */
+/**
+ * Rider reservation request: car, wall-local pickup/return strings, handover labels, and vehicle label for display.
+ * Every string is upper-bounded via {@link ReservationFormValidationSize}, whose limits are sourced from
+ * {@code app.validation.reservation-*}.
+ */
 @ReservationWithinMaxBillableDays(groups = ValidationGroups.OnReservationSubmit.class)
 public final class ReservationForm {
 
@@ -14,16 +20,32 @@ public final class ReservationForm {
     private Long carId;
 
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
+    @ReservationFormValidationSize(
+            kind = Kind.DATETIME_INPUT,
+            messageKey = "reservation.form.datetimeTooLong",
+            groups = ValidationGroups.OnReservationSubmit.class)
     private String fromDateTime;
 
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
+    @ReservationFormValidationSize(
+            kind = Kind.DATETIME_INPUT,
+            messageKey = "reservation.form.datetimeTooLong",
+            groups = ValidationGroups.OnReservationSubmit.class)
     private String untilDateTime;
 
     @NotNull(groups = ValidationGroups.OnReservationSubmit.class)
+    @ReservationFormValidationSize(
+            kind = Kind.DELIVERY_LOCATION,
+            messageKey = "reservation.form.deliveryLocationTooLong",
+            groups = ValidationGroups.OnReservationSubmit.class)
     private String deliveryLocation;
 
     @NotBlank(
             message = "{reservation.form.carNameRequired}",
+            groups = ValidationGroups.OnReservationSubmit.class)
+    @ReservationFormValidationSize(
+            kind = Kind.CAR_NAME,
+            messageKey = "reservation.form.carNameTooLong",
             groups = ValidationGroups.OnReservationSubmit.class)
     private String carName;
 
