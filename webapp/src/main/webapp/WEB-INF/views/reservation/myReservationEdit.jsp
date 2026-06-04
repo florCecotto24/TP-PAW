@@ -101,8 +101,11 @@
                          detail_pickup_time_label, detail_return_time_label, detail_pickup_location_label,
                          detail_return_location_label, detail_pricing_summary, detail_total_amount,
                          detail_date_alert, detail_max_billable_alert, detail_min_rental_days_alert,
-                         detailReservationSubmitBtn. --%>
+                         detailReservationSubmitBtn.
+                         The detail-reservation-panel class is required so the per-day price labels
+                         (.fp-day-price) and the inline calendar styling kick in (see components.css). --%>
                     <form action="<c:out value='${editPostUrl}'/>" method="post" id="detailReservationForm"
+                          class="detail-reservation-panel"
                           data-bookable-ranges='<c:out value="${bookableWallRangesJson}" escapeXml="false"/>'
                           data-max-billable-days="<c:out value='${maxReservationBillableDays}'/>"
                           data-max-billable-exceeded-msg="<c:out value='${maxBillableExceededMsg}'/>"
