@@ -1,8 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
 import java.io.IOException;
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +19,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.services.ReservationMessageService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -40,13 +39,14 @@ public final class ReservationMessageController {
     }
 
     @GetMapping(value = "/my-reservations/{reservationId}/messages", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<ReservationMessageDto>> listMessages(
+    public ResponseEntity<Page<ReservationMessageDto>> listMessages(
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId,
-            @RequestParam(defaultValue = "0") final int page) {
+            @RequestParam(required = false) final Integer page,
+            @RequestParam(required = false) final Integer size) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final List<ReservationMessageDto> messages =
-                reservationMessageService.getMessagesForParticipant(me.getId(), reservationId, page);
+        final Page<ReservationMessageDto> messages =
+                reservationMessageService.getMessagesForParticipant(me.getId(), reservationId, page, size);
         return ResponseEntity.ok(messages);
     }
 

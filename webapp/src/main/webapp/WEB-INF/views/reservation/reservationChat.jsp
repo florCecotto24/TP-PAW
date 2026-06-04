@@ -11,11 +11,14 @@
 <body class="has-fixed-navbar bg-light reservation-chat-body">
 <ryden:navbar/>
 
-<main class="container-xl reservation-chat-main pt-3 pb-0">
+<main class="container-xl reservation-chat-main">
     <spring:message code="reservationChat.pageTitle" var="chatPageTitle"/>
     <spring:message code="myReservationDetail.chat.send" var="chatSendLabel"/>
     <spring:message code="myReservationDetail.chat.placeholder" var="chatPlaceholder"/>
     <spring:message code="myReservationDetail.chat.empty" var="chatEmptyLabel"/>
+    <spring:message code="reservationChat.pagination.loadOlder" var="chatLoadOlderLabel"/>
+    <spring:message code="reservationChat.pagination.loadNewer" var="chatLoadNewerLabel"/>
+    <spring:message code="reservationChat.pagination.label" var="chatPaginationLabel"/>
     <spring:message code="reservationChat.error.load" var="chatErrorLoad"/>
     <spring:message code="reservationChat.error.send" var="chatErrorSend"/>
     <spring:message code="reservationChat.error.uploadTimeout" var="chatErrorUploadTimeout"/>
@@ -47,32 +50,34 @@
         </c:if>
     </c:url>
 
-    <c:choose>
-        <c:when test="${not empty reservationDetailOwnerCarHubId}">
-            <spring:message code="myCars.tab.reservations" var="bcHomeLabel"/>
-            <c:url var="bcHomeHref" value="/my-cars">
-                <c:param name="tab" value="reservations"/>
-            </c:url>
-            <ryden:breadcrumbTrail
-                    homeLabel="${bcHomeLabel}"
-                    homeHref="${bcHomeHref}"
-                    midLabel="${vehicleLabel}"
-                    midHref="${detailUrl}"
-                    currentLabel="${chatPageTitle}"/>
-        </c:when>
-        <c:otherwise>
-            <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
-            <ryden:breadcrumbTrail
-                    homeLabel="${myReservationsLabel}"
-                    homeHref="${pageContext.request.contextPath}/my-reservations"
-                    midLabel="${vehicleLabel}"
-                    midHref="${detailUrl}"
-                    currentLabel="${chatPageTitle}"/>
-        </c:otherwise>
-    </c:choose>
+    <div class="reservation-chat-main__header">
+        <c:choose>
+            <c:when test="${not empty reservationDetailOwnerCarHubId}">
+                <spring:message code="myCars.tab.reservations" var="bcHomeLabel"/>
+                <c:url var="bcHomeHref" value="/my-cars">
+                    <c:param name="tab" value="reservations"/>
+                </c:url>
+                <ryden:breadcrumbTrail
+                        homeLabel="${bcHomeLabel}"
+                        homeHref="${bcHomeHref}"
+                        midLabel="${vehicleLabel}"
+                        midHref="${detailUrl}"
+                        currentLabel="${chatPageTitle}"/>
+            </c:when>
+            <c:otherwise>
+                <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
+                <ryden:breadcrumbTrail
+                        homeLabel="${myReservationsLabel}"
+                        homeHref="${pageContext.request.contextPath}/my-reservations"
+                        midLabel="${vehicleLabel}"
+                        midHref="${detailUrl}"
+                        currentLabel="${chatPageTitle}"/>
+            </c:otherwise>
+        </c:choose>
+    </div>
 
-    <div class="card border-0 shadow-sm rounded-4 reservation-chat-card flex-grow-1 min-h-0 mt-2">
-        <div class="card-body p-0 d-flex flex-column min-h-0 h-100">
+    <div class="card border-0 shadow-sm rounded-4 reservation-chat-card">
+        <div class="card-body p-0 reservation-chat-card__body">
             <div id="reservationChatRoot"
                  class="reservation-chat reservation-chat-page reservation-chat-shell"
                  data-context-path="<c:out value='${pageContext.request.contextPath}'/>"
@@ -88,68 +93,95 @@
                  data-cancel-label="<c:out value='${chatCancelLabel}'/>"
                  data-send-file-label="<c:out value='${chatSendFileLabel}'/>"
                  data-empty-label="<c:out value='${chatEmptyLabel}'/>"
+                 data-history-page-size="<c:out value='${chatHistoryPageSize}'/>"
                  data-error-load="<c:out value='${chatErrorLoad}'/>"
                  data-error-send="<c:out value='${chatErrorSend}'/>"
                  data-error-upload-timeout="<c:out value='${chatErrorUploadTimeout}'/>"
+                 data-label-load-older="<c:out value='${chatLoadOlderLabel}'/>"
+                 data-label-load-newer="<c:out value='${chatLoadNewerLabel}'/>"
+                 data-label-pagination-nav="<c:out value='${chatPaginationLabel}'/>"
                  data-label-today="<c:out value='${chatDateToday}'/>"
                  data-label-yesterday="<c:out value='${chatDateYesterday}'/>">
-                <div id="reservationChatDropZone" class="reservation-chat__drop-zone d-flex flex-column flex-grow-1 min-h-0">
+                <div id="reservationChatDropZone" class="reservation-chat__drop-zone">
                     <div id="reservationChatDropOverlay" class="reservation-chat__drop-overlay d-none" aria-hidden="true">
                         <span class="reservation-chat__drop-overlay-text"><c:out value="${chatDropHint}"/></span>
                     </div>
-                <header class="reservation-chat-header">
-                    <a href="<c:out value='${counterpartyProfileUrl}'/>"
-                       class="reservation-chat-header__link text-decoration-none text-reset d-flex align-items-center gap-2 min-w-0"
-                       aria-label="<c:out value='${counterpartyProfileLinkAria}'/>">
-                        <c:choose>
-                            <c:when test="${counterpartyProfileImageId != null}">
-                                <c:url var="counterpartyChatAvatarUrl" value="/image/${counterpartyProfileImageId}"/>
-                                <img src="${counterpartyChatAvatarUrl}"
-                                     alt=""
-                                     class="reservation-chat-header__avatar rounded-circle flex-shrink-0"/>
-                            </c:when>
-                            <c:otherwise>
-                                <span class="reservation-chat-header__avatar reservation-chat-header__avatar--placeholder rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                                      aria-hidden="true">
-                                    <i class="bi bi-person-fill"></i>
-                                </span>
-                            </c:otherwise>
-                        </c:choose>
-                        <span class="reservation-chat-header__name text-break">
-                            <c:out value="${counterpartyDisplayName}"/>
-                        </span>
-                    </a>
-                </header>
-                <div id="reservationChatMessages"
-                     class="reservation-chat__messages reservation-chat-page__messages"
-                     role="log"
-                     aria-live="polite">
-                    <div id="reservationChatDayBar" class="reservation-chat-day-bar d-none" aria-live="polite">
-                        <span id="reservationChatDayLabel" class="reservation-chat__day-pill reservation-chat-day-bar__label"></span>
+                    <header class="reservation-chat-header">
+                        <a href="<c:out value='${counterpartyProfileUrl}'/>"
+                           class="reservation-chat-header__link text-decoration-none text-reset d-flex align-items-center gap-2 min-w-0"
+                           aria-label="<c:out value='${counterpartyProfileLinkAria}'/>">
+                            <c:choose>
+                                <c:when test="${counterpartyProfileImageId != null}">
+                                    <c:url var="counterpartyChatAvatarUrl" value="/image/${counterpartyProfileImageId}"/>
+                                    <img src="${counterpartyChatAvatarUrl}"
+                                         alt=""
+                                         class="reservation-chat-header__avatar rounded-circle flex-shrink-0"/>
+                                </c:when>
+                                <c:otherwise>
+                                    <span class="reservation-chat-header__avatar reservation-chat-header__avatar--placeholder rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
+                                          aria-hidden="true">
+                                        <i class="bi bi-person-fill"></i>
+                                    </span>
+                                </c:otherwise>
+                            </c:choose>
+                            <span class="reservation-chat-header__name text-break">
+                                <c:out value="${counterpartyDisplayName}"/>
+                            </span>
+                        </a>
+                    </header>
+                    <div class="reservation-chat__history-nav" aria-label="<c:out value='${chatPaginationLabel}'/>">
+                        <div class="reservation-chat__messages-stage">
+                            <div class="reservation-chat__load-page-host reservation-chat__load-page-host--older">
+                                <button type="button" id="reservationChatLoadOlder"
+                                        class="reservation-chat__load-page reservation-chat__load-page--older btn btn-sm btn-light border shadow-sm d-none"
+                                        aria-label="<c:out value='${chatLoadOlderLabel}'/>">
+                                    <i class="bi bi-chevron-up" aria-hidden="true"></i>
+                                    <span class="reservation-chat__load-page-label"><c:out value="${chatLoadOlderLabel}"/></span>
+                                </button>
+                            </div>
+                            <div id="reservationChatMessages"
+                                 class="reservation-chat__messages reservation-chat-page__messages"
+                                 role="log"
+                                 aria-live="polite">
+                                <div id="reservationChatDayBar" class="reservation-chat-day-bar d-none" aria-live="polite">
+                                    <span id="reservationChatDayLabel" class="reservation-chat__day-pill reservation-chat-day-bar__label"></span>
+                                </div>
+                                <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
+                            </div>
+                            <div class="reservation-chat__load-page-host reservation-chat__load-page-host--newer">
+                                <button type="button" id="reservationChatLoadNewer"
+                                        class="reservation-chat__load-page reservation-chat__load-page--newer btn btn-sm btn-light border shadow-sm d-none"
+                                        aria-label="<c:out value='${chatLoadNewerLabel}'/>">
+                                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                                    <span class="reservation-chat__load-page-label"><c:out value="${chatLoadNewerLabel}"/></span>
+                                </button>
+                            </div>
+                            <p id="reservationChatPageIndicator"
+                               class="reservation-chat__page-hint small text-muted text-center mb-0 d-none"
+                               aria-live="polite"></p>
+                        </div>
                     </div>
-                    <p class="text-muted small mb-0 reservation-chat__empty"><c:out value="${chatEmptyLabel}"/></p>
+                    <div id="reservationChatPending" class="reservation-chat__pending d-none" aria-live="polite"></div>
+                    <div id="reservationChatUploadProgress" class="reservation-chat__upload-progress d-none" role="progressbar"
+                         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                        <div id="reservationChatUploadProgressBar" class="reservation-chat__upload-progress-bar"></div>
+                    </div>
+                    <div class="reservation-chat__composer reservation-chat-page__composer d-flex gap-2 align-items-end">
+                        <input type="file" id="reservationChatFileInput" class="visually-hidden"
+                               accept="image/*,application/pdf,.doc,.docx,video/mp4,video/webm,video/quicktime,.txt,.zip,.xls,.xlsx,.ppt,.pptx"/>
+                        <button type="button" id="reservationChatAttach" class="btn btn-outline-secondary flex-shrink-0"
+                                title="<c:out value='${chatAttachLabel}'/>" aria-label="<c:out value='${chatAttachLabel}'/>">
+                            <i class="bi bi-paperclip" aria-hidden="true"></i>
+                        </button>
+                        <label class="visually-hidden" for="reservationChatInput"><c:out value="${chatPlaceholder}"/></label>
+                        <textarea id="reservationChatInput" class="form-control reservation-chat-page__input" rows="1" maxlength="${chatMessageMaxLength}"
+                                  placeholder="<c:out value='${chatPlaceholder}'/>"></textarea>
+                        <button type="button" id="reservationChatSend" class="btn btn-primary flex-shrink-0">
+                            <c:out value="${chatSendLabel}"/>
+                        </button>
+                    </div>
+                    <div id="reservationChatError" class="reservation-chat-page__error text-danger small d-none" role="alert"></div>
                 </div>
-                </div>
-                <div id="reservationChatPending" class="reservation-chat__pending d-none" aria-live="polite"></div>
-                <div id="reservationChatUploadProgress" class="reservation-chat__upload-progress d-none" role="progressbar"
-                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                    <div id="reservationChatUploadProgressBar" class="reservation-chat__upload-progress-bar"></div>
-                </div>
-                <div class="reservation-chat__composer reservation-chat-page__composer d-flex gap-2 align-items-end">
-                    <input type="file" id="reservationChatFileInput" class="visually-hidden"
-                           accept="image/*,application/pdf,.doc,.docx,video/mp4,video/webm,video/quicktime,.txt,.zip,.xls,.xlsx,.ppt,.pptx"/>
-                    <button type="button" id="reservationChatAttach" class="btn btn-outline-secondary flex-shrink-0"
-                            title="<c:out value='${chatAttachLabel}'/>" aria-label="<c:out value='${chatAttachLabel}'/>">
-                        <i class="bi bi-paperclip" aria-hidden="true"></i>
-                    </button>
-                    <label class="visually-hidden" for="reservationChatInput"><c:out value="${chatPlaceholder}"/></label>
-                    <textarea id="reservationChatInput" class="form-control reservation-chat-page__input" rows="1" maxlength="${chatMessageMaxLength}"
-                              placeholder="<c:out value='${chatPlaceholder}'/>"></textarea>
-                    <button type="button" id="reservationChatSend" class="btn btn-primary flex-shrink-0">
-                        <c:out value="${chatSendLabel}"/>
-                    </button>
-                </div>
-                <div id="reservationChatError" class="reservation-chat-page__error text-danger small d-none" role="alert"></div>
             </div>
         </div>
     </div>

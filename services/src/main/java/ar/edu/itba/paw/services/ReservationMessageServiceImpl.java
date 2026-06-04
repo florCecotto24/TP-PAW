@@ -23,8 +23,10 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageAttachmentDto;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
+import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.email.ReservationChatDigestConversationEntry;
 import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.models.email.ReservationChatDigestMessageEntry;
@@ -112,21 +114,32 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservationMessageDto> getMessagesForParticipant(
-            final long viewerUserId, final long reservationId, final int page) {
+    public Page<ReservationMessageDto> getMessagesForParticipant(
+            final long viewerUserId, final long reservationId, final Integer page, final Integer size) {
         final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
                 .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
         if (!isChatAvailable(reservation)) {
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
         }
-        final int pageSize = chatPolicy.getHistoryPageSize();
-        final int safePage = Math.max(0, page);
-        final int offset = safePage * pageSize;
-        return reservationMessageDao
-                .findByReservationIdOrderByCreatedAtAsc(reservationId, offset, pageSize)
+        final int maxPageSize = chatPolicy.getHistoryPageSize();
+        final int safeSize = resolveHistoryPageSize(size, maxPageSize);
+        final long totalItems = reservationMessageDao.countByReservationId(reservationId);
+        final int requestedPage = page == null ? Integer.MAX_VALUE : page;
+        final int safePage = UiPaging.clampZeroBasedPage(requestedPage, totalItems, safeSize);
+        final int offset = safePage * safeSize;
+        final List<ReservationMessageDto> content = reservationMessageDao
+                .findByReservationIdOrderByCreatedAtAsc(reservationId, offset, safeSize)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+        return new Page<>(content, safePage, safeSize, totalItems);
+    }
+
+    private static int resolveHistoryPageSize(final Integer size, final int maxPageSize) {
+        if (size == null || size < 1) {
+            return maxPageSize;
+        }
+        return Math.min(size, maxPageSize);
     }
 
     @Override

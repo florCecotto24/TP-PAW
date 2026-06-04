@@ -180,6 +180,7 @@ public class ReservationViewServiceImplTest {
         Mockito.when(userService.getUserById(9L)).thenReturn(Optional.of(owner));
         Mockito.when(reservationMessageService.getMessageBodyMaxLength()).thenReturn(1000);
         Mockito.when(reservationMessageService.getMaxChatAttachmentMegabytes()).thenReturn(25);
+        Mockito.when(reservationMessageService.getHistoryPageSize()).thenReturn(50);
         final Optional<ReservationChatPageModel> got =
                 reservationViewService.loadReservationChatForParticipant(1L, 5L, "rider", Locale.ENGLISH);
         Assertions.assertTrue(got.isPresent());

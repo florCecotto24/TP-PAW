@@ -57,6 +57,9 @@
     var labelTooLarge = root.getAttribute('data-too-large-label') || 'File must be at most {0} MB.';
     var labelInvalidType = root.getAttribute('data-invalid-type-label') || 'This file type is not allowed.';
     var labelCancel = root.getAttribute('data-cancel-label') || 'Cancel';
+    var historyPageSize = Number(root.getAttribute('data-history-page-size')) || 50;
+    var labelLoadOlder = root.getAttribute('data-label-load-older') || 'Load older messages';
+    var labelLoadNewer = root.getAttribute('data-label-load-newer') || 'Load newer messages';
 
     var messagesEl = document.getElementById('reservationChatMessages');
     var dayBarEl = document.getElementById('reservationChatDayBar');
@@ -71,8 +74,16 @@
     var pendingEl = document.getElementById('reservationChatPending');
     var uploadProgressEl = document.getElementById('reservationChatUploadProgress');
     var uploadProgressBarEl = document.getElementById('reservationChatUploadProgressBar');
+    var loadOlderBtn = document.getElementById('reservationChatLoadOlder');
+    var loadNewerBtn = document.getElementById('reservationChatLoadNewer');
+    var pageIndicatorEl = document.getElementById('reservationChatPageIndicator');
 
     var historyLoaded = false;
+    var historyLoading = false;
+    var historyPageIndex = 0;
+    var historyTotalPages = 1;
+    var historyHasPrevious = false;
+    var historyHasNext = false;
     var dayGroups = Object.create(null);
     var daySeparators = Object.create(null);
     var dayObserver = null;
@@ -661,7 +672,13 @@
         }
     }
 
-    function renderAll(messages) {
+    function scrollToTop() {
+        if (messagesEl) {
+            messagesEl.scrollTop = 0;
+        }
+    }
+
+    function renderAll(messages, scrollToBottomAfter) {
         clearMessageContent();
         renderedMessageIds = Object.create(null);
         if (!messages || messages.length === 0) {
@@ -674,7 +691,10 @@
         }
         setDayBarVisible(true);
         messages.forEach(renderMessage);
-        afterMessagesChanged(true);
+        afterMessagesChanged(scrollToBottomAfter !== false);
+        if (scrollToBottomAfter === false) {
+            scrollToTop();
+        }
     }
 
     function appendMessage(dto) {
@@ -693,8 +713,21 @@
         afterMessagesChanged(true);
     }
 
-    function fetchHistoryPage() {
-        return fetch(contextPath + '/my-reservations/' + reservationId + '/messages?page=0', {
+    function buildHistoryUrl(pageParam) {
+        var url =
+            contextPath +
+            '/my-reservations/' +
+            reservationId +
+            '/messages?size=' +
+            encodeURIComponent(String(historyPageSize));
+        if (pageParam !== undefined && pageParam !== null) {
+            url += '&page=' + encodeURIComponent(String(pageParam));
+        }
+        return url;
+    }
+
+    function fetchHistoryPage(pageParam) {
+        return fetch(buildHistoryUrl(pageParam), {
             credentials: 'same-origin',
             headers: { Accept: 'application/json' }
         }).then(function (response) {
@@ -703,6 +736,97 @@
             }
             return response.json();
         });
+    }
+
+    function isOnLastHistoryPage() {
+        return historyTotalPages <= 1 || historyPageIndex >= historyTotalPages - 1;
+    }
+
+    function formatPageHint() {
+        return historyPageIndex + 1 + ' / ' + historyTotalPages;
+    }
+
+    function updatePaginationControls() {
+        var showNav = historyTotalPages > 1;
+        if (loadOlderBtn) {
+            if (showNav && historyHasPrevious) {
+                loadOlderBtn.classList.remove('d-none');
+                loadOlderBtn.disabled = historyLoading;
+            } else {
+                loadOlderBtn.classList.add('d-none');
+                loadOlderBtn.disabled = true;
+            }
+        }
+        if (loadNewerBtn) {
+            if (showNav && historyHasNext) {
+                loadNewerBtn.classList.remove('d-none');
+                loadNewerBtn.disabled = historyLoading;
+            } else {
+                loadNewerBtn.classList.add('d-none');
+                loadNewerBtn.disabled = true;
+            }
+        }
+        if (pageIndicatorEl) {
+            if (showNav) {
+                pageIndicatorEl.textContent = formatPageHint();
+                pageIndicatorEl.classList.remove('d-none');
+            } else {
+                pageIndicatorEl.textContent = '';
+                pageIndicatorEl.classList.add('d-none');
+            }
+        }
+    }
+
+    function applyHistoryPage(page, scrollToBottomAfter) {
+        historyPageIndex = page.currentPage != null ? page.currentPage : 0;
+        historyPageSize = page.pageSize != null ? page.pageSize : historyPageSize;
+        historyTotalPages = page.totalPages != null ? page.totalPages : 1;
+        historyHasPrevious = !!page.hasPrevious;
+        historyHasNext = !!page.hasNext;
+        renderAll(page.content || [], scrollToBottomAfter);
+        updatePaginationControls();
+        syncMessagePolling();
+    }
+
+    function stopMessagePolling() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    }
+
+    function syncMessagePolling() {
+        if (isOnLastHistoryPage()) {
+            startMessagePolling();
+        } else {
+            stopMessagePolling();
+        }
+    }
+
+    function goToHistoryPage(pageParam, scrollToBottomAfter) {
+        historyLoading = true;
+        updatePaginationControls();
+        return fetchHistoryPage(pageParam)
+            .then(function (page) {
+                applyHistoryPage(page, scrollToBottomAfter);
+                historyLoaded = true;
+                showError('');
+            })
+            .catch(function () {
+                showError(errorLoadLabel);
+                throw new Error('history');
+            })
+            .finally(function () {
+                historyLoading = false;
+                updatePaginationControls();
+            });
+    }
+
+    function goToLastHistoryPageAfterSend() {
+        if (isOnLastHistoryPage()) {
+            return Promise.resolve();
+        }
+        return goToHistoryPage(null);
     }
 
     function fetchPollMessages() {
@@ -729,15 +853,11 @@
         if (historyLoaded) {
             return Promise.resolve();
         }
-        return fetchHistoryPage().then(function (messages) {
-            renderAll(messages);
-            historyLoaded = true;
-            startMessagePolling();
-        });
+        return goToHistoryPage(null);
     }
 
     function pollMessages() {
-        if (!historyLoaded) {
+        if (!historyLoaded || !isOnLastHistoryPage()) {
             return;
         }
         fetchPollMessages()
@@ -750,10 +870,18 @@
     }
 
     function startMessagePolling() {
-        if (pollTimer) {
+        if (pollTimer || !isOnLastHistoryPage()) {
             return;
         }
         pollTimer = setInterval(pollMessages, POLL_INTERVAL_MS);
+    }
+
+    function handleSendSuccess(xhr) {
+        if (isOnLastHistoryPage()) {
+            tryAppendDtoFromResponse(xhr);
+            return Promise.resolve();
+        }
+        return goToLastHistoryPageAfterSend();
     }
 
     function parseErrorResponse(xhr) {
@@ -798,8 +926,7 @@
             xhr.onload = function () {
                 setUploadProgress(null);
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    tryAppendDtoFromResponse(xhr);
-                    resolve();
+                    handleSendSuccess(xhr).then(resolve).catch(reject);
                     return;
                 }
                 showError(parseErrorResponse(xhr));
@@ -845,8 +972,7 @@
             xhr.setRequestHeader('Accept', 'application/json');
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    tryAppendDtoFromResponse(xhr);
-                    resolve();
+                    handleSendSuccess(xhr).then(resolve).catch(reject);
                     return;
                 }
                 showError(parseErrorResponse(xhr));
@@ -978,12 +1104,28 @@
             });
         }
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible' && historyLoaded) {
+            if (document.visibilityState === 'visible' && historyLoaded && isOnLastHistoryPage()) {
                 pollMessages();
             }
         });
+        if (loadOlderBtn) {
+            loadOlderBtn.addEventListener('click', function () {
+                if (historyLoading || !historyHasPrevious) {
+                    return;
+                }
+                goToHistoryPage(historyPageIndex - 1, false);
+            });
+        }
+        if (loadNewerBtn) {
+            loadNewerBtn.addEventListener('click', function () {
+                if (historyLoading || !historyHasNext) {
+                    return;
+                }
+                goToHistoryPage(historyPageIndex + 1, true);
+            });
+        }
         loadHistory().catch(function () {
-            showError(errorLoadLabel);
+            /* error shown in goToHistoryPage */
         });
     }
 

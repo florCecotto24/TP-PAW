@@ -26,6 +26,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
 import ar.edu.itba.paw.persistence.ReservationMessageDao;
@@ -164,6 +165,33 @@ class ReservationMessageServiceImplTest {
 
         // 2.Exercise / 3.Assert
         Assertions.assertFalse(service.isChatAvailable(res));
+    }
+
+    @Test
+    void testGetMessagesForParticipantReturnsPageWithTotalAndClampedPage() {
+        // 1.Arrange
+        stubParticipantAndSender();
+        Mockito.when(reservationMessageDao.countByReservationId(RESERVATION_ID)).thenReturn(120L);
+        Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 0, 50))
+                .thenReturn(List.of());
+        Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 100, 50))
+                .thenReturn(List.of());
+
+        // 2.Exercise
+        final Page<ReservationMessageDto> firstPage =
+                service.getMessagesForParticipant(RIDER_ID, RESERVATION_ID, 0, 50);
+        final Page<ReservationMessageDto> lastPage =
+                service.getMessagesForParticipant(RIDER_ID, RESERVATION_ID, null, null);
+
+        // 3.Assert
+        Assertions.assertEquals(120L, firstPage.getTotalItems());
+        Assertions.assertEquals(0, firstPage.getCurrentPage());
+        Assertions.assertEquals(50, firstPage.getPageSize());
+        Assertions.assertTrue(firstPage.isHasNext());
+        Assertions.assertFalse(firstPage.isHasPrevious());
+        Assertions.assertEquals(2, lastPage.getCurrentPage());
+        Assertions.assertTrue(lastPage.isHasPrevious());
+        Assertions.assertFalse(lastPage.isHasNext());
     }
 
     @Test

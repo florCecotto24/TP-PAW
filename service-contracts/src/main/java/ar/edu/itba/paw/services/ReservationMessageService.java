@@ -6,6 +6,7 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 
 public interface ReservationMessageService {
@@ -18,7 +19,8 @@ public interface ReservationMessageService {
 
     int getMaxChatAttachmentMegabytes();
 
-    List<ReservationMessageDto> getMessagesForParticipant(long viewerUserId, long reservationId, int page);
+    Page<ReservationMessageDto> getMessagesForParticipant(
+            long viewerUserId, long reservationId, Integer page, Integer size);
 
     List<ReservationMessageDto> pollMessagesForParticipant(
             long viewerUserId, long reservationId, long afterMessageId);
