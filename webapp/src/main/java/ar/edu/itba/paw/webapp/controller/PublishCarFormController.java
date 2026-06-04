@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.dto.PublishCarOutcome;
@@ -32,6 +33,7 @@ import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
@@ -40,6 +42,7 @@ import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.services.CarBrandService;
 import ar.edu.itba.paw.services.CarModelService;
 import ar.edu.itba.paw.services.CarPublishingService;
+import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.ImageService;
 import ar.edu.itba.paw.services.UserService;
 import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
@@ -66,6 +69,7 @@ public final class PublishCarFormController {
     private static final Logger LOG = LoggerFactory.getLogger(PublishCarFormController.class);
 
     private final CarPublishingService carPublishingService;
+    private final CarService carService;
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
     private final LocaleMessages localeMessages;
@@ -82,6 +86,7 @@ public final class PublishCarFormController {
 
     public PublishCarFormController(
             final CarPublishingService carPublishingService,
+            final CarService carService,
             final CarBrandService carBrandService,
             final CarModelService carModelService,
             final LocaleMessages localeMessages,
@@ -96,6 +101,7 @@ public final class PublishCarFormController {
             final PublishCarFormValidator publishCarFormValidator,
             final UserBookingDocumentsFacade userBookingDocumentsFacade) {
         this.carPublishingService = carPublishingService;
+        this.carService = carService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
         this.localeMessages = localeMessages;
@@ -186,6 +192,77 @@ public final class PublishCarFormController {
         final PublishCarForm form = new PublishCarForm();
         final ModelAndView mav = publishCarFormView(session);
         mav.addObject("publishCarForm", form);
+        return mav;
+    }
+
+    /**
+     * Renders the "submission received" screen for a freshly published car whose catalog entry
+     * (brand and/or model) is still pending admin review. Reached via the Post/Redirect/Get
+     * pattern from {@link #publish}, but also safe to reload or bookmark: the data is rebuilt
+     * from the persisted car so language toggles, refreshes, and back-navigation keep the user
+     * on this screen.
+     *
+     * If the catalog entry has already been validated (e.g. an admin approved it between the
+     * publish action and this navigation) the viewer is redirected to the car detail page since
+     * there is nothing pending to communicate anymore. Cars that don't belong to the viewer or
+     * no longer exist bounce to {@code /my-cars}: {@code /publish-car/**} is only authenticated,
+     * so this is the only ownership gate for the endpoint.
+     */
+    @GetMapping("/pending/{carId}")
+    public ModelAndView pendingView(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-cars"));
+        }
+        final Car car = carOpt.get();
+        final Optional<CarModel> carModelOpt = car.getCarModel();
+        final boolean brandPending = carModelOpt.map(m -> !m.getBrand().isValidated()).orElse(false);
+        final boolean modelPending = carModelOpt.map(m -> !m.isValidated()).orElse(false);
+        if (!brandPending && !modelPending) {
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        }
+        final ModelAndView mav = new ModelAndView("car/publishCarPending");
+        mav.addObject("createdCarId", carId);
+        if (brandPending) {
+            mav.addObject("pendingBrand", carModelOpt.get().getBrand().getName());
+        }
+        if (modelPending) {
+            mav.addObject("pendingModel", carModelOpt.get().getName());
+        }
+        return mav;
+    }
+
+    /**
+     * Renders the "car registered" confirmation screen after a successful publish. Reached via
+     * the Post/Redirect/Get pattern from {@link #publish}; using a real GET URL means the user
+     * can refresh or toggle the language on this screen without being bounced back to the
+     * publish form.
+     *
+     * The {@code newCatalogEntry} query parameter is forwarded from the publish redirect to
+     * preserve the "this added a new catalog row" informational alert (only set when the owner
+     * is an admin who introduced a brand/model on the fly — non-admins get the pending view
+     * instead). Cars that don't belong to the viewer or no longer exist bounce to
+     * {@code /my-cars}.
+     */
+    @GetMapping("/confirmation/{carId}")
+    public ModelAndView confirmationView(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @RequestParam(name = "newCatalogEntry", required = false, defaultValue = "false")
+                    final boolean newCatalogEntry) {
+        final User me = WebAuthUtils.requireUser(currentUser);
+        final Optional<Car> carOpt = carService.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+            return new ModelAndView(redirectTo("/my-cars"));
+        }
+        final ModelAndView mav = new ModelAndView("car/publishCarConfirmation");
+        mav.addObject("car", carOpt.get());
+        if (newCatalogEntry) {
+            mav.addObject("newCatalogEntry", true);
+        }
         return mav;
     }
 
@@ -394,19 +471,19 @@ public final class PublishCarFormController {
             pictureStash.clear(session);
             insuranceStash.clear(session);
 
+            // Post/Redirect/Get: the outcome views (`car/publishCarPending`, `car/publishCarConfirmation`)
+            // are served by dedicated GET endpoints so the browser URL identifies the result page.
+            // Without this, switching the language on those screens (which POSTs to /i18n/locale with the
+            // current URL as Referer) would redirect the user back to `GET /publish-car`, dropping the
+            // pending/confirmation context.
+            final long publishedCarId = outcome.getCar().getId();
             if (outcome.getKind() == PublishCarOutcome.Kind.PENDING_VALIDATION) {
-                final ModelAndView pendingMav = new ModelAndView("car/publishCarPending");
-                pendingMav.addObject("createdCarId", outcome.getCar().getId());
-                outcome.getPendingBrandName().ifPresent(name -> pendingMav.addObject("pendingBrand", name));
-                outcome.getPendingModelName().ifPresent(name -> pendingMav.addObject("pendingModel", name));
-                return pendingMav;
+                return new ModelAndView(redirectTo("/publish-car/pending/" + publishedCarId));
             }
-            final ModelAndView mav = new ModelAndView("car/publishCarConfirmation");
-            mav.addObject("car", outcome.getCar());
-            if (outcome.isNewCatalogEntry()) {
-                mav.addObject("newCatalogEntry", true);
-            }
-            return mav;
+            final String confirmationUrl = outcome.isNewCatalogEntry()
+                    ? "/publish-car/confirmation/" + publishedCarId + "?newCatalogEntry=true"
+                    : "/publish-car/confirmation/" + publishedCarId;
+            return new ModelAndView(redirectTo(confirmationUrl));
         } catch (final DuplicatePlateException e) {
             errors.rejectValue(
                     "plate",
@@ -519,5 +596,16 @@ public final class PublishCarFormController {
         mav.addObject("publisherHasIdentity", user.getIdentityFileId().isPresent());
         mav.addObject("cbuRequiredDigits", CbuRules.REQUIRED_DIGIT_LENGTH);
         return mav;
+    }
+
+    /**
+     * Context-relative redirect view used by the publish flow's Post/Redirect/Get transitions.
+     * Same shape as {@code MyCarsController.redirectTo}; kept here to avoid leaking a shared
+     * helper out of the only two controllers that currently need it.
+     */
+    private static RedirectView redirectTo(final String url) {
+        final RedirectView rv = new RedirectView(url, true);
+        rv.setExposeModelAttributes(false);
+        return rv;
     }
 }

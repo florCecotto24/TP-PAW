@@ -509,16 +509,35 @@ body.modal-open {
     font-weight: normal;
 }
 
+.carcard-brand,
+.carcard-model {
+    /* Single-line user text that may exceed the card width (legacy brand/model rows are up to 50
+       chars in the DB). Trailing edge fades into transparency so the user can tell the text
+       continues; the full string stays reachable via title="..." on hover/screen reader. */
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+
 .carcard-brand {
     color: #808080FF;
 }
 
-/* Full-width title: do not share a row with price (long ARS amounts were squeezing this to "P…"). */
 .carcard-model {
-    white-space: normal;
-    overflow-wrap: anywhere;
-    word-break: break-word;
     line-height: 1.25;
+}
+
+/* Fallback for browsers without mask-image support: keep the layout sane with a hard clip. */
+@supports not ((mask-image: linear-gradient(to right, #000, transparent)) or (-webkit-mask-image: linear-gradient(to right, #000, transparent))) {
+    .carcard-brand,
+    .carcard-model {
+        text-overflow: ellipsis;
+    }
 }
 
 /* Same row: amount + "/ día" (override .carcard-info > div column). */
@@ -2376,6 +2395,53 @@ body.reservation-chat-body.has-fixed-navbar {
     overflow-wrap: anywhere;
     word-break: break-word;
     min-width: 0;
+}
+
+/* Single-line user text that may exceed its container (e.g. legacy brand/model strings stored in
+   the DB before the current max length was tightened). Keeps the text on one line, clips overflow,
+   and fades the trailing edge into transparency so the user can tell the text continues. Pair with
+   title="..." so the full string is reachable via hover/screen reader. Requires min-width:0 on the
+   flex parent.
+   `!important` is used on the layout-defining properties because this class is intentionally a
+   final override for places where long unbroken user text would otherwise push the layout (e.g.
+   inside flex breadcrumbs / card titles where other utility classes might leak through). */
+.ryden-text-fade-end,
+.breadcrumb > .ryden-text-fade-end {
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+
+/* Browsers without mask-image support (older Edge / very old Safari) still get a graceful
+   single-line ellipsis cut so the layout never breaks. */
+@supports not ((mask-image: linear-gradient(to right, #000, transparent)) or (-webkit-mask-image: linear-gradient(to right, #000, transparent))) {
+    .ryden-text-fade-end,
+    .breadcrumb > .ryden-text-fade-end {
+        text-overflow: ellipsis;
+    }
+}
+
+/* Multi-line user text capped at 2 lines (e.g. brand+model titles inside a card). Allows the
+   string to wrap, breaks unbroken long words, and clips after the second line with an ellipsis
+   so the title can never collide with sibling content (status badges, action buttons). Pair with
+   title="..." for full text on hover/screen readers. Requires min-width:0 on the flex parent. */
+.ryden-text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+            line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* Price market insight card (owner publish / edit listing) */

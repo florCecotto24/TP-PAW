@@ -22,15 +22,15 @@
 </c:if>
 
 <spring:message code="breadcrumbTrail.ariaLabel" var="breadcrumbAria"/>
-<nav aria-label="<c:out value='${breadcrumbAria}'/>">
-    <ol class="breadcrumb mb-2 small">
+<nav aria-label="<c:out value='${breadcrumbAria}'/>" style="overflow: hidden;">
+    <ol class="breadcrumb mb-2 small" style="flex-wrap: nowrap; overflow: hidden;">
         <c:if test="${showHome}">
-            <li class="breadcrumb-item">
+            <li class="breadcrumb-item flex-shrink-0">
                 <a href="<c:out value='${homeHref}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${homeLabel}"/></a>
             </li>
         </c:if>
         <c:if test="${not empty midLabel}">
-            <li class="breadcrumb-item">
+            <li class="breadcrumb-item flex-shrink-0">
                 <c:choose>
                     <c:when test="${not empty midHref}">
                         <a href="<c:out value='${midHref}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${midLabel}"/></a>
@@ -40,7 +40,7 @@
             </li>
         </c:if>
         <c:if test="${not empty mid2Label}">
-            <li class="breadcrumb-item">
+            <li class="breadcrumb-item flex-shrink-0">
                 <c:choose>
                     <c:when test="${not empty mid2Href}">
                         <a href="<c:out value='${mid2Href}' escapeXml='false'/>" class="text-decoration-none"><c:out value="${mid2Label}"/></a>
@@ -49,6 +49,6 @@
                 </c:choose>
             </li>
         </c:if>
-        <li class="breadcrumb-item active text-muted" aria-current="page"><c:out value="${currentLabel}"/></li>
+        <li class="breadcrumb-item active text-muted ryden-text-fade-end" aria-current="page" title="<c:out value='${currentLabel}'/>" style="flex: 1 1 0; min-width: 0;"><c:out value="${currentLabel}"/></li>
     </ol>
 </nav>

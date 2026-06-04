@@ -49,12 +49,7 @@
 
             <div class="row g-4 align-items-start">
                 <div class="col-lg-8">
-                    <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white position-relative">
-                        <c:if test="${carModelPendingValidation}">
-                            <span class="position-absolute top-0 end-0 m-3" style="background-color:#0369a1; color:#ffffff; padding:.25rem .5rem; border-radius:.375rem; font-weight:600; font-size:.75rem; z-index:1;">
-                                <i class="bi bi-clock me-1"></i><spring:message code="myCars.modelPendingValidation.badge"/>
-                            </span>
-                        </c:if>
+                    <article class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                         <div class="card-body p-4">
                             <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
                                 <div class="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
@@ -70,11 +65,17 @@
                                         </c:otherwise>
                                     </c:choose>
                                 </div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
-                                        <h2 class="h5 fw-semibold mb-0 ryden-text-break">
+                                <div class="flex-grow-1 min-w-0" style="flex: 1 1 0; min-width: 0; overflow: hidden;">
+                                    <div class="d-flex align-items-start gap-3 mb-2 flex-wrap">
+                                        <c:set var="carFullTitle"><c:out value="${car.brand} ${car.model}"/><c:if test="${car.year.present}"> (<c:out value="${car.year.get()}"/>)</c:if></c:set>
+                                        <h2 class="h5 fw-semibold mb-0 ryden-text-clamp-2" title="<c:out value='${carFullTitle}'/>" style="flex: 1 1 0; min-width: 0;">
                                             <c:out value="${car.brand} ${car.model}"/><c:if test="${car.year.present}"> <span class="text-secondary fw-normal">(<c:out value="${car.year.get()}"/>)</span></c:if>
                                         </h2>
+                                        <c:if test="${carModelPendingValidation}">
+                                            <span class="badge text-nowrap flex-shrink-0" style="background-color:#0369a1; color:#ffffff; padding:.35rem .6rem; border-radius:.375rem; font-weight:600; font-size:.75rem;">
+                                                <i class="bi bi-clock me-1"></i><spring:message code="myCars.modelPendingValidation.badge"/>
+                                            </span>
+                                        </c:if>
                                     </div>
                                     <div class="d-flex flex-wrap gap-2 mb-3">
                                         <spring:message code="enum.car.transmission.${car.transmission.name()}" var="carTransmissionLabel"/>

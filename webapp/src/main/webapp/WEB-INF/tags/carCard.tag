@@ -81,8 +81,8 @@
     </c:if>
     <div class="carcard-info">
         <div class="carcard-info-text text">
-            <h4 class="carcard-model"><c:out value="${fn:trim(model)}"/></h4>
-            <p class="carcard-brand"><c:out value="${fn:trim(brand)}"/></p>
+            <h4 class="carcard-model" title="<c:out value='${fn:trim(brand)} ${fn:trim(model)}'/>"><c:out value="${fn:trim(model)}"/></h4>
+            <p class="carcard-brand" title="<c:out value='${fn:trim(brand)}'/>"><c:out value="${fn:trim(brand)}"/></p>
             <c:choose>
                 <c:when test="${not empty ratingAvg and reviewCount > 0}">
                     <p class="carcard-rating small text-secondary mb-0 mt-1">
