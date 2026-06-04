@@ -155,7 +155,7 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
                                 + "JOIN FETCH m.reservation "
                                 + "JOIN FETCH m.sender "
                                 + "LEFT JOIN FETCH m.attachment "
-                                + "WHERE m.emailNotified = false "
+                                + "WHERE m.emailNotified = false AND m.seen = false "
                                 + "ORDER BY m.createdAt ASC",
                         ReservationMessage.class)
                 .getResultList();
@@ -168,12 +168,31 @@ public class ReservationMessageJpaDao implements ReservationMessageDao {
             return 0;
         }
         final List<ReservationMessage> messages = em.createQuery(
-                        "FROM ReservationMessage m WHERE m.id IN :ids AND m.emailNotified = false",
+                        "FROM ReservationMessage m "
+                                + "WHERE m.id IN :ids AND m.emailNotified = false AND m.seen = false",
                         ReservationMessage.class)
                 .setParameter("ids", messageIds)
                 .getResultList();
         for (final ReservationMessage message : messages) {
             message.setEmailNotified(true);
+        }
+        return messages.size();
+    }
+
+    @Override
+    @Transactional
+    public int markSeenByRecipient(final long reservationId, final long recipientUserId) {
+        final List<ReservationMessage> messages = em.createQuery(
+                        "FROM ReservationMessage m "
+                                + "WHERE m.reservation.id = :reservationId "
+                                + "AND m.sender.id != :recipientUserId "
+                                + "AND m.seen = false",
+                        ReservationMessage.class)
+                .setParameter("reservationId", reservationId)
+                .setParameter("recipientUserId", recipientUserId)
+                .getResultList();
+        for (final ReservationMessage message : messages) {
+            message.setSeen(true);
         }
         return messages.size();
     }

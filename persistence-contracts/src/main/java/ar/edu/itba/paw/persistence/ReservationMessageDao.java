@@ -24,4 +24,6 @@ public interface ReservationMessageDao {
     List<ReservationMessage> findPendingEmailNotification();
 
     int markEmailNotified(Collection<Long> messageIds);
+
+    int markSeenByRecipient(long reservationId, long recipientUserId);
 }

@@ -253,6 +253,7 @@ CREATE TABLE IF NOT EXISTS reservation_messages (
     body TEXT NOT NULL,
     attachment_file_id INTEGER REFERENCES stored_files(id) ON DELETE SET NULL,
     email_notified BOOLEAN NOT NULL DEFAULT FALSE,
+    seen BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL
 );
 
@@ -260,7 +261,7 @@ CREATE INDEX IF NOT EXISTS idx_reservation_messages_reservation_created
     ON reservation_messages (reservation_id, created_at);
 
 CREATE INDEX IF NOT EXISTS idx_reservation_messages_email_pending
-    ON reservation_messages (email_notified, created_at);
+    ON reservation_messages (email_notified, seen, created_at);
 
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_profile_picture_id;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS fk_users_license_file_id;

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.services.ReservationMessageService;
 
 /**
- * Sends hourly digest emails for reservation chat messages pending notification.
+ * Sends digest emails for reservation chat messages pending notification.
  * Cron expression and zone are configured under {@code app.scheduler.chat-digest.*}.
  */
 @Component

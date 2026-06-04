@@ -113,7 +113,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ReservationMessageDto> getMessagesForParticipant(
             final long viewerUserId, final long reservationId, final Integer page, final Integer size) {
         final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
@@ -121,6 +121,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         if (!isChatAvailable(reservation)) {
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
         }
+        reservationMessageDao.markSeenByRecipient(reservationId, viewerUserId);
         final int maxPageSize = chatPolicy.getHistoryPageSize();
         final int safeSize = resolveHistoryPageSize(size, maxPageSize);
         final long totalItems = reservationMessageDao.countByReservationId(reservationId);
@@ -143,7 +144,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ReservationMessageDto> pollMessagesForParticipant(
             final long viewerUserId, final long reservationId, final long afterMessageId) {
         final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
@@ -151,6 +152,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         if (!isChatAvailable(reservation)) {
             throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
         }
+        reservationMessageDao.markSeenByRecipient(reservationId, viewerUserId);
         final long safeAfterId = Math.max(0L, afterMessageId);
         final int limit = chatPolicy.getHistoryPageSize();
         return reservationMessageDao
@@ -223,6 +225,9 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         }
         final Map<Long, List<ReservationMessage>> byRecipient = new LinkedHashMap<>();
         for (final ReservationMessage message : pending) {
+            if (message.isSeen()) {
+                continue;
+            }
             final long recipientId = resolveCounterpartyUserId(message.getSenderUserId(), message.getReservation());
             byRecipient.computeIfAbsent(recipientId, ignored -> new ArrayList<>()).add(message);
         }
@@ -250,8 +255,14 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
 
     private void dispatchDigestForRecipient(final long recipientId, final List<ReservationMessage> messages) {
         try {
+            final List<ReservationMessage> unseenMessages = messages.stream()
+                    .filter(message -> !message.isSeen())
+                    .collect(Collectors.toList());
+            if (unseenMessages.isEmpty()) {
+                return;
+            }
             final List<Long> messageIds =
-                    messages.stream().map(ReservationMessage::getId).collect(Collectors.toList());
+                    unseenMessages.stream().map(ReservationMessage::getId).collect(Collectors.toList());
             if (reservationMessageDao.markEmailNotified(messageIds) == 0) {
                 return;
             }
@@ -262,7 +273,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             final User recipient = recipientOpt.get();
             final Locale mailLocale = userService.resolveMailLocale(recipientId);
             final Optional<ReservationChatDigestEmailPayload> payloadOpt =
-                    buildDigestPayload(recipient, mailLocale, messages);
+                    buildDigestPayload(recipient, mailLocale, unseenMessages);
             if (payloadOpt.isEmpty()) {
                 return;
             }

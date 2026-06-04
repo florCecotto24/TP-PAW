@@ -48,6 +48,9 @@ public class ReservationMessage {
     @Column(name = "email_notified", nullable = false)
     private boolean emailNotified;
 
+    @Column(name = "seen", nullable = false)
+    private boolean seen;
+
     /* package */ ReservationMessage() {
         // For Hibernate
     }
@@ -72,6 +75,7 @@ public class ReservationMessage {
         this.attachment = attachment;
         this.createdAt = createdAt;
         this.emailNotified = false;
+        this.seen = false;
     }
 
     public long getId() {
@@ -116,5 +120,13 @@ public class ReservationMessage {
 
     public void setEmailNotified(final boolean emailNotified) {
         this.emailNotified = emailNotified;
+    }
+
+    public boolean isSeen() {
+        return seen;
+    }
+
+    public void setSeen(final boolean seen) {
+        this.seen = seen;
     }
 }

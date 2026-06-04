@@ -178,6 +178,7 @@ CREATE TABLE IF NOT EXISTS reservation_messages (
     attachment_file_id BIGINT NULL,
     created_at TIMESTAMP NOT NULL,
     email_notified BOOLEAN NOT NULL DEFAULT FALSE,
+    seen BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (attachment_file_id) REFERENCES stored_files(id) ON DELETE SET NULL

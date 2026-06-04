@@ -349,6 +349,28 @@ class ReservationMessageServiceImplTest {
     }
 
     @Test
+    void testDispatchChatDigestEmailsSkipsSeenMessages() {
+        // 1.Arrange
+        final Reservation reservation = reservation(Reservation.Status.ACCEPTED);
+        final User rider = User.identities(RIDER_ID, "r@test.com", "R", "Rider");
+        final ReservationMessage message = Mockito.mock(ReservationMessage.class);
+        Mockito.when(message.getId()).thenReturn(55L);
+        Mockito.when(message.getReservation()).thenReturn(reservation);
+        Mockito.when(message.getReservationId()).thenReturn(RESERVATION_ID);
+        Mockito.when(message.getSenderUserId()).thenReturn(RIDER_ID);
+        Mockito.when(message.getSender()).thenReturn(rider);
+        Mockito.when(message.isSeen()).thenReturn(true);
+
+        Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
+
+        // 2.Exercise
+        service.dispatchChatDigestEmails();
+
+        // 3.Assert
+        Assertions.assertTrue(sentDigests.isEmpty());
+    }
+
+    @Test
     void testDispatchChatDigestEmailsSendsOneDigestForRecipient() {
         // 1.Arrange
         final Reservation reservation = reservation(Reservation.Status.ACCEPTED);
@@ -370,6 +392,7 @@ class ReservationMessageServiceImplTest {
         Mockito.when(message.getBody()).thenReturn("When can I pick up?");
         Mockito.when(message.getCreatedAt()).thenReturn(OffsetDateTime.now(ZoneOffset.UTC));
         Mockito.when(message.getAttachment()).thenReturn(null);
+        Mockito.when(message.isSeen()).thenReturn(false);
 
         Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
         Mockito.when(reservationMessageDao.markEmailNotified(List.of(55L))).thenReturn(1);

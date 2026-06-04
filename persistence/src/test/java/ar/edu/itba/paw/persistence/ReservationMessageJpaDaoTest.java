@@ -149,15 +149,20 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void testFindPendingEmailNotificationReturnsOnlyUnnotifiedMessages() {
+    void testFindPendingEmailNotificationReturnsOnlyUnnotifiedUnseenMessages() {
         // 1.Arrange
         final ReservationMessage pending = dao.create(reservationId, riderId, "Pending");
         dao.create(reservationId, riderId, "Notified");
+        dao.create(reservationId, riderId, "Seen");
         em.flush();
         jdbcTemplate.update(
                 "UPDATE reservation_messages SET email_notified = TRUE WHERE id = ?",
                 jdbcTemplate.queryForObject(
                         "SELECT id FROM reservation_messages WHERE body = ?", Long.class, "Notified"));
+        jdbcTemplate.update(
+                "UPDATE reservation_messages SET seen = TRUE WHERE id = ?",
+                jdbcTemplate.queryForObject(
+                        "SELECT id FROM reservation_messages WHERE body = ?", Long.class, "Seen"));
 
         // 2.Exercise
         final var pendingMessages = dao.findPendingEmailNotification();
@@ -183,5 +188,67 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final Boolean notified = jdbcTemplate.queryForObject(
                 "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, created.getId());
         Assertions.assertTrue(notified);
+    }
+
+    @Test
+    void testMarkEmailNotifiedSkipsSeenMessages() {
+        // 1.Arrange
+        final ReservationMessage created = dao.create(reservationId, riderId, BODY);
+        em.flush();
+        jdbcTemplate.update("UPDATE reservation_messages SET seen = TRUE WHERE id = ?", created.getId());
+
+        // 2.Exercise
+        final int marked = dao.markEmailNotified(List.of(created.getId()));
+        em.flush();
+
+        // 3.Assert
+        Assertions.assertEquals(0, marked);
+        final Boolean notified = jdbcTemplate.queryForObject(
+                "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, created.getId());
+        Assertions.assertFalse(notified);
+    }
+
+    @Test
+    void testFindPendingEmailNotificationExcludesSeenMessagesAfterRecipientRead() {
+        // 1.Arrange
+        final long ownerId = jdbcTemplate.queryForObject(
+                "SELECT c.owner_id FROM cars c JOIN reservations r ON r.car_id = c.id WHERE r.id = ?",
+                Long.class,
+                reservationId);
+        dao.create(reservationId, riderId, "Unread until owner opens chat");
+        em.flush();
+        dao.markSeenByRecipient(reservationId, ownerId);
+        em.flush();
+
+        // 2.Exercise
+        final var pendingMessages = dao.findPendingEmailNotification();
+
+        // 3.Assert
+        Assertions.assertTrue(pendingMessages.isEmpty());
+    }
+
+    @Test
+    void testMarkSeenByRecipientMarksOnlyCounterpartyMessages() {
+        // 1.Arrange
+        final long ownerId = jdbcTemplate.queryForObject(
+                "SELECT c.owner_id FROM cars c JOIN reservations r ON r.car_id = c.id WHERE r.id = ?",
+                Long.class,
+                reservationId);
+        final ReservationMessage fromRider = dao.create(reservationId, riderId, "From rider");
+        final ReservationMessage fromOwner = dao.create(reservationId, ownerId, "From owner");
+        em.flush();
+
+        // 2.Exercise
+        final int marked = dao.markSeenByRecipient(reservationId, ownerId);
+        em.flush();
+
+        // 3.Assert
+        Assertions.assertEquals(1, marked);
+        final Boolean riderMessageSeen = jdbcTemplate.queryForObject(
+                "SELECT seen FROM reservation_messages WHERE id = ?", Boolean.class, fromRider.getId());
+        final Boolean ownerMessageSeen = jdbcTemplate.queryForObject(
+                "SELECT seen FROM reservation_messages WHERE id = ?", Boolean.class, fromOwner.getId());
+        Assertions.assertTrue(riderMessageSeen);
+        Assertions.assertFalse(ownerMessageSeen);
     }
 }
