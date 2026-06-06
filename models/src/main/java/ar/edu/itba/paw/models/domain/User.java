@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.persistence.AttributeConverter;
 import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Converter;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -92,8 +95,31 @@ public class User {
     @Column(name = "identity_validated", nullable = false)
     private boolean identityValidated;
 
+    @Convert(converter = UserRoleConverter.class)
     @Column(name = "user_role", nullable = false, length = 50)
-    private String userRole;
+    private UserRole userRole;
+
+    /**
+     * Maps {@link UserRole} to/from the {@code user_role} column. The DB stores
+     * {@link UserRole#persistenceName()} (currently uppercase, matching {@link Enum#name()});
+     * unknown DB values fall back to {@link UserRole#USER} via {@link UserRole#fromPersistenceName(String)}
+     * so authentication keeps working when ops introduces a new role before the enum is updated.
+     */
+    @Converter
+    public static class UserRoleConverter implements AttributeConverter<UserRole, String> {
+        @Override
+        public String convertToDatabaseColumn(final UserRole attribute) {
+            return attribute == null ? null : attribute.persistenceName();
+        }
+
+        @Override
+        public UserRole convertToEntityAttribute(final String dbData) {
+            if (dbData == null) {
+                return null;
+            }
+            return UserRole.fromPersistenceName(dbData).orElse(UserRole.USER);
+        }
+    }
 
     @Column(name = "role_assigned_by")
     private Long roleAssignedBy;
@@ -161,7 +187,7 @@ public class User {
         private boolean licenseValidated;
         private StoredFile identityFile;
         private boolean identityValidated;
-        private String userRole = UserRole.USER.persistenceName();
+        private UserRole userRole = UserRole.USER;
         private Long roleAssignedBy = null;
         private boolean blocked = false;
 
@@ -250,7 +276,7 @@ public class User {
             return this;
         }
 
-        public Builder userRole(final String userRole) {
+        public Builder userRole(final UserRole userRole) {
             this.userRole = userRole;
             return this;
         }
@@ -356,7 +382,7 @@ public class User {
         return identityValidated;
     }
 
-    public String getUserRole() {
+    public UserRole getUserRole() {
         return userRole;
     }
 
@@ -369,10 +395,10 @@ public class User {
     }
 
     public boolean isAdmin() {
-        return UserRole.ADMIN.persistenceName().equals(this.userRole);
+        return UserRole.ADMIN == this.userRole;
     }
 
-    public void setUserRole(final String userRole) {
+    public void setUserRole(final UserRole userRole) {
         this.userRole = userRole;
     }
 

@@ -32,6 +32,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
@@ -458,6 +459,12 @@ public final class UserServiceImpl implements UserService {
     @Override
     public Optional<StoredFile> findProfileDocument(final long userId, final UserDocumentType documentType) {
         return userProfileMediaService.findProfileDocument(userId, documentType);
+    }
+
+    @Override
+    public Optional<BinaryContent> findProfileDocumentContent(
+            final long userId, final UserDocumentType documentType) {
+        return userProfileMediaService.findProfileDocumentContent(userId, documentType);
     }
 
     @Override

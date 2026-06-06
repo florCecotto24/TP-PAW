@@ -22,6 +22,7 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
@@ -137,6 +138,16 @@ public final class ReservationPaymentServiceImpl implements ReservationPaymentSe
                 .filter(sf -> sf.getUploaderUserId() == r.getRiderId());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findPaymentReceiptContentForParticipant(
+            final long userId, final long reservationId) {
+        // Map to a detached value object inside this transaction so the controller doesn't
+        // depend on the JPA entity (issue #16).
+        return findPaymentReceiptForParticipant(userId, reservationId)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
+    }
+
     // ---------------------------------------------------------------------------------------
     // Refund receipt upload and owner auto-unblock
     // ---------------------------------------------------------------------------------------
@@ -194,6 +205,14 @@ public final class ReservationPaymentServiceImpl implements ReservationPaymentSe
             return Optional.empty();
         }
         return fileOpt;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findRefundReceiptContentForParticipant(
+            final long userId, final long reservationId) {
+        return findRefundReceiptForParticipant(userId, reservationId)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
     private Optional<Reservation> findReservationForParticipant(final long userId, final long reservationId) {

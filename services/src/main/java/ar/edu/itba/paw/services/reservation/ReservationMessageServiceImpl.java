@@ -24,6 +24,7 @@ import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageAttachmentDto;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.models.pagination.UiPaging;
@@ -255,6 +256,16 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             return Optional.empty();
         }
         return Optional.of(messageOpt.get().getAttachment());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findMessageAttachmentContentForParticipant(
+            final long viewerUserId, final long reservationId, final long messageId) {
+        // Map to a detached value object inside this transaction so the controller doesn't
+        // depend on the JPA entity (issue #16).
+        return findMessageAttachmentForParticipant(viewerUserId, reservationId, messageId)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
     private void dispatchDigestForRecipient(final long recipientId, final List<ReservationMessage> messages) {

@@ -7,6 +7,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 
 import ar.edu.itba.paw.services.user.AdminService;
@@ -37,6 +38,14 @@ public interface ReservationMessageService {
             byte[] data);
 
     Optional<StoredFile> findMessageAttachmentForParticipant(
+            long viewerUserId, long reservationId, long messageId);
+
+    /**
+     * Same participant scoping as {@link #findMessageAttachmentForParticipant} but returns a
+     * detached {@link BinaryContent} value object so download endpoints don't leak the JPA
+     * entity (issue #16).
+     */
+    Optional<BinaryContent> findMessageAttachmentContentForParticipant(
             long viewerUserId, long reservationId, long messageId);
 
     boolean canParticipantAccessReservationChat(long viewerUserId, long reservationId);

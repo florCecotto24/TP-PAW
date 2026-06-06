@@ -24,6 +24,7 @@ import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.persistence.UserDao;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
@@ -303,14 +304,14 @@ public class UserServiceImplTest {
                 .email("admin@test.com")
                 .forename("Grant")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .build();
         final User target = User.builder()
                 .id(20L)
                 .email("user@test.com")
                 .forename("Tar")
                 .surname("Get")
-                .userRole("USER")
+                .userRole(UserRole.USER)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
         Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
@@ -327,14 +328,14 @@ public class UserServiceImplTest {
                 .email("admin@test.com")
                 .forename("Grant")
                 .surname("Admin")
-                .userRole("USER")
+                .userRole(UserRole.USER)
                 .build();
         final User target = User.builder()
                 .id(20L)
                 .email("user@test.com")
                 .forename("Tar")
                 .surname("Get")
-                .userRole("USER")
+                .userRole(UserRole.USER)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
         Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
@@ -354,14 +355,14 @@ public class UserServiceImplTest {
                 .email("admin@test.com")
                 .forename("Grant")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .build();
         final User target = User.builder()
                 .id(20L)
                 .email("user@test.com")
                 .forename("Tar")
                 .surname("Get")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
         Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
@@ -381,7 +382,7 @@ public class UserServiceImplTest {
                 .email("admin@test.com")
                 .forename("Grant")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
         Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.empty());
@@ -409,14 +410,14 @@ public class UserServiceImplTest {
                 .email("admin@test.com")
                 .forename("Grant")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .build();
         final User created = User.builder()
                 .id(99L)
                 .email("newadmin@test.com")
                 .forename("New")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .roleAssignedBy(10L)
                 .emailValidated(true)
                 .build();
@@ -436,7 +437,7 @@ public class UserServiceImplTest {
         // 3. Assert
         Assertions.assertNotNull(result);
         Assertions.assertEquals(99L, result.getId());
-        Assertions.assertEquals("ADMIN", result.getUserRole());
+        Assertions.assertEquals(UserRole.ADMIN, result.getUserRole());
         Assertions.assertEquals(10L, result.getRoleAssignedBy().orElse(null));
     }
 
@@ -459,7 +460,7 @@ public class UserServiceImplTest {
                 .email("notadmin@test.com")
                 .forename("Not")
                 .surname("Admin")
-                .userRole("USER")
+                .userRole(UserRole.USER)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
 
@@ -479,14 +480,14 @@ public class UserServiceImplTest {
                 .email("admin@test.com")
                 .forename("Grant")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .build();
         final User created = User.builder()
                 .id(99L)
                 .email("newadmin@test.com")
                 .forename("New")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .roleAssignedBy(10L)
                 .emailValidated(true)
                 .build();
@@ -505,7 +506,7 @@ public class UserServiceImplTest {
 
         // 3. Assert: returned user reflects DAO output (admin role, pre-verified email, grantor recorded)
         Assertions.assertEquals(99L, result.getId());
-        Assertions.assertEquals("ADMIN", result.getUserRole());
+        Assertions.assertEquals(UserRole.ADMIN, result.getUserRole());
         Assertions.assertEquals(10L, result.getRoleAssignedBy().orElse(null));
         Assertions.assertTrue(result.getEmailValidated().orElse(false));
     }

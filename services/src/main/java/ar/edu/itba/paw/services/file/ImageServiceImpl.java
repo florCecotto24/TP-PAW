@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.persistence.ImageDao;
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
@@ -68,6 +69,15 @@ public final class ImageServiceImpl implements ImageService {
     @Transactional(readOnly = true)
     public Optional<Image> getImageById(final long id) {
         return imageDao.getImageById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> getImageContent(final long id) {
+        // Map to a detached value object inside this transaction so the controller doesn't
+        // depend on the JPA entity (issue #16).
+        return imageDao.getImageById(id)
+                .map(img -> new BinaryContent(img.getData(), img.getContentType(), img.getName()));
     }
 
     @Override

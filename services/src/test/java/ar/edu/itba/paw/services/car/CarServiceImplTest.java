@@ -308,4 +308,94 @@ public class CarServiceImplTest {
 
         Assertions.assertEquals(Car.Status.PAUSED, next);
     }
+
+    @Test
+    public void testReleaseAdminCarPauseSetsLackDocWhenInsuranceMissing() {
+        // markCarAsAdminPaused accepts LACK_DOC inputs, so unpausing must re-check documentation
+        // before promoting the listing back to ACTIVE; otherwise the car becomes bookable without
+        // the insurance file the Car.Status javadoc requires for ACTIVE.
+        final long ownerId = 42L;
+        final long carId = 99L;
+        final User owner = User.builder()
+                .id(ownerId)
+                .email("o@test.com")
+                .forename("O")
+                .surname("O")
+                .cbu("0000000000000000000000")
+                .build();
+        final Car adminPausedCar = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("AA000AA")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.ADMIN_PAUSED)
+                .build();
+        Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
+        Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
+        Mockito.when(userService.hasValidCbu(owner)).thenReturn(true);
+
+        carService.releaseAdminCarPause(carId);
+
+        Assertions.assertEquals(Car.Status.LACK_DOC, adminPausedCar.getStatus());
+    }
+
+    @Test
+    public void testReleaseAdminCarPauseSetsLackDocWhenCbuMissing() {
+        final long ownerId = 42L;
+        final long carId = 99L;
+        final User owner = User.builder()
+                .id(ownerId)
+                .email("o@test.com")
+                .forename("O")
+                .surname("O")
+                .build();
+        final Car adminPausedCar = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("AA000AA")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.ADMIN_PAUSED)
+                .build();
+        adminPausedCar.setInsuranceFile(new ar.edu.itba.paw.models.domain.StoredFile(
+                7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
+        Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
+        Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
+        Mockito.when(userService.hasValidCbu(owner)).thenReturn(false);
+
+        carService.releaseAdminCarPause(carId);
+
+        Assertions.assertEquals(Car.Status.LACK_DOC, adminPausedCar.getStatus());
+    }
+
+    @Test
+    public void testReleaseAdminCarPauseSetsActiveWhenDocumentationComplete() {
+        final long ownerId = 42L;
+        final long carId = 99L;
+        final User owner = User.builder()
+                .id(ownerId)
+                .email("o@test.com")
+                .forename("O")
+                .surname("O")
+                .cbu("0000000000000000000000")
+                .build();
+        final Car adminPausedCar = Car.builder()
+                .id(carId)
+                .owner(owner)
+                .plate("AA000AA")
+                .powertrain(Car.Powertrain.GASOLINE)
+                .transmission(Car.Transmission.MANUAL)
+                .status(Car.Status.ADMIN_PAUSED)
+                .build();
+        adminPausedCar.setInsuranceFile(new ar.edu.itba.paw.models.domain.StoredFile(
+                7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
+        Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
+        Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
+        Mockito.when(userService.hasValidCbu(owner)).thenReturn(true);
+
+        carService.releaseAdminCarPause(carId);
+
+        Assertions.assertEquals(Car.Status.ACTIVE, adminPausedCar.getStatus());
+    }
 }

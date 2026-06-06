@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
@@ -49,9 +50,9 @@ public final class SearchController {
     @RequestMapping(value = "/search", method = RequestMethod.GET)
     public ModelAndView search(
             @RequestParam(required = false) final String query,
-            @RequestParam(required = false) final List<String> category,
-            @RequestParam(required = false) final List<String> transmission,
-            @RequestParam(required = false) final List<String> powertrain,
+            @RequestParam(required = false) final List<Car.Type> category,
+            @RequestParam(required = false) final List<Car.Transmission> transmission,
+            @RequestParam(required = false) final List<Car.Powertrain> powertrain,
             @RequestParam(required = false) final BigDecimal priceMin,
             @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,

@@ -46,7 +46,7 @@ public class UserJpaDao implements UserDao {
                 .memberSince(memberSince)
                 .licenseValidated(false)
                 .identityValidated(false)
-                .userRole(UserRole.USER.persistenceName())
+                .userRole(UserRole.USER)
                 .roleAssignedBy(null)
                 .blocked(false)
                 .build();
@@ -69,7 +69,7 @@ public class UserJpaDao implements UserDao {
                 .memberSince(memberSince)
                 .licenseValidated(false)
                 .identityValidated(false)
-                .userRole(UserRole.ADMIN.persistenceName())
+                .userRole(UserRole.ADMIN)
                 .roleAssignedBy(assignedByUserId)
                 .blocked(false)
                 .build();
@@ -243,8 +243,11 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public List<String> findRoleNamesForUser(final long userId) {
+        // Persistence-name strings (e.g. "USER", "ADMIN") rather than the enum so the contract stays
+        // compatible with the legacy multi-row user_roles table that this method shadowed; the only
+        // caller (UserRoleAuthorities.fromDbRoleNames) re-parses with UserRole.fromPersistenceName.
         return getUserById(userId)
-                .map(u -> java.util.Collections.singletonList(u.getUserRole()))
+                .map(u -> java.util.Collections.singletonList(u.getUserRole().persistenceName()))
                 .orElse(java.util.Collections.emptyList());
     }
 
@@ -255,7 +258,7 @@ public class UserJpaDao implements UserDao {
         if (user == null) {
             return;
         }
-        user.setUserRole(UserRole.ADMIN.persistenceName());
+        user.setUserRole(UserRole.ADMIN);
         user.setRoleAssignedBy(assignedByUserId);
     }
 

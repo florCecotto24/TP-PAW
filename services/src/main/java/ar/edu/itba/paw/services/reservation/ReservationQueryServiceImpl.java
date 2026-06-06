@@ -5,12 +5,12 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,6 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
-import ar.edu.itba.paw.models.util.search.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
 /**
@@ -31,8 +30,6 @@ import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
  */
 @Service
 public final class ReservationQueryServiceImpl implements ReservationQueryService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationQueryServiceImpl.class);
 
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 
@@ -90,35 +87,28 @@ public final class ReservationQueryServiceImpl implements ReservationQueryServic
     public ReservationSearchCriteria buildReservationSearchCriteria(
             final Long ownerId,
             final Long riderId,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
             final List<String> rating,
-            final List<String> statusFilter,
+            final List<Reservation.Status> statusFilter,
             final int page,
             final int pageSize,
             final String sort,
             final String textQuery,
             final Long carId) {
-        final List<String> carTypes = collectCarTypeParams(category);
-        final List<String> transmissions = collectTransmissionParams(transmission);
-        final List<String> powertrains = collectPowertrainParams(powertrain);
+        // Spring already validated each enum token via the Web converters; this layer just normalises
+        // the lists. The criteria DTO and ReservationJpaDao expect uppercase Enum.name() for the car
+        // attribute filters and lowercase DB tokens (matching Reservation.StatusConverter) for the
+        // status filter — invalid values now produce 400 before reaching this method.
+        final List<String> carTypes = enumNames(category);
+        final List<String> transmissions = enumNames(transmission);
+        final List<String> powertrains = enumNames(powertrain);
         final BigDecimal minPrice = priceMin != null && priceMin.compareTo(BigDecimal.ZERO) >= 0 ? priceMin : null;
         final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
-        final ArrayList<String> statuses = new ArrayList<>();
-        if (statusFilter != null) {
-            for (final String s : statusFilter) {
-                if (s == null || s.isBlank()) {
-                    continue;
-                }
-                final String low = s.trim().toLowerCase();
-                if (ReservationHubStatusWhitelist.contains(low)) {
-                    statuses.add(low);
-                }
-            }
-        }
+        final List<String> statuses = enumDbTokens(statusFilter);
         final ArrayList<String> ratingBands = new ArrayList<>();
         if (rating != null) {
             for (final String r : rating) {
@@ -139,72 +129,30 @@ public final class ReservationQueryServiceImpl implements ReservationQueryServic
                 carTypes, transmissions, powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDir, textQuery);
     }
 
-    private static List<String> collectCarTypeParams(final List<String> raw) {
-        if (raw == null) {
+    private static <E extends Enum<E>> List<String> enumNames(final List<E> raw) {
+        if (raw == null || raw.isEmpty()) {
             return Collections.emptyList();
         }
-        final ArrayList<String> out = new ArrayList<>();
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Type.valueOf(u);
-                if (!out.contains(u)) {
-                    out.add(u);
-                }
-            } catch (final IllegalArgumentException ex) {
-                LOGGER.atDebug()
-                        .setMessage("Ignoring invalid car type reservation hub filter token [{}]")
-                        .addArgument(u).setCause(ex).log();
+        final LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (final E e : raw) {
+            if (e != null) {
+                out.add(e.name());
             }
         }
-        return out;
+        return new ArrayList<>(out);
     }
 
-    private static List<String> collectTransmissionParams(final List<String> raw) {
-        if (raw == null) {
+    private static <E extends Enum<E>> List<String> enumDbTokens(final List<E> raw) {
+        if (raw == null || raw.isEmpty()) {
             return Collections.emptyList();
         }
-        final ArrayList<String> out = new ArrayList<>();
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Transmission.valueOf(u);
-                out.add(u);
-            } catch (final IllegalArgumentException ex) {
-                LOGGER.atDebug()
-                        .setMessage("Ignoring invalid transmission reservation hub filter token [{}]")
-                        .addArgument(u).setCause(ex).log();
+        final LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (final E e : raw) {
+            if (e != null) {
+                out.add(e.name().toLowerCase(Locale.ROOT));
             }
         }
-        return out;
-    }
-
-    private static List<String> collectPowertrainParams(final List<String> raw) {
-        if (raw == null) {
-            return Collections.emptyList();
-        }
-        final ArrayList<String> out = new ArrayList<>();
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Powertrain.valueOf(u);
-                out.add(u);
-            } catch (final IllegalArgumentException ex) {
-                LOGGER.atDebug()
-                        .setMessage("Ignoring invalid powertrain reservation hub filter token [{}]")
-                        .addArgument(u).setCause(ex).log();
-            }
-        }
-        return out;
+        return new ArrayList<>(out);
     }
 
     @Override

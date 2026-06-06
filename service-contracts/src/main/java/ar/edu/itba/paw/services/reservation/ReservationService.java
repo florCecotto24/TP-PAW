@@ -8,9 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
@@ -44,13 +46,13 @@ public interface ReservationService {
     ReservationSearchCriteria buildReservationSearchCriteria(
             Long ownerId,
             Long riderId,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
             List<String> rating,
-            List<String> statusFilter,
+            List<Reservation.Status> statusFilter,
             int page,
             int pageSize,
             String sort,
@@ -152,11 +154,17 @@ public interface ReservationService {
      */
     Optional<StoredFile> findPaymentReceiptForParticipant(long userId, long reservationId);
 
+    /** {@link BinaryContent} variant of {@link #findPaymentReceiptForParticipant} for download endpoints (issue #16). */
+    Optional<BinaryContent> findPaymentReceiptContentForParticipant(long userId, long reservationId);
+
     /** Owner uploads refund transfer proof for a cancelled confirmed reservation that requires refund documentation. */
     void attachRefundReceiptByOwner(long ownerUserId, long reservationId, String originalFilename, String contentType, byte[] data);
 
     /** Refund receipt file when the viewer is rider or owner on a cancelled reservation that has one. */
     Optional<StoredFile> findRefundReceiptForParticipant(long userId, long reservationId);
+
+    /** {@link BinaryContent} variant of {@link #findRefundReceiptForParticipant} for download endpoints (issue #16). */
+    Optional<BinaryContent> findRefundReceiptContentForParticipant(long userId, long reservationId);
 
     /** Minimum hours between "now" and the pickup ({@code app.reservation.pickup-lead-hours}). */
     int getConfiguredPickupLeadHours();

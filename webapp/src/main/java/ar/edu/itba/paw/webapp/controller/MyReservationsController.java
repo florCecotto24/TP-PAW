@@ -31,6 +31,8 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.reservation.ReservationAccessDeniedException;
 import ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
@@ -137,10 +139,10 @@ public final class MyReservationsController {
     public ModelAndView myReservations(
             @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int riderPage,
-            @RequestParam(required = false) final List<String> riderStatus,
-            @RequestParam(required = false) final List<String> category,
-            @RequestParam(required = false) final List<String> transmission,
-            @RequestParam(required = false) final List<String> powertrain,
+            @RequestParam(required = false) final List<Reservation.Status> riderStatus,
+            @RequestParam(required = false) final List<Car.Type> category,
+            @RequestParam(required = false) final List<Car.Transmission> transmission,
+            @RequestParam(required = false) final List<Car.Powertrain> powertrain,
             @RequestParam(required = false) final BigDecimal priceMin,
             @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,
@@ -279,7 +281,7 @@ public final class MyReservationsController {
             @PathVariable("reservationId") final long reservationId) {
         final User me = WebAuthUtils.requireUser(currentUser);
         return StoredFileDownloadResponses.inlineOr404(
-                reservationService.findPaymentReceiptForParticipant(me.getId(), reservationId),
+                reservationService.findPaymentReceiptContentForParticipant(me.getId(), reservationId),
                 "payment receipt reservationId=" + reservationId);
     }
 
@@ -304,7 +306,7 @@ public final class MyReservationsController {
             @PathVariable("reservationId") final long reservationId) {
         final User me = WebAuthUtils.requireUser(currentUser);
         return StoredFileDownloadResponses.inlineOr404(
-                reservationService.findRefundReceiptForParticipant(me.getId(), reservationId),
+                reservationService.findRefundReceiptContentForParticipant(me.getId(), reservationId),
                 "refund receipt reservationId=" + reservationId);
     }
 

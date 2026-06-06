@@ -48,9 +48,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;
-import ar.edu.itba.paw.webapp.support.converter.StringToReservationViewerRoleConverter;
+import ar.edu.itba.paw.webapp.support.converter.StringToEnumConverterFactory;
 import ar.edu.itba.paw.webapp.support.converter.StringToSupportedLocaleConverter;
-import ar.edu.itba.paw.webapp.support.converter.StringToUserDocumentTypeConverter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
@@ -347,17 +346,23 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     /**
-     * Registers explicit {@code String → Enum/Locale} converters for {@code @RequestParam} binding,
-     * replacing the manual {@code parseDocumentType(raw)} / {@code if (!"owner".equals(role))} /
-     * {@code SupportedLocales.parse(raw)} dance that controllers used to perform. Each converter
-     * returns {@code null} for blank or unrecognized inputs so the existing "silently ignore" /
-     * "swap to default" semantics of those endpoints is preserved.
+     * Registers conversion strategies for {@code @RequestParam} / {@code @PathVariable} binding.
+     *
+     *   {@link StringToSupportedLocaleConverter}: {@code String → java.util.Locale}, validated
+     *       against the application whitelist; not handled by the enum factory because
+     *       {@link java.util.Locale} is not an enum, and we want unknown languages to fall back
+     *       silently rather than 400.</li>
+     *   {@link StringToEnumConverterFactory}: case-insensitive {@code String → Enum<?>} for
+     *       <em>every</em> enum used as {@code @RequestParam} / {@code @PathVariable}, including
+     *       {@code Car.Type}, {@code Car.Transmission}, {@code Car.Powertrain}, {@code Car.Status},
+     *       {@code Reservation.Status}, {@code UserDocumentType} and
+     *       {@link ar.edu.itba.paw.webapp.support.ReservationViewerRole}. Unknown tokens raise {@link IllegalArgumentException} → HTTP 400 
+     * If a future enum needs aliases or non-strict semantics, register a dedicated {@code Converter} for that specific type; Spring's binder picks the most specific converter, so the factory keeps covering the rest.
      */
     @Override
     public void addFormatters(final FormatterRegistry registry) {
-        registry.addConverter(new StringToReservationViewerRoleConverter());
-        registry.addConverter(new StringToUserDocumentTypeConverter());
         registry.addConverter(new StringToSupportedLocaleConverter());
+        registry.addConverterFactory(new StringToEnumConverterFactory());
     }
 
     /**

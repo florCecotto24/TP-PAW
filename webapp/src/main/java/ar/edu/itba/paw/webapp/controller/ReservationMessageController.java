@@ -17,9 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
-import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -82,28 +82,30 @@ public final class ReservationMessageController {
             @PathVariable("reservationId") final long reservationId,
             @PathVariable("messageId") final long messageId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final StoredFile sf = reservationMessageService
-                .findMessageAttachmentForParticipant(me.getId(), reservationId, messageId)
+        // Go through the BinaryContent helper so the controller never sees the JPA entity
+        // (issue #16): byte access stays inside the persistence + service layers.
+        final BinaryContent content = reservationMessageService
+                .findMessageAttachmentContentForParticipant(me.getId(), reservationId, messageId)
                 .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_ATTACHMENT_NOT_FOUND));
         final HttpHeaders headers = new HttpHeaders();
         MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
-        if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
+        if (content.getContentType() != null && !content.getContentType().isBlank()) {
             try {
-                contentType = MediaType.parseMediaType(sf.getContentType());
+                contentType = MediaType.parseMediaType(content.getContentType());
             } catch (final IllegalArgumentException e) {
                 LOG.atDebug()
                         .setMessage("Invalid chat attachment Content-Type reservationId={} messageId={} [{}]")
                         .addArgument(reservationId)
                         .addArgument(messageId)
-                        .addArgument(sf.getContentType())
+                        .addArgument(content.getContentType())
                         .setCause(e)
                         .log();
                 contentType = MediaType.APPLICATION_OCTET_STREAM;
             }
         }
         headers.setContentType(contentType);
-        final String safeName = DownloadFileNameSanitizer.sanitize(sf.getFileName(), "attachment");
+        final String safeName = DownloadFileNameSanitizer.sanitize(content.getFileName(), "attachment");
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeName + "\"");
-        return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
+        return new ResponseEntity<>(content.getBytes(), headers, HttpStatus.OK);
     }
 }

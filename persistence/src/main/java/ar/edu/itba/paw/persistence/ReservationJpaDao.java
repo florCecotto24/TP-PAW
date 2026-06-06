@@ -244,8 +244,19 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     public List<Reservation> getReminderReservations(final OffsetDateTime from, final OffsetDateTime to) {
+        // ReservationReminderScheduler iterates this list outside any transaction (the @Transactional
+        // boundary on findReminderReservations closes when the query returns) and reads
+        // reservation.getCar(), car.getOwner(), car.getBrand()/getModel() and reservation.getRider().
+        // Without JOIN FETCH those LAZY associations would trip LazyInitializationException once the
+        // session is closed; mirror the patterns used by getOwner/getRiderReservationById further down.
         return em.createQuery(
-                        "FROM Reservation r WHERE r.status = :status AND r.startDate >= :from AND r.startDate < :to",
+                        "FROM Reservation r "
+                                + "JOIN FETCH r.rider rider "
+                                + "JOIN FETCH r.car c "
+                                + "JOIN FETCH c.owner owner "
+                                + "LEFT JOIN FETCH c.carModel cm "
+                                + "LEFT JOIN FETCH cm.brand "
+                                + "WHERE r.status = :status AND r.startDate >= :from AND r.startDate < :to",
                         Reservation.class)
                 .setParameter("status", Reservation.Status.ACCEPTED)
                 .setParameter("from", from)

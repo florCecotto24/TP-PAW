@@ -14,9 +14,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.persistence.ReservationDao;
@@ -145,9 +147,10 @@ public final class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public ReservationSearchCriteria buildReservationSearchCriteria(
             final Long ownerId, final Long riderId,
-            final List<String> category, final List<String> transmission, final List<String> powertrain,
+            final List<Car.Type> category, final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin, final BigDecimal priceMax,
-            final List<String> rating, final List<String> statusFilter,
+            final List<String> rating, final List<Reservation.Status> statusFilter,
             final int page, final int pageSize, final String sort, final String textQuery, final Long carId) {
         return queryService.buildReservationSearchCriteria(
                 ownerId, riderId, category, transmission, powertrain,
@@ -321,6 +324,13 @@ public final class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findPaymentReceiptContentForParticipant(
+            final long userId, final long reservationId) {
+        return paymentService.findPaymentReceiptContentForParticipant(userId, reservationId);
+    }
+
+    @Override
     @Transactional
     public void attachRefundReceiptByOwner(
             final long ownerUserId, final long reservationId,
@@ -332,6 +342,13 @@ public final class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public Optional<StoredFile> findRefundReceiptForParticipant(final long userId, final long reservationId) {
         return paymentService.findRefundReceiptForParticipant(userId, reservationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findRefundReceiptContentForParticipant(
+            final long userId, final long reservationId) {
+        return paymentService.findRefundReceiptContentForParticipant(userId, reservationId);
     }
 
     @Override

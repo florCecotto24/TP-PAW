@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.file;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**
  * Binary image rows (profile, car pictures) with configured size limits.
@@ -14,6 +15,12 @@ public interface ImageService {
 
     /** Loads image metadata and payload when present. */
     Optional<Image> getImageById(final long id);
+
+    /**
+     * Loads inline bytes + content type for {@code id} and returns them as a detached
+     * {@link BinaryContent} value object so download endpoints don't leak the JPA entity
+     */
+    Optional<BinaryContent> getImageContent(long id);
 
     /** Removes the image row when it exists. */
     void deleteImage(long id);

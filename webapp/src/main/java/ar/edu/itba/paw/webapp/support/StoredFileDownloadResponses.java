@@ -10,11 +10,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**
  * Shared MIME parsing + filename sanitization + ResponseEntity assembly for the various
  * stored-file download handlers (payment/refund receipts, profile documents, etc).
+ *
+ * Operates on {@link BinaryContent} (a transaction-detached holder of bytes + metadata)
+ * rather than on the JPA {@code StoredFile} entity. Keeps the call site decoupled from
+ * persistence concerns: callers fetch the content through service helpers and pass the
+ * immutable holder here, so the response builder never imports the JPA entity
  *
  * <p>Centralises the three pieces of boilerplate that every controller download handler
  * duplicated: parsing the persisted Content-Type into a {@link MediaType} (with a safe
@@ -35,13 +40,13 @@ public final class StoredFileDownloadResponses {
      * is included in the warning emitted when the persisted Content-Type cannot be parsed.
      */
     public static ResponseEntity<byte[]> inlineDownload(
-            final StoredFile file, final String logContext) {
+            final BinaryContent file, final String logContext) {
         final MediaType contentType = safeMediaType(file.getContentType(), logContext);
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(contentType);
         final String safeName = sanitizeFileName(file.getFileName());
         headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeName + "\"");
-        return new ResponseEntity<>(file.getData(), headers, HttpStatus.OK);
+        return new ResponseEntity<>(file.getBytes(), headers, HttpStatus.OK);
     }
 
     /**
@@ -50,25 +55,25 @@ public final class StoredFileDownloadResponses {
      * Sets {@code Content-Length} alongside the media type.
      */
     public static ResponseEntity<byte[]> rawBytes(
-            final StoredFile file, final String logContext) {
+            final BinaryContent file, final String logContext) {
         final MediaType contentType = safeMediaType(file.getContentType(), logContext);
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(contentType);
-        headers.setContentLength(file.getData().length);
-        return new ResponseEntity<>(file.getData(), headers, HttpStatus.OK);
+        headers.setContentLength(file.getSize());
+        return new ResponseEntity<>(file.getBytes(), headers, HttpStatus.OK);
     }
 
     /** Optional-aware wrapper: returns 404 when {@code fileOpt} is empty. */
     public static ResponseEntity<byte[]> inlineOr404(
-            final Optional<StoredFile> fileOpt, final String logContext) {
+            final Optional<BinaryContent> fileOpt, final String logContext) {
         return fileOpt
                 .map(sf -> inlineDownload(sf, logContext))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Optional-aware wrapper for {@link #rawBytes(StoredFile, String)}. */
+    /** Optional-aware wrapper for {@link #rawBytes(BinaryContent, String)}. */
     public static ResponseEntity<byte[]> rawBytesOr404(
-            final Optional<StoredFile> fileOpt, final String logContext) {
+            final Optional<BinaryContent> fileOpt, final String logContext) {
         return fileOpt
                 .map(sf -> rawBytes(sf, logContext))
                 .orElseGet(() -> ResponseEntity.notFound().build());

@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.security.UserRole;
 
 import ar.edu.itba.paw.services.car.CarBrandService;
 import ar.edu.itba.paw.services.car.CarModelService;
@@ -76,7 +77,7 @@ public class AdminServiceImplTest {
                 .email("newadmin@test.com")
                 .forename("New")
                 .surname("Admin")
-                .userRole("ADMIN")
+                .userRole(UserRole.ADMIN)
                 .roleAssignedBy(10L)
                 .emailValidated(true)
                 .build();
@@ -96,7 +97,7 @@ public class AdminServiceImplTest {
         // 3. Assert: returns the user produced by the service and does not throw
         Assertions.assertNotNull(result);
         Assertions.assertEquals(99L, result.getId());
-        Assertions.assertEquals("ADMIN", result.getUserRole());
+        Assertions.assertEquals(UserRole.ADMIN, result.getUserRole());
     }
 
     @Test

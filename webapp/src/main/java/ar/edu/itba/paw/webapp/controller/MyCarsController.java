@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
@@ -141,11 +142,11 @@ public final class MyCarsController {
     public ModelAndView myCars(
             @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(required = false) final List<String> listingStatus,
+            @RequestParam(required = false) final List<Car.Status> listingStatus,
             @RequestParam(required = false) final String q,
-            @RequestParam(required = false) final List<String> category,
-            @RequestParam(required = false) final List<String> transmission,
-            @RequestParam(required = false) final List<String> powertrain,
+            @RequestParam(required = false) final List<Car.Type> category,
+            @RequestParam(required = false) final List<Car.Transmission> transmission,
+            @RequestParam(required = false) final List<Car.Powertrain> powertrain,
             @RequestParam(required = false) final BigDecimal priceMin,
             @RequestParam(required = false) final BigDecimal priceMax,
             @RequestParam(required = false) final List<String> rating,
@@ -179,11 +180,11 @@ public final class MyCarsController {
     public ModelAndView ownerReservations(
             @CurrentUser final User currentUser,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(required = false) final List<String> ownerStatus,
+            @RequestParam(required = false) final List<Reservation.Status> ownerStatus,
             @RequestParam(required = false) final String ownerQ,
-            @RequestParam(required = false) final List<String> ownerCategory,
-            @RequestParam(required = false) final List<String> ownerTransmission,
-            @RequestParam(required = false) final List<String> ownerPowertrain,
+            @RequestParam(required = false) final List<Car.Type> ownerCategory,
+            @RequestParam(required = false) final List<Car.Transmission> ownerTransmission,
+            @RequestParam(required = false) final List<Car.Powertrain> ownerPowertrain,
             @RequestParam(required = false) final BigDecimal ownerPriceMin,
             @RequestParam(required = false) final BigDecimal ownerPriceMax,
             @RequestParam(required = false) final List<String> ownerRating,
@@ -201,11 +202,11 @@ public final class MyCarsController {
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(required = false) final List<String> ownerStatus,
+            @RequestParam(required = false) final List<Reservation.Status> ownerStatus,
             @RequestParam(required = false) final String ownerQ,
-            @RequestParam(required = false) final List<String> ownerCategory,
-            @RequestParam(required = false) final List<String> ownerTransmission,
-            @RequestParam(required = false) final List<String> ownerPowertrain,
+            @RequestParam(required = false) final List<Car.Type> ownerCategory,
+            @RequestParam(required = false) final List<Car.Transmission> ownerTransmission,
+            @RequestParam(required = false) final List<Car.Powertrain> ownerPowertrain,
             @RequestParam(required = false) final BigDecimal ownerPriceMin,
             @RequestParam(required = false) final BigDecimal ownerPriceMax,
             @RequestParam(required = false) final List<String> ownerRating,
@@ -227,11 +228,11 @@ public final class MyCarsController {
             final Car selectedCarOrNull,
             final Long carIdFilterOrNull,
             int page,
-            final List<String> ownerStatus,
+            final List<Reservation.Status> ownerStatus,
             final String ownerQ,
-            final List<String> ownerCategory,
-            final List<String> ownerTransmission,
-            final List<String> ownerPowertrain,
+            final List<Car.Type> ownerCategory,
+            final List<Car.Transmission> ownerTransmission,
+            final List<Car.Powertrain> ownerPowertrain,
             final BigDecimal ownerPriceMin,
             final BigDecimal ownerPriceMax,
             final List<String> ownerRating,

@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**
  * Money side of the reservation lifecycle: rider payment receipts, owner refund proofs,
@@ -30,6 +31,12 @@ public interface ReservationPaymentService {
     Optional<StoredFile> findPaymentReceiptForParticipant(long userId, long reservationId);
 
     /**
+     * Same scoping as {@link #findPaymentReceiptForParticipant} but returns a detached
+     * {@link BinaryContent} value object so download endpoints don't leak the JPA entity.
+     */
+    Optional<BinaryContent> findPaymentReceiptContentForParticipant(long userId, long reservationId);
+
+    /**
      * Owner uploads refund transfer proof for a cancelled confirmed reservation that requires
      * refund documentation.
      */
@@ -37,6 +44,12 @@ public interface ReservationPaymentService {
 
     /** Refund receipt file when the viewer is rider or owner on a cancelled reservation that has one. */
     Optional<StoredFile> findRefundReceiptForParticipant(long userId, long reservationId);
+
+    /**
+     * Same scoping as {@link #findRefundReceiptForParticipant} but returns a detached
+     * {@link BinaryContent} value object so download endpoints don't leak the JPA entity.
+     */
+    Optional<BinaryContent> findRefundReceiptContentForParticipant(long userId, long reservationId);
 
     /**
      * Batch job: cancels pending reservations whose payment-proof deadline passed without a

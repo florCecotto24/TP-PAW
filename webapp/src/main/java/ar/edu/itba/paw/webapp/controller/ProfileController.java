@@ -349,11 +349,8 @@ public final class ProfileController {
             @CurrentUser final User currentUser,
             @PathVariable final UserDocumentType documentType) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (documentType == null) {
-            return ResponseEntity.notFound().build();
-        }
         return StoredFileDownloadResponses.rawBytesOr404(
-                userService.findProfileDocument(me.getId(), documentType),
+                userService.findProfileDocumentContent(me.getId(), documentType),
                 "profile document userId=" + me.getId());
     }
 
@@ -363,9 +360,6 @@ public final class ProfileController {
             @PathVariable final UserDocumentType documentType,
             final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        if (documentType == null) {
-            return "redirect:/profile";
-        }
         final var storedOpt = userService.findProfileDocument(me.getId(), documentType);
         if (storedOpt.isEmpty()) {
             return "redirect:/profile";

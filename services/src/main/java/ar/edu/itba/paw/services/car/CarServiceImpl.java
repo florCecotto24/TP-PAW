@@ -192,6 +192,12 @@ public final class CarServiceImpl implements CarService {
             if (ownerRow.get().isBlocked()) {
                 throw new CarValidationException(MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED);
             }
+            // Defense-in-depth: PAUSED should imply documentation is present (clearCarInsuranceDocument
+            // demotes ACTIVE/PAUSED to LACK_DOC when insurance is removed), but mirror the explicit
+            // check in resumeCarsForRestoredCbu so we never let an undocumented car reach ACTIVE.
+            if (car.getInsuranceFileId().isEmpty()) {
+                throw new CarValidationException(MessageKeys.CAR_INSURANCE_INVALID);
+            }
             newCarStatus = Car.Status.ACTIVE;
         } else {
             throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
@@ -243,9 +249,9 @@ public final class CarServiceImpl implements CarService {
     @Override
     public CarSearchCriteria buildSearchCriteria(
             final String query,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
             final List<String> rating,
@@ -268,12 +274,12 @@ public final class CarServiceImpl implements CarService {
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final List<String> carStatus,
+            final List<Car.Status> carStatus,
             final List<String> rating,
             final String textQuery,
             final int page,
@@ -287,12 +293,12 @@ public final class CarServiceImpl implements CarService {
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final List<String> carStatus,
+            final List<Car.Status> carStatus,
             final List<String> rating,
             final String textQuery,
             final int page,
@@ -489,7 +495,20 @@ public final class CarServiceImpl implements CarService {
         if (car.getStatus() != Car.Status.ADMIN_PAUSED) {
             throw new IllegalStateException("Car is not admin-paused: " + carId);
         }
-        car.setStatus(Car.Status.ACTIVE);
+        // markCarAsAdminPaused accepts every non-DEACTIVATED status (including LACK_DOC), so we cannot
+        // assume the car had valid documentation when it was paused. The Car.Status javadoc reserves
+        // ACTIVE for listings with all required documents, so re-check insurance and the owner's CBU
+        // before promoting; otherwise drop back to LACK_DOC and let the regular re-activation path
+        // (insurance upload / CBU restored) bring the car back online once the owner completes them.
+        final boolean hasInsurance = car.getInsuranceFileId().isPresent();
+        final boolean hasValidCbu = userService.getUserById(car.getOwnerId())
+                .map(userService::hasValidCbu)
+                .orElse(false);
+        if (hasInsurance && hasValidCbu) {
+            car.setStatus(Car.Status.ACTIVE);
+        } else {
+            car.setStatus(Car.Status.LACK_DOC);
+        }
     }
 
     @Override

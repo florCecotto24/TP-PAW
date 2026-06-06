@@ -9,10 +9,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,8 +38,6 @@ import ar.edu.itba.paw.services.location.LocationService;
 @Service
 public final class CarSearchServiceImpl implements CarSearchService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(CarSearchServiceImpl.class);
-    private static final Set<String> LISTING_STATUSES = Set.of("active", "paused", "finished");
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 
     private final ReservationTimingPolicy reservationTimingPolicy;
@@ -58,9 +55,9 @@ public final class CarSearchServiceImpl implements CarSearchService {
     @Transactional(readOnly = true)
     public CarSearchCriteria buildSearchCriteria(
             final String query,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
             final List<String> rating,
@@ -74,9 +71,9 @@ public final class CarSearchServiceImpl implements CarSearchService {
             final boolean flexible,
             final String flexMonth,
             final Integer flexDays) {
-        final List<String> transmissions = collectTransmissionParams(transmission);
-        final List<String> powertrains = collectPowertrainParams(powertrain);
-        final List<String> mergedCarTypes = collectCarTypeParams(category);
+        final List<String> transmissions = enumNames(transmission);
+        final List<String> powertrains = enumNames(powertrain);
+        final List<String> mergedCarTypes = enumNames(category);
         final BigDecimal minPrice = priceMin != null && priceMin.compareTo(BigDecimal.ZERO) >= 0 ? priceMin : null;
         final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
         final List<String> ratingBands = collectRatingBandParams(rating);
@@ -134,12 +131,12 @@ public final class CarSearchServiceImpl implements CarSearchService {
     @Transactional(readOnly = true)
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final List<String> carStatus,
+            final List<Car.Status> carStatus,
             final List<String> rating,
             final String textQuery,
             final int page,
@@ -156,12 +153,12 @@ public final class CarSearchServiceImpl implements CarSearchService {
     @Transactional(readOnly = true)
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final List<String> carStatus,
+            final List<Car.Status> carStatus,
             final List<String> rating,
             final String textQuery,
             final int page,
@@ -183,12 +180,12 @@ public final class CarSearchServiceImpl implements CarSearchService {
 
     private OwnerCarSearchCriteria buildOwnerCarSearchCriteriaInternal(
             final long ownerId,
-            final List<String> category,
-            final List<String> transmission,
-            final List<String> powertrain,
+            final List<Car.Type> category,
+            final List<Car.Transmission> transmission,
+            final List<Car.Powertrain> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final List<String> carStatus,
+            final List<Car.Status> carStatus,
             final List<String> rating,
             final String textQuery,
             final int page,
@@ -196,23 +193,16 @@ public final class CarSearchServiceImpl implements CarSearchService {
             final String sort,
             final Long excludeCarId,
             final boolean prioritizeRefundPending) {
-        final List<String> carTypes = collectCarTypeParams(category);
-        final List<String> transmissions = collectTransmissionParams(transmission);
-        final List<String> powertrains = collectPowertrainParams(powertrain);
+        final List<String> carTypes = enumNames(category);
+        final List<String> transmissions = enumNames(transmission);
+        final List<String> powertrains = enumNames(powertrain);
         final BigDecimal minPrice = priceMin != null && priceMin.compareTo(BigDecimal.ZERO) >= 0 ? priceMin : null;
         final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
-        final List<String> statuses = new ArrayList<>();
-        if (carStatus != null) {
-            for (final String s : carStatus) {
-                if (s == null || s.isBlank()) {
-                    continue;
-                }
-                final String low = s.trim().toLowerCase();
-                if (LISTING_STATUSES.contains(low)) {
-                    statuses.add(low);
-                }
-            }
-        }
+        // OwnerCarSearchCriteria persists statuses as the lowercase DB token (matches Car.Status
+        // converter); the previous LISTING_STATUSES whitelist hard-coded {active,paused,finished}
+        // which mismatched the dropdown options exposed by CarEnumOptions. Trusting the typed enum
+        // list lets every Car.Status value flow through correctly.
+        final List<String> statuses = enumDbTokens(carStatus);
         final List<String> ratingBands = collectRatingBandParams(rating);
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
@@ -256,78 +246,41 @@ public final class CarSearchServiceImpl implements CarSearchService {
         return List.copyOf(merged);
     }
 
-    private static List<String> collectCarTypeParams(final List<String> raw) {
-        if (raw == null) {
+    /**
+     * Distinct {@code Enum.name()} tokens for any non-null entry; preserves order, drops nulls.
+     * Matches the wire format the criteria DTO and JPQL/native filters in {@code CarJpaDao} expect
+     * (e.g. {@code SEDAN}, {@code AUTOMATIC}, {@code GASOLINE}).
+     */
+    private static <E extends Enum<E>> List<String> enumNames(final List<E> raw) {
+        if (raw == null || raw.isEmpty()) {
             return Collections.emptyList();
         }
-        final List<String> out = new ArrayList<>();
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Type.valueOf(u);
-                if (!out.contains(u)) {
-                    out.add(u);
-                }
-            } catch (final IllegalArgumentException ex) {
-                LOGGER.atDebug()
-                        .setMessage("Ignoring invalid car type search filter token [{}]")
-                        .addArgument(u)
-                        .setCause(ex)
-                        .log();
+        final LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (final E e : raw) {
+            if (e != null) {
+                out.add(e.name());
             }
         }
-        return out;
+        return new ArrayList<>(out);
     }
 
-    private static List<String> collectTransmissionParams(final List<String> raw) {
-        if (raw == null) {
+    /**
+     * Lowercase DB tokens for any non-null entry (matches {@code Car.StatusConverter} /
+     * {@code Reservation.StatusConverter} which persist {@code name().toLowerCase()}). Used by
+     * {@code OwnerCarSearchCriteria.carStatusFilters} which feeds a native SQL {@code IN} clause
+     * over {@code cars.status}.
+     */
+    private static <E extends Enum<E>> List<String> enumDbTokens(final List<E> raw) {
+        if (raw == null || raw.isEmpty()) {
             return Collections.emptyList();
         }
-        final List<String> out = new ArrayList<>();
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Transmission.valueOf(u);
-                out.add(u);
-            } catch (final IllegalArgumentException ex) {
-                LOGGER.atDebug()
-                        .setMessage("Ignoring invalid transmission search filter token [{}]")
-                        .addArgument(u)
-                        .setCause(ex)
-                        .log();
+        final LinkedHashSet<String> out = new LinkedHashSet<>();
+        for (final E e : raw) {
+            if (e != null) {
+                out.add(e.name().toLowerCase(Locale.ROOT));
             }
         }
-        return out;
-    }
-
-    private static List<String> collectPowertrainParams(final List<String> raw) {
-        if (raw == null) {
-            return Collections.emptyList();
-        }
-        final List<String> out = new ArrayList<>();
-        for (final String s : raw) {
-            if (s == null || s.isBlank()) {
-                continue;
-            }
-            final String u = s.trim().toUpperCase();
-            try {
-                Car.Powertrain.valueOf(u);
-                out.add(u);
-            } catch (final IllegalArgumentException ex) {
-                LOGGER.atDebug()
-                        .setMessage("Ignoring invalid powertrain search filter token [{}]")
-                        .addArgument(u)
-                        .setCause(ex)
-                        .log();
-            }
-        }
-        return out;
+        return new ArrayList<>(out);
     }
 
     private static List<String> collectRatingBandParams(final List<String> raw) {

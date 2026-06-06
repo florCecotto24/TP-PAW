@@ -111,7 +111,7 @@ public final class CounterpartyProfileViewServiceImpl implements CounterpartyPro
                 carService.buildOwnerCarSearchCriteria(
                         counterpartyUserId,
                         null, null, null, null, null,
-                        List.of("active"),
+                        List.of(Car.Status.ACTIVE),
                         null, null,
                         page,
                         pageSize,
@@ -142,7 +142,7 @@ public final class CounterpartyProfileViewServiceImpl implements CounterpartyPro
                         carService.buildOwnerCarSearchCriteria(
                                 counterparty.getId(),
                                 null, null, null, null, null,
-                                List.of("active"),
+                                List.of(Car.Status.ACTIVE),
                                 null, null,
                                 0,
                                 ownerListingsPageSize,

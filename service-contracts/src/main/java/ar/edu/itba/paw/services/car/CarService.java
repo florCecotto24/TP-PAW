@@ -120,9 +120,9 @@ public interface CarService {
      */
     CarSearchCriteria buildSearchCriteria(
             String query,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
             List<String> rating,
@@ -149,12 +149,12 @@ public interface CarService {
      */
     OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             long ownerId,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
-            List<String> carStatus,
+            List<Car.Status> carStatus,
             List<String> rating,
             String textQuery,
             int page,
@@ -168,12 +168,12 @@ public interface CarService {
      */
     OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             long ownerId,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
-            List<String> carStatus,
+            List<Car.Status> carStatus,
             List<String> rating,
             String textQuery,
             int page,

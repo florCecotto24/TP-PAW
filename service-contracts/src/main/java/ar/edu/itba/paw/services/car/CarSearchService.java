@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
@@ -24,9 +25,9 @@ public interface CarSearchService {
     /** See {@link CarService#buildSearchCriteria}. */
     CarSearchCriteria buildSearchCriteria(
             String query,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
             List<String> rating,
@@ -44,12 +45,12 @@ public interface CarSearchService {
     /** See {@link CarService#buildOwnerCarSearchCriteria(long, List, List, List, BigDecimal, BigDecimal, List, List, String, int, int, String)}. */
     OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             long ownerId,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
-            List<String> carStatus,
+            List<Car.Status> carStatus,
             List<String> rating,
             String textQuery,
             int page,
@@ -59,12 +60,12 @@ public interface CarSearchService {
     /** See {@link CarService#buildOwnerCarSearchCriteria(long, List, List, List, BigDecimal, BigDecimal, List, List, String, int, int, String, Long)}. */
     OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             long ownerId,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
-            List<String> carStatus,
+            List<Car.Status> carStatus,
             List<String> rating,
             String textQuery,
             int page,

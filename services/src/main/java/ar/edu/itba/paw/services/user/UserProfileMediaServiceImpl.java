@@ -15,6 +15,7 @@ import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 
 import ar.edu.itba.paw.services.file.ImageService;
@@ -154,6 +155,14 @@ public final class UserProfileMediaServiceImpl implements UserProfileMediaServic
                     case IDENTITY -> u.getIdentityFileId();
                 })
                 .flatMap(storedFileService::findById);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<BinaryContent> findProfileDocumentContent(
+            final long userId, final UserDocumentType documentType) {
+        return findProfileDocument(userId, documentType)
+                .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
     private static boolean profileDocumentSlotOccupied(final User user, final UserDocumentType documentType) {

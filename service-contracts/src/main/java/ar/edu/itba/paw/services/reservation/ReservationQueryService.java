@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
@@ -41,13 +42,13 @@ public interface ReservationQueryService {
     ReservationSearchCriteria buildReservationSearchCriteria(
             Long ownerId,
             Long riderId,
-            List<String> category,
-            List<String> transmission,
-            List<String> powertrain,
+            List<Car.Type> category,
+            List<Car.Transmission> transmission,
+            List<Car.Powertrain> powertrain,
             BigDecimal priceMin,
             BigDecimal priceMax,
             List<String> rating,
-            List<String> statusFilter,
+            List<Reservation.Status> statusFilter,
             int page,
             int pageSize,
             String sort,

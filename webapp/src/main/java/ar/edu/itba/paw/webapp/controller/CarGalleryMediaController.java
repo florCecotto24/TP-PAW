@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.car.CarPictureService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 
@@ -32,13 +32,15 @@ public final class CarGalleryMediaController {
         if (!carPictureService.isStoredFileInCarGallery(id)) {
             return ResponseEntity.notFound().build();
         }
-        final Optional<StoredFile> fileOpt = storedFileService.findById(id);
-        if (fileOpt.isEmpty()) {
+        // Consume BinaryContent so the controller never sees the JPA entity:
+        // byte access stays inside the persistence + service layers.
+        final Optional<BinaryContent> contentOpt = storedFileService.findContentById(id);
+        if (contentOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        final StoredFile file = fileOpt.get();
+        final BinaryContent content = contentOpt.get();
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(file.getContentType()))
-                .body(file.getData());
+                .contentType(MediaType.parseMediaType(content.getContentType()))
+                .body(content.getBytes());
     }
 }

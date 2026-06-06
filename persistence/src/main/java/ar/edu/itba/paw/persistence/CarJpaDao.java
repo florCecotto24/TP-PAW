@@ -8,8 +8,10 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,7 +25,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.CarModel;
+import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
@@ -48,6 +52,29 @@ public class CarJpaDao implements CarDao {
      */
     private static final String OWNER_NOT_BLOCKED_JOIN =
             "INNER JOIN users u ON u.id = c.owner_id AND u.blocked = FALSE ";
+
+    // String constants derived from the entity enums via name().toLowerCase() so that renaming a
+    // Car.Status / Reservation.Status / CarAvailability.Kind value forces a compile-time update of
+    // every native query that references it (rather than letting a stale 'active' / 'offered'
+    // literal silently match nothing). Mirrors the StatusConverter / KindConverter persistence
+    // contract: enum name lower-cased is what hits the database.
+    private static final String STATUS_ACTIVE = enumDbValue(Car.Status.ACTIVE);
+    private static final String KIND_OFFERED = enumDbValue(CarAvailability.Kind.OFFERED);
+    private static final String ACTIVE_RESERVATION_STATUS_CSV = quotedEnumCsv(
+            Reservation.Status.PENDING, Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
+    private static final String CANCELLED_BY_PARTICIPANT_STATUS_CSV = quotedEnumCsv(
+            Reservation.Status.CANCELLED_BY_OWNER, Reservation.Status.CANCELLED_BY_RIDER);
+
+    private static String enumDbValue(final Enum<?> value) {
+        return value.name().toLowerCase(Locale.ROOT);
+    }
+
+    private static String quotedEnumCsv(final Enum<?>... values) {
+        return Arrays.stream(values)
+                .map(CarJpaDao::enumDbValue)
+                .map(s -> "'" + s + "'")
+                .collect(Collectors.joining(", "));
+    }
 
     @PersistenceContext
     private EntityManager em;
@@ -145,13 +172,13 @@ public class CarJpaDao implements CarDao {
                 ? ", MAX(CASE WHEN EXISTS (SELECT 1 FROM reservations r WHERE r.car_id = c.id "
                         + "AND r.payment_refund_required = TRUE "
                         + "AND r.payment_refund_receipt_file_id IS NULL "
-                        + "AND r.status IN ('cancelled_by_owner', 'cancelled_by_rider')) THEN 1 ELSE 0 END) AS pending_refund "
+                        + "AND r.status IN (" + CANCELLED_BY_PARTICIPANT_STATUS_CSV + ")) THEN 1 ELSE 0 END) AS pending_refund "
                 : "";
         final StringBuilder idsSql = new StringBuilder(
                 "SELECT c.id, MIN(la.day_price) AS min_price")
                 .append(pendingRefundProjection)
                 .append(" FROM cars c "
-                + "LEFT JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
+                + "LEFT JOIN car_availability la ON la.car_id = c.id AND la.kind = '" + KIND_OFFERED + "' "
                 + "LEFT JOIN car_models cm ON cm.id = c.model_id "
                 + "LEFT JOIN car_brands cb ON cb.id = cm.brand_id "
                 + "WHERE c.owner_id = :ownerId ");
@@ -504,7 +531,7 @@ public class CarJpaDao implements CarDao {
                 + OWNER_NOT_BLOCKED_JOIN
                 + "JOIN car_availability la ON la.car_id = c.id "
                 + "JOIN car_models cm ON cm.id = c.model_id "
-                + "WHERE c.status = 'active' "
+                + "WHERE c.status = '" + STATUS_ACTIVE + "' "
                 + "AND c.id <> :carId "
                 + "AND UPPER(c.powertrain) = :refPowertrain "
                 + "AND UPPER(c.transmission) = :refTransmission ");
@@ -646,8 +673,8 @@ public class CarJpaDao implements CarDao {
                 + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
-                + "INNER JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
-                + "WHERE c.status = 'active' ");
+                + "INNER JOIN car_availability la ON la.car_id = c.id AND la.kind = '" + KIND_OFFERED + "' "
+                + "WHERE c.status = '" + STATUS_ACTIVE + "' ");
         appendBrowseEligibilityFilters(countSql, countParams, criteria.getBrowseWallDate(), criteria.getExcludeOwnerUserId());
         appendCarSearchFilters(countSql, countParams, criteria);
         final long total = ((Number) bindParams(em.createNativeQuery(countSql.toString()), countParams).getSingleResult()).longValue();
@@ -736,8 +763,8 @@ public class CarJpaDao implements CarDao {
                 + OWNER_NOT_BLOCKED_JOIN
                 + "INNER JOIN car_models cm ON cm.id = c.model_id AND cm.validated = TRUE "
                 + "INNER JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
-                + "INNER JOIN car_availability la ON la.car_id = c.id AND la.kind = 'offered' "
-                + "WHERE c.status = 'active' ");
+                + "INNER JOIN car_availability la ON la.car_id = c.id AND la.kind = '" + KIND_OFFERED + "' "
+                + "WHERE c.status = '" + STATUS_ACTIVE + "' ");
         appendBrowseEligibilityFilters(sql, params, browseWallDate, excludeOwnerUserId);
         if (searchCriteria != null) {
             appendCarSearchFilters(sql, params, searchCriteria);
@@ -854,12 +881,12 @@ public class CarJpaDao implements CarDao {
             sql.append("AND EXISTS (")
                     .append("SELECT 1 FROM car_availability la_cover ")
                     .append("WHERE la_cover.car_id = c.id ")
-                    .append("AND la_cover.kind = 'offered' ")
+                    .append("AND la_cover.kind = '").append(KIND_OFFERED).append("' ")
                     .append("AND la_cover.start_date <= :searchFromWallDate ")
                     .append("AND la_cover.end_date >= :searchUntilWallInclusive) ");
             sql.append("AND NOT EXISTS (")
                     .append("SELECT 1 FROM reservations r WHERE r.car_id = c.id ")
-                    .append("AND r.status IN ('pending', 'accepted', 'started') ")
+                    .append("AND r.status IN (").append(ACTIVE_RESERVATION_STATUS_CSV).append(") ")
                     .append("AND r.start_date < :resWindowEnd AND r.end_date > :resWindowStart) ");
             params.put("searchFromWallDate", java.sql.Date.valueOf(searchFromWallDate));
             params.put("searchUntilWallInclusive", java.sql.Date.valueOf(searchUntilWallInclusive));
@@ -879,7 +906,7 @@ public class CarJpaDao implements CarDao {
             sql.append("AND EXISTS (")
                     .append("SELECT 1 FROM car_availability la_month ")
                     .append("WHERE la_month.car_id = c.id ")
-                    .append("AND la_month.kind = 'offered' ")
+                    .append("AND la_month.kind = '").append(KIND_OFFERED).append("' ")
                     .append("AND la_month.start_date <= :flexMonthEnd ")
                     .append("AND la_month.end_date >= :flexMonthStart) ");
             params.put("flexMonthStart", java.sql.Date.valueOf(monthStart));
@@ -894,13 +921,13 @@ public class CarJpaDao implements CarDao {
                     .append("    INTERVAL '1 day'")
                     .append(") AS w(window_start) ")
                     .append("WHERE la.car_id = c.id ")
-                    .append("AND la.kind = 'offered' ")
+                    .append("AND la.kind = '").append(KIND_OFFERED).append("' ")
                     .append("AND la.start_date <= :flexMonthEnd ")
                     .append("AND la.end_date >= :flexMonthStart ")
                     .append("AND NOT EXISTS (")
                     .append("    SELECT 1 FROM reservations r ")
                     .append("    WHERE r.car_id = c.id ")
-                    .append("    AND r.status IN ('pending', 'accepted', 'started') ")
+                    .append("    AND r.status IN (").append(ACTIVE_RESERVATION_STATUS_CSV).append(") ")
                     .append("    AND r.start_date < ((w.window_start + (:flexibleDays * INTERVAL '1 day')) AT TIME ZONE :wallZone) ")
                     .append("    AND r.end_date > (w.window_start AT TIME ZONE :wallZone)")
                     .append(")) ");

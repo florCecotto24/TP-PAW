@@ -9,6 +9,7 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 
 import ar.edu.itba.paw.services.email.EmailService;
@@ -178,6 +179,12 @@ public interface UserService {
      * file id) so the download/view endpoints don't have to.
      */
     Optional<StoredFile> findProfileDocument(long userId, UserDocumentType documentType);
+
+    /**
+     * Same scoping as {@link #findProfileDocument} but returns a detached
+     * {@link BinaryContent} value object so download endpoints don't leak the JPA entity.
+     */
+    Optional<BinaryContent> findProfileDocumentContent(long userId, UserDocumentType documentType);
 
     /** Whether {@code cbuRaw} is acceptable as a CBU per {@link ar.edu.itba.paw.models.util.rules.CbuRules}. */
     boolean isValidCbuFormat(String cbuRaw);

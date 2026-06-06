@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**
  * Profile-picture and KYC-document writes/reads, extracted from {@link UserService} so the
@@ -30,4 +31,10 @@ public interface UserProfileMediaService {
 
     /** See {@link UserService#findProfileDocument(long, UserDocumentType)}. */
     Optional<StoredFile> findProfileDocument(long userId, UserDocumentType documentType);
+
+    /**
+     * Same scoping as {@link #findProfileDocument} but returns a detached
+     * {@link BinaryContent} value object so download endpoints don't leak the JPA entity.
+     */
+    Optional<BinaryContent> findProfileDocumentContent(long userId, UserDocumentType documentType);
 }
