@@ -8,8 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
 /**

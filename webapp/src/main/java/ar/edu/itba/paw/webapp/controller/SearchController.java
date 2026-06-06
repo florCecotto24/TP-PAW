@@ -5,8 +5,9 @@ import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.location.LocationService;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
@@ -32,14 +33,17 @@ public final class SearchController {
     private final CarService carService;
     private final LocationService locationService;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
+    private final AppPaginationProperties appPaginationProperties;
 
     public SearchController(
             final CarService carService,
             final LocationService locationService,
-            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
+            final AppPaginationProperties appPaginationProperties) {
         this.carService = carService;
         this.locationService = locationService;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
+        this.appPaginationProperties = appPaginationProperties;
     }
 
     @RequestMapping(value = "/search", method = RequestMethod.GET)
@@ -69,7 +73,8 @@ public final class SearchController {
 
         final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
         final var criteria = carService.buildSearchCriteria(
-                query, category, transmission, powertrain, priceMin, priceMax, rating, from, until, page, sort,
+                query, category, transmission, powertrain, priceMin, priceMax, rating, from, until, page,
+                appPaginationProperties.getUiPageSize(), sort,
                 viewer, neighborhoodIds, flexible, flexMonth, flexDays);
         final Page<CarCard> resultPage = carService.searchCarCards(criteria);
 

@@ -15,7 +15,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.validation.constraint.ReservationWithinMaxBillableDays;
 

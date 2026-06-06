@@ -1,14 +1,11 @@
 package ar.edu.itba.paw.webapp.controller;
 
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.core.session.SessionInformation;
-import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -24,15 +21,14 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarModel;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.reservation.AdminReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
-import ar.edu.itba.paw.services.AdminService;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.services.user.AdminService;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.CreateAdminUserForm;
+import ar.edu.itba.paw.webapp.support.UserSessionService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
@@ -44,22 +40,20 @@ import org.springframework.security.core.Authentication;
 @RequestMapping("/admin")
 public final class AdminController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AdminController.class);
-
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final AdminService adminService;
-    private final SessionRegistry sessionRegistry;
+    private final UserSessionService userSessionService;
     private final LocaleMessages localeMessages;
     private final UserValidationPolicy userValidationPolicy;
 
     public AdminController(
             final AdminService adminService,
-            final SessionRegistry sessionRegistry,
+            final UserSessionService userSessionService,
             final LocaleMessages localeMessages,
             final UserValidationPolicy userValidationPolicy) {
         this.adminService = adminService;
-        this.sessionRegistry = sessionRegistry;
+        this.userSessionService = userSessionService;
         this.localeMessages = localeMessages;
         this.userValidationPolicy = userValidationPolicy;
     }
@@ -126,7 +120,7 @@ public final class AdminController {
         final long actingAdminId = requireAdminId(authentication);
         try {
             adminService.blockUser(userId, actingAdminId);
-            invalidateUserSessions(userId);
+            userSessionService.invalidateSessionsForUser(userId);
             redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.blocked"));
         } catch (final RydenException e) {
             redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
@@ -290,20 +284,13 @@ public final class AdminController {
     public ModelAndView reservationChat(
             @PathVariable final long reservationId,
             @RequestParam(defaultValue = "0") final int page) {
-        final Reservation reservation = adminService.getReservationById(reservationId).orElse(null);
-        if (reservation == null) {
+        final Optional<AdminReservationChatPageModel> pageModelOpt =
+                adminService.loadReservationChatPage(reservationId, page, 50);
+        if (pageModelOpt.isEmpty()) {
             return new ModelAndView("redirect:/admin/reservations");
         }
-        final int pageSize = 50;
-        final List<ReservationMessage> messages =
-                adminService.getAdminChatMessages(reservationId, page * pageSize, pageSize);
-        final long totalMessages = adminService.countReservationMessages(reservationId);
         final ModelAndView mav = new ModelAndView("admin/reservationChat");
-        mav.addObject("reservation", reservation);
-        mav.addObject("messages", messages);
-        mav.addObject("totalMessages", totalMessages);
-        mav.addObject("currentPage", page);
-        mav.addObject("pageSize", pageSize);
+        pageModelOpt.get().populateModel(mav::addObject);
         return mav;
     }
 
@@ -313,15 +300,5 @@ public final class AdminController {
 
     private Optional<Long> requireAdminGrantorId(final Authentication authentication) {
         return WebAuthUtils.requireCurrentUser(authentication).getRoleAssignedBy();
-    }
-
-    private void invalidateUserSessions(final long userId) {
-        for (final Object principal : sessionRegistry.getAllPrincipals()) {
-            if (principal instanceof RydenUserDetails details && details.getUserId() == userId) {
-                for (final SessionInformation session : sessionRegistry.getAllSessions(principal, false)) {
-                    session.expireNow();
-                }
-            }
-        }
     }
 }

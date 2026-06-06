@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -8,18 +9,9 @@ import java.util.Locale;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -35,23 +27,24 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.user.InvalidCbuFormatException;
-import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.profile.ProfileBaseModel;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.StoredFileService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.services.file.ImageService;
+import ar.edu.itba.paw.services.user.view.ProfileViewService;
+import ar.edu.itba.paw.services.user.UserService;
+import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.CbuUpdateForm;
 import ar.edu.itba.paw.webapp.form.ProfileDocumentUploadForm;
 import ar.edu.itba.paw.webapp.form.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.ProfilePictureUploadForm;
 import ar.edu.itba.paw.webapp.form.ProfileUpdateForm;
-import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.SecurityPrincipalRefresher;
+import ar.edu.itba.paw.webapp.support.StoredFileDownloadResponses;
 import ar.edu.itba.paw.webapp.support.facade.UserBookingDocumentsFacade;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
@@ -63,16 +56,14 @@ import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
 @RequestMapping("/profile")
 public final class ProfileController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ProfileController.class);
-
     private final UserService userService;
     private final LocaleMessages localeMessages;
     private final ImageService imageService;
     private final MultipartImageValidation multipartImageValidation;
     private final UserValidationPolicy userValidationPolicy;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
-    private final StoredFileService storedFileService;
-    private final SecurityContextRepository securityContextRepository;
+    private final ProfileViewService profileViewService;
+    private final SecurityPrincipalRefresher securityPrincipalRefresher;
     private final UserBookingDocumentsFacade userBookingDocumentsFacade;
 
     public ProfileController(
@@ -82,8 +73,8 @@ public final class ProfileController {
             final MultipartImageValidation multipartImageValidation,
             final UserValidationPolicy userValidationPolicy,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
-            final StoredFileService storedFileService,
-            final SecurityContextRepository securityContextRepository,
+            final ProfileViewService profileViewService,
+            final SecurityPrincipalRefresher securityPrincipalRefresher,
             final UserBookingDocumentsFacade userBookingDocumentsFacade) {
         this.userService = userService;
         this.localeMessages = localeMessages;
@@ -91,8 +82,8 @@ public final class ProfileController {
         this.multipartImageValidation = multipartImageValidation;
         this.userValidationPolicy = userValidationPolicy;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
-        this.storedFileService = storedFileService;
-        this.securityContextRepository = securityContextRepository;
+        this.profileViewService = profileViewService;
+        this.securityPrincipalRefresher = securityPrincipalRefresher;
         this.userBookingDocumentsFacade = userBookingDocumentsFacade;
     }
 
@@ -153,25 +144,16 @@ public final class ProfileController {
         if (currentUser == null) {
             return;
         }
-        model.addAttribute("userEmail", currentUser.getEmail());
-        model.addAttribute("userForename", currentUser.getForename());
-        model.addAttribute("userSurname", currentUser.getSurname());
-        userService.getUserById(currentUser.getId()).ifPresent(u -> {
-            u.getProfilePictureId().ifPresent(id -> model.addAttribute("profilePictureImageId", id));
-            u.getMemberSince().ifPresent(ms -> {
-                final String display = ms.format(
-                        DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(LocaleContextHolder.getLocale()));
-                model.addAttribute("profileMemberSinceDisplay", display);
-            });
-            model.addAttribute("licenseValidated", u.isLicenseValidated());
-            model.addAttribute("identityValidated", u.isIdentityValidated());
-            u.getLicenseFileId()
-                    .flatMap(storedFileService::findById)
-                    .ifPresent(sf -> model.addAttribute("licenseFileName", sf.getFileName()));
-            u.getIdentityFileId()
-                    .flatMap(storedFileService::findById)
-                    .ifPresent(sf -> model.addAttribute("identityFileName", sf.getFileName()));
-        });
+        final ProfileBaseModel base = profileViewService
+                .loadProfileBaseModel(currentUser.getId(), LocaleContextHolder.getLocale())
+                .orElse(null);
+        if (base == null) {
+            model.addAttribute("userEmail", currentUser.getEmail());
+            model.addAttribute("userForename", currentUser.getForename());
+            model.addAttribute("userSurname", currentUser.getSurname());
+            return;
+        }
+        base.populateModel(model::addAttribute);
     }
 
     @GetMapping
@@ -222,7 +204,8 @@ public final class ProfileController {
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile/profile";
         }
-        refreshPrincipalDisplayName(profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
+        securityPrincipalRefresher.refreshDisplayName(
+                profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
         redirectAttributes.addFlashAttribute("profileSaved", Boolean.TRUE);
         return "redirect:/profile";
     }
@@ -369,29 +352,9 @@ public final class ProfileController {
         if (documentType == null) {
             return ResponseEntity.notFound().build();
         }
-        final var storedOpt = findProfileDocument(me.getId(), documentType);
-        if (storedOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        final StoredFile sf = storedOpt.get();
-        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
-        try {
-            if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
-                contentType = MediaType.parseMediaType(sf.getContentType());
-            }
-        } catch (final IllegalArgumentException e) {
-            LOG.atDebug()
-                    .setMessage("Invalid stored Content-Type for profile document userId={} [{}]")
-                    .addArgument(me.getId())
-                    .addArgument(sf.getContentType())
-                    .setCause(e)
-                    .log();
-            contentType = MediaType.APPLICATION_OCTET_STREAM;
-        }
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(contentType);
-        headers.setContentLength(sf.getData().length);
-        return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
+        return StoredFileDownloadResponses.rawBytesOr404(
+                userService.findProfileDocument(me.getId(), documentType),
+                "profile document userId=" + me.getId());
     }
 
     @GetMapping("/documents/{documentType}/view")
@@ -403,7 +366,7 @@ public final class ProfileController {
         if (documentType == null) {
             return "redirect:/profile";
         }
-        final var storedOpt = findProfileDocument(me.getId(), documentType);
+        final var storedOpt = userService.findProfileDocument(me.getId(), documentType);
         if (storedOpt.isEmpty()) {
             return "redirect:/profile";
         }
@@ -474,47 +437,6 @@ public final class ProfileController {
             u.getAbout().ifPresent(form::setAbout);
             u.getCbu().ifPresent(form::setCbu);
         });
-    }
-
-    private void refreshPrincipalDisplayName(
-            final String forename,
-            final String surname,
-            final HttpServletRequest request,
-            final HttpServletResponse response) {
-        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof RydenUserDetails old)) {
-            return;
-        }
-        final RydenUserDetails updated = new RydenUserDetails(
-                old.getUserId(),
-                old.getUsername(),
-                forename,
-                surname,
-                old.getPassword(),
-                old.getAuthorities(),
-                old.getRoleAssignedBy().orElse(null));
-        final UsernamePasswordAuthenticationToken newAuth = new UsernamePasswordAuthenticationToken(
-                updated,
-                authentication.getCredentials(),
-                updated.getAuthorities());
-        newAuth.setDetails(authentication.getDetails());
-        final SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(newAuth);
-        SecurityContextHolder.setContext(context);
-        this.securityContextRepository.saveContext(context, request, response);
-    }
-
-    private java.util.Optional<StoredFile> findProfileDocument(final long userId, final UserDocumentType documentType) {
-        final var userOpt = userService.getUserById(userId);
-        if (userOpt.isEmpty()) {
-            return java.util.Optional.empty();
-        }
-        final var user = userOpt.get();
-        final var fileId = switch (documentType) {
-            case LICENSE -> user.getLicenseFileId();
-            case IDENTITY -> user.getIdentityFileId();
-        };
-        return fileId.flatMap(storedFileService::findById);
     }
 
 }

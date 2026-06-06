@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.controller;
 
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
@@ -33,20 +34,21 @@ import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
-import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.car.PublishCarConfirmationPageModel;
+import ar.edu.itba.paw.models.dto.car.PublishCarPendingPageModel;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
-import ar.edu.itba.paw.services.CarBrandService;
-import ar.edu.itba.paw.services.CarModelService;
-import ar.edu.itba.paw.services.CarPublishingService;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
-import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.car.CarBrandService;
+import ar.edu.itba.paw.services.car.CarModelService;
+import ar.edu.itba.paw.services.car.view.CarPublishViewService;
+import ar.edu.itba.paw.services.car.CarPublishingService;
+import ar.edu.itba.paw.services.file.ImageService;
+import ar.edu.itba.paw.services.user.UserService;
+import ar.edu.itba.paw.policy.CarGalleryUploadPolicy;
+import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedInsurance;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
@@ -69,7 +71,7 @@ public final class PublishCarFormController {
     private static final Logger LOG = LoggerFactory.getLogger(PublishCarFormController.class);
 
     private final CarPublishingService carPublishingService;
-    private final CarService carService;
+    private final CarPublishViewService carPublishViewService;
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
     private final LocaleMessages localeMessages;
@@ -86,7 +88,7 @@ public final class PublishCarFormController {
 
     public PublishCarFormController(
             final CarPublishingService carPublishingService,
-            final CarService carService,
+            final CarPublishViewService carPublishViewService,
             final CarBrandService carBrandService,
             final CarModelService carModelService,
             final LocaleMessages localeMessages,
@@ -101,7 +103,7 @@ public final class PublishCarFormController {
             final PublishCarFormValidator publishCarFormValidator,
             final UserBookingDocumentsFacade userBookingDocumentsFacade) {
         this.carPublishingService = carPublishingService;
-        this.carService = carService;
+        this.carPublishViewService = carPublishViewService;
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
         this.localeMessages = localeMessages;
@@ -184,7 +186,7 @@ public final class PublishCarFormController {
         if (fresh.isBlocked()) {
             return new ModelAndView("redirect:/my-cars");
         }
-        if (!hasPublishPrerequisites(fresh)) {
+        if (!userService.meetsPublishingPrerequisites(fresh)) {
             return publishCarPrerequisitesView(fresh);
         }
         pictureStash.clear(session);
@@ -213,25 +215,17 @@ public final class PublishCarFormController {
             @CurrentUser final User currentUser,
             @PathVariable final long carId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<Car> carOpt = carService.getCarById(carId);
-        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
-            return new ModelAndView(redirectTo("/my-cars"));
-        }
-        final Car car = carOpt.get();
-        final Optional<CarModel> carModelOpt = car.getCarModel();
-        final boolean brandPending = carModelOpt.map(m -> !m.getBrand().isValidated()).orElse(false);
-        final boolean modelPending = carModelOpt.map(m -> !m.isValidated()).orElse(false);
-        if (!brandPending && !modelPending) {
-            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        final CarPublishViewService.LoadResult<PublishCarPendingPageModel> result =
+                carPublishViewService.loadPendingView(carId, me.getId());
+        final Optional<CarPublishViewService.RedirectTarget> redirect = result.getRedirect();
+        if (redirect.isPresent()) {
+            return new ModelAndView(redirectTo(switch (redirect.get()) {
+                case OWNER_HUB -> "/my-cars";
+                case CAR_DETAIL -> "/my-cars/car/" + carId;
+            }));
         }
         final ModelAndView mav = new ModelAndView("car/publishCarPending");
-        mav.addObject("createdCarId", carId);
-        if (brandPending) {
-            mav.addObject("pendingBrand", carModelOpt.get().getBrand().getName());
-        }
-        if (modelPending) {
-            mav.addObject("pendingModel", carModelOpt.get().getName());
-        }
+        result.getPageModel().orElseThrow().populateModel(mav::addObject);
         return mav;
     }
 
@@ -254,15 +248,13 @@ public final class PublishCarFormController {
             @RequestParam(name = "newCatalogEntry", required = false, defaultValue = "false")
                     final boolean newCatalogEntry) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<Car> carOpt = carService.getCarById(carId);
-        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != me.getId()) {
+        final Optional<PublishCarConfirmationPageModel> pmOpt =
+                carPublishViewService.loadConfirmationView(carId, me.getId(), newCatalogEntry);
+        if (pmOpt.isEmpty()) {
             return new ModelAndView(redirectTo("/my-cars"));
         }
         final ModelAndView mav = new ModelAndView("car/publishCarConfirmation");
-        mav.addObject("car", carOpt.get());
-        if (newCatalogEntry) {
-            mav.addObject("newCatalogEntry", true);
-        }
+        pmOpt.get().populateModel(mav::addObject);
         return mav;
     }
 
@@ -362,7 +354,7 @@ public final class PublishCarFormController {
         // Defensive backend check: prerequisites (CBU + identity) must be in place before publishing.
         final User me = WebAuthUtils.requireUser(currentUser);
         final User fresh = userService.getUserById(me.getId()).orElse(me);
-        if (!hasPublishPrerequisites(fresh)) {
+        if (!userService.meetsPublishingPrerequisites(fresh)) {
             return publishCarPrerequisitesView(fresh);
         }
         publishCarFormValidator.validate(form, errors);
@@ -583,10 +575,6 @@ public final class PublishCarFormController {
             default:
                 return ResponseEntity.badRequest().build();
         }
-    }
-
-    private boolean hasPublishPrerequisites(final User user) {
-        return userService.hasValidCbu(user) && user.getIdentityFileId().isPresent();
     }
 
     private ModelAndView publishCarPrerequisitesView(final User user) {

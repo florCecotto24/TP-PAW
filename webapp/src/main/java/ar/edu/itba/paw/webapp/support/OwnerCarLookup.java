@@ -7,7 +7,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.services.CarService;
+import ar.edu.itba.paw.services.car.CarService;
 
 /**
  * Loads a {@link Car} owned by the current viewer for the owner-only handlers in

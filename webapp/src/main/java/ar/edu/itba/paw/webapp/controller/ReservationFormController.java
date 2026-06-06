@@ -26,8 +26,8 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationConfirmationPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationFormPageModel;
-import ar.edu.itba.paw.services.ReservationFormViewService;
-import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.reservation.view.ReservationFormViewService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.form.ReservationForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.facade.UserBookingDocumentsFacade;
@@ -118,7 +118,10 @@ public final class ReservationFormController {
             @RequestParam(value = "availabilityId", required = false) final Long availabilityId,
             @RequestParam(value = "reservationTotal", required = false) final String reservationTotal) {
 
-        if (form.getCarId() == null) {
+        // carId is declared @NotNull(OnReservationSubmit) on the form, so a null binding here is already a
+        // BindingResult field error: bounce to /search (no in-flight reservation to render) instead of
+        // duplicating the null guard.
+        if (errors.hasFieldErrors("carId")) {
             return redirectToSearch();
         }
         final long carId = form.getCarId();

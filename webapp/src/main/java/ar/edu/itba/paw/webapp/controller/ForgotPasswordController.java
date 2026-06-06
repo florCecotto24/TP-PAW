@@ -17,8 +17,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.services.PasswordResetService;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
+import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordResetForm;
 import ar.edu.itba.paw.webapp.form.ForgotPasswordRequestForm;

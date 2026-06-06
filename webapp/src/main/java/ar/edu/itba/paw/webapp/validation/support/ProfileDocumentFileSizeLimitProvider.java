@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.validation.support;
 
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 
 /**
  * Adapts {@link ProfileDocumentUploadPolicy} (which reads

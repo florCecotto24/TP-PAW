@@ -7,8 +7,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 /**

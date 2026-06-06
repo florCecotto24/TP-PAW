@@ -14,3 +14,9 @@ app.security.remember-me.key=change-me-remember-me-key-local
 
 # Gmail / SMTP (JavaMail) — app password, not the account password
 mail.server.password=local-mail-not-configured
+
+# Hibernate dev overrides: dump every SQL statement (formatted) to the console. Override the production-safe
+# defaults from application.properties. Keep these OFF in application-deployed.properties.
+hibernate.show_sql=true
+hibernate.format_sql=true
+hibernate.use_sql_comments=true

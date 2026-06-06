@@ -46,7 +46,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.accept.HeaderContentNegotiationStrategy;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
-import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.security.access.CarNotOwnedByCallerAuthorization;
 import ar.edu.itba.paw.webapp.security.access.CarOwnerWebAuthorization;
 import ar.edu.itba.paw.webapp.security.access.ProfileWebAuthorization;

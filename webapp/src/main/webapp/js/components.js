@@ -1566,6 +1566,43 @@
         return RydenFlatpickrRange.localWallDayEndFromYmd(ymd);
     }
 
+    /**
+     * Parses [{"from":"yyyy-MM-dd","to":"yyyy-MM-dd"},...] (data-publish-blocked-ranges) into the
+     * shape Flatpickr's `disable` option accepts: [{from: Date, to: Date}, ...] using local
+     * start/end-of-day. These are the wall-day ranges already held by active reservations.
+     * Returns an empty array when the attribute is missing or malformed.
+     */
+    function readBlockedReservationRangesForFp() {
+        if (!section) {
+            return [];
+        }
+        var raw = section.getAttribute('data-publish-blocked-ranges');
+        if (!raw) {
+            return [];
+        }
+        try {
+            var parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+            var out = [];
+            for (var i = 0; i < parsed.length; i++) {
+                var r = parsed[i];
+                if (!r || !r.from || !r.to) {
+                    continue;
+                }
+                var fromD = RydenFlatpickrRange.localWallDayStartFromYmd(r.from);
+                var toD = RydenFlatpickrRange.localWallDayEndFromYmd(r.to);
+                if (fromD && toD) {
+                    out.push({ from: fromD, to: toD });
+                }
+            }
+            return out;
+        } catch (e) {
+            return [];
+        }
+    }
+
     function refreshAllPublishRowsMinDateFromServer() {
         var urlBase = window.rydenPublishAvailMinFromUrl;
         if (!urlBase) {
@@ -1681,6 +1718,10 @@
             defaults.push(new Date(untilH.value + 'T00:00:00'));
         }
         var md = maxDateForPublish();
+        // Days already held by active reservations are disabled in the picker. managePeriods.js
+        // clears this list when entering edit mode (the existing range may include reserved days
+        // from the very availability being edited).
+        var blocked = readBlockedReservationRangesForFp();
         var initCfg = {
             anchor: anchor,
             fromHidden: fromH,
@@ -1688,7 +1729,8 @@
             enableTime: false,
             dateFormat: 'Y-m-d',
             minDate: minDateForPublish(),
-            defaultDate: defaults.length ? defaults : undefined
+            defaultDate: defaults.length ? defaults : undefined,
+            disable: blocked
         };
         if (md) {
             initCfg.maxDate = md;

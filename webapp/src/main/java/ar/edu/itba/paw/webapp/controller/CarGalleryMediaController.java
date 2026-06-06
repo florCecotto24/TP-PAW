@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.services.CarPictureService;
-import ar.edu.itba.paw.services.StoredFileService;
+import ar.edu.itba.paw.services.car.CarPictureService;
+import ar.edu.itba.paw.services.file.StoredFileService;
 
 /** Serves car gallery video bytes for {@code /car-media/{id}}. */
 @Controller

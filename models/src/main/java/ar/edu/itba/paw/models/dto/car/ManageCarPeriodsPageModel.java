@@ -39,6 +39,7 @@ public final class ManageCarPeriodsPageModel {
     private final String publishMaxAvailabilityWallInclusive;
     private final String publisherEmail;
     private final CarPriceMarketInsight priceMarketInsight;
+    private final String reservationBlockedRangesJson;
 
     public ManageCarPeriodsPageModel(
             final Car car,
@@ -57,7 +58,8 @@ public final class ManageCarPeriodsPageModel {
             final int maxAvailabilityForwardWallDays,
             final String publishMaxAvailabilityWallInclusive,
             final String publisherEmail,
-            final CarPriceMarketInsight priceMarketInsight) {
+            final CarPriceMarketInsight priceMarketInsight,
+            final String reservationBlockedRangesJson) {
         this.car = car;
         this.owner = owner;
         this.statusKey = statusKey;
@@ -75,6 +77,8 @@ public final class ManageCarPeriodsPageModel {
         this.publishMaxAvailabilityWallInclusive = publishMaxAvailabilityWallInclusive;
         this.publisherEmail = publisherEmail;
         this.priceMarketInsight = priceMarketInsight;
+        this.reservationBlockedRangesJson =
+                reservationBlockedRangesJson != null ? reservationBlockedRangesJson : "[]";
     }
 
     public boolean isUserHasCbu() {
@@ -98,6 +102,7 @@ public final class ManageCarPeriodsPageModel {
         putObject.accept("maxAvailabilityForwardWallDays", maxAvailabilityForwardWallDays);
         putObject.accept("publishMaxAvailabilityWallInclusive", publishMaxAvailabilityWallInclusive);
         putObject.accept("publisherEmail", publisherEmail);
+        putObject.accept("reservationBlockedRangesJson", reservationBlockedRangesJson);
         if (priceMarketInsight != null) {
             putObject.accept("priceMarketInsight", priceMarketInsight);
         }

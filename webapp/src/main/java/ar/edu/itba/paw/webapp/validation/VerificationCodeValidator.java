@@ -9,7 +9,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.services.policy.VerificationCodePolicy;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 import ar.edu.itba.paw.webapp.validation.constraint.VerificationCode;
 
 /** Engine for {@link VerificationCode}: null/blank passes (let {@code @NotBlank} produce its own error). */

@@ -1,12 +1,18 @@
 package ar.edu.itba.paw.models.util.search;
 
-import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
-
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Common immutable filters, paging, and sort shared by all search criteria types. */
+/**
+ * Common immutable filters, paging, and sort shared by all search criteria types.
+ *
+ * <p>Callers are expected to supply a positive {@code pageSize} (the controller layer reads the
+ * page size from its pagination properties and threads it through). A non-positive value is
+ * defensively clamped to {@code 1} so the criteria still produces a well-formed SQL window.</p>
+ */
 public abstract class BaseSearchCriteria {
+
+    private static final int MIN_PAGE_SIZE = 1;
 
     private final int page;
     private final int pageSize;
@@ -31,7 +37,7 @@ public abstract class BaseSearchCriteria {
             final String sortBy,
             final String sortDirection) {
         this.page = Math.max(0, page);
-        this.pageSize = pageSize > 0 ? pageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
+        this.pageSize = pageSize > 0 ? pageSize : MIN_PAGE_SIZE;
         this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);
         this.powertrains = powertrains == null ? List.of() : List.copyOf(powertrains);

@@ -18,8 +18,8 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
-import ar.edu.itba.paw.services.FavCarService;
-import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.services.car.FavCarService;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
@@ -36,17 +36,17 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 public final class MyFavoritesController {
 
     private final FavCarService favCarService;
-    private final PaginationPolicy paginationPolicy;
+    private final AppPaginationProperties appPaginationProperties;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
     private final LocaleMessages localeMessages;
 
     public MyFavoritesController(
             final FavCarService favCarService,
-            final PaginationPolicy paginationPolicy,
+            final AppPaginationProperties appPaginationProperties,
             final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
             final LocaleMessages localeMessages) {
         this.favCarService = favCarService;
-        this.paginationPolicy = paginationPolicy;
+        this.appPaginationProperties = appPaginationProperties;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
         this.localeMessages = localeMessages;
     }
@@ -57,7 +57,7 @@ public final class MyFavoritesController {
             @RequestParam(defaultValue = "0") int page) {
         final User me = WebAuthUtils.requireUser(currentUser);
         page = Math.max(0, page);
-        final int pageSize = paginationPolicy.getDefaultPageSize();
+        final int pageSize = appPaginationProperties.getDefaultPageSize();
         final Page<CarCard> favoritesPage = favCarService.findMyFavorites(me.getId(), page, pageSize);
         final int safePage = UiPaging.clampZeroBasedPage(page, favoritesPage.getTotalItems(), favoritesPage.getPageSize());
         if (safePage != page) {

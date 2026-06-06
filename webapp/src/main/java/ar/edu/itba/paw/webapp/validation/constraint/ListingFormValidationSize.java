@@ -12,7 +12,7 @@ import javax.validation.Payload;
 import ar.edu.itba.paw.webapp.validation.ListingFormValidationSizeValidator;
 
 /**
- * Length bound resolved at runtime against {@link ar.edu.itba.paw.services.policy.ListingFormValidationPolicy}
+ * Length bound resolved at runtime against {@link ar.edu.itba.paw.policy.ListingFormValidationPolicy}
  * (handover street / number for listing creation and edit forms).
  */
 @Documented

@@ -12,7 +12,7 @@ import javax.validation.Payload;
 import ar.edu.itba.paw.webapp.validation.ReservationFormValidationSizeValidator;
 
 /**
- * Length bound resolved at runtime against {@link ar.edu.itba.paw.services.policy.ReservationFormValidationPolicy}
+ * Length bound resolved at runtime against {@link ar.edu.itba.paw.policy.ReservationFormValidationPolicy}
  * (delivery location, display car name, hidden datetime strings).
  */
 @Documented

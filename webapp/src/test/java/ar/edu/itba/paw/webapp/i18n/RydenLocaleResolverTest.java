@@ -24,7 +24,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import ar.edu.itba.paw.models.util.rules.SupportedLocales;
-import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 @ExtendWith(MockitoExtension.class)

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
-import ar.edu.itba.paw.services.policy.CarValidationPolicy;
+import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.webapp.form.PublishCarForm;
 
 /**

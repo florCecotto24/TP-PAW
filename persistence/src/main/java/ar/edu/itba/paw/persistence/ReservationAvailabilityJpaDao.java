@@ -60,16 +60,7 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
 
     @Override
     public Optional<BigDecimal> sumReservationTotal(final long reservationId) {
-        // Single JPQL with JOIN FETCH hydrates both the reservation (for the date range) and its
-        // covering availabilities (for per-day pricing); no extra em.find on a sibling DAO entity.
-        final List<ReservationAvailabilityCoverage> coverages = em.createQuery(
-                        "FROM ReservationAvailabilityCoverage ra "
-                                + "JOIN FETCH ra.availability "
-                                + "JOIN FETCH ra.reservation "
-                                + "WHERE ra.reservation.id = :reservationId",
-                        ReservationAvailabilityCoverage.class)
-                .setParameter("reservationId", reservationId)
-                .getResultList();
+        final List<ReservationAvailabilityCoverage> coverages = loadCoveragesForReservation(reservationId);
         if (coverages.isEmpty()) {
             return Optional.empty();
         }
@@ -84,6 +75,37 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
         return sumDayPricesByEffectiveCandidate(candidates, firstDay, lastDay);
     }
 
+    @Override
+    public Optional<CarAvailability> findEffectivePickupAvailabilityForReservation(final long reservationId) {
+        final List<ReservationAvailabilityCoverage> coverages = loadCoveragesForReservation(reservationId);
+        if (coverages.isEmpty()) {
+            return Optional.empty();
+        }
+        final Reservation reservation = coverages.get(0).getReservation();
+        final List<CarAvailability> candidates = coverages.stream()
+                .map(ReservationAvailabilityCoverage::getAvailability)
+                .toList();
+        final LocalDate firstDay = reservation.getStartDate()
+                .atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDate();
+        return pickEffectiveOfferedForDay(candidates, firstDay);
+    }
+
+    /**
+     * Single JPQL with JOIN FETCH hydrates both the reservation (for the date range) and its
+     * covering availabilities (for per-day pricing / pickup snapshot resolution); no extra em.find
+     * on a sibling DAO entity.
+     */
+    private List<ReservationAvailabilityCoverage> loadCoveragesForReservation(final long reservationId) {
+        return em.createQuery(
+                        "FROM ReservationAvailabilityCoverage ra "
+                                + "JOIN FETCH ra.availability "
+                                + "JOIN FETCH ra.reservation "
+                                + "WHERE ra.reservation.id = :reservationId",
+                        ReservationAvailabilityCoverage.class)
+                .setParameter("reservationId", reservationId)
+                .getResultList();
+    }
+
     /**
      * For each day in {@code [firstDay, lastDay]}, picks the candidate availability whose date range
      * covers the day with the latest {@code createdAt} (ties broken by id) and accumulates its
@@ -95,19 +117,30 @@ public class ReservationAvailabilityJpaDao implements ReservationAvailabilityDao
             final LocalDate lastDay) {
         BigDecimal total = BigDecimal.ZERO;
         for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) {
-            final LocalDate currentDay = day;
-            final Optional<CarAvailability> winner = candidates.stream()
-                    .filter(a -> a.getKind() == CarAvailability.Kind.OFFERED)
-                    .filter(a -> !currentDay.isBefore(a.getStartInclusive())
-                            && !currentDay.isAfter(a.getEndInclusive()))
-                    .max(Comparator
-                            .comparing(CarAvailability::getCreatedAt)
-                            .thenComparing(CarAvailability::getId));
+            final Optional<CarAvailability> winner = pickEffectiveOfferedForDay(candidates, day);
             if (winner.isEmpty()) {
                 return Optional.empty();
             }
             total = total.add(winner.get().getDayPriceValue());
         }
         return Optional.of(total);
+    }
+
+    /**
+     * Picks the OFFERED candidate whose range covers {@code day} with the latest {@code createdAt}
+     * (ties broken by id). WITHDRAWN candidates are ignored — the bridge only stores rows that were
+     * pricing-relevant at booking time, but a WITHDRAWN row that was inserted on top of the bridged
+     * candidates should not flip the day to "no pickup info available" for an already-booked
+     * reservation: the rule reflects the same semantics as the price sum.
+     */
+    static Optional<CarAvailability> pickEffectiveOfferedForDay(
+            final List<CarAvailability> candidates, final LocalDate day) {
+        return candidates.stream()
+                .filter(a -> a.getKind() == CarAvailability.Kind.OFFERED)
+                .filter(a -> !day.isBefore(a.getStartInclusive())
+                        && !day.isAfter(a.getEndInclusive()))
+                .max(Comparator
+                        .comparing(CarAvailability::getCreatedAt)
+                        .thenComparing(CarAvailability::getId));
     }
 }

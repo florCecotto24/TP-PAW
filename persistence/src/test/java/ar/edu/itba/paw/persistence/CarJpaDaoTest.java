@@ -152,28 +152,27 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final long kaModelId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_models WHERE name = ?", Long.class, "Ka");
 
-        final Car corollaA = dao.createCar(
+        final long corollaAId = insertCar(
                 ownerId, "COR001", corollaModelId,
                 2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        final Car corollaB = dao.createCar(
+        final long corollaBId = insertCar(
                 ownerId, "COR002", corollaModelId,
                 2020, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
-        final Car ka = dao.createCar(
+        final long kaId = insertCar(
                 ownerId, "KA0001", kaModelId,
                 2018, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        em.flush();
 
         final OffsetDateTime t = OffsetDateTime.parse("2026-07-01T10:00:00Z");
-        insertOfferedAvailability(corollaA.getId(), new BigDecimal("80.00"), t);
-        insertOfferedAvailability(corollaA.getId(), new BigDecimal("50.00"), t.plusDays(1));
-        insertOfferedAvailability(corollaB.getId(), new BigDecimal("120.00"), t);
-        insertOfferedAvailability(ka.getId(), new BigDecimal("200.00"), t);
+        insertOfferedAvailability(corollaAId, new BigDecimal("80.00"), t);
+        insertOfferedAvailability(corollaAId, new BigDecimal("50.00"), t.plusDays(1));
+        insertOfferedAvailability(corollaBId, new BigDecimal("120.00"), t);
+        insertOfferedAvailability(kaId, new BigDecimal("200.00"), t);
 
         // 2. Act — market stats for Toyota Corolla (two cars, min prices 50 and 120).
         final Optional<CarPriceMarketInsight> market = dao.findActiveDayPriceMarketInsightByBrandAndModel(
                 "Toyota", "Corolla", null);
         final Optional<CarPriceMarketInsight> excludingCorollaA = dao.findActiveDayPriceMarketInsightByBrandAndModel(
-                "Toyota", "Corolla", corollaA.getId());
+                "Toyota", "Corolla", corollaAId);
 
         // 3. Assert — per-car MIN aggregation (not raw segment count).
         Assertions.assertTrue(market.isPresent());
@@ -193,6 +192,7 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testUpdateMinimumRentalDaysPersistsValueViaJdbcTemplate() {
+        // 1. Arrange — seed catalog + a car directly via JdbcTemplate (no DAO call).
         jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Honda", true);
         final long brandId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_brands WHERE name = ?", Long.class, "Honda");
@@ -202,21 +202,23 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final long modelId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_models WHERE name = ?", Long.class, "Civic");
 
-        final Car car = dao.createCar(
+        final long carId = insertCar(
                 ownerId, "HON001", modelId,
                 2021, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+
+        // 2. Act
+        dao.updateMinimumRentalDays(carId, 3);
         em.flush();
 
-        dao.updateMinimumRentalDays(car.getId(), 3);
-        em.flush();
-
+        // 3. Assert
         final int persisted = jdbcTemplate.queryForObject(
-                "SELECT minimum_rental_days FROM cars WHERE id = ?", Integer.class, car.getId());
+                "SELECT minimum_rental_days FROM cars WHERE id = ?", Integer.class, carId);
         Assertions.assertEquals(3, persisted);
     }
 
     @Test
     void testSearchCarCardsExcludesCarsWhoseMinimumRentalDaysExceedsRangeLength() {
+        // 1. Arrange — seed catalog + two cars directly via JdbcTemplate (no DAO call).
         jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Hyundai", true);
         final long brandId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_brands WHERE name = ?", Long.class, "Hyundai");
@@ -226,22 +228,21 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final long modelId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_models WHERE name = ?", Long.class, "Elantra");
 
-        final Car fitsMin = dao.createCar(
+        final long fitsMinId = insertCar(
                 ownerId, "HYU001", modelId,
                 2022, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
-        final Car exceedsMin = dao.createCar(
+        final long exceedsMinId = insertCar(
                 ownerId, "HYU002", modelId,
                 2022, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        em.flush();
 
         final OffsetDateTime createdAt = OffsetDateTime.parse("2030-01-01T00:00:00Z");
-        insertOfferedAvailability(fitsMin.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+        insertOfferedAvailability(fitsMinId, LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
                 new BigDecimal("50.00"), createdAt);
-        insertOfferedAvailability(exceedsMin.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+        insertOfferedAvailability(exceedsMinId, LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
                 new BigDecimal("50.00"), createdAt);
 
-        jdbcTemplate.update("UPDATE cars SET minimum_rental_days = ? WHERE id = ?", 1, fitsMin.getId());
-        jdbcTemplate.update("UPDATE cars SET minimum_rental_days = ? WHERE id = ?", 5, exceedsMin.getId());
+        jdbcTemplate.update("UPDATE cars SET minimum_rental_days = ? WHERE id = ?", 1, fitsMinId);
+        jdbcTemplate.update("UPDATE cars SET minimum_rental_days = ? WHERE id = ?", 5, exceedsMinId);
 
         // Search range of 1 day: only fitsMin (minDays=1) should appear; exceedsMin (minDays=5) excluded.
         final Instant rangeStart = LocalDate.of(2030, 6, 10)
@@ -253,22 +254,24 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                 .browseWallDate(LocalDate.of(2030, 6, 1))
                 .page(0)
                 .uiPageSize(10)
-                .dbFetchSize(10)
                 .sortBy("date")
                 .sortDirection("desc")
                 .build();
 
+        // 2. Act
         final Page<CarCard> result = dao.searchCarCards(criteria);
 
+        // 3. Assert
         final List<Long> ids = result.getContent().stream()
                 .map(CarCard::getCarId)
                 .collect(Collectors.toList());
-        Assertions.assertTrue(ids.contains(fitsMin.getId()), "Car with minDays=1 should be included");
-        Assertions.assertFalse(ids.contains(exceedsMin.getId()), "Car with minDays=5 should be excluded for 1-day range");
+        Assertions.assertTrue(ids.contains(fitsMinId), "Car with minDays=1 should be included");
+        Assertions.assertFalse(ids.contains(exceedsMinId), "Car with minDays=5 should be excluded for 1-day range");
     }
 
     @Test
     void testSearchCarCardsWithAvailabilityRangeReturnsOnlyCarsCoveringWholeWallRange() {
+        // 1. Arrange — seed catalog + two cars directly via JdbcTemplate (no DAO call).
         jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
         final long brandId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_brands WHERE name = ?", Long.class, "Toyota");
@@ -278,23 +281,22 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final long modelId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_models WHERE name = ?", Long.class, "Corolla");
 
-        final Car outsideRange = dao.createCar(
+        final long outsideRangeId = insertCar(
                 ownerId, "OUT111", modelId,
                 2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        final Car coversRange = dao.createCar(
+        final long coversRangeId = insertCar(
                 ownerId, "IN1111", modelId,
                 2020, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
-        em.flush();
 
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-01T10:00:00Z");
         insertOfferedAvailability(
-                outsideRange.getId(),
+                outsideRangeId,
                 LocalDate.of(2026, 6, 1),
                 LocalDate.of(2026, 6, 10),
                 new BigDecimal("20.00"),
                 createdAt);
         insertOfferedAvailability(
-                coversRange.getId(),
+                coversRangeId,
                 LocalDate.of(2026, 6, 15),
                 LocalDate.of(2026, 6, 30),
                 new BigDecimal("25.00"),
@@ -311,15 +313,16 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                 .browseWallDate(LocalDate.of(2026, 6, 1))
                 .page(0)
                 .uiPageSize(10)
-                .dbFetchSize(10)
                 .sortBy("date")
                 .sortDirection("desc")
                 .build();
 
+        // 2. Act
         final Page<CarCard> result = dao.searchCarCards(criteria);
 
+        // 3. Assert
         Assertions.assertEquals(1, result.getContent().size());
-        Assertions.assertEquals(coversRange.getId(), result.getContent().get(0).getCarId());
+        Assertions.assertEquals(coversRangeId, result.getContent().get(0).getCarId());
         Assertions.assertEquals(1L, result.getTotalItems());
     }
 
@@ -335,10 +338,9 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final long modelId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_models WHERE name = ?", Long.class, "Yaris");
 
-        final Car car = dao.createCar(
+        final long carId = insertCar(
                 ownerId, "VID111", modelId,
                 2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        em.flush();
 
         jdbcTemplate.update(
                 "INSERT INTO images (image_name, content_type, byte_array) VALUES (?, ?, ?)",
@@ -363,19 +365,19 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         jdbcTemplate.update(
                 "INSERT INTO car_pictures (car_id, image_id, stored_file_id, display_order, created_at, updated_at) "
                         + "VALUES (?, NULL, ?, 1, ?, ?)",
-                car.getId(),
+                carId,
                 storedFileId,
                 now,
                 now);
         jdbcTemplate.update(
                 "INSERT INTO car_pictures (car_id, image_id, stored_file_id, display_order, created_at, updated_at) "
                         + "VALUES (?, ?, NULL, 2, ?, ?)",
-                car.getId(),
+                carId,
                 imageId,
                 now,
                 now);
 
-        insertOfferedAvailability(car.getId(), new BigDecimal("30.00"), now);
+        insertOfferedAvailability(carId, new BigDecimal("30.00"), now);
 
         final OwnerCarSearchCriteria criteria = OwnerCarSearchCriteria.builderFor(ownerId)
                 .page(0)
@@ -385,20 +387,23 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                 .sortDirection("desc")
                 .build();
 
-        // 2. Exercise
+        // 2. Act
         final Page<CarCard> result = dao.getOwnerCarCards(criteria);
 
         // 3. Assert
         final Optional<CarCard> card = result.getContent().stream()
-                .filter(c -> c.getCarId() == car.getId())
+                .filter(c -> c.getCarId() == carId)
                 .findFirst();
         Assertions.assertTrue(card.isPresent());
         Assertions.assertEquals(imageId, card.get().getImageId());
     }
 
-    @Test
-    void testSearchCarCardsAndCountExcludeCarsOfBlockedOwners() {
-        // 1. Arrange — two owners, two cars in the same brand/model and same availability period.
+    /**
+     * Seeds two cars (one of a regular owner, one of a blocked owner) sharing brand/model and
+     * availability period so the catalog visibility contract can be exercised in isolation by
+     * each consumer of the blocked-owner filter.
+     */
+    private long[] seedBlockedOwnerCatalogFixture() {
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since, blocked) VALUES (?, ?, ?, CURRENT_DATE, ?)",
                 "blocked-owner@test.com", "Bad", "Owner", true);
@@ -414,35 +419,83 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         final long modelId = jdbcTemplate.queryForObject(
                 "SELECT id FROM car_models WHERE name = ?", Long.class, "Gol");
 
-        final Car visibleCar = dao.createCar(
+        final long visibleCarId = insertCar(
                 ownerId, "VIS001", modelId,
                 2022, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        final Car hiddenCar = dao.createCar(
+        final long hiddenCarId = insertCar(
                 blockedOwnerId, "HID001", modelId,
                 2022, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
-        em.flush();
 
         final OffsetDateTime createdAt = OffsetDateTime.parse("2030-01-01T00:00:00Z");
-        insertOfferedAvailability(visibleCar.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+        insertOfferedAvailability(visibleCarId, LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
                 new BigDecimal("40.00"), createdAt);
-        insertOfferedAvailability(hiddenCar.getId(), LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
+        insertOfferedAvailability(hiddenCarId, LocalDate.of(2030, 6, 1), LocalDate.of(2030, 6, 30),
                 new BigDecimal("40.00"), createdAt);
 
+        return new long[] {visibleCarId, hiddenCarId};
+    }
+
+    @Test
+    void testSearchCarCardsExcludesCarsOfBlockedOwners() {
+        // 1. Arrange
+        final long[] ids = seedBlockedOwnerCatalogFixture();
+        final long visibleCarId = ids[0];
+        final long hiddenCarId = ids[1];
         final CarSearchCriteria criteria = CarSearchCriteria.builder()
                 .browseWallDate(LocalDate.of(2030, 6, 1))
-                .page(0).uiPageSize(10).dbFetchSize(10)
                 .sortBy("date").sortDirection("desc")
                 .build();
 
-        // 2. Act — exercise the public browse pagination API, which owns the COUNT internally.
+        // 2. Act — exercise the public browse pagination API.
         final Page<CarCard> page = dao.searchCarCards(criteria);
-        final long browseCount = dao.getMostRecentCarCards(0, 10, LocalDate.of(2030, 6, 1), null).getTotalItems();
 
         // 3. Assert — only the car owned by the non-blocked owner is visible to consumers.
         final List<Long> visibleIds = page.getContent().stream().map(CarCard::getCarId).collect(Collectors.toList());
-        Assertions.assertTrue(visibleIds.contains(visibleCar.getId()), "Car of non-blocked owner must be browse-visible");
-        Assertions.assertFalse(visibleIds.contains(hiddenCar.getId()), "Car of blocked owner must be hidden from the catalog");
-        Assertions.assertEquals(1L, browseCount, "Browse-page total must also exclude blocked-owner listings");
+        Assertions.assertTrue(visibleIds.contains(visibleCarId), "Car of non-blocked owner must be browse-visible");
+        Assertions.assertFalse(visibleIds.contains(hiddenCarId), "Car of blocked owner must be hidden from the catalog");
+    }
+
+    @Test
+    void testGetMostRecentCarCardsExcludesCarsOfBlockedOwners() {
+        // 1. Arrange
+        seedBlockedOwnerCatalogFixture();
+
+        // 2. Act — the recent-cars endpoint owns its own COUNT and must apply the same blocked-owner filter.
+        final long browseCount = dao.getMostRecentCarCards(0, 10, LocalDate.of(2030, 6, 1), null).getTotalItems();
+
+        // 3. Assert — only the car owned by the non-blocked owner is counted.
+        Assertions.assertEquals(1L, browseCount, "Recent-cars total must exclude blocked-owner listings");
+    }
+
+    /**
+     * Seeds a row in {@code cars} via {@link #jdbcTemplate} so DAO tests do not call the DAO
+     * under test in their Arrange. Mirrors the columns {@code CarJpaDao.createCar} would write:
+     * {@code status='active'}, {@code created_at}/{@code updated_at} = now (UTC), and the
+     * {@code minimum_rental_days} default of 1 from the schema.
+     */
+    private long insertCar(
+            final long carOwnerId,
+            final String plate,
+            final long carModelId,
+            final int year,
+            final Car.Powertrain powertrain,
+            final Car.Transmission transmission) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO cars (owner_id, plate, model_id, manufacture_year, transmission, "
+                        + "powertrain, status, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                carOwnerId,
+                plate,
+                carModelId,
+                year,
+                transmission.name(),
+                powertrain.name(),
+                "active",
+                now,
+                now);
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM cars WHERE plate = ?", Long.class, plate);
     }
 
     private void insertOfferedAvailability(

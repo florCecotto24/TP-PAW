@@ -270,10 +270,13 @@
                                      data-publish-avail-required="<c:out value='${availRequiredClientMsg}'/>"
                                      data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>"
                                      data-publish-max-avail-wall-ymd="<c:out value='${publishMaxAvailabilityWallInclusive}'/>"
-                                     data-publish-availability-beyond-msg="<c:out value='${beyondHorizonMsg}'/>">
+                                     data-publish-availability-beyond-msg="<c:out value='${beyondHorizonMsg}'/>"
+                                     data-publish-blocked-ranges='<c:out value="${reservationBlockedRangesJson}"/>'>
                                     <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
                                     <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.hint" arguments="${pickupLeadHours}"/></p>
                                     <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.forwardHorizonHint" arguments="${maxAvailabilityForwardWallDays}"/></p>
+                                    <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.reservedDaysHint"/></p>
+                                    <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.editDoesNotAffectReservations"/></p>
                                     <form:errors path="availabilityRows" cssClass="text-danger d-block mb-2"/>
                                     <div id="publish_availability_rows">
                                         <c:forEach items="${createCarAvailabilityForm.availabilityRows}" var="row" varStatus="st">

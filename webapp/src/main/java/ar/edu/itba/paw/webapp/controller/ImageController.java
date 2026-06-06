@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.services.ImageService;
+import ar.edu.itba.paw.services.file.ImageService;
 
 /** Serves image bytes for {@code /image/{id}}. */
 @Controller

@@ -68,6 +68,11 @@
     /**
      * After addOneEmptyRow(), set the date range on the first row using Flatpickr's API.
      * Falls back to direct hidden-input manipulation if the Flatpickr instance is not found.
+     *
+     * Also clears the picker's `disable` list: in edit mode the prefilled range may overlap a
+     * day already held by an active reservation (a reservation against THIS availability itself),
+     * so the user must be able to keep / shrink / extend the existing range. Server-side, the
+     * existing edit-conflict guard catches the cases that matter (removing reserved days).
      */
     function setFirstRowDates(from, to) {
         if (!rowsRoot || !from || !to) { return; }
@@ -76,6 +81,7 @@
         var fp = row._rydenAvailFp && row._rydenAvailFp.fp ? row._rydenAvailFp.fp : null;
         if (fp) {
             fp.set('minDate', null);
+            fp.set('disable', []);
             fp.setDate([
                 new Date(from + 'T00:00:00'),
                 new Date(to   + 'T00:00:00')

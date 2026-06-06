@@ -3,14 +3,14 @@ package ar.edu.itba.paw.webapp.advice;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
-import ar.edu.itba.paw.services.policy.CarValidationPolicy;
-import ar.edu.itba.paw.services.policy.ListingFormValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReservationFormValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.services.policy.VerificationCodePolicy;
+import ar.edu.itba.paw.policy.CarGalleryUploadPolicy;
+import ar.edu.itba.paw.policy.CarValidationPolicy;
+import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
+import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
+import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
+import ar.edu.itba.paw.policy.ReviewValidationPolicy;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
 /**
  * Exposes every {@code maxlength} / {@code minlength} bound surfaced by JSPs as a model attribute, sourced

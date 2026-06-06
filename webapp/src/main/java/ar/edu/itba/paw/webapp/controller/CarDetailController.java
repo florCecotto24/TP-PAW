@@ -4,8 +4,9 @@ import ar.edu.itba.paw.models.dto.car.detail.CarDetailPageModel;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyActiveListingsFragment;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.services.CarDetailViewService;
-import ar.edu.itba.paw.services.CounterpartyProfileViewService;
+import ar.edu.itba.paw.services.car.view.CarDetailViewService;
+import ar.edu.itba.paw.services.user.view.CounterpartyProfileViewService;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -33,15 +34,18 @@ public class CarDetailController {
     private final CarDetailViewService carDetailViewService;
     private final CounterpartyProfileViewService counterpartyProfileViewService;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
+    private final AppPaginationProperties appPaginationProperties;
 
     @Autowired
     public CarDetailController(
             final CarDetailViewService carDetailViewService,
             final CounterpartyProfileViewService counterpartyProfileViewService,
-            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
+            final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
+            final AppPaginationProperties appPaginationProperties) {
         this.carDetailViewService = carDetailViewService;
         this.counterpartyProfileViewService = counterpartyProfileViewService;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
+        this.appPaginationProperties = appPaginationProperties;
     }
 
     @GetMapping("/cars/{carId}")
@@ -66,6 +70,7 @@ public class CarDetailController {
                 currentUser,
                 currentUserIsAdmin,
                 reviewPage,
+                appPaginationProperties.getCarPublicReviewsPageSize(),
                 reviewsViewParam,
                 RequestContextUtils.getLocale(request));
         if (pageOpt.isEmpty()) {

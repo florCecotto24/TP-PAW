@@ -1,0 +1,537 @@
+package ar.edu.itba.paw.util;
+
+
+import static ar.edu.itba.paw.util.ReservationServiceSupport.formatHandoverLocation;
+import static ar.edu.itba.paw.util.ReservationServiceSupport.trimName;
+import static ar.edu.itba.paw.util.ReservationServiceSupport.trimToNull;
+
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import ar.edu.itba.paw.exception.user.CBUNotFoundException;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
+import ar.edu.itba.paw.models.email.ReservationMailPayload;
+import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
+import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
+import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
+import ar.edu.itba.paw.services.email.EmailService;
+import ar.edu.itba.paw.services.user.UserService;
+
+/**
+ * Builds and dispatches every reservation-related email. Centralising this here keeps the
+ * individual reservation services (workflow, payment, scheduler) under the project's
+ * per-file size budget and makes the email side of the lifecycle easier to scan in one place.
+ *
+ * <p>Each public method swallows {@link RuntimeException} from the mail layer so a transient
+ * mail failure never aborts the surrounding transaction. CBU lookups that fail return early
+ * — the underlying confirmation/reminder is harmless if we cannot embed the owner's account
+ * details on the rider's side.
+ */
+@Component
+public final class ReservationMailComposer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReservationMailComposer.class);
+
+    private final UserService userService;
+    private final EmailService emailService;
+    private final ReservationServiceSupport support;
+    private final CarAvailabilityAddressFormatter addressFormatter;
+
+    @Autowired
+    public ReservationMailComposer(
+            final UserService userService,
+            final EmailService emailService,
+            final ReservationServiceSupport support,
+            final CarAvailabilityAddressFormatter addressFormatter) {
+        this.userService = userService;
+        this.emailService = emailService;
+        this.support = support;
+        this.addressFormatter = addressFormatter;
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Confirmation / edit
+    // ---------------------------------------------------------------------------------------
+
+    /**
+     * Brand-new car-based reservation confirmation. Re-fetches rider and car so the caller
+     * does not need to wire users / vehicle metadata; the owner's CBU comes from upstream
+     * because the workflow service already had to resolve it to validate the reservation.
+     */
+    public void sendReservationCreatedEmail(
+            final long riderId,
+            final long carId,
+            final Reservation reservation,
+            final Car car,
+            final CarAvailability pickupAvailability,
+            final String ownerCbu) {
+        try {
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            if (riderOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId())
+                        .log("Skipping car reservation confirmation email: rider not found for riderId={} reservationId={}");
+                return;
+            }
+            final User carOwner = car == null ? null : car.getOwner();
+            if (carOwner == null) {
+                LOGGER.atWarn().addArgument(carId).addArgument(reservation.getId())
+                        .log("Skipping car reservation confirmation email: car owner not found for carId={} reservationId={}");
+                return;
+            }
+            final User rider = riderOpt.get();
+            final String vehicleLabel = car.getBrand() + " " + car.getModel();
+            final String handoverLocation = formatHandoverLocation(pickupAvailability);
+            final ReservationMailPayload payload = ReservationMailPayload.builder()
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(rider.getForename() + " " + rider.getSurname())
+                    .reservationId(reservation.getId())
+                    .carId(carId)
+                    .vehicleLabel(vehicleLabel)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .riderHandoverLocation(handoverLocation)
+                    .ownerHandoverLocation(handoverLocation)
+                    .ownerFullName(carOwner.getForename() + " " + carOwner.getSurname())
+                    .ownerEmail(carOwner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .riderMailLocale(userService.resolveMailLocale(rider.getId()))
+                    .ownerMailLocale(userService.resolveMailLocale(carOwner.getId()))
+                    .ownerCbu(ownerCbu)
+                    .build();
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing car-based reservation confirmation email to {} for reservation id={}");
+            emailService.sendReservationConfirmationEmail(payload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue car-based reservation confirmation email for reservation id={}");
+        }
+    }
+
+    /**
+     * Rider-driven edit of an unpaid pending reservation. We re-use the confirmation copy on
+     * purpose: the rider just chose new dates so they need the same payment-on-hold message
+     * and CBU line as a brand-new pending reservation would receive.
+     */
+    public void sendReservationEditedEmail(final Reservation reservation, final CarAvailability pickupAvailability) {
+        try {
+            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+            final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
+            if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
+                return;
+            }
+            final User rider = riderOpt.get();
+            final User owner = ownerOpt.get();
+            final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
+            final String handoverLocation = formatHandoverLocation(pickupAvailability);
+            final String ownerCbu;
+            try {
+                ownerCbu = userService.getUserCbu(owner.getId());
+            } catch (final UserNotFoundException | CBUNotFoundException e) {
+                LOGGER.atDebug()
+                        .setMessage("Skipping rider-edit confirmation email: owner CBU unavailable reservationId={} ownerId={}")
+                        .addArgument(reservation.getId())
+                        .addArgument(owner.getId())
+                        .setCause(e)
+                        .log();
+                return;
+            }
+            final ReservationMailPayload payload = ReservationMailPayload.builder()
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(rider.getForename() + " " + rider.getSurname())
+                    .reservationId(reservation.getId())
+                    .carId(reservation.getCarId())
+                    .vehicleLabel(vehicleLabel)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .riderHandoverLocation(handoverLocation)
+                    .ownerHandoverLocation(handoverLocation)
+                    .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                    .ownerEmail(owner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .riderMailLocale(userService.resolveMailLocale(rider.getId()))
+                    .ownerMailLocale(userService.resolveMailLocale(owner.getId()))
+                    .ownerCbu(ownerCbu)
+                    .build();
+            emailService.sendReservationConfirmationEmail(payload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue rider-edit confirmation email for reservation id={}");
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Cancellation
+    // ---------------------------------------------------------------------------------------
+
+    public void sendCancellationEmail(final Reservation reservation, final boolean notifyOwnerCancellation) {
+        try {
+            final long riderId = reservation.getRiderId();
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            final Optional<CarAvailability> availabilityOpt = support.resolveAvailabilityForReservation(reservation);
+            final Optional<User> listingOwnerOpt = support.resolveOwnerFromReservation(reservation);
+            if (riderOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(riderId).addArgument(reservation.getId())
+                        .log("Skipping reservation cancellation email: user not found for riderId={} reservationId={}");
+                return;
+            }
+            if (listingOwnerOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId())
+                        .log("Skipping reservation cancellation email: owner not found for reservationId={}");
+                return;
+            }
+            final User rider = riderOpt.get();
+            final User listingOwner = listingOwnerOpt.get();
+            final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
+            final String riderFullName = rider.getForename() + " " + rider.getSurname();
+            final String riderLoc = availabilityOpt
+                    .map(a -> trimToNull(addressFormatter.formatRiderReservationHandoverSummary(a, reservation)))
+                    .orElse(null);
+            final String ownerLoc = availabilityOpt
+                    .map(a -> trimToNull(addressFormatter.formatOwnerReservationHandoverSummary(a)))
+                    .orElse(null);
+            final ReservationMailPayload mail = ReservationMailPayload.builder()
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(riderFullName)
+                    .reservationId(reservation.getId())
+                    .carId(reservation.getCarId())
+                    .vehicleLabel(vehicleLabel)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .riderHandoverLocation(riderLoc)
+                    .ownerHandoverLocation(ownerLoc)
+                    .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
+                    .ownerEmail(listingOwner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .riderMailLocale(userService.resolveMailLocale(rider.getId()))
+                    .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
+                    .build();
+            final ReservationCancellationEmailPayload cancelPayload = ReservationCancellationEmailPayload.builder()
+                    .mail(mail)
+                    .cancellationStatus(reservation.getStatus())
+                    .notifyOwnerCancellation(notifyOwnerCancellation)
+                    .build();
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing reservation cancellation email to {} for reservation id={}");
+            emailService.sendReservationCancellationEmail(cancelPayload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue reservation cancellation email for reservation id={}");
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Payment proof: rider-side confirmation + owner-side notification
+    // ---------------------------------------------------------------------------------------
+
+    public void sendRiderReservationConfirmedAfterPaymentProof(final long riderId, final Reservation reservation) {
+        try {
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            final Optional<CarAvailability> availabilityOpt = support.resolveAvailabilityForReservation(reservation);
+            final Optional<User> listingOwnerOpt = support.resolveOwnerFromReservation(reservation);
+            if (riderOpt.isEmpty() || listingOwnerOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId()).log(
+                        "Skipping rider confirmed-after-proof email: missing rider or owner (reservation id={})");
+                return;
+            }
+            final User rider = riderOpt.get();
+            final User listingOwner = listingOwnerOpt.get();
+            final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
+            final String riderLoc = availabilityOpt
+                    .map(a -> trimToNull(addressFormatter.formatRiderReservationHandoverSummary(a, reservation)))
+                    .orElse(null);
+            final String ownerLoc = availabilityOpt
+                    .map(a -> trimToNull(addressFormatter.formatOwnerReservationHandoverSummary(a)))
+                    .orElse(null);
+            final ReservationMailPayload payload = ReservationMailPayload.builder()
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(rider.getForename() + " " + rider.getSurname())
+                    .reservationId(reservation.getId())
+                    .carId(reservation.getCarId())
+                    .vehicleLabel(vehicleLabel)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .riderHandoverLocation(riderLoc)
+                    .ownerHandoverLocation(ownerLoc)
+                    .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
+                    .ownerEmail(listingOwner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .riderMailLocale(userService.resolveMailLocale(rider.getId()))
+                    .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
+                    .build();
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing rider reservation confirmed-after-proof email to {} for reservation id={}");
+            emailService.sendRiderReservationConfirmedAfterPaymentProof(payload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue rider confirmed-after-proof email for reservation id={}");
+        }
+    }
+
+    public void sendOwnerPaymentProofReceived(final long reservationId, final long riderId, final Reservation reservation) {
+        try {
+            final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
+            final Optional<User> riderOpt = userService.getUserById(riderId);
+            if (ownerOpt.isEmpty() || riderOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservationId)
+                        .log("Skipping owner payment-proof email: missing owner or rider (reservation id={})");
+                return;
+            }
+            final User owner = ownerOpt.get();
+            final User rider = riderOpt.get();
+            final OwnerPaymentProofReceivedEmailPayload mailPayload = OwnerPaymentProofReceivedEmailPayload.builder()
+                    .messageLocale(userService.resolveMailLocale(owner.getId()))
+                    .recipientEmail(owner.getEmail())
+                    .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                    .riderFullName(rider.getForename() + " " + rider.getSurname())
+                    .riderEmail(rider.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
+                    .reservationId(reservationId)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .build();
+            LOGGER.atInfo().addArgument(owner.getEmail()).addArgument(reservationId)
+                    .log("Queueing owner payment-proof email to {} (reservation id={})");
+            emailService.sendOwnerPaymentProofReceivedEmail(mailPayload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservationId)
+                    .log("Could not enqueue owner payment-proof email for reservation id={}");
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Refund proof: rider-side notification + owner-side obligation / reminder
+    // ---------------------------------------------------------------------------------------
+
+    public void sendRiderRefundProofReceived(final long reservationId, final Reservation reservation) {
+        try {
+            final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
+            final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+            if (ownerOpt.isEmpty() || riderOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservationId)
+                        .log("Skipping rider refund-proof email: missing owner or rider (reservation id={})");
+                return;
+            }
+            final User owner = ownerOpt.get();
+            final User rider = riderOpt.get();
+            final RiderRefundProofReceivedEmailPayload mailPayload = RiderRefundProofReceivedEmailPayload.builder()
+                    .messageLocale(userService.resolveMailLocale(rider.getId()))
+                    .recipientEmail(rider.getEmail())
+                    .riderFullName(rider.getForename() + " " + rider.getSurname())
+                    .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                    .ownerEmail(owner.getEmail())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
+                    .reservationId(reservationId)
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .build();
+            LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservationId)
+                    .log("Queueing rider refund-proof email to {} (reservation id={})");
+            emailService.sendRiderRefundProofReceivedEmail(mailPayload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservationId)
+                    .log("Could not enqueue rider refund-proof email for reservation id={}");
+        }
+    }
+
+    /**
+     * "You must upload a refund receipt within X" email. Used both as a one-shot obligation
+     * notice (right after the confirmed cancellation) and as a recurring reminder from the
+     * due-refund-proof scheduler — {@code dueReminder} toggles the copy variant.
+     */
+    public void sendOwnerRefundProofObligation(final Reservation reservation, final boolean dueReminder) {
+        try {
+            if (!reservation.isPaymentRefundRequired()) {
+                return;
+            }
+            final Optional<OffsetDateTime> deadlineOpt = reservation.getRefundProofDeadlineAt();
+            if (deadlineOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId())
+                        .log("Skipping owner refund-proof email: no deadline (reservation id={})");
+                return;
+            }
+            final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
+            if (ownerOpt.isEmpty()) {
+                LOGGER.atWarn().addArgument(reservation.getId())
+                        .log("Skipping owner refund-proof email: owner not found (reservation id={})");
+                return;
+            }
+            final User owner = ownerOpt.get();
+            final OwnerRefundProofObligationEmailPayload mailPayload = OwnerRefundProofObligationEmailPayload.builder()
+                    .messageLocale(userService.resolveMailLocale(owner.getId()))
+                    .recipientEmail(owner.getEmail())
+                    .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                    .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
+                    .reservationId(reservation.getId())
+                    .startDate(reservation.getStartDate())
+                    .endDate(reservation.getEndDate())
+                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .refundProofDeadlineAt(deadlineOpt.get())
+                    .dueReminder(dueReminder)
+                    .build();
+            LOGGER.atInfo().addArgument(owner.getEmail()).addArgument(reservation.getId())
+                    .log("Queueing owner refund-proof obligation email to {} (reservation id={})");
+            emailService.sendOwnerRefundProofObligationEmail(mailPayload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                    .log("Could not enqueue owner refund-proof obligation email for reservation id={}");
+        }
+    }
+
+    public void sendOwnerBlockedEmail(final User owner, final List<Reservation> overdueReservations) {
+        try {
+            final List<OwnerBlockedEmailPayload.OverdueRefundReservation> rows = new java.util.ArrayList<>();
+            for (final Reservation r : overdueReservations) {
+                final OffsetDateTime deadline = r.getRefundProofDeadlineAt().orElse(null);
+                if (deadline == null) {
+                    continue;
+                }
+                rows.add(new OwnerBlockedEmailPayload.OverdueRefundReservation(
+                        r.getId(),
+                        support.resolveVehicleLabelFromReservation(r),
+                        deadline,
+                        ArsMoneyFormat.format(r.getTotalPrice())));
+            }
+            if (rows.isEmpty()) {
+                return;
+            }
+            final OwnerBlockedEmailPayload payload = OwnerBlockedEmailPayload.builder()
+                    .messageLocale(userService.resolveMailLocale(owner.getId()))
+                    .recipientEmail(owner.getEmail())
+                    .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                    .overdueReservations(rows)
+                    .build();
+            emailService.sendOwnerBlockedEmail(payload);
+        } catch (final RuntimeException e) {
+            LOGGER.atError().setCause(e).addArgument(owner.getId())
+                    .log("Could not enqueue owner-blocked email for ownerId={}");
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Due-payment-proof reminder (rider)
+    // ---------------------------------------------------------------------------------------
+
+    public Optional<ReservationMailPayload> buildDuePaymentProofReminder(final Reservation reservation) {
+        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
+        if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User rider = riderOpt.get();
+        final User owner = ownerOpt.get();
+        final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
+        final String ownerCbu;
+        try {
+            ownerCbu = userService.getUserCbu(owner.getId());
+        } catch (final UserNotFoundException | CBUNotFoundException e) {
+            LOGGER.atDebug()
+                    .setCause(e)
+                    .addArgument(reservation.getId())
+                    .addArgument(owner.getId())
+                    .log("Skipping due payment proof reminder: owner CBU unavailable (reservation id={}, owner id={})");
+            return Optional.empty();
+        }
+        final Locale riderLocale = userService.resolveMailLocale(rider.getId());
+        return Optional.of(ReservationMailPayload.builder()
+                .recipientEmail(rider.getEmail())
+                .riderFullName(rider.getForename() + " " + rider.getSurname())
+                .reservationId(reservation.getId())
+                .carId(reservation.getCarId())
+                .vehicleLabel(vehicleLabel)
+                .startDate(reservation.getStartDate())
+                .endDate(reservation.getEndDate())
+                .ownerFullName(owner.getForename() + " " + owner.getSurname())
+                .ownerEmail(owner.getEmail())
+                .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                .ownerCbu(ownerCbu)
+                .riderMailLocale(riderLocale)
+                .ownerMailLocale(userService.resolveMailLocale(owner.getId()))
+                .build());
+    }
+
+    public void sendDuePaymentProofReminder(final ReservationMailPayload payload) {
+        emailService.sendRiderDuePaymentProofEmail(payload);
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Return reminder + return checkout + review invite (scheduler-driven)
+    // ---------------------------------------------------------------------------------------
+
+    public Optional<RiderCarReturnEmailPayload> buildRiderCarReturnPayload(final Reservation reservation) {
+        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        final Optional<CarAvailability> availabilityOpt = support.resolveAvailabilityForReservation(reservation);
+        final Optional<User> ownerOpt = support.resolveOwnerFromReservation(reservation);
+        if (riderOpt.isEmpty() || ownerOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User rider = riderOpt.get();
+        final User owner = ownerOpt.get();
+        final Locale locale = userService.resolveMailLocale(rider.getId());
+        final String checkout = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
+        final String returnLine = availabilityOpt
+                .map(a -> addressFormatter.formatPickupForReservationView(a, reservation, false))
+                .orElse(null);
+        final String path = "/my-reservations/" + reservation.getId();
+        final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
+        return Optional.of(RiderCarReturnEmailPayload.builder()
+                .messageLocale(locale)
+                .recipientEmail(rider.getEmail())
+                .riderFullName(trimName(rider.getForename(), rider.getSurname()))
+                .vehicleLabel(vehicleLabel)
+                .ownerEmail(owner.getEmail())
+                .checkoutFormatted(checkout)
+                .returnLocationLine(returnLine)
+                .reservationDetailPath(path)
+                .build());
+    }
+
+    public void sendRiderReturnReminder(final RiderCarReturnEmailPayload payload) {
+        emailService.sendRiderReturnReminderEmail(payload);
+    }
+
+    public void sendRiderReturnCheckout(final RiderCarReturnEmailPayload payload) {
+        emailService.sendRiderReturnCheckoutEmail(payload);
+    }
+
+    public Optional<RiderReviewInviteEmailPayload> buildRiderReviewInvitePayload(final Reservation reservation) {
+        final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
+        if (riderOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final User rider = riderOpt.get();
+        final String vehicleLabel = support.resolveVehicleLabelFromReservation(reservation);
+        final Locale locale = userService.resolveMailLocale(rider.getId());
+        /* Deep link must stay consistent with GET /my-reservations/{id} (default role=rider) + #rider-review-owner. */
+        final String path = "/my-reservations/" + reservation.getId() + "?role=rider#rider-review-owner";
+        return Optional.of(RiderReviewInviteEmailPayload.builder()
+                .messageLocale(locale)
+                .recipientEmail(rider.getEmail())
+                .riderFullName(trimName(rider.getForename(), rider.getSurname()))
+                .vehicleLabel(vehicleLabel)
+                .reviewSectionPath(path)
+                .build());
+    }
+
+    public void sendRiderReviewInvite(final RiderReviewInviteEmailPayload payload) {
+        emailService.sendRiderReviewInviteEmail(payload);
+    }
+}

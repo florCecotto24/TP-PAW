@@ -104,6 +104,91 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertTrue(dao.sumReservationTotal(reservationId).isEmpty());
     }
 
+    @Test
+    void testFindEffectivePickupAvailabilityForReservationPicksBridgedCandidateForFirstDay() {
+        // 1. Arrange — reservation falls inside availabilityId100 (Jun 1..10 @ 100). Bridge both.
+        final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
+        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, availabilityId200));
+
+        // 2. Act
+        final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
+
+        // 3. Assert — only availabilityId100 covers Jun 3 (the first day); availabilityId200 starts Jun 11.
+        Assertions.assertTrue(winner.isPresent());
+        Assertions.assertEquals(availabilityId100, winner.get().getId());
+    }
+
+    @Test
+    void testFindEffectivePickupAvailabilityForReservationPicksLatestCreatedAmongBridgedCovers() {
+        // 1. Arrange — bridge an OFFERED row that covers the first day and was created LATER than
+        // availabilityId100. The newer one should win even though both cover the first day.
+        final OffsetDateTime newerCreated = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(10);
+        final long newerId = insertAvailability(
+                carId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
+                new BigDecimal("350.00"), newerCreated);
+        final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
+        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, newerId));
+
+        // 2. Act
+        final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
+
+        // 3. Assert
+        Assertions.assertTrue(winner.isPresent());
+        Assertions.assertEquals(newerId, winner.get().getId());
+    }
+
+    @Test
+    void testFindEffectivePickupAvailabilityForReservationIgnoresUnbridgedCarAvailabilities() {
+        // 1. Arrange — bridge ONLY availabilityId100. Insert a NEWER row on the car that ALSO covers
+        // the first day; it is NOT bridged. The bridge-anchored resolver must ignore it. This is the
+        // exact scenario where an owner edit inserts a new OFFERED row on top of an existing
+        // reservation's range: the rider's pickup snapshot must stay stable.
+        final OffsetDateTime newerCreated = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(20);
+        insertAvailability(
+                carId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
+                new BigDecimal("9999.99"), newerCreated);
+        final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
+        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100));
+
+        // 2. Act
+        final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
+
+        // 3. Assert — the bridged availabilityId100 wins; the newer unbridged row is invisible.
+        Assertions.assertTrue(winner.isPresent());
+        Assertions.assertEquals(availabilityId100, winner.get().getId());
+    }
+
+    @Test
+    void testFindEffectivePickupAvailabilityForReservationSkipsWithdrawnBridgedCandidates() {
+        // 1. Arrange — bridge a WITHDRAWN row covering the first day plus an OFFERED row covering it too;
+        // the OFFERED one must win (sum semantics).
+        final OffsetDateTime newerCreated = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+        final long withdrawnId = insertAvailabilityWithKind(
+                carId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
+                new BigDecimal("100.00"), newerCreated, "withdrawn");
+        final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
+        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, withdrawnId));
+
+        // 2. Act
+        final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
+
+        // 3. Assert — withdrawnId is more recent but is filtered out; availabilityId100 wins.
+        Assertions.assertTrue(winner.isPresent());
+        Assertions.assertEquals(availabilityId100, winner.get().getId());
+    }
+
+    @Test
+    void testFindEffectivePickupAvailabilityForReservationIsEmptyWhenReservationHasNoBridgeRows() {
+        // 1. Arrange — reservation without bridge entries (e.g. legacy data).
+        final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
+
+        // 2. Act
+        final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
+
+        // 3. Assert
+        Assertions.assertTrue(winner.isEmpty());
+    }
+
 
     private long insertReservation(final String startUtc, final String endUtc) {
         final OffsetDateTime created = OffsetDateTime.now(ZoneOffset.UTC);
@@ -125,17 +210,29 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
             final LocalDate end,
             final BigDecimal dayPrice,
             final OffsetDateTime createdAt) {
+        return insertAvailabilityWithKind(carId, start, end, dayPrice, createdAt, "offered");
+    }
+
+    private long insertAvailabilityWithKind(
+            final long carId,
+            final LocalDate start,
+            final LocalDate end,
+            final BigDecimal dayPrice,
+            final OffsetDateTime createdAt,
+            final String kind) {
         jdbcTemplate.update(
                 "INSERT INTO car_availability (car_id, start_date, end_date, created_at, updated_at, "
                         + "day_price, start_point_street, check_in_time, check_out_time, kind) "
                         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 carId, start, end, createdAt, createdAt, dayPrice,
-                "Street", LocalTime.of(10, 0), LocalTime.of(18, 0), "offered");
+                "Street", LocalTime.of(10, 0), LocalTime.of(18, 0), kind);
         return jdbcTemplate.queryForObject(
-                "SELECT id FROM car_availability WHERE car_id = ? AND start_date = ? AND day_price = ?",
+                "SELECT id FROM car_availability WHERE car_id = ? AND start_date = ? AND day_price = ? AND kind = ? "
+                        + "ORDER BY id DESC LIMIT 1",
                 Long.class,
                 carId,
                 start,
-                dayPrice);
+                dayPrice,
+                kind);
     }
 }

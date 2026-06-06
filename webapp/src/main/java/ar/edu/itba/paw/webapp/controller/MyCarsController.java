@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
@@ -14,19 +14,19 @@ import ar.edu.itba.paw.models.dto.car.ManageCarPeriodsPageModel;
 import ar.edu.itba.paw.models.dto.car.MyCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.CarAvailabilityService;
-import ar.edu.itba.paw.services.CarAvailabilityEditorViewService;
-import ar.edu.itba.paw.services.ManageCarPeriodsViewService;
-import ar.edu.itba.paw.services.MyCarDetailViewService;
-import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.services.ReservationViewService;
-import ar.edu.itba.paw.services.UserService;
-import ar.edu.itba.paw.services.policy.PaginationPolicy;
-import ar.edu.itba.paw.services.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.car.CarAvailabilityService;
+import ar.edu.itba.paw.services.car.view.CarAvailabilityEditorViewService;
+import ar.edu.itba.paw.services.car.view.ManageCarPeriodsViewService;
+import ar.edu.itba.paw.services.car.view.MyCarDetailViewService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.reservation.view.ReservationViewService;
+import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.webapp.support.facade.CarInsuranceUploadFacade;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.OwnerCarLookup;
@@ -80,10 +80,9 @@ public final class MyCarsController {
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
     private final CarAvailabilityNeighborhoodFormValidator carAvailabilityNeighborhoodFormValidator;
-    private final PaginationPolicy paginationPolicy;
+    private final AppPaginationProperties appPaginationProperties;
     private final LocaleMessages localeMessages;
     private final CarService carService;
-    private final UserService userService;
     private final CarAvailabilityService carAvailabilityService;
     private final CarAvailabilityEditorViewService carAvailabilityEditorViewService;
     private final MyCarDetailViewService myCarDetailViewService;
@@ -96,10 +95,9 @@ public final class MyCarsController {
             final ReservationService reservationService,
             final ReservationViewService reservationViewService,
             final CarAvailabilityNeighborhoodFormValidator carAvailabilityNeighborhoodFormValidator,
-            final PaginationPolicy paginationPolicy,
+            final AppPaginationProperties appPaginationProperties,
             final LocaleMessages localeMessages,
             final CarService carService,
-            final UserService userService,
             final CarAvailabilityService carAvailabilityService,
             final CarAvailabilityEditorViewService carAvailabilityEditorViewService,
             final MyCarDetailViewService myCarDetailViewService,
@@ -110,10 +108,9 @@ public final class MyCarsController {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
         this.carAvailabilityNeighborhoodFormValidator = carAvailabilityNeighborhoodFormValidator;
-        this.paginationPolicy = paginationPolicy;
+        this.appPaginationProperties = appPaginationProperties;
         this.localeMessages = localeMessages;
         this.carService = carService;
-        this.userService = userService;
         this.carAvailabilityService = carAvailabilityService;
         this.carAvailabilityEditorViewService = carAvailabilityEditorViewService;
         this.myCarDetailViewService = myCarDetailViewService;
@@ -159,7 +156,7 @@ public final class MyCarsController {
         final String listingsSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var listingsCriteria = carService.buildOwnerCarSearchCriteria(
                 me.getId(), category, transmission, powertrain, priceMin, priceMax,
-                listingStatus, rating, q, page, listingsSort);
+                listingStatus, rating, q, page, appPaginationProperties.getDefaultPageSize(), listingsSort);
         final Page<CarCard> resultPage = carService.getOwnerCarCards(listingsCriteria);
         final Optional<ModelAndView> clamp = PageClampRedirect.ifOutOfRange(page, resultPage, "page", request);
         if (clamp.isPresent()) {
@@ -244,7 +241,8 @@ public final class MyCarsController {
         final String sort = MyHubSortSanitizer.sanitize(ownerSort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain,
-                ownerPriceMin, ownerPriceMax, ownerRating, ownerStatus, page, sort, ownerQ, carIdFilterOrNull);
+                ownerPriceMin, ownerPriceMax, ownerRating, ownerStatus, page,
+                appPaginationProperties.getDefaultPageSize(), sort, ownerQ, carIdFilterOrNull);
         final OwnerReservationsListPageModel pageModel = reservationViewService.loadOwnerReservationsListPage(
                 criteria, selectedCarOrNull, sort, LocaleContextHolder.getLocale());
         final Optional<ModelAndView> clamp = PageClampRedirect.ifOutOfRange(
@@ -280,57 +278,33 @@ public final class MyCarsController {
         if (errors.hasErrors()) {
             return renderMyCarDetailOrRedirect(me, car, editForm, /* withPreview */ true);
         }
-        final List<CarAvailability> existing = carAvailabilityService.findByCarId(carId);
-        final List<AvailabilityPeriod> newPeriods = editForm.toAvailabilityPeriods();
-        final List<BigDecimal> newPeriodPrices = editForm.toPeriodPrices();
-        if (newPeriods.isEmpty()) {
+        if (editForm.toAvailabilityPeriods().isEmpty()) {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
-        if (existing.isEmpty()) {
-            try {
-                carAvailabilityService.createCarAvailabilityPeriods(
-                        carId,
-                        editForm.getPricePerDay(),
-                        editForm.getStartPointStreet(),
-                        editForm.getStartPointNumber(),
-                        editForm.getNeighborhoodId(),
-                        editForm.getCheckInTime(),
-                        editForm.getCheckOutTime(),
-                        newPeriods,
-                        newPeriodPrices,
-                        1);
-            } catch (final CarValidationException e) {
-                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-                return renderMyCarDetailOrRedirect(me, car, editForm, /* withPreview */ false);
-            }
-        } else {
-            final CarAvailability mostRecent = existing.stream()
-                    .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt))
-                    .get();
-            try {
-                for (int i = 0; i < newPeriods.size(); i++) {
-                    final AvailabilityPeriod np = newPeriods.get(i);
-                    final BigDecimal price = (i < newPeriodPrices.size() && newPeriodPrices.get(i) != null)
-                            ? newPeriodPrices.get(i)
-                            : editForm.getPricePerDay();
-                    carAvailabilityService.applyOwnerEditByCar(
-                            carId,
-                            mostRecent.getStartInclusive(),
-                            mostRecent.getEndInclusive(),
-                            np.getStartInclusive(),
-                            np.getEndInclusive(),
-                            price,
-                            editForm.getStartPointStreet(),
-                            editForm.getStartPointNumber(),
-                            editForm.getNeighborhoodId(),
-                            editForm.getCheckInTime(),
-                            editForm.getCheckOutTime());
-                }
-            } catch (final CarValidationException e) {
-                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            }
+        try {
+            carAvailabilityService.applyOwnerBulkEdit(
+                    me.getId(), carId, toBulkEditInput(editForm), Instant.now());
+        } catch (final CarValidationException e) {
+            errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return renderMyCarDetailOrRedirect(me, car, editForm, /* withPreview */ false);
         }
         return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+    }
+
+    private static AvailabilityCreateInput toBulkEditInput(final CarAvailabilityEditForm editForm) {
+        // minimumRentalDays is set to 1 to match the legacy create-fallback branch when the car has
+        // no existing availability rows; bulk-edit on an existing car does not change the configured
+        // minimum (that is what /min-rental-days exists for).
+        return new AvailabilityCreateInput(
+                editForm.getPricePerDay(),
+                editForm.getStartPointStreet(),
+                editForm.getStartPointNumber(),
+                editForm.getNeighborhoodId(),
+                editForm.getCheckInTime(),
+                editForm.getCheckOutTime(),
+                editForm.toAvailabilityPeriods(),
+                editForm.toPeriodPrices(),
+                1);
     }
 
     /**
@@ -395,7 +369,7 @@ public final class MyCarsController {
         page = Math.max(0, page);
         final String statusFilter = reservationViewService.normalizeReservationStatusQueryParam(reservationStatus);
         final CarReservationsListPageModel pageModel = reservationViewService.loadCarReservationsListPage(
-                me.getId(), lookup.car().orElseThrow(), page, paginationPolicy.getDefaultPageSize(),
+                me.getId(), lookup.car().orElseThrow(), page, appPaginationProperties.getDefaultPageSize(),
                 statusFilter, LocaleContextHolder.getLocale());
         final Optional<ModelAndView> clamp = PageClampRedirect.ifOutOfRange(
                 page, pageModel.getResultPage(), "page", request);
@@ -545,43 +519,22 @@ public final class MyCarsController {
             return lookup.redirect().get();
         }
         final Car car = lookup.car().orElseThrow();
-        final Optional<CarAvailability> avOpt = carAvailabilityService.findById(availabilityId);
-        if (avOpt.isEmpty() || avOpt.get().getCarId() != carId) {
-            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
-        }
-        final CarAvailability old = avOpt.get();
-        if (!errors.hasErrors()) {
-            try {
-                carAvailabilityService.validateEditAvailabilityRiderLead(
-                        form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now(),
-                        old.getStartInclusive());
-            } catch (final AvailabilityRiderLeadViolationException e) {
-                errors.rejectValue(
-                        "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
-                        e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            }
-        }
-        if (!errors.hasErrors()) {
-            try {
-                carAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
-            } catch (final CarValidationException e) {
-                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            }
-        }
         if (errors.hasErrors()) {
             return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
         }
-        final AvailabilityPeriod newPeriod = form.toAvailabilityPeriods().get(0);
         try {
-            carAvailabilityService.applyOwnerEditByCar(
-                    carId,
-                    old.getStartInclusive(), old.getEndInclusive(),
-                    newPeriod.getStartInclusive(), newPeriod.getEndInclusive(),
-                    form.getPricePerDay(),
-                    form.getStartPointStreet(), form.getStartPointNumber(),
-                    form.getNeighborhoodId(),
-                    form.getCheckInTime(), form.getCheckOutTime());
+            carAvailabilityService.editAvailability(
+                    me.getId(), carId, availabilityId, toAvailabilityInput(form), Instant.now());
+        } catch (final AvailabilityRiderLeadViolationException e) {
+            errors.rejectValue(
+                    "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
+                    e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
         } catch (final CarValidationException e) {
+            if (MessageKeys.CAR_AVAILABILITY_NOT_FOUND.equals(e.getMessageCode())
+                    || MessageKeys.CAR_AVAILABILITY_NOT_OWNED.equals(e.getMessageCode())) {
+                return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+            }
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
         }
@@ -602,55 +555,42 @@ public final class MyCarsController {
             return lookup.redirect().get();
         }
         final Car car = lookup.car().orElseThrow();
-        if (carService.isModelPendingValidation(carId)) {
-            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
-        }
-        if (errors.hasErrors()) {
-            return buildManagePeriodsViewWithError(car, month, "create");
-        }
-        final User freshUser = userService.getUserById(me.getId()).orElse(me);
-        if (!userService.hasValidCbu(freshUser)) {
-            errors.reject(MessageKeys.CAR_PUBLISH_CBU_REQUIRED, localeMessages.msg(MessageKeys.CAR_PUBLISH_CBU_REQUIRED));
-            return buildManagePeriodsViewWithError(car, month, "create");
-        }
-        if (!errors.hasErrors()) {
-            try {
-                carAvailabilityService.validatePublicationAvailabilityRiderLead(
-                        form.toAvailabilityPeriods(), form.getCheckInTime(), Instant.now());
-            } catch (final AvailabilityRiderLeadViolationException e) {
-                errors.rejectValue(
-                        "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
-                        e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            }
-        }
-        if (!errors.hasErrors()) {
-            try {
-                carAvailabilityService.validatePublicationAvailabilityAgainstWallCalendar(form.toAvailabilityPeriods());
-            } catch (final CarValidationException e) {
-                errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            }
-        }
         if (errors.hasErrors()) {
             return buildManagePeriodsViewWithError(car, month, "create");
         }
         try {
-            carAvailabilityService.createCarAvailabilityPeriods(
-                    carId,
-                    form.getPricePerDay(),
-                    form.getStartPointStreet(),
-                    form.getStartPointNumber(),
-                    form.getNeighborhoodId(),
-                    form.getCheckInTime(),
-                    form.getCheckOutTime(),
-                    form.toAvailabilityPeriods(),
-                    form.toPeriodPrices(),
-                    form.getMinimumRentalDays());
+            carAvailabilityService.createListing(
+                    me.getId(), carId, toAvailabilityInput(form), Instant.now());
             return new ModelAndView(redirectTo("/my-cars/car/" + carId + "/periods"
                     + (month != null && !month.isBlank() ? "?month=" + month : "")));
+        } catch (final AvailabilityRiderLeadViolationException e) {
+            errors.rejectValue(
+                    "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
+                    e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return buildManagePeriodsViewWithError(car, month, "create");
+        } catch (final ReservationConflictException e) {
+            errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return buildManagePeriodsViewWithError(car, month, "create");
         } catch (final CarValidationException e) {
+            if (MessageKeys.CAR_CREATE_MODEL_PENDING.equals(e.getMessageCode())) {
+                return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+            }
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             return buildManagePeriodsViewWithError(car, month, "create");
         }
+    }
+
+    private static AvailabilityCreateInput toAvailabilityInput(final CreateCarAvailabilityForm form) {
+        return new AvailabilityCreateInput(
+                form.getPricePerDay(),
+                form.getStartPointStreet(),
+                form.getStartPointNumber(),
+                form.getNeighborhoodId(),
+                form.getCheckInTime(),
+                form.getCheckOutTime(),
+                form.toAvailabilityPeriods(),
+                form.toPeriodPrices(),
+                form.getMinimumRentalDays());
     }
 
     @GetMapping(value = "/car/{carId}/availability-min-from", produces = MediaType.APPLICATION_JSON_VALUE)

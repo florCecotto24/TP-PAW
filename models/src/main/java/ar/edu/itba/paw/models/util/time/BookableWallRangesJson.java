@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models.util.time;
 import java.math.BigDecimal;
 import java.util.List;
 
+import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 
 /**
@@ -17,6 +18,31 @@ import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 public final class BookableWallRangesJson {
 
     private BookableWallRangesJson() {
+    }
+
+    /**
+     * Date-only JSON array of {@code [{from, to}, ...]} ranges, suitable for Flatpickr's
+     * {@code disable} option. Used to feed the owner publish picker with the wall-day ranges
+     * that already hold active reservations.
+     */
+    public static String availabilityPeriodsToJsonArray(final List<AvailabilityPeriod> periods) {
+        if (periods == null || periods.isEmpty()) {
+            return "[]";
+        }
+        final StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < periods.size(); i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            final AvailabilityPeriod p = periods.get(i);
+            sb.append("{\"from\":\"")
+                    .append(p.getStartInclusive())
+                    .append("\",\"to\":\"")
+                    .append(p.getEndInclusive())
+                    .append("\"}");
+        }
+        sb.append(']');
+        return sb.toString();
     }
 
     public static String toJsonArray(final List<BookableSegmentProjection> segments) {

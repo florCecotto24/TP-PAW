@@ -13,7 +13,7 @@ import ar.edu.itba.paw.webapp.validation.VerificationCodeValidator;
 
 /**
  * Validates that the value is a digits-only string whose length matches
- * {@link ar.edu.itba.paw.services.policy.VerificationCodePolicy#getCodeLength()}.
+ * {@link ar.edu.itba.paw.policy.VerificationCodePolicy#getCodeLength()}.
  * The pattern and length come from {@code app.validation.verification-code-length}, never hardcoded.
  */
 @Documented

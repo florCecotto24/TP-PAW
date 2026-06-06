@@ -7,7 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.webapp.controller.HomeController;
 import ar.edu.itba.paw.webapp.controller.MyCarsController;
 import ar.edu.itba.paw.webapp.controller.MyReservationsController;

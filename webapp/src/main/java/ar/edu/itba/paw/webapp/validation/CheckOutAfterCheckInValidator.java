@@ -10,7 +10,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.services.policy.CarAvailabilityCheckInOutPolicy;
+import ar.edu.itba.paw.policy.CarAvailabilityCheckInOutPolicy;
 import ar.edu.itba.paw.webapp.form.CarAvailabilityTimeWindow;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
 

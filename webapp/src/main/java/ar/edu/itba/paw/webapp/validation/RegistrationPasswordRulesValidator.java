@@ -10,7 +10,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.RegistrationPasswordConfirmFields;
 import ar.edu.itba.paw.webapp.validation.constraint.RegistrationPasswordRules;
 

@@ -26,7 +26,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
-import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -47,7 +46,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
-import ar.edu.itba.paw.services.UserService;
+import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;
 import ar.edu.itba.paw.webapp.support.converter.StringToReservationViewerRoleConverter;
 import ar.edu.itba.paw.webapp.support.converter.StringToSupportedLocaleConverter;
@@ -57,14 +56,14 @@ import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import ar.edu.itba.paw.services.policy.CarValidationPolicy;
-import ar.edu.itba.paw.services.policy.ListingFormValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReservationChatPolicy;
-import ar.edu.itba.paw.services.policy.ReservationFormValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.services.policy.VerificationCodePolicy;
+import ar.edu.itba.paw.policy.CarValidationPolicy;
+import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
+import ar.edu.itba.paw.policy.ReservationChatPolicy;
+import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
+import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
+import ar.edu.itba.paw.policy.ReviewValidationPolicy;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
@@ -213,20 +212,42 @@ public class WebConfig implements WebMvcConfigurer {
         return viewResolver;
     }
 
+    /**
+     * Hibernate JPA properties are read from the {@link Environment} (application.properties + active profile
+     * override). Verbose SQL logging is off by default; enable it per environment via {@code hibernate.show_sql} /
+     * {@code hibernate.format_sql} in {@code application-local.properties}.
+     */
     @Bean
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory(final DataSource dataSource) {
+    public LocalContainerEntityManagerFactoryBean entityManagerFactory(
+            final DataSource dataSource, final Environment environment) {
         final LocalContainerEntityManagerFactoryBean factoryBean = new LocalContainerEntityManagerFactoryBean();
         factoryBean.setPackagesToScan("ar.edu.itba.paw.models");
         factoryBean.setDataSource(dataSource);
-        final JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-        factoryBean.setJpaVendorAdapter(vendorAdapter);
-        final Properties properties = new Properties();
-        properties.setProperty("hibernate.hbm2ddl.auto", "update");
-        properties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-        properties.setProperty("hibernate.show_sql", "true");
-        properties.setProperty("format_sql", "true");
-        factoryBean.setJpaProperties(properties);
+        factoryBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+        factoryBean.setJpaProperties(resolveHibernateProperties(environment));
         return factoryBean;
+    }
+
+    /**
+     * Pulls each Hibernate knob from the {@link Environment} so nothing is hardcoded. Only sets a key if the
+     * property is present (so missing keys fall back to Hibernate's own defaults rather than to a stale literal).
+     */
+    private static Properties resolveHibernateProperties(final Environment environment) {
+        final Properties properties = new Properties();
+        copyIfPresent(environment, properties, "hibernate.hbm2ddl.auto");
+        copyIfPresent(environment, properties, "hibernate.dialect");
+        copyIfPresent(environment, properties, "hibernate.show_sql");
+        copyIfPresent(environment, properties, "hibernate.format_sql");
+        copyIfPresent(environment, properties, "hibernate.use_sql_comments");
+        return properties;
+    }
+
+    private static void copyIfPresent(
+            final Environment environment, final Properties properties, final String key) {
+        final String value = environment.getProperty(key);
+        if (value != null && !value.isBlank()) {
+            properties.setProperty(key, value.trim());
+        }
     }
 
     @Bean

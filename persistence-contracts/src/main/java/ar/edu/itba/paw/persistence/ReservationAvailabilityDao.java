@@ -4,13 +4,15 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Optional;
 
+import ar.edu.itba.paw.models.domain.CarAvailability;
+
 /**
  * N:N bridge rows between reservations and the {@code car_availability} rows that were considered
  * when pricing the reservation. The per-day winning availability is resolved at read time by date
  * range and {@code MAX(created_at)}; no per-row date segmentation is persisted.
  *
  * <p>Access is restricted to
- * {@link ar.edu.itba.paw.services.ReservationAvailabilityServiceImpl}.</p>
+ * {@link ar.edu.itba.paw.services.reservation.ReservationAvailabilityServiceImpl}.</p>
  */
 public interface ReservationAvailabilityDao {
 
@@ -36,4 +38,17 @@ public interface ReservationAvailabilityDao {
      *         reservation does not exist).
      */
     Optional<BigDecimal> sumReservationTotal(long reservationId);
+
+    /**
+     * Returns the snapshot {@link CarAvailability} that drives pickup display (address, check-in /
+     * check-out times) for the reservation: among the bridged candidates that {@code OFFERED}-cover
+     * the reservation's first wall-calendar day, the one with the latest {@code created_at} wins
+     * (ties broken by id). Anchors the rider-visible pickup info to the rows captured at pricing
+     * time, so later owner edits that insert new availability rows on the same date range do not
+     * mutate the address / times shown for already-bridged reservations.
+     *
+     * @return the winning {@code CarAvailability}; empty when the reservation has no bridge rows or
+     *         when none of the bridged candidates is an OFFERED row covering the first day.
+     */
+    Optional<CarAvailability> findEffectivePickupAvailabilityForReservation(long reservationId);
 }

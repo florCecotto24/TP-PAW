@@ -1,20 +1,15 @@
 package ar.edu.itba.paw.webapp.controller;
 
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
@@ -34,28 +29,29 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.exception.reservation.ReservationAccessDeniedException;
+import ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
-import ar.edu.itba.paw.models.dto.reservation.ReservationCardDisplayRow;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationEditPageModel;
+import ar.edu.itba.paw.models.dto.reservation.RiderReservationsListPageModel;
 import ar.edu.itba.paw.models.dto.profile.CounterpartyProfilePageModel;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
-import ar.edu.itba.paw.services.ImageService;
-import ar.edu.itba.paw.services.ReservationService;
-import ar.edu.itba.paw.services.CounterpartyProfileViewService;
-import ar.edu.itba.paw.services.ReservationViewService;
+import ar.edu.itba.paw.services.file.ImageService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.user.view.CounterpartyProfileViewService;
+import ar.edu.itba.paw.services.reservation.view.ReservationViewService;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.MyReservationDetailModelFactory;
 import ar.edu.itba.paw.webapp.support.ReservationViewerRole;
+import ar.edu.itba.paw.webapp.support.StoredFileDownloadResponses;
 import ar.edu.itba.paw.webapp.support.facade.ReviewSubmissionFacade;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
@@ -64,8 +60,6 @@ import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
 /** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
 @Controller
 public final class MyReservationsController {
-
-    private static final Logger LOG = LoggerFactory.getLogger(MyReservationsController.class);
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
@@ -76,6 +70,7 @@ public final class MyReservationsController {
     private final ReviewSubmissionFacade reviewSubmissionFacade;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
     private final ImageService imageService;
+    private final AppPaginationProperties appPaginationProperties;
 
     public MyReservationsController(
             final ReservationService reservationService,
@@ -86,7 +81,8 @@ public final class MyReservationsController {
             final MyReservationDetailModelFactory reservationDetailFactory,
             final ReviewSubmissionFacade reviewSubmissionFacade,
             final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
-            final ImageService imageService) {
+            final ImageService imageService,
+            final AppPaginationProperties appPaginationProperties) {
         this.reservationService = reservationService;
         this.reservationViewService = reservationViewService;
         this.counterpartyProfileViewService = counterpartyProfileViewService;
@@ -96,6 +92,7 @@ public final class MyReservationsController {
         this.reviewSubmissionFacade = reviewSubmissionFacade;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
         this.imageService = imageService;
+        this.appPaginationProperties = appPaginationProperties;
     }
 
     @ModelAttribute("uploadMaxImageBytes")
@@ -156,15 +153,13 @@ public final class MyReservationsController {
         final String riderSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 null, me.getId(), category, transmission, powertrain, priceMin, priceMax,
-                rating, riderStatus, riderPage, riderSort, q, null);
-        final Page<ReservationCard> riderResultPage = reservationService.getRiderReservationCards(criteria);
-        final Locale locale = LocaleContextHolder.getLocale();
-        final List<ReservationCardDisplayRow> riderReservations = riderResultPage.getContent().stream()
-                .map(card -> reservationViewService.toReservationCardDisplayRow(card, locale))
-                .collect(Collectors.toList());
+                rating, riderStatus, riderPage, appPaginationProperties.getDefaultPageSize(),
+                riderSort, q, null);
+        final RiderReservationsListPageModel pageModel = reservationViewService.loadRiderReservationsListPage(
+                criteria, riderSort, LocaleContextHolder.getLocale());
 
         final int safeRiderPage = UiPaging.clampZeroBasedPage(
-                riderPage, riderResultPage.getTotalItems(), riderResultPage.getPageSize());
+                riderPage, pageModel.getResultPage().getTotalItems(), pageModel.getResultPage().getPageSize());
         if (safeRiderPage != riderPage) {
             final RedirectView redirectView = new RedirectView(
                     UriComponentsBuilder.fromHttpRequest(new ServletServerHttpRequest(request))
@@ -176,10 +171,7 @@ public final class MyReservationsController {
         }
 
         final ModelAndView mav = new ModelAndView("reservation/myReservations");
-        mav.addObject("riderReservations", riderReservations);
-        mav.addObject("riderReservationsPage", riderResultPage);
-        mav.addObject("activeTab", "my-reservations");
-        mav.addObject("currentSort", riderSort);
+        pageModel.populateModel(mav::addObject);
         return mav;
     }
 
@@ -286,30 +278,9 @@ public final class MyReservationsController {
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<StoredFile> fileOpt = reservationService.findPaymentReceiptForParticipant(me.getId(), reservationId);
-        if (fileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        final StoredFile sf = fileOpt.get();
-        final HttpHeaders headers = new HttpHeaders();
-        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
-        if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
-            try {
-                contentType = MediaType.parseMediaType(sf.getContentType());
-            } catch (final IllegalArgumentException e) {
-                LOG.atDebug()
-                        .setMessage("Invalid payment receipt Content-Type reservationId={} [{}]")
-                        .addArgument(reservationId)
-                        .addArgument(sf.getContentType())
-                        .setCause(e)
-                        .log();
-                contentType = MediaType.APPLICATION_OCTET_STREAM;
-            }
-        }
-        headers.setContentType(contentType);
-        final String safeName = sanitizeDownloadFileName(sf.getFileName());
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeName + "\"");
-        return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
+        return StoredFileDownloadResponses.inlineOr404(
+                reservationService.findPaymentReceiptForParticipant(me.getId(), reservationId),
+                "payment receipt reservationId=" + reservationId);
     }
 
     @GetMapping("/my-reservations/{reservationId}/refund-receipt/view")
@@ -332,30 +303,9 @@ public final class MyReservationsController {
             @CurrentUser final User currentUser,
             @PathVariable("reservationId") final long reservationId) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        final Optional<StoredFile> fileOpt = reservationService.findRefundReceiptForParticipant(me.getId(), reservationId);
-        if (fileOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        final StoredFile sf = fileOpt.get();
-        final HttpHeaders headers = new HttpHeaders();
-        MediaType contentType = MediaType.APPLICATION_OCTET_STREAM;
-        if (sf.getContentType() != null && !sf.getContentType().isBlank()) {
-            try {
-                contentType = MediaType.parseMediaType(sf.getContentType());
-            } catch (final IllegalArgumentException e) {
-                LOG.atDebug()
-                        .setMessage("Invalid refund receipt Content-Type reservationId={} [{}]")
-                        .addArgument(reservationId)
-                        .addArgument(sf.getContentType())
-                        .setCause(e)
-                        .log();
-                contentType = MediaType.APPLICATION_OCTET_STREAM;
-            }
-        }
-        headers.setContentType(contentType);
-        final String safeName = sanitizeDownloadFileName(sf.getFileName());
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + safeName + "\"");
-        return new ResponseEntity<>(sf.getData(), headers, HttpStatus.OK);
+        return StoredFileDownloadResponses.inlineOr404(
+                reservationService.findRefundReceiptForParticipant(me.getId(), reservationId),
+                "refund receipt reservationId=" + reservationId);
     }
 
     @PostMapping("/my-reservations/{reservationId}/refund-receipt")
@@ -379,14 +329,6 @@ public final class MyReservationsController {
             redirectAttributes.addFlashAttribute("refundReceiptError", localeMessages.msg(MessageKeys.PUBLISH_IMAGES_READ));
         }
         return new ModelAndView(redirectToMyReservationDetailView(reservationId, ReservationViewerRole.OWNER, fromCar));
-    }
-
-    private static String sanitizeDownloadFileName(final String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "receipt";
-        }
-        final String trimmed = raw.trim().replace("\"", "'").replaceAll("[\\\\/:*?|<>\\r\\n]+", "_");
-        return trimmed.length() > 120 ? trimmed.substring(0, 120) : trimmed;
     }
 
     @PostMapping("/my-reservations/{reservationId}/payment-receipt")
@@ -539,23 +481,16 @@ public final class MyReservationsController {
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         final ReservationViewerRole role = roleParam != null ? roleParam : ReservationViewerRole.RIDER;
-        final Optional<Reservation> reservationOpt = role == ReservationViewerRole.OWNER
-                ? reservationService.getOwnerReservationById(me.getId(), reservationId)
-                : reservationService.getRiderReservationById(me.getId(), reservationId);
-
-        if (reservationOpt.isEmpty()) {
+        try {
+            reservationService.cancelReservationAsParticipantScoped(
+                    me.getId(), reservationId, role.toLegacyString());
+        } catch (final ReservationAccessDeniedException e) {
             return new ModelAndView(new RedirectView("/my-reservations", true));
-        }
-
-        final Optional<Reservation> cancelled =
-                reservationService.cancelReservationAsParticipant(me.getId(), reservationId);
-        if (cancelled.isEmpty()) {
+        } catch (final ReservationCancelNotAllowedException e) {
             redirectAttributes.addFlashAttribute(
-                    "cancelReservationError",
-                    localeMessages.msg(MessageKeys.RESERVATION_CANCEL_NOT_ALLOWED));
+                    "cancelReservationError", localeMessages.msg(e));
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
-
         final ModelAndView mav = new ModelAndView("reservation/reservationCancelled");
         mav.addObject("reservationRole", role.toLegacyString());
         return mav;

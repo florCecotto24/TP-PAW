@@ -11,8 +11,8 @@ import org.springframework.web.servlet.ModelAndView;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.policy.PaginationPolicy;
+import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
@@ -22,15 +22,15 @@ import ar.edu.itba.paw.webapp.support.CurrentUser;
 public final class HomeController {
 
     private final CarService carService;
-    private final PaginationPolicy paginationPolicy;
+    private final AppPaginationProperties appPaginationProperties;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
 
     public HomeController(
             final CarService carService,
-            final PaginationPolicy paginationPolicy,
+            final AppPaginationProperties appPaginationProperties,
             final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory) {
         this.carService = carService;
-        this.paginationPolicy = paginationPolicy;
+        this.appPaginationProperties = appPaginationProperties;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
     }
 
@@ -44,7 +44,7 @@ public final class HomeController {
         cheapestPage = Math.max(0, cheapestPage);
         recentPage   = Math.max(0, recentPage);
 
-        final int uiPageSize = paginationPolicy.getUiPageSize();
+        final int uiPageSize = appPaginationProperties.getUiPageSize();
         final Page<CarCard> cheapestRaw =
                 carService.getCheapestCarCards(cheapestPage, uiPageSize);
         final Page<CarCard> recentRaw =

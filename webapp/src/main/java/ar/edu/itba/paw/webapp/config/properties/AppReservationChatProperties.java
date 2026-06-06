@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.config.properties;
 
 import org.springframework.core.env.Environment;
 
-import ar.edu.itba.paw.services.policy.ReservationChatPolicy;
+import ar.edu.itba.paw.policy.ReservationChatPolicy;
 
 /** Bound view of {@code app.reservation.chat.*}. */
 public record AppReservationChatProperties(int historyPageSize, int graceDaysAfterFinished) {

@@ -2,13 +2,13 @@ package ar.edu.itba.paw.webapp.config.properties;
 
 import org.springframework.core.env.Environment;
 
-import ar.edu.itba.paw.services.policy.CarValidationPolicy;
-import ar.edu.itba.paw.services.policy.ListingFormValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReservationFormValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReservationMessageValidationPolicy;
-import ar.edu.itba.paw.services.policy.ReviewValidationPolicy;
-import ar.edu.itba.paw.services.policy.UserValidationPolicy;
-import ar.edu.itba.paw.services.policy.VerificationCodePolicy;
+import ar.edu.itba.paw.policy.CarValidationPolicy;
+import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
+import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
+import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
+import ar.edu.itba.paw.policy.ReviewValidationPolicy;
+import ar.edu.itba.paw.policy.UserValidationPolicy;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
 /**
  * Bound view of {@code app.validation.*}. Add new keys and defaults here, then expose them via accessors or

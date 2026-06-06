@@ -82,15 +82,15 @@ public class User {
     @JoinColumn(name = "license_file_id", unique = true)
     private StoredFile licenseFile;
 
-    @Column(name = "license_validated")
-    private Boolean licenseValidated;
+    @Column(name = "license_validated", nullable = false)
+    private boolean licenseValidated;
 
     @OneToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "identity_file_id", unique = true)
     private StoredFile identityFile;
 
-    @Column(name = "identity_validated")
-    private Boolean identityValidated;
+    @Column(name = "identity_validated", nullable = false)
+    private boolean identityValidated;
 
     @Column(name = "user_role", nullable = false, length = 50)
     private String userRole;
@@ -158,9 +158,9 @@ public class User {
         private LocalDate memberSince;
         private String cbu;
         private StoredFile licenseFile;
-        private Boolean licenseValidated;
+        private boolean licenseValidated;
         private StoredFile identityFile;
-        private Boolean identityValidated;
+        private boolean identityValidated;
         private String userRole = UserRole.USER.persistenceName();
         private Long roleAssignedBy = null;
         private boolean blocked = false;
@@ -235,7 +235,7 @@ public class User {
             return this;
         }
 
-        public Builder licenseValidated(final Boolean licenseValidated) {
+        public Builder licenseValidated(final boolean licenseValidated) {
             this.licenseValidated = licenseValidated;
             return this;
         }
@@ -245,7 +245,7 @@ public class User {
             return this;
         }
 
-        public Builder identityValidated(final Boolean identityValidated) {
+        public Builder identityValidated(final boolean identityValidated) {
             this.identityValidated = identityValidated;
             return this;
         }
@@ -340,7 +340,7 @@ public class User {
     }
 
     public boolean isLicenseValidated() {
-        return Boolean.TRUE.equals(licenseValidated);
+        return licenseValidated;
     }
 
     public Optional<StoredFile> getIdentityFile() {
@@ -353,7 +353,7 @@ public class User {
     }
 
     public boolean isIdentityValidated() {
-        return Boolean.TRUE.equals(identityValidated);
+        return identityValidated;
     }
 
     public String getUserRole() {
@@ -436,7 +436,7 @@ public class User {
         this.licenseFile = licenseFile;
     }
 
-    public void setLicenseValidated(final Boolean licenseValidated) {
+    public void setLicenseValidated(final boolean licenseValidated) {
         this.licenseValidated = licenseValidated;
     }
 
@@ -444,7 +444,7 @@ public class User {
         this.identityFile = identityFile;
     }
 
-    public void setIdentityValidated(final Boolean identityValidated) {
+    public void setIdentityValidated(final boolean identityValidated) {
         this.identityValidated = identityValidated;
     }
 

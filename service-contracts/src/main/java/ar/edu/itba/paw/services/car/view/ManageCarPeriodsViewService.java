@@ -1,0 +1,20 @@
+package ar.edu.itba.paw.services.car.view;
+
+import java.time.YearMonth;
+
+import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.dto.car.ManageCarPeriodsPageModel;
+
+/**
+ * Read-only assembly for the {@code car/manageCarPeriods.jsp} page. Loads all effective
+ * availability periods for the owner calendar and filters them to the active month for the
+ * right-hand list panel.
+ */
+public interface ManageCarPeriodsViewService {
+
+    /**
+     * @param car         ownership-resolved car (controller has already vetted access)
+     * @param activeMonth the month currently shown in the calendar
+     */
+    ManageCarPeriodsPageModel loadManageCarPeriodsPage(Car car, YearMonth activeMonth);
+}

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.services.ReservationService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.http.HttpRequestPathIds;

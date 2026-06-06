@@ -9,19 +9,21 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 
 /**
- * Immutable search filters + paging for the public car search. Prefer {@link #builder()} (Effective Java Item 2);
- * in the web app, wire sizes from Spring {@code Environment} via {@code CarService#buildSearchCriteria}.
+ * Immutable search filters + paging for the public car search. Prefer {@link #builder()} (Effective Java Item 2).
+ *
+ * <p>Only carries the UI page index and {@code uiPageSize} (controller-supplied). The DB fetch
+ * window for dual-layer paging is read by the DAO from its own pagination config, so the search
+ * criteria is purely about <em>what</em> to query and <em>which UI page</em>, not <em>how many
+ * rows per SQL window</em>.</p>
  */
 public final class CarSearchCriteria extends BaseSearchCriteria {
 
     private final String query;
     private final Instant availabilityRangeStart;
     private final Instant availabilityRangeEndExclusive;
-    private final int dbFetchSize;
     /** When set, SQL requires published availability reaching this wall-calendar day or later. */
     private final LocalDate browseWallDate;
     /** When set, SQL excludes cars owned by this user id (public rider browse). */
@@ -38,7 +40,6 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         this.query = b.query != null && !b.query.isBlank() ? b.query.trim() : null;
         this.availabilityRangeStart = b.availabilityRangeStart;
         this.availabilityRangeEndExclusive = b.availabilityRangeEndExclusive;
-        this.dbFetchSize = normalizedDbFetchSize(getPageSize(), b.dbFetchSize);
         this.browseWallDate = b.browseWallDate;
         this.excludeOwnerUserId = b.excludeOwnerUserId;
         this.neighborhoodIds = normalizeIdList(b.neighborhoodIds);
@@ -65,10 +66,8 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         private Instant availabilityRangeStart;
         private Instant availabilityRangeEndExclusive;
         private int page;
-        /** {@code 0} means use {@link PaginationFallbackSizes#UI_PAGE_SIZE} at {@link #build()}. */
+        /** Items per UI page (controller-supplied). {@code 0} falls back to {@code 1} via base normalisation. */
         private int uiPageSize;
-        /** {@code 0} means use {@link PaginationFallbackSizes#DB_FETCH_SIZE} at {@link #build()}. */
-        private int dbFetchSize;
         private String sortBy = "date";
         private String sortDirection = "desc";
         private LocalDate browseWallDate;
@@ -128,11 +127,6 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
             return this;
         }
 
-        public Builder dbFetchSize(final int dbFetchSize) {
-            this.dbFetchSize = dbFetchSize;
-            return this;
-        }
-
         public Builder sortBy(final String sortBy) {
             this.sortBy = sortBy;
             return this;
@@ -173,14 +167,6 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
         }
     }
 
-    /**
-     * Ensures a positive DB window at least as large as the UI page (dual-layer paging invariant).
-     */
-    private static int normalizedDbFetchSize(final int resolvedUiPageSize, final int dbFetchSize) {
-        final int base = dbFetchSize > 0 ? dbFetchSize : PaginationFallbackSizes.DB_FETCH_SIZE;
-        return Math.max(resolvedUiPageSize, base);
-    }
-
     private static List<Long> normalizeIdList(final List<Long> raw) {
         if (raw == null || raw.isEmpty()) {
             return List.of();
@@ -215,11 +201,6 @@ public final class CarSearchCriteria extends BaseSearchCriteria {
     /** Items shown per UI page (e.g. 8). */
     public int getUiPageSize() {
         return getPageSize();
-    }
-
-    /** Rows fetched per DB query window (e.g. 24); must be ≥ {@link #getUiPageSize()}. */
-    public int getDbFetchSize() {
-        return dbFetchSize;
     }
 
     public LocalDate getBrowseWallDate() {

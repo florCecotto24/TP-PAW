@@ -5,7 +5,7 @@ import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.services.review.ReviewService;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 
 @Component

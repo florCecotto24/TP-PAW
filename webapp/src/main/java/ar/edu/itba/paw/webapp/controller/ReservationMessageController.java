@@ -21,7 +21,7 @@ import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
-import ar.edu.itba.paw.services.ReservationMessageService;
+import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.util.DownloadFileNameSanitizer;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;

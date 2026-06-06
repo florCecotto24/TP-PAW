@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.validation;
 
-import ar.edu.itba.paw.services.LocationService;
+import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.webapp.form.CreateCarAvailabilityForm;
 import ar.edu.itba.paw.webapp.form.CarAvailabilityEditForm;
 import org.springframework.stereotype.Component;

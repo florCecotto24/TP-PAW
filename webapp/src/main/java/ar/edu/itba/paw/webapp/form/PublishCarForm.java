@@ -7,6 +7,7 @@ import javax.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.policy.CarGalleryUploadPolicy;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CarValidationSize;
 import ar.edu.itba.paw.webapp.validation.constraint.CarValidationSize.Kind;
@@ -71,10 +72,15 @@ public final class PublishCarForm {
     private String description;
 
     /**
-     * Can be empty on retry: pictures may be in session (see {@code PublishCarFormController}).
-     * Upper bound comes from {@link ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy#MAX_ITEMS}.
+     * Pictures bound from the current submit. The {@link Size} annotation only fires when the array is non-null
+     * (Spring MVC binds {@code null} when the user uploads nothing, e.g. retries where pictures are kept in
+     * session); the session-aware "at least one picture, total ≤ MAX_ITEMS" rule lives in
+     * {@code PublishCarPictureSessionStash#validatePicturePresence}, which is the single source of truth for the
+     * effective count. {@code min} matches the i18n message ({@code validation.pictures.size} reads
+     * "between 1 and {max}"), so the annotation can no longer silently accept an explicit empty array.
      */
-    @Size(max = ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy.MAX_ITEMS,
+    @Size(min = 1,
+            max = CarGalleryUploadPolicy.MAX_ITEMS,
             message = "{validation.pictures.size}", groups = ValidationGroups.OnPublishCar.class)
     private MultipartFile[] pictures;
 

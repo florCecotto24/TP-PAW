@@ -9,7 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
-import ar.edu.itba.paw.services.policy.CarGalleryUploadPolicy;
+import ar.edu.itba.paw.policy.CarGalleryUploadPolicy;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
 /** Validates mixed photo/video uploads for the publish-car gallery. */

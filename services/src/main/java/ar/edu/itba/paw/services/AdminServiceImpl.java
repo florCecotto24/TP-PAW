@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.services;
 
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.ReservationMessage;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.reservation.AdminReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload;
@@ -29,10 +31,10 @@ import ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload;
 /**
  * Admin operations: user management, car moderation, catalog validation, and reservation inspection.
  *
- * <p>This service is a pure orchestrator: it never talks to any DAO directly (project rule: a service may
+ * This service is a pure orchestrator: it never talks to any DAO directly (project rule: a service may
  * only call its own DAO). All persistence access is delegated to the corresponding peer services
  * ({@link UserService}, {@link CarService}, {@link CarBrandService}, {@link CarModelService},
- * {@link ReservationService}, {@link ReservationMessageService}).</p>
+ * {@link ReservationService}, {@link ReservationMessageService}).
  */
 @Service
 @Transactional
@@ -299,6 +301,22 @@ public class AdminServiceImpl implements AdminService {
     @Transactional(readOnly = true)
     public long countReservationMessages(final long reservationId) {
         return reservationMessageService.countMessages(reservationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AdminReservationChatPageModel> loadReservationChatPage(
+            final long reservationId, final int page, final int pageSize) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        return reservationService.getReservationById(reservationId)
+                .map(reservation -> new AdminReservationChatPageModel(
+                        reservation,
+                        reservationMessageService.getAdminChatMessages(
+                                reservationId, safePage * safePageSize, safePageSize),
+                        reservationMessageService.countMessages(reservationId),
+                        safePage,
+                        safePageSize));
     }
 
 }

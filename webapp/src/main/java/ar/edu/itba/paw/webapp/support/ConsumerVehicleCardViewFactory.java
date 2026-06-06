@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.services.CarService;
-import ar.edu.itba.paw.services.FavCarService;
+import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.car.FavCarService;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 
 /** Maps browse {@link CarCard} rows to {@link VehicleCardView} with optional consumer price market badges. */

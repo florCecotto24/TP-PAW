@@ -1,14 +1,17 @@
 package ar.edu.itba.paw.models.util.search;
 
-import ar.edu.itba.paw.models.pagination.PaginationFallbackSizes;
-
 import java.math.BigDecimal;
 import java.util.List;
 
 /**
  * Immutable filters and paging for rider or owner reservation card lists (status, vehicle facets, price, rating, sort).
+ *
+ * <p>The {@code pageSize} is controller-supplied (read from {@code AppPaginationProperties}); a
+ * non-positive value is defensively clamped to {@code 1}.</p>
  */
 public final class ReservationSearchCriteria {
+
+    private static final int MIN_PAGE_SIZE = 1;
 
     private final Long ownerId;
     private final Long riderId;
@@ -65,7 +68,7 @@ public final class ReservationSearchCriteria {
         this.riderId = riderId;
         this.carId = carId;
         this.page = Math.max(0, page);
-        this.pageSize = pageSize > 0 ? pageSize : PaginationFallbackSizes.UI_PAGE_SIZE;
+        this.pageSize = pageSize > 0 ? pageSize : MIN_PAGE_SIZE;
         this.statusFilters = statusFilters == null ? List.of() : List.copyOf(statusFilters);
         this.carTypes = carTypes == null ? List.of() : List.copyOf(carTypes);
         this.transmissions = transmissions == null ? List.of() : List.copyOf(transmissions);

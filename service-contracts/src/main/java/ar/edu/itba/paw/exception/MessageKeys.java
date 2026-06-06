@@ -98,6 +98,7 @@ public final class MessageKeys {
     public static final String CAR_AVAILABILITY_BEYOND_PUBLISH_HORIZON = "carAvailability.beyondPublishHorizon";
     public static final String CAR_AVAILABILITY_EDIT_CONFLICT = "carAvailability.editConflict";
     public static final String CAR_AVAILABILITY_WITHDRAW_CONFLICT = "carAvailability.withdrawConflict";
+    public static final String CAR_AVAILABILITY_PUBLISH_CONFLICT = "carAvailability.publishConflict";
     public static final String CAR_AVAILABILITY_NOT_FOUND = "carAvailability.notFound";
     public static final String CAR_AVAILABILITY_NOT_OWNED = "carAvailability.notOwned";
     public static final String CAR_AVAILABILITY_NOT_OFFERED = "carAvailability.notOffered";

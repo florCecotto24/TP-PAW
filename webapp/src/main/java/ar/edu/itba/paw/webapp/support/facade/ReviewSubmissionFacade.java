@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.services.ReviewService;
+import ar.edu.itba.paw.services.review.ReviewService;
 import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.validation.support.MultipartImageValidation;
