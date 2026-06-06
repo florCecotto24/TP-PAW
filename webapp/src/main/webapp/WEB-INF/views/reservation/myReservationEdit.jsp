@@ -19,7 +19,7 @@
     <ryden:breadcrumbTrail
             homeLabel="${myReservationsLabel}"
             homeHref="${pageContext.request.contextPath}/my-reservations"
-            midLabel="#${reservation.id}"
+            midLabel="${car.brand} ${car.model}"
             midHref="${detailHref}"
             currentLabel="${editHeadingLabel}"/>
 

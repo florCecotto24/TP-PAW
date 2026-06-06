@@ -2750,3 +2750,39 @@ body.reservation-chat-body.has-fixed-navbar {
     box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
     transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
+
+/* ─── Manage periods: mark days with an active reservation inside the edited
+       period. Used by managePeriods.js#applyReservedDayMarkers via onDayCreate.
+       Visible cue: small red dot in the bottom-right of the day cell + subtle
+       background. Works on both selected and unselected states. ─────────── */
+
+.flatpickr-day.has-active-reservation {
+    position: relative;
+    background-color: rgba(220, 53, 69, 0.08);
+}
+
+.flatpickr-day.has-active-reservation::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--bs-danger, #dc3545);
+    pointer-events: none;
+}
+
+.flatpickr-day.has-active-reservation.selected,
+.flatpickr-day.has-active-reservation.startRange,
+.flatpickr-day.has-active-reservation.endRange,
+.flatpickr-day.has-active-reservation.inRange {
+    background-color: rgba(13, 110, 253, 0.85);
+}
+
+.flatpickr-day.has-active-reservation.selected::after,
+.flatpickr-day.has-active-reservation.startRange::after,
+.flatpickr-day.has-active-reservation.endRange::after,
+.flatpickr-day.has-active-reservation.inRange::after {
+    background-color: #fff;
+}

@@ -3,6 +3,8 @@ package ar.edu.itba.paw.models.dto.car;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,7 +49,12 @@ public final class AvailabilityCreateInput {
         this.checkInTime = Objects.requireNonNull(checkInTime, "checkInTime");
         this.checkOutTime = Objects.requireNonNull(checkOutTime, "checkOutTime");
         this.periods = List.copyOf(Objects.requireNonNull(periods, "periods"));
-        this.periodPrices = periodPrices == null ? List.of() : List.copyOf(periodPrices);
+        // periodPrices is positional vs periods and MAY contain nulls (callers fall back to
+        // pricePerDay via effectivePriceAt). List.copyOf rejects nulls, so use a null-tolerant
+        // unmodifiable copy.
+        this.periodPrices = periodPrices == null
+                ? List.of()
+                : Collections.unmodifiableList(new ArrayList<>(periodPrices));
         this.minimumRentalDays = minimumRentalDays;
     }
 

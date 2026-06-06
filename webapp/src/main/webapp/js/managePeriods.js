@@ -40,6 +40,9 @@
     // Initial pre-filled neighborhood (for restoring create mode state)
     var initialNbId   = '';
     var initialNbText = '';
+    // Active edit only: reserved ranges (Date pairs) of the period currently being edited.
+    // Used by submit guard + click-outside guard. Reset by close()/setCreateMode().
+    var currentReservedRanges = [];
 
     function isOpen() {
         return formSection && formSection.classList.contains('show');
@@ -82,10 +85,13 @@
         if (fp) {
             fp.set('minDate', null);
             fp.set('disable', []);
-            fp.setDate([
-                new Date(from + 'T00:00:00'),
-                new Date(to   + 'T00:00:00')
-            ], true);
+            var fromDate = new Date(from + 'T00:00:00');
+            var toDate   = new Date(to   + 'T00:00:00');
+            fp.setDate([fromDate, toDate], true);
+            // setDate jumps to latestSelectedDateObj (the "to" end). With showMonths:2
+            // that leaves the picker on (to, to+1) instead of (from, from+1), which is
+            // disorienting when the range spans months. Re-anchor on the start.
+            fp.jumpToDate(fromDate, false);
         } else {
             var fromH = row.querySelector('.ryden-avail-from');
             var untilH = row.querySelector('.ryden-avail-until');
@@ -94,6 +100,168 @@
             if (untilH)  { untilH.value  = to; }
             if (display) { display.value = from + ' – ' + to; }
         }
+    }
+
+    function parseYmdLocal(ymd) {
+        return new Date(ymd + 'T00:00:00');
+    }
+
+    function startOfDay(d) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+
+    /**
+     * Returns true if every reservedRange is fully covered by [selStart, selEnd].
+     * selStart/selEnd are Date objects (local midnight). Reserved-range entries can have
+     * {from, to} either as ISO ymd strings or as Date objects (so the same helper works
+     * for the picker's onChange and for the form-submit guard).
+     */
+    function rangeCoversAllReservations(selStart, selEnd, reservedRanges) {
+        if (!reservedRanges || reservedRanges.length === 0) { return true; }
+        var s = startOfDay(selStart).getTime();
+        var e = startOfDay(selEnd).getTime();
+        for (var i = 0; i < reservedRanges.length; i++) {
+            var r = reservedRanges[i];
+            if (!r || !r.from || !r.to) { continue; }
+            var rsRaw = r.from instanceof Date ? r.from : parseYmdLocal(r.from);
+            var reRaw = r.to   instanceof Date ? r.to   : parseYmdLocal(r.to);
+            var rs = startOfDay(rsRaw).getTime();
+            var re = startOfDay(reRaw).getTime();
+            if (rs < s || re > e) { return false; }
+        }
+        return true;
+    }
+
+    function showInlineAvailError(message) {
+        var box = document.getElementById('publishClientAvailError');
+        if (!box) { return; }
+        box.textContent = message;
+        box.classList.remove('d-none');
+    }
+
+    function clearInlineAvailError() {
+        var box = document.getElementById('publishClientAvailError');
+        if (!box) { return; }
+        box.textContent = '';
+        box.classList.add('d-none');
+    }
+
+    /**
+     * In edit mode, surface the days already held by active reservations of the period
+     * being edited (red marker via CSS class) and prevent the owner from selecting a new
+     * range that would orphan any of them. Hooks are pushed onto the live Flatpickr
+     * config arrays, so they run alongside the hidden-input updater registered by
+     * components.js. The picker is recreated on every openEdit, so accumulating hooks
+     * across edits is not a concern.
+     */
+    function applyReservedDayMarkers(reservedRanges) {
+        if (!rowsRoot) { return; }
+        var row = rowsRoot.querySelector('[data-publish-avail-row]');
+        if (!row) { return; }
+        var fp = row._rydenAvailFp && row._rydenAvailFp.fp ? row._rydenAvailFp.fp : null;
+        if (!fp) { return; }
+
+        // Pre-parse to Date once per ranges list for cheaper checks.
+        var parsed = (reservedRanges || []).map(function (r) {
+            if (!r || !r.from || !r.to) { return null; }
+            return { from: parseYmdLocal(r.from), to: parseYmdLocal(r.to) };
+        }).filter(function (r) { return r !== null; });
+        // Expose to the submit guard (read in init's submit listener and reset in close()).
+        currentReservedRanges = parsed;
+
+        if (!fp.config.onDayCreate) { fp.config.onDayCreate = []; }
+        if (!Array.isArray(fp.config.onDayCreate)) {
+            fp.config.onDayCreate = [fp.config.onDayCreate];
+        }
+        var publishSec = document.getElementById('publishAvailabilitySection');
+        var reservedShrinkMsg = publishSec
+                ? (publishSec.getAttribute('data-publish-reserved-shrink-msg') || '') : '';
+        var reservedDayTitle = publishSec
+                ? (publishSec.getAttribute('data-publish-reserved-day-title') || '') : '';
+
+        fp.config.onDayCreate.push(function (_dObj, _dStr, _fp, dayElem) {
+            if (!dayElem || !dayElem.dateObj) { return; }
+            var t = startOfDay(dayElem.dateObj).getTime();
+            for (var i = 0; i < parsed.length; i++) {
+                if (t >= startOfDay(parsed[i].from).getTime()
+                        && t <= startOfDay(parsed[i].to).getTime()) {
+                    dayElem.classList.add('has-active-reservation');
+                    var baseTitle = dayElem.getAttribute('aria-label') || '';
+                    dayElem.setAttribute(
+                            'title',
+                            baseTitle ? baseTitle + (reservedDayTitle ? ' — ' + reservedDayTitle : '')
+                                      : (reservedDayTitle || ''));
+                    return;
+                }
+            }
+        });
+
+        if (!fp.config.onChange) { fp.config.onChange = []; }
+        if (!Array.isArray(fp.config.onChange)) {
+            fp.config.onChange = [fp.config.onChange];
+        }
+        fp.config.onChange.push(function (selectedDates) {
+            if (parsed.length === 0) { return; }
+            if (selectedDates.length < 2) {
+                // Mid-selection (only "from" picked so far): don't validate yet, but also
+                // clear any stale error so the user knows we're listening.
+                clearInlineAvailError();
+                return;
+            }
+            var ok = rangeCoversAllReservations(selectedDates[0], selectedDates[1], reservedRanges);
+            if (ok) {
+                clearInlineAvailError();
+                return;
+            }
+            showInlineAvailError(reservedShrinkMsg || 'El rango nuevo dejaría afuera reservas activas.');
+            // Revert to the prefilled range. The hiddens will be re-synced by the
+            // components.js onChange that runs FIRST on the next setDate call.
+            var fromH = row.querySelector('.ryden-avail-from');
+            var untilH = row.querySelector('.ryden-avail-until');
+            // Use the period's original bounds from data-* attrs of the active edit card.
+            // Fall back to whatever was previously valid via the picker's internal state.
+            // setDate(..., false) avoids re-firing this very onChange (silent revert).
+            var origFrom = fromH && fromH.dataset.lastValidYmd
+                ? parseYmdLocal(fromH.dataset.lastValidYmd) : null;
+            var origUntil = untilH && untilH.dataset.lastValidYmd
+                ? parseYmdLocal(untilH.dataset.lastValidYmd) : null;
+            if (origFrom && origUntil) {
+                fp.setDate([origFrom, origUntil], false);
+            } else {
+                // First invalid pick after opening edit: snap back to data-period-from/to,
+                // which the picker was seeded with in setFirstRowDates.
+                var card = document.querySelector('.manage-period-card.is-editing')
+                        || document.querySelector('.manage-period-card');
+                // Not strictly needed; the next openEdit re-seeds anyway.
+                if (card) {
+                    var bf = card.getAttribute('data-period-from');
+                    var bt = card.getAttribute('data-period-to');
+                    if (bf && bt) {
+                        fp.setDate([parseYmdLocal(bf), parseYmdLocal(bt)], false);
+                    }
+                }
+            }
+        });
+
+        // Remember the last valid (initial) range so future reverts have a target.
+        var fromH = row.querySelector('.ryden-avail-from');
+        var untilH = row.querySelector('.ryden-avail-until');
+        if (fromH && fromH.value) { fromH.dataset.lastValidYmd = fromH.value; }
+        if (untilH && untilH.value) { untilH.dataset.lastValidYmd = untilH.value; }
+
+        // Also track every accepted (valid) selection as the new "last valid".
+        fp.config.onChange.push(function (selectedDates) {
+            if (selectedDates.length !== 2) { return; }
+            if (!rangeCoversAllReservations(selectedDates[0], selectedDates[1], reservedRanges)) {
+                return;
+            }
+            if (fromH) { fromH.dataset.lastValidYmd = fromH.value; }
+            if (untilH) { untilH.dataset.lastValidYmd = untilH.value; }
+        });
+
+        // Apply onDayCreate to days already in the DOM (the picker is created and shown
+        // before our hook is attached).
+        fp.redraw();
     }
 
     function resetNeighborhoodPicker() {
@@ -205,6 +373,13 @@
         var streetNum= card.getAttribute('data-period-street-number')   || '';
         var checkIn  = card.getAttribute('data-period-check-in')        || '';
         var checkOut = card.getAttribute('data-period-check-out')       || '';
+        var reservedRangesRaw = card.getAttribute('data-period-reserved-ranges') || '[]';
+        var reservedRanges = [];
+        try {
+            reservedRanges = JSON.parse(reservedRangesRaw) || [];
+        } catch (e) {
+            reservedRanges = [];
+        }
 
         clearAvailabilityRows();
         if (formEl.reset) { formEl.reset(); }
@@ -230,6 +405,7 @@
 
         addOneEmptyRow();
         setFirstRowDates(from, to);
+        applyReservedDayMarkers(reservedRanges);
 
         openFormSection();
     }
@@ -240,6 +416,8 @@
         if (formEl && formEl.reset) { formEl.reset(); }
         restoreInitialNeighborhood();
         setCreateMode();
+        clearInlineAvailError();
+        currentReservedRanges = [];
     }
 
     function openOnLoad(mode) {
@@ -291,6 +469,39 @@
             cancelBtn.addEventListener('click', function () { close(); });
         }
 
+        // Hard guard: block submit when the current selection would orphan a reservation,
+        // or when the range is incomplete in edit-with-reservations mode. The picker's
+        // onChange already reverts invalid selections, but this catches mid-selection
+        // submits (length<2), races with rapid clicks, hook failures, and DevTools
+        // tampering with the hidden inputs.
+        if (formEl) {
+            formEl.addEventListener('submit', function (e) {
+                if (currentReservedRanges.length === 0) { return; }
+                if (!rowsRoot) { return; }
+                var row = rowsRoot.querySelector('[data-publish-avail-row]');
+                if (!row) { return; }
+                var fromH  = row.querySelector('.ryden-avail-from');
+                var untilH = row.querySelector('.ryden-avail-until');
+                var fromVal  = fromH  ? fromH.value  : '';
+                var untilVal = untilH ? untilH.value : '';
+                if (!fromVal || !untilVal) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showInlineAvailError(getReservedShrinkMsg());
+                    return;
+                }
+                var ok = rangeCoversAllReservations(
+                        parseYmdLocal(fromVal),
+                        parseYmdLocal(untilVal),
+                        currentReservedRanges);
+                if (!ok) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showInlineAvailError(getReservedShrinkMsg());
+                }
+            });
+        }
+
         document.addEventListener('click', function (e) {
             var editBtn = e.target.closest('.js-period-edit');
             if (!editBtn) { return; }
@@ -299,16 +510,32 @@
         });
 
         // Click outside the form = implicit cancel.
-        // Exclusions: inside the form, edit buttons, add button, calendar, and modals.
+        // Exclusions: inside the form, edit buttons, add button, inline owner calendar,
+        // the Flatpickr popup (which Flatpickr appends to <body>, so it's NOT a descendant
+        // of formSection), and modals. Additionally: don't auto-close while a client-side
+        // validation error is showing — force the user to either fix it or hit Cancel.
         document.addEventListener('click', function (e) {
             if (!isOpen()) { return; }
             if (formSection.contains(e.target))                { return; }
             if (e.target.closest('.js-period-edit'))           { return; }
             if (e.target.closest('#inlinePeriodAddBtn'))       { return; }
             if (e.target.closest('.owner-cal-container'))      { return; }
+            if (e.target.closest('.flatpickr-calendar'))       { return; }
             if (e.target.closest('.modal'))                    { return; }
+            if (isInlineAvailErrorVisible())                   { return; }
             close();
         });
+    }
+
+    function getReservedShrinkMsg() {
+        var sec = document.getElementById('publishAvailabilitySection');
+        return (sec && sec.getAttribute('data-publish-reserved-shrink-msg'))
+                || 'No podés excluir días con reservas activas.';
+    }
+
+    function isInlineAvailErrorVisible() {
+        var box = document.getElementById('publishClientAvailError');
+        return !!(box && !box.classList.contains('d-none') && box.textContent && box.textContent.trim() !== '');
     }
 
     if (document.readyState === 'loading') {

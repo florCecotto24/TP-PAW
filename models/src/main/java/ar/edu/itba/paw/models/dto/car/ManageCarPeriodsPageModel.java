@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.dto.car;
 
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 import ar.edu.itba.paw.models.domain.Car;
@@ -40,6 +41,7 @@ public final class ManageCarPeriodsPageModel {
     private final String publisherEmail;
     private final CarPriceMarketInsight priceMarketInsight;
     private final String reservationBlockedRangesJson;
+    private final Map<Long, String> reservedRangesByAvailabilityIdJson;
 
     public ManageCarPeriodsPageModel(
             final Car car,
@@ -59,7 +61,8 @@ public final class ManageCarPeriodsPageModel {
             final String publishMaxAvailabilityWallInclusive,
             final String publisherEmail,
             final CarPriceMarketInsight priceMarketInsight,
-            final String reservationBlockedRangesJson) {
+            final String reservationBlockedRangesJson,
+            final Map<Long, String> reservedRangesByAvailabilityIdJson) {
         this.car = car;
         this.owner = owner;
         this.statusKey = statusKey;
@@ -79,6 +82,10 @@ public final class ManageCarPeriodsPageModel {
         this.priceMarketInsight = priceMarketInsight;
         this.reservationBlockedRangesJson =
                 reservationBlockedRangesJson != null ? reservationBlockedRangesJson : "[]";
+        this.reservedRangesByAvailabilityIdJson =
+                reservedRangesByAvailabilityIdJson != null
+                        ? Map.copyOf(reservedRangesByAvailabilityIdJson)
+                        : Map.of();
     }
 
     public boolean isUserHasCbu() {
@@ -103,6 +110,7 @@ public final class ManageCarPeriodsPageModel {
         putObject.accept("publishMaxAvailabilityWallInclusive", publishMaxAvailabilityWallInclusive);
         putObject.accept("publisherEmail", publisherEmail);
         putObject.accept("reservationBlockedRangesJson", reservationBlockedRangesJson);
+        putObject.accept("reservedRangesByAvailabilityIdJson", reservedRangesByAvailabilityIdJson);
         if (priceMarketInsight != null) {
             putObject.accept("priceMarketInsight", priceMarketInsight);
         }

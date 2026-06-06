@@ -530,6 +530,12 @@ public final class MyCarsController {
                     "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
                     e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
             return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
+        } catch (final ReservationConflictException e) {
+            // Owner tried to shrink/move the period so that already-booked reservations
+            // would fall outside the new window. Mirror createListing: surface as a form
+            // error instead of letting it propagate to the global 400 page.
+            errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
         } catch (final CarValidationException e) {
             if (MessageKeys.CAR_AVAILABILITY_NOT_FOUND.equals(e.getMessageCode())
                     || MessageKeys.CAR_AVAILABILITY_NOT_OWNED.equals(e.getMessageCode())) {

@@ -1347,6 +1347,20 @@
         };
     }
 
+    /**
+     * Flatpickr `dateFormat` token (PHP-style) localized to the active UI locale.
+     * Spanish: dd/MM/yyyy. Anything else (English fallback): MMM d, yyyy.
+     * Use this whenever you want Flatpickr to render dates in the input the user
+     * sees. Hidden form inputs must keep their own ISO formatter (formatIsoLocalDate)
+     * because Spring binding expects yyyy-MM-dd.
+     */
+    function localizedDateFormat() {
+        var lang = (typeof window.RydenLocale === 'string' && window.RydenLocale)
+                ? window.RydenLocale.toLowerCase() : 'en';
+        if (lang === 'es') { return 'd/m/Y'; }
+        return 'M j, Y';
+    }
+
     window.RydenFlatpickrRange = {
         init: initRange,
         parseIsoLocalDateTime: parseIsoLocalDateTime,
@@ -1354,7 +1368,8 @@
         formatIsoLocalDate: formatIsoLocalDate,
         localNoonFromYmd: localNoonFromYmd,
         localWallDayStartFromYmd: localWallDayStartFromYmd,
-        localWallDayEndFromYmd: localWallDayEndFromYmd
+        localWallDayEndFromYmd: localWallDayEndFromYmd,
+        localizedDateFormat: localizedDateFormat
     };
 })();
 
@@ -1680,26 +1695,32 @@
         if (row.hasAttribute('data-avail-past-start')) {
             // Start date is in the past and locked — only the end date is editable.
             // Use a single-date picker so Flatpickr never touches fromH.
+            var displayFmt = RydenFlatpickrRange.localizedDateFormat();
+            var fromDateObj = fromH.value ? new Date(fromH.value + 'T00:00:00') : null;
+            var fromDisplay = fromDateObj ? flatpickr.formatDate(fromDateObj, displayFmt)
+                                          : (fromH.value || '');
             var untilDefault = untilH.value ? new Date(untilH.value + 'T00:00:00') : undefined;
-            var fromDisplay = fromH.value || '';
             var md = maxDateForPublish();
             var singleCfg = {
                 mode: 'single',
                 enableTime: false,
-                dateFormat: 'Y-m-d',
+                dateFormat: displayFmt,
                 minDate: minDateForPublish(),
                 defaultDate: untilDefault,
                 // onReady fires after Flatpickr has set the input value, so we can override it.
                 onReady: function () {
                     if (untilH.value) {
-                        anchor.value = fromDisplay + ' – ' + untilH.value;
+                        var initDisplay = flatpickr.formatDate(
+                                new Date(untilH.value + 'T00:00:00'), displayFmt);
+                        anchor.value = fromDisplay + ' – ' + initDisplay;
                     }
                 },
                 onChange: function (selectedDates) {
                     if (selectedDates.length === 1) {
-                        var fmt = RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0]);
-                        untilH.value = fmt;
-                        anchor.value = fromDisplay + ' – ' + fmt;
+                        var fmtIso = RydenFlatpickrRange.formatIsoLocalDate(selectedDates[0]);
+                        var fmtDisplay = flatpickr.formatDate(selectedDates[0], displayFmt);
+                        untilH.value = fmtIso;
+                        anchor.value = fromDisplay + ' – ' + fmtDisplay;
                     } else {
                         untilH.value = '';
                         anchor.value = '';
@@ -1727,7 +1748,10 @@
             fromHidden: fromH,
             untilHidden: untilH,
             enableTime: false,
-            dateFormat: 'Y-m-d',
+            // Anchor (visible input) gets a locale-aware format (ES: dd/MM/yyyy,
+            // EN: MMM d, yyyy). Hidden inputs are still set to ISO by RydenFlatpickrRange
+            // because Spring binding expects yyyy-MM-dd.
+            dateFormat: RydenFlatpickrRange.localizedDateFormat(),
             minDate: minDateForPublish(),
             defaultDate: defaults.length ? defaults : undefined,
             disable: blocked

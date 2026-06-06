@@ -98,8 +98,15 @@
                             <p class="text-secondary mb-0" id="inlinePeriodEmptyMsg"><spring:message code="manageCarPeriods.periods.empty"/></p>
                         </c:when>
                         <c:otherwise>
+                            <spring:eval var="uiLocale"
+                                         expression="T(org.springframework.context.i18n.LocaleContextHolder).getLocale()"/>
                             <div class="d-flex flex-column gap-2" id="inlinePeriodList">
                                 <c:forEach var="availability" items="${monthAvailabilities}">
+                                    <spring:eval var="periodFromDisplay"
+                                                 expression="T(ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat).formatWallDate(availability.startInclusive, uiLocale)"/>
+                                    <spring:eval var="periodToDisplay"
+                                                 expression="T(ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat).formatWallDate(availability.endInclusive, uiLocale)"/>
+                                    <c:set var="reservedRangesJson" value="${empty reservedRangesByAvailabilityIdJson[availability.id] ? '[]' : reservedRangesByAvailabilityIdJson[availability.id]}"/>
                                     <div class="manage-period-card p-3 border rounded-3 bg-white d-flex align-items-center justify-content-between gap-2"
                                          data-period-id="<c:out value='${availability.id}'/>"
                                          data-period-from="<c:out value='${availability.startInclusive}'/>"
@@ -109,10 +116,11 @@
                                          data-period-street="<c:out value='${availability.startPointStreet}'/>"
                                          data-period-street-number="<c:if test='${availability.startPointNumber.present}'><c:out value='${availability.startPointNumber.get()}'/></c:if>"
                                          data-period-check-in="<c:out value='${availability.checkInTime}'/>"
-                                         data-period-check-out="<c:out value='${availability.checkOutTime}'/>">
+                                         data-period-check-out="<c:out value='${availability.checkOutTime}'/>"
+                                         data-period-reserved-ranges='${reservedRangesJson}'>
                                         <div class="d-flex align-items-center gap-2 min-w-0">
                                             <i class="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true"></i>
-                                            <span class="fw-medium text-truncate"><c:out value="${availability.startInclusive}"/> &ndash; <c:out value="${availability.endInclusive}"/></span>
+                                            <span class="fw-medium text-truncate"><c:out value="${periodFromDisplay}"/> &ndash; <c:out value="${periodToDisplay}"/></span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                             <c:if test="${availability.dayPriceValue != null}">
@@ -266,11 +274,15 @@
                                 <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
                                 <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonMsg" htmlEscape="true"/>
                                 <spring:message code="carAvailability.required" var="availRequiredClientMsg" htmlEscape="true"/>
+                                <spring:message code="manageCarPeriods.editPicker.reservedShrink" var="reservedShrinkMsg" htmlEscape="true"/>
+                                <spring:message code="manageCarPeriods.editPicker.reservedDayTitle" var="reservedDayTitleMsg" htmlEscape="true"/>
                                 <div class="mb-4" id="publishAvailabilitySection"
                                      data-publish-avail-required="<c:out value='${availRequiredClientMsg}'/>"
                                      data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>"
                                      data-publish-max-avail-wall-ymd="<c:out value='${publishMaxAvailabilityWallInclusive}'/>"
                                      data-publish-availability-beyond-msg="<c:out value='${beyondHorizonMsg}'/>"
+                                     data-publish-reserved-shrink-msg="<c:out value='${reservedShrinkMsg}'/>"
+                                     data-publish-reserved-day-title="<c:out value='${reservedDayTitleMsg}'/>"
                                      data-publish-blocked-ranges='<c:out value="${reservationBlockedRangesJson}"/>'>
                                     <label class="form-label required-label"><spring:message code="publishCar.form.availability"/></label>
                                     <p class="small text-muted mb-2"><spring:message code="publishCar.form.availability.hint" arguments="${pickupLeadHours}"/></p>

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.models.util.time;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -22,7 +23,21 @@ public final class WallDateTimeDisplayFormat {
     private static final DateTimeFormatter ES_WALL = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter EN_WALL = DateTimeFormatter.ofPattern("MMM d, yyyy, h:mm a", Locale.ENGLISH);
 
+    private static final DateTimeFormatter ES_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter EN_DATE = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
+
     private WallDateTimeDisplayFormat() {
+    }
+
+    /**
+     * Locale-aware date-only formatter. Spanish: {@code dd/MM/yyyy}; English (default): {@code MMM d, yyyy}.
+     * Returns empty string when {@code date} is null.
+     */
+    public static String formatWallDate(final LocalDate date, final Locale locale) {
+        if (date == null) {
+            return "";
+        }
+        return dateFormatterFor(locale).format(date);
     }
 
     public static String formatUtcAsWallLocalNoSeconds(final OffsetDateTime utc, final Locale locale) {
@@ -70,5 +85,13 @@ public final class WallDateTimeDisplayFormat {
             return ES_WALL;
         }
         return EN_WALL.withLocale(Locale.ENGLISH);
+    }
+
+    private static DateTimeFormatter dateFormatterFor(final Locale locale) {
+        final Locale l = locale != null ? locale : Locale.ENGLISH;
+        if ("es".equalsIgnoreCase(l.getLanguage())) {
+            return ES_DATE;
+        }
+        return EN_DATE.withLocale(Locale.ENGLISH);
     }
 }

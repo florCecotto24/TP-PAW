@@ -16,9 +16,10 @@
 <main class="container pt-5 pb-4">
     <c:choose>
         <c:when test="${not empty reservationDetailOwnerCarHubId}">
-            <%-- 4-level: My Cars > Reservations for my cars > Brand Model > #reservationId --%>
+            <%-- 4-level: My Cars > Reservations for my cars > Brand Model > Reservation details --%>
             <spring:message code="navbar.myCars" var="bcHomeLabel"/>
             <spring:message code="ownerReservations.heading" var="bcMidLabel"/>
+            <spring:message code="myReservationDetail.heading" var="bcCurrentLabel"/>
             <c:url var="bcMid2Href" value="/my-cars/reservations/${reservationDetailOwnerCarHubId}"/>
             <ryden:breadcrumbTrail
                     homeLabel="${bcHomeLabel}"
@@ -27,14 +28,14 @@
                     midHref="${pageContext.request.contextPath}/my-cars/reservations"
                     mid2Label="${car.brand} ${car.model}"
                     mid2Href="${bcMid2Href}"
-                    currentLabel="#${reservation.id}"/>
+                    currentLabel="${bcCurrentLabel}"/>
         </c:when>
         <c:otherwise>
             <spring:message code="navbar.myReservations" var="myReservationsLabel"/>
             <ryden:breadcrumbTrail
                     homeLabel="${myReservationsLabel}"
                     homeHref="${pageContext.request.contextPath}/my-reservations"
-                    currentLabel="#${reservation.id}"/>
+                    currentLabel="${car.brand} ${car.model}"/>
         </c:otherwise>
     </c:choose>
 
