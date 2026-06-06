@@ -2670,3 +2670,83 @@ body.reservation-chat-body.has-fixed-navbar {
 .detail-reservation-panel .flatpickr-day.inRange {
     box-shadow: none !important;
 }
+
+/* ─── Owner availability calendar (read-only, myCarDetail & manageCarPeriods) ─── */
+
+/* Hidden anchor that Flatpickr binds to */
+.owner-cal-anchor {
+    display: block;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    outline: none;
+}
+
+/* Inline calendar: remove popup shadow/border, fill container width */
+.owner-cal-container .flatpickr-calendar.inline {
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    min-width: 0 !important;
+    margin: 0 auto;
+}
+
+/* Stretch inner containers to fill available width */
+.owner-cal-container .flatpickr-innerContainer,
+.owner-cal-container .flatpickr-rContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Stretch weekdays header to fill available width */
+.owner-cal-container .flatpickr-weekdays,
+.owner-cal-container .flatpickr-weekdaycontainer {
+    width: 100% !important;
+}
+
+/* Stretch days grid to fill available width */
+.owner-cal-container .flatpickr-days,
+.owner-cal-container .dayContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Taller day cells to fit the price label */
+.owner-cal-container .flatpickr-day {
+    width: calc(100% / 7);
+    max-width: none;
+    flex-basis: calc(100% / 7);
+    height: 52px;
+    line-height: 1.3;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 6px;
+    cursor: default;
+}
+
+/* Suppress hover/focus highlight on read-only days */
+.owner-cal-container .flatpickr-day:hover,
+.owner-cal-container .flatpickr-day:focus {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* Read-only calendar: disable all day interaction */
+.owner-cal-readonly .flatpickr-day {
+    pointer-events: none;
+}
+
+/* ─── Manage periods: highlighted period card on calendar day click ─────────── */
+
+.manage-period-card.period-highlighted {
+    border-color: var(--bs-primary) !important;
+    background-color: rgba(13, 110, 253, 0.05) !important;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}

@@ -409,17 +409,14 @@
                              data-initial-cover-index="<c:out value='${initialCoverIndex}'/>">
                             <form:hidden path="coverPictureIndex" id="publishCoverPictureIndex"/>
                             <span class="form-label required-label d-block"><spring:message code="publishCar.form.pictures"/></span>
-                            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                                <input id="picturesInput" type="file" name="pictures" class="visually-hidden"
-                                       accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" multiple
-                                       aria-label="Vehicle photos and videos"
-                                       data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
-                                       data-upload-max-video-bytes="<c:out value='${uploadMaxGalleryVideoBytes}'/>"
-                                       data-upload-image-too-large="<c:out value='${publishImageTooLargeMsg}'/>"
-                                       data-upload-video-too-large="<c:out value='${publishVideoTooLargeMsg}'/>"
-                                       data-upload-not-image-msg="<c:out value='${publishMustBeGalleryMediaMsg}'/>"/>
-                                <label id="picturesChooseLabel" for="picturesInput" class="btn btn-outline-secondary mb-0"><spring:message code="publishCar.form.chooseFiles"/></label>
-                            </div>
+                            <input id="picturesInput" type="file" name="pictures" class="form-control"
+                                   accept="image/*,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" multiple
+                                   aria-label="Vehicle photos and videos"
+                                   data-upload-max-image-bytes="<c:out value='${uploadMaxImageBytes}'/>"
+                                   data-upload-max-video-bytes="<c:out value='${uploadMaxGalleryVideoBytes}'/>"
+                                   data-upload-image-too-large="<c:out value='${publishImageTooLargeMsg}'/>"
+                                   data-upload-video-too-large="<c:out value='${publishVideoTooLargeMsg}'/>"
+                                   data-upload-not-image-msg="<c:out value='${publishMustBeGalleryMediaMsg}'/>"/>
                             <small class="text-muted d-block mt-2"><spring:message code="publishCar.form.pictures.hint"/></small>
                             <c:if test="${not empty retainedPictures}">
                                 <div id="publishRetainedPictures" class="row g-2 mt-2">

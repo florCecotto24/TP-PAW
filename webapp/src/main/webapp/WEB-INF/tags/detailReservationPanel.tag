@@ -48,22 +48,20 @@
         </p>
     </c:if>
 
-    <%-- Inline calendar (non-owners only): always visible, shows prices per day --%>
-    <c:if test="${!isOwnerRequesting}">
-        <div class="mb-3">
-            <label class="form-label small mb-1"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
-            <spring:message code="detailReservationPanel.maxBillableDays.hint" arguments="${maxBillableDays}" var="maxBillableHintLine"/>
-            <p class="form-text small text-muted mb-2"><c:out value="${maxBillableHintLine}"/></p>
-            <%-- Hidden anchor — Flatpickr inline calendar inserts as next sibling --%>
-            <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
-            <input type="text" id="detail_daterange" class="detail-daterange-anchor"
-                   readonly aria-hidden="true" tabindex="-1"
-                   aria-label="<c:out value='${datesAriaLabel}'/>"/>
-            <%-- Inline Flatpickr calendar renders here --%>
-            <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
-            <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
-        </div>
-    </c:if>
+    <%-- Inline calendar: always visible, shows prices per day --%>
+    <div class="mb-3">
+        <label class="form-label small mb-1"><spring:message code="detailReservationPanel.pickupReturnDates"/></label>
+        <spring:message code="detailReservationPanel.maxBillableDays.hint" arguments="${maxBillableDays}" var="maxBillableHintLine"/>
+        <p class="form-text small text-muted mb-2"><c:out value="${maxBillableHintLine}"/></p>
+        <%-- Hidden anchor — Flatpickr inline calendar inserts as next sibling --%>
+        <spring:message code="detailReservationPanel.dates.ariaLabel" var="datesAriaLabel"/>
+        <input type="text" id="detail_daterange" class="detail-daterange-anchor"
+               readonly aria-hidden="true" tabindex="-1"
+               aria-label="<c:out value='${datesAriaLabel}'/>"/>
+        <%-- Inline Flatpickr calendar renders here --%>
+        <input type="hidden" name="fromDateTime" id="detail_from_hidden" value="<c:out value='${fromDateTimeValue}'/>"/>
+        <input type="hidden" name="untilDateTime" id="detail_until_hidden" value="<c:out value='${untilDateTimeValue}'/>"/>
+    </div>
 
     <h2 class="h6 fw-semibold mb-2"><spring:message code="detailReservationPanel.pickupReturn"/></h2>
     <p class="form-text small mb-2">

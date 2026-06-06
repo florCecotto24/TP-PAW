@@ -208,4 +208,12 @@ public interface CarAvailabilityService {
      * published availability ({@code app.listing.max-availability-forward-wall-days}).
      */
     int getConfiguredMaxAvailabilityForwardWallDays();
+
+    /**
+     * Returns all effective offered periods as {@link BookableSegmentProjection} without any
+     * time-based clipping. Each {@link CarAvailability} row is mapped directly to one segment
+     * (no adjacent-day merging). Intended for the owner-facing calendar that must show past
+     * and future availability together.
+     */
+    List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(long carId);
 }

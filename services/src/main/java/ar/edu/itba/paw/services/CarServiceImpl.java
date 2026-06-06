@@ -37,8 +37,10 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
 import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
@@ -743,6 +745,9 @@ public final class CarServiceImpl implements CarService {
             final String title = brand + (!brand.isEmpty() && !model.isEmpty() ? " " : "") + model;
             final CarPriceMarketInsight priceMarketInsight =
                     getPriceMarketInsightForCar(car, car.getId()).orElse(null);
+            final List<BookableSegmentProjection> bookableSegments =
+                    carAvailabilityService.getBookableSegmentsForRiderDatePickerByCar(carId, Instant.now());
+            final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
             return new OwnerCarDetailPageModel(
                     allNeighborhoods,
                     carNeighborhoodName,
@@ -771,7 +776,8 @@ public final class CarServiceImpl implements CarService {
                     editPastAvailabilities,
                     wallToday.plusDays(forwardDays).toString(),
                     wallToday,
-                    priceMarketInsight);
+                    priceMarketInsight,
+                    bookableWallRangesJson);
         });
     }
 

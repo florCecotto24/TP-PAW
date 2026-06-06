@@ -47,6 +47,7 @@ public final class OwnerCarDetailPageModel {
     private final String editAvailMaxYmd;
     private final LocalDate editAvailWallToday;
     private final CarPriceMarketInsight priceMarketInsight;
+    private final String bookableWallRangesJson;
 
     public OwnerCarDetailPageModel(
             final List<Neighborhood> allNeighborhoods,
@@ -75,7 +76,8 @@ public final class OwnerCarDetailPageModel {
             final List<CarAvailability> editPastAvailabilities,
             final String editAvailMaxYmd,
             final LocalDate editAvailWallToday,
-            final CarPriceMarketInsight priceMarketInsight) {
+            final CarPriceMarketInsight priceMarketInsight,
+            final String bookableWallRangesJson) {
         this.allNeighborhoods = List.copyOf(allNeighborhoods);
         this.carNeighborhoodName = carNeighborhoodName;
         this.carStreetNumber = carStreetNumber;
@@ -103,6 +105,7 @@ public final class OwnerCarDetailPageModel {
         this.editAvailMaxYmd = editAvailMaxYmd;
         this.editAvailWallToday = editAvailWallToday;
         this.priceMarketInsight = priceMarketInsight;
+        this.bookableWallRangesJson = bookableWallRangesJson != null ? bookableWallRangesJson : "[]";
     }
 
     public List<CarAvailability> getAvailabilities() {
@@ -131,6 +134,10 @@ public final class OwnerCarDetailPageModel {
 
     public CarPriceMarketInsight getPriceMarketInsight() {
         return priceMarketInsight;
+    }
+
+    public String getBookableWallRangesJson() {
+        return bookableWallRangesJson;
     }
 
     public final void populateModel(final BiConsumer<String, Object> putObject) {
@@ -165,5 +172,6 @@ public final class OwnerCarDetailPageModel {
         if (priceMarketInsight != null) {
             putObject.accept("priceMarketInsight", priceMarketInsight);
         }
+        putObject.accept("bookableWallRangesJson", bookableWallRangesJson);
     }
 }

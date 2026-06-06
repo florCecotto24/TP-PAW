@@ -59,6 +59,18 @@ public final class CarAvailabilityEditorPageModel {
 
     public boolean isUserHasCbu() { return userHasCbu; }
 
+    public List<Neighborhood> getAllNeighborhoods() { return allNeighborhoods; }
+
+    public String getPublishMinAvailabilityFrom() { return publishMinAvailabilityFrom; }
+
+    public int getPickupLeadHours() { return pickupLeadHours; }
+
+    public int getMaxAvailabilityForwardWallDays() { return maxAvailabilityForwardWallDays; }
+
+    public String getPublishMaxAvailabilityWallInclusive() { return publishMaxAvailabilityWallInclusive; }
+
+    public String getPublisherEmail() { return publisherEmail; }
+
     public Optional<CarPriceMarketInsight> getPriceMarketInsight() {
         return Optional.ofNullable(priceMarketInsightOrNull);
     }

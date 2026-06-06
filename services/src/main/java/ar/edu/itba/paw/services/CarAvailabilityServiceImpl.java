@@ -641,6 +641,21 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
         return carAvailabilityPolicy.getMaxAvailabilityForwardWallDays();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(final long carId) {
+        return findEffectiveOfferedByCar(carId).stream()
+                .map(ca -> new BookableSegmentProjection(
+                        ca.getStartInclusive(),
+                        ca.getEndInclusive(),
+                        ca.getDayPriceValue(),
+                        ca.getCheckInTime(),
+                        ca.getCheckOutTime(),
+                        carAvailabilityAddressFormatter.formatPublicPickupLocation(ca),
+                        ca.getNeighborhoodId().orElse(null)))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Throws {@link CarValidationException} with {@link MessageKeys#CAR_MUTATION_OWNER_BLOCKED} when the
      * owner of {@code carId} is currently blocked. Used by mutations that could re-introduce a bookable car

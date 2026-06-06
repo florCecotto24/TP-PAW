@@ -115,10 +115,10 @@
                                 <div class="d-flex align-items-center justify-content-between mb-3">
                                     <h2 class="h5 fw-semibold mb-0"><spring:message code="myCarDetail.availability.title"/></h2>
                                     <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED' && !owner.blocked}">
-                                        <c:url var="createPeriodUrl" value="/my-cars/car/${car.id}/create"/>
-                                        <a href="<c:out value='${createPeriodUrl}'/>" class="btn btn-outline-primary btn-sm">
-                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                                            <spring:message code="myCarDetail.availability.addPeriod"/>
+                                        <c:url var="managePeriodsUrl" value="/my-cars/car/${car.id}/periods"/>
+                                        <a href="<c:out value='${managePeriodsUrl}'/>" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+                                            <spring:message code="myCarDetail.availability.managePeriodsBtn"/>
                                         </a>
                                     </c:if>
                                 </div>
@@ -127,28 +127,8 @@
                                         <p class="text-secondary mb-0"><spring:message code="myCarDetail.availability.empty"/></p>
                                     </c:when>
                                     <c:otherwise>
-                                        <div class="d-flex flex-column gap-2">
-                                            <c:forEach var="availability" items="${availabilities}">
-                                                <div class="p-3 border rounded-3 bg-white d-flex align-items-center justify-content-between gap-2">
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <i class="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true"></i>
-                                                        <span class="fw-medium"><c:out value="${availability.startInclusive}"/> &ndash; <c:out value="${availability.endInclusive}"/></span>
-                                                    </div>
-                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                                                        <c:if test="${availability.dayPriceValue != null}">
-                                                            <fmt:setLocale value="es_AR"/>
-                                                            <span class="text-secondary small text-nowrap"><fmt:formatNumber value="${availability.dayPriceValue}" type="currency" currencyCode="ARS"/></span>
-                                                        </c:if>
-                                                        <c:if test="${statusKey != 'DEACTIVATED' && statusKey != 'ADMIN_PAUSED' && !owner.blocked}">
-                                                            <c:url var="editAvailabilityUrl" value="/my-cars/car/${car.id}/availability/${availability.id}/edit"/>
-                                                            <a href="<c:out value='${editAvailabilityUrl}'/>" class="btn btn-sm btn-outline-secondary"
-                                                               aria-label="<spring:message code='myCarDetail.availability.edit.aria'/>">
-                                                                <i class="bi bi-pencil" aria-hidden="true"></i>
-                                                            </a>
-                                                        </c:if>
-                                                    </div>
-                                                </div>
-                                            </c:forEach>
+                                        <div class="owner-cal-container owner-cal-readonly" data-bookable-ranges='<c:out value="${bookableWallRangesJson}" escapeXml="false"/>'>
+                                            <input type="text" class="js-owner-cal-anchor owner-cal-anchor" aria-hidden="true" tabindex="-1" readonly/>
                                         </div>
                                     </c:otherwise>
                                 </c:choose>

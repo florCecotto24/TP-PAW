@@ -6,15 +6,18 @@ import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
+import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
 import ar.edu.itba.paw.models.dto.car.CarAvailabilityEditorPageModel;
+import ar.edu.itba.paw.models.dto.car.ManageCarPeriodsPageModel;
 import ar.edu.itba.paw.models.dto.car.MyCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
 import ar.edu.itba.paw.services.CarService;
 import ar.edu.itba.paw.services.CarAvailabilityService;
 import ar.edu.itba.paw.services.CarAvailabilityEditorViewService;
+import ar.edu.itba.paw.services.ManageCarPeriodsViewService;
 import ar.edu.itba.paw.services.MyCarDetailViewService;
 import ar.edu.itba.paw.services.ReservationService;
 import ar.edu.itba.paw.services.ReservationViewService;
@@ -63,6 +66,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,6 +87,7 @@ public final class MyCarsController {
     private final CarAvailabilityService carAvailabilityService;
     private final CarAvailabilityEditorViewService carAvailabilityEditorViewService;
     private final MyCarDetailViewService myCarDetailViewService;
+    private final ManageCarPeriodsViewService manageCarPeriodsViewService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final OwnerCarLookup ownerCarLookup;
     private final CarInsuranceUploadFacade carInsuranceUploadFacade;
@@ -97,6 +103,7 @@ public final class MyCarsController {
             final CarAvailabilityService carAvailabilityService,
             final CarAvailabilityEditorViewService carAvailabilityEditorViewService,
             final MyCarDetailViewService myCarDetailViewService,
+            final ManageCarPeriodsViewService manageCarPeriodsViewService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final OwnerCarLookup ownerCarLookup,
             final CarInsuranceUploadFacade carInsuranceUploadFacade) {
@@ -110,6 +117,7 @@ public final class MyCarsController {
         this.carAvailabilityService = carAvailabilityService;
         this.carAvailabilityEditorViewService = carAvailabilityEditorViewService;
         this.myCarDetailViewService = myCarDetailViewService;
+        this.manageCarPeriodsViewService = manageCarPeriodsViewService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.ownerCarLookup = ownerCarLookup;
         this.carInsuranceUploadFacade = carInsuranceUploadFacade;
@@ -432,6 +440,61 @@ public final class MyCarsController {
         return mav;
     }
 
+    @GetMapping("/car/{carId}/periods")
+    public ModelAndView manageCarPeriods(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @RequestParam(required = false) final String month) {
+        WebAuthUtils.requireUser(currentUser);
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
+        if (lookup.redirect().isPresent()) {
+            return lookup.redirect().get();
+        }
+        final Car car = lookup.car().orElseThrow();
+        final YearMonth activeMonth = parseYearMonthOrDefault(month);
+        final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(car, activeMonth);
+        final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
+        pm.populateModel(mav::addObject);
+        final CreateCarAvailabilityForm createForm = new CreateCarAvailabilityForm();
+        carAvailabilityService.findMostRecentByCarId(carId)
+                .ifPresent(la -> prefillLocationAndTimes(createForm, la));
+        mav.addObject("createCarAvailabilityForm", createForm);
+        mav.addObject("activeTab", "my-cars");
+        return mav;
+    }
+
+    private static YearMonth parseYearMonthOrDefault(final String month) {
+        if (month == null || month.isBlank()) {
+            return YearMonth.now(AppTimezone.WALL_ZONE);
+        }
+        try {
+            return YearMonth.parse(month);
+        } catch (final DateTimeParseException e) {
+            return YearMonth.now(AppTimezone.WALL_ZONE);
+        }
+    }
+
+    @PostMapping("/car/{carId}/min-rental-days")
+    public ModelAndView updateMinRentalDays(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @RequestParam final int minimumRentalDays,
+            @RequestParam(required = false) final String month,
+            final RedirectAttributes redirectAttributes) {
+        WebAuthUtils.requireUser(currentUser);
+        final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
+        if (lookup.redirect().isPresent()) {
+            return lookup.redirect().get();
+        }
+        try {
+            carAvailabilityService.updateMinimumRentalDays(carId, minimumRentalDays);
+        } catch (final CarValidationException e) {
+            redirectAttributes.addFlashAttribute("minRentalDaysError", localeMessages.msg(e));
+        }
+        return new ModelAndView(redirectTo("/my-cars/car/" + carId + "/periods"
+                + (month != null && !month.isBlank() ? "?month=" + month : "")));
+    }
+
     @GetMapping("/car/{carId}/create")
     public ModelAndView createCarAvailabilityForm(
             @CurrentUser final User currentUser,
@@ -473,6 +536,7 @@ public final class MyCarsController {
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
             @PathVariable final long availabilityId,
+            @RequestParam(required = false) final String month,
             @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createCarAvailabilityForm") final CreateCarAvailabilityForm form,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -505,7 +569,7 @@ public final class MyCarsController {
             }
         }
         if (errors.hasErrors()) {
-            return buildEditAvailabilityView(car, availabilityId, form, me);
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
         }
         final AvailabilityPeriod newPeriod = form.toAvailabilityPeriods().get(0);
         try {
@@ -519,15 +583,17 @@ public final class MyCarsController {
                     form.getCheckInTime(), form.getCheckOutTime());
         } catch (final CarValidationException e) {
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildEditAvailabilityView(car, availabilityId, form, me);
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId));
         }
-        return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+        return new ModelAndView(redirectTo("/my-cars/car/" + carId + "/periods"
+                + (month != null && !month.isBlank() ? "?month=" + month : "")));
     }
 
     @PostMapping("/car/{carId}/create")
     public ModelAndView createListing(
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
+            @RequestParam(required = false) final String month,
             @Validated(ValidationGroups.OnCreateListing.class) @ModelAttribute("createCarAvailabilityForm") final CreateCarAvailabilityForm form,
             final BindingResult errors) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -540,12 +606,12 @@ public final class MyCarsController {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         if (errors.hasErrors()) {
-            return buildCreateListingView(car, form, me);
+            return buildManagePeriodsViewWithError(car, month, "create");
         }
         final User freshUser = userService.getUserById(me.getId()).orElse(me);
         if (!userService.hasValidCbu(freshUser)) {
             errors.reject(MessageKeys.CAR_PUBLISH_CBU_REQUIRED, localeMessages.msg(MessageKeys.CAR_PUBLISH_CBU_REQUIRED));
-            return buildCreateListingView(car, form, freshUser);
+            return buildManagePeriodsViewWithError(car, month, "create");
         }
         if (!errors.hasErrors()) {
             try {
@@ -565,7 +631,7 @@ public final class MyCarsController {
             }
         }
         if (errors.hasErrors()) {
-            return buildCreateListingView(car, form, freshUser);
+            return buildManagePeriodsViewWithError(car, month, "create");
         }
         try {
             carAvailabilityService.createCarAvailabilityPeriods(
@@ -579,10 +645,11 @@ public final class MyCarsController {
                     form.toAvailabilityPeriods(),
                     form.toPeriodPrices(),
                     form.getMinimumRentalDays());
-            return new ModelAndView(redirectTo("/my-cars/car/" + carId));
+            return new ModelAndView(redirectTo("/my-cars/car/" + carId + "/periods"
+                    + (month != null && !month.isBlank() ? "?month=" + month : "")));
         } catch (final CarValidationException e) {
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildCreateListingView(car, form, freshUser);
+            return buildManagePeriodsViewWithError(car, month, "create");
         }
     }
 
@@ -653,6 +720,17 @@ public final class MyCarsController {
         final RedirectView rv = new RedirectView(url, true);
         rv.setExposeModelAttributes(false);
         return rv;
+    }
+
+    private ModelAndView buildManagePeriodsViewWithError(
+            final Car car, final String month, final String inlineFormOpen) {
+        final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(
+                car, parseYearMonthOrDefault(month));
+        final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
+        pm.populateModel(mav::addObject);
+        mav.addObject("inlineFormOpen", inlineFormOpen);
+        mav.addObject("activeTab", "my-cars");
+        return mav;
     }
 
     private ModelAndView buildCreateListingView(final Car car, final CreateCarAvailabilityForm form, final User user) {
