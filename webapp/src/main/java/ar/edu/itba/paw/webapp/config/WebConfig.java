@@ -96,8 +96,13 @@ import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
         "ar.edu.itba.paw.webapp.security",
         "ar.edu.itba.paw.webapp.validation",
         "ar.edu.itba.paw.webapp.interceptor",
+        "ar.edu.itba.paw.webapp.config.properties",
         "ar.edu.itba.paw.services",
-        "ar.edu.itba.paw.persistence"
+        "ar.edu.itba.paw.persistence",
+        "ar.edu.itba.paw.mail",
+        "ar.edu.itba.paw.policy",
+        "ar.edu.itba.paw.scheduling",
+        "ar.edu.itba.paw.util"
 })
 public class WebConfig implements WebMvcConfigurer {
 
