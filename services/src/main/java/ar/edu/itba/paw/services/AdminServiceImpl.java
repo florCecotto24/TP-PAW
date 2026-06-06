@@ -27,6 +27,14 @@ import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.services.car.CarBrandService;
+import ar.edu.itba.paw.services.car.CarModelService;
+import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.email.EmailService;
+import ar.edu.itba.paw.services.reservation.ReservationMessageService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.user.AdminService;
+import ar.edu.itba.paw.services.user.UserService;
 
 /**
  * Admin operations: user management, car moderation, catalog validation, and reservation inspection.
