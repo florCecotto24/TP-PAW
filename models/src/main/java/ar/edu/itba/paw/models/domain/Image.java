@@ -10,6 +10,8 @@ import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** Stored image metadata and inline bytes (legacy path; profile and uploads may use {@link StoredFile} instead). */
 @Entity
 @Table(name = "images")
@@ -71,6 +73,22 @@ public class Image {
 
     public byte[] getData() {
         return data;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Image)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((Image) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

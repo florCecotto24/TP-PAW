@@ -49,6 +49,21 @@ public final class WallDateTimeParsing {
     }
 
     /**
+     * Inverse of {@link #parseWallLocalDateTimeToUtc(String)}: renders a UTC instant back into
+     * the {@link #WALL_INPUT_DATE_TIME_PATTERN} string in the application wall zone, so that
+     * persisted reservation timestamps can re-populate confirmation pages reached via a
+     * post-redirect-get without needing the original form values.
+     *
+     * @return empty string when {@code utc} is null
+     */
+    public static String formatUtcAsClientWallDateTimeInput(final OffsetDateTime utc) {
+        if (utc == null) {
+            return "";
+        }
+        return WALL_INPUT_DATE_TIME.format(utc.atZoneSameInstant(AppTimezone.WALL_ZONE).toLocalDateTime());
+    }
+
+    /**
      * Wall-zone calendar day for a date-time coming from a form input (same format as
      * {@link #parseWallLocalDateTimeToUtc}). Mirrors the null-safe convention of the
      * {@code parseSearchFilter*} helpers above so callers can use it directly on raw form values.

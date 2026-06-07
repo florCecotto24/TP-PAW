@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.car.CarNotAdminPausedException;
+import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.car.DuplicatePlateException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
@@ -454,7 +456,7 @@ public final class CarServiceImpl implements CarService {
 
     @Override
     @Transactional
-    public void updateRatingAvg(final long carId, final java.math.BigDecimal average) {
+    public void updateRatingAvg(final long carId, final BigDecimal average) {
         carDao.updateRatingAvg(carId, average);
     }
 
@@ -480,7 +482,7 @@ public final class CarServiceImpl implements CarService {
     @Transactional
     public void markCarAsAdminPaused(final long carId) {
         final Car car = carDao.getCarById(carId)
-                .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+                .orElseThrow(() -> new CarNotFoundException(carId));
         if (car.getStatus() == Car.Status.DEACTIVATED) {
             throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
         }
@@ -491,9 +493,9 @@ public final class CarServiceImpl implements CarService {
     @Transactional
     public void releaseAdminCarPause(final long carId) {
         final Car car = carDao.getCarById(carId)
-                .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+                .orElseThrow(() -> new CarNotFoundException(carId));
         if (car.getStatus() != Car.Status.ADMIN_PAUSED) {
-            throw new IllegalStateException("Car is not admin-paused: " + carId);
+            throw new CarNotAdminPausedException(carId);
         }
         // markCarAsAdminPaused accepts every non-DEACTIVATED status (including LACK_DOC), so we cannot
         // assume the car had valid documentation when it was paused. The Car.Status javadoc reserves

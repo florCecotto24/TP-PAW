@@ -32,6 +32,7 @@ public final class RydenLocaleResolver extends CookieLocaleResolver {
 
     public static final String COOKIE_NAME = "RYDEN_LOCALE";
     private static final int COOKIE_MAX_AGE_SECONDS = (int) Duration.ofDays(365).toSeconds();
+    private static final String REQUEST_CACHE_ATTR = RydenLocaleResolver.class.getName() + ".RESOLVED";
 
     private final UserService userService;
 
@@ -47,6 +48,21 @@ public final class RydenLocaleResolver extends CookieLocaleResolver {
     @Override
     @NonNull
     public Locale resolveLocale(@NonNull final HttpServletRequest request) {
+        // Spring's view layer (interceptors, JSP tags, controller advice, security entry points) calls
+        // resolveLocale several times per request. The user-id branch performs a SELECT on users to read
+        // {@code latest_locale}; without caching, a single page render issued one extra DB query per
+        // resolveLocale() call. Memoize on the request scope so each HTTP request hits the database at
+        // most once (request attributes are inherently per-thread and per-request, so this is safe).
+        final Object cached = request.getAttribute(REQUEST_CACHE_ATTR);
+        if (cached instanceof Locale locale) {
+            return locale;
+        }
+        final Locale resolved = doResolveLocale(request);
+        request.setAttribute(REQUEST_CACHE_ATTR, resolved);
+        return resolved;
+    }
+
+    private Locale doResolveLocale(final HttpServletRequest request) {
         final Optional<Locale> fromUser = currentAuthenticatedUserId()
                 .flatMap(userService::findUserPreferredLocale);
         if (fromUser.isPresent()) {
@@ -54,6 +70,17 @@ public final class RydenLocaleResolver extends CookieLocaleResolver {
         }
         final Locale fromCookie = super.resolveLocale(request);
         return SupportedLocales.ALL.contains(fromCookie) ? fromCookie : SupportedLocales.DEFAULT;
+    }
+
+    @Override
+    public void setLocale(
+            @NonNull final HttpServletRequest request,
+            final javax.servlet.http.HttpServletResponse response,
+            final Locale locale) {
+        // Invalidate the per-request memoization when the locale toggle writes a new cookie mid-request,
+        // otherwise the rest of the rendering pipeline would still see the previous value.
+        request.removeAttribute(REQUEST_CACHE_ATTR);
+        super.setLocale(request, response, locale);
     }
 
     /**

@@ -134,6 +134,14 @@ public final class MessageKeys {
     public static final String ADMIN_BLOCK_CANNOT_BLOCK_SELF = "admin.block.cannotBlockSelf";
     public static final String ADMIN_PROMOTE_NOT_ADMIN = "admin.promote.notAdmin";
     public static final String ADMIN_PROMOTE_ALREADY_ADMIN = "admin.promote.alreadyAdmin";
+    public static final String ADMIN_PAUSE_CANNOT_PAUSE_ADMIN_CAR = "admin.pause.cannotPauseAdminCar";
+
+    // catalog
+    public static final String CATALOG_BRAND_NOT_FOUND = "catalog.brand.notFound";
+    public static final String CATALOG_MODEL_NOT_FOUND = "catalog.model.notFound";
+
+    // car (extra)
+    public static final String CAR_RESUME_NOT_ADMIN_PAUSED = "car.resume.notAdminPaused";
 
     // minimum rental days
     public static final String CAR_MIN_RENTAL_DAYS_EXCEEDS_PERIOD = "car.minRentalDays.exceedsPeriod";

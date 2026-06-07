@@ -64,7 +64,7 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
         }
 
         final List<GrantedAuthority> authorities =
-                UserRoleAuthorities.fromDbRoleNames(userService.findRoleNamesForUser(user.getId()));
+                UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId()));
         final RydenUserDetails principal = new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),

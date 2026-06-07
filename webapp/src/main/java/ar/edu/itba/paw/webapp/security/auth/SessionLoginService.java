@@ -58,7 +58,7 @@ public final class SessionLoginService {
         final String hash = withHash.getPasswordHash().filter(h -> !h.isBlank())
                 .orElseThrow(() -> new IllegalStateException("User has no password hash for session"));
         final List<GrantedAuthority> authorities =
-                UserRoleAuthorities.fromDbRoleNames(userService.findRoleNamesForUser(withHash.getId()));
+                UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(withHash.getId()));
         final RydenUserDetails principal = new RydenUserDetails(
                 withHash.getId(),
                 withHash.getEmail(),

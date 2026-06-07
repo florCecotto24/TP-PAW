@@ -1,9 +1,12 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import java.net.URI;
 import java.util.List;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Min;
+
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -24,6 +27,7 @@ import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.SafeRefererResolver;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 
 /**
@@ -33,7 +37,8 @@ import ar.edu.itba.paw.webapp.util.WebAuthUtils;
  */
 @Controller
 @RequestMapping("/my-favorites")
-public final class MyFavoritesController {
+@Validated
+public class MyFavoritesController {
 
     private final FavCarService favCarService;
     private final AppPaginationProperties appPaginationProperties;
@@ -54,9 +59,8 @@ public final class MyFavoritesController {
     @GetMapping
     public ModelAndView myFavorites(
             @CurrentUser final User currentUser,
-            @RequestParam(defaultValue = "0") int page) {
+            @RequestParam(defaultValue = "0") @Min(0) final int page) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        page = Math.max(0, page);
         final int pageSize = appPaginationProperties.getDefaultPageSize();
         final Page<CarCard> favoritesPage = favCarService.findMyFavorites(me.getId(), page, pageSize);
         final int safePage = UiPaging.clampZeroBasedPage(page, favoritesPage.getTotalItems(), favoritesPage.getPageSize());
@@ -82,6 +86,7 @@ public final class MyFavoritesController {
             @CurrentUser final User currentUser,
             @RequestParam("carId") final long carId,
             @RequestHeader(name = "Referer", required = false) final String referer,
+            final HttpServletRequest request,
             final RedirectAttributes redirectAttributes) {
         final User me = WebAuthUtils.requireUser(currentUser);
         try {
@@ -89,18 +94,8 @@ public final class MyFavoritesController {
         } catch (final FavoriteValidationException e) {
             redirectAttributes.addFlashAttribute("favoriteToggleErrorMessage", localeMessages.msg(e));
         }
-        return new ModelAndView(new RedirectView(resolveRedirectTarget(referer), false));
-    }
-
-    /** Bounce the user back to where they came from; default to the favorites hub when unknown. */
-    private static String resolveRedirectTarget(final String referer) {
-        if (referer == null || referer.isBlank()) {
-            return "/my-favorites";
-        }
-        try {
-            return URI.create(referer).toString();
-        } catch (final IllegalArgumentException e) {
-            return "/my-favorites";
-        }
+        // Same-app validated; defaults to the favorites hub when the Referer is missing or unsafe.
+        final String target = SafeRefererResolver.sameAppRelativePathOrDefault(request, referer, "/my-favorites");
+        return new ModelAndView(new RedirectView(target, true));
     }
 }

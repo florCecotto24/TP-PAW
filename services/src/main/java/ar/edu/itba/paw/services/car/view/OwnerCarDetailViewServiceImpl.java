@@ -5,9 +5,11 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -23,11 +25,11 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.policy.CarAvailabilityPolicy;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarPictureService;
@@ -43,6 +45,7 @@ public final class OwnerCarDetailViewServiceImpl implements OwnerCarDetailViewSe
     private final ReservationService reservationService;
     private final LocationService locationService;
     private final CarAvailabilityPolicy carAvailabilityPolicy;
+    private final MoneyFormat moneyFormat;
 
     @Autowired
     public OwnerCarDetailViewServiceImpl(
@@ -51,13 +54,15 @@ public final class OwnerCarDetailViewServiceImpl implements OwnerCarDetailViewSe
             @Lazy final CarAvailabilityService carAvailabilityService,
             @Lazy final ReservationService reservationService,
             final LocationService locationService,
-            final CarAvailabilityPolicy carAvailabilityPolicy) {
+            final CarAvailabilityPolicy carAvailabilityPolicy,
+            final MoneyFormat moneyFormat) {
         this.carService = carService;
         this.carPictureService = carPictureService;
         this.carAvailabilityService = carAvailabilityService;
         this.reservationService = reservationService;
         this.locationService = locationService;
         this.carAvailabilityPolicy = carAvailabilityPolicy;
+        this.moneyFormat = moneyFormat;
     }
 
     @Override
@@ -68,14 +73,14 @@ public final class OwnerCarDetailViewServiceImpl implements OwnerCarDetailViewSe
             final List<CarAvailability> availabilities = carAvailabilityService.findEffectiveOfferedByCar(carId);
             final long carImageId = carPictureService.getCarPicturesByCarId(carId).stream()
                     .map(p -> p.getImageId())
-                    .filter(java.util.Objects::nonNull)
+                    .filter(Objects::nonNull)
                     .findFirst()
                     .orElse(0L);
             final User owner = car.getOwner();
             final long ownerId = owner.getId();
             final List<Neighborhood> allNeighborhoods = locationService.findAllNeighborhoods();
             final CarAvailability mostRecent = availabilities.stream()
-                    .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt))
+                    .max(Comparator.comparing(CarAvailability::getCreatedAt))
                     .orElse(null);
             final Long carNbId = mostRecent != null ? mostRecent.getNeighborhoodId().orElse(null) : null;
             final String carNeighborhoodName = carNbId == null
@@ -88,8 +93,8 @@ public final class OwnerCarDetailViewServiceImpl implements OwnerCarDetailViewSe
             final Map<String, Long> reservationStatusCounts =
                     reservationService.countCarReservationsByStatus(ownerId, carId);
             final long reservationTotal = reservationStatusCounts.values().stream().mapToLong(Long::longValue).sum();
-            final String totalEarnings = ArsMoneyFormat.format(reservationService.getCarTotalEarnings(ownerId, carId));
-            final String pendingEarnings = ArsMoneyFormat.format(reservationService.getCarPendingEarnings(ownerId, carId));
+            final String totalEarnings = moneyFormat.format(reservationService.getCarTotalEarnings(ownerId, carId));
+            final String pendingEarnings = moneyFormat.format(reservationService.getCarPendingEarnings(ownerId, carId));
             final long totalDaysRented = reservationService.getCarTotalDaysRented(ownerId, carId);
             final long reservationsThisMonth = reservationService.getCarReservationsThisMonth(ownerId, carId);
             final long cancelled = reservationStatusCounts.getOrDefault("cancelled", 0L);

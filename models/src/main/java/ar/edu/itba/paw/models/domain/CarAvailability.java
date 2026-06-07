@@ -21,6 +21,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /**
  * Wall-calendar inclusive availability segment for a {@link Car}: carries its own pricing, pickup
  * location and check-in/out times. Rows are immutable from the owner's point of view; "edits" insert
@@ -291,6 +293,22 @@ public class CarAvailability {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof CarAvailability)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((CarAvailability) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

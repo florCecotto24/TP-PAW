@@ -13,6 +13,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** Ordered gallery link between a {@link Car} and a photo ({@link Image}) or video ({@link StoredFile}). */
 @Entity
 @Table(name = "car_pictures")
@@ -138,6 +140,22 @@ public class CarPicture {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof CarPicture)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((CarPicture) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

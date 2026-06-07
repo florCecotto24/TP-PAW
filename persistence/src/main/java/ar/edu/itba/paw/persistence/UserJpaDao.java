@@ -242,12 +242,9 @@ public class UserJpaDao implements UserDao {
     }
 
     @Override
-    public List<String> findRoleNamesForUser(final long userId) {
-        // Persistence-name strings (e.g. "USER", "ADMIN") rather than the enum so the contract stays
-        // compatible with the legacy multi-row user_roles table that this method shadowed; the only
-        // caller (UserRoleAuthorities.fromDbRoleNames) re-parses with UserRole.fromPersistenceName.
+    public List<UserRole> findRolesForUser(final long userId) {
         return getUserById(userId)
-                .map(u -> java.util.Collections.singletonList(u.getUserRole().persistenceName()))
+                .map(u -> java.util.Collections.singletonList(u.getUserRole()))
                 .orElse(java.util.Collections.emptyList());
     }
 

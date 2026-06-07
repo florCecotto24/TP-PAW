@@ -6,7 +6,7 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <title><spring:message code="manageCarPeriods.pageTitle"/></title>
     <%@include file="../header.jsp"%>
@@ -191,8 +191,9 @@
                                     <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
                                                                   initialUserPrice="${createCarAvailabilityForm.pricePerDay}"
                                                                   showDefaultPriceHint="true">
-                                        <form:input path="pricePerDay" id="pricePerDay" required="required" type="number" step="0.01" max="99999999.99"
-                                                    data-max-int="8" data-max-frac="2"
+                                        <form:input path="pricePerDay" id="pricePerDay" required="required" type="number"
+                                                    step="${listingPricePerDayMin}" min="${listingPricePerDayMin}" max="${listingPricePerDayMax}"
+                                                    data-max-int="${listingPricePerDayIntegerDigits}" data-max-frac="${listingPricePerDayFractionDigits}"
                                                     cssClass="form-control js-no-number-wheel-step js-listing-price-decimal"
                                                     cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
                                     </ryden:priceMarketInsightCard>

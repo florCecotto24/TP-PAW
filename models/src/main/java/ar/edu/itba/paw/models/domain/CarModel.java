@@ -15,6 +15,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /**
  * Catalog row for vehicle models. Each model belongs to a {@link CarBrand} and is locked to a body {@link Car.Type}.
  * Models seeded by the team or imported are marked {@code validated = true}; models created on the fly through the
@@ -134,6 +136,22 @@ public class CarModel {
 
     public void setType(final Car.Type type) {
         this.type = type;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof CarModel)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((CarModel) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

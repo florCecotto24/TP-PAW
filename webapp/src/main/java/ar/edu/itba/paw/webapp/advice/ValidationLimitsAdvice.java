@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import ar.edu.itba.paw.policy.CarGalleryUploadPolicy;
 import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
+import ar.edu.itba.paw.policy.MoneyFormatPolicy;
 import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
 import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
@@ -28,6 +29,7 @@ public final class ValidationLimitsAdvice {
     private final ReservationFormValidationPolicy reservationFormValidationPolicy;
     private final VerificationCodePolicy verificationCodePolicy;
     private final CarGalleryUploadPolicy carGalleryUploadPolicy;
+    private final MoneyFormatPolicy moneyFormatPolicy;
 
     public ValidationLimitsAdvice(
             final UserValidationPolicy userValidationPolicy,
@@ -37,7 +39,8 @@ public final class ValidationLimitsAdvice {
             final ListingFormValidationPolicy listingFormValidationPolicy,
             final ReservationFormValidationPolicy reservationFormValidationPolicy,
             final VerificationCodePolicy verificationCodePolicy,
-            final CarGalleryUploadPolicy carGalleryUploadPolicy) {
+            final CarGalleryUploadPolicy carGalleryUploadPolicy,
+            final MoneyFormatPolicy moneyFormatPolicy) {
         this.userValidationPolicy = userValidationPolicy;
         this.reviewValidationPolicy = reviewValidationPolicy;
         this.reservationMessageValidationPolicy = reservationMessageValidationPolicy;
@@ -46,6 +49,7 @@ public final class ValidationLimitsAdvice {
         this.reservationFormValidationPolicy = reservationFormValidationPolicy;
         this.verificationCodePolicy = verificationCodePolicy;
         this.carGalleryUploadPolicy = carGalleryUploadPolicy;
+        this.moneyFormatPolicy = moneyFormatPolicy;
     }
 
     @ModelAttribute("userDisplayNamePartMaxLength")
@@ -128,6 +132,41 @@ public final class ValidationLimitsAdvice {
         return listingFormValidationPolicy.getAddressNumberMaxLength();
     }
 
+    @ModelAttribute("listingPricePerDayMin")
+    public String listingPricePerDayMin() {
+        return listingFormValidationPolicy.getPricePerDayMin().toPlainString();
+    }
+
+    @ModelAttribute("listingPricePerDayMax")
+    public String listingPricePerDayMax() {
+        return listingFormValidationPolicy.getPricePerDayMaxValue().toPlainString();
+    }
+
+    @ModelAttribute("listingPricePerDayIntegerDigits")
+    public int listingPricePerDayIntegerDigits() {
+        return listingFormValidationPolicy.getPricePerDayIntegerDigits();
+    }
+
+    @ModelAttribute("listingPricePerDayFractionDigits")
+    public int listingPricePerDayFractionDigits() {
+        return listingFormValidationPolicy.getPricePerDayFractionDigits();
+    }
+
+    @ModelAttribute("listingMinimumRentalDaysMin")
+    public int listingMinimumRentalDaysMin() {
+        return listingFormValidationPolicy.getMinimumRentalDaysMin();
+    }
+
+    @ModelAttribute("listingMinimumRentalDaysMax")
+    public int listingMinimumRentalDaysMax() {
+        return listingFormValidationPolicy.getMinimumRentalDaysMax();
+    }
+
+    @ModelAttribute("listingAvailabilityRowsMax")
+    public int listingAvailabilityRowsMax() {
+        return listingFormValidationPolicy.getAvailabilityRowsMax();
+    }
+
     @ModelAttribute("reservationDeliveryLocationMaxLength")
     public int reservationDeliveryLocationMaxLength() {
         return reservationFormValidationPolicy.getDeliveryLocationMaxLength();
@@ -156,5 +195,15 @@ public final class ValidationLimitsAdvice {
     @ModelAttribute("carGalleryMaxItems")
     public int carGalleryMaxItems() {
         return carGalleryUploadPolicy.getMaxItems();
+    }
+
+    @ModelAttribute("moneyCurrencyCode")
+    public String moneyCurrencyCode() {
+        return moneyFormatPolicy.getCurrencyCode();
+    }
+
+    @ModelAttribute("moneyFormatLocale")
+    public String moneyFormatLocale() {
+        return moneyFormatPolicy.getFormatLocale().toLanguageTag();
     }
 }

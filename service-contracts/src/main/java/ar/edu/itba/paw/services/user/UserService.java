@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.user;
 
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -9,8 +10,10 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
+import ar.edu.itba.paw.models.security.UserRole;
 
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.file.ImageService;
@@ -41,9 +44,12 @@ public interface UserService {
     Optional<User> findByEmailForAuthentication(final String email);
 
     /**
-     * Role keys as stored in {@code user_roles.role} (same as {@link ar.edu.itba.paw.models.security.UserRole#name()}).
+     * Roles assigned to {@code userId}, decoded as the typed enum. Auth-tier callers should use
+     * {@link ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities#fromUserRoles}
+     * (or equivalent) to map each role to its Spring authority — the previous {@code List<String>}
+     * shape forced every caller to re-parse strings into roles.
      */
-    List<String> findRoleNamesForUser(long userId);
+    List<UserRole> findRolesForUser(long userId);
 
     /**
      * Updates first name and last name (max 50 characters each, no whitespace).
@@ -117,10 +123,10 @@ public interface UserService {
     void updateLatestLocale(long userId, String localeTag);
 
     /** Persists the user's average rating as rider; {@code null} clears the value. */
-    void updateRatingAsRider(long userId, java.math.BigDecimal average);
+    void updateRatingAsRider(long userId, BigDecimal average);
 
     /** Persists the user's average rating as owner; {@code null} clears the value. */
-    void updateRatingAsOwner(long userId, java.math.BigDecimal average);
+    void updateRatingAsOwner(long userId, BigDecimal average);
 
     /**
      * The user's explicitly-chosen UI locale (from {@code latest_locale}), if any. Returns {@link Optional#empty()}
@@ -137,6 +143,13 @@ public interface UserService {
      * (or English if {@code fallback} is null).
      */
     Locale resolveMailLocaleOrElse(long userId, Locale fallback);
+
+    /**
+     * In-memory variant of {@link #resolveMailLocale(long)} for callers that already hold a loaded
+     * {@link User} entity (e.g. schedulers that JOIN FETCH rider/owner). Avoids a redundant
+     * {@code SELECT users WHERE id = ?} per row in tight loops.
+     */
+    Locale resolveMailLocaleFor(User user);
 
     /**
      * Persists a valid CBU or clears it when the trimmed input is empty.
@@ -260,7 +273,7 @@ public interface UserService {
     /**
      * Paginated list of every user in the system, ordered by id. Admin-only listing.
      */
-    ar.edu.itba.paw.models.dto.Page<User> findAllUsersPaginated(int page, int pageSize);
+    Page<User> findAllUsersPaginated(int page, int pageSize);
 
     // -----------------------------------------------------------------------------------------------------------
     // Profile-media-orchestrated operations on user rows.

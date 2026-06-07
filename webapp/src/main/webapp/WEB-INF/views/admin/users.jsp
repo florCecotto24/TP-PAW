@@ -5,7 +5,7 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <title><spring:message code="admin.users.title"/></title>
     <%@include file="../header.jsp" %>
@@ -114,26 +114,10 @@
         </div>
     </div>
 
-    <c:if test="${users.totalPages > 1}">
-        <nav class="mt-4">
-            <ul class="pagination justify-content-center">
-                <c:if test="${users.hasPrevious}">
-                    <li class="page-item">
-                        <a class="page-link" href="${pageContext.request.contextPath}/admin/users?page=${users.currentPage - 1}">
-                            &laquo;
-                        </a>
-                    </li>
-                </c:if>
-                <c:if test="${users.hasNext}">
-                    <li class="page-item">
-                        <a class="page-link" href="${pageContext.request.contextPath}/admin/users?page=${users.currentPage + 1}">
-                            &raquo;
-                        </a>
-                    </li>
-                </c:if>
-            </ul>
-        </nav>
-    </c:if>
+    <ryden:pagination
+            currentPage="${users.currentPage}"
+            totalPages="${users.totalPages}"
+            baseUrl="${pageContext.request.contextPath}/admin/users"/>
 </div>
 <%@ include file="../footer.jsp" %>
 </body>

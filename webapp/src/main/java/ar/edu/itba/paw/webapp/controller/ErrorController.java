@@ -1,21 +1,16 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import java.net.URI;
-
 import javax.servlet.http.HttpServletRequest;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
+import ar.edu.itba.paw.webapp.support.SafeRefererResolver;
+
 /** Maps {@code /error} to friendly views or same-app Referer redirects when appropriate. */
 @Controller
 public final class ErrorController {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ErrorController.class);
 
     @RequestMapping("/error")
     public ModelAndView error(final HttpServletRequest request) {
@@ -29,8 +24,9 @@ public final class ErrorController {
          * Server errors (e.g. 500) are not handled here and continue to display the "error" view.
          */
         if (statusCode == 404 || statusCode == 403 || statusCode == 405) {
-            final String sameAppPath = safeSameApplicationRefererPath(request);
-            if (sameAppPath != null) {
+            final String sameAppPath = SafeRefererResolver.sameAppRelativePath(
+                    request, request.getHeader("Referer"));
+            if (sameAppPath != null && !sameAppPath.startsWith("/error")) {
                 return new ModelAndView("redirect:" + sameAppPath);
             }
         }
@@ -49,66 +45,5 @@ public final class ErrorController {
         mav.addObject("statusCode", statusCode);
         mav.addObject("messageKey", messageKey);
         return mav;
-    }
-
-    /**
-     * Returns the relative path to the context (e.g. {@code /search}) ready to be used in {@code redirect:...}, or {@code null}.
-     */
-    private static String safeSameApplicationRefererPath(final HttpServletRequest request) {
-        final String refererHeader = request.getHeader("Referer");
-        if (refererHeader == null || refererHeader.isBlank()) {
-            return null;
-        }
-        final String referer = refererHeader.trim();
-        if (!referer.regionMatches(true, 0, "http://", 0, 7) && !referer.regionMatches(true, 0, "https://", 0, 8)) {
-            return null;
-        }
-        try {
-            final URI ref = URI.create(referer);
-            if (ref.getHost() == null) {
-                return null;
-            }
-            final StringBuffer thisUrl = request.getRequestURL();
-            final URI here = URI.create(thisUrl.toString());
-            if (!ref.getScheme().equalsIgnoreCase(here.getScheme())
-                    || !ref.getHost().equalsIgnoreCase(here.getHost())) {
-                return null;
-            }
-            if (ref.getPort() != here.getPort()) {
-                return null;
-            }
-            String path = ref.getRawPath();
-            if (path == null || path.isEmpty()) {
-                path = "/";
-            }
-            final String contextPath = request.getContextPath();
-            if (contextPath != null && !contextPath.isEmpty()) {
-                if (!path.startsWith(contextPath)) {
-                    return null;
-                }
-                path = path.substring(contextPath.length());
-            }
-            if (path.isEmpty()) {
-                path = "/";
-            }
-            if (!path.startsWith("/")) {
-                path = "/" + path;
-            }
-            if (path.startsWith("/error") || path.contains("//") || path.contains("..")) {
-                return null;
-            }
-            final String query = ref.getRawQuery();
-            if (query != null && !query.isBlank()) {
-                return path + "?" + query;
-            }
-            return path;
-        } catch (final IllegalArgumentException e) {
-            LOG.atDebug()
-                    .setMessage("Referer not usable as same-app redirect URI [{}]")
-                    .addArgument(referer)
-                    .setCause(e)
-                    .log();
-            return null;
-        }
     }
 }

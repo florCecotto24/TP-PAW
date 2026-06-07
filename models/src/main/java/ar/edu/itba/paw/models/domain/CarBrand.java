@@ -10,6 +10,8 @@ import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /**
  * Catalog row for vehicle brands. Brands seeded by the team or imported are marked {@code validated = true};
  * brands created on the fly through the publish-car flow ("Other") start as {@code validated = false} and
@@ -88,6 +90,22 @@ public class CarBrand {
 
     public void setValidated(final boolean validated) {
         this.validated = validated;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof CarBrand)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((CarBrand) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

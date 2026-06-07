@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.controller;
 
-import java.net.URI;
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
@@ -18,6 +17,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.SafeRefererResolver;
 import ar.edu.itba.paw.webapp.support.converter.StringToSupportedLocaleConverter;
 
 /**
@@ -41,6 +41,9 @@ public final class LocaleController {
      * Spring binds {@code lang} into a {@link Locale} via {@link StringToSupportedLocaleConverter},
      * which mirrors the previous {@code SupportedLocales.parse(raw)} call and returns {@code null}
      * for unknown / unsupported tags so this endpoint keeps the "silently ignore" contract.
+     *
+     * <p>The {@code Referer} target is validated as same-application (host/scheme/port match) to
+     * avoid an open-redirect when an attacker forges a Referer header pointing elsewhere.</p>
      */
     @PostMapping("/locale")
     public ModelAndView changeLocale(
@@ -55,21 +58,7 @@ public final class LocaleController {
                 userService.updateLatestLocale(currentUser.getId(), lang.toLanguageTag());
             }
         }
-        return new ModelAndView(new RedirectView(resolveRedirectTarget(referer), false));
-    }
-
-    /**
-     * Bounce the visitor back to where they came from; default to home when unknown or invalid.
-     * The referer URL is kept opaque (we only validate that it parses as a URI) to avoid open-redirect leaks.
-     */
-    private static String resolveRedirectTarget(final String referer) {
-        if (referer == null || referer.isBlank()) {
-            return "/";
-        }
-        try {
-            return URI.create(referer).toString();
-        } catch (final IllegalArgumentException e) {
-            return "/";
-        }
+        final String target = SafeRefererResolver.sameAppRelativePathOrDefault(request, referer, "/");
+        return new ModelAndView(new RedirectView(target, true));
     }
 }

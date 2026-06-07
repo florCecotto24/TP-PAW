@@ -401,7 +401,7 @@ class ReservationMessageServiceImplTest {
         Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
         Mockito.when(reservationMessageDao.markEmailNotified(List.of(55L))).thenReturn(1);
         Mockito.when(userService.getUserById(OWNER_ID)).thenReturn(Optional.of(owner));
-        Mockito.when(userService.resolveMailLocale(OWNER_ID)).thenReturn(Locale.ENGLISH);
+        Mockito.when(userService.resolveMailLocaleFor(owner)).thenReturn(Locale.ENGLISH);
         Mockito.when(mailPublicUrls.absolutePath("/my-reservations/30/chat?role=owner"))
                 .thenReturn("https://example.com/my-reservations/30/chat?role=owner");
 

@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.security.UserRole;
 
 /** Users, roles, profile fields, and listing-owner resolution joins. */
 public interface UserDao {
@@ -56,7 +57,11 @@ public interface UserDao {
     /** Persists the user's average rating as owner; {@code null} clears the value. */
     void updateRatingAsOwner(long userId, java.math.BigDecimal average);
 
-    List<String> findRoleNamesForUser(long userId);
+    /**
+     * Roles assigned to {@code userId}, decoded as the typed enum so callers don't have to
+     * re-parse strings at the auth tier.
+     */
+    List<UserRole> findRolesForUser(long userId);
 
     void promoteToAdmin(long userId, Long assignedByUserId);
 

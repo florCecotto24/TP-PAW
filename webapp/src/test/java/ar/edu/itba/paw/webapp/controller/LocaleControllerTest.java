@@ -87,26 +87,29 @@ class LocaleControllerTest {
 
     @Test
     void changeLocaleToSpanishPersistsCookieAndUpdatesLatestLocaleForSignedInUser() {
-        // 1.Arrange
+        // 1.Arrange — the controller hands the Referer to SafeRefererResolver, which only honours
+        // a same-origin URL and always returns the *relative* path. The default MockHttpServletRequest
+        // resolves to http://localhost, so the referer must use the same scheme/host/port.
         final User signedInUser = userWithId(USER_ID);
 
         // 2.Act
         final ModelAndView result = controller.changeLocale(
-                SupportedLocales.SPANISH, "https://example.test/search", signedInUser, request, response);
+                SupportedLocales.SPANISH, "http://localhost/search", signedInUser, request, response);
 
         // 3.Assert
         assertCookieValue("es");
         assertEquals("es", persistedLocaleByUser.get(USER_ID));
-        assertRedirectsTo(result, "https://example.test/search");
+        assertRedirectsTo(result, "/search");
     }
 
     @Test
     void testChangeLocaleToEnglishPersistsCookieButLeavesLatestLocaleUntouchedForAnonymousVisitor() {
-        // 1.Arrange — anonymous visitor (no User passed in).
+        // 1.Arrange — anonymous visitor (no User passed in). Referer must be a same-origin absolute
+        // URL so SafeRefererResolver returns the relative path; otherwise it falls back to "/".
 
         // 2.Act
         final ModelAndView result = controller.changeLocale(
-                SupportedLocales.ENGLISH, "/login", null, request, response);
+                SupportedLocales.ENGLISH, "http://localhost/login", null, request, response);
 
         // 3.Assert
         assertCookieValue("en");
@@ -135,11 +138,12 @@ class LocaleControllerTest {
     @Test
     void changeLocaleLeavesCookieAndLatestLocaleUntouchedWhenLanguageIsBlank() {
         // 1.Arrange — blank input is mapped to null by the converter; controller treats it the same
-        // as an unsupported tag.
+        // as an unsupported tag. The redirect target still goes through SafeRefererResolver, which
+        // requires an absolute same-origin URL to extract a relative path.
 
         // 2.Act
         final ModelAndView result = controller.changeLocale(
-                null, "/search", null, request, response);
+                null, "http://localhost/search", null, request, response);
 
         // 3.Assert
         assertNoCookieWritten();

@@ -6,9 +6,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,10 +21,10 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
+import ar.edu.itba.paw.policy.MoneyFormatPolicy;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
-import ar.edu.itba.paw.policy.PresentationLimitsPolicy;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarPictureService;
@@ -75,13 +75,30 @@ public class ReservationViewServiceImplTest {
     private ReviewService reviewService;
 
     @Mock
-    private PresentationLimitsPolicy presentationLimitsPolicy;
-
-    @Mock
     private ReservationMessageService reservationMessageService;
 
-    @InjectMocks
+    private MoneyFormat moneyFormat;
+
     private ReservationViewServiceImpl reservationViewService;
+
+    @BeforeEach
+    public void setUp() {
+        moneyFormat = new MoneyFormat(
+                MoneyFormatPolicy.fromValidatedConfiguration("ARS", "es-AR", 2, 2));
+        reservationViewService = new ReservationViewServiceImpl(
+                reservationService,
+                carService,
+                carAvailabilityService,
+                reservationAvailabilityService,
+                carPictureService,
+                carAvailabilityAddressFormatter,
+                userService,
+                imageService,
+                paymentReceiptUploadPolicy,
+                reviewService,
+                reservationMessageService,
+                moneyFormat);
+    }
 
     @Test
     public void testNormalizeReservationStatusQueryParamAcceptsWhitelistedLowercase() {
@@ -111,7 +128,7 @@ public class ReservationViewServiceImplTest {
         Assertions.assertEquals("accepted", row.getStatusKey());
         Assertions.assertFalse(row.getPickupDateTime().isBlank());
         Assertions.assertFalse(row.getReturnDateTime().isBlank());
-        Assertions.assertEquals(ArsMoneyFormat.format(frozenTotal), row.getTotalPrice());
+        Assertions.assertEquals(moneyFormat.format(frozenTotal), row.getTotalPrice());
     }
 
 

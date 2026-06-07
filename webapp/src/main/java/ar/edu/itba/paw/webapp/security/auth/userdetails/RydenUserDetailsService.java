@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.services.user.UserService;
 
 /** Loads {@link RydenUserDetails} by email for Spring Security. */
@@ -35,8 +36,8 @@ public final class RydenUserDetailsService implements UserDetailsService {
         final String hash = user.getPasswordHash()
                 .filter(h -> !h.isBlank())
                 .orElseThrow(() -> new UsernameNotFoundException("User has no password"));
-        final List<String> roleNames = userService.findRoleNamesForUser(user.getId());
-        final List<GrantedAuthority> authorities = UserRoleAuthorities.fromDbRoleNames(roleNames);
+        final List<UserRole> roles = userService.findRolesForUser(user.getId());
+        final List<GrantedAuthority> authorities = UserRoleAuthorities.fromUserRoles(roles);
         return new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),

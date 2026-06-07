@@ -136,7 +136,7 @@ class ReservationWorkflowServiceImplTest {
         Mockito.lenient().when(pricingService.planReservationByCar(
                         Mockito.eq(carId), Mockito.any(LocalDate.class), Mockito.any(LocalDate.class)))
                 .thenReturn(Optional.of(new ReservationPlan(
-                        new BigDecimal("200.00"), new LinkedHashSet<>(java.util.Set.of(availabilityId)), avRow)));
+                        new BigDecimal("200.00"), new LinkedHashSet<>(Set.of(availabilityId)), avRow)));
 
         final RiderReservationException thrown = Assertions.assertThrows(
                 RiderReservationException.class,
@@ -172,8 +172,7 @@ class ReservationWorkflowServiceImplTest {
 
     // ---------------------------------------------------------------------------------------
     // Lifecycle happy-paths. All assertions read state from the returned aggregate or from a
-    // mock that simulates the post-DAO-update read; none of these tests use Mockito.verify or
-    // a doAnswer/argument-slot emulation thereof.
+    // mock that simulates the post-DAO-update read.
     // ---------------------------------------------------------------------------------------
 
     @Test

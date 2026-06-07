@@ -3,7 +3,7 @@
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <%@include file="../header.jsp"%>
     <title><spring:message code="reservationConfirmation.title"/></title>

@@ -23,6 +23,8 @@ import ar.edu.itba.paw.services.user.UserService;
 public final class ProfileViewServiceImpl implements ProfileViewService {
 
     private static final DateTimeFormatter MEMBER_SINCE_PATTERN = DateTimeFormatter.ofPattern("LLLL uuuu");
+    private static final DateTimeFormatter BIRTH_DATE_PATTERN_ES = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter BIRTH_DATE_PATTERN_EN = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
     private final UserService userService;
     private final StoredFileService storedFileService;
@@ -47,6 +49,9 @@ public final class ProfileViewServiceImpl implements ProfileViewService {
         final String memberSinceDisplay = user.getMemberSince()
                 .map(ms -> ms.format(MEMBER_SINCE_PATTERN.withLocale(locale)))
                 .orElse(null);
+        final String birthDateDisplay = user.getBirthDate()
+                .map(bd -> bd.format(birthDatePatternFor(locale)))
+                .orElse(null);
         final String licenseFileName = user.getLicenseFileId()
                 .flatMap(storedFileService::findById)
                 .map(sf -> sf.getFileName())
@@ -61,9 +66,14 @@ public final class ProfileViewServiceImpl implements ProfileViewService {
                 user.getSurname(),
                 profilePictureImageId,
                 memberSinceDisplay,
+                birthDateDisplay,
                 user.isLicenseValidated(),
                 user.isIdentityValidated(),
                 licenseFileName,
                 identityFileName);
+    }
+
+    private static DateTimeFormatter birthDatePatternFor(final Locale locale) {
+        return "es".equals(locale.getLanguage()) ? BIRTH_DATE_PATTERN_ES : BIRTH_DATE_PATTERN_EN;
     }
 }

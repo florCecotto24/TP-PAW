@@ -4,14 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import javax.validation.Valid;
-import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.Digits;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -21,15 +19,16 @@ import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CarValidationSize;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingAvailabilityRowsSize;
 import ar.edu.itba.paw.webapp.validation.constraint.ListingFormValidationSize;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingPricePerDay;
 
 /** Owner listing edit: price, handover address, availability periods, and neighborhood. */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnListingEdit.class)
 public final class CarAvailabilityEditForm implements CarAvailabilityTimeWindow {
 
     @NotNull(message = "{validation.pricePerDay.notNull}", groups = ValidationGroups.OnListingEdit.class)
-    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}", groups = ValidationGroups.OnListingEdit.class)
-    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}", groups = ValidationGroups.OnListingEdit.class)
+    @ListingPricePerDay(groups = ValidationGroups.OnListingEdit.class)
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "{validation.startPointStreet.notBlank}", groups = ValidationGroups.OnListingEdit.class)
@@ -124,9 +123,10 @@ public final class CarAvailabilityEditForm implements CarAvailabilityTimeWindow 
     }
 
     @Valid
-    @Size(min = 0, max = 10,
-          message = "{validation.availabilityRows.size.range}",
-          groups = ValidationGroups.OnListingEdit.class)
+    @ListingAvailabilityRowsSize(
+            enforceMinimum = false,
+            messageKey = "validation.availabilityRows.size.range",
+            groups = ValidationGroups.OnListingEdit.class)
     private List<AvailabilityRow> availabilityRows = new ArrayList<>();
 
     public List<AvailabilityRow> getAvailabilityRows() {
@@ -150,6 +150,41 @@ public final class CarAvailabilityEditForm implements CarAvailabilityTimeWindow 
                 }
             }
         }
+    }
+
+    /**
+     * Populates the unset header fields of this edit form (price, address, check-in/out times,
+     * neighborhood) from the most recently created availability of {@code existing}, then
+     * appends the still-active availabilities as default rows via
+     * {@link #populateDefaultAvailability(List)}. Pre-existing form values are preserved so
+     * binding errors that re-render the form keep what the user typed.
+     */
+    public void populateDefaultsFromExistingAvailabilities(final List<CarAvailability> existing) {
+        if (existing == null || existing.isEmpty()) {
+            return;
+        }
+        final CarAvailability mostRecent = existing.stream()
+                .max(Comparator.comparing(CarAvailability::getCreatedAt))
+                .get();
+        if (pricePerDay == null) {
+            pricePerDay = mostRecent.getDayPriceValue();
+        }
+        if (startPointStreet == null) {
+            startPointStreet = mostRecent.getStartPointStreet();
+        }
+        if (startPointNumber == null) {
+            startPointNumber = mostRecent.getStartPointNumber().orElse(null);
+        }
+        if (checkInTime == null) {
+            checkInTime = mostRecent.getCheckInTime();
+        }
+        if (checkOutTime == null) {
+            checkOutTime = mostRecent.getCheckOutTime();
+        }
+        if (neighborhoodId == null) {
+            neighborhoodId = mostRecent.getNeighborhoodId().orElse(null);
+        }
+        populateDefaultAvailability(existing);
     }
 
     public List<AvailabilityPeriod> toAvailabilityPeriods() {
@@ -180,10 +215,7 @@ public final class CarAvailabilityEditForm implements CarAvailabilityTimeWindow 
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
 
-        @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}",
-                    groups = ValidationGroups.OnListingEdit.class)
-        @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}",
-                groups = ValidationGroups.OnListingEdit.class)
+        @ListingPricePerDay(groups = ValidationGroups.OnListingEdit.class)
         private BigDecimal dayPrice;
 
         public LocalDate getFrom() {

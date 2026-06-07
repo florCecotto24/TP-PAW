@@ -23,9 +23,9 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 /**
@@ -40,13 +40,16 @@ public final class ReservationPricingServiceImpl implements ReservationPricingSe
 
     private final CarAvailabilityService carAvailabilityService;
     private final ReservationTimingPolicy reservationTimingPolicy;
+    private final MoneyFormat moneyFormat;
 
     @Autowired
     public ReservationPricingServiceImpl(
             final CarAvailabilityService carAvailabilityService,
-            final ReservationTimingPolicy reservationTimingPolicy) {
+            final ReservationTimingPolicy reservationTimingPolicy,
+            final MoneyFormat moneyFormat) {
         this.carAvailabilityService = carAvailabilityService;
         this.reservationTimingPolicy = reservationTimingPolicy;
+        this.moneyFormat = moneyFormat;
     }
 
     // ---------------------------------------------------------------------------------------
@@ -104,7 +107,7 @@ public final class ReservationPricingServiceImpl implements ReservationPricingSe
         try {
             final OffsetDateTime startDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(fromDateTime);
             final OffsetDateTime endDate = AvailabilityPeriod.parseWallLocalDateTimeToUtc(untilDateTime);
-            return calculateTotalByCar(carId, startDate, endDate).map(ArsMoneyFormat::format);
+            return calculateTotalByCar(carId, startDate, endDate).map(moneyFormat::format);
         } catch (final DateTimeParseException e) {
             LOGGER.atDebug()
                     .setMessage("reservationTotalDisplayByCar: unparseable wall datetimes carId={} from=[{}] until=[{}]")

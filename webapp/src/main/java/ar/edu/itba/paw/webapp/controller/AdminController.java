@@ -73,6 +73,23 @@ public final class AdminController {
         return userValidationPolicy.getRegistrationPasswordMaxLength();
     }
 
+    /**
+     * Runs an admin action and flashes a localized success or error message accordingly. Centralises
+     * the {@code try { service; flash success } catch (RydenException e) { flash error }} block that
+     * was repeated across every admin POST handler so the controller stays focused on routing.
+     */
+    private void executeAdminAction(
+            final RedirectAttributes redirectAttributes,
+            final String successMessageKey,
+            final Runnable action) {
+        try {
+            action.run();
+            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg(successMessageKey));
+        } catch (final RydenException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
+        }
+    }
+
     @GetMapping
     public String adminRoot() {
         return "redirect:/admin/panel";
@@ -103,12 +120,8 @@ public final class AdminController {
             final Authentication authentication,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
-        try {
-            adminService.promoteUserToAdmin(userId, actingAdminId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.promoted"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        executeAdminAction(redirectAttributes, "admin.success.promoted",
+                () -> adminService.promoteUserToAdmin(userId, actingAdminId));
         return "redirect:/admin/users";
     }
 
@@ -118,13 +131,10 @@ public final class AdminController {
             final Authentication authentication,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
-        try {
+        executeAdminAction(redirectAttributes, "admin.success.blocked", () -> {
             adminService.blockUser(userId, actingAdminId);
             userSessionService.invalidateSessionsForUser(userId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.blocked"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        });
         return "redirect:/admin/users";
     }
 
@@ -132,12 +142,8 @@ public final class AdminController {
     public String unblockUser(
             @PathVariable final long userId,
             final RedirectAttributes redirectAttributes) {
-        try {
-            adminService.unblockUser(userId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.unblocked"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        executeAdminAction(redirectAttributes, "admin.success.unblocked",
+                () -> adminService.unblockUser(userId));
         return "redirect:/admin/users";
     }
 
@@ -160,18 +166,14 @@ public final class AdminController {
             return new ModelAndView("admin/createAdminUser");
         }
         final long actingAdminId = requireAdminId(authentication);
-        try {
-            adminService.createAdminUser(
-                    createAdminUserForm.getEmail(),
-                    createAdminUserForm.getForename(),
-                    createAdminUserForm.getSurname(),
-                    createAdminUserForm.getPassword(),
-                    actingAdminId,
-                    locale);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.adminCreated"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        executeAdminAction(redirectAttributes, "admin.success.adminCreated", () ->
+                adminService.createAdminUser(
+                        createAdminUserForm.getEmail(),
+                        createAdminUserForm.getForename(),
+                        createAdminUserForm.getSurname(),
+                        createAdminUserForm.getPassword(),
+                        actingAdminId,
+                        locale));
         return new ModelAndView("redirect:/admin/users");
     }
 
@@ -195,19 +197,9 @@ public final class AdminController {
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
-        try {
-            adminService.adminPauseCar(carId, actingAdminId, locale);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carPaused"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
-        if (fromCarDetail && carDetailId != null) {
-            return "redirect:/cars/" + carDetailId;
-        }
-        if (page != null && page >= 0) {
-            return "redirect:/admin/cars?page=" + page;
-        }
-        return "redirect:/admin/cars";
+        executeAdminAction(redirectAttributes, "admin.success.carPaused",
+                () -> adminService.adminPauseCar(carId, actingAdminId, locale));
+        return adminCarsRedirect(fromCarDetail, carDetailId, page);
     }
 
     @PostMapping("/cars/{carId}/resume")
@@ -219,12 +211,12 @@ public final class AdminController {
             final Authentication authentication,
             final RedirectAttributes redirectAttributes) {
         final long actingAdminId = requireAdminId(authentication);
-        try {
-            adminService.adminResumeCar(carId, actingAdminId);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.carResumed"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        executeAdminAction(redirectAttributes, "admin.success.carResumed",
+                () -> adminService.adminResumeCar(carId, actingAdminId));
+        return adminCarsRedirect(fromCarDetail, carDetailId, page);
+    }
+
+    private String adminCarsRedirect(final boolean fromCarDetail, final Long carDetailId, final Integer page) {
         if (fromCarDetail && carDetailId != null) {
             return "redirect:/cars/" + carDetailId;
         }
@@ -248,12 +240,8 @@ public final class AdminController {
             @PathVariable final long modelId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        try {
-            adminService.validateCatalogEntry(modelId, locale);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryValidated"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        executeAdminAction(redirectAttributes, "admin.success.entryValidated",
+                () -> adminService.validateCatalogEntry(modelId, locale));
         return "redirect:/admin/catalog";
     }
 
@@ -262,12 +250,8 @@ public final class AdminController {
             @PathVariable final long modelId,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        try {
-            adminService.rejectCatalogEntry(modelId, locale);
-            redirectAttributes.addFlashAttribute("successMessage", localeMessages.msg("admin.success.entryRejected"));
-        } catch (final RydenException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", localeMessages.msg(e));
-        }
+        executeAdminAction(redirectAttributes, "admin.success.entryRejected",
+                () -> adminService.rejectCatalogEntry(modelId, locale));
         return "redirect:/admin/catalog";
     }
 

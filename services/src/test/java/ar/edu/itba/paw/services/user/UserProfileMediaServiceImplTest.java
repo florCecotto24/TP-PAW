@@ -66,9 +66,6 @@ public class UserProfileMediaServiceImplTest {
 
     @Test
     public void testUploadValidatedProfileDocumentDoesNotThrowForLicense() {
-        // Happy-path: the call completes without exceptions. The "stores license" and
-        // "marks validated" side-effects are not asserted here (would require Mockito.verify or
-        // a doAnswer/slot emulation, both forbidden by the test-style rules).
         // 1. Arrange
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));

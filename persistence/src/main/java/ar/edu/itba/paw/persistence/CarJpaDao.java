@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -28,6 +29,7 @@ import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.CarModel;
 import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
@@ -267,7 +269,7 @@ public class CarJpaDao implements CarDao {
                     .collect(Collectors.toList()));
         }
         if (criteria.getMinPrice() != null || criteria.getMaxPrice() != null) {
-            params.put("ownerOfferedKind", ar.edu.itba.paw.models.domain.CarAvailability.Kind.OFFERED);
+            params.put("ownerOfferedKind", CarAvailability.Kind.OFFERED);
         }
         if (criteria.getMinPrice() != null) {
             jpql.append("AND EXISTS (SELECT 1 FROM CarAvailability la WHERE la.car = c "
@@ -471,8 +473,7 @@ public class CarJpaDao implements CarDao {
         if (car == null) {
             return;
         }
-        final ar.edu.itba.paw.models.domain.StoredFile file = em.getReference(
-                ar.edu.itba.paw.models.domain.StoredFile.class, insuranceFileId);
+        final StoredFile file = em.getReference(StoredFile.class, insuranceFileId);
         car.setInsuranceFile(file);
         car.setUpdatedAt(OffsetDateTime.now());
     }
@@ -512,7 +513,7 @@ public class CarJpaDao implements CarDao {
     public List<CarCard> findSimilarCarCards(
             final long carId,
             final int limit,
-            final java.time.LocalDate browseWallDate,
+            final LocalDate browseWallDate,
             final Long excludeOwnerUserId) {
         final Optional<Car> anchorOpt = getCarById(carId);
         if (anchorOpt.isEmpty()) {
@@ -549,9 +550,16 @@ public class CarJpaDao implements CarDao {
         }
         idSql.append("GROUP BY c.id ORDER BY c.rating_avg DESC NULLS LAST, c.id ASC");
 
+        // The id-only query already encodes every WHERE clause that gates a similar listing
+        // (active status, owner not blocked, availability window, type/transmission/powertrain
+        // match, optional browseWallDate, optional excludeOwnerUserId). The downstream filter is
+        // only {@code filter(Objects::nonNull)}, which can drop a row solely if the car was hard-
+        // deleted between the id query and the entity-fetch JPQL — practically impossible inside
+        // the same transaction. Pulling 4× the requested limit was loading three quarters of the
+        // rows into memory just to discard them. Cap at the exact limit.
         @SuppressWarnings("unchecked")
         final List<Number> ids = bindParams(em.createNativeQuery(idSql.toString()), params)
-                .setMaxResults(limit * 4)
+                .setMaxResults(limit)
                 .getResultList();
 
         if (ids.isEmpty()) {
@@ -648,7 +656,7 @@ public class CarJpaDao implements CarDao {
                 + "AND cb.validated = TRUE "
                 + "AND la.kind = :offeredKind "
                 + "AND c.status = :activeStatus ");
-        params.put("offeredKind", ar.edu.itba.paw.models.domain.CarAvailability.Kind.OFFERED);
+        params.put("offeredKind", CarAvailability.Kind.OFFERED);
         params.put("activeStatus", Car.Status.ACTIVE);
         if (browseWallDate != null) {
             jpql.append("AND la.endInclusive >= :browseWallDate ");
@@ -690,57 +698,54 @@ public class CarJpaDao implements CarDao {
     @Override
     public Optional<CarPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
             final String brand, final String model, final Long excludeCarId) {
-        // Step 1: per-car min price among eligible active listings matching the brand+model. JPQL.
-        final Map<String, Object> perCarParams = new HashMap<>();
-        perCarParams.put("brand", brand);
-        perCarParams.put("model", model);
-        perCarParams.put("offeredKind", ar.edu.itba.paw.models.domain.CarAvailability.Kind.OFFERED);
-        perCarParams.put("activeStatus", Car.Status.ACTIVE);
-        final StringBuilder perCarJpql = new StringBuilder(
-                "SELECT MIN(la.dayPrice) FROM CarAvailability la "
-                + "JOIN la.car c "
-                + "JOIN c.owner u "
-                + "JOIN c.carModel cm "
-                + "JOIN cm.brand cb "
-                + "WHERE u.blocked = FALSE "
-                + "AND cm.validated = TRUE "
-                + "AND cb.validated = TRUE "
-                + "AND la.kind = :offeredKind "
-                + "AND c.status = :activeStatus "
-                + "AND LOWER(cb.name) = LOWER(:brand) "
-                + "AND LOWER(cm.name) = LOWER(:model) ");
+        // Aggregates the per-car minimum offered day price across the eligible active listings
+        // for {@code brand}+{@code model} in a single round-trip. Previous version pulled every
+        // per-car min into memory and folded them in Java, which scales linearly with how popular
+        // the model is and adds nothing the database cannot do.
+        //
+        // We use a derived-table form so the outer aggregate operates on the per-car minima
+        // rather than on the raw availability rows: a car with multiple OFFERED periods at
+        // different prices must contribute exactly one price (its minimum), otherwise high-price
+        // periods would inflate AVG and break MAX.
+        final Map<String, Object> params = new HashMap<>();
+        params.put("brand", brand);
+        params.put("model", model);
+        // The persisted kind/status columns are lowercase (see enumDbValue / DB conventions). Other
+        // queries in this DAO inline the KIND_OFFERED / STATUS_ACTIVE constants for that reason;
+        // do the same here so the bound parameters match what's actually stored.
+        final StringBuilder sql = new StringBuilder(
+                "SELECT MIN(per_car.min_price), MAX(per_car.min_price), AVG(per_car.min_price), COUNT(*) "
+                + "FROM (SELECT MIN(la.day_price) AS min_price "
+                + "      FROM car_availability la "
+                + "      JOIN cars c ON c.id = la.car_id "
+                + "      JOIN users u ON u.id = c.owner_id "
+                + "      JOIN car_models cm ON cm.id = c.model_id "
+                + "      JOIN car_brands cb ON cb.id = cm.brand_id "
+                + "      WHERE u.blocked = FALSE "
+                + "      AND cm.validated = TRUE "
+                + "      AND cb.validated = TRUE "
+                + "      AND la.kind = '" + KIND_OFFERED + "' "
+                + "      AND c.status = '" + STATUS_ACTIVE + "' "
+                + "      AND LOWER(cb.name) = LOWER(:brand) "
+                + "      AND LOWER(cm.name) = LOWER(:model) ");
         if (excludeCarId != null) {
-            perCarJpql.append("AND c.id <> :excludeCarId ");
-            perCarParams.put("excludeCarId", excludeCarId);
+            sql.append("      AND c.id <> :excludeCarId ");
+            params.put("excludeCarId", excludeCarId);
         }
-        perCarJpql.append("GROUP BY c.id");
-        final List<BigDecimal> perCarMinPrices = bindParams(
-                em.createQuery(perCarJpql.toString(), BigDecimal.class), perCarParams).getResultList();
-        if (perCarMinPrices.isEmpty()) {
+        sql.append("      GROUP BY c.id) per_car");
+
+        final Object[] row = (Object[]) bindParams(em.createNativeQuery(sql.toString()), params).getSingleResult();
+        if (row == null) {
             return Optional.empty();
         }
-        // Step 2: aggregate across cars in memory; the small per-car set keeps this trivial.
-        BigDecimal min = null;
-        BigDecimal max = null;
-        BigDecimal sum = BigDecimal.ZERO;
-        long count = 0L;
-        for (final BigDecimal price : perCarMinPrices) {
-            if (price == null) {
-                continue;
-            }
-            if (min == null || price.compareTo(min) < 0) {
-                min = price;
-            }
-            if (max == null || price.compareTo(max) > 0) {
-                max = price;
-            }
-            sum = sum.add(price);
-            count++;
-        }
-        if (count == 0L || min == null || max == null) {
+        // PostgreSQL returns null for MIN/MAX/AVG when the inner set is empty, and 0 for COUNT.
+        final long count = ((Number) row[3]).longValue();
+        if (count == 0L || row[0] == null || row[1] == null || row[2] == null) {
             return Optional.empty();
         }
-        final BigDecimal avg = sum.divide(BigDecimal.valueOf(count), 4, java.math.RoundingMode.HALF_UP);
+        final BigDecimal min = toBigDecimal(row[0]);
+        final BigDecimal max = toBigDecimal(row[1]);
+        final BigDecimal avg = toBigDecimal(row[2]).setScale(4, RoundingMode.HALF_UP);
         return Optional.of(new CarPriceMarketInsight(min, max, avg, count));
     }
 

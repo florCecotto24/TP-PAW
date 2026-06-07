@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -67,7 +66,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendListingDeletionEmail(final List<ReservationMailPayload> reservationsToCancel) {
         if (reservationsToCancel == null || reservationsToCancel.isEmpty()) {
@@ -168,7 +166,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendOwnerPaymentProofReceivedEmail(final OwnerPaymentProofReceivedEmailPayload payload) {
         if (payload == null) {
@@ -205,7 +202,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendOwnerRefundProofObligationEmail(final OwnerRefundProofObligationEmailPayload payload) {
         if (payload == null) {
@@ -246,7 +242,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendOwnerBlockedEmail(final OwnerBlockedEmailPayload payload) {
         if (payload == null) {
@@ -304,7 +299,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendListingPausedDueToMissingCbu(final CarPausedMissingCbuOwnerEmailPayload payload) {
         final String ownerEmail = payload.getOwnerEmail();
@@ -338,7 +332,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendCarPausedByAdmin(final CarPausedByAdminOwnerEmailPayload payload) {
         final String ownerEmail = payload.getOwnerEmail();
@@ -370,7 +363,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendCarRejectedByAdmin(final CarRejectedByAdminOwnerEmailPayload payload) {
         if (payload == null) {
@@ -410,7 +402,6 @@ public final class OwnerListingEmailServiceImpl implements OwnerListingEmailServ
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendCarValidatedByAdmin(final CarValidatedByAdminOwnerEmailPayload payload) {
         if (payload == null) {

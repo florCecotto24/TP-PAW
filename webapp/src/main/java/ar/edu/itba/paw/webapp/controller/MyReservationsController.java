@@ -9,11 +9,14 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
+import javax.validation.constraints.Min;
+
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
@@ -61,7 +64,8 @@ import ar.edu.itba.paw.webapp.validation.ReservationReviewFormValidator;
 
 /** Rider and owner reservation lists, detail, payment proof upload, reviews, and download flows. */
 @Controller
-public final class MyReservationsController {
+@Validated
+public class MyReservationsController {
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
@@ -138,7 +142,7 @@ public final class MyReservationsController {
     @GetMapping("/my-reservations")
     public ModelAndView myReservations(
             @CurrentUser final User currentUser,
-            @RequestParam(defaultValue = "0") int riderPage,
+            @RequestParam(defaultValue = "0") @Min(0) final int riderPage,
             @RequestParam(required = false) final List<Reservation.Status> riderStatus,
             @RequestParam(required = false) final List<Car.Type> category,
             @RequestParam(required = false) final List<Car.Transmission> transmission,
@@ -150,8 +154,6 @@ public final class MyReservationsController {
             @RequestParam(required = false) final String q,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        riderPage = Math.max(0, riderPage);
-
         final String riderSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 null, me.getId(), category, transmission, powertrain, priceMin, priceMax,
@@ -493,6 +495,19 @@ public final class MyReservationsController {
                     "cancelReservationError", localeMessages.msg(e));
             return new ModelAndView(redirectToMyReservationDetailView(reservationId, role, fromCar));
         }
+        // PRG: render the cancellation acknowledgement page from a GET so a refresh does not
+        // resubmit the cancel; the role flag is carried as a query param (it only affects the
+        // "back" link target on the confirmation view).
+        return new ModelAndView(new RedirectView(
+                "/my-reservations/cancelled?role=" + role.toLegacyString(), true));
+    }
+
+    @GetMapping("/my-reservations/cancelled")
+    public ModelAndView cancelledAcknowledgement(
+            @CurrentUser final User currentUser,
+            @RequestParam(name = "role", required = false) final ReservationViewerRole roleParam) {
+        WebAuthUtils.requireUser(currentUser);
+        final ReservationViewerRole role = roleParam != null ? roleParam : ReservationViewerRole.RIDER;
         final ModelAndView mav = new ModelAndView("reservation/reservationCancelled");
         mav.addObject("reservationRole", role.toLegacyString());
         return mav;

@@ -15,6 +15,8 @@ import javax.persistence.MapsId;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** Review left by a rider or owner after a reservation. Composite PK: (reservation_id, made_by_rider). */
 @Entity
 @Table(name = "reviews")
@@ -153,5 +155,21 @@ public class Review {
 
     public void setImage(final Image image) {
         this.image = image;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Review)) {
+            return false;
+        }
+        return EntityEquality.equalsByEmbeddedId(this.id, ((Review) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByEmbeddedId(this, id);
     }
 }

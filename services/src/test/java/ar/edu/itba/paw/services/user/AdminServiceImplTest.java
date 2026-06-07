@@ -68,9 +68,6 @@ public class AdminServiceImplTest {
 
     @Test
     public void testCreateAdminUserReturnsCreatedAdminUser() {
-        // Happy-path coverage of the createAdminUser facade. The "sends invitation" side-effect
-        // is not asserted (would require Mockito.verify, forbidden by the test-style rules);
-        // the test only confirms the call returns the User produced by the underlying service.
         // 1. Arrange
         final User created = User.builder()
                 .id(99L)

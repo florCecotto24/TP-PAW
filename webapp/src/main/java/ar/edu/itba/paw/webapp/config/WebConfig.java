@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import java.util.Properties;
 
@@ -57,12 +58,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
+import ar.edu.itba.paw.policy.MoneyFormatPolicy;
 import ar.edu.itba.paw.policy.ReservationChatPolicy;
 import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
 import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
+import ar.edu.itba.paw.webapp.config.properties.AppMoneyProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
@@ -143,6 +146,16 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
+    public AppMoneyProperties appMoneyProperties(final Environment environment) {
+        return AppMoneyProperties.fromEnvironment(environment);
+    }
+
+    @Bean
+    public MoneyFormatPolicy moneyFormatPolicy(final AppMoneyProperties appMoneyProperties) {
+        return appMoneyProperties.toMoneyFormatPolicy();
+    }
+
+    @Bean
     public UserValidationPolicy userValidationPolicy(final AppValidationProperties appValidationProperties) {
         return appValidationProperties.toUserValidationPolicy();
     }
@@ -199,6 +212,23 @@ public class WebConfig implements WebMvcConfigurer {
         bean.setValidationMessageSource(messageSource);
         bean.setConstraintValidatorFactory(new SpringConstraintValidatorFactory(beanFactory));
         return bean;
+    }
+
+    /**
+     * Enables JSR-303 method-level validation on Spring beans annotated with
+     * {@link org.springframework.validation.annotation.Validated} so controllers can declare
+     * {@code @Min(0) int page} on @RequestParam parameters instead of clamping with
+     * {@code Math.max(0, page)}. Failed constraints surface as
+     * {@link javax.validation.ConstraintViolationException} which the global handler
+     * (RydenExceptionHandler) reports as a 400.
+     */
+    @Bean
+    public org.springframework.validation.beanvalidation.MethodValidationPostProcessor methodValidationPostProcessor(
+            final LocalValidatorFactoryBean localValidatorFactoryBean) {
+        final org.springframework.validation.beanvalidation.MethodValidationPostProcessor processor =
+                new org.springframework.validation.beanvalidation.MethodValidationPostProcessor();
+        processor.setValidator(localValidatorFactoryBean);
+        return processor;
     }
 
     @Bean
@@ -281,6 +311,15 @@ public class WebConfig implements WebMvcConfigurer {
                 Thread.currentThread().setContextClassLoader(previous);
             }
         });
+        // Graceful shutdown: drain the queue so a deploy does not lose mail already accepted by
+        // the application (verification codes, password resets, reservation confirmations).
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        // Backpressure: when the queue is saturated, run the email synchronously on the caller
+        // thread instead of throwing TaskRejectedException up to the controller. Mail sending is
+        // already best-effort (failures are logged) so the small latency hit on the calling
+        // request is preferable to surfacing a 500 to the user mid-flow.
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }

@@ -20,6 +20,8 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /**
  * Rental agreement between a rider and a car: UTC interval, money total, payment proof state, and lifecycle status.
  */
@@ -515,5 +517,21 @@ public class Reservation {
                 ", carReturned=" + carReturned +
                 ", carReturnedAt=" + carReturnedAt +
                 '}';
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Reservation)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((Reservation) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 }

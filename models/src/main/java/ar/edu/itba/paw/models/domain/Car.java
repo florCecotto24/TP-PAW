@@ -25,6 +25,8 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** Vehicle inventory row: owner, plate, car-model FK, category enums, lifecycle status, description, timestamps and rating cache. */
 @Entity
 @Table(name = "cars")
@@ -386,6 +388,22 @@ public class Car {
 
     public void setMinimumRentalDays(final int minimumRentalDays) {
         this.minimumRentalDays = minimumRentalDays;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Car)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((Car) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.services.user;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -14,6 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.admin.AdminCannotBlockGrantorException;
 import ar.edu.itba.paw.exception.admin.AdminCannotBlockSelfException;
+import ar.edu.itba.paw.exception.admin.AdminCannotPauseAdminCarException;
+import ar.edu.itba.paw.exception.car.CarBrandNotFoundException;
+import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
+import ar.edu.itba.paw.exception.car.CarNotFoundException;
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
@@ -108,7 +115,7 @@ public class AdminServiceImpl implements AdminService {
             throw new AdminCannotBlockSelfException();
         }
         final User target = userService.getUserById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + targetUserId));
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         target.getRoleAssignedBy().ifPresent(grantorId -> {
             if (grantorId == actingAdminId) {
                 throw new AdminCannotBlockGrantorException();
@@ -125,9 +132,9 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void adminPauseCar(final long carId, final long actingAdminId, final Locale locale) {
         final Car car = carService.getCarById(carId)
-                .orElseThrow(() -> new IllegalArgumentException("Car not found: " + carId));
+                .orElseThrow(() -> new CarNotFoundException(carId));
         if (car.getOwner().isAdmin()) {
-            throw new IllegalArgumentException("Cannot admin-pause a car owned by another admin: " + carId);
+            throw new AdminCannotPauseAdminCarException(carId);
         }
         carService.markCarAsAdminPaused(carId);
         final List<Reservation> blocking = reservationService.findBlockingReservationsByCarId(carId);
@@ -160,7 +167,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void validateCarBrand(final long brandId) {
         if (carBrandService.findById(brandId).isEmpty()) {
-            throw new IllegalArgumentException("Brand not found: " + brandId);
+            throw new CarBrandNotFoundException(brandId);
         }
         carBrandService.markAsValidated(brandId);
     }
@@ -177,7 +184,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void validateCarModel(final long modelId) {
         if (carModelService.findById(modelId).isEmpty()) {
-            throw new IllegalArgumentException("Model not found: " + modelId);
+            throw new CarModelNotFoundException(modelId);
         }
         carModelService.markAsValidated(modelId);
     }
@@ -190,7 +197,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void validateCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelService.findById(modelId)
-                .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
+                .orElseThrow(() -> new CarModelNotFoundException(modelId));
         final CarBrand brand = model.getBrand();
         final boolean brandWillBeValidated = !brand.isValidated();
         final String brandName = brand.getName();
@@ -220,7 +227,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void rejectCatalogEntry(final long modelId, final Locale locale) {
         final CarModel model = carModelService.findById(modelId)
-                .orElseThrow(() -> new IllegalArgumentException("Model not found: " + modelId));
+                .orElseThrow(() -> new CarModelNotFoundException(modelId));
         final CarBrand brand = model.getBrand();
         final boolean brandIsPending = !brand.isValidated();
         final boolean isLastModelForBrand = carModelService.countByBrandId(brand.getId()) == 1;
@@ -228,7 +235,7 @@ public class AdminServiceImpl implements AdminService {
         final String brandName = brand.getName();
         final String modelName = model.getName();
         final List<Car> affectedCars = carService.findCarsByModelId(modelId);
-        final List<CarRejectedByAdminOwnerEmailPayload> notifications = new java.util.ArrayList<>(affectedCars.size());
+        final List<CarRejectedByAdminOwnerEmailPayload> notifications = new ArrayList<>(affectedCars.size());
         for (final Car car : affectedCars) {
             final User owner = car.getOwner();
             final String vehicleLabel = brandName + " " + modelName;

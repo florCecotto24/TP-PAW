@@ -5,7 +5,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <title><spring:message code="myReservationDetail.pageTitle" arguments="${car.brand} ${car.model}"/></title>
     <%@include file="../header.jsp"%>

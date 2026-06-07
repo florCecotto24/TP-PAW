@@ -84,6 +84,13 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<CarAvailability> findByIdForCar(final long carId, final long availabilityId) {
+        return carAvailabilityDao.findById(availabilityId)
+                .filter(av -> av.getCarId() == carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<CarAvailability> findEffectiveForDayByCar(final long carId, final LocalDate day) {
         return carAvailabilityDao.findEffectiveForDayByCar(carId, day);
     }

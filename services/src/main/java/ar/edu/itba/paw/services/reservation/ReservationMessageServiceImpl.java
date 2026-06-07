@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.reservation;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -228,16 +229,21 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         if (pending.isEmpty()) {
             return;
         }
+        // Cache cars referenced during this dispatch so each car triggers at most one
+        // {@code carService.getCarById}: previously every conversation entry called it again
+        // (resolveVehicleLabel) and so did counterparty resolution for owner-bound recipients.
+        final Map<Long, Optional<Car>> carCache = new HashMap<>();
         final Map<Long, List<ReservationMessage>> byRecipient = new LinkedHashMap<>();
         for (final ReservationMessage message : pending) {
             if (message.isSeen()) {
                 continue;
             }
-            final long recipientId = resolveCounterpartyUserId(message.getSenderUserId(), message.getReservation());
+            final long recipientId = resolveCounterpartyUserId(
+                    message.getSenderUserId(), message.getReservation(), carCache);
             byRecipient.computeIfAbsent(recipientId, ignored -> new ArrayList<>()).add(message);
         }
         for (final Map.Entry<Long, List<ReservationMessage>> entry : byRecipient.entrySet()) {
-            dispatchDigestForRecipient(entry.getKey(), entry.getValue());
+            dispatchDigestForRecipient(entry.getKey(), entry.getValue(), carCache);
         }
     }
 
@@ -268,7 +274,10 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
                 .map(sf -> new BinaryContent(sf.getData(), sf.getContentType(), sf.getFileName()));
     }
 
-    private void dispatchDigestForRecipient(final long recipientId, final List<ReservationMessage> messages) {
+    private void dispatchDigestForRecipient(
+            final long recipientId,
+            final List<ReservationMessage> messages,
+            final Map<Long, Optional<Car>> carCache) {
         try {
             final List<ReservationMessage> unseenMessages = messages.stream()
                     .filter(message -> !message.isSeen())
@@ -286,9 +295,11 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
                 return;
             }
             final User recipient = recipientOpt.get();
-            final Locale mailLocale = userService.resolveMailLocale(recipientId);
+            // resolveMailLocaleFor reuses the already-loaded user instead of re-querying users
+            // by id, which previously cost one extra SELECT per recipient in the digest loop.
+            final Locale mailLocale = userService.resolveMailLocaleFor(recipient);
             final Optional<ReservationChatDigestEmailPayload> payloadOpt =
-                    buildDigestPayload(recipient, mailLocale, unseenMessages);
+                    buildDigestPayload(recipient, mailLocale, unseenMessages, carCache);
             if (payloadOpt.isEmpty()) {
                 return;
             }
@@ -302,7 +313,10 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
     }
 
     private Optional<ReservationChatDigestEmailPayload> buildDigestPayload(
-            final User recipient, final Locale mailLocale, final List<ReservationMessage> messages) {
+            final User recipient,
+            final Locale mailLocale,
+            final List<ReservationMessage> messages,
+            final Map<Long, Optional<Car>> carCache) {
         final Map<Long, List<ReservationMessage>> byReservation = new LinkedHashMap<>();
         for (final ReservationMessage message : messages) {
             byReservation
@@ -317,7 +331,7 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
             }
             final Reservation reservation = reservationMessages.get(0).getReservation();
             final long reservationId = reservation.getId();
-            final String vehicleLabel = resolveVehicleLabel(reservation.getCarId());
+            final String vehicleLabel = resolveVehicleLabel(reservation.getCarId(), carCache);
             final boolean recipientIsOwner = recipient.getId() != reservation.getRiderId();
             final String roleParam = recipientIsOwner ? "owner" : "rider";
             final String detailPath = "/my-reservations/" + reservationId + "/chat?role=" + roleParam;
@@ -427,10 +441,12 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         return user.getForename() + " " + user.getSurname();
     }
 
-    private long resolveCounterpartyUserId(final long senderUserId, final Reservation reservation) {
+    private long resolveCounterpartyUserId(
+            final long senderUserId,
+            final Reservation reservation,
+            final Map<Long, Optional<Car>> carCache) {
         if (senderUserId == reservation.getRiderId()) {
-            return carService
-                    .getCarById(reservation.getCarId())
+            return cachedCar(reservation.getCarId(), carCache)
                     .map(Car::getOwner)
                     .map(User::getId)
                     .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
@@ -438,11 +454,14 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
         return reservation.getRiderId();
     }
 
-    private String resolveVehicleLabel(final long carId) {
-        return carService
-                .getCarById(carId)
+    private String resolveVehicleLabel(final long carId, final Map<Long, Optional<Car>> carCache) {
+        return cachedCar(carId, carCache)
                 .map(car -> car.getBrand() + " " + car.getModel())
                 .orElse("");
+    }
+
+    private Optional<Car> cachedCar(final long carId, final Map<Long, Optional<Car>> carCache) {
+        return carCache.computeIfAbsent(carId, carService::getCarById);
     }
 
     private static String truncateForEmailPreview(final String body, final String attachmentFileName) {

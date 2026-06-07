@@ -67,10 +67,14 @@ public final class MailDispatchSupport {
     }
 
     /**
-     * Sends an HTML email with the embedded {@code logo} CID image. Failures are logged at ERROR
-     * but never propagate, matching the original {@code EmailServiceImpl} fire-and-forget contract.
+     * Sends an HTML email with the embedded {@code logo} CID image. Wraps any underlying
+     * {@link MessagingException} into {@link EmailMessagingException} so the caller's
+     * {@link #runMail(MailAction)} block can detect the failure (it was previously swallowed
+     * here, which made wrong-headers / missing-logo failures invisible at the calling layer).
+     *
+     * @throws EmailMessagingException when JavaMail cannot assemble or dispatch the message
      */
-    public void sendEmail(final String to, final String subject, final String htmlBody) {
+    public void sendEmail(final String to, final String subject, final String htmlBody) throws EmailMessagingException {
         final MimeMessage message = this.mailSender.createMimeMessage();
         try {
             final MimeMessageHelper helper = new MimeMessageHelper(
@@ -87,6 +91,7 @@ public final class MailDispatchSupport {
             mailSender.send(message);
         } catch (final MessagingException e) {
             LOGGER.atError().setCause(e).addArgument(to).log("Error sending email to {}");
+            throw new EmailMessagingException(e);
         }
     }
 

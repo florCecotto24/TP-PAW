@@ -62,6 +62,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Min;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -76,7 +77,8 @@ import java.util.Optional;
 /** Owner hub: car cards, edit, pause/finish, and per-car reservation analytics and actions. */
 @Controller
 @RequestMapping("/my-cars")
-public final class MyCarsController {
+@Validated
+public class MyCarsController {
 
     private final ReservationService reservationService;
     private final ReservationViewService reservationViewService;
@@ -141,7 +143,7 @@ public final class MyCarsController {
     @GetMapping
     public ModelAndView myCars(
             @CurrentUser final User currentUser,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") @Min(0) final int page,
             @RequestParam(required = false) final List<Car.Status> listingStatus,
             @RequestParam(required = false) final String q,
             @RequestParam(required = false) final List<Car.Type> category,
@@ -153,7 +155,6 @@ public final class MyCarsController {
             @RequestParam(required = false) final String sort,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
-        page = Math.max(0, page);
         final String listingsSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         final var listingsCriteria = carService.buildOwnerCarSearchCriteria(
                 me.getId(), category, transmission, powertrain, priceMin, priceMax,
@@ -179,7 +180,7 @@ public final class MyCarsController {
     @GetMapping("/reservations")
     public ModelAndView ownerReservations(
             @CurrentUser final User currentUser,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") @Min(0) final int page,
             @RequestParam(required = false) final List<Reservation.Status> ownerStatus,
             @RequestParam(required = false) final String ownerQ,
             @RequestParam(required = false) final List<Car.Type> ownerCategory,
@@ -201,7 +202,7 @@ public final class MyCarsController {
     public ModelAndView ownerReservationsForCar(
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") @Min(0) final int page,
             @RequestParam(required = false) final List<Reservation.Status> ownerStatus,
             @RequestParam(required = false) final String ownerQ,
             @RequestParam(required = false) final List<Car.Type> ownerCategory,
@@ -227,7 +228,7 @@ public final class MyCarsController {
             final User me,
             final Car selectedCarOrNull,
             final Long carIdFilterOrNull,
-            int page,
+            final int page,
             final List<Reservation.Status> ownerStatus,
             final String ownerQ,
             final List<Car.Type> ownerCategory,
@@ -238,7 +239,6 @@ public final class MyCarsController {
             final List<String> ownerRating,
             final String ownerSort,
             final HttpServletRequest request) {
-        page = Math.max(0, page);
         final String sort = MyHubSortSanitizer.sanitize(ownerSort, DEFAULT_SORT);
         final var criteria = reservationService.buildReservationSearchCriteria(
                 me.getId(), null, ownerCategory, ownerTransmission, ownerPowertrain,
@@ -359,7 +359,7 @@ public final class MyCarsController {
     public ModelAndView carReservations(
             @CurrentUser final User currentUser,
             @PathVariable("carId") final long carId,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") @Min(0) final int page,
             @RequestParam(required = false) final String reservationStatus,
             final HttpServletRequest request) {
         final User me = WebAuthUtils.requireUser(currentUser);
@@ -367,7 +367,6 @@ public final class MyCarsController {
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
-        page = Math.max(0, page);
         final String statusFilter = reservationViewService.normalizeReservationStatusQueryParam(reservationStatus);
         final CarReservationsListPageModel pageModel = reservationViewService.loadCarReservationsListPage(
                 me.getId(), lookup.car().orElseThrow(), page, appPaginationProperties.getDefaultPageSize(),
@@ -398,7 +397,7 @@ public final class MyCarsController {
         if (pm.getVariant() == MyCarDetailPageModel.Variant.RICH) {
             final OwnerCarDetailPageModel owner = pm.getOwnerPageModel().orElseThrow();
             final CarAvailabilityEditForm editForm = new CarAvailabilityEditForm();
-            applyEditFormDefaultsFromAvailabilities(editForm, owner.getAvailabilities());
+            editForm.populateDefaultsFromExistingAvailabilities(owner.getAvailabilities());
             final ModelAndView mav = new ModelAndView("car/myCarDetail");
             owner.populateModel(mav::addObject);
             mav.addObject("editForm", editForm);
@@ -498,8 +497,8 @@ public final class MyCarsController {
         if (lookup.redirect().isPresent()) {
             return lookup.redirect().get();
         }
-        final Optional<CarAvailability> avOpt = carAvailabilityService.findById(availabilityId);
-        if (avOpt.isEmpty() || avOpt.get().getCarId() != carId) {
+        final Optional<CarAvailability> avOpt = carAvailabilityService.findByIdForCar(carId, availabilityId);
+        if (avOpt.isEmpty()) {
             return new ModelAndView(redirectTo("/my-cars/car/" + carId));
         }
         return buildEditAvailabilityView(
@@ -689,36 +688,6 @@ public final class MyCarsController {
         mav.addObject("userHasCbu", context.isUserHasCbu());
         mav.addObject("activeTab", "my-cars");
         return mav;
-    }
-
-    private static void applyEditFormDefaultsFromAvailabilities(
-            final CarAvailabilityEditForm editForm,
-            final List<CarAvailability> availabilities) {
-        if (availabilities == null || availabilities.isEmpty()) {
-            return;
-        }
-        final CarAvailability mostRecent = availabilities.stream()
-                .max(java.util.Comparator.comparing(CarAvailability::getCreatedAt))
-                .get();
-        if (editForm.getPricePerDay() == null) {
-            editForm.setPricePerDay(mostRecent.getDayPriceValue());
-        }
-        if (editForm.getStartPointStreet() == null) {
-            editForm.setStartPointStreet(mostRecent.getStartPointStreet());
-        }
-        if (editForm.getStartPointNumber() == null) {
-            editForm.setStartPointNumber(mostRecent.getStartPointNumber().orElse(null));
-        }
-        if (editForm.getCheckInTime() == null) {
-            editForm.setCheckInTime(mostRecent.getCheckInTime());
-        }
-        if (editForm.getCheckOutTime() == null) {
-            editForm.setCheckOutTime(mostRecent.getCheckOutTime());
-        }
-        if (editForm.getNeighborhoodId() == null) {
-            editForm.setNeighborhoodId(mostRecent.getNeighborhoodId().orElse(null));
-        }
-        editForm.populateDefaultAvailability(availabilities);
     }
 
     private static void prefillLocationAndTimes(final CreateCarAvailabilityForm form, final CarAvailability la) {

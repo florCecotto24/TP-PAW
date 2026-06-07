@@ -5,6 +5,7 @@ import ar.edu.itba.paw.services.reservation.ReservationAvailabilityService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -17,7 +18,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -38,6 +38,7 @@ public final class ReservationReminderScheduler {
     private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
     private final UserService userService;
     private final EmailService emailService;
+    private final MoneyFormat moneyFormat;
 
     @Autowired
     public ReservationReminderScheduler(
@@ -45,12 +46,14 @@ public final class ReservationReminderScheduler {
             final ReservationAvailabilityService reservationAvailabilityService,
             final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
             final UserService userService,
-            final EmailService emailService) {
+            final EmailService emailService,
+            final MoneyFormat moneyFormat) {
         this.reservationService = reservationService;
         this.reservationAvailabilityService = reservationAvailabilityService;
         this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
         this.userService = userService;
         this.emailService = emailService;
+        this.moneyFormat = moneyFormat;
     }
 
     @Scheduled(
@@ -70,22 +73,18 @@ public final class ReservationReminderScheduler {
 
         for (final Reservation reservation : reservations) {
             try {
-                final Optional<User> riderOpt = userService.getUserById(reservation.getRiderId());
-                if (riderOpt.isEmpty()) {
-                    LOGGER.atWarn().addArgument(reservation.getRiderId()).addArgument(reservation.getId()).log("Skipping reservation reminder email: user not found for riderId={} reservationId={}");
-                    continue;
-                }
-
+                // Rider, car and owner come pre-fetched from findReminderReservations (JOIN FETCH
+                // r.rider / r.car / c.owner / cm / cm.brand). Don't issue a SELECT users / SELECT
+                // cars per row — the previous version triggered three extra queries per reminder.
+                final User rider = reservation.getRider();
                 final Car car = reservation.getCar();
-                final Optional<User> ownerOpt = Optional.ofNullable(car).map(Car::getOwner);
-
-                if (ownerOpt.isEmpty()) {
-                    LOGGER.atWarn().addArgument(reservation.getId()).log("Skipping reservation reminder email: owner not found for reservationId={}");
+                if (rider == null || car == null || car.getOwner() == null) {
+                    LOGGER.atWarn().addArgument(reservation.getId())
+                            .log("Skipping reservation reminder email: rider/car/owner missing for reservationId={}");
                     continue;
                 }
 
-                final User rider = riderOpt.get();
-                final User listingOwner = ownerOpt.get();
+                final User listingOwner = car.getOwner();
                 final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
                         + " "
                         + (car.getModel() != null ? car.getModel() : "");
@@ -109,9 +108,9 @@ public final class ReservationReminderScheduler {
                         .ownerHandoverLocation(ownerLoc)
                         .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                         .ownerEmail(listingOwner.getEmail())
-                        .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
-                        .riderMailLocale(userService.resolveMailLocale(rider.getId()))
-                        .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
+                        .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
+                        .riderMailLocale(userService.resolveMailLocaleFor(rider))
+                        .ownerMailLocale(userService.resolveMailLocaleFor(listingOwner))
                         .build();
                 LOGGER.atInfo().addArgument(rider.getEmail()).addArgument(reservation.getId())
                         .log("Queueing reservation reminder email to {} for reservation id={}");

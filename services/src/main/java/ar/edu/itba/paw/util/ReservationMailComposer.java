@@ -6,6 +6,7 @@ import static ar.edu.itba.paw.util.ReservationServiceSupport.trimName;
 import static ar.edu.itba.paw.util.ReservationServiceSupport.trimToNull;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -29,10 +30,10 @@ import ar.edu.itba.paw.models.email.ReservationMailPayload;
 import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
 import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
 import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.user.UserService;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 
 /**
  * Builds and dispatches every reservation-related email. Centralising this here keeps the
@@ -53,17 +54,20 @@ public final class ReservationMailComposer {
     private final EmailService emailService;
     private final ReservationServiceSupport support;
     private final CarAvailabilityAddressFormatter addressFormatter;
+    private final MoneyFormat moneyFormat;
 
     @Autowired
     public ReservationMailComposer(
             final UserService userService,
             final EmailService emailService,
             final ReservationServiceSupport support,
-            final CarAvailabilityAddressFormatter addressFormatter) {
+            final CarAvailabilityAddressFormatter addressFormatter,
+            final MoneyFormat moneyFormat) {
         this.userService = userService;
         this.emailService = emailService;
         this.support = support;
         this.addressFormatter = addressFormatter;
+        this.moneyFormat = moneyFormat;
     }
 
     // ---------------------------------------------------------------------------------------
@@ -110,7 +114,7 @@ public final class ReservationMailComposer {
                     .ownerHandoverLocation(handoverLocation)
                     .ownerFullName(carOwner.getForename() + " " + carOwner.getSurname())
                     .ownerEmail(carOwner.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(carOwner.getId()))
                     .ownerCbu(ownerCbu)
@@ -164,7 +168,7 @@ public final class ReservationMailComposer {
                     .ownerHandoverLocation(handoverLocation)
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .ownerEmail(owner.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(owner.getId()))
                     .ownerCbu(ownerCbu)
@@ -218,7 +222,7 @@ public final class ReservationMailComposer {
                     .ownerHandoverLocation(ownerLoc)
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
@@ -271,7 +275,7 @@ public final class ReservationMailComposer {
                     .ownerHandoverLocation(ownerLoc)
                     .ownerFullName(listingOwner.getForename() + " " + listingOwner.getSurname())
                     .ownerEmail(listingOwner.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .riderMailLocale(userService.resolveMailLocale(rider.getId()))
                     .ownerMailLocale(userService.resolveMailLocale(listingOwner.getId()))
                     .build();
@@ -301,7 +305,7 @@ public final class ReservationMailComposer {
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
                     .riderEmail(rider.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
                     .reservationId(reservationId)
                     .startDate(reservation.getStartDate())
@@ -337,7 +341,7 @@ public final class ReservationMailComposer {
                     .riderFullName(rider.getForename() + " " + rider.getSurname())
                     .ownerFullName(owner.getForename() + " " + owner.getSurname())
                     .ownerEmail(owner.getEmail())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .vehicleLabel(support.resolveVehicleLabelFromReservation(reservation))
                     .reservationId(reservationId)
                     .startDate(reservation.getStartDate())
@@ -383,7 +387,7 @@ public final class ReservationMailComposer {
                     .reservationId(reservation.getId())
                     .startDate(reservation.getStartDate())
                     .endDate(reservation.getEndDate())
-                    .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                    .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                     .refundProofDeadlineAt(deadlineOpt.get())
                     .dueReminder(dueReminder)
                     .build();
@@ -398,7 +402,7 @@ public final class ReservationMailComposer {
 
     public void sendOwnerBlockedEmail(final User owner, final List<Reservation> overdueReservations) {
         try {
-            final List<OwnerBlockedEmailPayload.OverdueRefundReservation> rows = new java.util.ArrayList<>();
+            final List<OwnerBlockedEmailPayload.OverdueRefundReservation> rows = new ArrayList<>();
             for (final Reservation r : overdueReservations) {
                 final OffsetDateTime deadline = r.getRefundProofDeadlineAt().orElse(null);
                 if (deadline == null) {
@@ -408,7 +412,7 @@ public final class ReservationMailComposer {
                         r.getId(),
                         support.resolveVehicleLabelFromReservation(r),
                         deadline,
-                        ArsMoneyFormat.format(r.getTotalPrice())));
+                        moneyFormat.format(r.getTotalPrice())));
             }
             if (rows.isEmpty()) {
                 return;
@@ -461,7 +465,7 @@ public final class ReservationMailComposer {
                 .endDate(reservation.getEndDate())
                 .ownerFullName(owner.getForename() + " " + owner.getSurname())
                 .ownerEmail(owner.getEmail())
-                .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                 .ownerCbu(ownerCbu)
                 .riderMailLocale(riderLocale)
                 .ownerMailLocale(userService.resolveMailLocale(owner.getId()))

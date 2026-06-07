@@ -14,6 +14,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,12 +23,14 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.util.List;
 
 /** Public listing search and filters with canonical sort tokens and pagination. */
 @Controller
-public final class SearchController {
+@Validated
+public class SearchController {
 
     private static final String DEFAULT_SORT = "date,desc";
 
@@ -58,7 +61,7 @@ public final class SearchController {
             @RequestParam(required = false) final List<String> rating,
             @RequestParam(required = false) final String from,
             @RequestParam(required = false) final String until,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") @Min(0) final int page,
             @RequestParam(required = false) final String sort,
             @RequestParam(required = false) final List<String> neighborhoodId,
             @RequestParam(defaultValue = "false") final boolean flexible,
@@ -67,8 +70,6 @@ public final class SearchController {
             @CurrentUser final User currentUser,
             final HttpServletRequest request) {
         final ModelAndView mav = new ModelAndView("search");
-
-        page = Math.max(0, page);
 
         final User viewer = currentUser;
 

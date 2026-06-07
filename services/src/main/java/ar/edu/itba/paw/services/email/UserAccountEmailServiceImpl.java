@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -53,7 +52,6 @@ public final class UserAccountEmailServiceImpl implements UserAccountEmailServic
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendEmailVerificationCode(final EmailVerificationCodeEmailPayload payload) {
         final String to = payload.getRecipientEmail();
@@ -82,7 +80,6 @@ public final class UserAccountEmailServiceImpl implements UserAccountEmailServic
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendMigratedUserPassword(final MigratedUserPasswordEmailPayload payload) {
         final String to = payload.getRecipientEmail();
@@ -110,7 +107,6 @@ public final class UserAccountEmailServiceImpl implements UserAccountEmailServic
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendAdminInvitation(final AdminInvitationEmailPayload payload) {
         final String to = payload.getRecipientEmail();
@@ -139,7 +135,6 @@ public final class UserAccountEmailServiceImpl implements UserAccountEmailServic
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendAdminPromoted(final AdminPromotedEmailPayload payload) {
         if (payload == null) {
@@ -174,7 +169,6 @@ public final class UserAccountEmailServiceImpl implements UserAccountEmailServic
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendPasswordResetCode(final PasswordResetCodeEmailPayload payload) {
         final String to = payload.getRecipientEmail();

@@ -52,4 +52,18 @@ public interface ReservationFormViewService {
             Long availabilityId,
             Reservation reservation,
             Locale locale);
+
+    /**
+     * Loads the {@code reservationConfirmation} JSP page model from a persisted reservation,
+     * scoped to its rider. Used by the GET endpoint that follows the POST-redirect-GET on
+     * a successful reservation submit, so a browser refresh re-renders the page from the
+     * stored reservation instead of reposting the form.
+     *
+     * @return empty when the reservation does not exist or does not belong to {@code riderId}
+     */
+    Optional<ReservationConfirmationPageModel> loadReservationConfirmationForRider(
+            long riderId,
+            long reservationId,
+            Long availabilityId,
+            Locale locale);
 }

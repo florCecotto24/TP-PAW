@@ -3,8 +3,6 @@ package ar.edu.itba.paw.webapp.controller;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -163,13 +161,11 @@ public final class ProfileController {
             final Model model) {
         final User me = WebAuthUtils.requireUser(currentUser);
         populateFormFromUser(me.getId(), profileForm);
-        final LocalDate bd = profileForm.getBirthDate();
-        if (bd != null) {
-            final Locale locale = LocaleContextHolder.getLocale();
-            final String pattern = locale.getLanguage().equals("es") ? "dd/MM/yyyy" : "MM/dd/yyyy";
-            model.addAttribute("profileBirthDateDisplay",
-                    bd.format(DateTimeFormatter.ofPattern(pattern)));
-        } else {
+        // The locale-aware date format is computed by ProfileViewService.loadProfileBaseModel
+        // and exposed as the "profileBirthDateDisplay" model attribute via @ModelAttribute
+        // addUserBasics. We only need the "not specified" fallback when the user has no
+        // birth date on record (the base model leaves the attribute unset in that case).
+        if (profileForm.getBirthDate() == null) {
             model.addAttribute("profileBirthDateDisplay", localeMessages.msg("common.notSpecified"));
         }
         return "profile/profile";

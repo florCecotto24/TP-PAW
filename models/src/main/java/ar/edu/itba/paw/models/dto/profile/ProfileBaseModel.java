@@ -21,6 +21,7 @@ public final class ProfileBaseModel {
     private final String userSurname;
     private final Long profilePictureImageId;
     private final String profileMemberSinceDisplay;
+    private final String profileBirthDateDisplay;
     private final boolean licenseValidated;
     private final boolean identityValidated;
     private final String licenseFileName;
@@ -32,6 +33,7 @@ public final class ProfileBaseModel {
             final String userSurname,
             final Long profilePictureImageId,
             final String profileMemberSinceDisplay,
+            final String profileBirthDateDisplay,
             final boolean licenseValidated,
             final boolean identityValidated,
             final String licenseFileName,
@@ -41,6 +43,7 @@ public final class ProfileBaseModel {
         this.userSurname = Objects.requireNonNull(userSurname, "userSurname");
         this.profilePictureImageId = profilePictureImageId;
         this.profileMemberSinceDisplay = profileMemberSinceDisplay;
+        this.profileBirthDateDisplay = profileBirthDateDisplay;
         this.licenseValidated = licenseValidated;
         this.identityValidated = identityValidated;
         this.licenseFileName = licenseFileName;
@@ -59,6 +62,10 @@ public final class ProfileBaseModel {
 
     public Optional<String> getProfileMemberSinceDisplay() {
         return Optional.ofNullable(profileMemberSinceDisplay);
+    }
+
+    public String getProfileBirthDateDisplay() {
+        return profileBirthDateDisplay;
     }
 
     public boolean isLicenseValidated() { return licenseValidated; }
@@ -82,6 +89,9 @@ public final class ProfileBaseModel {
         }
         if (profileMemberSinceDisplay != null) {
             sink.accept("profileMemberSinceDisplay", profileMemberSinceDisplay);
+        }
+        if (profileBirthDateDisplay != null) {
+            sink.accept("profileBirthDateDisplay", profileBirthDateDisplay);
         }
         sink.accept("licenseValidated", licenseValidated);
         sink.accept("identityValidated", identityValidated);

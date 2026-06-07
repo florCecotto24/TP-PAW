@@ -1,11 +1,35 @@
 /* Price market insight card: animated slider + sync with price-per-day input */
 (function () {
-    var moneyFmt = new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency: "ARS",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    });
+    var DEFAULT_CURRENCY = "ARS";
+    var moneyFormatterCache = {};
+
+    function getMoneyFormatter(currency) {
+        var key = currency || DEFAULT_CURRENCY;
+        if (!moneyFormatterCache[key]) {
+            try {
+                moneyFormatterCache[key] = new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: key,
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                });
+            } catch (ignore) {
+                moneyFormatterCache[key] = new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: DEFAULT_CURRENCY,
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                });
+            }
+        }
+        return moneyFormatterCache[key];
+    }
+
+    function getCardCurrency(card) {
+        var attr = card.getAttribute("data-currency");
+        return attr && attr.trim() !== "" ? attr.trim() : DEFAULT_CURRENCY;
+    }
+
     var nextCardId = 0;
 
     function parseMoney(raw) {
@@ -215,7 +239,7 @@
         }
 
         var userPct = pctOnBar(user, min, max);
-        var formattedUser = moneyFmt.format(user);
+        var formattedUser = getMoneyFormatter(getCardCurrency(card)).format(user);
         var animate = options.animate !== false && !card._rydenSliderDragging;
 
         userMarker.classList.remove("d-none");

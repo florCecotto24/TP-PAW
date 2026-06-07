@@ -27,6 +27,13 @@ public interface CarAvailabilityService {
     Optional<CarAvailability> findById(long availabilityId);
 
     /**
+     * Availability row scoped to a car: returns empty when the row does not exist or when it belongs
+     * to a different car. Centralises the {@code av.getCarId() == carId} ownership check so callers
+     * (controllers, view services) don't have to encode it themselves.
+     */
+    Optional<CarAvailability> findByIdForCar(long carId, long availabilityId);
+
+    /**
      * The single availability row that is effective for {@code day} on a given car: the most recent row whose window
      * contains it. When the effective row is {@link CarAvailability.Kind#WITHDRAWN}, the day is not
      * bookable; otherwise its {@code dayPrice} is the effective price.
@@ -178,7 +185,7 @@ public interface CarAvailabilityService {
      * @throws ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException  when a
      *         period start violates the rider pickup lead time
      */
-    List<CarAvailability> createListing(long ownerUserId, long carId, AvailabilityCreateInput input, java.time.Instant now);
+    List<CarAvailability> createListing(long ownerUserId, long carId, AvailabilityCreateInput input, Instant now);
 
     /**
      * Atomic owner-side edit of a single availability window used by
@@ -193,7 +200,7 @@ public interface CarAvailabilityService {
      * @throws ar.edu.itba.paw.exception.car.AvailabilityRiderLeadViolationException  when the
      *         new start violates the rider pickup lead (and changed vs. the original start)
      */
-    CarAvailability editAvailability(long ownerUserId, long carId, long availabilityId, AvailabilityCreateInput input, java.time.Instant now);
+    CarAvailability editAvailability(long ownerUserId, long carId, long availabilityId, AvailabilityCreateInput input, Instant now);
 
     /**
      * Atomic owner-side bulk replacement of all availability windows for a car used by
@@ -204,5 +211,5 @@ public interface CarAvailabilityService {
      * Owner-blocked / CBU / model-pending guards are inherited from the underlying services.
      * {@code minimumRentalDays = 1} is used when falling through to {@code createListing}.
      */
-    void applyOwnerBulkEdit(long ownerUserId, long carId, AvailabilityCreateInput input, java.time.Instant now);
+    void applyOwnerBulkEdit(long ownerUserId, long carId, AvailabilityCreateInput input, Instant now);
 }

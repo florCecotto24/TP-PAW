@@ -7,14 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.validation.Valid;
-import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.Digits;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
-import javax.validation.constraints.Size;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -22,16 +17,18 @@ import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.CarAvailability;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.CheckOutAfterCheckIn;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingAvailabilityRowsSize;
 import ar.edu.itba.paw.webapp.validation.constraint.ListingFormValidationSize;
 import ar.edu.itba.paw.webapp.validation.constraint.ListingFormValidationSize.Kind;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingMinimumRentalDays;
+import ar.edu.itba.paw.webapp.validation.constraint.ListingPricePerDay;
 
 /** Step 2 of the two-step publish flow: listing details and per-period availability. */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnCreateListing.class)
 public final class CreateCarAvailabilityForm implements CarAvailabilityTimeWindow {
 
     @NotNull(message = "{validation.pricePerDay.notNull}", groups = ValidationGroups.OnCreateListing.class)
-    @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}", groups = ValidationGroups.OnCreateListing.class)
-    @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}", groups = ValidationGroups.OnCreateListing.class)
+    @ListingPricePerDay(groups = ValidationGroups.OnCreateListing.class)
     private BigDecimal pricePerDay;
 
     @NotBlank(message = "{validation.startPointStreet.notBlank}", groups = ValidationGroups.OnCreateListing.class)
@@ -61,12 +58,14 @@ public final class CreateCarAvailabilityForm implements CarAvailabilityTimeWindo
     private LocalTime checkOutTime;
 
     @Valid
-    @Size(min = 1, max = 10, message = "{validation.availabilityRows.size.range}", groups = ValidationGroups.OnCreateListing.class)
+    @ListingAvailabilityRowsSize(
+            enforceMinimum = true,
+            messageKey = "validation.availabilityRows.size.range",
+            groups = ValidationGroups.OnCreateListing.class)
     private List<AvailabilityRow> availabilityRows = new ArrayList<>();
 
     @NotNull(groups = ValidationGroups.OnCreateListing.class)
-    @Min(value = 1, groups = ValidationGroups.OnCreateListing.class)
-    @Max(value = 365, groups = ValidationGroups.OnCreateListing.class)
+    @ListingMinimumRentalDays(groups = ValidationGroups.OnCreateListing.class)
     private Integer minimumRentalDays = 1;
 
     public CreateCarAvailabilityForm() {
@@ -171,8 +170,7 @@ public final class CreateCarAvailabilityForm implements CarAvailabilityTimeWindo
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate until;
 
-        @DecimalMin(value = "0.01", message = "{validation.pricePerDay.decimalMin}", groups = ValidationGroups.OnCreateListing.class)
-        @Digits(integer = 8, fraction = 2, message = "{validation.pricePerDay.digits}", groups = ValidationGroups.OnCreateListing.class)
+        @ListingPricePerDay(groups = ValidationGroups.OnCreateListing.class)
         private BigDecimal dayPrice;
 
         public LocalDate getFrom() {

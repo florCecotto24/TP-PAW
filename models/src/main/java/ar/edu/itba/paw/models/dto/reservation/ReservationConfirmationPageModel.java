@@ -48,6 +48,14 @@ public final class ReservationConfirmationPageModel {
         this.uploadMaxImageMegabytes = b.uploadMaxImageMegabytes;
     }
 
+    public long getReservationId() {
+        return reservationId;
+    }
+
+    public long getCarId() {
+        return carId;
+    }
+
     public void populateModel(final BiConsumer<String, Object> put) {
         put.accept("carName", carName);
         put.accept("name", name);

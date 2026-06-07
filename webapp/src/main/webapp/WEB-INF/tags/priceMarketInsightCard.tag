@@ -15,9 +15,10 @@
          data-min="${insight.minPrice}"
          data-max="${insight.maxPrice}"
          data-avg="${insight.averagePrice}"
-         <fmt:formatNumber value="${insight.minPrice}" type="currency" currencyCode="ARS" minFractionDigits="0" maxFractionDigits="0" var="minPriceFormatted"/>
-         <fmt:formatNumber value="${insight.maxPrice}" type="currency" currencyCode="ARS" minFractionDigits="0" maxFractionDigits="0" var="maxPriceFormatted"/>
-         <fmt:formatNumber value="${insight.averagePrice}" type="currency" currencyCode="ARS" minFractionDigits="0" maxFractionDigits="0" var="avgPriceFormatted"/>
+         data-currency="${moneyCurrencyCode}"
+         <fmt:formatNumber value="${insight.minPrice}" type="currency" currencyCode="${moneyCurrencyCode}" minFractionDigits="0" maxFractionDigits="0" var="minPriceFormatted"/>
+         <fmt:formatNumber value="${insight.maxPrice}" type="currency" currencyCode="${moneyCurrencyCode}" minFractionDigits="0" maxFractionDigits="0" var="maxPriceFormatted"/>
+         <fmt:formatNumber value="${insight.averagePrice}" type="currency" currencyCode="${moneyCurrencyCode}" minFractionDigits="0" maxFractionDigits="0" var="avgPriceFormatted"/>
      </c:if>
      data-price-input-id="${resolvedPriceInputId}"
      <c:if test="${initialUserPrice != null}">data-initial-user-price="${initialUserPrice}"</c:if>>

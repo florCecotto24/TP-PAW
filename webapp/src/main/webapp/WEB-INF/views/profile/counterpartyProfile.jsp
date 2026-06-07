@@ -4,7 +4,7 @@
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <title><spring:message code="counterpartyProfile.title"/> — <spring:message code="app.title"/></title>
     <%@include file="../header.jsp" %>

@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -194,7 +193,6 @@ public final class EmailServiceImpl implements EmailService {
     // -------- Reservation lifecycle emails (rider+owner; remain owned by this service) --------
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendReservationConfirmationEmail(final ReservationMailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendReservationConfirmationEmail")) {
@@ -216,7 +214,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendRiderReservationConfirmedAfterPaymentProof(final ReservationMailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendRiderReservationConfirmedAfterPaymentProof")) {
@@ -241,7 +238,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendReservationReminderEmail(final ReservationMailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendReservationReminderEmail")) {
@@ -263,7 +259,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendRiderDuePaymentProofEmail(final ReservationMailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendRiderDuePaymentProofEmail")) {
@@ -289,7 +284,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendReservationCancellationEmail(final ReservationCancellationEmailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendReservationCancellationEmail")) {
@@ -320,7 +314,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendRiderReturnReminderEmail(final RiderCarReturnEmailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendRiderReturnReminderEmail")) {
@@ -342,7 +335,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendRiderReturnCheckoutEmail(final RiderCarReturnEmailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendRiderReturnCheckoutEmail")) {
@@ -364,7 +356,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendRiderReviewInviteEmail(final RiderReviewInviteEmailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendRiderReviewInviteEmail")) {
@@ -390,7 +381,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendRiderRefundProofReceivedEmail(final RiderRefundProofReceivedEmailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendRiderRefundProofReceivedEmail")) {
@@ -426,7 +416,6 @@ public final class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    @Transactional
     @Async("mailTaskExecutor")
     public void sendReservationChatDigestEmail(final ReservationChatDigestEmailPayload payload) {
         if (skipBecauseNullPayload(payload, "sendReservationChatDigestEmail")) {

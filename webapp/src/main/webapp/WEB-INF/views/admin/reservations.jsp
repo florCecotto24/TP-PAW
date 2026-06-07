@@ -5,7 +5,7 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <title><spring:message code="admin.reservations.title"/></title>
     <%@include file="../header.jsp" %>
@@ -72,22 +72,10 @@
         </div>
     </div>
 
-    <c:if test="${reservations.totalPages > 1}">
-        <nav class="mt-4">
-            <ul class="pagination justify-content-center">
-                <c:if test="${reservations.hasPrevious}">
-                    <li class="page-item">
-                        <a class="page-link" href="${pageContext.request.contextPath}/admin/reservations?page=${reservations.currentPage - 1}">&laquo;</a>
-                    </li>
-                </c:if>
-                <c:if test="${reservations.hasNext}">
-                    <li class="page-item">
-                        <a class="page-link" href="${pageContext.request.contextPath}/admin/reservations?page=${reservations.currentPage + 1}">&raquo;</a>
-                    </li>
-                </c:if>
-            </ul>
-        </nav>
-    </c:if>
+    <ryden:pagination
+            currentPage="${reservations.currentPage}"
+            totalPages="${reservations.totalPages}"
+            baseUrl="${pageContext.request.contextPath}/admin/reservations"/>
 </div>
 <%@ include file="../footer.jsp" %>
 </body>

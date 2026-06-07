@@ -14,6 +14,8 @@ import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** Append-only chat message between reservation participants (owner and rider). */
 @Entity
 @Table(name = "reservation_messages")
@@ -128,5 +130,21 @@ public class ReservationMessage {
 
     public void setSeen(final boolean seen) {
         this.seen = seen;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ReservationMessage)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((ReservationMessage) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 }

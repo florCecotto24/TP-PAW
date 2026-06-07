@@ -294,10 +294,6 @@ public class UserServiceImplTest {
 
     @Test
     public void testPromoteToAdminDoesNotThrowWhenValid() {
-        // Happy-path: actor is admin, target is a regular user. The test does not assert on the
-        // "sends email" or "persists role" side-effects (those would require Mockito.verify or
-        // a doAnswer/slot emulation, both forbidden by the test-style rules); it only confirms
-        // the call completes successfully.
         // 1. Arrange
         final User granting = User.builder()
                 .id(10L)

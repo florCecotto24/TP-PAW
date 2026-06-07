@@ -14,11 +14,11 @@ import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationConfirmationPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationFormPageModel;
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarService;
@@ -44,6 +44,7 @@ public final class ReservationFormViewServiceImpl implements ReservationFormView
     private final UserService userService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter;
+    private final MoneyFormat moneyFormat;
 
     @Autowired
     public ReservationFormViewServiceImpl(
@@ -53,7 +54,8 @@ public final class ReservationFormViewServiceImpl implements ReservationFormView
             final ImageService imageService,
             final UserService userService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
-            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter) {
+            final CarAvailabilityAddressFormatter carAvailabilityAddressFormatter,
+            final MoneyFormat moneyFormat) {
         this.carService = carService;
         this.carAvailabilityService = carAvailabilityService;
         this.reservationService = reservationService;
@@ -61,6 +63,7 @@ public final class ReservationFormViewServiceImpl implements ReservationFormView
         this.userService = userService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.carAvailabilityAddressFormatter = carAvailabilityAddressFormatter;
+        this.moneyFormat = moneyFormat;
     }
 
     @Override
@@ -130,7 +133,7 @@ public final class ReservationFormViewServiceImpl implements ReservationFormView
                 .reservationId(reservation.getId())
                 .carId(carId)
                 .availabilityId(availabilityId)
-                .reservationTotal(ArsMoneyFormat.format(reservation.getTotalPrice()))
+                .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
                 .ownerCbu(userService.findOwnerCbuForCar(carId).orElse(""))
                 .fromDateTimeDisplay(formatDateTimeInput(fromDateTime, locale))
                 .untilDateTimeDisplay(formatDateTimeInput(untilDateTime, locale))
@@ -139,6 +142,54 @@ public final class ReservationFormViewServiceImpl implements ReservationFormView
                 .uploadMaxImageBytes(imageService.getMaxImageBytes())
                 .uploadMaxImageMegabytes(imageService.getMaxImageMegabytesRoundedUp())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReservationConfirmationPageModel> loadReservationConfirmationForRider(
+            final long riderId,
+            final long reservationId,
+            final Long availabilityId,
+            final Locale locale) {
+        // Rider-scoped lookup so a refresh on a foreign reservation cannot leak details.
+        final Optional<Reservation> reservationOpt =
+                reservationService.getRiderReservationById(riderId, reservationId);
+        if (reservationOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final Reservation reservation = reservationOpt.get();
+        final Car car = reservation.getCar();
+        if (car == null) {
+            return Optional.empty();
+        }
+        final long carId = car.getId();
+        final User rider = reservation.getRider();
+        final String carName = car.getBrand() + " " + car.getModel();
+        // Reproduce the wall-input string from the persisted UTC instants so the page model keeps
+        // the same shape callers (and the JSP) expect even when arriving via the GET-after-POST.
+        final String fromInput = WallDateTimeParsing.formatUtcAsClientWallDateTimeInput(reservation.getStartDate());
+        final String untilInput = WallDateTimeParsing.formatUtcAsClientWallDateTimeInput(reservation.getEndDate());
+        final String confirmLoc = resolveCarHandoverLocation(carId, fromInput);
+        return Optional.of(ReservationConfirmationPageModel.builder()
+                .carName(carName)
+                .name(rider.getForename())
+                .surname(rider.getSurname())
+                .email(rider.getEmail())
+                .fromDateTime(fromInput)
+                .untilDateTime(untilInput)
+                .deliveryLocation(confirmLoc == null || confirmLoc.isBlank() ? "" : confirmLoc)
+                .reservationId(reservation.getId())
+                .carId(carId)
+                .availabilityId(availabilityId)
+                .reservationTotal(moneyFormat.format(reservation.getTotalPrice()))
+                .ownerCbu(userService.findOwnerCbuForCar(carId).orElse(""))
+                .fromDateTimeDisplay(formatDateTimeInput(fromInput, locale))
+                .untilDateTimeDisplay(formatDateTimeInput(untilInput, locale))
+                .paymentProofUploadDeadlineHours(reservationService.getConfiguredPaymentProofDeadlineHours())
+                .maxReservationBillableDays(reservationService.getConfiguredMaxReservationBillableDays())
+                .uploadMaxImageBytes(imageService.getMaxImageBytes())
+                .uploadMaxImageMegabytes(imageService.getMaxImageMegabytesRoundedUp())
+                .build());
     }
 
     /**

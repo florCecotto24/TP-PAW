@@ -5,7 +5,7 @@
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <%@include file="../header.jsp"%>
     <title><spring:message code="reservationForm.title"/></title>
@@ -142,6 +142,24 @@
         </div>
     </div>
 </main>
+
+<script>
+    (function () {
+        var form = document.getElementById('reservationFormEl');
+        if (!form) { return; }
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.rydenSubmitting === '1') {
+                e.preventDefault();
+                return false;
+            }
+            form.dataset.rydenSubmitting = '1';
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+                setTimeout(function () { btn.disabled = true; }, 0);
+            }
+        });
+    })();
+</script>
 
 <%@include file="../footer.jsp"%>
 </body>

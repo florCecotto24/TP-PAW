@@ -161,9 +161,36 @@ public final class ReservationFormController {
                     localeMessages.msg(e));
         }
 
-        final ReservationConfirmationPageModel confirmation = reservationFormViewService.buildReservationConfirmation(
-                carId, rider, form.getCarName(), form.getFromDateTime(), form.getUntilDateTime(),
-                availabilityId, reservation, LocaleContextHolder.getLocale());
+        // PRG: redirect to the confirmation GET so a browser refresh re-renders the confirmation
+        // from the persisted reservation instead of resubmitting the form.
+        final StringBuilder target = new StringBuilder("/cars/").append(carId)
+                .append("/reservation/").append(reservation.getId())
+                .append("/confirmation");
+        if (availabilityId != null) {
+            target.append("?availabilityId=").append(availabilityId);
+        }
+        return new ModelAndView(new RedirectView(target.toString(), true));
+    }
+
+    @GetMapping("/cars/{carId}/reservation/{reservationId}/confirmation")
+    public ModelAndView confirmationGet(
+            @CurrentUser final User currentUser,
+            @PathVariable final long carId,
+            @PathVariable final long reservationId,
+            @RequestParam(value = "availabilityId", required = false) final Long availabilityId) {
+        final User rider = WebAuthUtils.requireUser(currentUser);
+        final Optional<ReservationConfirmationPageModel> confirmationOpt =
+                reservationFormViewService.loadReservationConfirmationForRider(
+                        rider.getId(), reservationId, availabilityId, LocaleContextHolder.getLocale());
+        if (confirmationOpt.isEmpty()) {
+            return new ModelAndView(new RedirectView("/my-reservations", true));
+        }
+        final ReservationConfirmationPageModel confirmation = confirmationOpt.get();
+        if (confirmation.getCarId() != carId) {
+            // The path embeds carId for human-readable URLs; if it does not match the rider's
+            // reservation, fall back to the canonical URL on the rider's hub.
+            return new ModelAndView(new RedirectView("/my-reservations/" + reservationId, true));
+        }
         final ModelAndView mav = new ModelAndView(CONFIRMATION_VIEW);
         confirmation.populateModel(mav::addObject);
         return mav;

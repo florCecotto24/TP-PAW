@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,13 +15,13 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.util.format.ArsMoneyFormat;
 import ar.edu.itba.paw.models.util.search.ReservationHubStatusWhitelist;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.WallDateTimeDisplayFormat;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.CarPicture;
 import ar.edu.itba.paw.models.domain.Reservation;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
@@ -37,6 +38,7 @@ import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
+import ar.edu.itba.paw.util.format.MoneyFormat;
 
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarPictureService;
@@ -62,6 +64,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
     private final ReservationMessageService reservationMessageService;
+    private final MoneyFormat moneyFormat;
 
     @Autowired
     public ReservationViewServiceImpl(
@@ -75,7 +78,8 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
             final ImageService imageService,
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             @Lazy final ReviewService reviewService,
-            final ReservationMessageService reservationMessageService) {
+            final ReservationMessageService reservationMessageService,
+            final MoneyFormat moneyFormat) {
         this.reservationService = reservationService;
         this.carService = carService;
         this.carAvailabilityService = carAvailabilityService;
@@ -87,6 +91,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
         this.reservationMessageService = reservationMessageService;
+        this.moneyFormat = moneyFormat;
     }
 
     @Override
@@ -127,11 +132,11 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                 .orElse("");
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String totalPrice = ArsMoneyFormat.format(reservation.getTotalPrice());
-        final List<ar.edu.itba.paw.models.domain.CarPicture> carPictures = carPictureService.getCarPicturesByCarId(carId);
+        final String totalPrice = moneyFormat.format(reservation.getTotalPrice());
+        final List<CarPicture> carPictures = carPictureService.getCarPicturesByCarId(carId);
         final long carImageId = carPictures.stream()
-                .map(ar.edu.itba.paw.models.domain.CarPicture::getImageId)
-                .filter(java.util.Objects::nonNull)
+                .map(CarPicture::getImageId)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(0L);
         final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
@@ -210,18 +215,18 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
                         car.getId(), Instant.now(), reservation.getId());
         final String bookableWallRangesJson = BookableWallRangesJson.toJsonArray(bookableSegments);
         final boolean hasBookableDays = !bookableSegments.isEmpty();
-        final List<ar.edu.itba.paw.models.domain.CarPicture> carPictures =
+        final List<CarPicture> carPictures =
                 carPictureService.getCarPicturesByCarId(car.getId());
         final long carImageId = carPictures.stream()
-                .map(ar.edu.itba.paw.models.domain.CarPicture::getImageId)
-                .filter(java.util.Objects::nonNull)
+                .map(CarPicture::getImageId)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(0L);
         final String pickupDisplay =
                 WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getStartDate(), locale);
         final String returnDisplay =
                 WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(reservation.getEndDate(), locale);
-        final String totalPriceDisplay = ArsMoneyFormat.format(reservation.getTotalPrice());
+        final String totalPriceDisplay = moneyFormat.format(reservation.getTotalPrice());
         // Pre-fill the hidden Flatpickr inputs with the current wall-zone values so the form opens
         // pointing at the user's existing window (which they can then shrink/move/extend).
         final LocalDateTime startWall =
@@ -298,7 +303,7 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final String pickupDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getStartDate(), locale);
         final String returnDisplay = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(card.getEndDate(), locale);
         final String totalPrice = card.getTotalPrice() != null
-                ? ArsMoneyFormat.format(card.getTotalPrice())
+                ? moneyFormat.format(card.getTotalPrice())
                 : "-";
         return new ReservationCardDisplayRow(
                 card.getReservationId(),

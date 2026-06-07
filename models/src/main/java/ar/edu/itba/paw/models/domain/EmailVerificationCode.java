@@ -9,6 +9,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** One-time email verification token row (maps {@code email_verification_codes}). */
 @Entity
 @Table(name = "email_verification_codes")
@@ -58,5 +60,21 @@ public class EmailVerificationCode {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof EmailVerificationCode)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((EmailVerificationCode) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 }

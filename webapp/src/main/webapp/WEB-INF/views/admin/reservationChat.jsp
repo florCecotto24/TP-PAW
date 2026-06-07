@@ -4,7 +4,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${pageContext.response.locale.language}">
 <head>
     <title><spring:message code="admin.reservationChat.title"/></title>
     <%@include file="../header.jsp" %>
@@ -50,22 +50,10 @@
             </div>
 
             <c:set var="totalPages" value="${(totalMessages + pageSize - 1) / pageSize}"/>
-            <c:if test="${totalPages > 1}">
-                <nav class="mt-4">
-                    <ul class="pagination justify-content-center">
-                        <c:if test="${currentPage > 0}">
-                            <li class="page-item">
-                                <a class="page-link" href="${pageContext.request.contextPath}/admin/reservations/${reservation.id}/chat?page=${currentPage - 1}">&laquo;</a>
-                            </li>
-                        </c:if>
-                        <c:if test="${currentPage < totalPages - 1}">
-                            <li class="page-item">
-                                <a class="page-link" href="${pageContext.request.contextPath}/admin/reservations/${reservation.id}/chat?page=${currentPage + 1}">&raquo;</a>
-                            </li>
-                        </c:if>
-                    </ul>
-                </nav>
-            </c:if>
+            <ryden:pagination
+                    currentPage="${currentPage}"
+                    totalPages="${totalPages}"
+                    baseUrl="${pageContext.request.contextPath}/admin/reservations/${reservation.id}/chat"/>
         </c:otherwise>
     </c:choose>
 </div>

@@ -13,6 +13,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** User-uploaded binary blob with filename, MIME type, and creation timestamp. */
 @Entity
 @Table(name = "stored_files")
@@ -107,5 +109,21 @@ public class StoredFile {
         final String t = contentType.trim().toLowerCase();
         return t.startsWith("image/")
                 || "application/pdf".equals(t);
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof StoredFile)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((StoredFile) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 }

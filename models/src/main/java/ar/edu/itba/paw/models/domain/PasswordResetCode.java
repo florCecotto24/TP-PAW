@@ -9,6 +9,8 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
+import ar.edu.itba.paw.models.domain.internal.EntityEquality;
+
 /** Password reset token row (maps {@code password_reset_codes}). */
 @Entity
 @Table(name = "password_reset_codes")
@@ -58,5 +60,21 @@ public class PasswordResetCode {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof PasswordResetCode)) {
+            return false;
+        }
+        return EntityEquality.equalsByLongId(this, this.id, ((PasswordResetCode) o).id);
+    }
+
+    @Override
+    public int hashCode() {
+        return EntityEquality.hashByLongId(this, id);
     }
 }

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.user;
 
 
 import java.security.SecureRandom;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -28,10 +29,12 @@ import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.StoredFile;
 import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
@@ -136,8 +139,8 @@ public final class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<String> findRoleNamesForUser(final long userId) {
-        return userDao.findRoleNamesForUser(userId);
+    public List<UserRole> findRolesForUser(final long userId) {
+        return userDao.findRolesForUser(userId);
     }
 
     @Override
@@ -398,13 +401,13 @@ public final class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void updateRatingAsRider(final long userId, final java.math.BigDecimal average) {
+    public void updateRatingAsRider(final long userId, final BigDecimal average) {
         userDao.updateRatingAsRider(userId, average);
     }
 
     @Override
     @Transactional
-    public void updateRatingAsOwner(final long userId, final java.math.BigDecimal average) {
+    public void updateRatingAsOwner(final long userId, final BigDecimal average) {
         userDao.updateRatingAsOwner(userId, average);
     }
 
@@ -427,6 +430,16 @@ public final class UserServiceImpl implements UserService {
     public Locale resolveMailLocaleOrElse(final long userId, final Locale fallback) {
         final Locale fb = fallback != null ? fallback : Locale.ENGLISH;
         return findUserPreferredLocale(userId).orElse(fb);
+    }
+
+    @Override
+    public Locale resolveMailLocaleFor(final User user) {
+        if (user == null) {
+            return Locale.ENGLISH;
+        }
+        return user.getLatestLocaleTag()
+                .flatMap(SupportedLocales::parse)
+                .orElse(Locale.ENGLISH);
     }
 
     @Override
@@ -594,7 +607,7 @@ public final class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public ar.edu.itba.paw.models.dto.Page<User> findAllUsersPaginated(final int page, final int pageSize) {
+    public Page<User> findAllUsersPaginated(final int page, final int pageSize) {
         return userDao.findAllUsersPaginated(page, pageSize);
     }
 

@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.config.properties;
 
+import java.math.BigDecimal;
+
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.policy.CarValidationPolicy;
@@ -35,7 +37,11 @@ public record AppValidationProperties(
         int listingAddressNumberMaxLength,
         int listingAvailabilityRowsMin,
         int listingAvailabilityRowsMax,
+        int listingMinimumRentalDaysMin,
         int listingMinimumRentalDaysMax,
+        BigDecimal listingPricePerDayMin,
+        int listingPricePerDayIntegerDigits,
+        int listingPricePerDayFractionDigits,
         int reservationDeliveryLocationMaxLength,
         int reservationCarNameMaxLength,
         int reservationDatetimeInputMaxLength,
@@ -63,7 +69,11 @@ public record AppValidationProperties(
     private static final String LISTING_ADDRESS_NUMBER_MAX_LENGTH = "app.validation.listing-address-number-max-length";
     private static final String LISTING_AVAILABILITY_ROWS_MIN = "app.validation.listing-availability-rows-min";
     private static final String LISTING_AVAILABILITY_ROWS_MAX = "app.validation.listing-availability-rows-max";
+    private static final String LISTING_MINIMUM_RENTAL_DAYS_MIN = "app.validation.listing-minimum-rental-days-min";
     private static final String LISTING_MINIMUM_RENTAL_DAYS_MAX = "app.validation.listing-minimum-rental-days-max";
+    private static final String LISTING_PRICE_PER_DAY_MIN = "app.validation.listing-price-per-day-min";
+    private static final String LISTING_PRICE_PER_DAY_INTEGER_DIGITS = "app.validation.listing-price-per-day-integer-digits";
+    private static final String LISTING_PRICE_PER_DAY_FRACTION_DIGITS = "app.validation.listing-price-per-day-fraction-digits";
 
     private static final String RESERVATION_DELIVERY_LOCATION_MAX_LENGTH =
             "app.validation.reservation-delivery-location-max-length";
@@ -95,7 +105,11 @@ public record AppValidationProperties(
                 environment.getProperty(LISTING_ADDRESS_NUMBER_MAX_LENGTH, Integer.class, 10),
                 environment.getProperty(LISTING_AVAILABILITY_ROWS_MIN, Integer.class, 1),
                 environment.getProperty(LISTING_AVAILABILITY_ROWS_MAX, Integer.class, 10),
+                environment.getProperty(LISTING_MINIMUM_RENTAL_DAYS_MIN, Integer.class, 1),
                 environment.getProperty(LISTING_MINIMUM_RENTAL_DAYS_MAX, Integer.class, 365),
+                environment.getProperty(LISTING_PRICE_PER_DAY_MIN, BigDecimal.class, new BigDecimal("0.01")),
+                environment.getProperty(LISTING_PRICE_PER_DAY_INTEGER_DIGITS, Integer.class, 8),
+                environment.getProperty(LISTING_PRICE_PER_DAY_FRACTION_DIGITS, Integer.class, 2),
                 environment.getProperty(RESERVATION_DELIVERY_LOCATION_MAX_LENGTH, Integer.class, 250),
                 environment.getProperty(RESERVATION_CAR_NAME_MAX_LENGTH, Integer.class, 120),
                 environment.getProperty(RESERVATION_DATETIME_INPUT_MAX_LENGTH, Integer.class, 40),
@@ -138,7 +152,11 @@ public record AppValidationProperties(
                 listingAddressNumberMaxLength,
                 listingAvailabilityRowsMin,
                 listingAvailabilityRowsMax,
-                listingMinimumRentalDaysMax);
+                listingMinimumRentalDaysMin,
+                listingMinimumRentalDaysMax,
+                listingPricePerDayMin,
+                listingPricePerDayIntegerDigits,
+                listingPricePerDayFractionDigits);
     }
 
     public ReservationFormValidationPolicy toReservationFormValidationPolicy() {
