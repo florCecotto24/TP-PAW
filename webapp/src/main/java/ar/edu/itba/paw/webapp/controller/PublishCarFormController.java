@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.controller;
 
 
 import java.io.IOException;
+import java.time.Year;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -171,7 +172,7 @@ public final class PublishCarFormController {
 
     @ModelAttribute("carYearMax")
     public int carYearMax() {
-        return java.time.Year.now().getValue();
+        return Year.now().getValue();
     }
 
     @GetMapping

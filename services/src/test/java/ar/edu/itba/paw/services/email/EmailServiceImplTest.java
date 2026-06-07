@@ -76,7 +76,7 @@ public class EmailServiceImplTest {
 
     @BeforeEach
     public void setUp() {
-        mailDispatch = new MailDispatchSupport(environment, mailSender, emailMessageSource);
+        mailDispatch = new MailDispatchSupport(environment, mailSender, emailMessageSource, mailPublicUrls);
         emailService = new EmailServiceImpl(
                 mailDispatch,
                 mailPublicUrls,

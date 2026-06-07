@@ -5,6 +5,7 @@ import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.pagination.UiPaging;
+import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.location.LocationService;
@@ -74,10 +75,26 @@ public class SearchController {
         final User viewer = currentUser;
 
         final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
-        final var criteria = carService.buildSearchCriteria(
-                query, category, transmission, powertrain, priceMin, priceMax, rating, from, until, page,
-                appPaginationProperties.getUiPageSize(), sort,
-                viewer, neighborhoodIds, flexible, flexMonth, flexDays);
+        final CarSearchRequest searchRequest = CarSearchRequest.builder()
+                .query(query)
+                .categories(category)
+                .transmissions(transmission)
+                .powertrains(powertrain)
+                .priceMin(priceMin)
+                .priceMax(priceMax)
+                .ratingBands(rating)
+                .from(from)
+                .until(until)
+                .page(page)
+                .uiPageSize(appPaginationProperties.getUiPageSize())
+                .sort(sort)
+                .viewer(viewer)
+                .neighborhoodIds(neighborhoodIds)
+                .flexible(flexible)
+                .flexMonth(flexMonth)
+                .flexDays(flexDays)
+                .build();
+        final var criteria = carService.buildSearchCriteria(searchRequest);
         final Page<CarCard> resultPage = carService.searchCarCards(criteria);
 
         final int safePage = UiPaging.clampZeroBasedPage(page, resultPage.getTotalItems(), resultPage.getPageSize());

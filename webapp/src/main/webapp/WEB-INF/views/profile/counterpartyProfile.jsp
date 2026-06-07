@@ -25,12 +25,13 @@
                         memberSinceDisplay="${counterpartyMemberSinceDisplay}"
                         profileImageId="${counterpartyProfileImageId}"
                         averageRating="${counterpartyAverageRating}"
+                        reviewCount="${counterpartyReviewCount}"
                         licenseValidated="${counterpartyLicenseValidated}"
                         identityValidated="${counterpartyIdentityValidated}"
                         ratingFloor="${counterpartyRatingFloor}"/>
 
                 <ryden:counterpartyProfileReviews
-                        reviews="${recentReviewComments}"/>
+                        reviews="${recentReviews}"/>
 
                 <c:if test="${showCounterpartyActiveListings}">
                     <section class="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4"

@@ -172,7 +172,6 @@ public final class CarDetailViewServiceImpl implements CarDetailViewService {
                 .similarSearchUrl(similarSearchUrl)
                 .maxReservationBillableDays(reservationService.getConfiguredMaxReservationBillableDays())
                 .isOwnerRequesting(isOwnerRequesting)
-                .currentUserIsAdmin(viewerIsAdmin)
                 .carIsFavoritable(carIsFavoritable)
                 .carIsFavorited(carIsFavorited)
                 .build());

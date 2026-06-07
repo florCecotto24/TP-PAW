@@ -5,8 +5,6 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
-
 /**
  * Application roles stored in {@code user_roles.role}. Add enum constants when new roles are introduced
  * in Flyway/ops; values persisted in the DB that are not listed here are ignored when building authorities

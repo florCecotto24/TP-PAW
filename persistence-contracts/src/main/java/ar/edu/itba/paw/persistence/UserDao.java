@@ -10,18 +10,26 @@ import ar.edu.itba.paw.models.security.UserRole;
 
 /** Users, roles, profile fields, and listing-owner resolution joins. */
 public interface UserDao {
-    User createUser(String email, String forename, String surname, String passwordHash);
+    /**
+     * Persists a new user row with the role / verification flag / grantor decided by the caller.
+     * The DAO does not pick defaults for these values: the service tier is the single source of
+     * truth for "what kind of account is this?". Standard self-registration passes
+     * {@link UserRole#USER}, {@code emailValidated=false} and {@code assignedByUserId=null};
+     * admin-initiated account creation passes {@link UserRole#ADMIN}, {@code emailValidated=true}
+     * and the granting admin's id.
+     */
+    User createUser(String email, String forename, String surname, String passwordHash,
+                    UserRole role, boolean emailValidated, Long assignedByUserId);
 
-    default User createUser(final String email, final String forename, final String surname) {
-        return createUser(email, forename, surname, null);
+    /** Convenience self-registration overload: USER role, unverified email, no grantor. */
+    default User createUser(final String email, final String forename, final String surname, final String passwordHash) {
+        return createUser(email, forename, surname, passwordHash, UserRole.USER, false, null);
     }
 
-    /**
-     * Creates a user row with the admin role, the email pre-verified, and {@code assignedByUserId}
-     * recorded as the granting admin. Intended for admin-initiated account creation only.
-     */
-    User createAdminUser(String email, String forename, String surname,
-                         String passwordHash, Long assignedByUserId);
+    /** Convenience self-registration overload with no password set yet. */
+    default User createUser(final String email, final String forename, final String surname) {
+        return createUser(email, forename, surname, null, UserRole.USER, false, null);
+    }
 
     Optional<User> getUserById(final long id);
 
@@ -63,7 +71,11 @@ public interface UserDao {
      */
     List<UserRole> findRolesForUser(long userId);
 
-    void promoteToAdmin(long userId, Long assignedByUserId);
+    /**
+     * Sets {@code userId}'s role and records {@code assignedByUserId} as the granting admin. The
+     * service tier decides which role to assign; the DAO just persists.
+     */
+    void updateUserRoleAndGrantor(long userId, UserRole role, Long assignedByUserId);
 
     void blockUser(long userId);
 

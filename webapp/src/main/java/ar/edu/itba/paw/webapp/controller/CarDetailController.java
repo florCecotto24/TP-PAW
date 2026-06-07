@@ -24,6 +24,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,15 +61,15 @@ public class CarDetailController {
             final Authentication authentication,
             final HttpServletRequest request) {
 
-        final boolean currentUserIsAdmin = AuthenticationAuthorities.hasAdminRole(authentication);
-        // Page model assembly (8 services + visibility rules + review formatting + favorite
-        // flag) lives in CarDetailViewService; the controller stays focused on HTTP concerns:
-        // request params (date defaults, search context, admin action form) and the view-layer
-        // VehicleCardView conversion that the JSP tag requires.
+        // viewerIsAdmin stays as a business input: CarDetailViewService uses it to expose pages
+        // for blocked owners only to the owner themselves or to an admin. JSP rendering of the
+        // admin action panel uses <sec:authorize hasRole('ADMIN')> instead of a model flag, so the
+        // controller no longer leaks that decision into the view layer.
+        final boolean viewerIsAdmin = AuthenticationAuthorities.hasAdminRole(authentication);
         final Optional<CarDetailPageModel> pageOpt = carDetailViewService.loadCarDetailPage(
                 carId,
                 currentUser,
-                currentUserIsAdmin,
+                viewerIsAdmin,
                 reviewPage,
                 appPaginationProperties.getCarPublicReviewsPageSize(),
                 reviewsViewParam,
@@ -79,16 +80,18 @@ public class CarDetailController {
         final CarDetailPageModel pageModel = pageOpt.get();
         final ModelAndView mav = new ModelAndView("car/carDetail");
         pageModel.populateModel(mav::addObject);
-        // Webapp-only concerns that the service deliberately does not know about:
         final List<VehicleCardView> similarListings = consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
                 pageModel.getSimilarListings(), currentUser == null ? null : currentUser.getId());
         mav.addObject("similarListings", similarListings);
         mav.addObject("reservationFromDefault", fromDateParam != null ? fromDateParam : "");
         mav.addObject("reservationUntilDefault", untilDateParam != null ? untilDateParam : "");
         mav.addObject("searchNeighborhoodIds", searchNeighborhoodIds != null ? searchNeighborhoodIds : List.of());
-        if (currentUserIsAdmin) {
-            mav.addObject("adminActionForm", new java.util.HashMap<>());
-        }
+        // The admin section in the JSP uses <form:form modelAttribute="adminActionForm">, which
+        // requires the attribute to exist whenever the section is rendered. The actual
+        // rendering decision lives in <sec:authorize hasRole('ADMIN')>; supplying an empty
+        // map unconditionally keeps the form binding contract intact without inspecting roles
+        // in the controller.
+        mav.addObject("adminActionForm", new HashMap<>());
         return mav;
     }
 

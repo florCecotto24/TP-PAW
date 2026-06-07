@@ -56,7 +56,6 @@ public final class PublishCarRequest {
     public Optional<String> getInsuranceFilename() { return Optional.ofNullable(insuranceFilename); }
     public Optional<String> getInsuranceContentType() { return Optional.ofNullable(insuranceContentType); }
     public byte[] getInsuranceBytes() { return insuranceBytes; }
-    public boolean hasInsurance() { return insuranceBytes != null; }
 
     public static Builder builder() {
         return new Builder();

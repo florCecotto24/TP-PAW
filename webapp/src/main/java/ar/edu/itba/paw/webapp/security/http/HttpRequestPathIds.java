@@ -6,8 +6,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
-
 /**
  * Parses numeric ids from {@link HttpServletRequest} paths (after context path).
  */

@@ -11,18 +11,9 @@ import org.springframework.web.multipart.MultipartFile;
  */
 public final class ReservationReviewForm {
 
-    private ReservationReviewAction reviewAction = ReservationReviewAction.SUBMIT;
     private Integer rating;
     private String comment;
     private MultipartFile picture;
-
-    public ReservationReviewAction getReviewAction() {
-        return reviewAction;
-    }
-
-    public void setReviewAction(final ReservationReviewAction reviewAction) {
-        this.reviewAction = reviewAction != null ? reviewAction : ReservationReviewAction.SUBMIT;
-    }
 
     public Integer getRating() {
         return rating;

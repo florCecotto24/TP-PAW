@@ -131,7 +131,9 @@ public final class CounterpartyProfileViewServiceImpl implements CounterpartyPro
         final DateTimeFormatter memberSinceFormatter = DateTimeFormatter.ofPattern("LLLL uuuu").withLocale(locale);
         final BigDecimal averageRating =
                 reviewService.getAverageRatingForCounterparty(counterparty.getId(), counterpartyIsOwner);
-        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentCommentReviewsForCounterparty(
+        final long reviewCount =
+                reviewService.countReviewsForCounterparty(counterparty.getId(), counterpartyIsOwner);
+        final List<ReviewItemDto> recentReviewItems = reviewService.getRecentReviewsForCounterparty(
                 counterparty.getId(),
                 counterpartyIsOwner,
                 presentationLimitsPolicy.getCounterpartyRecentReviewsLimit());
@@ -166,6 +168,7 @@ public final class CounterpartyProfileViewServiceImpl implements CounterpartyPro
                 counterparty.getProfilePictureId().orElse(null),
                 counterparty.getMemberSince().map(memberSinceFormatter::format).orElse(null),
                 averageRating,
+                reviewCount,
                 counterparty.isLicenseValidated() || counterparty.getLicenseFileId().isPresent(),
                 counterparty.isIdentityValidated() || counterparty.getIdentityFileId().isPresent(),
                 recentReviewItems,

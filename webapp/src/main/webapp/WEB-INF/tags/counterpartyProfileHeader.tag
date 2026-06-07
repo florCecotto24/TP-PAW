@@ -10,6 +10,7 @@
 <%@ attribute name="memberSinceDisplay" required="false" type="java.lang.String" %>
 <%@ attribute name="profileImageId" required="false" type="java.lang.Long" %>
 <%@ attribute name="averageRating" required="false" type="java.math.BigDecimal" %>
+<%@ attribute name="reviewCount" required="false" type="java.lang.Long" %>
 <%@ attribute name="licenseValidated" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="identityValidated" required="false" type="java.lang.Boolean" %>
 <%@ attribute name="ratingFloor" required="false" type="java.lang.Long" %>
@@ -56,6 +57,11 @@
                                     </c:choose>
                                 </c:forEach>
                             </div>
+                            <c:if test="${reviewCount != null && reviewCount > 0}">
+                                <span class="text-secondary small">
+                                    <spring:message code="counterpartyProfile.reviews.count" arguments="${reviewCount}"/>
+                                </span>
+                            </c:if>
                         </c:when>
                         <c:otherwise>
                             <span class="counterparty-rating-value">

@@ -22,9 +22,10 @@ public final class CounterpartyProfilePageModel {
     private final Long counterpartyProfileImageId;
     private final String counterpartyMemberSinceDisplay;
     private final BigDecimal counterpartyAverageRating;
+    private final long counterpartyReviewCount;
     private final boolean counterpartyLicenseValidated;
     private final boolean counterpartyIdentityValidated;
-    private final List<ReviewItemDto> recentReviewComments;
+    private final List<ReviewItemDto> recentReviews;
     private final boolean showCounterpartyActiveListings;
     private final List<CarCard> activeOwnerCarCards;
     private final CounterpartyActiveCarsLoadMore counterpartyActiveCarsLoadMore;
@@ -36,9 +37,10 @@ public final class CounterpartyProfilePageModel {
             final Long counterpartyProfileImageId,
             final String counterpartyMemberSinceDisplay,
             final BigDecimal counterpartyAverageRating,
+            final long counterpartyReviewCount,
             final boolean counterpartyLicenseValidated,
             final boolean counterpartyIdentityValidated,
-            final List<ReviewItemDto> recentReviewComments,
+            final List<ReviewItemDto> recentReviews,
             final boolean showCounterpartyActiveListings,
             final List<CarCard> activeOwnerCarCards,
             final CounterpartyActiveCarsLoadMore counterpartyActiveCarsLoadMore) {
@@ -48,9 +50,10 @@ public final class CounterpartyProfilePageModel {
         this.counterpartyProfileImageId = counterpartyProfileImageId;
         this.counterpartyMemberSinceDisplay = counterpartyMemberSinceDisplay;
         this.counterpartyAverageRating = counterpartyAverageRating;
+        this.counterpartyReviewCount = counterpartyReviewCount;
         this.counterpartyLicenseValidated = counterpartyLicenseValidated;
         this.counterpartyIdentityValidated = counterpartyIdentityValidated;
-        this.recentReviewComments = List.copyOf(recentReviewComments);
+        this.recentReviews = List.copyOf(recentReviews);
         this.showCounterpartyActiveListings = showCounterpartyActiveListings;
         this.activeOwnerCarCards = List.copyOf(activeOwnerCarCards);
         this.counterpartyActiveCarsLoadMore =
@@ -77,6 +80,7 @@ public final class CounterpartyProfilePageModel {
         putObject.accept("counterpartyProfileImageId", counterpartyProfileImageId);
         putObject.accept("counterpartyMemberSinceDisplay", counterpartyMemberSinceDisplay);
         putObject.accept("counterpartyAverageRating", counterpartyAverageRating);
+        putObject.accept("counterpartyReviewCount", counterpartyReviewCount);
         // Star floor used by counterpartyProfileHeader.tag for half-star rendering. Centralised
         // here so callers do not each compute `avg.longValue()` themselves.
         putObject.accept(
@@ -84,7 +88,7 @@ public final class CounterpartyProfilePageModel {
                 counterpartyAverageRating != null ? counterpartyAverageRating.longValue() : 0L);
         putObject.accept("counterpartyLicenseValidated", counterpartyLicenseValidated);
         putObject.accept("counterpartyIdentityValidated", counterpartyIdentityValidated);
-        putObject.accept("recentReviewComments", recentReviewComments);
+        putObject.accept("recentReviews", recentReviews);
         putObject.accept("showCounterpartyActiveListings", showCounterpartyActiveListings);
         putObject.accept("counterpartyActiveCarsLoadMore", counterpartyActiveCarsLoadMore);
     }

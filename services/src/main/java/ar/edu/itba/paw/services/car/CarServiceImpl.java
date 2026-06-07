@@ -35,6 +35,7 @@ import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.persistence.CarDao;
 
@@ -249,28 +250,8 @@ public final class CarServiceImpl implements CarService {
     }
 
     @Override
-    public CarSearchCriteria buildSearchCriteria(
-            final String query,
-            final List<Car.Type> category,
-            final List<Car.Transmission> transmission,
-            final List<Car.Powertrain> powertrain,
-            final BigDecimal priceMin,
-            final BigDecimal priceMax,
-            final List<String> rating,
-            final String from,
-            final String until,
-            final int page,
-            final int uiPageSize,
-            final String sort,
-            final User viewer,
-            final List<Long> neighborhoodIds,
-            final boolean flexible,
-            final String flexMonth,
-            final Integer flexDays) {
-        return carSearchService.buildSearchCriteria(
-                query, category, transmission, powertrain,
-                priceMin, priceMax, rating, from, until, page, uiPageSize, sort,
-                viewer, neighborhoodIds, flexible, flexMonth, flexDays);
+    public CarSearchCriteria buildSearchCriteria(final CarSearchRequest request) {
+        return carSearchService.buildSearchCriteria(request);
     }
 
     @Override

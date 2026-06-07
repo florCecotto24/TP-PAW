@@ -14,7 +14,6 @@ public final class AdminPromotedEmailPayload {
     private final String recipientFullName;
     private final String grantedByFullName;
     private final long targetUserId;
-    private final long grantedByUserId;
 
     private AdminPromotedEmailPayload(final Builder builder) {
         this.messageLocale = Objects.requireNonNull(builder.messageLocale, "messageLocale");
@@ -22,7 +21,6 @@ public final class AdminPromotedEmailPayload {
         this.recipientFullName = Objects.requireNonNull(builder.recipientFullName, "recipientFullName");
         this.grantedByFullName = Objects.requireNonNull(builder.grantedByFullName, "grantedByFullName");
         this.targetUserId = builder.targetUserId;
-        this.grantedByUserId = builder.grantedByUserId;
     }
 
     public static Builder builder() {
@@ -49,17 +47,12 @@ public final class AdminPromotedEmailPayload {
         return targetUserId;
     }
 
-    public long getGrantedByUserId() {
-        return grantedByUserId;
-    }
-
     public static final class Builder {
         private Locale messageLocale;
         private String recipientEmail;
         private String recipientFullName;
         private String grantedByFullName;
         private long targetUserId;
-        private long grantedByUserId;
 
         private Builder() {
         }
@@ -86,11 +79,6 @@ public final class AdminPromotedEmailPayload {
 
         public Builder targetUserId(final long value) {
             this.targetUserId = value;
-            return this;
-        }
-
-        public Builder grantedByUserId(final long value) {
-            this.grantedByUserId = value;
             return this;
         }
 

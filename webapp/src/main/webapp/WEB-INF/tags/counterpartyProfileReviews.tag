@@ -14,31 +14,36 @@
             <c:when test="${not empty reviews}">
                 <ul class="list-group list-group-flush">
                     <c:forEach var="review" items="${reviews}">
-                        <c:if test="${not empty review.commentText}">
-                            <li class="list-group-item px-0 py-3 bg-transparent">
-                                <div class="d-flex flex-column gap-2">
-                                    <div class="d-flex align-items-center justify-content-between gap-2">
-                                        <div class="min-w-0 flex-grow-1">
-                                            <p class="fw-semibold mb-1 ryden-text-break"><c:out value="${review.reviewerName}"/></p>
-                                            <div class="d-inline-flex align-items-center gap-1">
-                                                <c:forEach begin="1" end="5" var="star">
-                                                    <c:choose>
-                                                        <c:when test="${star <= review.rating}">
-                                                            <i class="bi bi-star-fill text-warning" aria-hidden="true" style="font-size: 0.75rem;"></i>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <i class="bi bi-star text-secondary-subtle" aria-hidden="true" style="font-size: 0.75rem;"></i>
-                                                        </c:otherwise>
-                                                    </c:choose>
-                                                </c:forEach>
-                                            </div>
+                        <li class="list-group-item px-0 py-3 bg-transparent">
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <div class="min-w-0 flex-grow-1">
+                                        <p class="fw-semibold mb-1 ryden-text-break"><c:out value="${review.reviewerName}"/></p>
+                                        <div class="d-inline-flex align-items-center gap-1">
+                                            <c:forEach begin="1" end="5" var="star">
+                                                <c:choose>
+                                                    <c:when test="${star <= review.rating}">
+                                                        <i class="bi bi-star-fill text-warning" aria-hidden="true" style="font-size: 0.75rem;"></i>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <i class="bi bi-star text-secondary-subtle" aria-hidden="true" style="font-size: 0.75rem;"></i>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </c:forEach>
                                         </div>
-                                        <span class="text-secondary small"><c:out value="${review.reviewDate}"/></span>
                                     </div>
-                                    <p class="mb-0 text-secondary ryden-multiline-plaintext"><c:out value="${review.commentText}"/></p>
+                                    <span class="text-secondary small"><c:out value="${review.reviewDate}"/></span>
                                 </div>
-                            </li>
-                        </c:if>
+                                <c:choose>
+                                    <c:when test="${not empty review.commentText}">
+                                        <p class="mb-0 text-secondary ryden-multiline-plaintext"><c:out value="${review.commentText}"/></p>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <p class="mb-0 small text-secondary"><spring:message code="reviewCard.noComment"/></p>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </li>
                     </c:forEach>
                 </ul>
             </c:when>

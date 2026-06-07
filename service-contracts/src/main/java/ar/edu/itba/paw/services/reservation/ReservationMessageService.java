@@ -10,7 +10,6 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
 
-import ar.edu.itba.paw.services.user.AdminService;
 public interface ReservationMessageService {
 
     boolean isChatAvailable(Reservation reservation);

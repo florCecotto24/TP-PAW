@@ -92,11 +92,17 @@ public final class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewItemDto> getRecentCommentReviewsForCounterparty(
+    public List<ReviewItemDto> getRecentReviewsForCounterparty(
             final long counterpartyUserId,
             final boolean counterpartyIsOwner,
             final int limit) {
-        return reviewDao.findRecentCommentReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner, limit);
+        return reviewDao.findRecentReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long countReviewsForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
+        return reviewDao.countReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner);
     }
 
     @Override
@@ -200,6 +206,13 @@ public final class ReviewServiceImpl implements ReviewService {
     /**
      * After an owner-side review (owner reviews rider): recompute rider's average and the car
      * average. The persistence of each side stays in its own DAO via the corresponding service.
+     *
+     * Transactional contract: must be called from a method that already opened a
+     * transaction (typically {@code @Transactional} on the calling submit method). The helper is
+     * {@code private} so Spring's proxy-based AOP cannot decorate it, and the two reads + two
+     * writes here need to share that ambient transaction to keep the rating and the just-inserted
+     * review row consistent. Callers in this class ({@link #submitOwnerReviewOfRider}) are already
+     * {@code @Transactional}; do not invoke from outside that context.
      */
     private void refreshAggregatesAfterOwnerReview(final Reservation r) {
         final BigDecimal riderAvg = reviewDao.findAverageRatingForCounterparty(r.getRiderId(), false);
@@ -211,6 +224,10 @@ public final class ReviewServiceImpl implements ReviewService {
     /**
      * After a rider-side review (rider reviews owner): recompute owner's average (resolved via
      * the car's owner) and the car average.
+     *
+     * Transactional contract: see {@link #refreshAggregatesAfterOwnerReview} - same rule
+     * applies. Private helper, no proxy interception, must execute inside the caller's transaction
+     * ({@link #submitRiderReviewOfOwner}).
      */
     private void refreshAggregatesAfterRiderReview(final Reservation r) {
         final long carId = r.getCarId();

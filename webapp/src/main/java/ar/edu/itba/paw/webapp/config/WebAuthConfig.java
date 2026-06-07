@@ -339,7 +339,11 @@ public class WebAuthConfig {
                         .userDetailsService(userDetailsService))
                 .sessionManagement(sm -> sm
                         .maximumSessions(-1)
-                        .sessionRegistry(sessionRegistry));
+                        .sessionRegistry(sessionRegistry)
+                        // Without expiredUrl, ConcurrentSessionFilter returns a blank 200 when
+                        // session.expireNow() fires (admin block flow in UserSessionService).
+                        // Redirect to the login page so the user sees something actionable.
+                        .expiredUrl("/login?expired"));
         return http.build();
     }
 

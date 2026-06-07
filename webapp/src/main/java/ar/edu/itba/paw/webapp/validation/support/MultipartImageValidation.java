@@ -1,13 +1,11 @@
 package ar.edu.itba.paw.webapp.validation.support;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
 
-import ar.edu.itba.paw.dto.ImageUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.domain.Image;
 import ar.edu.itba.paw.services.file.ImageService;
@@ -71,45 +69,6 @@ public final class MultipartImageValidation {
         }
         return true;
     }
-
-    public boolean validateImageUploadsAreImages(
-            final List<ImageUpload> uploads,
-            final BindingResult errors,
-            final String fieldName) {
-        if (uploads == null || uploads.isEmpty()) {
-            return true;
-        }
-        for (final ImageUpload upload : uploads) {
-            if (!Image.isImageContentType(upload.getContentType())) {
-                errors.rejectValue(
-                        fieldName,
-                        "validation.pictures.mustBeImage",
-                        localeMessages.msg("validation.pictures.mustBeImage"));
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public boolean validateImageUploadsWithinMaxSize(final List<ImageUpload> uploads, final BindingResult errors) {
-        if (uploads == null || uploads.isEmpty()) {
-            return true;
-        }
-        final long max = imageService.getMaxImageBytes();
-        final long maxMb = imageService.getMaxImageMegabytesRoundedUp();
-        for (final ImageUpload upload : uploads) {
-            final long size = upload.getData().length;
-            if (size > max) {
-                errors.reject(
-                        MessageKeys.IMAGE_FILE_TOO_LARGE,
-                        new Object[] { maxMb },
-                        localeMessages.msg(MessageKeys.IMAGE_FILE_TOO_LARGE, maxMb));
-                return false;
-            }
-        }
-        return true;
-    }
-
 
     public Optional<SingleMultipartImageIssue> validateNonEmptyFile(final MultipartFile file) {
         final long max = imageService.getMaxImageBytes();

@@ -31,21 +31,15 @@ import ar.edu.itba.paw.models.domain.internal.EntityEquality;
 @Entity
 @Table(name = "cars")
 public class Car {
-    public interface PrettyNamed {
-        default String prettyName() {
-            return ((Enum<?>) this).name().replace("_", " ").toLowerCase();
-        }
-    }
-
-    public enum Type implements PrettyNamed {
+    public enum Type {
         SEDAN, HATCHBACK, SUV, COUPE, CONVERTIBLE, WAGON, VAN, PICKUP
     }
 
-    public enum Powertrain implements PrettyNamed {
+    public enum Powertrain {
         GASOLINE, DIESEL, ELECTRIC, HYBRID, CNG
     }
 
-    public enum Transmission implements PrettyNamed {
+    public enum Transmission {
         MANUAL, AUTOMATIC, SEMI_AUTOMATIC;
     }
 

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
@@ -28,12 +29,11 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.webapp.form.CreateAdminUserForm;
+import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.UserSessionService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 import ar.edu.itba.paw.webapp.util.WebAuthUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
-
-import org.springframework.security.core.Authentication;
 
 /** Administration endpoints: user management, car moderation, catalog validation, reservation inspection. */
 @Controller
@@ -103,23 +103,22 @@ public final class AdminController {
     @GetMapping("/users")
     public ModelAndView listUsers(
             @RequestParam(defaultValue = "0") final int page,
-            final Authentication authentication) {
-        final long currentAdminId = requireAdminId(authentication);
-        final Long currentAdminGrantorId = requireAdminGrantorId(authentication).orElse(null);
+            @CurrentUser final User currentAdmin) {
+        final User me = WebAuthUtils.requireUser(currentAdmin);
         final Page<User> users = adminService.listUsers(page, DEFAULT_PAGE_SIZE);
         final ModelAndView mav = new ModelAndView("admin/users");
         mav.addObject("users", users);
-        mav.addObject("currentAdminId", currentAdminId);
-        mav.addObject("currentAdminGrantorId", currentAdminGrantorId);
+        mav.addObject("currentAdminId", me.getId());
+        mav.addObject("currentAdminGrantorId", me.getRoleAssignedBy().orElse(null));
         return mav;
     }
 
     @PostMapping("/users/{userId}/promote")
     public String promoteUser(
             @PathVariable final long userId,
-            final Authentication authentication,
+            @CurrentUser final User currentAdmin,
             final RedirectAttributes redirectAttributes) {
-        final long actingAdminId = requireAdminId(authentication);
+        final long actingAdminId = WebAuthUtils.requireUser(currentAdmin).getId();
         executeAdminAction(redirectAttributes, "admin.success.promoted",
                 () -> adminService.promoteUserToAdmin(userId, actingAdminId));
         return "redirect:/admin/users";
@@ -128,9 +127,9 @@ public final class AdminController {
     @PostMapping("/users/{userId}/block")
     public String blockUser(
             @PathVariable final long userId,
-            final Authentication authentication,
+            @CurrentUser final User currentAdmin,
             final RedirectAttributes redirectAttributes) {
-        final long actingAdminId = requireAdminId(authentication);
+        final long actingAdminId = WebAuthUtils.requireUser(currentAdmin).getId();
         executeAdminAction(redirectAttributes, "admin.success.blocked", () -> {
             adminService.blockUser(userId, actingAdminId);
             userSessionService.invalidateSessionsForUser(userId);
@@ -159,13 +158,13 @@ public final class AdminController {
             @Validated(ValidationGroups.OnCreateAdminUser.class)
             @ModelAttribute("createAdminUserForm") final CreateAdminUserForm createAdminUserForm,
             final BindingResult bindingResult,
-            final Authentication authentication,
+            @CurrentUser final User currentAdmin,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             return new ModelAndView("admin/createAdminUser");
         }
-        final long actingAdminId = requireAdminId(authentication);
+        final long actingAdminId = WebAuthUtils.requireUser(currentAdmin).getId();
         executeAdminAction(redirectAttributes, "admin.success.adminCreated", () ->
                 adminService.createAdminUser(
                         createAdminUserForm.getEmail(),
@@ -193,10 +192,10 @@ public final class AdminController {
             @RequestParam(required = false, defaultValue = "false") final boolean fromCarDetail,
             @RequestParam(required = false) final Long carDetailId,
             @RequestParam(required = false) final Integer page,
-            final Authentication authentication,
+            @CurrentUser final User currentAdmin,
             final Locale locale,
             final RedirectAttributes redirectAttributes) {
-        final long actingAdminId = requireAdminId(authentication);
+        final long actingAdminId = WebAuthUtils.requireUser(currentAdmin).getId();
         executeAdminAction(redirectAttributes, "admin.success.carPaused",
                 () -> adminService.adminPauseCar(carId, actingAdminId, locale));
         return adminCarsRedirect(fromCarDetail, carDetailId, page);
@@ -208,9 +207,9 @@ public final class AdminController {
             @RequestParam(required = false, defaultValue = "false") final boolean fromCarDetail,
             @RequestParam(required = false) final Long carDetailId,
             @RequestParam(required = false) final Integer page,
-            final Authentication authentication,
+            @CurrentUser final User currentAdmin,
             final RedirectAttributes redirectAttributes) {
-        final long actingAdminId = requireAdminId(authentication);
+        final long actingAdminId = WebAuthUtils.requireUser(currentAdmin).getId();
         executeAdminAction(redirectAttributes, "admin.success.carResumed",
                 () -> adminService.adminResumeCar(carId, actingAdminId));
         return adminCarsRedirect(fromCarDetail, carDetailId, page);
@@ -278,11 +277,4 @@ public final class AdminController {
         return mav;
     }
 
-    private long requireAdminId(final Authentication authentication) {
-        return WebAuthUtils.requireCurrentUser(authentication).getUserId();
-    }
-
-    private Optional<Long> requireAdminGrantorId(final Authentication authentication) {
-        return WebAuthUtils.requireCurrentUser(authentication).getRoleAssignedBy();
-    }
 }

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
@@ -28,13 +29,10 @@ public class UserJpaDao implements UserDao {
     private EntityManager em;
 
     @Override
-    public User createUser(final String email, final String forename, final String surname) {
-        return createUser(email, forename, surname, null);
-    }
-
-    @Override
     @Transactional
-    public User createUser(final String email, final String forename, final String surname, final String passwordHash) {
+    public User createUser(final String email, final String forename, final String surname,
+                           final String passwordHash, final UserRole role,
+                           final boolean emailValidated, final Long assignedByUserId) {
         final String normalizedEmail = EmailNormalizer.normalize(email);
         final LocalDate memberSince = LocalDate.now(AppTimezone.WALL_ZONE);
         final User user = User.builder()
@@ -42,34 +40,11 @@ public class UserJpaDao implements UserDao {
                 .forename(forename)
                 .surname(surname)
                 .passwordHash(passwordHash)
-                .emailValidated(Boolean.FALSE)
+                .emailValidated(emailValidated)
                 .memberSince(memberSince)
                 .licenseValidated(false)
                 .identityValidated(false)
-                .userRole(UserRole.USER)
-                .roleAssignedBy(null)
-                .blocked(false)
-                .build();
-        em.persist(user);
-        return user;
-    }
-
-    @Override
-    @Transactional
-    public User createAdminUser(final String email, final String forename, final String surname,
-                                final String passwordHash, final Long assignedByUserId) {
-        final String normalizedEmail = EmailNormalizer.normalize(email);
-        final LocalDate memberSince = LocalDate.now(AppTimezone.WALL_ZONE);
-        final User user = User.builder()
-                .email(normalizedEmail)
-                .forename(forename)
-                .surname(surname)
-                .passwordHash(passwordHash)
-                .emailValidated(Boolean.TRUE)
-                .memberSince(memberSince)
-                .licenseValidated(false)
-                .identityValidated(false)
-                .userRole(UserRole.ADMIN)
+                .userRole(role)
                 .roleAssignedBy(assignedByUserId)
                 .blocked(false)
                 .build();
@@ -218,6 +193,13 @@ public class UserJpaDao implements UserDao {
         if (user == null) {
             return;
         }
+        // Idempotency guard: skip dirty-checking when the stored locale already matches the
+        // requested one. Avoids an UPDATE on every page render when the user keeps the same
+        // language (the navbar locale toggle fires this for every signed-in request).
+        final String currentTag = user.getLatestLocaleTag().orElse(null);
+        if (Objects.equals(currentTag, localeTag)) {
+            return;
+        }
         user.setLatestLocaleTag(localeTag);
     }
 
@@ -244,18 +226,18 @@ public class UserJpaDao implements UserDao {
     @Override
     public List<UserRole> findRolesForUser(final long userId) {
         return getUserById(userId)
-                .map(u -> java.util.Collections.singletonList(u.getUserRole()))
-                .orElse(java.util.Collections.emptyList());
+                .map(u -> Collections.singletonList(u.getUserRole()))
+                .orElse(Collections.emptyList());
     }
 
     @Override
     @Transactional
-    public void promoteToAdmin(final long userId, final Long assignedByUserId) {
+    public void updateUserRoleAndGrantor(final long userId, final UserRole role, final Long assignedByUserId) {
         final User user = em.find(User.class, userId);
         if (user == null) {
             return;
         }
-        user.setUserRole(UserRole.ADMIN);
+        user.setUserRole(role);
         user.setRoleAssignedBy(assignedByUserId);
     }
 

@@ -39,7 +39,6 @@ public final class CarDetailPageModel {
     private final String similarSearchUrl;
     private final int maxReservationBillableDays;
     private final boolean isOwnerRequesting;
-    private final boolean currentUserIsAdmin;
     private final boolean carIsFavoritable;
     private final boolean carIsFavorited;
 
@@ -61,7 +60,6 @@ public final class CarDetailPageModel {
         this.similarSearchUrl = b.similarSearchUrl;
         this.maxReservationBillableDays = b.maxReservationBillableDays;
         this.isOwnerRequesting = b.isOwnerRequesting;
-        this.currentUserIsAdmin = b.currentUserIsAdmin;
         this.carIsFavoritable = b.carIsFavoritable;
         this.carIsFavorited = b.carIsFavorited;
     }
@@ -92,7 +90,6 @@ public final class CarDetailPageModel {
         putObject.accept("similarSearchUrl", similarSearchUrl);
         putObject.accept("maxReservationBillableDays", maxReservationBillableDays);
         putObject.accept("isOwnerRequesting", isOwnerRequesting);
-        putObject.accept("currentUserIsAdmin", currentUserIsAdmin);
         putObject.accept("carIsFavoritable", carIsFavoritable);
         putObject.accept("carIsFavorited", carIsFavorited);
     }
@@ -119,7 +116,6 @@ public final class CarDetailPageModel {
         private String similarSearchUrl;
         private int maxReservationBillableDays;
         private boolean isOwnerRequesting;
-        private boolean currentUserIsAdmin;
         private boolean carIsFavoritable;
         private boolean carIsFavorited;
 
@@ -140,7 +136,6 @@ public final class CarDetailPageModel {
         public Builder similarSearchUrl(final String v) { this.similarSearchUrl = v; return this; }
         public Builder maxReservationBillableDays(final int v) { this.maxReservationBillableDays = v; return this; }
         public Builder isOwnerRequesting(final boolean v) { this.isOwnerRequesting = v; return this; }
-        public Builder currentUserIsAdmin(final boolean v) { this.currentUserIsAdmin = v; return this; }
         public Builder carIsFavoritable(final boolean v) { this.carIsFavoritable = v; return this; }
         public Builder carIsFavorited(final boolean v) { this.carIsFavorited = v; return this; }
 

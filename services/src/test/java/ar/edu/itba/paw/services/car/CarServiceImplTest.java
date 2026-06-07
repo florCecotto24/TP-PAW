@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarBrand;
 import ar.edu.itba.paw.models.domain.CarModel;
@@ -274,11 +276,11 @@ public class CarServiceImplTest {
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(blockedOwner));
         Mockito.when(userService.hasValidCbu(blockedOwner)).thenReturn(true);
 
-        final ar.edu.itba.paw.exception.car.CarValidationException thrown = Assertions.assertThrows(
-                ar.edu.itba.paw.exception.car.CarValidationException.class,
+        final CarValidationException thrown = Assertions.assertThrows(
+                CarValidationException.class,
                 () -> carService.toggleCarStatus(ownerId, carId));
         Assertions.assertEquals(
-                ar.edu.itba.paw.exception.MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED,
+                MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED,
                 thrown.getMessageCode());
     }
 

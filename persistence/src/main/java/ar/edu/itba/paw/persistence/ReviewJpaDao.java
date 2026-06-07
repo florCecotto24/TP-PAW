@@ -146,6 +146,20 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     @Override
+    public long countReviewsForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
+        final String jpql = counterpartyIsOwner
+                ? "SELECT COUNT(r) FROM Review r "
+                        + "WHERE r.id.madeByRider = true AND r.reservation.car.owner.id = :userId "
+                        + "AND r.rating IS NOT NULL"
+                : "SELECT COUNT(r) FROM Review r "
+                        + "WHERE r.id.madeByRider = false AND r.reservation.rider.id = :userId "
+                        + "AND r.rating IS NOT NULL";
+        return em.createQuery(jpql, Long.class)
+                .setParameter("userId", counterpartyUserId)
+                .getSingleResult();
+    }
+
+    @Override
     public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final String jpql = counterpartyIsOwner
                 ? "SELECT AVG(r.rating) FROM Review r "
@@ -161,7 +175,7 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     @Override
-    public List<ReviewItemDto> findRecentCommentReviewsForCounterparty(
+    public List<ReviewItemDto> findRecentReviewsForCounterparty(
             final long counterpartyUserId,
             final boolean counterpartyIsOwner,
             final int limit) {
@@ -179,6 +193,10 @@ public class ReviewJpaDao implements ReviewDao {
          * counterparty is the owner; owner when the counterparty is the rider), so we JOIN FETCH
          * only that side and avoid the implicit INNER JOIN that {@code rider.profilePicture.id}
          * would produce on a nullable association (which would silently drop avatar-less reviews).
+         *
+         * Comment-less rated reviews are intentionally included: the counterparty profile renders a
+         * "no comment" placeholder for them (mirrors {@code reviewCard.tag}), so a user with a
+         * rating but no written feedback no longer shows up as "no reviews".
          */
         final String idSql;
         if (counterpartyIsOwner) {
@@ -188,7 +206,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "JOIN reservations res ON res.id = r.reservation_id "
                     + "JOIN cars c ON c.id = res.car_id "
                     + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId "
-                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
+                    + "AND r.rating IS NOT NULL "
                     + "ORDER BY r.created_at DESC "
                     + "LIMIT :limit";
         } else {
@@ -197,7 +215,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "FROM reviews r "
                     + "JOIN reservations res ON res.id = r.reservation_id "
                     + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId "
-                    + "AND r.rating IS NOT NULL AND TRIM(r.comment) <> '' "
+                    + "AND r.rating IS NOT NULL "
                     + "ORDER BY r.created_at DESC "
                     + "LIMIT :limit";
         }
@@ -245,9 +263,7 @@ public class ReviewJpaDao implements ReviewDao {
                     ? r.getReservation().getRider()
                     : r.getReservation().getCar().getOwner();
             result.add(new ReviewItemDto(
-                    reviewer.getId(),
                     reviewer.getForename() + " " + reviewer.getSurname(),
-                    reviewer.getProfilePicture().map(Image::getId).orElse(null),
                     r.getRating().orElse(0),
                     r.getCreatedAt().toLocalDate(),
                     r.getComment().orElse(null)));

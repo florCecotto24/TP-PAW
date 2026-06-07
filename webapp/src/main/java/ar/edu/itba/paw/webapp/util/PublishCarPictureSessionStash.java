@@ -20,7 +20,6 @@ import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.BindingResult;
@@ -206,12 +205,6 @@ public final class PublishCarPictureSessionStash {
             }
         }
         return MediaType.APPLICATION_OCTET_STREAM;
-    }
-
-    /** @deprecated use {@link #safeGalleryMediaType(String)} */
-    @Deprecated
-    public static MediaType safeImageMediaType(final String contentType) {
-        return safeGalleryMediaType(contentType);
     }
 
     /**

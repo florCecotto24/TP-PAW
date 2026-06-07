@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.reservation;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -200,7 +201,7 @@ public final class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public List<Long> findOverdueRefundProofReservationIdsForOwner(final long ownerUserId) {
         return reservationDao.findOverdueRefundProofReservationsForOwner(
-                        ownerUserId, OffsetDateTime.now(java.time.ZoneOffset.UTC))
+                        ownerUserId, OffsetDateTime.now(ZoneOffset.UTC))
                 .stream()
                 .map(Reservation::getId)
                 .toList();

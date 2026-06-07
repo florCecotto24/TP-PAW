@@ -3,6 +3,7 @@
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 <head>
@@ -234,31 +235,33 @@
         </div>
 
         <div class="col-lg-4 order-2">
-            <c:if test="${currentUserIsAdmin and !owner.admin}">
-                <div class="card bg-white border-0 shadow-sm rounded-4 mb-3 p-3">
-                    <h6 class="fw-semibold mb-2"><spring:message code="carDetail.admin.sectionTitle"/></h6>
-                    <c:if test="${car.status.name() eq 'ACTIVE'}">
-                        <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/pause"
-                                   method="post" modelAttribute="adminActionForm" cssClass="d-inline">
-                            <input type="hidden" name="fromCarDetail" value="true"/>
-                            <input type="hidden" name="carDetailId" value="${car.id}"/>
-                            <button type="submit" class="btn btn-warning btn-sm rounded-3 w-100">
-                                <spring:message code="carDetail.admin.pause"/>
-                            </button>
-                        </form:form>
-                    </c:if>
-                    <c:if test="${car.status.name() eq 'ADMIN_PAUSED'}">
-                        <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/resume"
-                                   method="post" modelAttribute="adminActionForm" cssClass="d-inline">
-                            <input type="hidden" name="fromCarDetail" value="true"/>
-                            <input type="hidden" name="carDetailId" value="${car.id}"/>
-                            <button type="submit" class="btn btn-success btn-sm rounded-3 w-100">
-                                <spring:message code="carDetail.admin.resume"/>
-                            </button>
-                        </form:form>
-                    </c:if>
-                </div>
-            </c:if>
+            <sec:authorize access="hasRole('ADMIN')">
+                <c:if test="${!owner.admin}">
+                    <div class="card bg-white border-0 shadow-sm rounded-4 mb-3 p-3">
+                        <h6 class="fw-semibold mb-2"><spring:message code="carDetail.admin.sectionTitle"/></h6>
+                        <c:if test="${car.status.name() eq 'ACTIVE'}">
+                            <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/pause"
+                                       method="post" modelAttribute="adminActionForm" cssClass="d-inline">
+                                <input type="hidden" name="fromCarDetail" value="true"/>
+                                <input type="hidden" name="carDetailId" value="${car.id}"/>
+                                <button type="submit" class="btn btn-warning btn-sm rounded-3 w-100">
+                                    <spring:message code="carDetail.admin.pause"/>
+                                </button>
+                            </form:form>
+                        </c:if>
+                        <c:if test="${car.status.name() eq 'ADMIN_PAUSED'}">
+                            <form:form action="${pageContext.request.contextPath}/admin/cars/${car.id}/resume"
+                                       method="post" modelAttribute="adminActionForm" cssClass="d-inline">
+                                <input type="hidden" name="fromCarDetail" value="true"/>
+                                <input type="hidden" name="carDetailId" value="${car.id}"/>
+                                <button type="submit" class="btn btn-success btn-sm rounded-3 w-100">
+                                    <spring:message code="carDetail.admin.resume"/>
+                                </button>
+                            </form:form>
+                        </c:if>
+                    </div>
+                </c:if>
+            </sec:authorize>
             <div class="detail-reservation-sticky">
                 <ryden:detailReservationPanel
                         carId="${car.id}"

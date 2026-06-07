@@ -418,11 +418,13 @@ public class UserServiceImplTest {
                 .emailValidated(true)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
-        Mockito.when(userDao.createAdminUser(
+        Mockito.when(userDao.createUser(
                         Mockito.eq("newadmin@test.com"),
                         Mockito.eq("New"),
                         Mockito.eq("Admin"),
                         Mockito.eq("HASH"),
+                        Mockito.eq(UserRole.ADMIN),
+                        Mockito.eq(true),
                         Mockito.eq(10L)))
                 .thenReturn(created);
 
@@ -488,11 +490,13 @@ public class UserServiceImplTest {
                 .emailValidated(true)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
-        Mockito.when(userDao.createAdminUser(
+        Mockito.when(userDao.createUser(
                         Mockito.eq("newadmin@test.com"),
                         Mockito.eq("New"),
                         Mockito.eq("Admin"),
                         Mockito.eq("HASH"),
+                        Mockito.eq(UserRole.ADMIN),
+                        Mockito.eq(true),
                         Mockito.eq(10L)))
                 .thenReturn(created);
 

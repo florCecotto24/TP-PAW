@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.Reservation;
@@ -16,7 +17,6 @@ import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 
-import ar.edu.itba.paw.services.user.AdminService;
 /**
  * Reservation lifecycle, pricing, participant checks, and mail side effects. The implementation uses only
  * {@code ReservationDao}; user and car data are resolved through peer services.
@@ -293,14 +293,14 @@ public interface ReservationService {
      * yet), independently of whether the deadline has lapsed. Used by owner-side hub views to render a
      * per-reservation "you must upload a refund receipt" badge.
      */
-    java.util.Set<Long> findOwnerReservationIdsRequiringRefundProof(long ownerUserId);
+    Set<Long> findOwnerReservationIdsRequiringRefundProof(long ownerUserId);
 
     /**
      * Car ids of {@code ownerUserId} that have at least one reservation still requiring a refund proof.
      * Used by the {@code /my-cars} grid to surface a per-car "you have a reservation requiring a refund
      * receipt" badge regardless of whether the owner is already blocked.
      */
-    java.util.Set<Long> findOwnerCarIdsWithReservationRequiringRefundProof(long ownerUserId);
+    Set<Long> findOwnerCarIdsWithReservationRequiringRefundProof(long ownerUserId);
 
     // -----------------------------------------------------------------------------------------------------------
     // Sub-service-orchestrated operations on reservation rows.

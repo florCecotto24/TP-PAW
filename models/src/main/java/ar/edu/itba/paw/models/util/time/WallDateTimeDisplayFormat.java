@@ -9,10 +9,6 @@ import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
-
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-
 /**
  * Format for dates/times for UI and emails: Argentina wall-clock, without seconds, pattern according to language.
  */

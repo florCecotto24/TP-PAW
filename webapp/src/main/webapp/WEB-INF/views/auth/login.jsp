@@ -52,6 +52,11 @@
             <spring:message code="login.logout.confirmation"/>
         </div>
     </c:if>
+    <c:if test="${param.expired != null}">
+        <div class="alert alert-warning" role="alert">
+            <spring:message code="login.session.expired"/>
+        </div>
+    </c:if>
 
     <spring:message code="common.password.show" var="lblPwShow" htmlEscape="true"/>
     <spring:message code="common.password.hide" var="lblPwHide" htmlEscape="true"/>

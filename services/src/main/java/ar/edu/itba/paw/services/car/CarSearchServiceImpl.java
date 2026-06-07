@@ -4,6 +4,7 @@ package ar.edu.itba.paw.services.car;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,8 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
@@ -53,35 +54,28 @@ public final class CarSearchServiceImpl implements CarSearchService {
 
     @Override
     @Transactional(readOnly = true)
-    public CarSearchCriteria buildSearchCriteria(
-            final String query,
-            final List<Car.Type> category,
-            final List<Car.Transmission> transmission,
-            final List<Car.Powertrain> powertrain,
-            final BigDecimal priceMin,
-            final BigDecimal priceMax,
-            final List<String> rating,
-            final String from,
-            final String until,
-            final int page,
-            final int uiPageSize,
-            final String sort,
-            final User viewer,
-            final List<Long> neighborhoodIds,
-            final boolean flexible,
-            final String flexMonth,
-            final Integer flexDays) {
-        final List<String> transmissions = enumNames(transmission);
-        final List<String> powertrains = enumNames(powertrain);
-        final List<String> mergedCarTypes = enumNames(category);
+    public CarSearchCriteria buildSearchCriteria(final CarSearchRequest request) {
+        final String query = request.getQuery();
+        final String from = request.getFrom();
+        final String until = request.getUntil();
+        final boolean flexible = request.isFlexible();
+        final String flexMonth = request.getFlexMonth();
+        final Integer flexDays = request.getFlexDays();
+        final BigDecimal priceMin = request.getPriceMin();
+        final BigDecimal priceMax = request.getPriceMax();
+        final String sort = request.getSort();
+
+        final List<String> transmissions = enumNames(request.getTransmissions());
+        final List<String> powertrains = enumNames(request.getPowertrains());
+        final List<String> mergedCarTypes = enumNames(request.getCategories());
         final BigDecimal minPrice = priceMin != null && priceMin.compareTo(BigDecimal.ZERO) >= 0 ? priceMin : null;
         final BigDecimal maxPrice = priceMax != null && priceMax.compareTo(BigDecimal.ZERO) >= 0 ? priceMax : null;
-        final List<String> ratingBands = collectRatingBandParams(rating);
+        final List<String> ratingBands = collectRatingBandParams(request.getRatingBands());
         final String[] sortParts = (sort != null && !sort.isBlank()) ? sort.split(",", 2) : new String[0];
         final String sortBy = sortParts.length > 0 ? sortParts[0].trim() : "date";
         final String sortDir = sortParts.length > 1 ? sortParts[1].trim() : "desc";
         final LocalDate browseWallDate = publicBrowseMinBookableWallDate();
-        final List<Long> mergedNeighborhoodIds = mergeNeighborhoodIdsForSearch(query, neighborhoodIds);
+        final List<Long> mergedNeighborhoodIds = mergeNeighborhoodIdsForSearch(query, request.getNeighborhoodIds());
         final CarSearchCriteria.Builder builder = CarSearchCriteria.builder()
                 .query(query)
                 .transmissions(transmissions)
@@ -90,8 +84,8 @@ public final class CarSearchServiceImpl implements CarSearchService {
                 .minPrice(minPrice)
                 .maxPrice(maxPrice)
                 .ratingBands(ratingBands)
-                .page(page)
-                .uiPageSize(uiPageSize)
+                .page(request.getPage())
+                .uiPageSize(request.getUiPageSize())
                 .sortBy(sortBy)
                 .sortDirection(sortDir)
                 .browseWallDate(browseWallDate)
@@ -100,7 +94,7 @@ public final class CarSearchServiceImpl implements CarSearchService {
         if (flexible && flexMonth != null && !flexMonth.isBlank()) {
             java.time.YearMonth parsedMonth = null;
             try {
-                parsedMonth = java.time.YearMonth.parse(flexMonth);
+                parsedMonth = YearMonth.parse(flexMonth);
             } catch (final java.time.format.DateTimeParseException ignored) {
                 // invalid month string — fall back to no filter
             }

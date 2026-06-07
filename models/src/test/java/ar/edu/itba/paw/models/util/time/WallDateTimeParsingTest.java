@@ -10,8 +10,6 @@ import java.time.format.DateTimeParseException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-
 class WallDateTimeParsingTest {
 
     @Test

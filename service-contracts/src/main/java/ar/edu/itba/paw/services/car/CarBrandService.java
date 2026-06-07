@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.CarBrand;
 
-import ar.edu.itba.paw.services.user.AdminService;
 /**
  * Catalog operations for vehicle brands. Lookup methods are normalized at this layer (trim, case-insensitive)
  * so DAOs only execute parametrized queries.

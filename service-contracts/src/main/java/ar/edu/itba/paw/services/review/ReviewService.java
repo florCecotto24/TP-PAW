@@ -76,6 +76,13 @@ public interface ReviewService {
      */
     BigDecimal getAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
 
-    /** Recent reviews that include a non-blank comment, for profile counterparty snippets. */
-    List<ReviewItemDto> getRecentCommentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
+    /**
+     * Recent rated reviews for the counterparty profile snippet. Comment-less reviews are included
+     * (their {@link ReviewItemDto#getCommentText()} is {@code null}) so the JSP can render a
+     * "no comment" placeholder for them.
+     */
+    List<ReviewItemDto> getRecentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
+
+    /** Total rated reviews stored against the counterparty (owner side or rider side). */
+    long countReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
 }

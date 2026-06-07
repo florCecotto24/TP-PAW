@@ -11,6 +11,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 
 import ar.edu.itba.paw.services.location.LocationService;
@@ -37,10 +38,11 @@ public class CarSearchServiceImplTest {
     @Test
     public void testBuildSearchCriteriaWithFlexibleMonthSetsFlexibleSearchTrue() {
         Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
-        final CarSearchCriteria criteria = carSearchService.buildSearchCriteria(
-                null, null, null, null, null, null, null,
-                null, null, 0, 12, null, null, null,
-                true, "2026-06", null);
+        final CarSearchRequest request = CarSearchRequest.builder()
+                .page(0).uiPageSize(12)
+                .flexible(true).flexMonth("2026-06")
+                .build();
+        final CarSearchCriteria criteria = carSearchService.buildSearchCriteria(request);
 
         Assertions.assertTrue(criteria.isFlexibleSearch());
         Assertions.assertEquals(YearMonth.of(2026, 6), criteria.getFlexibleMonth());
@@ -50,10 +52,11 @@ public class CarSearchServiceImplTest {
     @Test
     public void testBuildSearchCriteriaWithFlexibleMonthAndDaysSetsFlexibleDays() {
         Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
-        final CarSearchCriteria criteria = carSearchService.buildSearchCriteria(
-                null, null, null, null, null, null, null,
-                null, null, 0, 12, null, null, null,
-                true, "2026-08", 7);
+        final CarSearchRequest request = CarSearchRequest.builder()
+                .page(0).uiPageSize(12)
+                .flexible(true).flexMonth("2026-08").flexDays(7)
+                .build();
+        final CarSearchCriteria criteria = carSearchService.buildSearchCriteria(request);
 
         Assertions.assertTrue(criteria.isFlexibleSearch());
         Assertions.assertEquals(YearMonth.of(2026, 8), criteria.getFlexibleMonth());
@@ -63,10 +66,11 @@ public class CarSearchServiceImplTest {
     @Test
     public void testBuildSearchCriteriaWithFlexibleFalseIsNotFlexibleSearch() {
         Mockito.lenient().when(reservationTimingPolicy.getPickupLeadHours()).thenReturn(0);
-        final CarSearchCriteria criteria = carSearchService.buildSearchCriteria(
-                null, null, null, null, null, null, null,
-                null, null, 0, 12, null, null, null,
-                false, "2026-06", 3);
+        final CarSearchRequest request = CarSearchRequest.builder()
+                .page(0).uiPageSize(12)
+                .flexible(false).flexMonth("2026-06").flexDays(3)
+                .build();
+        final CarSearchCriteria criteria = carSearchService.buildSearchCriteria(request);
 
         Assertions.assertFalse(criteria.isFlexibleSearch());
         Assertions.assertNull(criteria.getFlexibleMonth());

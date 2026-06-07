@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -802,7 +803,7 @@ public class ReservationJpaDao implements ReservationDao {
     public Page<ReservationCard> findAllReservationCards(final int page, final int pageSize) {
         final Number total = (Number) em.createQuery("SELECT COUNT(r) FROM Reservation r").getSingleResult();
         final String idSql = "SELECT r.id FROM reservations r ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset";
-        final Map<String, Object> params = new java.util.LinkedHashMap<>();
+        final Map<String, Object> params = new LinkedHashMap<>();
         params.put("limit", pageSize);
         params.put("offset", page * pageSize);
         final List<ReservationCard> content = loadReservationCardsByIdNativeQuery(idSql, params);
@@ -918,7 +919,7 @@ public class ReservationJpaDao implements ReservationDao {
                 .setParameter("ids", orderedIds)
                 .getResultList();
         final Map<Long, Reservation> byId = new HashMap<>(reservations.size());
-        final java.util.LinkedHashSet<Long> carIds = new java.util.LinkedHashSet<>(reservations.size());
+        final LinkedHashSet<Long> carIds = new LinkedHashSet<>(reservations.size());
         for (final Reservation r : reservations) {
             byId.put(r.getId(), r);
             carIds.add(r.getCar().getId());

@@ -573,7 +573,7 @@ public final class UserServiceImpl implements UserService {
         if (target.isAdmin()) {
             throw new UserAlreadyAdminException();
         }
-        userDao.promoteToAdmin(targetUserId, assignedByUserId);
+        userDao.updateUserRoleAndGrantor(targetUserId, UserRole.ADMIN, assignedByUserId);
         final Locale mailLocale = resolveMailLocaleOrElse(targetUserId, Locale.ENGLISH);
         emailService.sendAdminPromoted(AdminPromotedEmailPayload.builder()
                 .messageLocale(mailLocale)
@@ -581,7 +581,6 @@ public final class UserServiceImpl implements UserService {
                 .recipientFullName(target.getForename() + " " + target.getSurname())
                 .grantedByFullName(granting.getForename() + " " + granting.getSurname())
                 .targetUserId(targetUserId)
-                .grantedByUserId(assignedByUserId)
                 .build());
     }
 
@@ -602,7 +601,10 @@ public final class UserServiceImpl implements UserService {
         if (!granting.isAdmin()) {
             throw new AdminPromoterNotAdminException();
         }
-        return userDao.createAdminUser(email, forename, surname, bcryptEncodedHash, assignedByUserId);
+        // Service decides the role/verification state that distinguishes an admin-created account
+        // from self-registration; UserDao#createUser persists what it is told.
+        return userDao.createUser(email, forename, surname, bcryptEncodedHash,
+                UserRole.ADMIN, true, assignedByUserId);
     }
 
     @Override

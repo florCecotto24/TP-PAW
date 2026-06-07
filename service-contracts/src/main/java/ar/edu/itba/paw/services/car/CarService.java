@@ -15,9 +15,9 @@ import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 
-import ar.edu.itba.paw.services.user.AdminService;
 /**
  * Car rows for owners and public catalog/search (browse cheapest/most-recent, search, owner hub,
  * counterparty profile grid, owner detail page).
@@ -116,26 +116,10 @@ public interface CarService {
 
     /**
      * Builds {@link CarSearchCriteria} from raw home/search form parameters
-     * (text, filters, wall dates or flexible month/days, pagination, sort).
+     * (text, filters, wall dates or flexible month/days, pagination, sort) bundled into a
+     * {@link CarSearchRequest} so the contract does not grow positional arguments.
      */
-    CarSearchCriteria buildSearchCriteria(
-            String query,
-            List<Car.Type> category,
-            List<Car.Transmission> transmission,
-            List<Car.Powertrain> powertrain,
-            BigDecimal priceMin,
-            BigDecimal priceMax,
-            List<String> rating,
-            String from,
-            String until,
-            int page,
-            int uiPageSize,
-            String sort,
-            User viewer,
-            List<Long> neighborhoodIds,
-            boolean flexible,
-            String flexMonth,
-            Integer flexDays);
+    CarSearchCriteria buildSearchCriteria(CarSearchRequest request);
 
     /**
      * Sweeps active cars that have no future bookable wall day and transitions them to

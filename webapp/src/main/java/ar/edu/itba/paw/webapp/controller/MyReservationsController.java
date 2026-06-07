@@ -4,7 +4,6 @@ package ar.edu.itba.paw.webapp.controller;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;

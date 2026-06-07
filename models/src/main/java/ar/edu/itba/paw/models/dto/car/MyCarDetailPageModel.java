@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Car;
-
 /**
  * Bundle returned by {@code MyCarDetailViewService.loadMyCarDetailPage} for the
  * {@code car/myCarDetail.jsp} view used by both {@code MyCarsController.myCarDetail} and the
@@ -17,9 +15,9 @@ import ar.edu.itba.paw.models.domain.Car;
  * <ul>
  *   <li><b>Rich</b> — the owner-detail page model + the top-3 preview reservations + the total
  *       count. Built when {@code carService.buildOwnerCarDetailPageModel} returns present.</li>
- *   <li><b>Fallback</b> — the raw car + the first car-picture image id +
+ *   <li><b>Fallback</b> — only the first car-picture image id +
  *       {@code hasPublishedAvailability=false}. Built when the rich model is absent (e.g. the car
- *       has no published availability yet).</li>
+ *       has no published availability yet); the controller already holds the {@code Car}.</li>
  * </ul>
  *
  * <p>The view's JSP-side attributes have not changed; the controller still adds
@@ -34,7 +32,6 @@ public final class MyCarDetailPageModel {
     private final OwnerCarDetailPageModel ownerPageModelOrNull;
     private final List<ReservationCardDisplayRow> previewReservations;
     private final long reservationPreviewTotal;
-    private final Car fallbackCarOrNull;
     private final long fallbackCarImageId;
 
     private MyCarDetailPageModel(
@@ -42,13 +39,11 @@ public final class MyCarDetailPageModel {
             final OwnerCarDetailPageModel ownerPageModelOrNull,
             final List<ReservationCardDisplayRow> previewReservations,
             final long reservationPreviewTotal,
-            final Car fallbackCarOrNull,
             final long fallbackCarImageId) {
         this.variant = Objects.requireNonNull(variant, "variant");
         this.ownerPageModelOrNull = ownerPageModelOrNull;
         this.previewReservations = previewReservations == null ? List.of() : List.copyOf(previewReservations);
         this.reservationPreviewTotal = reservationPreviewTotal;
-        this.fallbackCarOrNull = fallbackCarOrNull;
         this.fallbackCarImageId = fallbackCarImageId;
     }
 
@@ -61,14 +56,11 @@ public final class MyCarDetailPageModel {
                 Objects.requireNonNull(ownerPageModel, "ownerPageModel"),
                 previewReservations,
                 reservationPreviewTotal,
-                null,
                 0L);
     }
 
-    public static MyCarDetailPageModel fallback(final Car car, final long firstImageId) {
-        return new MyCarDetailPageModel(
-                Variant.FALLBACK, null, List.of(), 0L,
-                Objects.requireNonNull(car, "car"), firstImageId);
+    public static MyCarDetailPageModel fallback(final long firstImageId) {
+        return new MyCarDetailPageModel(Variant.FALLBACK, null, List.of(), 0L, firstImageId);
     }
 
     public Variant getVariant() { return variant; }
@@ -80,8 +72,6 @@ public final class MyCarDetailPageModel {
     public List<ReservationCardDisplayRow> getPreviewReservations() { return previewReservations; }
 
     public long getReservationPreviewTotal() { return reservationPreviewTotal; }
-
-    public Optional<Car> getFallbackCar() { return Optional.ofNullable(fallbackCarOrNull); }
 
     public long getFallbackCarImageId() { return fallbackCarImageId; }
 }

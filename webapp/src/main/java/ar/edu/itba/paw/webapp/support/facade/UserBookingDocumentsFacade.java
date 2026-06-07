@@ -75,7 +75,7 @@ public final class UserBookingDocumentsFacade {
                     userId, documentType, file.getOriginalFilename(), file.getContentType(), bytes);
             return UploadOutcome.ok();
         } catch (final RydenException e) {
-            return UploadOutcome.businessError(e, localeMessages.msg(e));
+            return UploadOutcome.businessError(localeMessages.msg(e));
         }
     }
 
@@ -132,17 +132,14 @@ public final class UserBookingDocumentsFacade {
     public static final class UploadOutcome {
 
         private final Status status;
-        private final RydenException businessExceptionOrNull;
         private final IOException readExceptionOrNull;
         private final String localizedBusinessMessageOrNull;
 
         private UploadOutcome(
                 final Status status,
-                final RydenException businessExceptionOrNull,
                 final IOException readExceptionOrNull,
                 final String localizedBusinessMessageOrNull) {
             this.status = status;
-            this.businessExceptionOrNull = businessExceptionOrNull;
             this.readExceptionOrNull = readExceptionOrNull;
             this.localizedBusinessMessageOrNull = localizedBusinessMessageOrNull;
         }
@@ -155,28 +152,26 @@ public final class UserBookingDocumentsFacade {
             return status == Status.BUSINESS_ERROR || status == Status.READ_ERROR;
         }
 
-        public Optional<RydenException> getBusinessException() { return Optional.ofNullable(businessExceptionOrNull); }
-
         public Optional<IOException> getReadException() { return Optional.ofNullable(readExceptionOrNull); }
 
         public Optional<String> getLocalizedBusinessMessage() {
             return Optional.ofNullable(localizedBusinessMessageOrNull);
         }
 
-        static UploadOutcome ok() { return new UploadOutcome(Status.OK, null, null, null); }
+        static UploadOutcome ok() { return new UploadOutcome(Status.OK, null, null); }
 
-        static UploadOutcome skippedEmpty() { return new UploadOutcome(Status.SKIPPED_EMPTY, null, null, null); }
+        static UploadOutcome skippedEmpty() { return new UploadOutcome(Status.SKIPPED_EMPTY, null, null); }
 
         static UploadOutcome skippedAlreadyPresent() {
-            return new UploadOutcome(Status.SKIPPED_ALREADY_PRESENT, null, null, null);
+            return new UploadOutcome(Status.SKIPPED_ALREADY_PRESENT, null, null);
         }
 
-        static UploadOutcome businessError(final RydenException ex, final String localizedMessage) {
-            return new UploadOutcome(Status.BUSINESS_ERROR, ex, null, localizedMessage);
+        static UploadOutcome businessError(final String localizedMessage) {
+            return new UploadOutcome(Status.BUSINESS_ERROR, null, localizedMessage);
         }
 
         static UploadOutcome readError(final IOException ex) {
-            return new UploadOutcome(Status.READ_ERROR, null, ex, null);
+            return new UploadOutcome(Status.READ_ERROR, ex, null);
         }
     }
 
@@ -204,10 +199,6 @@ public final class UserBookingDocumentsFacade {
             this.firstHardErrorOrNull = firstHardErrorOrNull;
             this.stateAfter = stateAfter;
         }
-
-        public UploadOutcome getLicenseOutcome() { return licenseOutcome; }
-
-        public UploadOutcome getIdentityOutcome() { return identityOutcome; }
 
         public Optional<UploadOutcome> getFirstHardError() { return Optional.ofNullable(firstHardErrorOrNull); }
 

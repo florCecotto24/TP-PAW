@@ -44,5 +44,18 @@ public interface ReviewDao {
      */
     BigDecimal findAverageRatingForCar(long carId);
 
-    List<ReviewItemDto> findRecentCommentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
+    /**
+     * Recent rated reviews left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
+     * or as rider ({@code false}). Comment-less reviews are included; the comment field on
+     * {@link ReviewItemDto} is left {@code null} for those rows.
+     */
+    List<ReviewItemDto> findRecentReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner, int limit);
+
+    /**
+     * Count of rated reviews left to {@code counterpartyUserId} as owner ({@code counterpartyIsOwner=true})
+     * or as rider ({@code false}). Mirrors the predicate used by
+     * {@link #findAverageRatingForCounterparty(long, boolean)} so the counterparty profile can show
+     * "rating (count)" the same way the public car page does.
+     */
+    long countReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
 }

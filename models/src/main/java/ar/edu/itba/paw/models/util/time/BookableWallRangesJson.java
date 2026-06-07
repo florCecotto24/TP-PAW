@@ -88,8 +88,7 @@ public final class BookableWallRangesJson {
             return "";
         }
         final StringBuilder sb = new StringBuilder(raw.length() + 4);
-        for (int i = 0; i < raw.length(); i++) {
-            final char c = raw.charAt(i);
+        for (final char c : raw.toCharArray()) {
             switch (c) {
                 case '"': sb.append("\\\""); break;
                 case '\\': sb.append("\\\\"); break;

@@ -28,10 +28,6 @@ public final class ReservationChatPolicy {
         this.historyPageSize = historyPageSize;
     }
 
-    public int getGraceDaysAfterFinished() {
-        return graceDaysAfterFinished;
-    }
-
     public int getHistoryPageSize() {
         return historyPageSize;
     }

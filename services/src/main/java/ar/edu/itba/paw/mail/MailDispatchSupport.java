@@ -44,15 +44,18 @@ public final class MailDispatchSupport {
     private final Environment environment;
     private final JavaMailSender mailSender;
     private final MessageSource emailMessageSource;
+    private final MailPublicUrls mailPublicUrls;
 
     @Autowired
     public MailDispatchSupport(
             final Environment environment,
             final JavaMailSender mailSender,
-            @Qualifier("emailMessageSource") final MessageSource emailMessageSource) {
+            @Qualifier("emailMessageSource") final MessageSource emailMessageSource,
+            final MailPublicUrls mailPublicUrls) {
         this.environment = environment;
         this.mailSender = mailSender;
         this.emailMessageSource = emailMessageSource;
+        this.mailPublicUrls = mailPublicUrls;
     }
 
     /** Runs {@code action} and wraps any non-{@link EmailMessagingException} into one. */
@@ -95,7 +98,12 @@ public final class MailDispatchSupport {
         }
     }
 
-    /** Sets {@code htmlLang} on {@code ctx} using the locale's language tag (default {@code en}). */
+    /**
+     * Sets the variables every Thymeleaf mail template expects in addition to its own payload:
+     * {@code htmlLang} for the {@code <html lang="...">} attribute and {@code homeUrl} for the
+     * clickable header logo. Single source of truth so every {@code *EmailServiceImpl} stays in
+     * sync without having to remember to set both per template.
+     */
     public void setHtmlLangFromLocale(final Context ctx, final Locale mailLocale) {
         final String lang = mailLocale != null
                 && mailLocale.getLanguage() != null
@@ -103,6 +111,7 @@ public final class MailDispatchSupport {
                 ? mailLocale.getLanguage()
                 : "en";
         ctx.setVariable("htmlLang", lang);
+        ctx.setVariable("homeUrl", mailPublicUrls.absolutePath("/"));
     }
 
     /** Avoids printing the literal "null" in Thymeleaf for optional contact fields. */

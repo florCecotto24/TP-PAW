@@ -47,13 +47,13 @@ public final class PublishCarFormValidator implements Validator {
             final int yearMin = carValidationPolicy.getYearMin();
             if (year < yearMin) {
                 errors.rejectValue("year", "validation.year.min",
-                        new Object[] { yearMin }, null);
+                        new Object[] { String.valueOf(yearMin) }, null);
                 return;
             }
             final int currentYear = Year.now().getValue();
             if (year > currentYear) {
                 errors.rejectValue("year", "validation.year.max",
-                        new Object[] { currentYear }, null);
+                        new Object[] { String.valueOf(currentYear) }, null);
             }
         }
     }

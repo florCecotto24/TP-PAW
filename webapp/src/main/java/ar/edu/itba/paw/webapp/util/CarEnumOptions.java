@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.util;
 
 import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.Reservation;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -72,8 +73,7 @@ public final class CarEnumOptions {
 
     public Map<String, String> reservationStatusSelectOptions() {
         final Map<String, String> m = new LinkedHashMap<>();
-        for (final ar.edu.itba.paw.models.domain.Reservation.Status s
-                : ar.edu.itba.paw.models.domain.Reservation.Status.values()) {
+        for (final Reservation.Status s : Reservation.Status.values()) {
             final String key = s.name().toLowerCase();
             m.put(key, label("enum.reservation.status." + key, key));
         }

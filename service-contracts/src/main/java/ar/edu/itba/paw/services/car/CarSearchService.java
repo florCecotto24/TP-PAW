@@ -6,41 +6,24 @@ import java.time.LocalDate;
 import java.util.List;
 
 import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.User;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
+import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 
 /**
  * Search-criteria construction extracted from the {@link CarService} monolith so that the
  * lifecycle/mutations surface stays focused.
  *
- * <p>The query/browse methods themselves (cheapest, most-recent, search, owner cards, similar)
+ * The query/browse methods themselves (cheapest, most-recent, search, owner cards, similar)
  * live on {@link CarService} because they read the {@code car} table directly through {@code CarDao};
  * the architectural rule "each ServiceImpl can only call its own DAO" forbids this service from
  * touching {@code CarDao}. This contract therefore only builds criteria and exposes shared
- * timing helpers.</p>
+ * timing helpers.
  */
 public interface CarSearchService {
 
     /** See {@link CarService#buildSearchCriteria}. */
-    CarSearchCriteria buildSearchCriteria(
-            String query,
-            List<Car.Type> category,
-            List<Car.Transmission> transmission,
-            List<Car.Powertrain> powertrain,
-            BigDecimal priceMin,
-            BigDecimal priceMax,
-            List<String> rating,
-            String from,
-            String until,
-            int page,
-            int uiPageSize,
-            String sort,
-            User viewer,
-            List<Long> neighborhoodIds,
-            boolean flexible,
-            String flexMonth,
-            Integer flexDays);
+    CarSearchCriteria buildSearchCriteria(CarSearchRequest request);
 
     /** See {@link CarService#buildOwnerCarSearchCriteria(long, List, List, List, BigDecimal, BigDecimal, List, List, String, int, int, String)}. */
     OwnerCarSearchCriteria buildOwnerCarSearchCriteria(

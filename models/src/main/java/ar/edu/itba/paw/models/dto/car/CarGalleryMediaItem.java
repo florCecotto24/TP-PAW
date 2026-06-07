@@ -20,10 +20,6 @@ public final class CarGalleryMediaItem {
         this.contentType = contentType != null ? contentType : "";
     }
 
-    public MediaKind getMediaKind() {
-        return mediaKind;
-    }
-
     public String getUrl() {
         return url;
     }

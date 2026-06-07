@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +42,7 @@ public interface CarDao {
     List<CarCard> findSimilarCarCards(long carId, int limit, LocalDate browseWallDate, Long excludeOwnerUserId);
 
     /** All cars for the owner whose status is one of {@code statuses}. */
-    List<Car> findCarsByOwnerAndStatuses(long ownerId, java.util.Collection<Car.Status> statuses);
+    List<Car> findCarsByOwnerAndStatuses(long ownerId, Collection<Car.Status> statuses);
 
     /** All cars whose status equals {@code status}. */
     List<Car> findCarsByStatus(Car.Status status);

@@ -6,7 +6,6 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.Car;
 import ar.edu.itba.paw.models.domain.CarModel;
 
-import ar.edu.itba.paw.services.user.AdminService;
 /**
  * Catalog operations for vehicle models. A model belongs to a {@link ar.edu.itba.paw.models.domain.CarBrand}
  * and is locked to a body {@link Car.Type}. Lookup methods are normalized (trim, case-insensitive) here so

@@ -192,11 +192,10 @@ public final class ProfileController {
                     .aboutRaw(profileForm.getAbout())
                     .cbuRaw(profileForm.getCbu())
                     .build());
+        } catch (final InvalidCbuFormatException ic) {
+            bindingResult.rejectValue("cbu", ic.getMessageCode(), ic.getMessageArgs(), null);
+            return "profile/profile";
         } catch (final RydenException e) {
-            if (e instanceof InvalidCbuFormatException ic) {
-                bindingResult.rejectValue("cbu", ic.getMessageCode(), ic.getMessageArgs(), null);
-                return "profile/profile";
-            }
             bindingResult.reject("profile.update.failed", localeMessages.msg(e));
             return "profile/profile";
         }

@@ -62,6 +62,6 @@ public final class MyCarDetailViewServiceImpl implements MyCarDetailViewService 
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
                 .orElse(0L);
-        return MyCarDetailPageModel.fallback(car, firstImageId);
+        return MyCarDetailPageModel.fallback(firstImageId);
     }
 }

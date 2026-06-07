@@ -6,7 +6,7 @@
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
 <head>
-    <title><spring:message code="myReservationEdit.pageTitle" arguments="${reservation.id}"/></title>
+    <title><spring:message code="myReservationEdit.pageTitle" arguments="${car.brand} ${car.model}"/></title>
     <%@include file="../header.jsp"%>
 </head>
 <body class="has-fixed-navbar bg-light">

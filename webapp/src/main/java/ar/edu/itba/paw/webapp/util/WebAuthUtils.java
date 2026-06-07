@@ -95,8 +95,17 @@ public final class WebAuthUtils {
     }
 
     public static Optional<User> viewerUser(final Authentication authentication) {
+        // The roleAssignedBy slot stays populated so admin-only handlers that need to know who
+        // granted the role can read it through @CurrentUser instead of falling back to
+        // Authentication / RydenUserDetails directly.
         return currentUserDetails(authentication).map(
-                d -> User.identities(d.getUserId(), d.getUsername(), d.getForename(), d.getSurname()));
+                d -> User.builder()
+                        .id(d.getUserId())
+                        .email(d.getUsername())
+                        .forename(d.getForename())
+                        .surname(d.getSurname())
+                        .roleAssignedBy(d.getRoleAssignedBy().orElse(null))
+                        .build());
     }
 
     public static Optional<RydenUserDetails> currentUserDetails(final Authentication authentication) {

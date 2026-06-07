@@ -75,19 +75,6 @@ public final class VehicleCardView {
                 .build();
     }
 
-    /** Owner "My cars" grid from a car card with status. */
-    public static VehicleCardView fromOwnerCarCard(final CarCard card) {
-        return builder()
-                .carId(card.getCarId())
-                .brand(card.getBrand())
-                .model(card.getModel())
-                .price(card.getDayPrice())
-                .imageId(card.getImageId())
-                .statusKey(card.getStatusKey())
-                .ratingAvg(card.getRatingAvg())
-                .build();
-    }
-
     /**
      * Returns a copy of this view with the favorite flags resolved against the current viewer:
      * the heart is rendered when the viewer is logged in and is not the owner; the heart is
@@ -164,10 +151,6 @@ public final class VehicleCardView {
 
     public long getReviewCount() {
         return reviewCount;
-    }
-
-    public PriceMarketPosition getPriceMarketPosition() {
-        return priceMarketPosition;
     }
 
     /** CSS modifier suffix for {@code carcard-price-market-badge--*}, e.g. {@code below_market}. */
