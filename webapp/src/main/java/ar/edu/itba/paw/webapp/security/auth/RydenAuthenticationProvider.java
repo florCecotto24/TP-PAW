@@ -13,7 +13,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.security.auth.exception.EmailNotValidatedException;
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;

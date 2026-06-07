@@ -4,7 +4,7 @@ package ar.edu.itba.paw.models.dto.car;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Page model for {@code car/publishCarConfirmation.jsp}, the success screen after a publish.

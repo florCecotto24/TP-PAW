@@ -2,7 +2,7 @@ package ar.edu.itba.paw.webapp.validation.support;
 
 /**
  * Strategy for resolving a maximum allowed byte count at runtime. Used by
- * {@link ar.edu.itba.paw.webapp.validation.constraint.MaxFileSize}: when the annotation references a
+ * {@link ar.edu.itba.paw.webapp.validation.constraint.file.MaxFileSize}: when the annotation references a
  * subtype of this interface, the {@code @Component} implementation is looked up from the Spring
  * context so policies that read from {@code application.properties} (e.g. profile-document upload
  * limit) stay the single source of truth instead of duplicating the byte count on the annotation.

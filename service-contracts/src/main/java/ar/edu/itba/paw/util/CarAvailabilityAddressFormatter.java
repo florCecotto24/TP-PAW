@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.util;
 
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 
 /**
  * Builds human-readable pickup and return address lines from a {@link CarAvailability} row.

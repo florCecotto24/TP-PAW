@@ -7,7 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Page model consumed by {@code reservation/ownerReservations.jsp}. Used by both the

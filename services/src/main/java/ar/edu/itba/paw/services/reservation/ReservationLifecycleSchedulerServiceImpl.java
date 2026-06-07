@@ -19,11 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
-import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.email.reservation.RiderCarReturnEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.RiderReviewInviteEmailPayload;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 

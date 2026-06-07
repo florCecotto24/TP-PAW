@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
 
 /**
  * Wall-calendar availability segments for rider booking UIs: merge adjacent ranges and clip to the minimum

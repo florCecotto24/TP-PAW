@@ -7,7 +7,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 
-import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
 
 /**
  * First availability wall-calendar day consistent with the pickup lead-time rule

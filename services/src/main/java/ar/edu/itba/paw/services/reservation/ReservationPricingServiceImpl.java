@@ -21,8 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.format.MoneyFormat;

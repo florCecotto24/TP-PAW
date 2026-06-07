@@ -18,10 +18,10 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;

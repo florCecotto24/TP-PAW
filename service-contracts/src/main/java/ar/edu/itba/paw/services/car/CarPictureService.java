@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services.car;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.CarPicture;
+import ar.edu.itba.paw.models.domain.car.CarPicture;
 
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;

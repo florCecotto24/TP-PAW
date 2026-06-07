@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 
 import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.webapp.controller.HomeController;
-import ar.edu.itba.paw.webapp.controller.MyCarsController;
-import ar.edu.itba.paw.webapp.controller.MyReservationsController;
-import ar.edu.itba.paw.webapp.controller.SearchController;
+import ar.edu.itba.paw.webapp.controller.car.MyCarsController;
+import ar.edu.itba.paw.webapp.controller.reservation.MyReservationsController;
+import ar.edu.itba.paw.webapp.controller.car.SearchController;
 import ar.edu.itba.paw.webapp.util.CarEnumOptions;
 
 /**

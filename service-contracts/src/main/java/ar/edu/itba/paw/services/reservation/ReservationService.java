@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
@@ -109,7 +109,7 @@ public interface ReservationService {
 
     /**
      * Cancels without participant checks (e.g. expired pending payment job). Persists
-     * {@link ar.edu.itba.paw.models.domain.Reservation.Status#CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF}. Prefer
+     * {@link ar.edu.itba.paw.models.domain.reservation.Reservation.Status#CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF}. Prefer
      * {@link #cancelReservationAsParticipant(long, long)} for user-initiated cancellations.
      */
     Optional<Reservation> cancelReservation(long reservationId);

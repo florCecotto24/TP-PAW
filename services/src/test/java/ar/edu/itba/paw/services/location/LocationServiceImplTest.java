@@ -11,8 +11,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.persistence.LocationDao;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
+import ar.edu.itba.paw.persistence.location.LocationDao;
 
 @ExtendWith(MockitoExtension.class)
 public class LocationServiceImplTest {

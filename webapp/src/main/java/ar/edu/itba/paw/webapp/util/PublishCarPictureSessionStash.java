@@ -30,7 +30,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.policy.CarGalleryUploadPolicy;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedImage;
-import ar.edu.itba.paw.webapp.form.PublishCarForm;
+import ar.edu.itba.paw.webapp.form.car.PublishCarForm;
 
 /**
  * Preserves pictures from the publish form between POST with errors (the browser does not repopulate {@code type=file}).
@@ -41,12 +41,9 @@ public final class PublishCarPictureSessionStash {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublishCarPictureSessionStash.class);
 
-    /** Same key as historically used by {@code PublishCarFormController} (current sessions). */
-    private static final String SESSION_ATTRIBUTE =
-            "ar.edu.itba.paw.webapp.controller.PublishCarFormController.RETAINED_PICTURES";
+    private static final String SESSION_ATTRIBUTE = "ryden.publishCar.retainedPictures";
 
-    private static final String SESSION_COVER_INDEX_ATTRIBUTE =
-            "ar.edu.itba.paw.webapp.controller.PublishCarFormController.COVER_PICTURE_INDEX";
+    private static final String SESSION_COVER_INDEX_ATTRIBUTE = "ryden.publishCar.coverPictureIndex";
 
     private static final Path STASH_ROOT =
             Path.of(System.getProperty("java.io.tmpdir"), "ryden-publish-stash");

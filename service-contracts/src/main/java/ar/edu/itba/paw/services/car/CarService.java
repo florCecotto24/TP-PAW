@@ -7,8 +7,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;

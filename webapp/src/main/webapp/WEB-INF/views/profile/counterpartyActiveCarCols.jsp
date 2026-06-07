@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
 <c:forEach var="car" items="${counterpartyActiveListings}">
     <div class="col d-flex justify-content-center">
         <c:choose>
@@ -12,7 +13,7 @@
             </c:otherwise>
         </c:choose>
         <c:url var="counterpartyListingHref" value="/cars/${car.carId}"/>
-        <ryden:consumerCarCard card="${car}"
+        <ryden-car:consumerCarCard card="${car}"
                                image="${counterpartyListingImageUrl}"
                                href="${counterpartyListingHref}"/>
     </div>

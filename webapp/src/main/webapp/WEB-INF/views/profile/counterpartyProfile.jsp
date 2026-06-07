@@ -2,6 +2,8 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
+<%@ taglib prefix="ryden-profile" tagdir="/WEB-INF/tags/profile" %>
 
 <!DOCTYPE html>
 <html lang="${pageContext.response.locale.language}">
@@ -18,7 +20,7 @@
     <div class="counterparty-profile-container">
         <div class="row g-4">
             <div class="col-12">
-                <ryden:counterpartyProfileHeader
+                <ryden-profile:counterpartyProfileHeader
                         forename="${counterpartyForename}"
                         surname="${counterpartySurname}"
                         about="${counterpartyAbout}"
@@ -30,7 +32,7 @@
                         identityValidated="${counterpartyIdentityValidated}"
                         ratingFloor="${counterpartyRatingFloor}"/>
 
-                <ryden:counterpartyProfileReviews
+                <ryden-profile:counterpartyProfileReviews
                         reviews="${recentReviews}"/>
 
                 <c:if test="${showCounterpartyActiveListings}">
@@ -58,7 +60,7 @@
                                                     </c:otherwise>
                                                 </c:choose>
                                                 <c:url var="counterpartyListingHref" value="/cars/${car.carId}"/>
-                                                <ryden:consumerCarCard card="${car}"
+                                                <ryden-car:consumerCarCard card="${car}"
                                                                        image="${counterpartyListingImageUrl}"
                                                                        href="${counterpartyListingHref}"/>
                                             </div>

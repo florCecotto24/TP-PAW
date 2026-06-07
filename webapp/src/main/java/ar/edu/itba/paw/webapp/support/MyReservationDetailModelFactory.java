@@ -10,7 +10,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.services.reservation.view.ReservationViewService;
-import ar.edu.itba.paw.webapp.form.ReservationReviewForm;
+import ar.edu.itba.paw.webapp.form.reservation.ReservationReviewForm;
 
 @Component
 public final class MyReservationDetailModelFactory {

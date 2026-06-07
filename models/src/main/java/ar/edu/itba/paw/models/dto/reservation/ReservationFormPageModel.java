@@ -2,7 +2,7 @@ package ar.edu.itba.paw.models.dto.reservation;
 
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Everything the rider-facing {@code reservationForm} JSP needs from the persistence/service

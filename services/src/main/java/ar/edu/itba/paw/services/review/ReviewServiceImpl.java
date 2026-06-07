@@ -14,10 +14,11 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.file.Image;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
-import ar.edu.itba.paw.persistence.ReviewDao;
+import ar.edu.itba.paw.persistence.review.ReviewDao;
 
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.file.ImageService;
@@ -232,7 +233,7 @@ public final class ReviewServiceImpl implements ReviewService {
     private void refreshAggregatesAfterRiderReview(final Reservation r) {
         final long carId = r.getCarId();
         carService.getCarById(carId)
-                .map(ar.edu.itba.paw.models.domain.Car::getOwner)
+                .map(Car::getOwner)
                 .ifPresent(owner -> {
                     final BigDecimal ownerAvg = reviewDao.findAverageRatingForCounterparty(owner.getId(), true);
                     userService.updateRatingAsOwner(owner.getId(), ownerAvg);

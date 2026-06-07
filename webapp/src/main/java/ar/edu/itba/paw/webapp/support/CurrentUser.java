@@ -6,7 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.user.User;
 
 /**
  * Injects the session {@link User} from {@link org.springframework.security.core.context.SecurityContextHolder}

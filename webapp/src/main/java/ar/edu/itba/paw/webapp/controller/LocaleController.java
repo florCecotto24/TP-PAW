@@ -14,7 +14,7 @@ import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.SafeRefererResolver;

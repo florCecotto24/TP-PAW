@@ -11,9 +11,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.persistence.StoredFileDao;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.persistence.file.StoredFileDao;
 
 @ExtendWith(MockitoExtension.class)
 public class StoredFileServiceImplTest {

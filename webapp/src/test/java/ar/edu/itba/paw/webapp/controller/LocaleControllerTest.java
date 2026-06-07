@@ -27,7 +27,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import org.springframework.web.servlet.view.RedirectView;
 
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;

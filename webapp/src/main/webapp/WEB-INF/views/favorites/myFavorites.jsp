@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" trimDirectiveWhitespaces="true" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
@@ -55,7 +56,7 @@
                                 <c:url var="favoriteCarDetailHref" value="/cars/${car.carId}">
                                     <c:param name="src" value="my-favorites"/>
                                 </c:url>
-                                <ryden:consumerCarCard card="${car}" image="${imageUrl}" href="${favoriteCarDetailHref}"/>
+                                <ryden-car:consumerCarCard card="${car}" image="${imageUrl}" href="${favoriteCarDetailHref}"/>
                             </div>
                         </c:forEach>
                     </div>

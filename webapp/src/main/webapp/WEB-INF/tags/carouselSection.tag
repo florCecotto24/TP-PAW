@@ -1,6 +1,7 @@
 <%@ tag language="java" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ attribute name="cars"         required="true"  type="java.util.List" %>
 <%@ attribute name="title"        required="true"  type="java.lang.String" %>
@@ -44,7 +45,7 @@
                             </c:otherwise>
                         </c:choose>
 
-                        <ryden:consumerCarCard card="${car}" image="${imageUrl}"
+                        <ryden-car:consumerCarCard card="${car}" image="${imageUrl}"
                                                href="${pageContext.request.contextPath}/cars/${car.carId}"/>
                     </div>
 

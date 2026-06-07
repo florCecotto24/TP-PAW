@@ -4,12 +4,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarPicture;
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.domain.file.Image;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.user.User;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

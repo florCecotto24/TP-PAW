@@ -30,20 +30,20 @@ import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.security.UserRole;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
-import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
-import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
+import ar.edu.itba.paw.models.email.user.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 import ar.edu.itba.paw.models.util.rules.SupportedLocales;
-import ar.edu.itba.paw.persistence.UserDao;
+import ar.edu.itba.paw.persistence.user.UserDao;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 
 

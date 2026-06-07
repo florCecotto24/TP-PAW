@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.services.file;
 
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 import java.util.Optional;

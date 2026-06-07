@@ -9,9 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
-import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
-import ar.edu.itba.paw.persistence.ImageDao;
+import ar.edu.itba.paw.persistence.file.ImageDao;
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 /** Validates upload size then persists via {@link ImageDao}. */

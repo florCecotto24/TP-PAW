@@ -11,7 +11,7 @@ import java.time.format.DateTimeParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 
 /**
  * Parses and formats wall-zone date/time strings from HTML inputs and maps instants to UTC using

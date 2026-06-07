@@ -11,8 +11,8 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
 
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.persistence.ImageDao;
+import ar.edu.itba.paw.models.domain.file.Image;
+import ar.edu.itba.paw.persistence.file.ImageDao;
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 @ExtendWith(MockitoExtension.class)

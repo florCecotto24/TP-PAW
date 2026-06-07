@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import ar.edu.itba.paw.models.domain.CarPicture;
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.domain.file.Image;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.car.CarGalleryMediaItem;
 import ar.edu.itba.paw.models.dto.car.CarGalleryMediaItem.MediaKind;
 

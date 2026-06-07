@@ -3,7 +3,7 @@ package ar.edu.itba.paw.models.util.time;
 import java.math.BigDecimal;
 import java.util.List;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 
 /**

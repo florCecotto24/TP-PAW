@@ -2,7 +2,7 @@ package ar.edu.itba.paw.dto;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Outcome of {@code CarPublishingService.publishCar}. Two flavours:

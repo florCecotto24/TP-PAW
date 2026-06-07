@@ -1,5 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-search" tagdir="/WEB-INF/tags/search" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
@@ -70,13 +71,13 @@
                             <div class="d-flex justify-content-center">
                                 <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
                                     <spring:message code="myCars.filter.status" var="lstStatusLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${lstStatusLabel}" paramName="listingStatus" ariaGroup="lst-status" options="${listingStatusOptions}"/>
+                                    <ryden-search:exploreFilterDropdown filterLabel="${lstStatusLabel}" paramName="listingStatus" ariaGroup="lst-status" options="${listingStatusOptions}"/>
                                     <spring:message code="search.filter.category" var="lstCategoryLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${lstCategoryLabel}" paramName="category" ariaGroup="lst-category" options="${categoryFilterOptions}"/>
+                                    <ryden-search:exploreFilterDropdown filterLabel="${lstCategoryLabel}" paramName="category" ariaGroup="lst-category" options="${categoryFilterOptions}"/>
                                     <spring:message code="search.filter.transmission" var="lstTransmissionLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${lstTransmissionLabel}" paramName="transmission" ariaGroup="lst-transmission" options="${transmissionFilterOptions}"/>
+                                    <ryden-search:exploreFilterDropdown filterLabel="${lstTransmissionLabel}" paramName="transmission" ariaGroup="lst-transmission" options="${transmissionFilterOptions}"/>
                                     <spring:message code="search.filter.powertrain" var="lstPowertrainLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${lstPowertrainLabel}" paramName="powertrain" ariaGroup="lst-powertrain" options="${powertrainFilterOptions}"/>
+                                    <ryden-search:exploreFilterDropdown filterLabel="${lstPowertrainLabel}" paramName="powertrain" ariaGroup="lst-powertrain" options="${powertrainFilterOptions}"/>
                                     <spring:message code="search.filter.price" var="lstPriceLabel"/>
                                     <spring:message code="search.filter.price.min" var="lstPriceMinLabel"/>
                                     <spring:message code="search.filter.price.max" var="lstPriceMaxLabel"/>
@@ -99,7 +100,7 @@
                                         </div>
                                     </div>
                                     <spring:message code="search.filter.rating" var="lstRatingLabel"/>
-                                    <ryden:exploreFilterDropdown filterLabel="${lstRatingLabel}" paramName="rating" ariaGroup="lst-rating" options="${ratingFilterOptions}"/>
+                                    <ryden-search:exploreFilterDropdown filterLabel="${lstRatingLabel}" paramName="rating" ariaGroup="lst-rating" options="${ratingFilterOptions}"/>
                                 </div>
                             </div>
                         </form>

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Page model consumed by {@code car/carReservations.jsp}. Built by

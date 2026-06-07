@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
 
 /**
  * Pricing, date math, configurable timing policy getters, and rider-side validation guards

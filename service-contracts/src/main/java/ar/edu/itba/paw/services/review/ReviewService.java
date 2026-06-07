@@ -38,8 +38,8 @@ public interface ReviewService {
     /**
      * Owner rates the rider after a completed rental with an optional attached image.
      * Pass {@code null} for {@code imageBytes} to skip the image; otherwise the service validates content type and
-     * size via {@link ImageService} and persists the {@link ar.edu.itba.paw.models.domain.Image} together with the
-     * {@link ar.edu.itba.paw.models.domain.Review} (cascade-persisted from the Review aggregate root).
+     * size via {@link ImageService} and persists the {@link ar.edu.itba.paw.models.domain.file.Image} together with the
+     * {@link ar.edu.itba.paw.models.domain.review.Review} (cascade-persisted from the Review aggregate root).
      *
      * @throws ar.edu.itba.paw.exception.RydenException when validation or business rules fail
      */

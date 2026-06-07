@@ -2,7 +2,7 @@ package ar.edu.itba.paw.models.dto.car;
 
 import java.math.BigDecimal;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Car teaser projected from {@code cars} and the latest listing data: identity, cover image,

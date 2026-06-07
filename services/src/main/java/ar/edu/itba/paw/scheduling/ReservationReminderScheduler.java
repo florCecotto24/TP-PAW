@@ -18,11 +18,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.email.ReservationMailPayload;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
+import ar.edu.itba.paw.models.domain.user.User;
 
 /**
  * Daily job: emails riders a reminder the day before pickup for reservations starting tomorrow (wall zone window

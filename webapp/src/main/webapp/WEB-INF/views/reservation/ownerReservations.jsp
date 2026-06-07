@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-reservation" tagdir="/WEB-INF/tags/reservation" %>
+<%@ taglib prefix="ryden-search" tagdir="/WEB-INF/tags/search" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
@@ -140,15 +142,15 @@
             <div class="d-flex justify-content-center mb-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
                     <spring:message code="myReservations.filter.status" var="ownStatusLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${ownStatusLabel}" paramName="ownerStatus" ariaGroup="own-status" options="${reservationStatusOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${ownStatusLabel}" paramName="ownerStatus" ariaGroup="own-status" options="${reservationStatusOptions}"/>
                     <c:if test="${empty selectedCar}">
                         <%-- Vehicle-level filters: irrelevant when already scoped to a single car --%>
                         <spring:message code="search.filter.category" var="ownCategoryLabel"/>
-                        <ryden:exploreFilterDropdown filterLabel="${ownCategoryLabel}" paramName="ownerCategory" ariaGroup="own-category" options="${categoryFilterOptions}"/>
+                        <ryden-search:exploreFilterDropdown filterLabel="${ownCategoryLabel}" paramName="ownerCategory" ariaGroup="own-category" options="${categoryFilterOptions}"/>
                         <spring:message code="search.filter.transmission" var="ownTransmissionLabel"/>
-                        <ryden:exploreFilterDropdown filterLabel="${ownTransmissionLabel}" paramName="ownerTransmission" ariaGroup="own-transmission" options="${transmissionFilterOptions}"/>
+                        <ryden-search:exploreFilterDropdown filterLabel="${ownTransmissionLabel}" paramName="ownerTransmission" ariaGroup="own-transmission" options="${transmissionFilterOptions}"/>
                         <spring:message code="search.filter.powertrain" var="ownPowertrainLabel"/>
-                        <ryden:exploreFilterDropdown filterLabel="${ownPowertrainLabel}" paramName="ownerPowertrain" ariaGroup="own-powertrain" options="${powertrainFilterOptions}"/>
+                        <ryden-search:exploreFilterDropdown filterLabel="${ownPowertrainLabel}" paramName="ownerPowertrain" ariaGroup="own-powertrain" options="${powertrainFilterOptions}"/>
                     </c:if>
                     <spring:message code="search.filter.price" var="ownPriceLabel"/>
                     <spring:message code="search.filter.price.min" var="ownPriceMinLabel"/>
@@ -172,7 +174,7 @@
                         </div>
                     </div>
                     <spring:message code="search.filter.rating" var="ownRatingLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${ownRatingLabel}" paramName="ownerRating" ariaGroup="own-rating" options="${ratingFilterOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${ownRatingLabel}" paramName="ownerRating" ariaGroup="own-rating" options="${ratingFilterOptions}"/>
                     <%-- On the car-specific view the search row is hidden, so put Search/Clear here --%>
                     <c:if test="${not empty selectedCar}">
                         <button type="submit" class="btn btn-primary rounded-4 mx-1 my-1 flex-shrink-0">
@@ -246,7 +248,7 @@
                         <c:param name="role" value="owner"/>
                         <c:param name="fromCar" value="${reservation.carId}"/>
                     </c:url>
-                    <ryden:carReservationCard
+                    <ryden-reservation:carReservationCard
                             reservation="${reservation}"
                             href="${ownerResDetailUrl}"
                             showRefundBadge="${not empty pendingRefundReservationIds and pendingRefundReservationIds.contains(reservation.reservationId)}"/>

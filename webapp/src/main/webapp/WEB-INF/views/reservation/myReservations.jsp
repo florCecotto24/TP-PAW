@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-reservation" tagdir="/WEB-INF/tags/reservation" %>
+<%@ taglib prefix="ryden-search" tagdir="/WEB-INF/tags/search" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <!DOCTYPE html>
@@ -64,13 +66,13 @@
             <div class="d-flex justify-content-center mb-3">
                 <div class="d-flex flex-wrap align-items-center justify-content-center gap-0 pt-1">
                     <spring:message code="myReservations.filter.status" var="riderStatusLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${riderStatusLabel}" paramName="riderStatus" ariaGroup="rider-status" options="${reservationStatusOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${riderStatusLabel}" paramName="riderStatus" ariaGroup="rider-status" options="${reservationStatusOptions}"/>
                     <spring:message code="search.filter.category" var="riderCategoryLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${riderCategoryLabel}" paramName="category" ariaGroup="rider-category" options="${categoryFilterOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${riderCategoryLabel}" paramName="category" ariaGroup="rider-category" options="${categoryFilterOptions}"/>
                     <spring:message code="search.filter.transmission" var="riderTransmissionLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${riderTransmissionLabel}" paramName="transmission" ariaGroup="rider-transmission" options="${transmissionFilterOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${riderTransmissionLabel}" paramName="transmission" ariaGroup="rider-transmission" options="${transmissionFilterOptions}"/>
                     <spring:message code="search.filter.powertrain" var="riderPowertrainLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${riderPowertrainLabel}" paramName="powertrain" ariaGroup="rider-powertrain" options="${powertrainFilterOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${riderPowertrainLabel}" paramName="powertrain" ariaGroup="rider-powertrain" options="${powertrainFilterOptions}"/>
                     <spring:message code="search.filter.price" var="riderPriceLabel"/>
                     <spring:message code="search.filter.price.min" var="riderPriceMinLabel"/>
                     <spring:message code="search.filter.price.max" var="riderPriceMaxLabel"/>
@@ -92,7 +94,7 @@
                         </div>
                     </div>
                     <spring:message code="search.filter.rating" var="riderRatingLabel"/>
-                    <ryden:exploreFilterDropdown filterLabel="${riderRatingLabel}" paramName="rating" ariaGroup="rider-rating" options="${ratingFilterOptions}"/>
+                    <ryden-search:exploreFilterDropdown filterLabel="${riderRatingLabel}" paramName="rating" ariaGroup="rider-rating" options="${ratingFilterOptions}"/>
                 </div>
             </div>
         </form>
@@ -144,7 +146,7 @@
             <div class="d-flex flex-column gap-3 mb-4">
                 <c:forEach var="reservation" items="${riderReservations}">
                     <c:url var="reservationDetailUrl" value="/my-reservations/${reservation.reservationId}"/>
-                    <ryden:carReservationCard reservation="${reservation}" href="${reservationDetailUrl}"/>
+                    <ryden-reservation:carReservationCard reservation="${reservation}" href="${reservationDetailUrl}"/>
                 </c:forEach>
             </div>
 

@@ -3,11 +3,11 @@ package ar.edu.itba.paw.services.car;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarModel;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarModel;
 
 /**
- * Catalog operations for vehicle models. A model belongs to a {@link ar.edu.itba.paw.models.domain.CarBrand}
+ * Catalog operations for vehicle models. A model belongs to a {@link ar.edu.itba.paw.models.domain.car.CarBrand}
  * and is locked to a body {@link Car.Type}. Lookup methods are normalized (trim, case-insensitive) here so
  * DAOs only execute parametrized queries.
  */

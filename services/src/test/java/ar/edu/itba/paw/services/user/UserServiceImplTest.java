@@ -22,11 +22,11 @@ import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.persistence.UserDao;
+import ar.edu.itba.paw.persistence.user.UserDao;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;

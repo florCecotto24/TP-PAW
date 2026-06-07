@@ -14,7 +14,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.security.UserRole;
 
 import ar.edu.itba.paw.services.car.CarBrandService;

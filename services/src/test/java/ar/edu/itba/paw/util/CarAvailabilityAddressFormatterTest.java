@@ -12,9 +12,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
 import ar.edu.itba.paw.services.location.LocationService;
 
 @ExtendWith(MockitoExtension.class)

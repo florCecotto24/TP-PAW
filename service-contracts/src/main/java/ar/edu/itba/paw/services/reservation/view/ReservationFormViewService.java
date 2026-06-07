@@ -3,8 +3,8 @@ package ar.edu.itba.paw.services.reservation.view;
 import java.util.Locale;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.reservation.ReservationConfirmationPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationFormPageModel;
 

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 
 /**
  * Owner-side input for the create-listing / edit-availability flows. Holds the same fields the

@@ -3,8 +3,8 @@ package ar.edu.itba.paw.models.util.search;
 import java.math.BigDecimal;
 import java.util.List;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.user.User;
 
 /**
  * Raw, controller-side input for a public car search. Acts as a parameter object so the service

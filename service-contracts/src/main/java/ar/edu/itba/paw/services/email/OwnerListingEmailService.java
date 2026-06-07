@@ -3,14 +3,14 @@ package ar.edu.itba.paw.services.email;
 
 import java.util.List;
 
-import ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
-import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
-import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
-import ar.edu.itba.paw.models.email.ReservationMailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.OwnerBlockedEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
 
 /**
  * Owner-facing transactional emails (listing lifecycle, payment-proof receipts, refund-proof

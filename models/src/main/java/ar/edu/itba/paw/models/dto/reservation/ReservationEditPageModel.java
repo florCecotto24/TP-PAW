@@ -2,8 +2,8 @@ package ar.edu.itba.paw.models.dto.reservation;
 
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 
 /**
  * Model attributes for the rider-side {@code myReservationEdit} JSP: identifies the reservation being

@@ -7,9 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarModel;
-import ar.edu.itba.paw.persistence.CarModelDao;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.persistence.car.CarModelDao;
 
 /** Catalog reads via {@link CarModelDao}; "Other" creation is normalized here before delegating. */
 @Service

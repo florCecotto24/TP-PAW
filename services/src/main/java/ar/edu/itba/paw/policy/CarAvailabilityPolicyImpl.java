@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarValidationException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 
 /**
  * Reads {@code app.listing.max-availability-forward-wall-days} (or the legacy

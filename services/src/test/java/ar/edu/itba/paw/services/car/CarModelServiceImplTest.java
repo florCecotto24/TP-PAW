@@ -11,10 +11,10 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarBrand;
-import ar.edu.itba.paw.models.domain.CarModel;
-import ar.edu.itba.paw.persistence.CarModelDao;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.persistence.car.CarModelDao;
 
 @ExtendWith(MockitoExtension.class)
 class CarModelServiceImplTest {

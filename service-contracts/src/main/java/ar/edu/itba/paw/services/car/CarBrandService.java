@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services.car;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.CarBrand;
+import ar.edu.itba.paw.models.domain.car.CarBrand;
 
 /**
  * Catalog operations for vehicle brands. Lookup methods are normalized at this layer (trim, case-insensitive)

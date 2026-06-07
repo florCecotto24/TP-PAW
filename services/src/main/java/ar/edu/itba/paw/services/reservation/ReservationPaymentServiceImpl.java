@@ -19,11 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
-import ar.edu.itba.paw.models.email.ReservationMailPayload;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
 import ar.edu.itba.paw.util.ReservationMailComposer;
 import ar.edu.itba.paw.util.ReservationServiceSupport;

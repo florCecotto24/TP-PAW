@@ -1,0 +1,48 @@
+package ar.edu.itba.paw.webapp.form.user;
+
+import javax.validation.constraints.NotBlank;
+
+import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.user.RegistrationPasswordRules;
+import ar.edu.itba.paw.webapp.validation.constraint.user.VerificationCode;
+
+/** Forgot-password reset: emailed numeric code (length per {@code VerificationCodePolicy}) plus new password pair. */
+@RegistrationPasswordRules(groups = ValidationGroups.OnForgotPasswordReset.class)
+public final class ForgotPasswordResetForm implements RegistrationPasswordConfirmFields {
+
+    @NotBlank(message = "{forgotPassword.code.required}", groups = ValidationGroups.OnForgotPasswordReset.class)
+    @VerificationCode(messageKey = "forgotPassword.code.pattern", groups = ValidationGroups.OnForgotPasswordReset.class)
+    private String code = "";
+
+    @NotBlank(message = "{validation.registration.password.required}", groups = ValidationGroups.OnForgotPasswordReset.class)
+    private String password = "";
+
+    @NotBlank(message = "{validation.registration.passwordConfirm.required}", groups = ValidationGroups.OnForgotPasswordReset.class)
+    private String passwordConfirm = "";
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(final String code) {
+        this.code = code != null ? code.trim() : "";
+    }
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(final String password) {
+        this.password = password != null ? password : "";
+    }
+
+    @Override
+    public String getPasswordConfirm() {
+        return passwordConfirm;
+    }
+
+    public void setPasswordConfirm(final String passwordConfirm) {
+        this.passwordConfirm = passwordConfirm != null ? passwordConfirm : "";
+    }
+}

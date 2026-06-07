@@ -5,9 +5,9 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.services.location.LocationService;
 
 /**

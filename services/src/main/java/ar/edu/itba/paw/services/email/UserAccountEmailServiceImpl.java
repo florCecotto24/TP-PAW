@@ -14,11 +14,11 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import ar.edu.itba.paw.exception.email.EmailMessagingException;
-import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
-import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
-import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
-import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
-import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
+import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
+import ar.edu.itba.paw.models.email.user.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.mail.MailDispatchSupport;
 import ar.edu.itba.paw.mail.MailPublicUrls;
 

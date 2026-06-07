@@ -3,7 +3,7 @@ package ar.edu.itba.paw.dto;
 import java.util.List;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 
 /**
  * Immutable command consumed by {@code CarPublishingService} when an owner submits the publish

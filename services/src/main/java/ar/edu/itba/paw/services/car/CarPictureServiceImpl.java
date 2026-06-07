@@ -9,8 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
-import ar.edu.itba.paw.models.domain.CarPicture;
-import ar.edu.itba.paw.persistence.CarPictureDao;
+import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.persistence.car.CarPictureDao;
 
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;

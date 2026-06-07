@@ -3,8 +3,8 @@ package ar.edu.itba.paw.services.user;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**

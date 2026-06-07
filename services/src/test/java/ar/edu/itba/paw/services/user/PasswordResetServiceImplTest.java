@@ -21,9 +21,9 @@ import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
-import ar.edu.itba.paw.persistence.PasswordResetCodeDao;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
+import ar.edu.itba.paw.persistence.user.PasswordResetCodeDao;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 
 import ar.edu.itba.paw.services.email.EmailService;

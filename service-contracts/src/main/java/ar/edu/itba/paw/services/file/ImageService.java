@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services.file;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**

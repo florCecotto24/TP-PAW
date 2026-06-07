@@ -16,15 +16,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarValidationException;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarBrand;
-import ar.edu.itba.paw.models.domain.CarModel;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
-import ar.edu.itba.paw.persistence.CarDao;
+import ar.edu.itba.paw.persistence.car.CarDao;
 
 import ar.edu.itba.paw.services.car.view.OwnerCarDetailViewService;
 import ar.edu.itba.paw.services.email.EmailService;
@@ -360,7 +361,7 @@ public class CarServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .status(Car.Status.ADMIN_PAUSED)
                 .build();
-        adminPausedCar.setInsuranceFile(new ar.edu.itba.paw.models.domain.StoredFile(
+        adminPausedCar.setInsuranceFile(new StoredFile(
                 7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
@@ -390,7 +391,7 @@ public class CarServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .status(Car.Status.ADMIN_PAUSED)
                 .build();
-        adminPausedCar.setInsuranceFile(new ar.edu.itba.paw.models.domain.StoredFile(
+        adminPausedCar.setInsuranceFile(new StoredFile(
                 7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));

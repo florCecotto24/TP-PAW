@@ -3,7 +3,7 @@ package ar.edu.itba.paw.services.reservation;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 
 /**
  * Mutating reservation lifecycle: rider submissions, rider-driven edits of unpaid pending
@@ -44,7 +44,7 @@ public interface ReservationWorkflowService {
 
     /**
      * Cancels without participant checks (e.g. expired pending payment job). Persists
-     * {@link ar.edu.itba.paw.models.domain.Reservation.Status#CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF}.
+     * {@link ar.edu.itba.paw.models.domain.reservation.Reservation.Status#CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF}.
      */
     Optional<Reservation> cancelReservation(long reservationId);
 

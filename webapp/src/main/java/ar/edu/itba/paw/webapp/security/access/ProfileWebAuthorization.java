@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 /**
- * Authorization for {@code /profile/**}. {@link ar.edu.itba.paw.webapp.controller.ProfileController} always
+ * Authorization for {@code /profile/**}. {@link ar.edu.itba.paw.webapp.controller.user.ProfileController} always
  * acts on the authenticated account (no user id in the path): only that principal can edit "their"
  * profile via these URLs. This manager rejects anonymous callers and principals that are not
  * {@link RydenUserDetails}, matching {@link ReservationWebAuthorization} conventions.

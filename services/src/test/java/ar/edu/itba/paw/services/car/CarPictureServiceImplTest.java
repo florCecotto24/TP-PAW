@@ -16,12 +16,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarPicture;
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.persistence.CarPictureDao;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.domain.file.Image;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.persistence.car.CarPictureDao;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 

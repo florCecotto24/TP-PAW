@@ -7,7 +7,7 @@ import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 /**
  * Adapts {@link ProfileDocumentUploadPolicy} (which reads
  * {@code app.upload.max-profile-document-megabytes} from {@code application.properties}) to the
- * {@link FileSizeLimitProvider} contract so {@link ar.edu.itba.paw.webapp.validation.constraint.MaxFileSize}
+ * {@link FileSizeLimitProvider} contract so {@link ar.edu.itba.paw.webapp.validation.constraint.file.MaxFileSize}
  * can enforce the profile-document size cap declaratively on any {@code MultipartFile} field.
  */
 @Component

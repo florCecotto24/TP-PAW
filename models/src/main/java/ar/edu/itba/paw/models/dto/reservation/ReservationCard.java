@@ -3,7 +3,7 @@ package ar.edu.itba.paw.models.dto.reservation;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 
 /** Reservation with car vehicle summary, frozen total and UTC dates for "my reservations" hub queries. */
 public final class ReservationCard {

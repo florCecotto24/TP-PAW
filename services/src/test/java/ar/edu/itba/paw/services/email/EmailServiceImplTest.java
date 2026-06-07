@@ -27,7 +27,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import ar.edu.itba.paw.models.email.ReservationMailPayload;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
 import ar.edu.itba.paw.mail.MailDispatchSupport;
 import ar.edu.itba.paw.mail.MailPublicUrls;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;

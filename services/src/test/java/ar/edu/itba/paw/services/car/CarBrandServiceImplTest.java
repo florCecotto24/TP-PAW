@@ -11,8 +11,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ar.edu.itba.paw.models.domain.CarBrand;
-import ar.edu.itba.paw.persistence.CarBrandDao;
+import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.persistence.car.CarBrandDao;
 
 @ExtendWith(MockitoExtension.class)
 class CarBrandServiceImplTest {

@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 
 /**

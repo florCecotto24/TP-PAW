@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-search" tagdir="/WEB-INF/tags/search" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 
 <!DOCTYPE html>
@@ -28,7 +29,7 @@
             <c:url var="homeSearchFiltersClearHref" value="/"/>
             <c:set var="hasActiveSearchFilters"
                    value="${not empty param.query or not empty param.from or not empty param.until or not empty searchSanitizedNeighborhoodIds or not empty paramValues.category or not empty paramValues.transmission or not empty paramValues.powertrain or not empty paramValues.price}"/>
-            <ryden:searchWithFilters
+            <ryden-search:searchWithFilters
                     formId="homeSearchForm"
                     formClass="search-menu sticky-top w-100"
                     actionPath="/search"

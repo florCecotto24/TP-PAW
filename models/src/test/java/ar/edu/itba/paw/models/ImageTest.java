@@ -3,7 +3,7 @@ package ar.edu.itba.paw.models;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.file.Image;
 
 public class ImageTest {
 

@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.ReservationMessage;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.ReservationMessage;
 
 /**
  * Page model consumed by {@code admin/reservationChat.jsp}. Built by

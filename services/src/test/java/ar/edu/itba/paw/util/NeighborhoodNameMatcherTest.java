@@ -5,7 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
 
 class NeighborhoodNameMatcherTest {
 

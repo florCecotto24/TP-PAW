@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.models.util.media;
 
-import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.file.Image;
 
 /** Allowed MIME types for car gallery uploads (photos and short videos). */
 public final class CarGalleryMediaContentTypes {

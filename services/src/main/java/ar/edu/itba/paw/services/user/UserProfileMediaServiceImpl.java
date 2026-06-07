@@ -11,10 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.InvalidProfileDocumentException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.models.domain.Image;
-import ar.edu.itba.paw.models.domain.StoredFile;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.models.domain.UserDocumentType;
+import ar.edu.itba.paw.models.domain.file.Image;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicy;
 

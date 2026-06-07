@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.services.file;
 
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
-import ar.edu.itba.paw.persistence.StoredFileDao;
+import ar.edu.itba.paw.persistence.file.StoredFileDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

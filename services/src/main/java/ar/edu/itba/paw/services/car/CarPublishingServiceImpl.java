@@ -10,10 +10,10 @@ import ar.edu.itba.paw.dto.PublishCarOutcome;
 import ar.edu.itba.paw.dto.PublishCarRequest;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarBrand;
-import ar.edu.itba.paw.models.domain.CarModel;
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.models.domain.user.User;
 
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.UserService;

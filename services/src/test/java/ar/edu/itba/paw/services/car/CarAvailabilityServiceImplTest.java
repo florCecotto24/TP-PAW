@@ -18,11 +18,11 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.car.CarValidationException;
-import ar.edu.itba.paw.models.domain.AvailabilityPeriod;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.persistence.CarAvailabilityDao;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.persistence.car.CarAvailabilityDao;
 import ar.edu.itba.paw.policy.CarAvailabilityPolicy;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 

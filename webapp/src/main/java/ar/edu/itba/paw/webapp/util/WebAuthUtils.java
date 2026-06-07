@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 
-import ar.edu.itba.paw.models.domain.User;
+import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 /** Helpers to read {@link RydenUserDetails} / {@link User} from Spring Security and safe redirect targets. */

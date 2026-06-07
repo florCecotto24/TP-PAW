@@ -8,8 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import ar.edu.itba.paw.models.domain.CarAvailability;
-import ar.edu.itba.paw.persistence.ReservationAvailabilityDao;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.persistence.reservation.ReservationAvailabilityDao;
 
 /** Pass-through to {@link ReservationAvailabilityDao}; joins the caller's transaction when one is active. */
 @Service

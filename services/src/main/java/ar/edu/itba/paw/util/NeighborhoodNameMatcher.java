@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
 
 /**
  * Approximate matching of search text tokens with neighborhood names (Levenshtein bounded).

@@ -1,21 +1,24 @@
 package ar.edu.itba.paw.services.email;
 
 import java.util.List;
-import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
-import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
-import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
-import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
-import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
-import ar.edu.itba.paw.models.email.ReservationCancellationEmailPayload;
-import ar.edu.itba.paw.models.email.ReservationMailPayload;
-import ar.edu.itba.paw.models.email.RiderCarReturnEmailPayload;
-import ar.edu.itba.paw.models.email.OwnerPaymentProofReceivedEmailPayload;
-import ar.edu.itba.paw.models.email.OwnerRefundProofObligationEmailPayload;
-import ar.edu.itba.paw.models.email.OwnerBlockedEmailPayload;
-import ar.edu.itba.paw.models.email.RiderRefundProofReceivedEmailPayload;
-import ar.edu.itba.paw.models.email.CarPausedMissingCbuOwnerEmailPayload;
-import ar.edu.itba.paw.models.email.RiderReviewInviteEmailPayload;
-import ar.edu.itba.paw.models.email.ReservationChatDigestEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
+import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
+import ar.edu.itba.paw.models.email.user.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.ReservationCancellationEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
+import ar.edu.itba.paw.models.email.reservation.RiderCarReturnEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.OwnerPaymentProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.OwnerRefundProofObligationEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.OwnerBlockedEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.RiderRefundProofReceivedEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.listing.CarValidatedByAdminOwnerEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.RiderReviewInviteEmailPayload;
+import ar.edu.itba.paw.models.email.reservation.chat.ReservationChatDigestEmailPayload;
 
 /**
  * HTML mail dispatch (implementation is typically asynchronous). Callers supply fully-built payloads; this layer
@@ -81,13 +84,13 @@ public interface EmailService {
     void sendListingPausedDueToMissingCbu(CarPausedMissingCbuOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator pauses their listing. */
-    void sendCarPausedByAdmin(ar.edu.itba.paw.models.email.CarPausedByAdminOwnerEmailPayload payload);
+    void sendCarPausedByAdmin(CarPausedByAdminOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator rejects the catalog entry (brand, model, or both) used by their car. */
-    void sendCarRejectedByAdmin(ar.edu.itba.paw.models.email.CarRejectedByAdminOwnerEmailPayload payload);
+    void sendCarRejectedByAdmin(CarRejectedByAdminOwnerEmailPayload payload);
 
     /** Owner notified when a platform administrator validates the catalog entry (brand, model, or both) used by their car. */
-    void sendCarValidatedByAdmin(ar.edu.itba.paw.models.email.CarValidatedByAdminOwnerEmailPayload payload);
+    void sendCarValidatedByAdmin(CarValidatedByAdminOwnerEmailPayload payload);
 
     /** Hourly digest of reservation chat messages for one recipient. */
     void sendReservationChatDigestEmail(ReservationChatDigestEmailPayload payload);

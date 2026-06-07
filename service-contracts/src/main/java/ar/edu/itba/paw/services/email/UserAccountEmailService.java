@@ -1,10 +1,10 @@
 package ar.edu.itba.paw.services.email;
 
-import ar.edu.itba.paw.models.email.AdminInvitationEmailPayload;
-import ar.edu.itba.paw.models.email.AdminPromotedEmailPayload;
-import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
-import ar.edu.itba.paw.models.email.MigratedUserPasswordEmailPayload;
-import ar.edu.itba.paw.models.email.PasswordResetCodeEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
+import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
+import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
+import ar.edu.itba.paw.models.email.user.MigratedUserPasswordEmailPayload;
+import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 
 /**
  * Transactional emails for the user identity / auth lifecycle (verification, password reset,

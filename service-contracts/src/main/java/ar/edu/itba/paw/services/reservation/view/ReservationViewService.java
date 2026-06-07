@@ -4,7 +4,7 @@ package ar.edu.itba.paw.services.reservation.view;
 import java.util.Locale;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
 import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
@@ -39,7 +39,7 @@ public interface ReservationViewService {
     /**
      * Builds the page model for the rider-side "edit reservation period" form. Returns empty when
      * the viewer is not the rider on the reservation, when the reservation is no longer editable
-     * (not {@link ar.edu.itba.paw.models.domain.Reservation.Status#PENDING} or already has a payment
+     * (not {@link ar.edu.itba.paw.models.domain.reservation.Reservation.Status#PENDING} or already has a payment
      * receipt) or when the underlying car has been removed. The bookable-segments JSON is computed
      * with the current reservation excluded so its existing days remain selectable.
      */

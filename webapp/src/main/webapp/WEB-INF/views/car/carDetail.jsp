@@ -1,6 +1,9 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
+<%@ taglib prefix="ryden-reservation" tagdir="/WEB-INF/tags/reservation" %>
+<%@ taglib prefix="ryden-review" tagdir="/WEB-INF/tags/review" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
 <%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags" %>
@@ -61,7 +64,7 @@
                     </form>
                 </c:if>
             </div>
-            <ryden:detailListingMeta
+            <ryden-car:detailListingMeta
                     rating="${carRatingLabel}"
                     reviewCount="${carReviewCountLabel}"/>
         </div>
@@ -69,7 +72,7 @@
 
     <div class="row g-4 align-items-start">
         <div class="col-lg-8 order-1 d-flex flex-column gap-4">
-            <ryden:carDetailGalleryGrid
+            <ryden-car:carDetailGalleryGrid
                     modalId="carDetailGalleryModal"
                     mediaItems="${carGalleryMedia}"
                     vehicleLabel="${carTitle}"/>
@@ -182,7 +185,7 @@
                         <div class="row row-cols-1 row-cols-md-2 g-3 mb-3">
                             <c:forEach var="row" items="${carReviewPage.content}">
                                 <div class="col">
-                                    <ryden:reviewCard
+                                    <ryden-review:reviewCard
                                             forename="${row.reviewerForename}"
                                             surname="${row.reviewerSurname}"
                                             dateLabel="${row.dateText}"
@@ -227,7 +230,7 @@
                     </c:when>
                     <c:otherwise>
                         <%-- Default: carousel view (Bootstrap, client-side slide navigation). --%>
-                        <ryden:reviewCarousel reviews="${carReviewPage.content}" id="carDetailReviewsCarousel"/>
+                        <ryden-review:reviewCarousel reviews="${carReviewPage.content}" id="carDetailReviewsCarousel"/>
                     </c:otherwise>
                 </c:choose>
             </section>
@@ -263,7 +266,7 @@
                 </c:if>
             </sec:authorize>
             <div class="detail-reservation-sticky">
-                <ryden:detailReservationPanel
+                <ryden-reservation:detailReservationPanel
                         carId="${car.id}"
                         dailyPrice="${carMinEffectiveDayPrice}"
                         priceFrom="${carPriceIsVariable}"
@@ -281,7 +284,7 @@
     </div>
 
     <section class="similarVehiclesSection mt-5 pt-5 border-top border-secondary-subtle" id="similarVehiclesSection">
-        <ryden:similarVehiclesHeader seeAllHref="${pageContext.request.contextPath}${similarSearchUrl}"/>
+        <ryden-car:similarVehiclesHeader seeAllHref="${pageContext.request.contextPath}${similarSearchUrl}"/>
         <c:choose>
             <c:when test="${empty similarListings}">
                 <p class="text-secondary text-center mb-0"><spring:message code="carDetail.similarCarsWhenAvailable"/></p>
@@ -300,7 +303,7 @@
                             </c:choose>
 
                             <c:url var="similarCarDetailUrl" value="/cars/${similar.carId}"/>
-                            <ryden:consumerCarCard card="${similar}" image="${similarImageUrl}" href="${similarCarDetailUrl}"/>
+                            <ryden-car:consumerCarCard card="${similar}" image="${similarImageUrl}" href="${similarCarDetailUrl}"/>
                         </div>
                     </c:forEach>
                 </div>
@@ -310,7 +313,7 @@
 </main>
 
 <c:if test="${not empty carGalleryMedia}">
-<ryden:carDetailGalleryModal
+<ryden-car:carDetailGalleryModal
         modalId="carDetailGalleryModal"
         carouselId="carDetailCarousel"
         mediaItems="${carGalleryMedia}"

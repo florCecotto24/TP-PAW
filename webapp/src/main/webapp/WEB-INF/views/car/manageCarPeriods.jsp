@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
+<%@ taglib prefix="ryden-search" tagdir="/WEB-INF/tags/search" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
@@ -188,7 +190,7 @@
 
                                 <%-- Price per day --%>
                                 <div class="mb-3">
-                                    <ryden:priceMarketInsightCard insight="${priceMarketInsight}"
+                                    <ryden-car:priceMarketInsightCard insight="${priceMarketInsight}"
                                                                   initialUserPrice="${createCarAvailabilityForm.pricePerDay}"
                                                                   showDefaultPriceHint="true">
                                         <form:input path="pricePerDay" id="pricePerDay" required="required" type="number"
@@ -196,7 +198,7 @@
                                                     data-max-int="${listingPricePerDayIntegerDigits}" data-max-frac="${listingPricePerDayFractionDigits}"
                                                     cssClass="form-control js-no-number-wheel-step js-listing-price-decimal"
                                                     cssErrorClass="form-control is-invalid js-no-number-wheel-step js-listing-price-decimal"/>
-                                    </ryden:priceMarketInsightCard>
+                                    </ryden-car:priceMarketInsightCard>
                                     <form:errors path="pricePerDay" cssClass="text-danger d-block"/>
                                 </div>
 
@@ -206,7 +208,7 @@
                                 <spring:message code="publishCar.form.neighborhood.search" var="createNbSearchPh"/>
                                 <form:hidden path="neighborhoodId" id="nb_hid_publish"/>
                                 <div class="mb-3">
-                                    <ryden:neighborhoodPicker
+                                    <ryden-search:neighborhoodPicker
                                             pickerId="publish"
                                             mode="get"
                                             allowMultiple="false"

@@ -7,8 +7,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
 
 /**
  * Shared bundle consumed by both {@code car/createCarAvailability.jsp} (publish flow) and

@@ -2,7 +2,7 @@ package ar.edu.itba.paw.services.car.view;
 
 import java.util.Locale;
 
-import ar.edu.itba.paw.models.domain.Car;
+import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.car.MyCarDetailPageModel;
 
 /**

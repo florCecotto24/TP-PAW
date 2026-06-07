@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.services.location;
 
-import ar.edu.itba.paw.models.domain.Neighborhood;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
 
 import java.util.List;
 import java.util.Optional;

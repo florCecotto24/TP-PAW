@@ -7,7 +7,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.models.domain.Image;
+import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 

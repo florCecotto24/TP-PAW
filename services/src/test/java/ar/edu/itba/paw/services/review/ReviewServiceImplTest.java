@@ -22,10 +22,10 @@ import org.mockito.quality.Strictness;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
-import ar.edu.itba.paw.models.domain.Car;
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.persistence.ReviewDao;
+import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.persistence.review.ReviewDao;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;

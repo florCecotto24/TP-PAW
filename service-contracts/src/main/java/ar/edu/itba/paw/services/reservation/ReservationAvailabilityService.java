@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.CarAvailability;
+import ar.edu.itba.paw.models.domain.car.CarAvailability;
 
 /**
  * N:N bridge between reservations and the {@code car_availability} rows considered when pricing

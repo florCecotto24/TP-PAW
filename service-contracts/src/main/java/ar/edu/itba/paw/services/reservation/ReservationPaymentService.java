@@ -3,8 +3,8 @@ package ar.edu.itba.paw.services.reservation;
 
 import java.util.Optional;
 
-import ar.edu.itba.paw.models.domain.Reservation;
-import ar.edu.itba.paw.models.domain.StoredFile;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 
 /**

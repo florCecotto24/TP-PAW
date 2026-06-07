@@ -1,5 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="ryden" tagdir="/WEB-INF/tags" %>
+<%@ taglib prefix="ryden-car" tagdir="/WEB-INF/tags/car" %>
+<%@ taglib prefix="ryden-search" tagdir="/WEB-INF/tags/search" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
@@ -13,7 +15,7 @@
         <ryden:navbar/>
         <div>
             <c:url var="searchFiltersClearHref" value="/search"/>
-            <ryden:searchWithFilters
+            <ryden-search:searchWithFilters
                     formId="exploreSearchForm"
                     formClass="search-menu sticky-top w-100"
                     actionPath="/search"
@@ -153,7 +155,7 @@
                                                 <c:param name="searchNbId"><c:out value="${nid}"/></c:param>
                                             </c:forEach>
                                         </c:url>
-                                        <ryden:consumerCarCard card="${car}" image="${imageUrl}" href="${searchCarDetailHref}"/>
+                                        <ryden-car:consumerCarCard card="${car}" image="${imageUrl}" href="${searchCarDetailHref}"/>
                                     </div>
                                 </c:forEach>
                             </div>

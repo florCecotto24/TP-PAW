@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import ar.edu.itba.paw.webapp.dto.PublishCarRetainedInsurance;
-import ar.edu.itba.paw.webapp.form.PublishCarForm;
+import ar.edu.itba.paw.webapp.form.car.PublishCarForm;
 
 /**
  * Preserves the optional insurance file from the publish form between POST submissions with errors:
@@ -33,8 +33,7 @@ public final class PublishCarInsuranceSessionStash {
 
     private static final Logger LOG = LoggerFactory.getLogger(PublishCarInsuranceSessionStash.class);
 
-    private static final String SESSION_ATTRIBUTE =
-            "ar.edu.itba.paw.webapp.controller.PublishCarFormController.RETAINED_INSURANCE";
+    private static final String SESSION_ATTRIBUTE = "ryden.publishCar.retainedInsurance";
 
     private static final Path STASH_ROOT =
             Path.of(System.getProperty("java.io.tmpdir"), "ryden-publish-insurance-stash");

@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.services.location;
 
-import ar.edu.itba.paw.models.domain.Neighborhood;
-import ar.edu.itba.paw.persistence.LocationDao;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
+import ar.edu.itba.paw.persistence.location.LocationDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

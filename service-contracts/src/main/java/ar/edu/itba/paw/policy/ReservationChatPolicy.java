@@ -2,7 +2,7 @@ package ar.edu.itba.paw.policy;
 
 import java.time.OffsetDateTime;
 
-import ar.edu.itba.paw.models.domain.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.Reservation;
 
 /** Chat availability window and history paging for reservation messages. */
 public final class ReservationChatPolicy {

@@ -15,9 +15,9 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
-import ar.edu.itba.paw.models.email.EmailVerificationCodeEmailPayload;
-import ar.edu.itba.paw.models.domain.User;
-import ar.edu.itba.paw.persistence.EmailVerificationCodeDao;
+import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
 
 import ar.edu.itba.paw.services.email.EmailService;
 /** Uses only {@link EmailVerificationCodeDao}; user and mail side effects go through {@link UserService} and {@link EmailService}. */
