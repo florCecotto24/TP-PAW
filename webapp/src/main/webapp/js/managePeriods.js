@@ -271,8 +271,11 @@
             rb.checked = false;
         });
         var text = document.getElementById('nb_dd_text_publish');
+        var wrap = document.getElementById('nb_dd_wrap_publish');
         if (text) {
-            var placeholder = text.getAttribute('data-placeholder') || '';
+            var placeholder = text.getAttribute('data-placeholder')
+                || (wrap && wrap.getAttribute('data-nb-any'))
+                || '';
             text.textContent = placeholder;
         }
     }

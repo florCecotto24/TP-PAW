@@ -94,7 +94,7 @@
                         aria-expanded="false"
                         aria-haspopup="true"
                         aria-label="<c:out value='${toggleAriaLabel}'/>">
-                    <span class="<c:choose><c:when test='${nbSearchBar}'>text-truncate min-w-0</c:when><c:otherwise>text-truncate</c:otherwise></c:choose>" id="<c:out value='${nbDdTextId}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
+                    <span class="<c:choose><c:when test='${nbSearchBar}'>text-truncate min-w-0</c:when><c:otherwise>text-truncate</c:otherwise></c:choose>" id="<c:out value='${nbDdTextId}'/>" data-placeholder="<c:out value='${anyLabel}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
                     <c:if test="${nbAllowMultiple}">
                         <span id="nb_dd_badge_<c:out value='${pickerId}'/>"
                               class="badge text-bg-primary rounded-pill flex-shrink-0 <c:if test='${nbMultiCount eq 0}'>d-none</c:if>"
@@ -178,7 +178,7 @@
                         aria-expanded="false"
                         aria-haspopup="true"
                         aria-label="<c:out value='${toggleAriaLabel}'/>">
-                    <span class="text-truncate" id="<c:out value='${nbDdTextId}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
+                    <span class="text-truncate" id="<c:out value='${nbDdTextId}'/>" data-placeholder="<c:out value='${anyLabel}'/>"><c:out value="${not empty nbChosenName ? nbChosenName : anyLabel}"/></span>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow explore-filter-dropdown__panel p-0 w-100 neighborhood-picker__menu"
                      style="min-width: 0;"
