@@ -273,7 +273,7 @@
                                             <c:when test="${statusKey == 'LACK_DOC'}">
                                                 <c:if test="${!ownerHasValidCbu}">
                                                     <p class="text-secondary small mb-2">
-                                                        <spring:message code="myCarDetail.status.pausedMissingCbuHint" arguments="${cbuRequiredDigits}"/>
+                                                        <spring:message code="myCarDetail.status.pausedMissingCbuHint"/>
                                                     </p>
                                                     <a href="${pageContext.request.contextPath}/profile" class="btn btn-primary w-100">
                                                         <i class="bi bi-person-fill me-2"></i><spring:message code="myCarDetail.status.pausedMissingCbuCta"/>

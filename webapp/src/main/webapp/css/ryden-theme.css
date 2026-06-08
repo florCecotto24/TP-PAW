@@ -991,12 +991,49 @@ hr {
     color: #FFFFFF !important;
 }
 
-/* Continuous strip: box-shadow bridges the gap between adjacent cells */
+/* Make every Flatpickr calendar (popups + inline) lay out its days as a tight
+   7-column grid, so adjacent day cells touch instead of leaving the small
+   space-around gap that Flatpickr ships by default. With touching cells the
+   range selection renders as a continuous pill (startRange + inRange band +
+   endRange) without needing semi-transparent box-shadow bridges, matching the
+   inline reservation/owner calendars. */
+.flatpickr-calendar .flatpickr-day {
+    max-width: none !important;
+    width: calc(100% / 7) !important;
+    flex-basis: calc(100% / 7) !important;
+}
+
+.flatpickr-calendar .dayContainer {
+    justify-content: flex-start !important;
+}
+
+/* Selected / startRange / endRange should sit above any adjacent cell so the
+   solid dark background isn't visually clipped by a neighbour's border or
+   transparent edge. */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    position: relative;
+    z-index: 1;
+}
+
+/* inRange days form a continuous strip simply by sharing edges with their
+   neighbours (no bridge shadow needed once cells fill 100%/7 of the row). */
 .flatpickr-day.inRange {
     background: rgba(110, 141, 184, 0.12) !important;
     border-color: transparent !important;
     border-radius: 0 !important;
-    box-shadow: -5px 0 0 rgba(110, 141, 184, 0.12), 5px 0 0 rgba(110, 141, 184, 0.12) !important;
+    box-shadow: none !important;
+}
+
+/* Round the strip when it starts/ends a week so it closes off cleanly at row
+   boundaries instead of looking abruptly clipped. */
+.flatpickr-day.inRange:nth-child(7n+1) {
+    border-radius: 50px 0 0 50px !important;
+}
+
+.flatpickr-day.inRange:nth-child(7n+7) {
+    border-radius: 0 50px 50px 0 !important;
 }
 
 .flatpickr-profile-clear-btn {
