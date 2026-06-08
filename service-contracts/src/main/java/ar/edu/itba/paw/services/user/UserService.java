@@ -139,7 +139,7 @@ public interface UserService {
     Locale resolveMailLocale(long userId);
 
     /**
-     * Locale for mail when the user has a persisted {@link User#getLatestLocaleTag()}; otherwise {@code fallback}
+     * Locale for mail when the user has a persisted {@link User#getLatestLocale()}; otherwise {@code fallback}
      * (or English if {@code fallback} is null).
      */
     Locale resolveMailLocaleOrElse(long userId, Locale fallback);

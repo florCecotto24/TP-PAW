@@ -8,7 +8,6 @@ import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.services.car.CarService;
-import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
@@ -24,6 +23,8 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.Min;
@@ -36,17 +37,14 @@ public class SearchController {
     private static final String DEFAULT_SORT = "date,desc";
 
     private final CarService carService;
-    private final LocationService locationService;
     private final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory;
     private final AppPaginationProperties appPaginationProperties;
 
     public SearchController(
             final CarService carService,
-            final LocationService locationService,
             final ConsumerVehicleCardViewFactory consumerVehicleCardViewFactory,
             final AppPaginationProperties appPaginationProperties) {
         this.carService = carService;
-        this.locationService = locationService;
         this.consumerVehicleCardViewFactory = consumerVehicleCardViewFactory;
         this.appPaginationProperties = appPaginationProperties;
     }
@@ -64,7 +62,7 @@ public class SearchController {
             @RequestParam(required = false) final String until,
             @RequestParam(defaultValue = "0") @Min(0) final int page,
             @RequestParam(required = false) final String sort,
-            @RequestParam(required = false) final List<String> neighborhoodId,
+            @RequestParam(required = false) final List<Long> neighborhoodId,
             @RequestParam(defaultValue = "false") final boolean flexible,
             @RequestParam(required = false) final String flexMonth,
             @RequestParam(required = false) final Integer flexDays,
@@ -72,9 +70,11 @@ public class SearchController {
             final HttpServletRequest request) {
         final ModelAndView mav = new ModelAndView("search");
 
-        final User viewer = currentUser;
-
-        final List<Long> neighborhoodIds = locationService.resolveSearchNeighborhoodIds(neighborhoodId);
+        // Spring binds invalid tokens (e.g. "abc") to a MethodArgumentTypeMismatchException → HTTP 400;
+        // valid ids are kept in submission order and deduplicated to match the search criteria contract.
+        final List<Long> neighborhoodIds = neighborhoodId == null || neighborhoodId.isEmpty()
+                ? Collections.emptyList()
+                : List.copyOf(new LinkedHashSet<>(neighborhoodId));
         final CarSearchRequest searchRequest = CarSearchRequest.builder()
                 .query(query)
                 .categories(category)
@@ -88,7 +88,6 @@ public class SearchController {
                 .page(page)
                 .uiPageSize(appPaginationProperties.getUiPageSize())
                 .sort(sort)
-                .viewer(viewer)
                 .neighborhoodIds(neighborhoodIds)
                 .flexible(flexible)
                 .flexMonth(flexMonth)
@@ -110,7 +109,7 @@ public class SearchController {
         }
         final List<VehicleCardView> results =
                 consumerVehicleCardViewFactory.toConsumerVehicleCardViews(
-                        resultPage.getContent(), viewer == null ? null : viewer.getId());
+                        resultPage.getContent(), currentUser == null ? null : currentUser.getId());
 
         final String safeSort = MyHubSortSanitizer.sanitize(sort, DEFAULT_SORT);
         mav.addObject("results", results);

@@ -169,7 +169,7 @@ public final class RegistrationController {
                 }
             }
         } else if (StringUtils.hasText(email)) {
-            model.addAttribute("verifyEmailHint", email.trim());
+            model.addAttribute("verifyEmailHint", email);
         }
         final VerifyEmailForm verifyEmailForm = new VerifyEmailForm();
         final Object flashEmail = model.asMap().get("verifyEmail");

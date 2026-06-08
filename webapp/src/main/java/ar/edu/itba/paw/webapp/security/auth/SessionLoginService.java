@@ -1,6 +1,6 @@
 package ar.edu.itba.paw.webapp.security.auth;
 
-import java.util.List;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -57,7 +57,7 @@ public final class SessionLoginService {
             final User withHash) {
         final String hash = withHash.getPasswordHash().filter(h -> !h.isBlank())
                 .orElseThrow(() -> new IllegalStateException("User has no password hash for session"));
-        final List<GrantedAuthority> authorities =
+        final Set<GrantedAuthority> authorities =
                 UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(withHash.getId()));
         final RydenUserDetails principal = new RydenUserDetails(
                 withHash.getId(),

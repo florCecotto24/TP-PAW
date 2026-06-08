@@ -35,15 +35,6 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedFixture() {
-        jdbcTemplate.update("DELETE FROM fav_cars");
-        jdbcTemplate.update("DELETE FROM car_pictures");
-        jdbcTemplate.update("DELETE FROM car_availability");
-        jdbcTemplate.update("DELETE FROM cars");
-        jdbcTemplate.update("DELETE FROM car_models");
-        jdbcTemplate.update("DELETE FROM car_brands");
-        jdbcTemplate.update("DELETE FROM users WHERE email IN (?, ?)",
-                "fav-owner@test.com", "fav-viewer@test.com");
-
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
                 "fav-owner@test.com", "Owner", "Test");

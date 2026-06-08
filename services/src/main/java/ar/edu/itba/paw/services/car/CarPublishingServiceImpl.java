@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.dto.PublishCarOutcome;
 import ar.edu.itba.paw.dto.PublishCarRequest;
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.domain.car.Car;
@@ -56,10 +57,10 @@ public final class CarPublishingServiceImpl implements CarPublishingService {
         // Resolve brand/model strings (already non-blank-validated upstream) to a catalog row.
         // findOrCreateUnvalidated() returns a row marked validated=false when the value is new.
         final CarBrand resolvedBrand = carBrandService.findOrCreateUnvalidated(request.getBrand())
-                .orElseThrow(() -> new IllegalStateException("Could not resolve brand: " + request.getBrand()));
+                .orElseThrow(() -> new CarValidationException(MessageKeys.CATALOG_BRAND_NOT_FOUND, request.getBrand()));
         final CarModel resolvedModel = carModelService
                 .findOrCreateUnvalidated(resolvedBrand.getId(), request.getModel(), request.getType())
-                .orElseThrow(() -> new IllegalStateException("Could not resolve model: " + request.getModel()));
+                .orElseThrow(() -> new CarValidationException(MessageKeys.CATALOG_MODEL_NOT_FOUND, request.getModel()));
 
         final boolean newCatalogEntry = !resolvedBrand.isValidated() || !resolvedModel.isValidated();
 

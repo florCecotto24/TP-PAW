@@ -29,8 +29,6 @@ class CarModelJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedCatalog() {
-        jdbcTemplate.update("DELETE FROM car_models");
-        jdbcTemplate.update("DELETE FROM car_brands");
         jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Honda", true);
         jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
         brandId = jdbcTemplate.queryForObject(

@@ -2,8 +2,7 @@ package ar.edu.itba.paw.models.domain.user;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,15 +16,12 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 
-import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
-import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.security.UserRole;
 
 /**
@@ -68,9 +64,13 @@ public class User {
     @JoinColumn(name = "profile_picture_id", unique = true)
     private Image profilePicture;
 
-    /** BCP 47 tag (e.g. {@code en}, {@code es}) for async mail copy; may be null for legacy rows. */
+    /**
+     * Locale used for async mail copy (Hibernate persists it as a BCP 47 language tag in the
+     * {@code latest_locale} VARCHAR column via the built-in {@code LocaleType}). May be {@code null}
+     * for legacy rows that never set a preference.
+     */
     @Column(name = "latest_locale", length = 32)
-    private String latestLocaleTag;
+    private Locale latestLocale;
 
     /** Join date (wall calendar); used to show "member since" (month + year) in the UI. */
     @Column(name = "member_since", nullable = false)
@@ -131,12 +131,6 @@ public class User {
     @Column(nullable = false)
     private boolean blocked;
 
-    @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
-    private List<Car> cars = new ArrayList<>();
-
-    @OneToMany(mappedBy = "rider", fetch = FetchType.LAZY)
-    private List<Reservation> reservationsAsRider = new ArrayList<>();
-
     /* package */ User() {
         // For Hibernate
     }
@@ -152,7 +146,7 @@ public class User {
         this.birthDate = b.birthDate;
         this.about = b.about;
         this.profilePicture = b.profilePicture;
-        this.latestLocaleTag = b.latestLocaleTag;
+        this.latestLocale = b.latestLocale;
         this.memberSince = b.memberSince;
         this.cbu = b.cbu;
         this.licenseFile = b.licenseFile;
@@ -184,7 +178,7 @@ public class User {
         private LocalDate birthDate;
         private String about;
         private Image profilePicture;
-        private String latestLocaleTag;
+        private Locale latestLocale;
         private LocalDate memberSince;
         private String cbu;
         private StoredFile licenseFile;
@@ -245,8 +239,8 @@ public class User {
             return this;
         }
 
-        public Builder latestLocaleTag(final String latestLocaleTag) {
-            this.latestLocaleTag = latestLocaleTag;
+        public Builder latestLocale(final Locale latestLocale) {
+            this.latestLocale = latestLocale;
             return this;
         }
 
@@ -348,8 +342,8 @@ public class User {
         return profilePicture == null ? Optional.empty() : Optional.of(profilePicture.getId());
     }
 
-    public Optional<String> getLatestLocaleTag() {
-        return Optional.ofNullable(latestLocaleTag).filter(s -> !s.isBlank());
+    public Optional<Locale> getLatestLocale() {
+        return Optional.ofNullable(latestLocale);
     }
 
     public Optional<LocalDate> getMemberSince() {
@@ -446,8 +440,8 @@ public class User {
         this.profilePicture = profilePicture;
     }
 
-    public void setLatestLocaleTag(final String latestLocaleTag) {
-        this.latestLocaleTag = latestLocaleTag;
+    public void setLatestLocale(final Locale latestLocale) {
+        this.latestLocale = latestLocale;
     }
 
     public void setCbu(final String cbu) {
@@ -476,14 +470,6 @@ public class User {
 
     public void setIdentityValidated(final boolean identityValidated) {
         this.identityValidated = identityValidated;
-    }
-
-    public List<Car> getCars() {
-        return cars;
-    }
-
-    public List<Reservation> getReservationsAsRider() {
-        return reservationsAsRider;
     }
 
     /**

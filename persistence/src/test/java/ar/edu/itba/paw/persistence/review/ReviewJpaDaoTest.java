@@ -32,18 +32,6 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedFixture() {
-        jdbcTemplate.update("DELETE FROM reviews");
-        jdbcTemplate.update("DELETE FROM reservations_availabilities");
-        jdbcTemplate.update("DELETE FROM reservations");
-        jdbcTemplate.update("DELETE FROM car_pictures");
-        jdbcTemplate.update("DELETE FROM car_availability");
-        jdbcTemplate.update("DELETE FROM cars");
-        jdbcTemplate.update("DELETE FROM car_models");
-        jdbcTemplate.update("DELETE FROM car_brands");
-        jdbcTemplate.update("DELETE FROM images");
-        jdbcTemplate.update("DELETE FROM users WHERE email IN (?, ?, ?)",
-                "rv-owner@test.com", "rv-rider@test.com", "rv-rider2@test.com");
-
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
                 "rv-owner@test.com", "Owner", "Test");

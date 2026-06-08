@@ -20,7 +20,8 @@ public final class PublishCarRequest {
     private final String model;
     private final Car.Type type;
     private final String plate;
-    private final int year;
+    /** Optional manufacture year; {@code null} when the owner left it blank. */
+    private final Integer year;
     private final Car.Powertrain powertrain;
     private final Car.Transmission transmission;
     private final String description;
@@ -48,7 +49,7 @@ public final class PublishCarRequest {
     public String getModel() { return model; }
     public Car.Type getType() { return type; }
     public String getPlate() { return plate; }
-    public int getYear() { return year; }
+    public Integer getYear() { return year; }
     public Car.Powertrain getPowertrain() { return powertrain; }
     public Car.Transmission getTransmission() { return transmission; }
     public String getDescription() { return description; }
@@ -66,7 +67,7 @@ public final class PublishCarRequest {
         private String model;
         private Car.Type type;
         private String plate;
-        private int year;
+        private Integer year;
         private Car.Powertrain powertrain;
         private Car.Transmission transmission;
         private String description;
@@ -79,7 +80,7 @@ public final class PublishCarRequest {
         public Builder model(final String v) { this.model = v; return this; }
         public Builder type(final Car.Type v) { this.type = v; return this; }
         public Builder plate(final String v) { this.plate = v; return this; }
-        public Builder year(final int v) { this.year = v; return this; }
+        public Builder year(final Integer v) { this.year = v; return this; }
         public Builder powertrain(final Car.Powertrain v) { this.powertrain = v; return this; }
         public Builder transmission(final Car.Transmission v) { this.transmission = v; return this; }
         public Builder description(final String v) { this.description = v; return this; }

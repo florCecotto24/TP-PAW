@@ -7,7 +7,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -23,15 +22,9 @@ class CarBrandJpaDaoTest extends DaoIntegrationTestSupport {
     @PersistenceContext
     private EntityManager em;
 
-    @BeforeEach
-    void clearCatalog() {
-        jdbcTemplate.update("DELETE FROM car_models");
-        jdbcTemplate.update("DELETE FROM car_brands");
-    }
-
     @Test
     void testCreatePersistsBrandWithGivenValidatedFlag() {
-        // 1. Arrange — empty catalog (handled by @BeforeEach).
+        // 1. Arrange — empty catalog (each test runs in its own rolled-back transaction).
 
         // 2. Act
         final CarBrand created = dao.create("Toyota", false);

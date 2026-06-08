@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.security.auth.userdetails;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -37,7 +38,7 @@ public final class RydenUserDetailsService implements UserDetailsService {
                 .filter(h -> !h.isBlank())
                 .orElseThrow(() -> new UsernameNotFoundException("User has no password"));
         final List<UserRole> roles = userService.findRolesForUser(user.getId());
-        final List<GrantedAuthority> authorities = UserRoleAuthorities.fromUserRoles(roles);
+        final Set<GrantedAuthority> authorities = UserRoleAuthorities.fromUserRoles(roles);
         return new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),

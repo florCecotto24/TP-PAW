@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import ar.edu.itba.paw.exception.reservation.ReservationException;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
@@ -163,13 +164,12 @@ public final class ReservationFormController {
 
         // PRG: redirect to the confirmation GET so a browser refresh re-renders the confirmation
         // from the persisted reservation instead of resubmitting the form.
-        final StringBuilder target = new StringBuilder("/cars/").append(carId)
-                .append("/reservation/").append(reservation.getId())
-                .append("/confirmation");
+        final UriComponentsBuilder target = UriComponentsBuilder
+                .fromPath("/cars/" + carId + "/reservation/" + reservation.getId() + "/confirmation");
         if (availabilityId != null) {
-            target.append("?availabilityId=").append(availabilityId);
+            target.queryParam("availabilityId", availabilityId);
         }
-        return new ModelAndView(new RedirectView(target.toString(), true));
+        return new ModelAndView(new RedirectView(target.build().toUriString(), true));
     }
 
     @GetMapping("/cars/{carId}/reservation/{reservationId}/confirmation")

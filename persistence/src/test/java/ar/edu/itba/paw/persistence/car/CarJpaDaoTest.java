@@ -41,11 +41,6 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedOwner() {
-        jdbcTemplate.update("DELETE FROM car_availability");
-        jdbcTemplate.update("DELETE FROM cars");
-        jdbcTemplate.update("DELETE FROM car_models");
-        jdbcTemplate.update("DELETE FROM car_brands");
-        jdbcTemplate.update("DELETE FROM users WHERE email = ?", "car-owner@test.com");
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
                 "car-owner@test.com", "Owner", "Test");

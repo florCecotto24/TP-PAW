@@ -442,7 +442,7 @@
                                                     </c:otherwise>
                                                 </c:choose>
                                                 <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 ryden-publish-remove-retained-btn"
-                                                        aria-label="<c:out value='${removeImageLabel}'/>" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}/remove">
+                                                        aria-label="<c:out value='${removeImageLabel}'/>" data-remove-url="${pageContext.request.contextPath}/publish-car/retained-picture/${rp.stashToken()}">
                                                     <i class="bi bi-trash" aria-hidden="true"></i>
                                                 </button>
                                             </div>
@@ -477,7 +477,7 @@
                             </div>
                             <c:if test="${not empty retainedInsuranceFilename}">
                                 <div id="publishRetainedInsurance" class="d-flex align-items-center gap-2 mt-2"
-                                     data-remove-url="${pageContext.request.contextPath}/publish-car/retained-insurance/remove">
+                                     data-remove-url="${pageContext.request.contextPath}/publish-car/retained-insurance">
                                     <i class="bi bi-file-earmark-check text-success" aria-hidden="true"></i>
                                     <a href="${pageContext.request.contextPath}/publish-car/retained-insurance"
                                        class="small text-truncate" style="max-width:260px"
@@ -860,7 +860,7 @@
                 if (!url) { return; }
                 retainedRemoveBtn.disabled = true;
                 var xhr = new XMLHttpRequest();
-                xhr.open('POST', url, true);
+                xhr.open('DELETE', url, true);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState !== 4) { return; }

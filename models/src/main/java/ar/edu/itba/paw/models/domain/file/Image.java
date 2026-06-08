@@ -2,8 +2,10 @@ package ar.edu.itba.paw.models.domain.file;
 
 import java.util.Arrays;
 
+import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -28,6 +30,14 @@ public class Image {
     @Column(name = "content_type", nullable = false, length = 50)
     private String contentType;
 
+    /**
+     * Marked LAZY so navigations that only need {@code id} / {@code name} / {@code contentType}
+     * (e.g. {@code user.getProfilePicture().getContentType()} or gallery card metadata) do not pull
+     * the full byte array. The hint only fires when Hibernate bytecode enhancement is enabled at
+     * build time; without enhancement Hibernate ignores the {@code LAZY} flag and the column is
+     * still loaded eagerly. The annotation stays so it takes effect as soon as enhancement is on.
+     */
+    @Basic(fetch = FetchType.LAZY)
     @Column(name = "byte_array", nullable = false)
     private byte[] data;
 

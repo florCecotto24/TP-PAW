@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.domain.user.User;
 
 /**
  * Raw, controller-side input for a public car search. Acts as a parameter object so the service
@@ -30,7 +29,6 @@ public final class CarSearchRequest {
     private final int page;
     private final int uiPageSize;
     private final String sort;
-    private final User viewer;
     private final List<Long> neighborhoodIds;
     private final boolean flexible;
     private final String flexMonth;
@@ -49,7 +47,6 @@ public final class CarSearchRequest {
         this.page = b.page;
         this.uiPageSize = b.uiPageSize;
         this.sort = b.sort;
-        this.viewer = b.viewer;
         this.neighborhoodIds = b.neighborhoodIds;
         this.flexible = b.flexible;
         this.flexMonth = b.flexMonth;
@@ -72,7 +69,6 @@ public final class CarSearchRequest {
     public int getPage() { return page; }
     public int getUiPageSize() { return uiPageSize; }
     public String getSort() { return sort; }
-    public User getViewer() { return viewer; }
     public List<Long> getNeighborhoodIds() { return neighborhoodIds; }
     public boolean isFlexible() { return flexible; }
     public String getFlexMonth() { return flexMonth; }
@@ -91,7 +87,6 @@ public final class CarSearchRequest {
         private int page;
         private int uiPageSize;
         private String sort;
-        private User viewer;
         private List<Long> neighborhoodIds;
         private boolean flexible;
         private String flexMonth;
@@ -109,7 +104,6 @@ public final class CarSearchRequest {
         public Builder page(final int v) { this.page = v; return this; }
         public Builder uiPageSize(final int v) { this.uiPageSize = v; return this; }
         public Builder sort(final String v) { this.sort = v; return this; }
-        public Builder viewer(final User v) { this.viewer = v; return this; }
         public Builder neighborhoodIds(final List<Long> v) { this.neighborhoodIds = v; return this; }
         public Builder flexible(final boolean v) { this.flexible = v; return this; }
         public Builder flexMonth(final String v) { this.flexMonth = v; return this; }

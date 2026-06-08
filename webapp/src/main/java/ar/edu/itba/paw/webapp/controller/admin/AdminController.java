@@ -28,6 +28,7 @@ import ar.edu.itba.paw.models.dto.reservation.AdminReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.user.AdminService;
+import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.form.admin.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
 import ar.edu.itba.paw.webapp.support.UserSessionService;
@@ -46,16 +47,19 @@ public final class AdminController {
     private final UserSessionService userSessionService;
     private final LocaleMessages localeMessages;
     private final UserValidationPolicy userValidationPolicy;
+    private final AppPaginationProperties appPaginationProperties;
 
     public AdminController(
             final AdminService adminService,
             final UserSessionService userSessionService,
             final LocaleMessages localeMessages,
-            final UserValidationPolicy userValidationPolicy) {
+            final UserValidationPolicy userValidationPolicy,
+            final AppPaginationProperties appPaginationProperties) {
         this.adminService = adminService;
         this.userSessionService = userSessionService;
         this.localeMessages = localeMessages;
         this.userValidationPolicy = userValidationPolicy;
+        this.appPaginationProperties = appPaginationProperties;
     }
 
     @ModelAttribute("registrationDisplayNamePartMaxLength")
@@ -268,7 +272,8 @@ public final class AdminController {
             @PathVariable final long reservationId,
             @RequestParam(defaultValue = "0") final int page) {
         final Optional<AdminReservationChatPageModel> pageModelOpt =
-                adminService.loadReservationChatPage(reservationId, page, 50);
+                adminService.loadReservationChatPage(
+                        reservationId, page, appPaginationProperties.getAdminReservationChatPageSize());
         if (pageModelOpt.isEmpty()) {
             return new ModelAndView("redirect:/admin/reservations");
         }

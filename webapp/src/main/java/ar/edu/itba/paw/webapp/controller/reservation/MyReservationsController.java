@@ -116,12 +116,13 @@ public class MyReservationsController {
             final long reservationId,
             final ReservationViewerRole role,
             final Long fromCar) {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("/my-reservations/").append(reservationId).append("?role=").append(role.toLegacyString());
+        final UriComponentsBuilder uri = UriComponentsBuilder
+                .fromPath("/my-reservations/" + reservationId)
+                .queryParam("role", role.toLegacyString());
         if (fromCar != null) {
-            sb.append("&fromCar=").append(fromCar);
+            uri.queryParam("fromCar", fromCar);
         }
-        return sb.toString();
+        return uri.build().toUriString();
     }
 
     private static RedirectView redirectToMyReservationDetailView(
@@ -497,8 +498,12 @@ public class MyReservationsController {
         // PRG: render the cancellation acknowledgement page from a GET so a refresh does not
         // resubmit the cancel; the role flag is carried as a query param (it only affects the
         // "back" link target on the confirmation view).
-        return new ModelAndView(new RedirectView(
-                "/my-reservations/cancelled?role=" + role.toLegacyString(), true));
+        final String cancelledUrl = UriComponentsBuilder
+                .fromPath("/my-reservations/cancelled")
+                .queryParam("role", role.toLegacyString())
+                .build()
+                .toUriString();
+        return new ModelAndView(new RedirectView(cancelledUrl, true));
     }
 
     @GetMapping("/my-reservations/cancelled")

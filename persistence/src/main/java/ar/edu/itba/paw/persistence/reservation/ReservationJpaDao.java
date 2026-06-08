@@ -17,6 +17,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,13 +40,6 @@ public class ReservationJpaDao implements ReservationDao {
     private static final List<Reservation.Status> BLOCKING_STATUSES = Arrays.asList(
             Reservation.Status.PENDING, Reservation.Status.ACCEPTED, Reservation.Status.STARTED);
 
-    private final CarPictureDao carPictureDao;
-
-    @org.springframework.beans.factory.annotation.Autowired
-    public ReservationJpaDao(final CarPictureDao carPictureDao) {
-        this.carPictureDao = carPictureDao;
-    }
-
     private static final List<Reservation.Status> REFUND_ELIGIBLE_CANCELLED_STATUSES = Arrays.asList(
             Reservation.Status.CANCELLED_BY_OWNER, Reservation.Status.CANCELLED_BY_RIDER);
 
@@ -58,11 +52,29 @@ public class ReservationJpaDao implements ReservationDao {
     private static final List<Reservation.Status> REVIEW_AUTO_SKIP_STATUSES = Arrays.asList(
             Reservation.Status.ACCEPTED, Reservation.Status.STARTED, Reservation.Status.FINISHED);
 
+    /**
+     * Cross-aggregate DAO intentionally injected to keep {@link #loadReservationCardsByIdNativeQuery}
+     * down to three queries per page (id-pagination native SQL, JPQL {@code JOIN FETCH} for the
+     * reservation + car catalog, and a batched cover-image lookup). Composing this at the service
+     * layer would either reintroduce N+1 reads against {@code car_pictures} or force every
+     * {@code ReservationCard} caller through a view-service shim. {@code AGENTS.md} cites
+     * {@code loadReservationCardsByIdNativeQuery} as the reference example for the N+1 rule and
+     * the same pattern lives in {@link ar.edu.itba.paw.persistence.car.CarJpaDao} and
+     * {@link ar.edu.itba.paw.persistence.car.FavCarJpaDao}.
+     */
+    private final CarPictureDao carPictureDao;
+    private final int paymentProofReminderLeadHours;
+
     @PersistenceContext
     private EntityManager em;
 
-    @Value("${app.reservation.payment-proof-reminder-lead-hours:2}")
-    private int paymentProofReminderLeadHours;
+    @Autowired
+    public ReservationJpaDao(
+            final CarPictureDao carPictureDao,
+            @Value("${app.reservation.payment-proof-reminder-lead-hours:2}") final int paymentProofReminderLeadHours) {
+        this.carPictureDao = carPictureDao;
+        this.paymentProofReminderLeadHours = paymentProofReminderLeadHours;
+    }
 
     @Override
     public boolean hasActiveOverlapByCar(final long carId, final OffsetDateTime startDate, final OffsetDateTime endDate) {

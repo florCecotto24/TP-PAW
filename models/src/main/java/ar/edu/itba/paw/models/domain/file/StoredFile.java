@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.domain.file;
 
 import java.time.OffsetDateTime;
 
+import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -36,6 +37,13 @@ public class StoredFile {
     @Column(name = "content_type", nullable = false, length = 100)
     private String contentType;
 
+    /**
+     * Marked LAZY so navigations that only need metadata (filename, content type, uploader)
+     * do not pull the full byte array. Requires Hibernate bytecode enhancement to actually defer
+     * the load; without enhancement Hibernate ignores the {@code LAZY} flag and the column is
+     * still loaded eagerly. The annotation stays so it takes effect as soon as enhancement is on.
+     */
+    @Basic(fetch = FetchType.LAZY)
     @Column(name = "byte_array", nullable = false)
     private byte[] data;
 

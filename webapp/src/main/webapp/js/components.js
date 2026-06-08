@@ -924,7 +924,7 @@
                     var removedIdx = parseInt(col.getAttribute("data-gallery-index"), 10);
                     btn.disabled = true;
                     fetch(url, {
-                        method: "POST",
+                        method: "DELETE",
                         body: formData
                     }).then(function (res) {
                         if (res.ok) {

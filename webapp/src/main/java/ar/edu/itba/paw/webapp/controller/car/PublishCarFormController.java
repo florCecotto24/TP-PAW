@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -293,7 +294,7 @@ public final class PublishCarFormController {
         return ResponseEntity.ok().contentType(mediaType).body(bytes.get());
     }
 
-    @PostMapping("/retained-insurance/remove")
+    @DeleteMapping("/retained-insurance")
     public ResponseEntity<Void> removeRetainedInsurance(
             @CurrentUser final User currentUser,
             final HttpSession session) {
@@ -333,7 +334,7 @@ public final class PublishCarFormController {
         return ResponseEntity.ok().contentType(mediaType).body(bytes.get());
     }
 
-    @PostMapping("/retained-picture/{token}/remove")
+    @DeleteMapping("/retained-picture/{token}")
     public ResponseEntity<Void> removeRetainedPicture(
             @CurrentUser final User currentUser,
             final HttpSession session,

@@ -146,7 +146,7 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     @Override
     @Transactional
     public void updateMinimumRentalDays(final long carId, final int minDays) {
-        final List<AvailabilityPeriod> periods = findEffectiveOfferedByCar(carId).stream()
+        final List<AvailabilityPeriod> periods = effectiveOfferedAvailabilityFor(carId).stream()
                 .map(la -> new AvailabilityPeriod(la.getStartInclusive(), la.getEndInclusive()))
                 .collect(Collectors.toList());
         if (!periods.isEmpty()) {
@@ -164,6 +164,16 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     @Override
     @Transactional(readOnly = true)
     public List<CarAvailability> findEffectiveOfferedByCar(final long carId) {
+        return effectiveOfferedAvailabilityFor(carId);
+    }
+
+    /**
+     * Private helper shared by {@link #findEffectiveOfferedByCar(long)} and {@link #updateMinimumRentalDays(long, int)}.
+     * Extracted so the writable {@code updateMinimumRentalDays} no longer self-invokes the public
+     * {@code findEffectiveOfferedByCar}, which would skip the proxy and lose the {@code @Transactional}
+     * annotation if the outer transaction ever changes its propagation/read-only flag.
+     */
+    private List<CarAvailability> effectiveOfferedAvailabilityFor(final long carId) {
         return carAvailabilityCalendarService.findEffectiveOfferedByCar(carId);
     }
 
@@ -221,7 +231,7 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
         Objects.requireNonNull(newStartInclusive, "newStartInclusive");
         Objects.requireNonNull(newEndInclusive, "newEndInclusive");
         if (newEndInclusive.isBefore(newStartInclusive)) {
-            throw new IllegalArgumentException("newEndInclusive before newStartInclusive");
+            throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_INVALID_ORDER);
         }
         // Defense-in-depth: an edit can extend a window or move it forward, which both re-introduce
         // bookable days. applyOwnerWithdrawByCar is intentionally left unguarded — it only ever

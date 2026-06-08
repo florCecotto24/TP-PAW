@@ -418,9 +418,7 @@ public final class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Locale> findUserPreferredLocale(final long userId) {
-        return getUserById(userId)
-                .flatMap(User::getLatestLocaleTag)
-                .flatMap(SupportedLocales::parse);
+        return preferredLocaleFor(userId);
     }
 
     @Override
@@ -433,7 +431,19 @@ public final class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public Locale resolveMailLocaleOrElse(final long userId, final Locale fallback) {
         final Locale fb = fallback != null ? fallback : Locale.ENGLISH;
-        return findUserPreferredLocale(userId).orElse(fb);
+        return preferredLocaleFor(userId).orElse(fb);
+    }
+
+    /**
+     * Private helper shared by {@link #findUserPreferredLocale(long)} and
+     * {@link #resolveMailLocaleOrElse(long, Locale)}. Extracted so the latter no longer self-invokes
+     * the public {@code findUserPreferredLocale}, which would skip the Spring proxy and ignore its
+     * {@code @Transactional(readOnly = true)} annotation if propagation rules ever changed.
+     */
+    private Optional<Locale> preferredLocaleFor(final long userId) {
+        return getUserById(userId)
+                .flatMap(User::getLatestLocale)
+                .flatMap(loc -> SupportedLocales.parse(loc.toLanguageTag()));
     }
 
     @Override
@@ -442,8 +452,8 @@ public final class UserServiceImpl implements UserService {
         if (user == null) {
             return Locale.ENGLISH;
         }
-        return user.getLatestLocaleTag()
-                .flatMap(SupportedLocales::parse)
+        return user.getLatestLocale()
+                .flatMap(loc -> SupportedLocales.parse(loc.toLanguageTag()))
                 .orElse(Locale.ENGLISH);
     }
 

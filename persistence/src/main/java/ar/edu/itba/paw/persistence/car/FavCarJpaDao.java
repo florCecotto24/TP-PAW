@@ -36,6 +36,15 @@ public class FavCarJpaDao implements FavCarDao {
     @PersistenceContext
     private EntityManager em;
 
+    /**
+     * Cross-aggregate DAOs intentionally injected to assemble the favourites {@code CarCard}
+     * page in three batched queries (favourite id-pagination, JPQL {@code JOIN FETCH} for catalog
+     * data, plus the cover-image and min-price batch lookups). The N+1 rule in {@code AGENTS.md}
+     * (with {@code loadReservationCardsByIdNativeQuery} as the reference example) takes priority
+     * over the service-layer aggregation rule for these card composers; the equivalent injections
+     * exist in {@link CarJpaDao} and
+     * {@link ar.edu.itba.paw.persistence.reservation.ReservationJpaDao}.
+     */
     private final CarPictureDao carPictureDao;
     private final CarAvailabilityDao carAvailabilityDao;
 

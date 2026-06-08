@@ -200,7 +200,7 @@ public final class ProfileController {
             return "profile/profile";
         }
         securityPrincipalRefresher.refreshDisplayName(
-                profileForm.getForename().trim(), profileForm.getSurname().trim(), request, response);
+                profileForm.getForename(), profileForm.getSurname(), request, response);
         redirectAttributes.addFlashAttribute("profileSaved", Boolean.TRUE);
         return "redirect:/profile";
     }
@@ -413,7 +413,7 @@ public final class ProfileController {
         if (bindingResult.hasErrors()) {
             return ResponseEntity.badRequest().build();
         }
-        userService.updateCbu(currentUser.getId(), cbuUpdateForm.getCbu().trim());
+        userService.updateCbu(currentUser.getId(), cbuUpdateForm.getCbu());
         return ResponseEntity.noContent().build();
     }
 

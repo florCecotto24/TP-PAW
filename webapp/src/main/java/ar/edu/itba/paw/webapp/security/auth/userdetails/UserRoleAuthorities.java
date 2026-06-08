@@ -1,8 +1,8 @@
 package ar.edu.itba.paw.webapp.security.auth.userdetails;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,20 +19,24 @@ public final class UserRoleAuthorities {
     }
 
     /**
-     * Builds authorities from typed {@link UserRole} values. {@code null} entries are skipped.
-     * If nothing maps, grants {@link UserRole#USER} so authenticated accounts keep a minimal role
-     * set (legacy safety).
+     * Builds the authority set for a user from typed {@link UserRole} values. {@code null} entries
+     * are skipped. If nothing maps, grants {@link UserRole#USER} so authenticated accounts keep a
+     * minimal role set (legacy safety).
+     *
+     * Returns a {@link Set} because Spring authorities have set semantics (no duplicates).
+     * Uses {@link LinkedHashSet} to preserve insertion order, which keeps log output stable when
+     * a user has multiple roles.
      */
-    public static List<GrantedAuthority> fromUserRoles(final Collection<UserRole> roles) {
-        final List<GrantedAuthority> list = new ArrayList<>();
+    public static Set<GrantedAuthority> fromUserRoles(final Collection<UserRole> roles) {
+        final Set<GrantedAuthority> authorities = new LinkedHashSet<>();
         for (final UserRole role : roles) {
             if (role != null) {
-                list.add(new SimpleGrantedAuthority(role.springAuthorityName()));
+                authorities.add(new SimpleGrantedAuthority(role.springAuthorityName()));
             }
         }
-        if (list.isEmpty()) {
-            list.add(new SimpleGrantedAuthority(UserRole.USER.springAuthorityName()));
+        if (authorities.isEmpty()) {
+            authorities.add(new SimpleGrantedAuthority(UserRole.USER.springAuthorityName()));
         }
-        return list;
+        return authorities;
     }
 }

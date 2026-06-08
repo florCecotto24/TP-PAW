@@ -37,13 +37,6 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedCarAndAvailabilities() {
-        jdbcTemplate.update("DELETE FROM reservations_availabilities");
-        jdbcTemplate.update("DELETE FROM reservations");
-        jdbcTemplate.update("DELETE FROM car_availability");
-        jdbcTemplate.update("DELETE FROM cars");
-        jdbcTemplate.update("DELETE FROM users WHERE email IN (?, ?)",
-                "ra-bridge@test.com", "rider-bridge@test.com");
-
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
                 "ra-bridge@test.com", "Owner", "Test");

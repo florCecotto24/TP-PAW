@@ -32,10 +32,6 @@ class CarAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
 
     @BeforeEach
     void seedCar() {
-        jdbcTemplate.update("DELETE FROM car_availability");
-        jdbcTemplate.update("DELETE FROM cars");
-        jdbcTemplate.update("DELETE FROM users WHERE email = ?", "la-owner@test.com");
-
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
                 "la-owner@test.com", "Owner", "Test");

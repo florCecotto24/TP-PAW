@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.security.auth;
 
-import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -63,7 +63,7 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
             throw new EmailNotValidatedException(user.getEmail());
         }
 
-        final List<GrantedAuthority> authorities =
+        final Set<GrantedAuthority> authorities =
                 UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId()));
         final RydenUserDetails principal = new RydenUserDetails(
                 user.getId(),

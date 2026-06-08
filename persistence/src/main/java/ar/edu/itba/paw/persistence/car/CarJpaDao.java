@@ -81,6 +81,21 @@ public class CarJpaDao implements CarDao {
     @PersistenceContext
     private EntityManager em;
 
+    /**
+     * Cross-aggregate DAOs intentionally injected here (not via peer services). They power the
+     * batched {@code CarCard} composition in {@link #findSimilarCarCards}, {@link #searchCarCards},
+     * {@link #getOwnerCarCards}, {@link #getCheapestCarCards} and {@link #getMostRecentCarCards}:
+     * one ID-paginated native query, one {@code JOIN FETCH} for the catalog associations, then a
+     * pair of {@code findXxxByCarIds(Collection)} batch lookups that return a {@code Map<carId, ...>}.
+     * The alternative (composing in a service layer) would either reintroduce N+1 cover-image/price
+     * lookups or force a chain of view-services for every {@code CarCard} caller.
+     *
+     * This matches the project rule on prohibited N+1 reads in {@code AGENTS.md} (which lists
+     * {@code loadReservationCardsByIdNativeQuery} in {@link ar.edu.itba.paw.persistence.reservation.ReservationJpaDao}
+     * as the reference for the same pattern) and is repeated in {@link FavCarJpaDao} and
+     * {@code ReservationJpaDao} for consistency. Do not split this composition into peer services
+     * without first ensuring the batch shape (≤ 3 queries per page) is preserved.
+     */
     private final CarPictureDao carPictureDao;
     private final CarAvailabilityDao carAvailabilityDao;
     private final DbPaginationConfig dbPaginationConfig;

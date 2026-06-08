@@ -76,10 +76,10 @@ public class ImageServiceImplTest {
 
         // 3. Assert
         Assertions.assertNotNull(result);
-        Assertions.assertEquals(result.getId(), image.getId());
-        Assertions.assertEquals(result.getName(), image.getName());
-        Assertions.assertEquals(result.getContentType(), image.getContentType());
-        Assertions.assertEquals(result.getData(), image.getData());
+        Assertions.assertEquals(image.getId(), result.getId());
+        Assertions.assertEquals(image.getName(), result.getName());
+        Assertions.assertEquals(image.getContentType(), result.getContentType());
+        Assertions.assertEquals(image.getData(), result.getData());
     }
 
 }

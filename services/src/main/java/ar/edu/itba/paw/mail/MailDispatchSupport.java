@@ -36,9 +36,16 @@ public final class MailDispatchSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MailDispatchSupport.class);
 
+    /**
+     * Mail templating + JavaMail dispatch lambda. Callers only need to surface
+     * {@link EmailMessagingException} (rethrown straight through {@link #runMail(MailAction)}); any
+     * other failure inside the lambda is a {@link RuntimeException} (Thymeleaf
+     * {@code TemplateProcessingException}, Spring {@code NoSuchMessageException}, etc.) and is
+     * wrapped by {@code runMail}.
+     */
     @FunctionalInterface
     public interface MailAction {
-        void run() throws Exception;
+        void run() throws EmailMessagingException;
     }
 
     private final Environment environment;
@@ -58,13 +65,18 @@ public final class MailDispatchSupport {
         this.mailPublicUrls = mailPublicUrls;
     }
 
-    /** Runs {@code action} and wraps any non-{@link EmailMessagingException} into one. */
+    /**
+     * Runs {@code action}; rethrows {@link EmailMessagingException} as-is and wraps any
+     * {@link RuntimeException} (Thymeleaf template parse/render errors, Spring
+     * {@code NoSuchMessageException}, etc.) into one so the calling {@code *EmailServiceImpl} only
+     * has to catch a single typed failure.
+     */
     public void runMail(final MailAction action) throws EmailMessagingException {
         try {
             action.run();
         } catch (final EmailMessagingException e) {
             throw e;
-        } catch (final Exception e) {
+        } catch (final RuntimeException e) {
             throw new EmailMessagingException(e);
         }
     }

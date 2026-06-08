@@ -206,7 +206,7 @@ class BookableWallAvailabilityCalendarTest {
         // 3.Assert
         Assertions.assertEquals(1, clipped.size());
         Assertions.assertEquals(LocalDate.of(2026, 5, 4), clipped.get(0).getStartInclusive());
-        Assertions.assertEquals(CarAvailability.DEFAULT_CHECK_IN_TIME, LocalTime.of(10, 0),
+        Assertions.assertEquals(LocalTime.of(10, 0), CarAvailability.DEFAULT_CHECK_IN_TIME,
                 "guard: this test relies on the default check-in time staying at 10:00");
     }
 }

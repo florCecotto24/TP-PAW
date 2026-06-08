@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -193,14 +194,17 @@ public class UserJpaDao implements UserDao {
         if (user == null) {
             return;
         }
+        final Locale incoming = localeTag == null || localeTag.isBlank()
+                ? null
+                : Locale.forLanguageTag(localeTag.trim().replace('_', '-'));
         // Idempotency guard: skip dirty-checking when the stored locale already matches the
         // requested one. Avoids an UPDATE on every page render when the user keeps the same
         // language (the navbar locale toggle fires this for every signed-in request).
-        final String currentTag = user.getLatestLocaleTag().orElse(null);
-        if (Objects.equals(currentTag, localeTag)) {
+        final Locale current = user.getLatestLocale().orElse(null);
+        if (Objects.equals(current, incoming)) {
             return;
         }
-        user.setLatestLocaleTag(localeTag);
+        user.setLatestLocale(incoming);
     }
 
     @Override
