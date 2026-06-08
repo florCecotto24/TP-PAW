@@ -6,12 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class UploadBinaryMegabyteTest {
 
     @Mock
@@ -19,7 +16,7 @@ class UploadBinaryMegabyteTest {
 
     @Test
     void testBytesPerBinaryMegabyteFallsBackToOneMebibyte() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final long bytes = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
 
         // 3.Assert
@@ -33,7 +30,7 @@ class UploadBinaryMegabyteTest {
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_BYTES_PER_BINARY_MB, Integer.class))
                 .thenReturn(0);
 
-        // 2.Exercise
+        // 2.Act
         final long bytes = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
 
         // 3.Assert
@@ -46,7 +43,7 @@ class UploadBinaryMegabyteTest {
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_BYTES_PER_BINARY_MB, Integer.class))
                 .thenReturn(1024);
 
-        // 2.Exercise
+        // 2.Act
         final long bytes = UploadBinaryMegabyte.bytesPerBinaryMegabyte(environment);
 
         // 3.Assert
@@ -56,9 +53,13 @@ class UploadBinaryMegabyteTest {
     @Test
     void testMaxBytesFromConfiguredMegabytesUsesConfiguredValue() {
         // 1.Arrange
-        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class)).thenReturn(3L);
+        // lenient(): the SUT also calls getProperty(BYTES_PER_BINARY_MB, Integer.class) which we
+        // intentionally leave unstubbed so that the default 1 MiB unit applies — without lenient,
+        // strict-stubs flags the mb-key stub as a "potential stubbing problem" on the other call.
+        Mockito.lenient().when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class))
+                .thenReturn(3L);
 
-        // 2.Exercise
+        // 2.Act
         final long bytes = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, 5L);
 
@@ -68,7 +69,7 @@ class UploadBinaryMegabyteTest {
 
     @Test
     void testMaxBytesFromConfiguredMegabytesAppliesDefaultWhenPropertyMissing() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final long bytes = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, 5L);
 
@@ -79,9 +80,11 @@ class UploadBinaryMegabyteTest {
     @Test
     void testMaxBytesFromConfiguredMegabytesAppliesDefaultWhenPropertyZeroOrNegative() {
         // 1.Arrange
-        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class)).thenReturn(0L);
+        // lenient(): see testMaxBytesFromConfiguredMegabytesUsesConfiguredValue — same rationale.
+        Mockito.lenient().when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class))
+                .thenReturn(0L);
 
-        // 2.Exercise
+        // 2.Act
         final long bytes = UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                 environment, UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, 7L);
 
@@ -93,9 +96,11 @@ class UploadBinaryMegabyteTest {
     void testMaxBytesFromConfiguredMegabytesThrowsArithmeticExceptionOnOverflow() {
         // 1.Arrange
         final long huge = Long.MAX_VALUE / 2;
-        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class)).thenReturn(huge);
+        // lenient(): see testMaxBytesFromConfiguredMegabytesUsesConfiguredValue — same rationale.
+        Mockito.lenient().when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, Long.class))
+                .thenReturn(huge);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(ArithmeticException.class,
                 () -> UploadBinaryMegabyte.maxBytesFromConfiguredMegabytes(
                         environment, UploadBinaryMegabyte.PROPERTY_MAX_IMAGE_MB, 5L));

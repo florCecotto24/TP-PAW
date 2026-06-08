@@ -31,7 +31,7 @@ class ModelsToStringTest {
                 .createdAt(OffsetDateTime.parse("2026-04-05T10:00:00Z"))
                 .updatedAt(OffsetDateTime.parse("2026-04-05T11:00:00Z"))
                 .build();
-        // Exercise
+        // Act
         final String result = car.toString();
         // Assert
         final String expected = "Car{id=1, ownerId=2, plate='AA123BB', brand='null', model='null', type=null, "
@@ -45,7 +45,7 @@ class ModelsToStringTest {
     void testUserToStringIncludesAllFields() {
         // Arrange
         final User user = User.identities(1L, "user@example.com", "Ada", "Lovelace");
-        // Exercise
+        // Act
         final String result = user.toString();
         // Assert
         final String expected = "User{id=1, email='user@example.com', forename='Ada', surname='Lovelace'}";
@@ -68,7 +68,7 @@ class ModelsToStringTest {
                 .updatedAt(OffsetDateTime.parse("2026-04-01T10:00:00Z"))
                 .totalPrice(new BigDecimal("300.00"))
                 .build();
-        // Exercise
+        // Act
         final String result = reservation.toString();
         // Assert
         final String expected = "Reservation{id=5, riderId=7, carId=3, startDate=2026-04-10T08:00Z, endDate=2026-04-12T08:00Z, "
@@ -89,7 +89,7 @@ class ModelsToStringTest {
                 .createdAt(OffsetDateTime.parse("2026-04-05T09:00:00Z"))
                 .updatedAt(OffsetDateTime.parse("2026-04-05T09:30:00Z"))
                 .build();
-        // Exercise
+        // Act
         final String result = availability.toString();
         // Assert
         final String expected = "CarAvailability{id=8, carId=11, startInclusive=2026-04-20, endInclusive=2026-04-25, "
@@ -109,7 +109,7 @@ class ModelsToStringTest {
                 0,
                 OffsetDateTime.parse("2026-04-05T10:00:00Z"),
                 OffsetDateTime.parse("2026-04-05T10:05:00Z"));
-        // Exercise
+        // Act
         final String result = picture.toString();
         // Assert
         final String expected = "CarPicture{id=1, carId=2, imageId=3, storedFileId=null, displayOrder=0, createdAt=2026-04-05T10:00Z, "
@@ -121,7 +121,7 @@ class ModelsToStringTest {
     void testImageToStringIncludesAllFieldsIncludingData() {
         // Arrange
         final Image image = new Image(1L, "cover.jpg", "image/jpeg", new byte[] {1, 2, -1});
-        // Exercise
+        // Act
         final String result = image.toString();
         // Assert
         final String expected = "Image{id=1, name='cover.jpg', contentType='image/jpeg', data=[1, 2, -1]}";

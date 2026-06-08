@@ -3,6 +3,7 @@ package ar.edu.itba.paw.models.dto.car;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import ar.edu.itba.paw.models.domain.car.Car;
@@ -42,6 +43,7 @@ public final class ManageCarPeriodsPageModel {
     private final CarPriceMarketInsight priceMarketInsight;
     private final String reservationBlockedRangesJson;
     private final Map<Long, String> reservedRangesByAvailabilityIdJson;
+    private final CarAvailability mostRecentAvailabilityOrNull;
 
     public ManageCarPeriodsPageModel(
             final Car car,
@@ -62,7 +64,8 @@ public final class ManageCarPeriodsPageModel {
             final String publisherEmail,
             final CarPriceMarketInsight priceMarketInsight,
             final String reservationBlockedRangesJson,
-            final Map<Long, String> reservedRangesByAvailabilityIdJson) {
+            final Map<Long, String> reservedRangesByAvailabilityIdJson,
+            final CarAvailability mostRecentAvailabilityOrNull) {
         this.car = car;
         this.owner = owner;
         this.statusKey = statusKey;
@@ -86,10 +89,20 @@ public final class ManageCarPeriodsPageModel {
                 reservedRangesByAvailabilityIdJson != null
                         ? Map.copyOf(reservedRangesByAvailabilityIdJson)
                         : Map.of();
+        this.mostRecentAvailabilityOrNull = mostRecentAvailabilityOrNull;
     }
 
     public boolean isUserHasCbu() {
         return userHasCbu;
+    }
+
+    /**
+     * Most recent availability row for this car (across all months), exposed so the GET handler
+     * can pre-fill the inline create form's location/time fields without re-querying. Empty when
+     * the car has no availability history yet.
+     */
+    public Optional<CarAvailability> getMostRecentAvailability() {
+        return Optional.ofNullable(mostRecentAvailabilityOrNull);
     }
 
     public void populateModel(final BiConsumer<String, Object> putObject) {

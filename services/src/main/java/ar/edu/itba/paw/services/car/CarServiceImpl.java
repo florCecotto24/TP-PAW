@@ -254,6 +254,7 @@ public final class CarServiceImpl implements CarService {
         return carSearchService.buildSearchCriteria(request);
     }
 
+    // Both buildOwnerCarSearchCriteria overloads are intentionally not @Transactional: they delegate
     @Override
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
@@ -301,11 +302,16 @@ public final class CarServiceImpl implements CarService {
             LOGGER.atInfo().log("Car exhaustion sweep: no active cars");
             return;
         }
+        // Batch the bookable-day calculation for every active car at once: the calendar service
+        // turns the N+1 (one availability + one blocking-reservation query per car) into 2
+        // queries total. The atomic per-car status flip below still runs once per row, but it
+        // is a single column update so PostgreSQL pipelines it efficiently.
+        final List<Long> activeCarIds = activeCars.stream().map(Car::getId).toList();
+        final Map<Long, List<AvailabilityPeriod>> bookableByCarId =
+                carAvailabilityService.getBookableWallAvailabilityPeriodsByCars(activeCarIds);
         int paused = 0;
-        for (final Car car : activeCars) {
-            final long carId = car.getId();
-            final List<AvailabilityPeriod> bookable =
-                    carAvailabilityService.getBookableWallAvailabilityPeriodsByCar(carId);
+        for (final Long carId : activeCarIds) {
+            final List<AvailabilityPeriod> bookable = bookableByCarId.getOrDefault(carId, List.of());
             if (bookable.isEmpty()) {
                 if (carDao.updateCarStatusIfCurrent(carId, Car.Status.PAUSED, Car.Status.ACTIVE)) {
                     paused++;
@@ -551,6 +557,7 @@ public final class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<OwnerCarDetailPageModel> buildOwnerCarDetailPageModel(
             final long carId, final Locale locale) {
         return ownerCarDetailViewService.buildOwnerCarDetailPageModel(carId, locale);

@@ -13,7 +13,7 @@ class AvailabilityPeriodTest {
     void testConstructorRejectsNullStart() {
         // Arrange
         final LocalDate end = LocalDate.of(2026, 4, 10);
-        // Exercise & Assert
+        // Act & Assert
         Assertions.assertThrows(NullPointerException.class, () -> new AvailabilityPeriod(null, end));
     }
 
@@ -21,7 +21,7 @@ class AvailabilityPeriodTest {
     void testConstructorRejectsNullEnd() {
         // Arrange
         final LocalDate start = LocalDate.of(2026, 4, 1);
-        // Exercise & Assert
+        // Act & Assert
         Assertions.assertThrows(NullPointerException.class, () -> new AvailabilityPeriod(start, null));
     }
 
@@ -31,7 +31,7 @@ class AvailabilityPeriodTest {
         final LocalDate same = LocalDate.of(2026, 4, 1);
         final AvailabilityPeriod period = new AvailabilityPeriod(same, same);
         
-        // Exercise
+        // Act
         boolean result = period.isValidOrder();
 
         // Assert
@@ -45,7 +45,7 @@ class AvailabilityPeriodTest {
                 LocalDate.of(2026, 4, 2),
                 LocalDate.of(2026, 4, 1));
 
-        // Exercise
+        // Act
         boolean result = period.isValidOrder();
 
         // Assert

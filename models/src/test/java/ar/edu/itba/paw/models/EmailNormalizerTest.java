@@ -14,7 +14,7 @@ class EmailNormalizerTest {
         String email1= "UsEr.Name+tag@Example.COM";
         String email2="user.name+tag@example.com";
 
-        // Exercise
+        // Act
         final String result = EmailNormalizer.normalize(email1);
         // Assert
         Assertions.assertEquals(email2, result);
@@ -26,7 +26,7 @@ class EmailNormalizerTest {
         //Arrange
         String nullEmail=null;
 
-        // Exercise & Assert
+        // Act & Assert
         Assertions.assertThrows(NullPointerException.class, () -> EmailNormalizer.normalize(nullEmail));
     }
 }

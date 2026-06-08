@@ -25,7 +25,7 @@ class BookableWallAvailabilityCalendarTest {
         // 1.Arrange
         final List<AvailabilityPeriod> raw = List.of();
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(raw);
 
         // 3.Assert
@@ -37,7 +37,7 @@ class BookableWallAvailabilityCalendarTest {
         // 1.Arrange
         final AvailabilityPeriod only = period(3, 5);
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(List.of(only));
 
         // 3.Assert
@@ -52,7 +52,7 @@ class BookableWallAvailabilityCalendarTest {
         final AvailabilityPeriod a = period(3, 5);
         final AvailabilityPeriod b = period(6, 8);
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(List.of(a, b));
 
         // 3.Assert
@@ -67,7 +67,7 @@ class BookableWallAvailabilityCalendarTest {
         final AvailabilityPeriod a = period(3, 8);
         final AvailabilityPeriod b = period(5, 10);
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(List.of(a, b));
 
         // 3.Assert
@@ -82,7 +82,7 @@ class BookableWallAvailabilityCalendarTest {
         final AvailabilityPeriod a = period(3, 20);
         final AvailabilityPeriod b = period(5, 7);
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(List.of(a, b));
 
         // 3.Assert
@@ -97,7 +97,7 @@ class BookableWallAvailabilityCalendarTest {
         final AvailabilityPeriod a = period(3, 5);
         final AvailabilityPeriod b = period(8, 10);
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(List.of(a, b));
 
         // 3.Assert
@@ -115,7 +115,7 @@ class BookableWallAvailabilityCalendarTest {
         final AvailabilityPeriod b = period(3, 5);
         final AvailabilityPeriod c = period(6, 8);
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> merged = BookableWallAvailabilityCalendar.mergeAdjacentPeriods(List.of(a, b, c));
 
         // 3.Assert
@@ -131,7 +131,7 @@ class BookableWallAvailabilityCalendarTest {
         // 1.Arrange
         final Instant cut = Instant.parse("2026-05-03T13:00:00Z");
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> clipped = BookableWallAvailabilityCalendar
                 .clipPeriodsToMinPickupInstant(List.of(), LocalTime.of(10, 0), AppTimezone.WALL_ZONE, cut);
 
@@ -146,7 +146,7 @@ class BookableWallAvailabilityCalendarTest {
         final Instant cut = ZonedDateTime.of(LocalDate.of(2026, 5, 1), LocalTime.of(0, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> clipped = BookableWallAvailabilityCalendar
                 .clipPeriodsToMinPickupInstant(List.of(seg), LocalTime.of(10, 0),
                         AppTimezone.WALL_ZONE, cut);
@@ -164,7 +164,7 @@ class BookableWallAvailabilityCalendarTest {
         final Instant cut = ZonedDateTime.of(LocalDate.of(2026, 5, 5), LocalTime.of(12, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> clipped = BookableWallAvailabilityCalendar
                 .clipPeriodsToMinPickupInstant(List.of(seg), LocalTime.of(10, 0),
                         AppTimezone.WALL_ZONE, cut);
@@ -182,7 +182,7 @@ class BookableWallAvailabilityCalendarTest {
         final Instant cut = ZonedDateTime.of(LocalDate.of(2026, 5, 11), LocalTime.of(23, 59),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> clipped = BookableWallAvailabilityCalendar
                 .clipPeriodsToMinPickupInstant(List.of(seg), LocalTime.of(10, 0),
                         AppTimezone.WALL_ZONE, cut);
@@ -198,7 +198,7 @@ class BookableWallAvailabilityCalendarTest {
         final Instant cut = ZonedDateTime.of(LocalDate.of(2026, 5, 4), LocalTime.of(9, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final List<AvailabilityPeriod> clipped = BookableWallAvailabilityCalendar
                 .clipPeriodsToMinPickupInstant(List.of(seg), null,
                         AppTimezone.WALL_ZONE, cut);

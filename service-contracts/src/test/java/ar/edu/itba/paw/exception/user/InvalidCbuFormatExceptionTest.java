@@ -9,7 +9,7 @@ class InvalidCbuFormatExceptionTest {
 
     @Test
     void testConstructorSetsCanonicalCbuFormatMessageKey() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final InvalidCbuFormatException ex = new InvalidCbuFormatException(22);
 
         // 3.Assert
@@ -18,7 +18,7 @@ class InvalidCbuFormatExceptionTest {
 
     @Test
     void testConstructorPassesRequiredDigitLengthAsTheOnlyMessageArg() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final InvalidCbuFormatException ex = new InvalidCbuFormatException(22);
 
         // 3.Assert
@@ -27,7 +27,7 @@ class InvalidCbuFormatExceptionTest {
 
     @Test
     void testIsAUserExceptionForControllerAdviceMatching() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final InvalidCbuFormatException ex = new InvalidCbuFormatException(22);
 
         // 3.Assert

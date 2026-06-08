@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
@@ -92,6 +93,14 @@ public interface CarAvailabilityService {
      * The result is a compressed list of contiguous {@link AvailabilityPeriod} ranges.
      */
     List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(long carId);
+
+    /**
+     * Batch variant of {@link #getBookableWallAvailabilityPeriodsByCar(long)}. Computes the
+     * bookable wall-day periods for every {@code carId} in a constant number of queries
+     * (rather than one per car). Used by scheduler / batch flows.
+     */
+    Map<Long, List<AvailabilityPeriod>> getBookableWallAvailabilityPeriodsByCars(
+            Collection<Long> carIds);
 
     /**
      * Like {@link #getBookableWallAvailabilityPeriodsByCar} but also clips the result based on the rider pickup

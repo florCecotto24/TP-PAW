@@ -70,6 +70,7 @@ import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
 import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
 import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
+import ar.edu.itba.paw.webapp.support.ViewerIsAdminArgumentResolver;
 
 /**
  * Central Spring MVC setup: view resolver, i18n, multipart, async mail executor, Flyway-ready property sources,
@@ -422,10 +423,17 @@ public class WebConfig implements WebMvcConfigurer {
             adapter.setIgnoreDefaultModelOnRedirect(true);
             final List<HandlerMethodArgumentResolver> resolvers =
                     new ArrayList<>(adapter.getArgumentResolvers());
-            if (resolvers.stream().anyMatch(r -> r instanceof CurrentUserArgumentResolver)) {
+            final boolean hasCurrentUser = resolvers.stream().anyMatch(r -> r instanceof CurrentUserArgumentResolver);
+            final boolean hasViewerIsAdmin = resolvers.stream().anyMatch(r -> r instanceof ViewerIsAdminArgumentResolver);
+            if (hasCurrentUser && hasViewerIsAdmin) {
                 return;
             }
-            resolvers.add(0, new CurrentUserArgumentResolver());
+            if (!hasCurrentUser) {
+                resolvers.add(0, new CurrentUserArgumentResolver());
+            }
+            if (!hasViewerIsAdmin) {
+                resolvers.add(0, new ViewerIsAdminArgumentResolver());
+            }
             adapter.setArgumentResolvers(resolvers);
         };
     }

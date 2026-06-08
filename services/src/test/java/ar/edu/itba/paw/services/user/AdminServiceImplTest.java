@@ -9,8 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
@@ -24,7 +22,6 @@ import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 public class AdminServiceImplTest {
 
     @Mock

@@ -29,7 +29,12 @@ import ar.edu.itba.paw.mail.MailDispatchSupport;
 import ar.edu.itba.paw.mail.MailPublicUrls;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 
-/** Owner-facing listing lifecycle + payment-proof / refund-proof / blocked emails. */
+/**
+ * Owner-facing listing lifecycle + payment-proof / refund-proof / blocked emails.
+ *
+ * Every public method is an {@code @Async} mail sender (Thymeleaf render + dispatch through
+ * {@link MailDispatchSupport}), no JPA touch. {@code @Transactional} is intentionally omitted
+ */
 @Service
 public final class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
 

@@ -103,8 +103,20 @@ public class ReservationViewServiceImplTest {
     @Test
     public void testNormalizeReservationStatusQueryParamAcceptsWhitelistedLowercase() {
         Assertions.assertEquals("pending", reservationViewService.normalizeReservationStatusQueryParam("  PeNdIng  "));
+    }
+
+    @Test
+    public void testNormalizeReservationStatusQueryParamRejectsBogusValue() {
         Assertions.assertNull(reservationViewService.normalizeReservationStatusQueryParam("bogus"));
+    }
+
+    @Test
+    public void testNormalizeReservationStatusQueryParamReturnsNullForBlankString() {
         Assertions.assertNull(reservationViewService.normalizeReservationStatusQueryParam(""));
+    }
+
+    @Test
+    public void testNormalizeReservationStatusQueryParamReturnsNullForNullInput() {
         Assertions.assertNull(reservationViewService.normalizeReservationStatusQueryParam(null));
     }
 

@@ -6,14 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class CarGalleryUploadPolicyTest {
 
     @Mock
@@ -29,7 +26,7 @@ class CarGalleryUploadPolicyTest {
         Mockito.when(environment.getProperty(CarGalleryUploadPolicyImpl.PROPERTY_MAX_VIDEO_MB, Long.class))
                 .thenReturn(25L);
 
-        // 2.Exercise
+        // 2.Act
         final CarGalleryUploadPolicy policy = new CarGalleryUploadPolicyImpl(environment);
 
         // 3.Assert

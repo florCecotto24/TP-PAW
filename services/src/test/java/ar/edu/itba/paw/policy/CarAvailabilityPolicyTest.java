@@ -10,8 +10,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -19,7 +17,6 @@ import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class CarAvailabilityPolicyTest {
 
     private static final String NEW_KEY = "app.listing.max-availability-forward-wall-days";
@@ -30,11 +27,11 @@ class CarAvailabilityPolicyTest {
 
     @Test
     void testConstructorPrefersNewKeyOverLegacy() {
-        // 1.Arrange
+        // 1.Arrange: only NEW_KEY is consulted in this branch — the SUT short-circuits before
+        // looking at LEGACY_KEY when NEW_KEY resolves to a positive value.
         Mockito.when(environment.getProperty(NEW_KEY, Integer.class)).thenReturn(120);
-        Mockito.when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(60);
 
-        // 2.Exercise
+        // 2.Act
         final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 3.Assert
@@ -43,10 +40,12 @@ class CarAvailabilityPolicyTest {
 
     @Test
     void testConstructorFallsBackToLegacyKeyWhenNewKeyMissing() {
-        // 1.Arrange
-        Mockito.when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(60);
+        // 1.Arrange: leave NEW_KEY unstubbed (resolves to null) so the SUT falls back to LEGACY_KEY.
+        // lenient() avoids strict-stubs flagging the LEGACY_KEY stub as a potential problem on the
+        // NEW_KEY call that returns null.
+        Mockito.lenient().when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(60);
 
-        // 2.Exercise
+        // 2.Act
         final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 3.Assert
@@ -59,7 +58,7 @@ class CarAvailabilityPolicyTest {
         Mockito.when(environment.getProperty(NEW_KEY, Integer.class)).thenReturn(0);
         Mockito.when(environment.getProperty(LEGACY_KEY, Integer.class)).thenReturn(-1);
 
-        // 2.Exercise
+        // 2.Act
         final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
         // 3.Assert
@@ -72,7 +71,7 @@ class CarAvailabilityPolicyTest {
         final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
         final LocalDate today = LocalDate.of(2026, 5, 3);
 
-        // 2.Exercise / 3.Assert (no exception)
+        // 2.Act / 3.Assert (no exception)
         Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, List.of()));
         Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, null));
     }
@@ -82,7 +81,7 @@ class CarAvailabilityPolicyTest {
         // 1.Arrange
         final CarAvailabilityPolicy policy = new CarAvailabilityPolicyImpl(environment);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class,
                 () -> policy.validateAvailabilityWithinPublishHorizon(null, List.of()));
     }
@@ -96,7 +95,7 @@ class CarAvailabilityPolicyTest {
                 new AvailabilityPeriod(today.plusDays(10), today.plusDays(50)),
                 new AvailabilityPeriod(today, today.plusDays(365)));
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
     }
 
@@ -109,7 +108,7 @@ class CarAvailabilityPolicyTest {
         final List<AvailabilityPeriod> periods = List.of(
                 new AvailabilityPeriod(today.plusDays(31), today.plusDays(40)));
 
-        // 2.Exercise
+        // 2.Act
         final CarValidationException ex = Assertions.assertThrows(CarValidationException.class,
                 () -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
 
@@ -127,7 +126,7 @@ class CarAvailabilityPolicyTest {
         final List<AvailabilityPeriod> periods = List.of(
                 new AvailabilityPeriod(today.plusDays(20), today.plusDays(40)));
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(CarValidationException.class,
                 () -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
     }
@@ -142,7 +141,7 @@ class CarAvailabilityPolicyTest {
         periods.add(new AvailabilityPeriod(today.plusDays(99), today.plusDays(50)));
         periods.add(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertDoesNotThrow(() -> policy.validateAvailabilityWithinPublishHorizon(today, periods));
     }
 }

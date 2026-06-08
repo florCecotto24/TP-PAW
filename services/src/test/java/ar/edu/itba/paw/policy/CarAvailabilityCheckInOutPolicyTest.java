@@ -8,12 +8,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class CarAvailabilityCheckInOutPolicyTest {
 
     private static final String KEY = "app.listing.min-hours-between-checkin-checkout";
@@ -23,7 +20,7 @@ class CarAvailabilityCheckInOutPolicyTest {
 
     @Test
     void testConstructorAppliesDefaultWhenPropertyMissing() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
         // 3.Assert
@@ -35,7 +32,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         // 1.Arrange
         Mockito.when(environment.getProperty(KEY, Integer.class)).thenReturn(0);
 
-        // 2.Exercise
+        // 2.Act
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
         // 3.Assert
@@ -47,7 +44,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         // 1.Arrange
         Mockito.when(environment.getProperty(KEY, Integer.class)).thenReturn(8);
 
-        // 2.Exercise
+        // 2.Act
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
         // 3.Assert
@@ -59,7 +56,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         // 1.Arrange
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertTrue(policy.hasMinimumGap(null, LocalTime.of(18, 0)));
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(8, 0), null));
         Assertions.assertTrue(policy.hasMinimumGap(null, null));
@@ -70,7 +67,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         // 1.Arrange
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(10, 0), LocalTime.of(10, 0)));
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(18, 0), LocalTime.of(8, 0)));
     }
@@ -80,7 +77,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         // 1.Arrange: default gap = 6h.
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(14, 0)));
     }
 
@@ -89,7 +86,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         // 1.Arrange: default gap = 6h; difference here is 5h59m.
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertFalse(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(13, 59)));
     }
 
@@ -99,7 +96,7 @@ class CarAvailabilityCheckInOutPolicyTest {
         Mockito.when(environment.getProperty(KEY, Integer.class)).thenReturn(4);
         final CarAvailabilityCheckInOutPolicy policy = new CarAvailabilityCheckInOutPolicyImpl(environment);
 
-        // 2.Exercise / 3.Assert: 4h exact passes; 3h59m fails.
+        // 2.Act / 3.Assert: 4h exact passes; 3h59m fails.
         Assertions.assertTrue(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(12, 0)));
         Assertions.assertFalse(policy.hasMinimumGap(LocalTime.of(8, 0), LocalTime.of(11, 59)));
     }

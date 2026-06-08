@@ -30,6 +30,14 @@ public interface ReservationDao {
     List<Reservation> findBlockingByCarId(long carId);
 
     /**
+     * Batch variant of {@link #findBlockingByCarId} for many cars at once: same {@code pending},
+     * {@code accepted}, {@code started} status filter, scoped to {@code carIds}. The caller is
+     * responsible for grouping the rows by {@link Reservation#getCarId()} as needed. Returns an
+     * empty list when {@code carIds} is null or empty.
+     */
+    List<Reservation> findBlockingByCarIds(Collection<Long> carIds);
+
+    /**
      * Same as {@link #findBlockingByCarId}, but excludes the reservation whose id matches
      * {@code excludingReservationId}. Used to recompute the bookable wall-day calendar when a rider
      * is editing its own pending reservation (the reservation under edit must not subtract days

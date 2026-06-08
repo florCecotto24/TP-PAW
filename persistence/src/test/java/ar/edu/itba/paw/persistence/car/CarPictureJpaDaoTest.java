@@ -69,7 +69,7 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreateCarPicturePersistsImageReference() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final CarPicture created = dao.createCarPicture(carId, imageId, 1);
         em.flush();
 
@@ -84,7 +84,7 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreateCarPictureFromVideoPersistsStoredFileReference() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final CarPicture created = dao.createCarPictureFromVideo(carId, storedFileId, 2);
         em.flush();
 
@@ -103,7 +103,7 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
         dao.createCarPictureFromVideo(carId, storedFileId, 1);
         em.flush();
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertTrue(dao.isStoredFileInCarGallery(storedFileId));
         Assertions.assertFalse(dao.isStoredFileInCarGallery(storedFileId + 9999));
     }

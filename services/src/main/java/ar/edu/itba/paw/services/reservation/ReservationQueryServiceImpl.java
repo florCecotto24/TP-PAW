@@ -4,10 +4,12 @@ package ar.edu.itba.paw.services.reservation;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -159,6 +161,13 @@ public final class ReservationQueryServiceImpl implements ReservationQueryServic
     @Transactional(readOnly = true)
     public List<Reservation> findBlockingReservationsByCarId(final long carId) {
         return reservationService.findBlockingReservationsByCarId(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, List<Reservation>> findBlockingReservationsByCarIds(
+            final Collection<Long> carIds) {
+        return reservationService.findBlockingReservationsByCarIds(carIds);
     }
 
     @Override

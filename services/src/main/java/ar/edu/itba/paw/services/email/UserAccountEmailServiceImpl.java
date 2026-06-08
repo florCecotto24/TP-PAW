@@ -22,7 +22,12 @@ import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.mail.MailDispatchSupport;
 import ar.edu.itba.paw.mail.MailPublicUrls;
 
-/** Identity / auth lifecycle emails. Extracted from {@code EmailServiceImpl}. */
+/**
+ * Identity / auth lifecycle emails. Extracted from {@code EmailServiceImpl}.
+ *
+ * Every public method is an {@code @Async} mail sender: Thymeleaf template render + dispatch
+ * through {@link MailDispatchSupport}, no JPA touch. {@code @Transactional} is intentionally omitted.
+ */
 @Service
 public final class UserAccountEmailServiceImpl implements UserAccountEmailService {
 

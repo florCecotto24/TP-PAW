@@ -6,14 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PaymentReceiptUploadPolicyTest {
 
     @Mock
@@ -21,7 +18,7 @@ class PaymentReceiptUploadPolicyTest {
 
     @Test
     void testConstructorUsesDefaultWhenPropertyMissing() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final PaymentReceiptUploadPolicy policy = new PaymentReceiptUploadPolicyImpl(environment);
 
         // 3.Assert
@@ -32,10 +29,13 @@ class PaymentReceiptUploadPolicyTest {
     @Test
     void testConstructorUsesConfiguredMegabytes() {
         // 1.Arrange
-        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PAYMENT_RECEIPT_MB, Long.class))
+        // lenient(): the SUT also reads PROPERTY_BYTES_PER_BINARY_MB (Integer); we leave it unstubbed
+        // so the default 1 MiB unit applies. Without lenient, strict-stubs flags the megabytes stub
+        // as a "potential stubbing problem" on that other call.
+        Mockito.lenient().when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PAYMENT_RECEIPT_MB, Long.class))
                 .thenReturn(10L);
 
-        // 2.Exercise
+        // 2.Act
         final PaymentReceiptUploadPolicy policy = new PaymentReceiptUploadPolicyImpl(environment);
 
         // 3.Assert
@@ -46,10 +46,11 @@ class PaymentReceiptUploadPolicyTest {
     @Test
     void testConstructorThrowsWhenResolvedSizeOverflowsInteger() {
         // 1.Arrange
-        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PAYMENT_RECEIPT_MB, Long.class))
+        // lenient(): same rationale as testConstructorUsesConfiguredMegabytes.
+        Mockito.lenient().when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PAYMENT_RECEIPT_MB, Long.class))
                 .thenReturn(5_000L);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> new PaymentReceiptUploadPolicyImpl(environment));
     }

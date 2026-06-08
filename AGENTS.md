@@ -97,7 +97,7 @@ Key enums (on model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, 
 
 ## Technologies
 
-- **Backend**: Java 21, Spring 5.3 (MVC, JDBC, Context, TX, ORM, Context Support for mail), Spring Security 5.7.14.
+- **Backend**: Java 21, Spring 5.3 (MVC, JDBC, Context, TX, ORM, Context Support for mail), Spring Security 5.8.10.
 - **Database**: PostgreSQL (runtime), HSQLDB (DAO / persistence tests). Baseline **`db/ryden_baseline.sql`** + **Flyway** (`V2__`, `V3__`, … under `classpath:db/migration/`).
 - **ORM**: Hibernate / JPA (`EntityManager`, `LocalContainerEntityManagerFactoryBean` in `WebConfig`).
 - **Web UI**: JSP, Spring form tags, custom JSP tags under `WEB-INF/tags/`.
@@ -160,7 +160,7 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 - **SQL / queries**: Use parameterized JQL or native SQL with **bound parameters** (named or positional); never concatenate user input into queries.
 - **N+1 queries (strictly prohibited)**: Never return a `List<entity>` from a DAO and let callers trigger per-row lazy loads on LAZY associations. DAO methods that return a list of entities must pre-hydrate every association the known caller chain will navigate — typically via `JOIN FETCH` in JPQL, or ID-page + `IN` fetch / DTO-native projections (see **Pagination**). FK-only convenience accessors like `Reservation#getCarId()` / `#getRiderId()` are safe and need no fetch; property navigation across a non-FK association (`car.getOwner()`, `carModel.getBrand()`, …) is not. The fix belongs in the DAO; services and controllers must not work around it. Existing pattern examples: `findReservationsWithOverdueRefundProof`, `findReservationsRequiringRefundProofForOwner`, and `loadReservationCardsByIdNativeQuery` in `ReservationJpaDao`.
 - **Logging**: Production `logback/logback-prod.xml` (typically **INFO+** for `ar.edu.itba.paw`); local may use `logback-local.xml` with **DEBUG** or **TRACE** on persistence packages when diagnosing listing/reservation SQL. Use **SLF4J** with parameterized messages; prefer **DEBUG** (optionally SLF4J 2 **fluent** `atDebug().setMessage(...).addArgument(...).setCause(...).log()`) for swallowed parse/IO fallbacks where you still need traceability.
-- **Tests**: Arrange / exercise / assert outcomes, not wiring. **No `Mockito.verify`** (or call-count tricks). Skip tests that only mirror a one-line delegate.
+- **Tests**: Arrange / Act / assert outcomes, not wiring. **No `Mockito.verify`** (or call-count tricks). Skip tests that only mirror a one-line delegate.
 - **Style**: `final` where appropriate, private constructors on utility classes, immutable DTOs/criteria where practical; avoid magic numbers — read limits from `application.properties` (documented JVM fallbacks only where needed, e.g. `AppPaginationProperties` / `DbPaginationConfig`).
 - **Comments**: English only; remove obsolete chatty notes.
 

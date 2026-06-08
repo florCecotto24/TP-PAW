@@ -8,12 +8,11 @@ import ar.edu.itba.paw.services.car.view.CarDetailViewService;
 import ar.edu.itba.paw.services.user.view.CounterpartyProfileViewService;
 import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.VehicleCardView;
-import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.support.ConsumerVehicleCardViewFactory;
 import ar.edu.itba.paw.webapp.support.CurrentUser;
+import ar.edu.itba.paw.webapp.support.ViewerIsAdmin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,14 +57,15 @@ public class CarDetailController {
             @RequestParam(name = "until", required = false) final String untilDateParam,
             @RequestParam(name = "searchNbId", required = false) final List<Long> searchNeighborhoodIds,
             @CurrentUser final User currentUser,
-            final Authentication authentication,
+            @ViewerIsAdmin final boolean viewerIsAdmin,
             final HttpServletRequest request) {
 
         // viewerIsAdmin stays as a business input: CarDetailViewService uses it to expose pages
         // for blocked owners only to the owner themselves or to an admin. JSP rendering of the
         // admin action panel uses <sec:authorize hasRole('ADMIN')> instead of a model flag, so the
-        // controller no longer leaks that decision into the view layer.
-        final boolean viewerIsAdmin = AuthenticationAuthorities.hasAdminRole(authentication);
+        // controller no longer leaks that decision into the view layer. The session-to-flag
+        // translation lives in ViewerIsAdminArgumentResolver so the controller body stays free
+        // of Authentication / GrantedAuthority lookups.
         final Optional<CarDetailPageModel> pageOpt = carDetailViewService.loadCarDetailPage(
                 carId,
                 currentUser,

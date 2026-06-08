@@ -7,7 +7,7 @@ class AvailabilityRiderLeadViolationExceptionTest {
 
     @Test
     void testGetAvailabilityRowIndexReturnsConstructorInput() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final AvailabilityRiderLeadViolationException ex =
                 new AvailabilityRiderLeadViolationException(3, "car.availability.leadViolation", 24);
 
@@ -17,7 +17,7 @@ class AvailabilityRiderLeadViolationExceptionTest {
 
     @Test
     void testMessageCodeAndArgsArePassedThroughToRydenException() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final AvailabilityRiderLeadViolationException ex =
                 new AvailabilityRiderLeadViolationException(0, "some.key", "a", 7);
 
@@ -28,7 +28,7 @@ class AvailabilityRiderLeadViolationExceptionTest {
 
     @Test
     void testIsCarValidationExceptionForControllerAdviceMatching() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final AvailabilityRiderLeadViolationException ex =
                 new AvailabilityRiderLeadViolationException(2, "k");
 

@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -285,6 +286,13 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
 
     @Override
     @Transactional(readOnly = true)
+    public Map<Long, List<AvailabilityPeriod>> getBookableWallAvailabilityPeriodsByCars(
+            final Collection<Long> carIds) {
+        return carAvailabilityCalendarService.getBookableWallAvailabilityPeriodsByCars(carIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
             final long carId,
             final LocalTime checkInTime,
@@ -430,6 +438,8 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
                 LocalDate.now(AppTimezone.WALL_ZONE), periods);
     }
 
+    // Intentionally not @Transactional: returns a value from the singleton policy bean
+    // (CarAvailabilityPolicy holds Spring-bound config), no DAO / EntityManager touch.
     @Override
     public int getConfiguredMaxAvailabilityForwardWallDays() {
         return carAvailabilityPolicy.getMaxAvailabilityForwardWallDays();

@@ -24,14 +24,22 @@ public class LocationServiceImplTest {
     private LocationServiceImpl locationService;
 
     @Test
-    public void testResolveSearchNeighborhoodIdBlank() {
+    public void testResolveSearchNeighborhoodIdNull() {
         Assertions.assertTrue(locationService.resolveSearchNeighborhoodId(null).isEmpty());
+    }
+
+    @Test
+    public void testResolveSearchNeighborhoodIdBlank() {
         Assertions.assertTrue(locationService.resolveSearchNeighborhoodId("   ").isEmpty());
     }
 
     @Test
-    public void testResolveSearchNeighborhoodIdNonPositive() {
+    public void testResolveSearchNeighborhoodIdZero() {
         Assertions.assertTrue(locationService.resolveSearchNeighborhoodId("0").isEmpty());
+    }
+
+    @Test
+    public void testResolveSearchNeighborhoodIdNegative() {
         Assertions.assertTrue(locationService.resolveSearchNeighborhoodId("-3").isEmpty());
     }
 

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -334,7 +335,13 @@ public final class ReservationViewServiceImpl implements ReservationViewService 
         final List<ReservationCardDisplayRow> rows = resultPage.getContent().stream()
                 .map(card -> toReservationCardDisplayRow(card, locale))
                 .toList();
-        return new OwnerReservationsListPageModel(rows, resultPage, selectedCarOrNull, currentSort);
+        // Refund-proof obligation badges are part of the same view; pulling them inside the
+        // page model keeps the controller free of an independent reservationService call.
+        final Set<Long> pendingRefundReservationIds = criteria.getOwnerId() != null
+                ? reservationService.findOwnerReservationIdsRequiringRefundProof(criteria.getOwnerId())
+                : Set.of();
+        return new OwnerReservationsListPageModel(
+                rows, resultPage, selectedCarOrNull, currentSort, pendingRefundReservationIds);
     }
 
     @Override

@@ -9,7 +9,7 @@ class EmailVerificationCodeEmailPayloadTest {
 
     @Test
     void testBuildSucceedsWithAllRequiredFields() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final EmailVerificationCodeEmailPayload payload = EmailVerificationCodeEmailPayload.builder()
                 .messageLocale(Locale.ENGLISH)
                 .recipientEmail("user@example.com")
@@ -29,7 +29,7 @@ class EmailVerificationCodeEmailPayloadTest {
                 .recipientEmail("user@example.com")
                 .code("123456");
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -40,7 +40,7 @@ class EmailVerificationCodeEmailPayloadTest {
                 .messageLocale(Locale.ENGLISH)
                 .code("123456");
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -51,7 +51,7 @@ class EmailVerificationCodeEmailPayloadTest {
                 .messageLocale(Locale.ENGLISH)
                 .recipientEmail("user@example.com");
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 }

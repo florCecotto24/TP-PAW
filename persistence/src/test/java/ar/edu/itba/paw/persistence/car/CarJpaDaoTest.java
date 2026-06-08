@@ -446,7 +446,7 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
                 .sortBy("date").sortDirection("desc")
                 .build();
 
-        // 2. Act — exercise the public browse pagination API.
+        // 2. Act — Act the public browse pagination API.
         final Page<CarCard> page = dao.searchCarCards(criteria);
 
         // 3. Assert — only the car owned by the non-blocked owner is visible to consumers.

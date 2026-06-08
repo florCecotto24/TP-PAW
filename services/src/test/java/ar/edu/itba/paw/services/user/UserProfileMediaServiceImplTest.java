@@ -9,8 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -25,7 +23,6 @@ import ar.edu.itba.paw.policy.ProfileDocumentUploadPolicyImpl;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 public class UserProfileMediaServiceImplTest {
 
     // Architectural rule: this service no longer touches UserDao; tests mock UserService instead,

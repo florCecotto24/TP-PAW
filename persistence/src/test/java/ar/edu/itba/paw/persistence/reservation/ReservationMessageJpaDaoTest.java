@@ -72,7 +72,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreatePersistsMessageWithTimestamp() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final ReservationMessage created = dao.create(reservationId, riderId, BODY);
         em.flush();
 
@@ -96,7 +96,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         dao.create(reservationId, riderId, "Third");
         em.flush();
 
-        // 2.Exercise
+        // 2.Act
         final var messages = dao.findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, first.getId(), 10);
 
         // 3.Assert
@@ -112,7 +112,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         dao.create(reservationId, riderId, "Second");
         em.flush();
 
-        // 2.Exercise
+        // 2.Act
         final var messages = dao.findByReservationIdOrderByCreatedAtAsc(reservationId, 0, 10);
 
         // 3.Assert
@@ -136,7 +136,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final long fileId =
                 jdbcTemplate.queryForObject("SELECT id FROM stored_files WHERE file_name = ?", Long.class, "photo.png");
 
-        // 2.Exercise
+        // 2.Act
         final ReservationMessage created = dao.create(reservationId, riderId, "", fileId);
         em.flush();
 
@@ -164,7 +164,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
                 jdbcTemplate.queryForObject(
                         "SELECT id FROM reservation_messages WHERE body = ?", Long.class, "Seen"));
 
-        // 2.Exercise
+        // 2.Act
         final var pendingMessages = dao.findPendingEmailNotification();
 
         // 3.Assert
@@ -179,7 +179,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final ReservationMessage created = dao.create(reservationId, riderId, BODY);
         em.flush();
 
-        // 2.Exercise
+        // 2.Act
         final int marked = dao.markEmailNotified(List.of(created.getId()));
         em.flush();
 
@@ -197,7 +197,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         em.flush();
         jdbcTemplate.update("UPDATE reservation_messages SET seen = TRUE WHERE id = ?", created.getId());
 
-        // 2.Exercise
+        // 2.Act
         final int marked = dao.markEmailNotified(List.of(created.getId()));
         em.flush();
 
@@ -220,7 +220,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         dao.markSeenByRecipient(reservationId, ownerId);
         em.flush();
 
-        // 2.Exercise
+        // 2.Act
         final var pendingMessages = dao.findPendingEmailNotification();
 
         // 3.Assert
@@ -238,7 +238,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final ReservationMessage fromOwner = dao.create(reservationId, ownerId, "From owner");
         em.flush();
 
-        // 2.Exercise
+        // 2.Act
         final int marked = dao.markSeenByRecipient(reservationId, ownerId);
         em.flush();
 

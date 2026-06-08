@@ -17,7 +17,7 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensReturnsEmptyForNullQuery() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens(null, CITY, 1, 3);
 
         // 3.Assert
@@ -26,7 +26,7 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensReturnsEmptyForBlankQuery() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("   ", CITY, 1, 3);
 
         // 3.Assert
@@ -35,14 +35,14 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensReturnsEmptyWhenNeighborhoodsAreNullOrEmpty() {
-        // 1.Arrange / 2.Exercise / 3.Assert
+        // 1.Arrange / 2.Act / 3.Assert
         Assertions.assertTrue(NeighborhoodNameMatcher.idsMatchingFuzzyTokens("palermo", null, 1, 3).isEmpty());
         Assertions.assertTrue(NeighborhoodNameMatcher.idsMatchingFuzzyTokens("palermo", List.of(), 1, 3).isEmpty());
     }
 
     @Test
     void testIdsMatchingFuzzyTokensReturnsEmptyWhenAllTokensTooShort() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("ab cd", CITY, 1, 4);
 
         // 3.Assert
@@ -51,7 +51,7 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensMatchesExactNameCaseInsensitive() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("PALERMO", CITY, 0, 3);
 
         // 3.Assert
@@ -60,7 +60,7 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensTolerantOfOneEditWhenMaxDistanceIsOne() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("palerno", CITY, 1, 3);
 
         // 3.Assert
@@ -69,7 +69,7 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensCollectsMultipleNeighborhoodsAcrossTokens() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("palermo recoleta", CITY, 1, 3);
 
         // 3.Assert
@@ -81,7 +81,7 @@ class NeighborhoodNameMatcherTest {
     @Test
     void testIdsMatchingFuzzyTokensDeduplicatesIds() {
         // 1.Arrange
-        // 2.Exercise
+        // 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("palermo palerno", CITY, 1, 3);
 
         // 3.Assert
@@ -90,7 +90,7 @@ class NeighborhoodNameMatcherTest {
 
     @Test
     void testIdsMatchingFuzzyTokensReturnsEmptyWhenNoNeighborhoodWithinDistance() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Long> ids = NeighborhoodNameMatcher.idsMatchingFuzzyTokens("zorroland", CITY, 1, 3);
 
         // 3.Assert

@@ -98,9 +98,12 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
                 && !Car.Status.ADMIN_PAUSED.name().equals(statusKey)
                 && !owner.isBlocked();
 
-        final LocalTime checkInTime = carAvailabilityService.findMostRecentByCarId(carId)
-                .map(CarAvailability::getCheckInTime)
-                .orElse(null);
+        // Single fetch of the most-recent availability: feeds the editor's checkInTime hint AND
+        // the GET handler's create-form prefill (street, neighborhood, times). Returning the row
+        // through the page model keeps the controller from issuing the same query a second time.
+        final CarAvailability mostRecentOrNull =
+                carAvailabilityService.findMostRecentByCarId(carId).orElse(null);
+        final LocalTime checkInTime = mostRecentOrNull != null ? mostRecentOrNull.getCheckInTime() : null;
         final CarAvailabilityEditorPageModel editorCtx =
                 carAvailabilityEditorViewService.loadEditorContext(car, owner.getId(), checkInTime);
 
@@ -125,6 +128,7 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
                 editorCtx.getPublisherEmail(),
                 editorCtx.getPriceMarketInsight().orElse(null),
                 reservationBlockedRangesJson,
-                reservedRangesByAvailabilityIdJson);
+                reservedRangesByAvailabilityIdJson,
+                mostRecentOrNull);
     }
 }

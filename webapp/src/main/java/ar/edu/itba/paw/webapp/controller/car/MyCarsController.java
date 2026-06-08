@@ -8,12 +8,11 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.CarAvailabilityEditorPageModel;
-import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.ManageCarPeriodsPageModel;
 import ar.edu.itba.paw.models.dto.car.MyCarDetailPageModel;
+import ar.edu.itba.paw.models.dto.car.MyCarsListPageModel;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.reservation.CarReservationsListPageModel;
 import ar.edu.itba.paw.models.dto.reservation.OwnerReservationsListPageModel;
@@ -25,6 +24,7 @@ import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.car.view.CarAvailabilityEditorViewService;
 import ar.edu.itba.paw.services.car.view.ManageCarPeriodsViewService;
 import ar.edu.itba.paw.services.car.view.MyCarDetailViewService;
+import ar.edu.itba.paw.services.car.view.MyCarsListViewService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.reservation.view.ReservationViewService;
 import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
@@ -89,6 +89,7 @@ public class MyCarsController {
     private final CarAvailabilityService carAvailabilityService;
     private final CarAvailabilityEditorViewService carAvailabilityEditorViewService;
     private final MyCarDetailViewService myCarDetailViewService;
+    private final MyCarsListViewService myCarsListViewService;
     private final ManageCarPeriodsViewService manageCarPeriodsViewService;
     private final ProfileDocumentUploadPolicy profileDocumentUploadPolicy;
     private final OwnerCarLookup ownerCarLookup;
@@ -104,6 +105,7 @@ public class MyCarsController {
             final CarAvailabilityService carAvailabilityService,
             final CarAvailabilityEditorViewService carAvailabilityEditorViewService,
             final MyCarDetailViewService myCarDetailViewService,
+            final MyCarsListViewService myCarsListViewService,
             final ManageCarPeriodsViewService manageCarPeriodsViewService,
             final ProfileDocumentUploadPolicy profileDocumentUploadPolicy,
             final OwnerCarLookup ownerCarLookup,
@@ -117,6 +119,7 @@ public class MyCarsController {
         this.carAvailabilityService = carAvailabilityService;
         this.carAvailabilityEditorViewService = carAvailabilityEditorViewService;
         this.myCarDetailViewService = myCarDetailViewService;
+        this.myCarsListViewService = myCarsListViewService;
         this.manageCarPeriodsViewService = manageCarPeriodsViewService;
         this.profileDocumentUploadPolicy = profileDocumentUploadPolicy;
         this.ownerCarLookup = ownerCarLookup;
@@ -159,21 +162,16 @@ public class MyCarsController {
         final var listingsCriteria = carService.buildOwnerCarSearchCriteria(
                 me.getId(), category, transmission, powertrain, priceMin, priceMax,
                 listingStatus, rating, q, page, appPaginationProperties.getDefaultPageSize(), listingsSort);
-        final Page<CarCard> resultPage = carService.getOwnerCarCards(listingsCriteria);
-        final Optional<ModelAndView> clamp = PageClampRedirect.ifOutOfRange(page, resultPage, "page", request);
+        final MyCarsListPageModel pageModel = myCarsListViewService.loadMyCarsListPage(
+                listingsCriteria, listingsSort, me.isBlocked());
+        final Optional<ModelAndView> clamp =
+                PageClampRedirect.ifOutOfRange(page, pageModel.getResultPage(), "page", request);
         if (clamp.isPresent()) {
             return clamp.get();
         }
         final ModelAndView mav = new ModelAndView("car/myCars");
-        mav.addObject("results", resultPage.getContent());
-        mav.addObject("myListingsPage", resultPage);
+        pageModel.populateModel(mav::addObject);
         mav.addObject("activeTab", "my-cars");
-        mav.addObject("listingsCurrentSort", listingsSort);
-        mav.addObject("currentUserBlocked", me.isBlocked());
-        // Per-car badge "you have a reservation requiring a refund receipt": independent of whether the
-        // owner is already blocked, so it surfaces the obligation even before the deadline expires.
-        mav.addObject("pendingRefundCarIds",
-                reservationService.findOwnerCarIdsWithReservationRequiringRefundProof(me.getId()));
         return mav;
     }
 
@@ -254,10 +252,6 @@ public class MyCarsController {
         final ModelAndView mav = new ModelAndView("reservation/ownerReservations");
         pageModel.populateModel(mav::addObject);
         mav.addObject("activeTab", "owner-reservations");
-        // Per-reservation badge "you must upload a refund receipt for this reservation": same condition
-        // as the per-car badge in /my-cars but indexed by reservation id for the cards on this page.
-        mav.addObject("pendingRefundReservationIds",
-                reservationService.findOwnerReservationIdsRequiringRefundProof(me.getId()));
         return mav;
     }
 
@@ -430,8 +424,7 @@ public class MyCarsController {
         final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
         pm.populateModel(mav::addObject);
         final CreateCarAvailabilityForm createForm = new CreateCarAvailabilityForm();
-        carAvailabilityService.findMostRecentByCarId(carId)
-                .ifPresent(la -> prefillLocationAndTimes(createForm, la));
+        pm.getMostRecentAvailability().ifPresent(la -> prefillLocationAndTimes(createForm, la));
         mav.addObject("createCarAvailabilityForm", createForm);
         mav.addObject("activeTab", "my-cars");
         return mav;

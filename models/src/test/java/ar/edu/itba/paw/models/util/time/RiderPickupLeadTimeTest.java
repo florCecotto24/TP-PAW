@@ -16,7 +16,7 @@ class RiderPickupLeadTimeTest {
         // 1.Arrange
         final Instant now = Instant.parse("2026-05-03T13:00:00Z");
 
-        // 2.Exercise
+        // 2.Act
         final Executable call = () -> RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 0);
 
@@ -29,7 +29,7 @@ class RiderPickupLeadTimeTest {
         // 1.Arrange
         final Instant now = Instant.parse("2026-05-03T13:00:00Z");
 
-        // 2.Exercise
+        // 2.Act
         final Executable call = () -> RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, -5);
 
@@ -43,7 +43,7 @@ class RiderPickupLeadTimeTest {
         final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(13, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final LocalDate first = RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 1);
 
@@ -57,7 +57,7 @@ class RiderPickupLeadTimeTest {
         final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(6, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final LocalDate first = RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 1);
 
@@ -71,7 +71,7 @@ class RiderPickupLeadTimeTest {
         final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(9, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final LocalDate first = RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 LocalTime.of(10, 0), AppTimezone.WALL_ZONE, now, 48);
 
@@ -85,7 +85,7 @@ class RiderPickupLeadTimeTest {
         final Instant now = ZonedDateTime.of(LocalDate.of(2026, 5, 3), LocalTime.of(11, 0),
                 AppTimezone.WALL_ZONE).toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final LocalDate first = RiderPickupLeadTime.minCarAvailabilityFirstDayInclusive(
                 null, AppTimezone.WALL_ZONE, now, 25);
 

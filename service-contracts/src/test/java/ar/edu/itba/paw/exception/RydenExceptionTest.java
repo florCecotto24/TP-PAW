@@ -17,7 +17,7 @@ class RydenExceptionTest {
 
     @Test
     void testGetMessageReturnsTheRawMessageCode() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final TestException ex = new TestException("some.error.key", 1, "two");
 
         // 3.Assert
@@ -26,7 +26,7 @@ class RydenExceptionTest {
 
     @Test
     void testGetMessageCodeReflectsConstructorInput() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final TestException ex = new TestException("user.account.notFound");
 
         // 3.Assert
@@ -35,7 +35,7 @@ class RydenExceptionTest {
 
     @Test
     void testGetMessageArgsContainsConstructorVarargs() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final TestException ex = new TestException("k", 22, "abc", 3.14);
 
         // 3.Assert
@@ -47,7 +47,7 @@ class RydenExceptionTest {
         // 1.Arrange
         final TestException ex = new TestException("k", "original");
 
-        // 2.Exercise
+        // 2.Act
         final Object[] borrowed = ex.getMessageArgs();
         borrowed[0] = "tampered";
 
@@ -57,7 +57,7 @@ class RydenExceptionTest {
 
     @Test
     void testConstructorTreatsNullVarargsAsEmptyArray() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final TestException ex = new TestException("k", (Object[]) null);
 
         // 3.Assert
@@ -67,7 +67,7 @@ class RydenExceptionTest {
 
     @Test
     void testConstructorAcceptsEmptyVarargs() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final TestException ex = new TestException("k");
 
         // 3.Assert

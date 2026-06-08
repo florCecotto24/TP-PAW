@@ -17,31 +17,29 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.persistence.review.ReviewDao;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.support.RecordingReviewDao;
 import ar.edu.itba.paw.services.user.UserService;
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class ReviewServiceImplTest {
 
     private static final long OWNER_ID = 100L;
     private static final long RIDER_ID = 200L;
     private static final long RESERVATION_ID = 300L;
 
-    @Mock
-    private ReviewDao reviewDao;
+    // State-based double per AGENTS.md TEST-8: tests stub read-side return values through the
+    // double's stub* helpers and assert on inserted() to verify writes — no doAnswer captor.
+    private RecordingReviewDao reviewDao;
 
     @Mock
     private ReservationService reservationService;
@@ -59,6 +57,7 @@ class ReviewServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        reviewDao = new RecordingReviewDao();
         service = new ReviewServiceImpl(
                 reviewDao,
                 reservationService,
@@ -72,7 +71,10 @@ class ReviewServiceImplTest {
 
     private static Reservation reservation(final boolean carReturned, final OffsetDateTime endDate) {
         final Car carRef = Mockito.mock(Car.class);
-        Mockito.when(carRef.getId()).thenReturn(CAR_ID);
+        // lenient(): only the happy paths reach refreshAggregatesAfter*Review which queries the car;
+        // negative-path tests short-circuit before resolving the car id, so strict-stubs would flag
+        // this shared helper stub as unnecessary on those tests.
+        Mockito.lenient().when(carRef.getId()).thenReturn(CAR_ID);
         return Reservation.builder()
                 .id(RESERVATION_ID)
                 .rider(User.identities(RIDER_ID, "r@test.com", "R", "Rider"))
@@ -89,168 +91,136 @@ class ReviewServiceImplTest {
 
     @Test
     void testGetReviewCommentMaxLengthReflectsPolicy() {
-        // 1.Arrange / 2.Exercise
         final int max = service.getReviewCommentMaxLength();
 
-        // 3.Assert
         Assertions.assertEquals(500, max);
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderPersistOmitWhenRatingNullAndCommentBlank() {
-        // 1.Arrange
         final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
 
-        // 2.Exercise & 3. Assert
         Assertions.assertDoesNotThrow(() -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, null, "   "));
     }
 
     @Test
     void testSubmitRiderReviewOfOwnerPersistOmitWhenRatingNullAndCommentBlank() {
-        // 1.Arrange
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
         final Reservation res = reservation(true, past);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
         Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.empty());
 
-        // 2.Exercise & 3. Assert
         Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, null, null));
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderRequiresRatingWhenCommentPresent() {
-        // 1.Arrange / 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, null, "Nice ride!"));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_RATING_REQUIRED_WHEN_COMMENT, ex.getMessageCode());
     }
 
     @Test
-    void testSubmitOwnerReviewOfRiderRejectsRatingOutOfRange() {
-        // 1.Arrange / 2.Exercise / 3.Assert
-        final RiderReservationException low = Assertions.assertThrows(RiderReservationException.class,
+    void testSubmitOwnerReviewOfRiderRejectsRatingBelowRange() {
+        // Split out of the original "rating out of range" test so each @Test has a single Act
+        // call (TEST-2: one behavior per test).
+        final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 0, null));
-        final RiderReservationException high = Assertions.assertThrows(RiderReservationException.class,
+        Assertions.assertEquals(MessageKeys.REVIEW_RATING_INVALID, ex.getMessageCode());
+    }
+
+    @Test
+    void testSubmitOwnerReviewOfRiderRejectsRatingAboveRange() {
+        final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 6, null));
-        Assertions.assertEquals(MessageKeys.REVIEW_RATING_INVALID, low.getMessageCode());
-        Assertions.assertEquals(MessageKeys.REVIEW_RATING_INVALID, high.getMessageCode());
+        Assertions.assertEquals(MessageKeys.REVIEW_RATING_INVALID, ex.getMessageCode());
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderRejectsCommentLongerThanPolicyMax() {
-        // 1.Arrange
         final String longComment = "a".repeat(501);
 
-        // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 5, longComment));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_COMMENT_TOO_LONG, ex.getMessageCode());
         Assertions.assertArrayEquals(new Object[]{500}, ex.getMessageArgs());
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderThrowsNotAllowedWhenReservationNotFound() {
-        // 1.Arrange
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.empty());
 
-        // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 5, null));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_NOT_ALLOWED, ex.getMessageCode());
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderThrowsNotAllowedWhenCarNotReturned() {
-        // 1.Arrange
         final Reservation res = reservation(false, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
 
-        // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 5, null));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_NOT_ALLOWED, ex.getMessageCode());
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderThrowsAlreadySubmittedWhenReviewExists() {
-        // 1.Arrange
         final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(true);
+        reviewDao.stubExistsReview(RESERVATION_ID, false, true);
 
-        // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 5, null));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_ALREADY_SUBMITTED, ex.getMessageCode());
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderInsertsReviewWithTrimmedComment() {
-        // 1.Arrange
         final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
-        final String[] insertedComment = new String[1];
-        Mockito.doAnswer(inv -> {
-            insertedComment[0] = inv.getArgument(3);
-            return null;
-        }).when(reviewDao).insertReview(Mockito.eq(RESERVATION_ID), Mockito.eq(false), Mockito.eq(4),
-                Mockito.anyString(), Mockito.isNull());
 
-        // 2.Exercise
         service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 4, "  Great rider!  ");
 
-        // 3.Assert
-        Assertions.assertEquals("Great rider!", insertedComment[0]);
+        Assertions.assertEquals(1, reviewDao.inserted().size());
+        final RecordingReviewDao.InsertedReview row = reviewDao.inserted().get(0);
+        Assertions.assertEquals(RESERVATION_ID, row.reservationId());
+        Assertions.assertFalse(row.madeByRider());
+        Assertions.assertEquals(4, row.rating());
+        Assertions.assertEquals("Great rider!", row.comment());
+        Assertions.assertNull(row.imageId());
     }
 
     @Test
     void testSubmitOwnerReviewOfRiderTreatsBlankCommentAsNull() {
-        // 1.Arrange
         final Reservation res = reservation(true, OffsetDateTime.now(ZoneOffset.UTC).minusDays(1));
         Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, false)).thenReturn(false);
-        final Object[] capturedComment = new Object[]{"sentinel"};
-        Mockito.doAnswer(inv -> {
-            capturedComment[0] = inv.getArgument(3);
-            return null;
-        }).when(reviewDao).insertReview(Mockito.eq(RESERVATION_ID), Mockito.eq(false), Mockito.eq(5),
-                Mockito.isNull(), Mockito.isNull());
 
-        // 2.Exercise
         service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 5, "   ");
 
-        // 3.Assert
-        Assertions.assertNull(capturedComment[0]);
+        Assertions.assertEquals(1, reviewDao.inserted().size());
+        Assertions.assertNull(reviewDao.inserted().get(0).comment());
     }
 
     @Test
     void testSubmitRiderReviewOfOwnerThrowsWhenReservationNotFound() {
-        // 1.Arrange
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.empty());
 
-        // 2.Exercise / 3.Assert
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, null));
         Assertions.assertEquals(MessageKeys.REVIEW_NOT_ALLOWED, ex.getMessageCode());
@@ -258,52 +228,42 @@ class ReviewServiceImplTest {
 
     @Test
     void testSubmitRiderReviewOfOwnerThrowsWhenEndDateInFuture() {
-        // 1.Arrange
         final OffsetDateTime future = OffsetDateTime.now(ZoneOffset.UTC).plusDays(7);
         final Reservation res = reservation(true, future);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
 
-        // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, null));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_NOT_ALLOWED, ex.getMessageCode());
     }
 
     @Test
     void testSubmitRiderReviewOfOwnerThrowsAlreadySubmittedWhenReviewExists() {
-        // 1.Arrange
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
         final Reservation res = reservation(true, past);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(true);
+        reviewDao.stubExistsReview(RESERVATION_ID, true, true);
 
-        // 2.Exercise
         final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
                 () -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, null));
 
-        // 3.Assert
         Assertions.assertEquals(MessageKeys.REVIEW_ALREADY_SUBMITTED, ex.getMessageCode());
     }
 
     @Test
     void testGetCarPublicReviewsReturnsWhateverTheDaoProvides() {
-        // 1.Arrange
         final CarPublicReview oneReview = new CarPublicReview(
                 "Ada", "Lovelace",
                 OffsetDateTime.of(2026, 5, 1, 12, 0, 0, 0, ZoneOffset.UTC),
                 5, "Loved the car", null);
-        final Page<CarPublicReview> daoPage = new Page<>(
-                List.of(oneReview), 0, 6, 1L);
-        Mockito.when(reviewDao.findCarPublicReviews(CAR_ID, 0, 6)).thenReturn(daoPage);
+        final Page<CarPublicReview> daoPage = new Page<>(List.of(oneReview), 0, 6, 1L);
+        reviewDao.stubCarPublicReviews(CAR_ID, 0, 6, daoPage);
 
-        // 2.Exercise
         final Page<CarPublicReview> actual = service.getCarPublicReviews(CAR_ID, 0, 6);
 
-        // 3.Assert
         Assertions.assertSame(daoPage, actual);
         Assertions.assertEquals(1, actual.getContent().size());
         Assertions.assertEquals(1L, actual.getTotalItems());
@@ -311,41 +271,32 @@ class ReviewServiceImplTest {
 
     @Test
     void testGetCarPublicReviewsReturnsEmptyPageWhenCarHasNoReviews() {
-        // 1.Arrange
         final Page<CarPublicReview> emptyPage = new Page<>(Collections.emptyList(), 0, 6, 0L);
-        Mockito.when(reviewDao.findCarPublicReviews(CAR_ID, 0, 6)).thenReturn(emptyPage);
+        reviewDao.stubCarPublicReviews(CAR_ID, 0, 6, emptyPage);
 
-        // 2.Exercise
         final Page<CarPublicReview> actual = service.getCarPublicReviews(CAR_ID, 0, 6);
 
-        // 3.Assert
         Assertions.assertTrue(actual.getContent().isEmpty());
         Assertions.assertEquals(0L, actual.getTotalItems());
     }
 
     @Test
     void testCountReviewsForCarDelegatesToDao() {
-        // 1.Arrange
-        Mockito.when(reviewDao.countReviewsForCar(CAR_ID)).thenReturn(42L);
+        reviewDao.stubReviewCountForCar(CAR_ID, 42L);
 
-        // 2.Exercise
         final long count = service.countReviewsForCar(CAR_ID);
 
-        // 3.Assert
         Assertions.assertEquals(42L, count);
     }
 
     @Test
     void testSubmitRiderReviewOfOwnerCompletesOnHappyPath() {
-        // 1.Arrange
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
         final Reservation res = reservation(true, past);
         Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(reviewDao.existsReview(RESERVATION_ID, true)).thenReturn(false);
         Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.empty());
 
-        // 2.Exercise / 3.Assert
         Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, null));
     }
 }

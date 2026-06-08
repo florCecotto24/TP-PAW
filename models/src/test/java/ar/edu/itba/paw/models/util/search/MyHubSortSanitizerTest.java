@@ -9,7 +9,7 @@ class MyHubSortSanitizerTest {
 
     @Test
     void testSanitizeReturnsDefaultWhenNull() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final String result = MyHubSortSanitizer.sanitize(null, DEFAULT_SORT);
 
         // 3.Assert
@@ -18,7 +18,7 @@ class MyHubSortSanitizerTest {
 
     @Test
     void testSanitizeReturnsDefaultWhenBlank() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final String result = MyHubSortSanitizer.sanitize("   ", DEFAULT_SORT);
 
         // 3.Assert
@@ -30,7 +30,7 @@ class MyHubSortSanitizerTest {
         // 1.Arrange
         final String evil = "name,desc";
 
-        // 2.Exercise
+        // 2.Act
         final String result = MyHubSortSanitizer.sanitize(evil, DEFAULT_SORT);
 
         // 3.Assert
@@ -39,7 +39,7 @@ class MyHubSortSanitizerTest {
 
     @Test
     void testSanitizeReturnsValueWhenWhitelisted() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final String dateAsc = MyHubSortSanitizer.sanitize("date,asc", DEFAULT_SORT);
         final String priceAsc = MyHubSortSanitizer.sanitize("price,asc", DEFAULT_SORT);
         final String priceDesc = MyHubSortSanitizer.sanitize("price,desc", DEFAULT_SORT);
@@ -58,7 +58,7 @@ class MyHubSortSanitizerTest {
 
     @Test
     void testSanitizeIsCaseSensitiveAndRejectsUppercaseValue() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final String result = MyHubSortSanitizer.sanitize("DATE,DESC", DEFAULT_SORT);
 
         // 3.Assert

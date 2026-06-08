@@ -6,12 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class MailPublicUrlsTest {
 
     private static final String KEY = "mail.app.base.url";
@@ -32,7 +29,7 @@ class MailPublicUrlsTest {
         // 1.Arrange
         useBase(null);
 
-        // 2.Exercise
+        // 2.Act
         final String url = mailPublicUrls.absolutePath("/login");
 
         // 3.Assert
@@ -44,7 +41,7 @@ class MailPublicUrlsTest {
         // 1.Arrange
         useBase("https://app.example.com/webapp///");
 
-        // 2.Exercise
+        // 2.Act
         final String url = mailPublicUrls.absolutePath("/login");
 
         // 3.Assert
@@ -56,7 +53,7 @@ class MailPublicUrlsTest {
         // 1.Arrange
         useBase("https://app.example.com/webapp/");
 
-        // 2.Exercise
+        // 2.Act
         final String url = mailPublicUrls.absolutePath(null);
 
         // 3.Assert
@@ -68,7 +65,7 @@ class MailPublicUrlsTest {
         // 1.Arrange
         useBase("https://app.example.com/webapp");
 
-        // 2.Exercise
+        // 2.Act
         final String url = mailPublicUrls.absolutePath("   ");
 
         // 3.Assert
@@ -80,7 +77,7 @@ class MailPublicUrlsTest {
         // 1.Arrange
         useBase("https://app.example.com/webapp");
 
-        // 2.Exercise
+        // 2.Act
         final String url = mailPublicUrls.absolutePath("login");
 
         // 3.Assert
@@ -92,7 +89,7 @@ class MailPublicUrlsTest {
         // 1.Arrange
         useBase("https://app.example.com/webapp");
 
-        // 2.Exercise
+        // 2.Act
         final String url = mailPublicUrls.absolutePath("/cars/42");
 
         // 3.Assert

@@ -6,14 +6,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class ProfileDocumentUploadPolicyTest {
 
     @Mock
@@ -21,7 +18,7 @@ class ProfileDocumentUploadPolicyTest {
 
     @Test
     void testConstructorUsesDefaultMegabytesWhenPropertyMissing() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicyImpl(environment);
 
         // 3.Assert
@@ -37,7 +34,7 @@ class ProfileDocumentUploadPolicyTest {
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_BYTES_PER_BINARY_MB, Integer.class))
                 .thenReturn(1000);
 
-        // 2.Exercise
+        // 2.Act
         final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicyImpl(environment);
 
         // 3.Assert
@@ -53,7 +50,7 @@ class ProfileDocumentUploadPolicyTest {
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PROFILE_DOCUMENT_MB, Long.class))
                 .thenReturn(3L);
 
-        // 2.Exercise
+        // 2.Act
         final ProfileDocumentUploadPolicy policy = new ProfileDocumentUploadPolicyImpl(environment);
 
         // 3.Assert
@@ -64,10 +61,10 @@ class ProfileDocumentUploadPolicyTest {
     @Test
     void testConstructorThrowsWhenResolvedSizeOverflowsInteger() {
         // 1.Arrange
-        Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PROFILE_DOCUMENT_MB, Long.class))
+        Mockito.lenient().when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_PROFILE_DOCUMENT_MB, Long.class))
                 .thenReturn(5_000L);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> new ProfileDocumentUploadPolicyImpl(environment));
     }

@@ -10,8 +10,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -32,7 +30,6 @@ import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 public class UserServiceImplTest {
 
     @Mock
@@ -326,15 +323,7 @@ public class UserServiceImplTest {
                 .surname("Admin")
                 .userRole(UserRole.USER)
                 .build();
-        final User target = User.builder()
-                .id(20L)
-                .email("user@test.com")
-                .forename("Tar")
-                .surname("Get")
-                .userRole(UserRole.USER)
-                .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
-        Mockito.when(userDao.getUserById(20L)).thenReturn(Optional.of(target));
 
         // 2. Execute and 3. Assert
         final AdminPromoterNotAdminException thrown = Assertions.assertThrows(

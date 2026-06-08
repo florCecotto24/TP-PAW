@@ -21,7 +21,7 @@ class CabaNeighborhoodCatalogTest extends DaoIntegrationTestSupport {
         final Long expectedRowCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM neighborhoods", Long.class);
 
-        // 2.Exercise
+        // 2.Act
         final List<Neighborhood> all = catalog.findAllNeighborhoods();
 
         // 3.Assert
@@ -31,7 +31,7 @@ class CabaNeighborhoodCatalogTest extends DaoIntegrationTestSupport {
 
     @Test
     void testFindAllNeighborhoodsReturnsCaseInsensitiveAlphabeticalOrder() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final List<Neighborhood> all = catalog.findAllNeighborhoods();
 
         // 3.Assert
@@ -50,7 +50,7 @@ class CabaNeighborhoodCatalogTest extends DaoIntegrationTestSupport {
         final String expectedName = jdbcTemplate.queryForObject(
                 "SELECT name FROM neighborhoods WHERE id = ?", String.class, 22L);
 
-        // 2.Exercise
+        // 2.Act
         final Optional<Neighborhood> found = catalog.findNeighborhoodById(22L);
 
         // 3.Assert
@@ -61,7 +61,7 @@ class CabaNeighborhoodCatalogTest extends DaoIntegrationTestSupport {
 
     @Test
     void testFindNeighborhoodByIdReturnsEmptyWhenAbsent() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final Optional<Neighborhood> found = catalog.findNeighborhoodById(9_999_999L);
 
         // 3.Assert

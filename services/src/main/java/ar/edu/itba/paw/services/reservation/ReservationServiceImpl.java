@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -173,6 +174,17 @@ public final class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<Long, List<Reservation>> findBlockingReservationsByCarIds(
+            final Collection<Long> carIds) {
+        if (carIds == null || carIds.isEmpty()) {
+            return Map.of();
+        }
+        final List<Reservation> rows = reservationDao.findBlockingByCarIds(carIds);
+        return rows.stream().collect(Collectors.groupingBy(Reservation::getCarId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Reservation> findBlockingReservationsByCarIdExcluding(
             final long carId, final long excludingReservationId) {
         return reservationDao.findBlockingByCarIdExcluding(carId, excludingReservationId);
@@ -213,7 +225,7 @@ public final class ReservationServiceImpl implements ReservationService {
         return reservationDao.findReservationsRequiringRefundProofForOwner(ownerUserId)
                 .stream()
                 .map(Reservation::getId)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
@@ -222,7 +234,7 @@ public final class ReservationServiceImpl implements ReservationService {
         return reservationDao.findReservationsRequiringRefundProofForOwner(ownerUserId)
                 .stream()
                 .map(r -> r.getCar().getId())
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     // ---------------------------------------------------------------------------------------

@@ -36,7 +36,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated();
 
-        // 2.Exercise
+        // 2.Act
         final ReservationMailPayload payload = builder.build();
 
         // 3.Assert
@@ -70,7 +70,7 @@ class ReservationMailPayloadTest {
                 .reservationTotal(null)
                 .ownerCbu(null);
 
-        // 2.Exercise
+        // 2.Act
         final ReservationMailPayload payload = builder.build();
 
         // 3.Assert
@@ -87,7 +87,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().recipientEmail(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -96,7 +96,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().riderFullName(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -113,7 +113,7 @@ class ReservationMailPayloadTest {
                 .riderMailLocale(Locale.ENGLISH)
                 .ownerMailLocale(Locale.ENGLISH);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -130,7 +130,7 @@ class ReservationMailPayloadTest {
                 .riderMailLocale(Locale.ENGLISH)
                 .ownerMailLocale(Locale.ENGLISH);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -139,7 +139,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().vehicleLabel(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -148,7 +148,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().startDate(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -157,7 +157,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().endDate(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -166,7 +166,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().riderMailLocale(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 
@@ -175,7 +175,7 @@ class ReservationMailPayloadTest {
         // 1.Arrange
         final ReservationMailPayload.Builder builder = fullyPopulated().ownerMailLocale(null);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(NullPointerException.class, builder::build);
     }
 }

@@ -9,7 +9,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +72,36 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
     @Transactional(readOnly = true)
     public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(final long carId) {
         return CarAvailabilityCalendarMath.mergeAdjacentWallDaysToPeriods(computeBookableWallDaysByCar(carId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, List<AvailabilityPeriod>> getBookableWallAvailabilityPeriodsByCars(
+            final Collection<Long> carIds) {
+        if (carIds == null || carIds.isEmpty()) {
+            return Map.of();
+        }
+        // Two batch reads instead of N+1: all availability rows for the requested cars and all
+        // blocking reservations for the same set. LocalDate.MIN passes the "endingOnOrAfter"
+        // filter for every row (the wall-day arithmetic itself does not care about the historical
+        // past — it just computes the bookable-day set per car).
+        final List<CarAvailability> allRows = carAvailabilityService.findByCarIdsEndingOnOrAfter(
+                carIds, LocalDate.MIN);
+        final Map<Long, List<CarAvailability>> rowsByCarId = allRows.stream()
+                .collect(Collectors.groupingBy(CarAvailability::getCarId));
+        final Map<Long, List<Reservation>> blockingByCarId =
+                reservationService.findBlockingReservationsByCarIds(carIds);
+        final Map<Long, List<AvailabilityPeriod>> result = new HashMap<>(carIds.size());
+        for (final Long carId : carIds) {
+            if (carId == null) {
+                continue;
+            }
+            final SortedSet<LocalDate> days = computeBookableWallDaysFromRows(
+                    rowsByCarId.getOrDefault(carId, List.of()),
+                    blockingByCarId.getOrDefault(carId, List.of()));
+            result.put(carId, CarAvailabilityCalendarMath.mergeAdjacentWallDaysToPeriods(days));
+        }
+        return result;
     }
 
     @Override
@@ -206,19 +238,26 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
 
     private List<BookableSegmentProjection> computeBookableSegmentsForRiderDatePicker(
             final long carId, final Instant now, final Long excludingReservationIdOrNull) {
-        final SortedSet<LocalDate> bookableDays = excludingReservationIdOrNull == null
-                ? computeBookableWallDaysByCar(carId)
-                : computeBookableWallDaysByCarExcluding(carId, excludingReservationIdOrNull);
+        // Single fetch for both branches: the wall-day calculation AND the per-day "effective row"
+        // lookup share the same underlying availability rows. Replacing the previous N queries
+        // (one findEffectiveForDayByCar call per bookable day) with one in-memory scan removes the
+        // user-facing N+1 on the public car-detail / reservation-edit date pickers.
+        final List<CarAvailability> allRows = carAvailabilityService.findByCarId(carId);
+        final List<Reservation> blockingReservations = excludingReservationIdOrNull == null
+                ? reservationService.findBlockingReservationsByCarId(carId)
+                : reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationIdOrNull);
+        final SortedSet<LocalDate> bookableDays = computeBookableWallDaysFromRows(allRows, blockingReservations);
         if (bookableDays.isEmpty()) {
             return List.of();
         }
+        final Map<LocalDate, CarAvailability> effectiveByDay =
+                indexEffectiveOfferedRowByDay(allRows, bookableDays);
         final List<BookableSegmentProjection> singleDay = new ArrayList<>(bookableDays.size());
         for (final LocalDate day : bookableDays) {
-            final Optional<CarAvailability> effOpt = carAvailabilityService.findEffectiveForDayByCar(carId, day);
-            if (effOpt.isEmpty() || effOpt.get().getKind() != CarAvailability.Kind.OFFERED) {
+            final CarAvailability eff = effectiveByDay.get(day);
+            if (eff == null || eff.getKind() != CarAvailability.Kind.OFFERED) {
                 continue;
             }
-            final CarAvailability eff = effOpt.get();
             singleDay.add(new BookableSegmentProjection(
                     day,
                     day,
@@ -235,6 +274,43 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
         return CarAvailabilityCalendarMath.clipSegmentsByPickupLead(merged, AppTimezone.WALL_ZONE, minPickupExclusive);
     }
 
+    /**
+     * Builds the "effective availability row for this day" map by walking all rows in
+     * {@code createdAt} desc (ties broken by id desc) and claiming each in-range day for the
+     * first row that covers it — same precedence rule {@code findEffectiveForDayByCar} applies
+     * one day at a time, just done once in memory for every {@code wantedDays} entry.
+     */
+    private static Map<LocalDate, CarAvailability> indexEffectiveOfferedRowByDay(
+            final List<CarAvailability> allRows, final SortedSet<LocalDate> wantedDays) {
+        if (wantedDays.isEmpty() || allRows.isEmpty()) {
+            return Map.of();
+        }
+        final List<CarAvailability> ordered = new ArrayList<>(allRows);
+        // Null-safe ordering so unit tests (which build CarAvailability without auditing
+        // populating createdAt) still get a stable "most recent createdAt wins, ties broken by id"
+        // resolution. nullsLast on the descending sort means a null createdAt loses to any populated
+        // one — identical to how a freshly-inserted row would lose to a previously-persisted row.
+        ordered.sort(Comparator
+                .comparing(CarAvailability::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(CarAvailability::getId, Comparator.reverseOrder()));
+        final Map<LocalDate, CarAvailability> effective = new HashMap<>(wantedDays.size());
+        for (final CarAvailability row : ordered) {
+            final LocalDate start = row.getStartInclusive();
+            final LocalDate end = row.getEndInclusive();
+            for (final LocalDate day : wantedDays) {
+                if (day.isBefore(start) || day.isAfter(end)) {
+                    continue;
+                }
+                effective.putIfAbsent(day, row);
+            }
+            if (effective.size() == wantedDays.size()) {
+                break;
+            }
+        }
+        return effective;
+    }
+
     private SortedSet<LocalDate> computeBookableWallDaysByCar(final long carId) {
         return computeBookableWallDaysByCarInternal(
                 carId, reservationService.findBlockingReservationsByCarId(carId));
@@ -248,9 +324,20 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
 
     private SortedSet<LocalDate> computeBookableWallDaysByCarInternal(
             final long carId, final List<Reservation> blockingReservations) {
+        return computeBookableWallDaysFromRows(
+                carAvailabilityService.findByCarId(carId), blockingReservations);
+    }
+
+    /**
+     * Shared core of {@link #computeBookableWallDaysByCarInternal} and the batch path: builds the
+     * bookable wall-day set from already-fetched OFFERED availability rows and blocking
+     * reservations. Lives here so the per-car and per-batch paths cannot drift.
+     */
+    private static SortedSet<LocalDate> computeBookableWallDaysFromRows(
+            final List<CarAvailability> rows, final List<Reservation> blockingReservations) {
         final ZoneId wall = AppTimezone.WALL_ZONE;
         final SortedSet<LocalDate> days = new TreeSet<>();
-        for (final CarAvailability la : carAvailabilityService.findByCarId(carId)) {
+        for (final CarAvailability la : rows) {
             if (la.getKind() != CarAvailability.Kind.OFFERED) {
                 continue;
             }

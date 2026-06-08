@@ -18,7 +18,7 @@ public class WallDateTimeDisplayFormatTest {
         final LocalDateTime wall = LocalDateTime.of(2026, 4, 17, 9, 5);
         final String s = WallDateTimeDisplayFormat.formatWallLocalNoSeconds(wall, Locale.forLanguageTag("es-AR"));
 
-        // 2. Exercise
+        // 2. Act
         final String result = WallDateTimeDisplayFormat.formatWallLocalNoSeconds(wall, Locale.forLanguageTag("es-AR"));
         final int seconds = s.trim().split(":").length;
 
@@ -32,7 +32,7 @@ public class WallDateTimeDisplayFormatTest {
         // 1. Arrange
         final OffsetDateTime utc = OffsetDateTime.of(2026, 4, 17, 12, 0, 0, 0, ZoneOffset.UTC);
 
-        // 2. Exercise
+        // 2. Act
         final String s = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(utc, Locale.forLanguageTag("es"));
 
         // 3. Assert
@@ -45,7 +45,7 @@ public class WallDateTimeDisplayFormatTest {
         final String raw = "2026-05-01T10:30";
         final String s = WallDateTimeDisplayFormat.formatClientWallDateTimeInputOrRaw(raw, Locale.forLanguageTag("es"));
 
-        // 2. Exercise
+        // 2. Act
         final String result = WallDateTimeDisplayFormat.formatClientWallDateTimeInputOrRaw(raw, Locale.forLanguageTag("es"));
         final int seconds = s.trim().split(":").length;
 

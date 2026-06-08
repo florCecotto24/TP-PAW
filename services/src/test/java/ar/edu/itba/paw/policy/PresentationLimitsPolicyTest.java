@@ -6,12 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class PresentationLimitsPolicyTest {
 
     private static final String COUNTERPARTY_KEY = "app.presentation.counterparty-recent-reviews-limit";
@@ -24,7 +21,7 @@ class PresentationLimitsPolicyTest {
 
     @Test
     void testConstructorAppliesFallbacksWhenPropertiesMissing() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final PresentationLimitsPolicy policy = new PresentationLimitsPolicyImpl(environment);
 
         // 3.Assert
@@ -40,7 +37,7 @@ class PresentationLimitsPolicyTest {
         Mockito.when(environment.getProperty(SIMILAR_KEY, Integer.class)).thenReturn(-1);
         Mockito.when(environment.getProperty(OWNER_ACTIVE_LISTINGS_KEY, Integer.class)).thenReturn(0);
 
-        // 2.Exercise
+        // 2.Act
         final PresentationLimitsPolicy policy = new PresentationLimitsPolicyImpl(environment);
 
         // 3.Assert
@@ -56,7 +53,7 @@ class PresentationLimitsPolicyTest {
         Mockito.when(environment.getProperty(SIMILAR_KEY, Integer.class)).thenReturn(8);
         Mockito.when(environment.getProperty(OWNER_ACTIVE_LISTINGS_KEY, Integer.class)).thenReturn(9);
 
-        // 2.Exercise
+        // 2.Act
         final PresentationLimitsPolicy policy = new PresentationLimitsPolicyImpl(environment);
 
         // 3.Assert

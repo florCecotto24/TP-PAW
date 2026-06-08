@@ -251,6 +251,14 @@ public interface ReservationService {
     List<Reservation> findBlockingReservationsByCarId(long carId);
 
     /**
+     * Batch variant of {@link #findBlockingReservationsByCarId(long)} returning blocking
+     * reservations for many cars at once, indexed by car id. Cars without any blocking
+     * reservation are absent from the returned map. Used by schedulers / batch flows so the
+     * caller does not issue one query per car.
+     */
+    Map<Long, List<Reservation>> findBlockingReservationsByCarIds(Collection<Long> carIds);
+
+    /**
      * Same as {@link #findBlockingReservationsByCarId(long)} but excludes the reservation whose id
      * matches {@code excludingReservationId}. Used to recompute the bookable wall-day calendar for the
      * rider-side reservation edit flow (the reservation under edit must not subtract days from its

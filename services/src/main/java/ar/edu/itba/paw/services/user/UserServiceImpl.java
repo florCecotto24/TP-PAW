@@ -209,6 +209,7 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void updateProfilePicture(
             final long userId,
             final String originalFilename,
@@ -218,11 +219,13 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void clearProfilePicture(final long userId) {
         userProfileMediaService.clearProfilePicture(userId);
     }
 
     @Override
+    @Transactional
     public void uploadValidatedProfileDocument(
             final long userId,
             final UserDocumentType documentType,
@@ -233,6 +236,7 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void clearProfileDocument(final long userId, final UserDocumentType documentType) {
         userProfileMediaService.clearProfileDocument(userId, documentType);
     }
@@ -433,6 +437,7 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Locale resolveMailLocaleFor(final User user) {
         if (user == null) {
             return Locale.ENGLISH;
@@ -470,16 +475,19 @@ public final class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<StoredFile> findProfileDocument(final long userId, final UserDocumentType documentType) {
         return userProfileMediaService.findProfileDocument(userId, documentType);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Optional<BinaryContent> findProfileDocumentContent(
             final long userId, final UserDocumentType documentType) {
         return userProfileMediaService.findProfileDocumentContent(userId, documentType);
     }
 
+    // Intentionally not @Transactional: pure static-format validation delegating to CbuRules
     @Override
     public boolean isValidCbuFormat(final String cbuRaw) {
         return CbuRules.isValidFormat(cbuRaw);

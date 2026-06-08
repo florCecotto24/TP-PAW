@@ -113,6 +113,20 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
+    public List<Reservation> findBlockingByCarIds(final Collection<Long> carIds) {
+        if (carIds == null || carIds.isEmpty()) {
+            return List.of();
+        }
+        return em.createQuery(
+                        "FROM Reservation r WHERE r.car.id IN :carIds AND r.status IN :statuses "
+                                + "ORDER BY r.car.id ASC, r.startDate ASC",
+                        Reservation.class)
+                .setParameter("carIds", carIds)
+                .setParameter("statuses", BLOCKING_STATUSES)
+                .getResultList();
+    }
+
+    @Override
     public List<Reservation> findBlockingByCarIdExcluding(final long carId, final long excludingReservationId) {
         return em.createQuery(
                         "FROM Reservation r "
@@ -167,7 +181,7 @@ public class ReservationJpaDao implements ReservationDao {
                 .returnReminderEmailSent(false)
                 .returnCheckoutEmailSent(false)
                 .riderReviewInviteEmailSent(false)
-                .pendingPaymentproofEmailSent(false)
+                .pendingPaymentProofEmailSent(false)
                 .pendingRefundEmailSent(false)
                 .build();
         em.persist(reservation);
@@ -634,7 +648,7 @@ public class ReservationJpaDao implements ReservationDao {
                                 + "WHERE r.paymentProofDeadlineAt IS NOT NULL "
                                 + "AND r.paymentProofDeadlineAt <= :windowEnd "
                                 + "AND r.paymentReceiptFile IS NULL "
-                                + "AND r.pendingPaymentproofEmailSent = FALSE",
+                                + "AND r.pendingPaymentProofEmailSent = FALSE",
                         Reservation.class)
                 .setParameter("windowEnd", windowEnd)
                 .getResultList();

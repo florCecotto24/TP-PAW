@@ -8,16 +8,19 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.time.format.DateTimeParseException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.domain.location.Neighborhood;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
@@ -95,7 +98,7 @@ public final class CarSearchServiceImpl implements CarSearchService {
             java.time.YearMonth parsedMonth = null;
             try {
                 parsedMonth = YearMonth.parse(flexMonth);
-            } catch (final java.time.format.DateTimeParseException ignored) {
+            } catch (final DateTimeParseException ignored) {
                 // invalid month string — fall back to no filter
             }
             if (parsedMonth != null) {
@@ -121,8 +124,10 @@ public final class CarSearchServiceImpl implements CarSearchService {
         return builder.build();
     }
 
+    // Both buildOwnerCarSearchCriteria overloads are intentionally not @Transactional: they delegate
+    // to buildOwnerCarSearchCriteriaInternal, which only does enum/string normalization and
+    // OwnerCarSearchCriteria builder assembly — no DAO / EntityManager touch on this code path.
     @Override
-    @Transactional(readOnly = true)
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
             final List<Car.Type> category,
@@ -144,7 +149,6 @@ public final class CarSearchServiceImpl implements CarSearchService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public OwnerCarSearchCriteria buildOwnerCarSearchCriteria(
             final long ownerId,
             final List<Car.Type> category,
@@ -165,6 +169,10 @@ public final class CarSearchServiceImpl implements CarSearchService {
                 /* prioritizeRefundPending */ false);
     }
 
+    // Intentionally not @Transactional: pure clock arithmetic (now + lead hours) projected
+    // onto WALL_ZONE; reads only the singleton ReservationTimingPolicy bean. No DAO /
+    // EntityManager touch. Permitted exception per AGENTS.md "PR checks (transactionality)"
+    // line 240.
     @Override
     public LocalDate publicBrowseMinBookableWallDate() {
         return LocalDate.ofInstant(
@@ -221,19 +229,32 @@ public final class CarSearchServiceImpl implements CarSearchService {
 
     private List<Long> mergeNeighborhoodIdsForSearch(
             final String query, final List<Long> explicitNeighborhoodIds) {
+        final String q = query != null ? query.trim() : "";
+        final boolean hasExplicit = explicitNeighborhoodIds != null && !explicitNeighborhoodIds.isEmpty();
+        if (!hasExplicit && q.isEmpty()) {
+            return List.of();
+        }
+        // Single fetch for both branches: validating each explicit id used to issue one
+        // findNeighborhoodById(...) per id (N+1) even though the fuzzy-match branch already
+        // pulls the full neighborhood catalog. Loading once and filtering in memory keeps the
+        // call count at 1 regardless of how many ids the request carries.
+        final List<Neighborhood> allNeighborhoods = locationService.findAllNeighborhoods();
+        final Set<Long> validIds = new HashSet<>(allNeighborhoods.size());
+        for (final Neighborhood n : allNeighborhoods) {
+            validIds.add(n.getId());
+        }
         final LinkedHashSet<Long> merged = new LinkedHashSet<>();
-        if (explicitNeighborhoodIds != null) {
+        if (hasExplicit) {
             for (final Long id : explicitNeighborhoodIds) {
-                if (id != null && id > 0L && locationService.findNeighborhoodById(id).isPresent()) {
+                if (id != null && id > 0L && validIds.contains(id)) {
                     merged.add(id);
                 }
             }
         }
-        final String q = query != null ? query.trim() : "";
         if (!q.isEmpty()) {
             merged.addAll(NeighborhoodNameMatcher.idsMatchingFuzzyTokens(
                     q,
-                    locationService.findAllNeighborhoods(),
+                    allNeighborhoods,
                     2,
                     3));
         }

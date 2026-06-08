@@ -3,7 +3,6 @@ package ar.edu.itba.paw.services.reservation;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -15,8 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -38,11 +35,10 @@ import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 import ar.edu.itba.paw.services.car.CarService;
-import ar.edu.itba.paw.services.email.EmailService;
+import ar.edu.itba.paw.services.support.RecordingEmailService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.services.user.UserService;
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class ReservationMessageServiceImplTest {
 
     private static final long OWNER_ID = 10L;
@@ -64,9 +60,6 @@ class ReservationMessageServiceImplTest {
     private CarService carService;
 
     @Mock
-    private EmailService emailService;
-
-    @Mock
     private MailPublicUrls mailPublicUrls;
 
     @Mock
@@ -75,19 +68,13 @@ class ReservationMessageServiceImplTest {
     @Mock
     private Environment environment;
 
-    private final List<ReservationChatDigestEmailPayload> sentDigests = new ArrayList<>();
+    private RecordingEmailService emailService;
 
     private ReservationMessageServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        sentDigests.clear();
-        Mockito.doAnswer(invocation -> {
-                    sentDigests.add(invocation.getArgument(0));
-                    return null;
-                })
-                .when(emailService)
-                .sendReservationChatDigestEmail(Mockito.any(ReservationChatDigestEmailPayload.class));
+        emailService = new RecordingEmailService();
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_BYTES_PER_BINARY_MB, Integer.class))
                 .thenReturn(1048576);
         Mockito.when(environment.getProperty(UploadBinaryMegabyte.PROPERTY_MAX_CHAT_ATTACHMENT_MB, Long.class))
@@ -108,7 +95,9 @@ class ReservationMessageServiceImplTest {
 
     private static Reservation reservation(final Reservation.Status status) {
         final Car carRef = Mockito.mock(Car.class);
-        Mockito.when(carRef.getId()).thenReturn(CAR_ID);
+        // lenient(): shared helper — only the dispatch / digest paths read the car id via
+        // Reservation.getCarId(), so strict-stubs would flag this on every short-circuiting test.
+        Mockito.lenient().when(carRef.getId()).thenReturn(CAR_ID);
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return Reservation.builder()
                 .id(RESERVATION_ID)
@@ -125,9 +114,12 @@ class ReservationMessageServiceImplTest {
 
     private void stubParticipantAndSender() {
         final Reservation res = reservation(Reservation.Status.ACCEPTED);
-        Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
+        // lenient(): shared helper — not every test using it reaches the participant lookup
+        // (e.g. attachment validation short-circuits on body/file checks before consulting the
+        // sender). Strict-stubs would flag these as unnecessary on those paths.
+        Mockito.lenient().when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
                 .thenReturn(Optional.of(res));
-        Mockito.when(userService.getUserById(RIDER_ID))
+        Mockito.lenient().when(userService.getUserById(RIDER_ID))
                 .thenReturn(Optional.of(User.identities(RIDER_ID, "r@test.com", "R", "Rider")));
     }
 
@@ -136,7 +128,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         final Reservation res = reservation(Reservation.Status.ACCEPTED);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertTrue(service.isChatAvailable(res));
     }
 
@@ -145,7 +137,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         final Reservation res = reservation(Reservation.Status.PENDING);
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertFalse(service.isChatAvailable(res));
     }
 
@@ -154,7 +146,9 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final Car carRef = Mockito.mock(Car.class);
-        Mockito.when(carRef.getId()).thenReturn(CAR_ID);
+        // lenient(): isChatAvailable does not need the car id; this stub mirrors the helper above
+        // for consistency but the SUT short-circuits on status without touching the car.
+        Mockito.lenient().when(carRef.getId()).thenReturn(CAR_ID);
         final Reservation res = Reservation.builder()
                 .id(RESERVATION_ID)
                 .rider(User.identities(RIDER_ID, "r@test.com", "R", "Rider"))
@@ -167,25 +161,21 @@ class ReservationMessageServiceImplTest {
                 .totalPrice(new BigDecimal("100"))
                 .build();
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertFalse(service.isChatAvailable(res));
     }
 
     @Test
-    void testGetMessagesForParticipantReturnsPageWithTotalAndClampedPage() {
+    void testGetMessagesForParticipantReturnsFirstPageMetadata() {
         // 1.Arrange
         stubParticipantAndSender();
         Mockito.when(reservationMessageDao.countByReservationId(RESERVATION_ID)).thenReturn(120L);
         Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 0, 50))
                 .thenReturn(List.of());
-        Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 100, 50))
-                .thenReturn(List.of());
 
-        // 2.Exercise
+        // 2.Act
         final Page<ReservationMessageDto> firstPage =
                 service.getMessagesForParticipant(RIDER_ID, RESERVATION_ID, 0, 50);
-        final Page<ReservationMessageDto> lastPage =
-                service.getMessagesForParticipant(RIDER_ID, RESERVATION_ID, null, null);
 
         // 3.Assert
         Assertions.assertEquals(120L, firstPage.getTotalItems());
@@ -193,6 +183,21 @@ class ReservationMessageServiceImplTest {
         Assertions.assertEquals(50, firstPage.getPageSize());
         Assertions.assertTrue(firstPage.isHasNext());
         Assertions.assertFalse(firstPage.isHasPrevious());
+    }
+
+    @Test
+    void testGetMessagesForParticipantClampsNullPageToLastPage() {
+        // 1.Arrange
+        stubParticipantAndSender();
+        Mockito.when(reservationMessageDao.countByReservationId(RESERVATION_ID)).thenReturn(120L);
+        Mockito.when(reservationMessageDao.findByReservationIdOrderByCreatedAtAsc(RESERVATION_ID, 100, 50))
+                .thenReturn(List.of());
+
+        // 2.Act
+        final Page<ReservationMessageDto> lastPage =
+                service.getMessagesForParticipant(RIDER_ID, RESERVATION_ID, null, null);
+
+        // 3.Assert
         Assertions.assertEquals(2, lastPage.getCurrentPage());
         Assertions.assertTrue(lastPage.isHasPrevious());
         Assertions.assertFalse(lastPage.isHasNext());
@@ -200,12 +205,10 @@ class ReservationMessageServiceImplTest {
 
     @Test
     void testPostMessageRejectsEmptyBody() {
-        // 1.Arrange
-        final Reservation res = reservation(Reservation.Status.ACCEPTED);
-        Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
-                .thenReturn(Optional.of(res));
+        // 1.Arrange: the SUT validates the body first and short-circuits before any DAO/service
+        // call — no need to stub the participant lookup here.
 
-        // 2.Exercise & 3.Assert
+        // 2.Act & 3.Assert
         final ReservationMessageException ex = Assertions.assertThrows(
                 ReservationMessageException.class,
                 () -> service.postMessage(RIDER_ID, RESERVATION_ID, "   "));
@@ -217,7 +220,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         stubParticipantAndSender();
 
-        // 2.Exercise & 3.Assert
+        // 2.Act & 3.Assert
         final ReservationMessageException ex = Assertions.assertThrows(
                 ReservationMessageException.class,
                 () -> service.postMessageWithAttachment(RIDER_ID, RESERVATION_ID, "  ", "a.pdf", "application/pdf", new byte[0]));
@@ -229,7 +232,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         stubParticipantAndSender();
 
-        // 2.Exercise & 3.Assert
+        // 2.Act & 3.Assert
         final ReservationMessageException ex = Assertions.assertThrows(
                 ReservationMessageException.class,
                 () -> service.postMessageWithAttachment(
@@ -243,7 +246,7 @@ class ReservationMessageServiceImplTest {
         stubParticipantAndSender();
         final byte[] tooLarge = new byte[26 * 1024 * 1024];
 
-        // 2.Exercise & 3.Assert
+        // 2.Act & 3.Assert
         final ReservationMessageException ex = Assertions.assertThrows(
                 ReservationMessageException.class,
                 () -> service.postMessageWithAttachment(
@@ -275,7 +278,7 @@ class ReservationMessageServiceImplTest {
         Mockito.when(reservationMessageDao.create(RESERVATION_ID, RIDER_ID, "See attached", STORED_FILE_ID))
                 .thenReturn(saved);
 
-        // 2.Exercise
+        // 2.Act
         final ReservationMessageDto dto = service.postMessageWithAttachment(
                 RIDER_ID, RESERVATION_ID, "See attached", "receipt.pdf", "application/pdf", pdfBytes);
 
@@ -310,7 +313,7 @@ class ReservationMessageServiceImplTest {
         Mockito.when(reservationMessageDao.create(RESERVATION_ID, RIDER_ID, "", STORED_FILE_ID))
                 .thenReturn(saved);
 
-        // 2.Exercise
+        // 2.Act
         final ReservationMessageDto dto =
                 service.postMessageWithAttachment(RIDER_ID, RESERVATION_ID, "", "shot.png", "image/png", pngBytes);
 
@@ -333,11 +336,11 @@ class ReservationMessageServiceImplTest {
         Mockito.when(saved.getAttachment()).thenReturn(null);
         Mockito.when(reservationMessageDao.create(RESERVATION_ID, RIDER_ID, "Hello")).thenReturn(saved);
 
-        // 2.Exercise
+        // 2.Act
         service.postMessage(RIDER_ID, RESERVATION_ID, "Hello");
 
         // 3.Assert
-        Assertions.assertTrue(sentDigests.isEmpty());
+        Assertions.assertTrue(emailService.reservationChatDigests().isEmpty());
     }
 
     @Test
@@ -345,33 +348,27 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of());
 
-        // 2.Exercise
+        // 2.Act
         service.dispatchChatDigestEmails();
 
         // 3.Assert
-        Assertions.assertTrue(sentDigests.isEmpty());
+        Assertions.assertTrue(emailService.reservationChatDigests().isEmpty());
     }
 
     @Test
     void testDispatchChatDigestEmailsSkipsSeenMessages() {
-        // 1.Arrange
-        final Reservation reservation = reservation(Reservation.Status.ACCEPTED);
-        final User rider = User.identities(RIDER_ID, "r@test.com", "R", "Rider");
+        // 1.Arrange: the SUT short-circuits on isSeen() == true before touching any other field,
+        // so we only stub that read here (no reservation / sender / id needed).
         final ReservationMessage message = Mockito.mock(ReservationMessage.class);
-        Mockito.when(message.getId()).thenReturn(55L);
-        Mockito.when(message.getReservation()).thenReturn(reservation);
-        Mockito.when(message.getReservationId()).thenReturn(RESERVATION_ID);
-        Mockito.when(message.getSenderUserId()).thenReturn(RIDER_ID);
-        Mockito.when(message.getSender()).thenReturn(rider);
         Mockito.when(message.isSeen()).thenReturn(true);
 
         Mockito.when(reservationMessageDao.findPendingEmailNotification()).thenReturn(List.of(message));
 
-        // 2.Exercise
+        // 2.Act
         service.dispatchChatDigestEmails();
 
         // 3.Assert
-        Assertions.assertTrue(sentDigests.isEmpty());
+        Assertions.assertTrue(emailService.reservationChatDigests().isEmpty());
     }
 
     @Test
@@ -381,7 +378,6 @@ class ReservationMessageServiceImplTest {
         final User owner = User.identities(OWNER_ID, "o@test.com", "O", "Owner");
         final User rider = User.identities(RIDER_ID, "r@test.com", "R", "Rider");
         final Car car = Mockito.mock(Car.class);
-        Mockito.when(car.getId()).thenReturn(CAR_ID);
         Mockito.when(car.getBrand()).thenReturn("Toyota");
         Mockito.when(car.getModel()).thenReturn("Corolla");
         Mockito.when(car.getOwner()).thenReturn(owner);
@@ -405,12 +401,12 @@ class ReservationMessageServiceImplTest {
         Mockito.when(mailPublicUrls.absolutePath("/my-reservations/30/chat?role=owner"))
                 .thenReturn("https://example.com/my-reservations/30/chat?role=owner");
 
-        // 2.Exercise
+        // 2.Act
         service.dispatchChatDigestEmails();
 
         // 3.Assert
-        Assertions.assertEquals(1, sentDigests.size());
-        final ReservationChatDigestEmailPayload payload = sentDigests.get(0);
+        Assertions.assertEquals(1, emailService.reservationChatDigests().size());
+        final ReservationChatDigestEmailPayload payload = emailService.reservationChatDigests().get(0);
         Assertions.assertEquals("o@test.com", payload.getRecipientEmail());
         Assertions.assertEquals(1, payload.getTotalMessageCount());
         Assertions.assertEquals(1, payload.getConversations().size());

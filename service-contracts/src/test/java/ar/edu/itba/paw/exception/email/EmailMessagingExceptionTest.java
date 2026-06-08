@@ -7,7 +7,7 @@ class EmailMessagingExceptionTest {
 
     @Test
     void testIsCheckedExceptionAndNotARuntimeException() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final Object ex = new EmailMessagingException("boom");
 
         // 3.Assert
@@ -17,7 +17,7 @@ class EmailMessagingExceptionTest {
 
     @Test
     void testMessageOnlyConstructorPropagatesMessageAndLeavesCauseNull() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final EmailMessagingException ex = new EmailMessagingException("template render failed");
 
         // 3.Assert
@@ -30,7 +30,7 @@ class EmailMessagingExceptionTest {
         // 1.Arrange
         final IllegalStateException cause = new IllegalStateException("smtp dead");
 
-        // 2.Exercise
+        // 2.Act
         final EmailMessagingException ex = new EmailMessagingException("send failed", cause);
 
         // 3.Assert
@@ -43,7 +43,7 @@ class EmailMessagingExceptionTest {
         // 1.Arrange
         final IllegalStateException cause = new IllegalStateException("smtp dead");
 
-        // 2.Exercise
+        // 2.Act
         final EmailMessagingException ex = new EmailMessagingException(cause);
 
         // 3.Assert

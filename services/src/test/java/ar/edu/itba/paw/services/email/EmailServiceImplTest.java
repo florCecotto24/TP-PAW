@@ -2,14 +2,11 @@ package ar.edu.itba.paw.services.email;
 
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Properties;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
@@ -20,10 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.stubbing.Answer;
 import org.springframework.context.MessageSource;
 import org.springframework.core.env.Environment;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -31,12 +26,12 @@ import ar.edu.itba.paw.models.email.reservation.ReservationMailPayload;
 import ar.edu.itba.paw.mail.MailDispatchSupport;
 import ar.edu.itba.paw.mail.MailPublicUrls;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
+import ar.edu.itba.paw.services.support.RecordingJavaMailSender;
 
 @ExtendWith(MockitoExtension.class)
 public class EmailServiceImplTest {
 
-    private record SentMail(String to, String subject) {
-    }
+    private record SentMail(String to, String subject) { }
 
     private static final String TEMPLATE_RIDER = "html/reservation-confirmation-rider";
     private static final String TEMPLATE_OWNER = "html/reservation-confirmation-owner";
@@ -48,9 +43,6 @@ public class EmailServiceImplTest {
 
     @Mock
     private MailPublicUrls mailPublicUrls;
-
-    @Mock
-    private JavaMailSender mailSender;
 
     @Mock
     private MessageSource emailMessageSource;
@@ -67,15 +59,16 @@ public class EmailServiceImplTest {
     @Mock
     private OwnerListingEmailService ownerListingEmailService;
 
-    // Use a real MailDispatchSupport wired with mock JavaMail/Environment/MessageSource to exercise
-    // the full pipeline (template render -> sendEmail) while keeping the test focused on the
-    // EmailServiceImpl orchestration logic.
+    // State-based fake mail sender per AGENTS.md rule TEST-8: replaces the previous Mockito mock
+    // + doAnswer(recordSentInto(...)) captor over the JavaMailSender. The fake also produces real
+    // MimeMessage instances so the production pipeline runs end-to-end against test inputs.
+    private RecordingJavaMailSender mailSender;
     private MailDispatchSupport mailDispatch;
-
     private EmailServiceImpl emailService;
 
     @BeforeEach
     public void setUp() {
+        mailSender = new RecordingJavaMailSender();
         mailDispatch = new MailDispatchSupport(environment, mailSender, emailMessageSource, mailPublicUrls);
         emailService = new EmailServiceImpl(
                 mailDispatch,
@@ -87,29 +80,20 @@ public class EmailServiceImplTest {
                 ownerListingEmailService);
     }
 
-    private static Answer<Void> recordSentInto(final List<SentMail> out) {
-        return invocation -> {
-            final MimeMessage message = invocation.getArgument(0);
-            try {
-                out.add(new SentMail(
-                        ((InternetAddress) message.getRecipients(Message.RecipientType.TO)[0]).getAddress(),
-                        message.getSubject()));
-            } catch (final MessagingException e) {
-                throw new AssertionError(e);
-            }
-            return null;
-        };
+    private static SentMail toSentMail(final MimeMessage message) {
+        try {
+            return new SentMail(
+                    ((InternetAddress) message.getRecipients(Message.RecipientType.TO)[0]).getAddress(),
+                    message.getSubject());
+        } catch (final MessagingException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
     public void testSendReservationConfirmationEmail() {
-        // 1. Arrange
         Mockito.when(mailPublicUrls.absolutePath(Mockito.anyString()))
                 .thenAnswer(invocation -> "http://localhost" + invocation.getArgument(0));
-        final List<SentMail> sent = new ArrayList<>();
-        Mockito.doAnswer(recordSentInto(sent)).when(mailSender).send(Mockito.any(MimeMessage.class));
-        Mockito.when(mailSender.createMimeMessage())
-                .thenAnswer(invocation -> new MimeMessage(Session.getDefaultInstance(new Properties())));
 
         final Locale locale = Locale.ENGLISH;
         final String riderEmail = "rider@test.com";
@@ -157,14 +141,11 @@ public class EmailServiceImplTest {
         Mockito.when(htmlTemplateEngine.process(Mockito.eq(TEMPLATE_OWNER), Mockito.any(Context.class)))
                 .thenReturn("<html>owner</html>");
 
-        // 2. Execute
         emailService.sendReservationConfirmationEmail(payload);
 
-        // 3. Assert
+        final List<SentMail> sent = mailSender.sent().stream().map(EmailServiceImplTest::toSentMail).toList();
         Assertions.assertIterableEquals(
                 List.of(new SentMail(riderEmail, subjectRider), new SentMail(ownerEmail, subjectOwner)),
                 sent);
     }
-
-
 }

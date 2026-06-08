@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -94,12 +93,6 @@ public class CarAvailabilityCalendarServiceImplTest {
         Mockito.when(carAvailabilityService.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
-        for (LocalDate d = aStart; !d.isAfter(aEnd); d = d.plusDays(1)) {
-            Mockito.when(carAvailabilityService.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
-        }
-        for (LocalDate d = bStart; !d.isAfter(bEnd); d = d.plusDays(1)) {
-            Mockito.when(carAvailabilityService.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
-        }
         Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
         Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
 
@@ -125,12 +118,6 @@ public class CarAvailabilityCalendarServiceImplTest {
         Mockito.when(carAvailabilityService.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
-        for (LocalDate d = aStart; !d.isAfter(aEnd); d = d.plusDays(1)) {
-            Mockito.when(carAvailabilityService.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
-        }
-        for (LocalDate d = bStart; !d.isAfter(bEnd); d = d.plusDays(1)) {
-            Mockito.when(carAvailabilityService.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
-        }
         Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
         Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
 
@@ -159,12 +146,6 @@ public class CarAvailabilityCalendarServiceImplTest {
         Mockito.when(carAvailabilityService.findByCarId(CAR_ID)).thenReturn(List.of(a, b));
         Mockito.when(reservationService.findBlockingReservationsByCarId(CAR_ID)).thenReturn(List.of());
         Mockito.when(reservationService.getConfiguredPickupLeadHours()).thenReturn(24);
-        for (LocalDate d = aStart; !d.isAfter(aEnd); d = d.plusDays(1)) {
-            Mockito.when(carAvailabilityService.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(a));
-        }
-        for (LocalDate d = bStart; !d.isAfter(bEnd); d = d.plusDays(1)) {
-            Mockito.when(carAvailabilityService.findEffectiveForDayByCar(CAR_ID, d)).thenReturn(Optional.of(b));
-        }
         Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(a)).thenReturn("Av. Centro");
         Mockito.when(carAvailabilityAddressFormatter.formatPublicPickupLocation(b)).thenReturn("Av. Centro");
 

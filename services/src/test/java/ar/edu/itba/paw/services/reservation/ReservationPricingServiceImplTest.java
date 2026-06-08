@@ -79,6 +79,10 @@ class ReservationPricingServiceImplTest {
     @Test
     void testNormalizeClientReservationTotalRejectsBlank() {
         Assertions.assertTrue(pricingService.normalizeClientReservationTotal("   ").isEmpty());
+    }
+
+    @Test
+    void testNormalizeClientReservationTotalRejectsNull() {
         Assertions.assertTrue(pricingService.normalizeClientReservationTotal(null).isEmpty());
     }
 }

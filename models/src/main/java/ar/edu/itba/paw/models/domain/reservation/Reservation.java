@@ -139,7 +139,7 @@ public class Reservation {
     private boolean riderReviewInviteEmailSent;
 
     @Column(name = "pending_paymentproof_email_sent", nullable = false)
-    private boolean pendingPaymentproofEmailSent;
+    private boolean pendingPaymentProofEmailSent;
 
     @Column(name = "pending_refund_email_sent", nullable = false)
     private boolean pendingRefundEmailSent;
@@ -168,7 +168,7 @@ public class Reservation {
         this.returnReminderEmailSent = b.returnReminderEmailSent;
         this.returnCheckoutEmailSent = b.returnCheckoutEmailSent;
         this.riderReviewInviteEmailSent = b.riderReviewInviteEmailSent;
-        this.pendingPaymentproofEmailSent = b.pendingPaymentproofEmailSent;
+        this.pendingPaymentProofEmailSent = b.pendingPaymentProofEmailSent;
         this.pendingRefundEmailSent = b.pendingRefundEmailSent;
     }
 
@@ -196,7 +196,7 @@ public class Reservation {
         private boolean returnReminderEmailSent;
         private boolean returnCheckoutEmailSent;
         private boolean riderReviewInviteEmailSent;
-        private boolean pendingPaymentproofEmailSent;
+        private boolean pendingPaymentProofEmailSent;
         private boolean pendingRefundEmailSent;
 
         public Builder id(final long id) {
@@ -295,8 +295,8 @@ public class Reservation {
             return this;
         }
 
-        public Builder pendingPaymentproofEmailSent(final boolean pendingPaymentproofEmailSent) {
-            this.pendingPaymentproofEmailSent = pendingPaymentproofEmailSent;
+        public Builder pendingPaymentProofEmailSent(final boolean pendingPaymentProofEmailSent) {
+            this.pendingPaymentProofEmailSent = pendingPaymentProofEmailSent;
             return this;
         }
 
@@ -477,8 +477,8 @@ public class Reservation {
         this.riderReviewInviteEmailSent = riderReviewInviteEmailSent;
     }
 
-    public void setPendingPaymentproofEmailSent(final boolean pendingPaymentproofEmailSent) {
-        this.pendingPaymentproofEmailSent = pendingPaymentproofEmailSent;
+    public void setPendingPaymentproofEmailSent(final boolean pendingPaymentProofEmailSent) {
+        this.pendingPaymentProofEmailSent = pendingPaymentProofEmailSent;
     }
 
     public void setPendingRefundEmailSent(final boolean pendingRefundEmailSent) {
@@ -498,7 +498,7 @@ public class Reservation {
     }
 
     public boolean isPendingPaymentproofEmailSent() {
-        return pendingPaymentproofEmailSent;
+        return pendingPaymentProofEmailSent;
     }
 
     public boolean isPendingRefundEmailSent() {

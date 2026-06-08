@@ -38,18 +38,26 @@ import ar.edu.itba.paw.mail.MailDispatchSupport;
 import ar.edu.itba.paw.mail.MailPublicUrls;
 import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 
+
 /**
- * Reservation-centric transactional email service (rider/owner reservation lifecycle, return
- * reminders, chat digest, etc.). Other email domains have been moved to dedicated services that
- * this class delegates to to keep the public {@link EmailService} contract unchanged:
+ * Reservation-centric email service (rider/owner reservation lifecycle, return reminders, chat
+ * digest, etc.). Other email domains live in dedicated services that this class delegates to so
+ * the public {@link EmailService} contract stays unchanged:
  *
- * <ul>
- *   <li>User identity / auth emails → {@link UserAccountEmailService}</li>
- *   <li>Owner-facing listing-lifecycle emails → {@link OwnerListingEmailService}</li>
- * </ul>
+ * 
+ *  - User identity / auth emails → {@link UserAccountEmailService}
+ *  - Owner-facing listing-lifecycle emails → {@link OwnerListingEmailService}
  *
- * <p>JavaMail/MimeMessage assembly and other low-level concerns are centralized in
- * {@link MailDispatchSupport}.</p>
+ * JavaMail/MimeMessage assembly and other low-level concerns are centralized in
+ * {@link MailDispatchSupport}.
+ *
+ * Transactionality: every public method here is either an {@code @Async} mail sender
+ * (Thymeleaf render + {@link MailDispatchSupport#runMail}) or a pure synchronous pass-through
+ * to one of the delegated mail services. Neither branch touches JPA on this thread — the
+ * {@code @Async} dispatch even hops threads, so a caller-side tx wouldn't propagate anyway.
+ * {@code @Transactional} is intentionally omitted throughout the class — AGENTS.md line 229
+ * exempts "mail-only {@code @Async} senders" from the transactionality rule, and line 240
+ * permits public service methods without {@code @Transactional} under documented justification.
  */
 @Service
 public final class EmailServiceImpl implements EmailService {
@@ -506,7 +514,8 @@ public final class EmailServiceImpl implements EmailService {
         });
     }
 
-    // -------- User identity / auth emails (delegate to UserAccountEmailService) --------
+    // -------- Mail-only delegates to UserAccountEmailService / OwnerListingEmailService --------
+    // (See class-level Javadoc for the transactionality rationale.)
 
     @Override
     public void sendEmailVerificationCode(final EmailVerificationCodeEmailPayload payload) {
@@ -532,8 +541,6 @@ public final class EmailServiceImpl implements EmailService {
     public void sendPasswordResetCode(final PasswordResetCodeEmailPayload payload) {
         userAccountEmailService.sendPasswordResetCode(payload);
     }
-
-    // -------- Owner-facing listing emails (delegate to OwnerListingEmailService) --------
 
     @Override
     public void sendListingDeletionEmail(final List<ReservationMailPayload> reservationsToCancel) {

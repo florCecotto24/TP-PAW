@@ -20,7 +20,7 @@ import ar.edu.itba.paw.models.domain.user.User;
 
 /**
  * Sanity coverage for {@link ReservationQueryServiceImpl}: focuses on small pure-logic
- * methods (id lookups, reminder-window passthrough) that don't exercise the larger query
+ * methods (id lookups, reminder-window passthrough) that don't Act the larger query
  * paths covered by the DAO integration tests.
  *
  * <p>Architectural rule: this service no longer touches {@code ReservationDao}; tests mock

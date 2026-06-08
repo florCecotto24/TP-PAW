@@ -21,7 +21,7 @@ class WallDateTimeParsingTest {
                 .toInstant()
                 .atOffset(ZoneOffset.UTC);
 
-        // 2.Exercise
+        // 2.Act
         final OffsetDateTime actual = WallDateTimeParsing.parseWallLocalDateTimeToUtc(input);
 
         // 3.Assert
@@ -34,7 +34,7 @@ class WallDateTimeParsingTest {
         // 1.Arrange
         final String input = "  2026-05-03T10:00  ";
 
-        // 2.Exercise
+        // 2.Act
         final OffsetDateTime actual = WallDateTimeParsing.parseWallLocalDateTimeToUtc(input);
 
         // 3.Assert
@@ -48,7 +48,7 @@ class WallDateTimeParsingTest {
         // 1.Arrange
         final String input = "not-a-date";
 
-        // 2.Exercise / 3.Assert
+        // 2.Act / 3.Assert
         Assertions.assertThrows(DateTimeParseException.class,
                 () -> WallDateTimeParsing.parseWallLocalDateTimeToUtc(input));
     }
@@ -58,7 +58,7 @@ class WallDateTimeParsingTest {
         // 1.Arrange
         final String blank = "   ";
 
-        // 2.Exercise
+        // 2.Act
         final Instant fromBlank = WallDateTimeParsing.parseSearchFilterRangeStartInstant(blank);
         final Instant fromNull = WallDateTimeParsing.parseSearchFilterRangeStartInstant(null);
 
@@ -72,7 +72,7 @@ class WallDateTimeParsingTest {
         // 1.Arrange
         final String garbage = "2026/05/03";
 
-        // 2.Exercise
+        // 2.Act
         final Instant actual = WallDateTimeParsing.parseSearchFilterRangeStartInstant(garbage);
 
         // 3.Assert
@@ -87,7 +87,7 @@ class WallDateTimeParsingTest {
                 .atStartOfDay(AppTimezone.WALL_ZONE)
                 .toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final Instant actual = WallDateTimeParsing.parseSearchFilterRangeStartInstant(input);
 
         // 3.Assert
@@ -102,7 +102,7 @@ class WallDateTimeParsingTest {
                 .atZone(AppTimezone.WALL_ZONE)
                 .toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final Instant actual = WallDateTimeParsing.parseSearchFilterRangeStartInstant(input);
 
         // 3.Assert
@@ -117,7 +117,7 @@ class WallDateTimeParsingTest {
                 .atStartOfDay(AppTimezone.WALL_ZONE)
                 .toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final Instant actual = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(input);
 
         // 3.Assert
@@ -132,7 +132,7 @@ class WallDateTimeParsingTest {
                 .atZone(AppTimezone.WALL_ZONE)
                 .toInstant();
 
-        // 2.Exercise
+        // 2.Act
         final Instant actual = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(input);
 
         // 3.Assert
@@ -144,7 +144,7 @@ class WallDateTimeParsingTest {
         // 1.Arrange
         final String garbage = "yesterday";
 
-        // 2.Exercise
+        // 2.Act
         final Instant fromGarbage = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(garbage);
         final Instant fromNull = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant(null);
         final Instant fromBlank = WallDateTimeParsing.parseSearchFilterRangeEndExclusiveInstant("");

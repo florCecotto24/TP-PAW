@@ -3,7 +3,9 @@ package ar.edu.itba.paw.services.reservation;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -60,6 +62,13 @@ public interface ReservationQueryService {
 
     /** Reservations in {@code pending}, {@code accepted}, or {@code started} for one car. */
     List<Reservation> findBlockingReservationsByCarId(long carId);
+
+    /**
+     * Batch variant of {@link #findBlockingReservationsByCarId(long)} for many cars at once.
+     * Returns the same {@code pending}/{@code accepted}/{@code started} status filter, indexed
+     * by car id; cars without any blocking reservation are absent from the returned map.
+     */
+    Map<Long, List<Reservation>> findBlockingReservationsByCarIds(Collection<Long> carIds);
 
     /** Same as {@link #findBlockingReservationsByCarId(long)} but excludes one reservation id. */
     List<Reservation> findBlockingReservationsByCarIdExcluding(long carId, long excludingReservationId);

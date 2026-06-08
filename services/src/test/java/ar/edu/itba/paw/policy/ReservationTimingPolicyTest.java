@@ -6,12 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.core.env.Environment;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class ReservationTimingPolicyTest {
 
     @Mock
@@ -21,7 +18,7 @@ class ReservationTimingPolicyTest {
     void testConstructorAppliesDefaultsWhenAllPropertiesMissing() {
         // 1.Arrange
 
-        // 2.Exercise
+        // 2.Act
         final ReservationTimingPolicy policy = new ReservationTimingPolicyImpl(environment);
 
         // 3.Assert
@@ -44,7 +41,7 @@ class ReservationTimingPolicyTest {
                 .thenReturn(4);
         Mockito.when(environment.getProperty("app.reservation.max-billable-days", Integer.class)).thenReturn(60);
 
-        // 2.Exercise
+        // 2.Act
         final ReservationTimingPolicy policy = new ReservationTimingPolicyImpl(environment);
 
         // 3.Assert
@@ -67,7 +64,7 @@ class ReservationTimingPolicyTest {
                 .thenReturn(-1);
         Mockito.when(environment.getProperty("app.reservation.max-billable-days", Integer.class)).thenReturn(0);
 
-        // 2.Exercise
+        // 2.Act
         final ReservationTimingPolicy policy = new ReservationTimingPolicyImpl(environment);
 
         // 3.Assert

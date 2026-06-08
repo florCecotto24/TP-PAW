@@ -9,7 +9,7 @@ class UserValidationPolicyTest {
 
     @Test
     void testFromValidatedConfigurationBuildsPolicyWithGetters() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final UserValidationPolicy policy = UserValidationPolicy.fromValidatedConfiguration(
                 8, 64, 200, 50, 30, 500, "^\\+?\\d{6,30}$");
 
@@ -28,21 +28,21 @@ class UserValidationPolicyTest {
 
     @Test
     void testFromValidatedConfigurationRejectsZeroPasswordMinLength() {
-        // 1.Arrange / 2.Exercise / 3.Assert
+        // 1.Arrange / 2.Act / 3.Assert
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> UserValidationPolicy.fromValidatedConfiguration(0, 64, 200, 50, 30, 500, ".*"));
     }
 
     @Test
     void testFromValidatedConfigurationRejectsPasswordMaxLessThanMin() {
-        // 1.Arrange / 2.Exercise / 3.Assert
+        // 1.Arrange / 2.Act / 3.Assert
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> UserValidationPolicy.fromValidatedConfiguration(10, 5, 200, 50, 30, 500, ".*"));
     }
 
     @Test
     void testFromValidatedConfigurationAllowsPasswordMaxEqualToMin() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final UserValidationPolicy policy = UserValidationPolicy.fromValidatedConfiguration(
                 10, 10, 200, 50, 30, 500, ".*");
 
@@ -77,7 +77,7 @@ class UserValidationPolicyTest {
 
     @Test
     void testFromValidatedConfigurationRejectsInvalidRegex() {
-        // 1.Arrange / 2.Exercise / 3.Assert: unmatched bracket
+        // 1.Arrange / 2.Act / 3.Assert: unmatched bracket
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> UserValidationPolicy.fromValidatedConfiguration(8, 64, 200, 50, 30, 500, "[abc"));
     }

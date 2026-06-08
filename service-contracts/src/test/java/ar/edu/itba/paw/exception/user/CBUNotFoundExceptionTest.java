@@ -9,7 +9,7 @@ class CBUNotFoundExceptionTest {
 
     @Test
     void testGetMessageContainsTheUserIdInThePersistedFormat() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final CBUNotFoundException ex = new CBUNotFoundException(42L);
 
         // 3.Assert
@@ -18,7 +18,7 @@ class CBUNotFoundExceptionTest {
 
     @Test
     void testIsRuntimeExceptionAndNotPartOfRydenFamily() {
-        // 1.Arrange / 2.Exercise
+        // 1.Arrange / 2.Act
         final Object ex = new CBUNotFoundException(1L);
 
         // 3.Assert
