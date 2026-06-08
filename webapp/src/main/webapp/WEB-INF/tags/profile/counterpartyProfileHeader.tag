@@ -70,16 +70,14 @@
                         </c:otherwise>
                     </c:choose>
                 </div>
-                <p class="counterparty-about mt-3 mb-2 ryden-multiline-plaintext">
-                    <c:choose>
-                        <c:when test="${not empty about}">
-                            <c:out value="${about}"/>
-                        </c:when>
-                        <c:otherwise>
-                            <spring:message code="counterpartyProfile.about.empty"/>
-                        </c:otherwise>
-                    </c:choose>
-                </p>
+                <c:choose>
+                    <c:when test="${not empty about}">
+                        <p class="counterparty-about mt-3 mb-2 ryden-multiline-plaintext"><c:out value="${about}"/></p>
+                    </c:when>
+                    <c:otherwise>
+                        <p class="counterparty-about mt-3 mb-2"><spring:message code="counterpartyProfile.about.empty"/></p>
+                    </c:otherwise>
+                </c:choose>
                 <c:if test="${not empty memberSinceDisplay}">
                     <p class="counterparty-member-since mb-0">
                         <span class="text-secondary"><spring:message code="profile.memberSince"/></span>
