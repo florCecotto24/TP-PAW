@@ -447,6 +447,8 @@
 
 <script>window.rydenPublishAvailMinFromUrl = '<c:url value="/my-cars/car/${car.id}/availability-min-from"/>';</script>
 
+<script src="${pageContext.request.contextPath}/js/managePeriods.js"></script>
+
 <%-- Auto-open inline form on error re-renders --%>
 <c:if test="${not empty inlineFormOpen}">
 <script>
@@ -458,7 +460,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </c:if>
 
-<script src="${pageContext.request.contextPath}/js/managePeriods.js"></script>
 <%@include file="../includes/footerScripts.jspf"%>
 </body>
 </html>
