@@ -163,8 +163,8 @@
                                 <spring:message code="manageCarPeriods.form.titleCreate"/>
                             </h6>
 
-                            <spring:message code="validation.neighborhood.invalid" var="createNbInvalidMsg" htmlEscape="true"/>
-                            <spring:message code="validation.neighborhood.notNull" var="createNbRequiredMsg" htmlEscape="true"/>
+                            <spring:message code="validation.neighborhood.invalid" var="createNbInvalidMsg"/>
+                            <spring:message code="validation.neighborhood.notNull" var="createNbRequiredMsg"/>
                             <spring:message code="publishCar.missingCbu.invalid" var="createMissingCbuInvalidMsg" htmlEscape="false" arguments="${cbuRequiredDigits}"/>
                             <spring:message code="publishCar.missingCbu.saveFailed" var="createMissingCbuSaveFailedMsg" htmlEscape="false"/>
                             <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonClientErrMsg" htmlEscape="true"/>
@@ -275,10 +275,10 @@
                                 <%-- Availability rows --%>
                                 <spring:message code="publishCar.form.period" var="periodLabel"/>
                                 <spring:message code="publishCar.form.dateRange.placeholder" var="dateRangePlaceholder"/>
-                                <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonMsg" htmlEscape="true"/>
-                                <spring:message code="carAvailability.required" var="availRequiredClientMsg" htmlEscape="true"/>
-                                <spring:message code="manageCarPeriods.editPicker.reservedShrink" var="reservedShrinkMsg" htmlEscape="true"/>
-                                <spring:message code="manageCarPeriods.editPicker.reservedDayTitle" var="reservedDayTitleMsg" htmlEscape="true"/>
+                                <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonMsg"/>
+                                <spring:message code="carAvailability.required" var="availRequiredClientMsg"/>
+                                <spring:message code="manageCarPeriods.editPicker.reservedShrink" var="reservedShrinkMsg"/>
+                                <spring:message code="manageCarPeriods.editPicker.reservedDayTitle" var="reservedDayTitleMsg"/>
                                 <div class="mb-4" id="publishAvailabilitySection"
                                      data-publish-avail-required="<c:out value='${availRequiredClientMsg}'/>"
                                      data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>"

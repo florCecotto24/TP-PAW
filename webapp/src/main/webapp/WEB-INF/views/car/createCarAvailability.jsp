@@ -43,8 +43,8 @@
                 <div class="card-body p-4 p-md-5">
                     <h4 class="fw-semibold mb-4"><c:out value="${createListingTitle}"/></h4>
 
-                    <spring:message code="validation.neighborhood.invalid" var="createNbInvalidMsg" htmlEscape="true"/>
-                    <spring:message code="validation.neighborhood.notNull" var="createNbRequiredMsg" htmlEscape="true"/>
+                    <spring:message code="validation.neighborhood.invalid" var="createNbInvalidMsg"/>
+                    <spring:message code="validation.neighborhood.notNull" var="createNbRequiredMsg"/>
                     <spring:message code="publishCar.missingCbu.invalid" var="createMissingCbuInvalidMsg" htmlEscape="false" arguments="${cbuRequiredDigits}"/>
                     <spring:message code="publishCar.missingCbu.saveFailed" var="createMissingCbuSaveFailedMsg" htmlEscape="false"/>
                     <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonClientErrMsg" htmlEscape="true"/>
@@ -155,8 +155,8 @@
                         <spring:message code="availability.dateRange.aria" var="availabilityDateRangeAria" htmlEscape="true"/>
                         <spring:message code="createCarAvailability.availabilityRow.dayPrice" var="dayPriceLabel" htmlEscape="true"/>
                         <spring:message code="createCarAvailability.availabilityRow.dayPrice.placeholder" var="dayPricePh" htmlEscape="true"/>
-                        <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonMsg" htmlEscape="true"/>
-                        <spring:message code="carAvailability.required" var="availRequiredClientMsg" htmlEscape="true"/>
+                        <spring:message code="carAvailability.beyondPublishHorizon" arguments="${maxAvailabilityForwardWallDays}" var="beyondHorizonMsg"/>
+                        <spring:message code="carAvailability.required" var="availRequiredClientMsg"/>
                         <div class="mb-4" id="publishAvailabilitySection"
                              data-publish-avail-required="<c:out value='${availRequiredClientMsg}'/>"
                              data-publish-min-avail-ymd="<c:out value='${publishMinAvailabilityFrom}'/>"

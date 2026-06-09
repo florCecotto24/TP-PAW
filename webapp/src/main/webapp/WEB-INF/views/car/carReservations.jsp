@@ -33,7 +33,7 @@
     </c:url>
 
     <c:if test="${not empty reservations or not empty statusFilter}">
-        <spring:message code="validation.dropdown.invalid" var="carResDropdownInvalid" htmlEscape="true"/>
+        <spring:message code="validation.dropdown.invalid" var="carResDropdownInvalid"/>
         <form id="carResFilterForm" class="row g-2 align-items-end mb-3" method="get"
               action="${pageContext.request.contextPath}/my-cars/car/${car.id}/reservations"
               data-ryden-dropdown-invalid="<c:out value='${carResDropdownInvalid}'/>">

@@ -91,9 +91,9 @@
                     <h2 class="h5 fw-semibold mb-3"><spring:message code="myReservationEdit.newPeriod.title"/></h2>
 
                     <c:url var="editPostUrl" value="/my-reservations/${reservation.id}/edit"/>
-                    <spring:message code="validation.reservationForm.maxBillableDays" arguments="${maxReservationBillableDays}" var="maxBillableExceededMsg" htmlEscape="true"/>
+                    <spring:message code="validation.reservationForm.maxBillableDays" arguments="${maxReservationBillableDays}" var="maxBillableExceededMsg"/>
                     <c:if test="${not empty minimumRentalDays and minimumRentalDays > 1}">
-                        <spring:message code="validation.reservationForm.minRentalDays" arguments="${minimumRentalDays}" var="minRentalDaysMsg" htmlEscape="true"/>
+                        <spring:message code="validation.reservationForm.minRentalDays" arguments="${minimumRentalDays}" var="minRentalDaysMsg"/>
                     </c:if>
 
                     <%-- Reuses /js/detailReservationForm.js by mirroring its element IDs:

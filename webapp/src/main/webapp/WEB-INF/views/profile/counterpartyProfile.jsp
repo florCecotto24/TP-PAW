@@ -68,7 +68,7 @@
                                     </div>
                                     <c:if test="${counterpartyActiveCarsLoadMore.hasNext}">
                                         <div class="text-center mt-4">
-                                            <spring:message code="counterpartyProfile.activeCars.viewMore" var="counterpartyViewMoreListingsLabel" htmlEscape="true"/>
+                                            <spring:message code="counterpartyProfile.activeCars.viewMore" var="counterpartyViewMoreListingsLabel"/>
                                             <button type="button"
                                                     class="btn btn-outline-primary"
                                                     id="counterpartyListingsLoadMoreBtn"
