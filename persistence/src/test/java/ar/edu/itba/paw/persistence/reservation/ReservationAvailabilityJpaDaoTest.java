@@ -5,10 +5,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
-
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,9 +22,6 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Autowired
     private ReservationAvailabilityDao dao;
-
-    @PersistenceContext
-    private EntityManager em;
 
     private long carId;
     private long riderId;
@@ -62,38 +55,42 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testSumReservationTotalReconstructsPerDayFromBridgedAvailabilities() {
-        // Reservation covers 6 wall-calendar days: Jun 8..10 (3 days @100) + Jun 11..13 (3 days @200) = 900
+        // 1. Arrange — reservation covers 6 wall-calendar days: Jun 8..10 (3 days @100) + Jun 11..13 (3 days @200) = 900.
         final long reservationId = insertReservation("2026-06-08T10:00", "2026-06-13T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, availabilityId200));
+        insertCoverages(reservationId, availabilityId100, availabilityId200);
 
+        // 2. Act
         final BigDecimal total = dao.sumReservationTotal(reservationId).orElseThrow();
 
+        // 3. Assert
         Assertions.assertEquals(0, new BigDecimal("900.00").compareTo(total));
     }
 
     @Test
     void testSumReservationTotalPicksMostRecentlyCreatedAvailabilityWhenRangesOverlap() {
-        // Newer availability fully contains the older one for days 5..8 with day_price 300.
+        // 1. Arrange — newer availability fully contains the older one for days 5..8 with day_price 300.
+        // Reservation Jun 5..8 (4 days). Both candidates cover all days; the newer wins -> 4 * 300 = 1200.
         final OffsetDateTime newerCreated = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(5);
         final long overrideAvailabilityId = insertAvailability(
                 carId, LocalDate.of(2026, 6, 5), LocalDate.of(2026, 6, 8), new BigDecimal("300.00"), newerCreated);
-
-        // Reservation Jun 5..8 (4 days). Both candidates cover all days; the newer wins -> 4 * 300 = 1200.
         final long reservationId = insertReservation("2026-06-05T10:00", "2026-06-08T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, overrideAvailabilityId));
+        insertCoverages(reservationId, availabilityId100, overrideAvailabilityId);
 
+        // 2. Act
         final BigDecimal total = dao.sumReservationTotal(reservationId).orElseThrow();
 
+        // 3. Assert
         Assertions.assertEquals(0, new BigDecimal("1200.00").compareTo(total));
     }
 
     @Test
     void testSumReservationTotalIsEmptyWhenAnyDayLacksCoverage() {
-        // Reservation Jun 8..15 but we only bridge availabilityId100 which covers Jun 1..10.
+        // 1. Arrange — reservation Jun 8..15 but we only bridge availabilityId100 which covers Jun 1..10.
         // Jun 11..15 lack coverage -> empty.
         final long reservationId = insertReservation("2026-06-08T10:00", "2026-06-15T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100));
+        insertCoverages(reservationId, availabilityId100);
 
+        // 2. Act / 3. Assert
         Assertions.assertTrue(dao.sumReservationTotal(reservationId).isEmpty());
     }
 
@@ -101,7 +98,7 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
     void testFindEffectivePickupAvailabilityForReservationPicksBridgedCandidateForFirstDay() {
         // 1. Arrange — reservation falls inside availabilityId100 (Jun 1..10 @ 100). Bridge both.
         final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, availabilityId200));
+        insertCoverages(reservationId, availabilityId100, availabilityId200);
 
         // 2. Act
         final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
@@ -120,7 +117,7 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 carId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
                 new BigDecimal("350.00"), newerCreated);
         final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, newerId));
+        insertCoverages(reservationId, availabilityId100, newerId);
 
         // 2. Act
         final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
@@ -141,7 +138,7 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 carId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
                 new BigDecimal("9999.99"), newerCreated);
         final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100));
+        insertCoverages(reservationId, availabilityId100);
 
         // 2. Act
         final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
@@ -160,7 +157,7 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 carId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
                 new BigDecimal("100.00"), newerCreated, "withdrawn");
         final long reservationId = insertReservation("2026-06-03T10:00", "2026-06-05T18:00");
-        dao.insertCoveringAvailabilities(reservationId, List.of(availabilityId100, withdrawnId));
+        insertCoverages(reservationId, availabilityId100, withdrawnId);
 
         // 2. Act
         final var winner = dao.findEffectivePickupAvailabilityForReservation(reservationId);
@@ -195,6 +192,14 @@ class ReservationAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM reservations WHERE rider_id = ? AND start_date = ?",
                 Long.class, riderId, OffsetDateTime.parse(startUtc + ":00Z"));
+    }
+
+    private void insertCoverages(final long reservationId, final long... availabilityIds) {
+        for (final long availabilityId : availabilityIds) {
+            jdbcTemplate.update(
+                    "INSERT INTO reservations_availabilities (reservation_id, availability_id) VALUES (?, ?)",
+                    reservationId, availabilityId);
+        }
     }
 
     private long insertAvailability(

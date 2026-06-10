@@ -16,11 +16,10 @@ public class WallDateTimeDisplayFormatTest {
     public void testFormatSpanishUsesDayMonthYearAndNoSecondsLiteral() {
         // 1. Arrange
         final LocalDateTime wall = LocalDateTime.of(2026, 4, 17, 9, 5);
-        final String s = WallDateTimeDisplayFormat.formatWallLocalNoSeconds(wall, Locale.forLanguageTag("es-AR"));
 
         // 2. Act
         final String result = WallDateTimeDisplayFormat.formatWallLocalNoSeconds(wall, Locale.forLanguageTag("es-AR"));
-        final int seconds = s.trim().split(":").length;
+        final int seconds = result.trim().split(":").length;
 
         // 3. Assert
         Assertions.assertEquals("17/04/2026 09:05", result);
@@ -33,21 +32,20 @@ public class WallDateTimeDisplayFormatTest {
         final OffsetDateTime utc = OffsetDateTime.of(2026, 4, 17, 12, 0, 0, 0, ZoneOffset.UTC);
 
         // 2. Act
-        final String s = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(utc, Locale.forLanguageTag("es"));
+        final String result = WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(utc, Locale.forLanguageTag("es"));
 
         // 3. Assert
-        Assertions.assertEquals("17/04/2026 09:00", s);
+        Assertions.assertEquals("17/04/2026 09:00", result);
     }
 
     @Test
     public void testFormatClientInputParsesIsoLocalWithoutSeconds() {
         // 1. Arrange
         final String raw = "2026-05-01T10:30";
-        final String s = WallDateTimeDisplayFormat.formatClientWallDateTimeInputOrRaw(raw, Locale.forLanguageTag("es"));
 
         // 2. Act
         final String result = WallDateTimeDisplayFormat.formatClientWallDateTimeInputOrRaw(raw, Locale.forLanguageTag("es"));
-        final int seconds = s.trim().split(":").length;
+        final int seconds = result.trim().split(":").length;
 
         // 3. Assert
         Assertions.assertEquals("01/05/2026 10:30", result);

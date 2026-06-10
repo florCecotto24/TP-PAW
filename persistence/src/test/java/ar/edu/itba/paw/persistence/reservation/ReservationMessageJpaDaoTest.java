@@ -28,6 +28,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
     private EntityManager em;
 
     private long reservationId;
+    private long ownerId;
     private long riderId;
 
     @BeforeEach
@@ -37,7 +38,8 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
                 "owner-chat@test.com",
                 "Owner",
                 "Test");
-        final long ownerId = jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ?", Long.class, "owner-chat@test.com");
+        ownerId = jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE email = ?", Long.class, "owner-chat@test.com");
 
         jdbcTemplate.update(
                 "INSERT INTO users (email, forename, surname, member_since) VALUES (?, ?, ?, CURRENT_DATE)",
@@ -72,11 +74,11 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreatePersistsMessageWithTimestamp() {
-        // 1.Arrange / 2.Act
+        // 1. Arrange / 2. Act
         final ReservationMessage created = dao.create(reservationId, riderId, BODY);
         em.flush();
 
-        // 3.Assert
+        // 3. Assert
         final Map<String, Object> row = jdbcTemplate.queryForMap(
                 "SELECT body, sender_user_id, reservation_id FROM reservation_messages WHERE id = ?",
                 created.getId());
@@ -90,16 +92,15 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testFindByReservationIdAfterIdOrderByCreatedAtAscReturnsOnlyNewerRows() {
-        // 1.Arrange
-        final ReservationMessage first = dao.create(reservationId, riderId, "First");
-        dao.create(reservationId, riderId, "Second");
-        dao.create(reservationId, riderId, "Third");
-        em.flush();
+        // 1. Arrange — seed three messages via JdbcTemplate so the DAO under test is only exercised in Act.
+        final long firstId = insertMessage(reservationId, riderId, "First");
+        insertMessage(reservationId, riderId, "Second");
+        insertMessage(reservationId, riderId, "Third");
 
-        // 2.Act
-        final var messages = dao.findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, first.getId(), 10);
+        // 2. Act
+        final var messages = dao.findByReservationIdAfterIdOrderByCreatedAtAsc(reservationId, firstId, 10);
 
-        // 3.Assert
+        // 3. Assert
         Assertions.assertEquals(2, messages.size());
         Assertions.assertEquals("Second", messages.get(0).getBody());
         Assertions.assertEquals("Third", messages.get(1).getBody());
@@ -107,15 +108,14 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testFindByReservationIdOrderByCreatedAtAscReturnsInsertedRows() {
-        // 1.Arrange
-        dao.create(reservationId, riderId, "First");
-        dao.create(reservationId, riderId, "Second");
-        em.flush();
+        // 1. Arrange — seed via JdbcTemplate.
+        insertMessage(reservationId, riderId, "First");
+        insertMessage(reservationId, riderId, "Second");
 
-        // 2.Act
+        // 2. Act
         final var messages = dao.findByReservationIdOrderByCreatedAtAsc(reservationId, 0, 10);
 
-        // 3.Assert
+        // 3. Assert
         Assertions.assertEquals(2, messages.size());
         Assertions.assertEquals("First", messages.get(0).getBody());
         Assertions.assertEquals("Second", messages.get(1).getBody());
@@ -123,7 +123,7 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreateWithAttachmentPersistsForeignKey() {
-        // 1.Arrange
+        // 1. Arrange — seed a stored file directly; the DAO call we test is the one in Act.
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         jdbcTemplate.update(
                 "INSERT INTO stored_files (uploader_user_id, file_name, content_type, byte_array, created_at) "
@@ -136,11 +136,11 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
         final long fileId =
                 jdbcTemplate.queryForObject("SELECT id FROM stored_files WHERE file_name = ?", Long.class, "photo.png");
 
-        // 2.Act
+        // 2. Act
         final ReservationMessage created = dao.create(reservationId, riderId, "", fileId);
         em.flush();
 
-        // 3.Assert
+        // 3. Assert
         final Long attachmentId = jdbcTemplate.queryForObject(
                 "SELECT attachment_file_id FROM reservation_messages WHERE id = ?",
                 Long.class,
@@ -150,105 +150,104 @@ class ReservationMessageJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testFindPendingEmailNotificationReturnsOnlyUnnotifiedUnseenMessages() {
-        // 1.Arrange
-        final ReservationMessage pending = dao.create(reservationId, riderId, "Pending");
-        dao.create(reservationId, riderId, "Notified");
-        dao.create(reservationId, riderId, "Seen");
-        em.flush();
-        jdbcTemplate.update(
-                "UPDATE reservation_messages SET email_notified = TRUE WHERE id = ?",
-                jdbcTemplate.queryForObject(
-                        "SELECT id FROM reservation_messages WHERE body = ?", Long.class, "Notified"));
-        jdbcTemplate.update(
-                "UPDATE reservation_messages SET seen = TRUE WHERE id = ?",
-                jdbcTemplate.queryForObject(
-                        "SELECT id FROM reservation_messages WHERE body = ?", Long.class, "Seen"));
+        // 1. Arrange — three messages: one pending, one already notified, one already seen.
+        final long pendingId = insertMessage(reservationId, riderId, "Pending");
+        insertMessageWithFlags(reservationId, riderId, "Notified", true, false);
+        insertMessageWithFlags(reservationId, riderId, "Seen", false, true);
 
-        // 2.Act
+        // 2. Act
         final var pendingMessages = dao.findPendingEmailNotification();
 
-        // 3.Assert
+        // 3. Assert
         Assertions.assertEquals(1, pendingMessages.size());
-        Assertions.assertEquals(pending.getId(), pendingMessages.get(0).getId());
+        Assertions.assertEquals(pendingId, pendingMessages.get(0).getId());
         Assertions.assertEquals("Pending", pendingMessages.get(0).getBody());
     }
 
     @Test
     void testMarkEmailNotifiedPersistsFlag() {
-        // 1.Arrange
-        final ReservationMessage created = dao.create(reservationId, riderId, BODY);
+        // 1. Arrange
+        final long messageId = insertMessage(reservationId, riderId, BODY);
+
+        // 2. Act
+        final int marked = dao.markEmailNotified(List.of(messageId));
         em.flush();
 
-        // 2.Act
-        final int marked = dao.markEmailNotified(List.of(created.getId()));
-        em.flush();
-
-        // 3.Assert
-        Assertions.assertEquals(1, marked);
+        // 3. Assert
         final Boolean notified = jdbcTemplate.queryForObject(
-                "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, created.getId());
+                "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, messageId);
+        Assertions.assertEquals(1, marked);
         Assertions.assertTrue(notified);
     }
 
     @Test
     void testMarkEmailNotifiedSkipsSeenMessages() {
-        // 1.Arrange
-        final ReservationMessage created = dao.create(reservationId, riderId, BODY);
-        em.flush();
-        jdbcTemplate.update("UPDATE reservation_messages SET seen = TRUE WHERE id = ?", created.getId());
+        // 1. Arrange — message inserted with seen=TRUE so markEmailNotified must ignore it.
+        final long messageId = insertMessageWithFlags(reservationId, riderId, BODY, false, true);
 
-        // 2.Act
-        final int marked = dao.markEmailNotified(List.of(created.getId()));
+        // 2. Act
+        final int marked = dao.markEmailNotified(List.of(messageId));
         em.flush();
 
-        // 3.Assert
-        Assertions.assertEquals(0, marked);
+        // 3. Assert
         final Boolean notified = jdbcTemplate.queryForObject(
-                "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, created.getId());
+                "SELECT email_notified FROM reservation_messages WHERE id = ?", Boolean.class, messageId);
+        Assertions.assertEquals(0, marked);
         Assertions.assertFalse(notified);
     }
 
     @Test
     void testFindPendingEmailNotificationExcludesSeenMessagesAfterRecipientRead() {
-        // 1.Arrange
-        final long ownerId = jdbcTemplate.queryForObject(
-                "SELECT c.owner_id FROM cars c JOIN reservations r ON r.car_id = c.id WHERE r.id = ?",
-                Long.class,
-                reservationId);
-        dao.create(reservationId, riderId, "Unread until owner opens chat");
-        em.flush();
-        dao.markSeenByRecipient(reservationId, ownerId);
-        em.flush();
+        // 1. Arrange — message from rider already marked as seen (the state markSeenByRecipient would leave).
+        insertMessageWithFlags(reservationId, riderId, "Unread until owner opens chat", false, true);
 
-        // 2.Act
+        // 2. Act
         final var pendingMessages = dao.findPendingEmailNotification();
 
-        // 3.Assert
+        // 3. Assert
         Assertions.assertTrue(pendingMessages.isEmpty());
     }
 
     @Test
     void testMarkSeenByRecipientMarksOnlyCounterpartyMessages() {
-        // 1.Arrange
-        final long ownerId = jdbcTemplate.queryForObject(
-                "SELECT c.owner_id FROM cars c JOIN reservations r ON r.car_id = c.id WHERE r.id = ?",
-                Long.class,
-                reservationId);
-        final ReservationMessage fromRider = dao.create(reservationId, riderId, "From rider");
-        final ReservationMessage fromOwner = dao.create(reservationId, ownerId, "From owner");
-        em.flush();
+        // 1. Arrange — one message from rider and one from owner.
+        final long fromRiderId = insertMessage(reservationId, riderId, "From rider");
+        final long fromOwnerId = insertMessage(reservationId, ownerId, "From owner");
 
-        // 2.Act
+        // 2. Act
         final int marked = dao.markSeenByRecipient(reservationId, ownerId);
         em.flush();
 
-        // 3.Assert
-        Assertions.assertEquals(1, marked);
+        // 3. Assert
         final Boolean riderMessageSeen = jdbcTemplate.queryForObject(
-                "SELECT seen FROM reservation_messages WHERE id = ?", Boolean.class, fromRider.getId());
+                "SELECT seen FROM reservation_messages WHERE id = ?", Boolean.class, fromRiderId);
         final Boolean ownerMessageSeen = jdbcTemplate.queryForObject(
-                "SELECT seen FROM reservation_messages WHERE id = ?", Boolean.class, fromOwner.getId());
+                "SELECT seen FROM reservation_messages WHERE id = ?", Boolean.class, fromOwnerId);
+        Assertions.assertEquals(1, marked);
         Assertions.assertTrue(riderMessageSeen);
         Assertions.assertFalse(ownerMessageSeen);
+    }
+
+    private long insertMessage(final long reservationId, final long senderUserId, final String body) {
+        return insertMessageWithFlags(reservationId, senderUserId, body, false, false);
+    }
+
+    private long insertMessageWithFlags(
+            final long reservationId,
+            final long senderUserId,
+            final String body,
+            final boolean emailNotified,
+            final boolean seen) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO reservation_messages "
+                        + "(reservation_id, sender_user_id, body, created_at, email_notified, seen) "
+                        + "VALUES (?, ?, ?, ?, ?, ?)",
+                reservationId, senderUserId, body, now, emailNotified, seen);
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM reservation_messages "
+                        + "WHERE reservation_id = ? AND sender_user_id = ? AND body = ? "
+                        + "ORDER BY id DESC LIMIT 1",
+                Long.class, reservationId, senderUserId, body);
     }
 }

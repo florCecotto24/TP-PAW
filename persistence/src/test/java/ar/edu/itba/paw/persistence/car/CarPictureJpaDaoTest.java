@@ -69,11 +69,11 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreateCarPicturePersistsImageReference() {
-        // 1.Arrange / 2.Act
+        // 1. Arrange / 2. Act
         final CarPicture created = dao.createCarPicture(carId, imageId, 1);
         em.flush();
 
-        // 3.Assert
+        // 3. Assert
         final Map<String, Object> row = jdbcTemplate.queryForMap(
                 "SELECT image_id, stored_file_id, display_order FROM car_pictures WHERE id = ?",
                 created.getId());
@@ -84,11 +84,11 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testCreateCarPictureFromVideoPersistsStoredFileReference() {
-        // 1.Arrange / 2.Act
+        // 1. Arrange / 2. Act
         final CarPicture created = dao.createCarPictureFromVideo(carId, storedFileId, 2);
         em.flush();
 
-        // 3.Assert
+        // 3. Assert
         final Map<String, Object> row = jdbcTemplate.queryForMap(
                 "SELECT image_id, stored_file_id, display_order FROM car_pictures WHERE id = ?",
                 created.getId());
@@ -99,12 +99,19 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
 
     @Test
     void testIsStoredFileInCarGalleryReturnsTrueWhenLinked() {
-        // 1.Arrange
-        dao.createCarPictureFromVideo(carId, storedFileId, 1);
-        em.flush();
+        // 1. Arrange — seed a gallery picture pointing at the stored file via JdbcTemplate.
+        insertCarPictureFromVideo(carId, storedFileId, 1);
 
-        // 2.Act / 3.Assert
+        // 2. Act / 3. Assert
         Assertions.assertTrue(dao.isStoredFileInCarGallery(storedFileId));
         Assertions.assertFalse(dao.isStoredFileInCarGallery(storedFileId + 9999));
+    }
+
+    private void insertCarPictureFromVideo(final long carId, final long storedFileId, final int displayOrder) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO car_pictures (car_id, stored_file_id, display_order, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                carId, storedFileId, displayOrder, now, now);
     }
 }
