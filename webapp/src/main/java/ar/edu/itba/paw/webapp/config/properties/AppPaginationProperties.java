@@ -7,8 +7,7 @@ import org.springframework.stereotype.Component;
 /**
  * UI-layer page sizes bound from {@code app.pagination.*}. Lives in the webapp module because
  * pagination is a UI concern (clamping, page-param redirects, choosing how many cards to render).
- * The DB-side fetch window for dual-layer queries lives in {@code DbPaginationConfig} (persistence
- * module).
+ * The DAOs paginate with SQL {@code LIMIT}/{@code OFFSET} using these same sizes.
  *
  * Architectural rule: services do not read these sizes. Controllers inject this component and
  * pass the resolved {@code pageSize} (or {@code uiPageSize}) into the service/criteria builder.

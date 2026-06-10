@@ -14,10 +14,8 @@ import ar.edu.itba.paw.models.util.time.AppTimezone;
 /**
  * Immutable search filters + paging for the public car search. Prefer {@link #builder()} (Effective Java Item 2).
  *
- * <p>Only carries the UI page index and {@code uiPageSize} (controller-supplied). The DB fetch
- * window for dual-layer paging is read by the DAO from its own pagination config, so the search
- * criteria is purely about <em>what</em> to query and <em>which UI page</em>, not <em>how many
- * rows per SQL window</em>.</p>
+ * Carries the UI page index and {@code uiPageSize} (controller-supplied); the DAO paginates
+ * directly with SQL {@code LIMIT}/{@code OFFSET} from these values.
  */
 public final class CarSearchCriteria extends BaseSearchCriteria {
 

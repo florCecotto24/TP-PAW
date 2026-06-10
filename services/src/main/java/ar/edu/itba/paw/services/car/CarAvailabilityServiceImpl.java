@@ -180,14 +180,18 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
         final int safePage = Math.max(0, page);
         final int safePageSize = Math.max(1, pageSize);
 
-        // Single query: all kinds overlapping the month → effectiveness computed in memory
+        // Intentional exception to the SQL LIMIT/OFFSET pagination rule: the paginated items are
+        // *effective* offered segments, which do not exist as rows, each one is derived by
+        // subtracting the overlapping blocking/reserved periods from the stored OFFERED rows
+        // (computeEffectiveOffered), so neither LIMIT/OFFSET nor a SQL COUNT can address them.
+        // The input is bounded to one car × one month of availability rows, so the full fetch is
+        // a handful of rows, not an unbounded set.
         final List<CarAvailability> allMonthRows =
                 carAvailabilityDao.findOverlappingRangeByCar(carId, monthStart, monthEnd);
         final List<CarAvailability> effectiveRows =
                 CarAvailabilityCalendarServiceImpl.computeEffectiveOffered(allMonthRows);
         final int total = effectiveRows.size();
 
-        // In-memory paginate from the effective list
         final int fromIndex = Math.min(safePage * safePageSize, total);
         final int toIndex = Math.min(fromIndex + safePageSize, total);
         final List<CarAvailability> content = fromIndex < toIndex

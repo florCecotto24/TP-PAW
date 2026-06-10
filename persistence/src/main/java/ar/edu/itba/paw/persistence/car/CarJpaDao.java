@@ -34,11 +34,9 @@ import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
-import ar.edu.itba.paw.models.pagination.DualLayerPageWindow;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
-import ar.edu.itba.paw.persistence.util.DbPaginationConfig;
 import static ar.edu.itba.paw.persistence.util.JpaQueryUtils.bindParams;
 
 @Transactional(readOnly = true)
@@ -98,15 +96,12 @@ public class CarJpaDao implements CarDao {
      */
     private final CarPictureDao carPictureDao;
     private final CarAvailabilityDao carAvailabilityDao;
-    private final DbPaginationConfig dbPaginationConfig;
 
     @org.springframework.beans.factory.annotation.Autowired
     public CarJpaDao(final CarPictureDao carPictureDao,
-                     final CarAvailabilityDao carAvailabilityDao,
-                     final DbPaginationConfig dbPaginationConfig) {
+                     final CarAvailabilityDao carAvailabilityDao) {
         this.carPictureDao = carPictureDao;
         this.carAvailabilityDao = carAvailabilityDao;
-        this.dbPaginationConfig = dbPaginationConfig;
     }
 
     @Override
@@ -687,8 +682,8 @@ public class CarJpaDao implements CarDao {
 
     @Override
     public Page<CarCard> searchCarCards(final CarSearchCriteria criteria) {
-        final DualLayerPageWindow w = DualLayerPageWindow.compute(
-                criteria.getPage(), criteria.getUiPageSize(), dbPaginationConfig.getDbFetchSize());
+        final int safePage = Math.max(0, criteria.getPage());
+        final int safePageSize = Math.max(1, criteria.getUiPageSize());
 
         final Map<String, Object> countParams = new HashMap<>();
         final StringBuilder countSql = new StringBuilder(
@@ -703,11 +698,10 @@ public class CarJpaDao implements CarDao {
         final long total = ((Number) bindParams(em.createNativeQuery(countSql.toString()), countParams).getSingleResult()).longValue();
 
         final String orderBy = buildCarBrowseOrderBy(criteria.getSortBy(), criteria.getSortDirection());
-        final List<CarCard> batch = loadCarCardsWindow(
-                orderBy, w.sqlOffset(), w.sqlLimit(),
+        final List<CarCard> content = loadCarCardsWindow(
+                orderBy, safePage * safePageSize, safePageSize,
                 criteria.getBrowseWallDate(), criteria.getExcludeOwnerUserId(), criteria);
-        final List<CarCard> slice = DualLayerPageWindow.sliceBatch(batch, w);
-        return new Page<>(slice, w.uiPage(), w.uiPageSize(), total);
+        return new Page<>(content, safePage, safePageSize, total);
     }
 
     @Override
