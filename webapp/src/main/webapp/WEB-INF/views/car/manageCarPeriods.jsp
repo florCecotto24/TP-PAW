@@ -85,7 +85,7 @@
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center justify-content-between mb-3">
                         <h2 class="h6 fw-semibold text-secondary text-uppercase mb-0" style="letter-spacing:.04em;">
-                            <spring:message code="manageCarPeriods.periods.title"/>
+                            <spring:message code="manageCarPeriods.periods.title" arguments="${activeMonthName}"/>
                         </h2>
                         <c:if test="${canManage}">
                             <button type="button" id="inlinePeriodAddBtn" class="btn btn-outline-primary btn-sm">

@@ -30,6 +30,7 @@ public final class ManageCarPeriodsPageModel {
     private final String allSegmentsJson;
     private final List<CarAvailability> monthAvailabilities;
     private final YearMonth activeYearMonth;
+    private final String activeMonthName;
     private final boolean canManage;
     private final boolean isFirstPeriod;
     // Editor context (for inline form)
@@ -53,6 +54,7 @@ public final class ManageCarPeriodsPageModel {
             final String allSegmentsJson,
             final List<CarAvailability> monthAvailabilities,
             final YearMonth activeYearMonth,
+            final String activeMonthName,
             final boolean canManage,
             final boolean isFirstPeriod,
             final boolean userHasCbu,
@@ -73,6 +75,7 @@ public final class ManageCarPeriodsPageModel {
         this.allSegmentsJson = allSegmentsJson != null ? allSegmentsJson : "[]";
         this.monthAvailabilities = List.copyOf(monthAvailabilities);
         this.activeYearMonth = activeYearMonth;
+        this.activeMonthName = activeMonthName;
         this.canManage = canManage;
         this.isFirstPeriod = isFirstPeriod;
         this.userHasCbu = userHasCbu;
@@ -113,6 +116,7 @@ public final class ManageCarPeriodsPageModel {
         putObject.accept("allSegmentsJson", allSegmentsJson);
         putObject.accept("monthAvailabilities", monthAvailabilities);
         putObject.accept("activeYearMonth", activeYearMonth);
+        putObject.accept("activeMonthName", activeMonthName);
         putObject.accept("canManage", canManage);
         putObject.accept("isFirstPeriod", isFirstPeriod);
         putObject.accept("userHasCbu", userHasCbu);

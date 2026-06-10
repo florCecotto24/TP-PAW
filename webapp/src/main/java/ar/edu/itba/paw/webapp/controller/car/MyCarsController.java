@@ -420,7 +420,8 @@ public class MyCarsController {
         }
         final Car car = lookup.car().orElseThrow();
         final YearMonth activeMonth = parseYearMonthOrDefault(month);
-        final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(car, activeMonth);
+        final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(
+                car, activeMonth, LocaleContextHolder.getLocale());
         final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
         pm.populateModel(mav::addObject);
         final CreateCarAvailabilityForm createForm = new CreateCarAvailabilityForm();
@@ -665,7 +666,7 @@ public class MyCarsController {
             final Car car, final String month, final String inlineFormOpen,
             final CreateCarAvailabilityForm form, final BindingResult errors) {
         final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(
-                car, parseYearMonthOrDefault(month));
+                car, parseYearMonthOrDefault(month), LocaleContextHolder.getLocale());
         final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
         pm.populateModel(mav::addObject);
         mav.addObject("inlineFormOpen", inlineFormOpen);

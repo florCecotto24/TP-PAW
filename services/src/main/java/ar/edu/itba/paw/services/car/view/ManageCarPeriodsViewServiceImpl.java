@@ -3,8 +3,10 @@ package ar.edu.itba.paw.services.car.view;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -42,7 +44,7 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
     @Override
     @Transactional(readOnly = true)
     public ManageCarPeriodsPageModel loadManageCarPeriodsPage(
-            final Car car, final YearMonth activeMonth) {
+            final Car car, final YearMonth activeMonth, final Locale locale) {
         final long carId = car.getId();
         final User owner = car.getOwner();
 
@@ -109,6 +111,8 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
 
         final boolean isFirstPeriod = allAvailabilities.isEmpty();
 
+        final String activeMonthName = DateTimeFormatter.ofPattern("MMMM", locale).format(activeMonth);
+
         return new ManageCarPeriodsPageModel(
                 car,
                 owner,
@@ -117,6 +121,7 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
                 allSegmentsJson,
                 monthAvailabilities,
                 activeMonth,
+                activeMonthName,
                 canManage,
                 isFirstPeriod,
                 editorCtx.isUserHasCbu(),
