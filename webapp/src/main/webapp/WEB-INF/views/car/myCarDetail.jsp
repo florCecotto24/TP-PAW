@@ -167,8 +167,10 @@
                             <%-- Full status / docs / action sidebar --%>
                             <article class="card border-0 shadow-sm rounded-4 reservation-detail-sticky bg-white">
                                 <div class="card-body p-4">
-                                    <spring:message code="enum.car.status.${statusKey}" var="carStatusLabel"/>
-                                    <div class="mb-3">
+
+                                    <div class="d-flex flex-column gap-3 px-2">
+                                        <spring:message code="enum.car.status.${statusKey}" var="carStatusLabel"/>
+                                    <div class="mb-1">
                                         <span class="text-secondary small text-uppercase fw-semibold d-block mb-2" style="letter-spacing:.04em;">
                                             <spring:message code="myCarDetail.status.label"/>
                                         </span>
@@ -197,8 +199,6 @@
                                             </c:otherwise>
                                         </c:choose>
                                     </div>
-
-                                    <div class="d-flex flex-column gap-3 px-2">
                                         <c:url var="carDetailUrl" value="/cars/${car.id}"/>
                                         <a href="<c:out value='${carDetailUrl}'/>" class="btn btn-outline-warm w-100">
                                             <i class="bi bi-eye me-2"></i><spring:message code="myCarDetail.actions.viewCar"/>
