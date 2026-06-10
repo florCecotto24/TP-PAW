@@ -106,12 +106,24 @@
                         if (formSection && formSection.classList.contains('show')) { return; }
                         document.querySelectorAll('.manage-period-card.period-highlighted')
                                 .forEach(function (el) { el.classList.remove('period-highlighted'); });
-                        var card = document.querySelector(
-                            '[data-period-from="' + seg.from + '"][data-period-to="' + seg.to + '"]'
-                        );
-                        if (card) {
-                            card.classList.add('period-highlighted');
-                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        var cards = document.querySelectorAll('.manage-period-card');
+                        var bestCard = null;
+                        var bestId = -1;
+                        for (var i = 0; i < cards.length; i++) {
+                            var c = cards[i];
+                            var cFrom = c.getAttribute('data-period-from');
+                            var cTo = c.getAttribute('data-period-to');
+                            if (cFrom <= ymd && ymd <= cTo) {
+                                var cId = parseInt(c.getAttribute('data-period-id'), 10);
+                                if (cId > bestId) {
+                                    bestId = cId;
+                                    bestCard = c;
+                                }
+                            }
+                        }
+                        if (bestCard) {
+                            bestCard.classList.add('period-highlighted');
+                            bestCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                         }
                     });
                 }

@@ -179,28 +179,22 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
         final LocalDate monthEnd = month.atEndOfMonth();
         final int safePage = Math.max(0, page);
         final int safePageSize = Math.max(1, pageSize);
-        final int offset = safePage * safePageSize;
 
-        // Query 1: COUNT (OFFERED rows in the month — approximate upper bound)
-        final int approximateTotal = carAvailabilityDao.countMonthOfferedByCar(carId, monthStart, monthEnd);
-
-        // Query 2: SELECT page of OFFERED rows
-        final List<CarAvailability> pageRows = carAvailabilityDao.findMonthOfferedByCar(
-                carId, monthStart, monthEnd, safePageSize, offset);
-
-        // Query 3: All kinds in the month window — needed to resolve effectiveness
+        // Single query: all kinds overlapping the month → effectiveness computed in memory
         final List<CarAvailability> allMonthRows =
                 carAvailabilityDao.findOverlappingRangeByCar(carId, monthStart, monthEnd);
-        final Set<Long> effectiveIds = CarAvailabilityCalendarServiceImpl.computeEffectiveOffered(allMonthRows)
-                .stream()
-                .map(CarAvailability::getId)
-                .collect(Collectors.toSet());
+        final List<CarAvailability> effectiveRows =
+                CarAvailabilityCalendarServiceImpl.computeEffectiveOffered(allMonthRows);
+        final int total = effectiveRows.size();
 
-        final List<CarAvailability> content = pageRows.stream()
-                .filter(la -> effectiveIds.contains(la.getId()))
-                .collect(Collectors.toList());
+        // In-memory paginate from the effective list
+        final int fromIndex = Math.min(safePage * safePageSize, total);
+        final int toIndex = Math.min(fromIndex + safePageSize, total);
+        final List<CarAvailability> content = fromIndex < toIndex
+                ? effectiveRows.subList(fromIndex, toIndex)
+                : List.of();
 
-        return new Page<>(content, safePage, safePageSize, approximateTotal);
+        return new Page<>(content, safePage, safePageSize, total);
     }
 
     @Override

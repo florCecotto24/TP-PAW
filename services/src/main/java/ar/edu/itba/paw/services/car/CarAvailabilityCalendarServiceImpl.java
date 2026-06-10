@@ -135,7 +135,7 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
     @Override
     @Transactional(readOnly = true)
     public List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(final long carId) {
-        return mapToSegments(findEffectiveOfferedByCar(carId));
+        return computeEffectiveSegmentsForOwnerCalendar(carAvailabilityService.findByCarId(carId));
     }
 
     @Override
@@ -155,7 +155,8 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
     @Transactional(readOnly = true)
     public List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(
             final long carId, final LocalDate from, final LocalDate to) {
-        return mapToSegments(findEffectiveOfferedByCarInRange(carId, from, to));
+        return computeEffectiveSegmentsForOwnerCalendar(
+                carAvailabilityService.findOverlappingRangeByCar(carId, from, to));
     }
 
     /**
@@ -218,6 +219,51 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
                         carAvailabilityAddressFormatter.formatPublicPickupLocation(ca),
                         ca.getNeighborhoodId().orElse(null)))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Computes owner-facing calendar segments with day-by-day effective price resolution,
+     * then merges contiguous days that share identical attributes. Unlike the rider-facing
+     * variant, this does <b>not</b> subtract reservation-blocked days or apply pickup-lead
+     * clipping — the owner calendar must show <b>all</b> offered days exactly as they will
+     * appear to riders, with the effective (most recent) price per day.
+     */
+    private List<BookableSegmentProjection> computeEffectiveSegmentsForOwnerCalendar(
+            final List<CarAvailability> rows) {
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        final SortedSet<LocalDate> offeredDays = new TreeSet<>();
+        for (final CarAvailability row : rows) {
+            if (row.getKind() != CarAvailability.Kind.OFFERED) {
+                continue;
+            }
+            LocalDate d = row.getStartInclusive();
+            while (!d.isAfter(row.getEndInclusive())) {
+                offeredDays.add(d);
+                d = d.plusDays(1);
+            }
+        }
+        if (offeredDays.isEmpty()) {
+            return List.of();
+        }
+        final Map<LocalDate, CarAvailability> effectiveByDay =
+                indexEffectiveOfferedRowByDay(rows, offeredDays);
+        final List<BookableSegmentProjection> singleDay = new ArrayList<>(offeredDays.size());
+        for (final LocalDate day : offeredDays) {
+            final CarAvailability eff = effectiveByDay.get(day);
+            if (eff == null || eff.getKind() != CarAvailability.Kind.OFFERED) {
+                continue;
+            }
+            singleDay.add(new BookableSegmentProjection(
+                    day, day,
+                    eff.getDayPriceValue(),
+                    eff.getCheckInTime(),
+                    eff.getCheckOutTime(),
+                    carAvailabilityAddressFormatter.formatPublicPickupLocation(eff),
+                    eff.getNeighborhoodId().orElse(null)));
+        }
+        return CarAvailabilityCalendarMath.mergeContiguousIdenticalProjections(singleDay);
     }
 
     @Override
