@@ -139,6 +139,16 @@
                                     </div>
                                 </c:forEach>
                             </div>
+                            <c:if test="${totalPages > 1}">
+                                <c:url var="periodsBaseUrl" value="/my-cars/car/${car.id}/periods">
+                                    <c:param name="month" value="${activeYearMonth}"/>
+                                </c:url>
+                                <ryden:pagination
+                                    currentPage="${currentPage}"
+                                    totalPages="${totalPages}"
+                                    baseUrl="${periodsBaseUrl}"
+                                    pageParam="page"/>
+                            </c:if>
                         </c:otherwise>
                     </c:choose>
                 </div>

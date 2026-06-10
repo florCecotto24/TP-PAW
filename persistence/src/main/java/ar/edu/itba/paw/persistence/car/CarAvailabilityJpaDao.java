@@ -134,6 +134,74 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
     }
 
     @Override
+    public int countMonthOfferedByCar(final long carId, final LocalDate monthStart, final LocalDate monthEnd) {
+        final Number count = (Number) em.createNativeQuery(
+                        "SELECT COUNT(*) FROM car_availability la "
+                                + "WHERE la.car_id = :carId "
+                                + "AND la.kind = 'offered' "
+                                + "AND la.start_date <= :monthEnd AND la.end_date >= :monthStart")
+                .setParameter("carId", carId)
+                .setParameter("monthStart", monthStart)
+                .setParameter("monthEnd", monthEnd)
+                .getSingleResult();
+        return count != null ? count.intValue() : 0;
+    }
+
+    @Override
+    public List<CarAvailability> findMonthOfferedByCar(
+            final long carId, final LocalDate monthStart, final LocalDate monthEnd,
+            final int limit, final int offset) {
+        @SuppressWarnings("unchecked")
+        final List<Number> ids = em.createNativeQuery(
+                        "SELECT la.id FROM car_availability la "
+                                + "WHERE la.car_id = :carId "
+                                + "AND la.kind = 'offered' "
+                                + "AND la.start_date <= :monthEnd AND la.end_date >= :monthStart "
+                                + "ORDER BY la.start_date ASC "
+                                + "LIMIT :limit OFFSET :offset")
+                .setParameter("carId", carId)
+                .setParameter("monthStart", monthStart)
+                .setParameter("monthEnd", monthEnd)
+                .setParameter("limit", limit)
+                .setParameter("offset", offset)
+                .getResultList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> orderedIds = ids.stream()
+                .map(Number::longValue)
+                .collect(java.util.stream.Collectors.toList());
+        final List<CarAvailability> fetched = em.createQuery(
+                        "FROM CarAvailability la WHERE la.id IN :ids",
+                        CarAvailability.class)
+                .setParameter("ids", orderedIds)
+                .getResultList();
+        final Map<Long, CarAvailability> byId = new HashMap<>(fetched.size());
+        for (final CarAvailability la : fetched) {
+            byId.put(la.getId(), la);
+        }
+        final List<CarAvailability> result = new java.util.ArrayList<>(orderedIds.size());
+        for (final long id : orderedIds) {
+            final CarAvailability la = byId.get(id);
+            if (la != null) {
+                result.add(la);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public boolean existsAnyOfferedByCar(final long carId) {
+        final Number count = (Number) em.createNativeQuery(
+                        "SELECT COUNT(*) FROM car_availability la "
+                                + "WHERE la.car_id = :carId AND la.kind = 'offered' "
+                                + "LIMIT 1")
+                .setParameter("carId", carId)
+                .getSingleResult();
+        return count != null && count.intValue() > 0;
+    }
+
+    @Override
     @Transactional
     public void deleteByCarId(final long carId) {
         final List<CarAvailability> toRemove = em.createQuery(

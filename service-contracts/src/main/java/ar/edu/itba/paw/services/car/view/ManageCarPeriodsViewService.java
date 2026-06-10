@@ -17,6 +17,8 @@ public interface ManageCarPeriodsViewService {
      * @param car         ownership-resolved car (controller has already vetted access)
      * @param activeMonth the month currently shown in the calendar
      * @param locale      locale for formatting display strings (e.g. month name)
+     * @param page        0-based page index for the period list
+     * @param pageSize    items per page for the period list
      */
-    ManageCarPeriodsPageModel loadManageCarPeriodsPage(Car car, YearMonth activeMonth, Locale locale);
+    ManageCarPeriodsPageModel loadManageCarPeriodsPage(Car car, YearMonth activeMonth, Locale locale, int page, int pageSize);
 }

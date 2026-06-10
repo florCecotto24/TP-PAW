@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 import ar.edu.itba.paw.models.domain.car.Car;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.location.Neighborhood;
 import ar.edu.itba.paw.models.domain.user.User;
@@ -44,6 +45,8 @@ public final class ManageCarPeriodsPageModel {
     private final CarPriceMarketInsight priceMarketInsight;
     private final String reservationBlockedRangesJson;
     private final Map<Long, String> reservedRangesByAvailabilityIdJson;
+    private final int currentPage;
+    private final int totalPages;
     private final CarAvailability mostRecentAvailabilityOrNull;
 
     public ManageCarPeriodsPageModel(
@@ -67,7 +70,9 @@ public final class ManageCarPeriodsPageModel {
             final CarPriceMarketInsight priceMarketInsight,
             final String reservationBlockedRangesJson,
             final Map<Long, String> reservedRangesByAvailabilityIdJson,
-            final CarAvailability mostRecentAvailabilityOrNull) {
+            final CarAvailability mostRecentAvailabilityOrNull,
+            final int currentPage,
+            final int totalPages) {
         this.car = car;
         this.owner = owner;
         this.statusKey = statusKey;
@@ -93,6 +98,8 @@ public final class ManageCarPeriodsPageModel {
                         ? Map.copyOf(reservedRangesByAvailabilityIdJson)
                         : Map.of();
         this.mostRecentAvailabilityOrNull = mostRecentAvailabilityOrNull;
+        this.currentPage = currentPage;
+        this.totalPages = totalPages;
     }
 
     public boolean isUserHasCbu() {
@@ -106,6 +113,14 @@ public final class ManageCarPeriodsPageModel {
      */
     public Optional<CarAvailability> getMostRecentAvailability() {
         return Optional.ofNullable(mostRecentAvailabilityOrNull);
+    }
+
+    public int getCurrentPage() {
+        return currentPage;
+    }
+
+    public int getTotalPages() {
+        return totalPages;
     }
 
     public void populateModel(final BiConsumer<String, Object> putObject) {
@@ -128,6 +143,8 @@ public final class ManageCarPeriodsPageModel {
         putObject.accept("publisherEmail", publisherEmail);
         putObject.accept("reservationBlockedRangesJson", reservationBlockedRangesJson);
         putObject.accept("reservedRangesByAvailabilityIdJson", reservedRangesByAvailabilityIdJson);
+        putObject.accept("currentPage", currentPage);
+        putObject.accept("totalPages", totalPages);
         if (priceMarketInsight != null) {
             putObject.accept("priceMarketInsight", priceMarketInsight);
         }

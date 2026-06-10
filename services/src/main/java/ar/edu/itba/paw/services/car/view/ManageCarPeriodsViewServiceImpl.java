@@ -18,6 +18,7 @@ import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarAvailabilityEditorPageModel;
 import ar.edu.itba.paw.models.dto.car.ManageCarPeriodsPageModel;
 import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
@@ -44,22 +45,21 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
     @Override
     @Transactional(readOnly = true)
     public ManageCarPeriodsPageModel loadManageCarPeriodsPage(
-            final Car car, final YearMonth activeMonth, final Locale locale) {
+            final Car car, final YearMonth activeMonth, final Locale locale,
+            final int page, final int pageSize) {
         final long carId = car.getId();
         final User owner = car.getOwner();
 
-        final List<CarAvailability> allAvailabilities =
-                carAvailabilityService.findEffectiveOfferedByCar(carId);
+        // Paginated effective offered rows for the active month (3-query pattern)
+        final Page<CarAvailability> monthPage = carAvailabilityService
+                .findEffectiveOfferedByCarAndMonth(carId, activeMonth, page, pageSize);
+        final List<CarAvailability> monthAvailabilities = monthPage.getContent();
 
-        final LocalDate firstDay = activeMonth.atDay(1);
-        final LocalDate lastDay = activeMonth.atEndOfMonth();
-        final List<CarAvailability> monthAvailabilities = allAvailabilities.stream()
-                .filter(a -> !a.getStartInclusive().isAfter(lastDay)
-                        && !a.getEndInclusive().isBefore(firstDay))
-                .collect(Collectors.toList());
-
+        // Calendar segments: ±1 month window (the page reloads on month change)
+        final LocalDate calStart = activeMonth.minusMonths(1).atDay(1);
+        final LocalDate calEnd = activeMonth.plusMonths(1).atEndOfMonth();
         final String allSegmentsJson = BookableWallRangesJson.toJsonArray(
-                carAvailabilityService.getAllEffectiveSegmentsForOwnerCalendar(carId));
+                carAvailabilityService.getEffectiveSegmentsForOwnerCalendarInRange(carId, calStart, calEnd));
 
         final List<AvailabilityPeriod> reservationBlockedRanges =
                 carAvailabilityService.findReservationBlockedWallRangesByCar(carId);
@@ -93,7 +93,8 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
                 .findFirst()
                 .orElse(0L);
 
-        final String statusKey = (allAvailabilities.isEmpty() && car.getStatus() == Car.Status.ACTIVE
+        final boolean existsAnyOffered = carAvailabilityService.existsAnyOfferedByCar(carId);
+        final String statusKey = (!existsAnyOffered && car.getStatus() == Car.Status.ACTIVE
                 ? Car.Status.UNAVAILABLE : car.getStatus()).name();
 
         final boolean canManage = !Car.Status.DEACTIVATED.name().equals(statusKey)
@@ -109,7 +110,7 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
         final CarAvailabilityEditorPageModel editorCtx =
                 carAvailabilityEditorViewService.loadEditorContext(car, owner.getId(), checkInTime);
 
-        final boolean isFirstPeriod = allAvailabilities.isEmpty();
+        final boolean isFirstPeriod = !existsAnyOffered;
 
         final String activeMonthName = DateTimeFormatter.ofPattern("MMMM", locale).format(activeMonth);
 
@@ -134,6 +135,8 @@ public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsVi
                 editorCtx.getPriceMarketInsight().orElse(null),
                 reservationBlockedRangesJson,
                 reservedRangesByAvailabilityIdJson,
-                mostRecentOrNull);
+                mostRecentOrNull,
+                monthPage.getCurrentPage(),
+                monthPage.getTotalPages());
     }
 }

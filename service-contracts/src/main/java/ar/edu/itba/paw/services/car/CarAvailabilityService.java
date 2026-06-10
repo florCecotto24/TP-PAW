@@ -5,12 +5,14 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
@@ -63,6 +65,26 @@ public interface CarAvailabilityService {
      * Intended for the owner's availability list view.
      */
     List<CarAvailability> findEffectiveOfferedByCar(long carId);
+
+    /**
+     * Paginated variant: returns effective OFFERED rows overlapping {@code month}.
+     * Uses a 1+1 SQL pattern (COUNT + SELECT) for the OFFERED rows, then a supplementary
+     * query to load all kinds for the month window to resolve effectiveness in memory.
+     * The total count is an upper bound (all OFFERED rows in the month, pre-filter).
+     */
+    Page<CarAvailability> findEffectiveOfferedByCarAndMonth(long carId, YearMonth month, int page, int pageSize);
+
+    /**
+     * Like {@link #getAllEffectiveSegmentsForOwnerCalendar(long)} but scoped to rows overlapping
+     * {@code [from, to]}. Used for the owner calendar to load a ±1 month window.
+     */
+    List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(long carId, LocalDate from, LocalDate to);
+
+    /**
+     * Returns {@code true} when the car has at least one OFFERED availability row.
+     * Lightweight existence check.
+     */
+    boolean existsAnyOfferedByCar(long carId);
 
     /** Batch load: rows for the given car ids whose {@code end_inclusive} is on or after {@code minEndDate}. */
     List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);

@@ -135,33 +135,43 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
     @Override
     @Transactional(readOnly = true)
     public List<BookableSegmentProjection> getAllEffectiveSegmentsForOwnerCalendar(final long carId) {
-        return findEffectiveOfferedByCar(carId).stream()
-                .map(ca -> new BookableSegmentProjection(
-                        ca.getStartInclusive(),
-                        ca.getEndInclusive(),
-                        ca.getDayPriceValue(),
-                        ca.getCheckInTime(),
-                        ca.getCheckOutTime(),
-                        carAvailabilityAddressFormatter.formatPublicPickupLocation(ca),
-                        ca.getNeighborhoodId().orElse(null)))
-                .collect(Collectors.toList());
+        return mapToSegments(findEffectiveOfferedByCar(carId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarAvailability> findEffectiveOfferedByCar(final long carId) {
-        final List<CarAvailability> all = carAvailabilityService.findByCarId(carId);
-        if (all.isEmpty()) {
+        return computeEffectiveOffered(carAvailabilityService.findByCarId(carId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CarAvailability> findEffectiveOfferedByCarInRange(
+            final long carId, final LocalDate from, final LocalDate to) {
+        return computeEffectiveOffered(carAvailabilityService.findOverlappingRangeByCar(carId, from, to));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(
+            final long carId, final LocalDate from, final LocalDate to) {
+        return mapToSegments(findEffectiveOfferedByCarInRange(carId, from, to));
+    }
+
+    /**
+     * Rows with the same createdAt are co-created "peers" (same batch/operation) and
+     * must not supersede each other — otherwise a larger peer could absorb a smaller one
+     * created in the same publish form.  We therefore process rows in groups of identical
+     * createdAt (newest group first).  Within a group every OFFERED row is checked
+     * against days claimed by *previous* (newer) groups only; peers are independent.
+     * WITHDRAWN rows participate in claiming days so that edits — which always produce
+     * WITHDRAWN rows for removed chunks — correctly invalidate overlapping older OFFERED rows.
+     */
+    static List<CarAvailability> computeEffectiveOffered(final List<CarAvailability> rows) {
+        if (rows.isEmpty()) {
             return List.of();
         }
-        // Rows with the same createdAt are co-created "peers" (same batch/operation) and
-        // must not supersede each other — otherwise a larger peer could absorb a smaller one
-        // created in the same publish form.  We therefore process rows in groups of identical
-        // createdAt (newest group first).  Within a group every OFFERED row is checked
-        // against days claimed by *previous* (newer) groups only; peers are independent.
-        // WITHDRAWN rows participate in claiming days so that edits — which always produce
-        // WITHDRAWN rows for removed chunks — correctly invalidate overlapping older OFFERED rows.
-        final Map<OffsetDateTime, List<CarAvailability>> byTime = all.stream()
+        final Map<OffsetDateTime, List<CarAvailability>> byTime = rows.stream()
                 .collect(Collectors.groupingBy(CarAvailability::getCreatedAt));
         final List<OffsetDateTime> times = byTime.keySet().stream()
                 .sorted(Comparator.reverseOrder())
@@ -191,9 +201,22 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
                 }
             }
         }
-        return all.stream()
+        return rows.stream()
                 .filter(la -> effectiveIds.contains(la.getId()))
                 .sorted(Comparator.comparing(CarAvailability::getStartInclusive))
+                .collect(Collectors.toList());
+    }
+
+    private List<BookableSegmentProjection> mapToSegments(final List<CarAvailability> effective) {
+        return effective.stream()
+                .map(ca -> new BookableSegmentProjection(
+                        ca.getStartInclusive(),
+                        ca.getEndInclusive(),
+                        ca.getDayPriceValue(),
+                        ca.getCheckInTime(),
+                        ca.getCheckOutTime(),
+                        carAvailabilityAddressFormatter.formatPublicPickupLocation(ca),
+                        ca.getNeighborhoodId().orElse(null)))
                 .collect(Collectors.toList());
     }
 

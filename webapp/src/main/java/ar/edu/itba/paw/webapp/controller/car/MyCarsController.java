@@ -412,7 +412,8 @@ public class MyCarsController {
     public ModelAndView manageCarPeriods(
             @CurrentUser final User currentUser,
             @PathVariable final long carId,
-            @RequestParam(required = false) final String month) {
+            @RequestParam(required = false) final String month,
+            @RequestParam(defaultValue = "0") @Min(0) final int page) {
         WebAuthUtils.requireUser(currentUser);
         final OwnerCarLookup.Result lookup = ownerCarLookup.loadOwnedCar(carId, "/my-cars");
         if (lookup.redirect().isPresent()) {
@@ -421,7 +422,13 @@ public class MyCarsController {
         final Car car = lookup.car().orElseThrow();
         final YearMonth activeMonth = parseYearMonthOrDefault(month);
         final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(
-                car, activeMonth, LocaleContextHolder.getLocale());
+                car, activeMonth, LocaleContextHolder.getLocale(),
+                page, appPaginationProperties.getManagePeriodsPageSize());
+        if (pm.getTotalPages() > 0 && page >= pm.getTotalPages()) {
+            final int clampedPage = Math.max(0, pm.getTotalPages() - 1);
+            return new ModelAndView(redirectTo(
+                    "/my-cars/car/" + carId + "/periods?month=" + activeMonth + "&page=" + clampedPage));
+        }
         final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
         pm.populateModel(mav::addObject);
         final CreateCarAvailabilityForm createForm = new CreateCarAvailabilityForm();
@@ -514,7 +521,7 @@ public class MyCarsController {
         }
         final Car car = lookup.car().orElseThrow();
         if (errors.hasErrors()) {
-            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors);
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors, 0);
         }
         try {
             carAvailabilityService.editAvailability(
@@ -523,20 +530,20 @@ public class MyCarsController {
             errors.rejectValue(
                     "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
                     e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors);
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors, 0);
         } catch (final ReservationConflictException e) {
             // Owner tried to shrink/move the period so that already-booked reservations
             // would fall outside the new window. Mirror createListing: surface as a form
             // error instead of letting it propagate to the global 400 page.
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors);
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors, 0);
         } catch (final CarValidationException e) {
             if (MessageKeys.CAR_AVAILABILITY_NOT_FOUND.equals(e.getMessageCode())
                     || MessageKeys.CAR_AVAILABILITY_NOT_OWNED.equals(e.getMessageCode())) {
                 return new ModelAndView(redirectTo("/my-cars/car/" + carId));
             }
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors);
+            return buildManagePeriodsViewWithError(car, month, String.valueOf(availabilityId), form, errors, 0);
         }
         return new ModelAndView(redirectTo("/my-cars/car/" + carId + "/periods"
                 + (month != null && !month.isBlank() ? "?month=" + month : "")));
@@ -556,7 +563,7 @@ public class MyCarsController {
         }
         final Car car = lookup.car().orElseThrow();
         if (errors.hasErrors()) {
-            return buildManagePeriodsViewWithError(car, month, "create", form, errors);
+            return buildManagePeriodsViewWithError(car, month, "create", form, errors, 0);
         }
         try {
             carAvailabilityService.createListing(
@@ -567,16 +574,16 @@ public class MyCarsController {
             errors.rejectValue(
                     "availabilityRows[" + e.getAvailabilityRowIndex() + "].from",
                     e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildManagePeriodsViewWithError(car, month, "create", form, errors);
+            return buildManagePeriodsViewWithError(car, month, "create", form, errors, 0);
         } catch (final ReservationConflictException e) {
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildManagePeriodsViewWithError(car, month, "create", form, errors);
+            return buildManagePeriodsViewWithError(car, month, "create", form, errors, 0);
         } catch (final CarValidationException e) {
             if (MessageKeys.CAR_CREATE_MODEL_PENDING.equals(e.getMessageCode())) {
                 return new ModelAndView(redirectTo("/my-cars/car/" + carId));
             }
             errors.reject(e.getMessageCode(), e.getMessageArgs(), localeMessages.msg(e));
-            return buildManagePeriodsViewWithError(car, month, "create", form, errors);
+            return buildManagePeriodsViewWithError(car, month, "create", form, errors, 0);
         }
     }
 
@@ -664,9 +671,11 @@ public class MyCarsController {
 
     private ModelAndView buildManagePeriodsViewWithError(
             final Car car, final String month, final String inlineFormOpen,
-            final CreateCarAvailabilityForm form, final BindingResult errors) {
+            final CreateCarAvailabilityForm form, final BindingResult errors,
+            final int page) {
         final ManageCarPeriodsPageModel pm = manageCarPeriodsViewService.loadManageCarPeriodsPage(
-                car, parseYearMonthOrDefault(month), LocaleContextHolder.getLocale());
+                car, parseYearMonthOrDefault(month), LocaleContextHolder.getLocale(),
+                page, appPaginationProperties.getManagePeriodsPageSize());
         final ModelAndView mav = new ModelAndView("car/manageCarPeriods");
         pm.populateModel(mav::addObject);
         mav.addObject("inlineFormOpen", inlineFormOpen);

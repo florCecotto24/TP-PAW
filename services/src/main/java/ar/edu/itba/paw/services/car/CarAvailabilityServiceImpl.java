@@ -9,6 +9,7 @@ import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
@@ -28,14 +29,17 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import ar.edu.itba.paw.services.reservation.ReservationService;
@@ -165,6 +169,51 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
     @Transactional(readOnly = true)
     public List<CarAvailability> findEffectiveOfferedByCar(final long carId) {
         return effectiveOfferedAvailabilityFor(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CarAvailability> findEffectiveOfferedByCarAndMonth(
+            final long carId, final YearMonth month, final int page, final int pageSize) {
+        final LocalDate monthStart = month.atDay(1);
+        final LocalDate monthEnd = month.atEndOfMonth();
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        final int offset = safePage * safePageSize;
+
+        // Query 1: COUNT (OFFERED rows in the month — approximate upper bound)
+        final int approximateTotal = carAvailabilityDao.countMonthOfferedByCar(carId, monthStart, monthEnd);
+
+        // Query 2: SELECT page of OFFERED rows
+        final List<CarAvailability> pageRows = carAvailabilityDao.findMonthOfferedByCar(
+                carId, monthStart, monthEnd, safePageSize, offset);
+
+        // Query 3: All kinds in the month window — needed to resolve effectiveness
+        final List<CarAvailability> allMonthRows =
+                carAvailabilityDao.findOverlappingRangeByCar(carId, monthStart, monthEnd);
+        final Set<Long> effectiveIds = CarAvailabilityCalendarServiceImpl.computeEffectiveOffered(allMonthRows)
+                .stream()
+                .map(CarAvailability::getId)
+                .collect(Collectors.toSet());
+
+        final List<CarAvailability> content = pageRows.stream()
+                .filter(la -> effectiveIds.contains(la.getId()))
+                .collect(Collectors.toList());
+
+        return new Page<>(content, safePage, safePageSize, approximateTotal);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(
+            final long carId, final LocalDate from, final LocalDate to) {
+        return carAvailabilityCalendarService.getEffectiveSegmentsForOwnerCalendarInRange(carId, from, to);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsAnyOfferedByCar(final long carId) {
+        return carAvailabilityDao.existsAnyOfferedByCar(carId);
     }
 
     /**

@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.car;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collection;
 import java.util.List;
@@ -57,4 +58,17 @@ public interface CarAvailabilityCalendarService {
 
     /** See {@link CarAvailabilityService#isCarPriceVariableByCar(long, BigDecimal)}. */
     boolean isCarPriceVariableByCar(long carId, BigDecimal defaultPrice);
+
+    /**
+     * Like {@link #findEffectiveOfferedByCar(long)} but scoped to rows overlapping
+     * {@code [from, to]}. Only rows that overlap the given range are loaded from the DB,
+     * and effectiveness is computed on that subset.
+     */
+    List<CarAvailability> findEffectiveOfferedByCarInRange(long carId, LocalDate from, LocalDate to);
+
+    /**
+     * Like {@link #getAllEffectiveSegmentsForOwnerCalendar(long)} but scoped to rows overlapping
+     * {@code [from, to]}. Used for the owner calendar to load a ±1 month window.
+     */
+    List<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRange(long carId, LocalDate from, LocalDate to);
 }
