@@ -3,6 +3,7 @@ package ar.edu.itba.paw.services.review;
 import java.math.BigDecimal;
 import java.util.List;
 
+import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
@@ -22,6 +23,12 @@ public interface ReviewService {
 
     /** Public car page: paginated reviews with reviewer display fields. */
     Page<CarPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
+
+    /** Hydrated review entities for REST {@code GET /cars/{id}/reviews}. */
+    Page<Review> getCarPublicReviewEntities(long carId, int page, int pageSize);
+
+    /** Reviews attached to a single reservation (participants/admin). */
+    List<Review> getReviewsForReservation(long reservationId);
 
     /** Total public reviews stored for the car. */
     long countReviewsForCar(long carId);

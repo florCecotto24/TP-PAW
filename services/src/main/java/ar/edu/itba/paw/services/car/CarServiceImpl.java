@@ -443,6 +443,21 @@ public final class CarServiceImpl implements CarService {
 
     @Override
     @Transactional
+    public void updateDescription(final long ownerId, final long carId, final String description) {
+        final Optional<Car> carOpt = carDao.getCarById(carId);
+        if (carOpt.isEmpty() || carOpt.get().getOwnerId() != ownerId) {
+            throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
+        }
+        final Car car = carOpt.get();
+        if (description != null && !description.isBlank()) {
+            car.setDescription(description.strip());
+        } else {
+            car.setDescription(null);
+        }
+    }
+
+    @Override
+    @Transactional
     public void updateRatingAvg(final long carId, final BigDecimal average) {
         carDao.updateRatingAvg(carId, average);
     }

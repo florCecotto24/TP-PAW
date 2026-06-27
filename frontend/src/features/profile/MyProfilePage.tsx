@@ -1,0 +1,665 @@
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button, Form } from 'react-bootstrap';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMyUserUri } from './hooks';
+import {
+  deleteDocument,
+  deleteProfilePicture,
+  fetchUser,
+  openDocument,
+  patchUser,
+  uploadDocument,
+  uploadProfilePicture,
+} from './api';
+import type { DocumentType, ProfileFormValues, UserDto, UserPatchDto } from './types';
+import { apiErrorMessage } from '../auth/errorMessage';
+
+// =============================================================================
+// MyProfilePage — perfil propio editable. Markup espejo del profile.jsp original
+// (Bootstrap + clases del tema: profile-card, profile-fields-grid, etc.).
+//   GET /users/{myId} → datos. PATCH para editar / cambiar password.
+//   PUT/DELETE profile-picture y documents (multipart) vía sub-recursos.
+// =============================================================================
+
+const DOC_TYPES: DocumentType[] = ['license', 'identity'];
+
+function toForm(u: UserDto): ProfileFormValues {
+  return {
+    forename: u.forename ?? '',
+    surname: u.surname ?? '',
+    phoneNumber: u.phoneNumber ?? '',
+    birthDate: u.birthDate ?? '',
+    about: u.about ?? '',
+    cbu: u.cbu ?? '',
+  };
+}
+
+/** Construye el patch con SOLO los campos que cambiaron respecto al original. */
+function diffPatch(original: UserDto, form: ProfileFormValues): UserPatchDto {
+  const patch: UserPatchDto = {};
+  if (form.forename !== (original.forename ?? '')) patch.forename = form.forename;
+  if (form.surname !== (original.surname ?? '')) patch.surname = form.surname;
+  if (form.phoneNumber !== (original.phoneNumber ?? '')) patch.phoneNumber = form.phoneNumber;
+  if (form.birthDate !== (original.birthDate ?? '')) patch.birthDate = form.birthDate;
+  if (form.about !== (original.about ?? '')) patch.about = form.about;
+  if (form.cbu !== (original.cbu ?? '')) patch.cbu = form.cbu;
+  return patch;
+}
+
+function initials(u: UserDto): string {
+  return `${(u.forename ?? '').charAt(0)}${(u.surname ?? '').charAt(0)}`.toUpperCase();
+}
+
+export default function MyProfilePage() {
+  const { t } = useTranslation();
+  const myUri = useMyUserUri();
+  const queryClient = useQueryClient();
+
+  const userQuery = useQuery({
+    queryKey: ['profile', 'me', myUri],
+    // Perfil propio: vista privada (email, cbu, etc.).
+    queryFn: () => fetchUser(myUri as string, { private: true }),
+    enabled: !!myUri,
+  });
+
+  if (!myUri) {
+    return (
+      <div className="container profile-container">
+        <div className="profile-header">
+          <h1 className="profile-header__title">{t('profile.me.title')}</h1>
+        </div>
+        <div className="alert alert-warning" role="alert">
+          {t('profile.common.loginRequired')}
+        </div>
+      </div>
+    );
+  }
+  if (userQuery.isLoading) {
+    return (
+      <div className="container profile-container">
+        <p role="status" className="text-secondary">
+          {t('profile.common.loading')}
+        </p>
+      </div>
+    );
+  }
+  if (userQuery.isError || !userQuery.data) {
+    return (
+      <div className="container profile-container">
+        <div className="alert alert-danger" role="alert">
+          {t('profile.common.error')}
+        </div>
+      </div>
+    );
+  }
+
+  const user = userQuery.data;
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['profile', 'me', myUri] });
+
+  return (
+    <div className="container profile-container">
+      <div className="profile-header">
+        <h1 className="profile-header__title">{t('profile.me.title')}</h1>
+      </div>
+
+      <ProfilePictureCard user={user} onChanged={invalidate} />
+      <ProfileDataCard user={user} userUri={myUri} onSaved={invalidate} />
+      <DocumentsCard user={user} onChanged={invalidate} />
+      <PasswordCard userUri={myUri} />
+    </div>
+  );
+}
+
+// --- Card de avatar + nombre + email ----------------------------------------
+function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () => void }) {
+  const { t } = useTranslation();
+  // El backend incluye links.profilePicture SOLO si el usuario tiene foto, así que
+  // su presencia indica si existe (mostramos imagen y la opción "quitar"); si está
+  // ausente, mostramos el placeholder de iniciales. El onError queda como red de
+  // seguridad ante un GET que falle igual (replica el gating por imageId del JSP).
+  const [imgFailed, setImgFailed] = useState(false);
+  const pictureLink = imgFailed ? undefined : user.links.profilePicture;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Si cambia la foto (tras subir/borrar), reseteamos el estado de error.
+  useEffect(() => setImgFailed(false), [user.links.profilePicture]);
+
+  // Cierra el menú al clickear fuera (espejo del comportamiento del JSP).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [menuOpen]);
+
+  const upload = useMutation({
+    mutationFn: (file: File) => uploadProfilePicture(user, file),
+    onSuccess: onChanged,
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteProfilePicture(user),
+    onSuccess: onChanged,
+  });
+
+  return (
+    <div className="profile-card">
+      <div className="profile-card__header">
+        <div className="profile-card__avatar">
+          {pictureLink ? (
+            <img
+              src={pictureLink}
+              alt={`${user.forename} ${user.surname}`}
+              className="profile-card__avatar-img"
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <div className="profile-card__avatar-placeholder">
+              <span>{initials(user)}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="profile-card__avatar-edit-btn"
+            aria-label={t('profile.photo.edit')}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((o) => !o);
+            }}
+          >
+            <i className="bi bi-pencil-fill" aria-hidden="true"></i>
+          </button>
+          <div
+            className={`profile-avatar-menu${menuOpen ? ' is-open' : ''}`}
+            aria-hidden={!menuOpen}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="profile-avatar-menu__item"
+              onClick={() => {
+                setMenuOpen(false);
+                fileRef.current?.click();
+              }}
+            >
+              <i className="bi bi-upload" aria-hidden="true"></i>{' '}
+              {pictureLink ? t('profile.photo.replace') : t('profile.photo.upload')}
+            </button>
+            {pictureLink && (
+              <button
+                type="button"
+                className="profile-avatar-menu__item profile-avatar-menu__item--danger"
+                onClick={() => {
+                  setMenuOpen(false);
+                  remove.mutate();
+                }}
+                disabled={remove.isPending}
+              >
+                <i className="bi bi-trash" aria-hidden="true"></i> {t('profile.photo.remove')}
+              </button>
+            )}
+          </div>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="d-none"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) upload.mutate(file);
+              e.target.value = '';
+            }}
+          />
+        </div>
+
+        <div className="profile-card__info min-w-0">
+          <h2 className="profile-card__name ryden-text-break">
+            {user.forename} {user.surname}
+          </h2>
+          {user.memberSince && (
+            <p className="profile-card__member-since">
+              <span className="profile-card__member-since-label">{t('profile.me.memberSince')}</span>{' '}
+              <span className="profile-card__member-since-value">{user.memberSince}</span>
+            </p>
+          )}
+          {user.email && <p className="profile-card__email ryden-text-break">{user.email}</p>}
+        </div>
+      </div>
+
+      {(upload.isError || remove.isError) && (
+        <div className="alert alert-danger mt-3 mb-0" role="alert">
+          {t('profile.common.error')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Datos personales (vista / edición) -------------------------------------
+function ProfileDataCard({
+  user,
+  userUri,
+  onSaved,
+}: {
+  user: UserDto;
+  userUri: string;
+  onSaved: () => void;
+}) {
+  const { t } = useTranslation();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<ProfileFormValues>(() => toForm(user));
+  const [done, setDone] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Resincroniza si el usuario base cambia (tras invalidate).
+  useEffect(() => setForm(toForm(user)), [user]);
+
+  const mutation = useMutation({
+    mutationFn: (patch: UserPatchDto) => patchUser(userUri, patch),
+    onSuccess: () => {
+      setDone(true);
+      setEditing(false);
+      onSaved();
+    },
+  });
+
+  function update<K extends keyof ProfileFormValues>(key: K, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+    setDone(false);
+    setValidationError(null);
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    // Validaciones client-side que el JSP mostraba inline (Pattern/@Size/@Past).
+    const phone = form.phoneNumber.trim();
+    if (phone && !/^\+?[0-9]{1,14}$/.test(phone)) {
+      setValidationError(t('profile.me.phoneInvalid'));
+      return;
+    }
+    const cbu = form.cbu.trim();
+    if (cbu && !/^[0-9]{22}$/.test(cbu)) {
+      setValidationError(t('profile.me.cbuInvalid'));
+      return;
+    }
+    if (form.birthDate && form.birthDate > new Date().toISOString().slice(0, 10)) {
+      setValidationError(t('profile.me.birthDateFuture'));
+      return;
+    }
+    setValidationError(null);
+    const patch = diffPatch(user, form);
+    if (Object.keys(patch).length === 0) {
+      setEditing(false);
+      return;
+    }
+    mutation.mutate(patch);
+  }
+
+  const orDash = (v?: string | null) => (v && v.trim() ? v : t('profile.common.notSpecified'));
+
+  if (!editing) {
+    return (
+      <div className="profile-card profile-card--section">
+        <div className="profile-card__section-header">
+          <h2 className="profile-section-title">{t('profile.me.optionalSection')}</h2>
+          <Button variant="outline-primary" size="sm" onClick={() => setEditing(true)}>
+            {t('profile.common.edit')}
+          </Button>
+        </div>
+        <hr className="profile-card__divider" />
+        {done && (
+          <div className="alert alert-success" role="alert">
+            {t('profile.common.saved')}
+          </div>
+        )}
+        <div className="profile-fields-grid">
+          <FieldView label={t('profile.me.forename')} value={orDash(form.forename)} />
+          <FieldView label={t('profile.me.surname')} value={orDash(form.surname)} />
+          <FieldView label={t('profile.me.phoneNumber')} value={orDash(form.phoneNumber)} />
+          <FieldView label={t('profile.me.birthDate')} value={orDash(form.birthDate)} />
+          <FieldView label={t('profile.me.cbu')} value={orDash(form.cbu)} />
+          <FieldView label={t('profile.me.about')} value={orDash(form.about)} multiline />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="profile-card profile-card--section">
+      <h2 className="profile-section-title">{t('profile.me.optionalSection')}</h2>
+      <hr className="profile-card__divider" />
+      <Form onSubmit={onSubmit} noValidate>
+        {validationError && (
+          <div className="alert alert-danger" role="alert">
+            {validationError}
+          </div>
+        )}
+        {mutation.isError && (
+          <div className="alert alert-danger" role="alert">
+            {apiErrorMessage(t, mutation.error)}
+          </div>
+        )}
+        <div className="profile-fields-grid">
+          <Form.Group className="mb-3" controlId="forename">
+            <Form.Label>{t('profile.me.forename')}</Form.Label>
+            <Form.Control
+              value={form.forename}
+              autoComplete="given-name"
+              onChange={(e) => update('forename', e.target.value)}
+              required
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="surname">
+            <Form.Label>{t('profile.me.surname')}</Form.Label>
+            <Form.Control
+              value={form.surname}
+              autoComplete="family-name"
+              onChange={(e) => update('surname', e.target.value)}
+              required
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="phoneNumber">
+            <Form.Label>{t('profile.me.phoneNumber')}</Form.Label>
+            <Form.Control
+              value={form.phoneNumber}
+              autoComplete="tel"
+              inputMode="tel"
+              onChange={(e) => update('phoneNumber', e.target.value)}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="birthDate">
+            <Form.Label>{t('profile.me.birthDate')}</Form.Label>
+            <Form.Control
+              type="date"
+              value={form.birthDate}
+              autoComplete="bday"
+              onChange={(e) => update('birthDate', e.target.value)}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="cbu">
+            <Form.Label>{t('profile.me.cbu')}</Form.Label>
+            <Form.Control
+              value={form.cbu}
+              inputMode="numeric"
+              onChange={(e) => update('cbu', e.target.value)}
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="about">
+            <Form.Label>{t('profile.me.about')}</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              value={form.about}
+              onChange={(e) => update('about', e.target.value)}
+            />
+          </Form.Group>
+        </div>
+        <div className="profile-card__form-actions">
+          <Button
+            type="button"
+            variant="outline-secondary"
+            onClick={() => {
+              setForm(toForm(user));
+              setEditing(false);
+            }}
+          >
+            {t('profile.common.cancel')}
+          </Button>
+          <Button type="submit" variant="primary" disabled={mutation.isPending}>
+            {mutation.isPending ? t('profile.common.saving') : t('profile.common.save')}
+          </Button>
+        </div>
+      </Form>
+    </div>
+  );
+}
+
+function FieldView({
+  label,
+  value,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
+  return (
+    <div className="profile-field-view">
+      <span className="profile-section-label">{label}</span>
+      <span
+        className={`profile-field-value ryden-text-break${
+          multiline ? ' ryden-multiline-plaintext d-inline-block w-100' : ''
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// --- Documentos -------------------------------------------------------------
+function DocumentsCard({ user, onChanged }: { user: UserDto; onChanged: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="profile-card profile-card--section">
+      <h2 className="profile-section-title">{t('profile.docs.title')}</h2>
+      <hr className="profile-card__divider" />
+      <p className="text-muted small mb-3">{t('profile.docs.sectionHint')}</p>
+      <div className="profile-fields-grid">
+        {DOC_TYPES.map((type) => (
+          <DocumentRow key={type} user={user} type={type} onChanged={onChanged} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DocumentRow({
+  user,
+  type,
+  onChanged,
+}: {
+  user: UserDto;
+  type: DocumentType;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const label = type === 'license' ? t('profile.docs.license') : t('profile.docs.identity');
+  const validated = type === 'license' ? user.licenseValidated : user.identityValidated;
+  const [viewError, setViewError] = useState(false);
+
+  const upload = useMutation({
+    mutationFn: (file: File) => uploadDocument(user, type, file),
+    onSuccess: onChanged,
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteDocument(user, type),
+    onSuccess: onChanged,
+  });
+  // El GET del documento exige Authorization → no se puede usar un <a href>.
+  // Se baja autenticado y se abre como blob (espejo del viewer del JSP viejo).
+  const view = useMutation({
+    mutationFn: () => openDocument(user, type),
+    onSuccess: (ok) => setViewError(!ok),
+  });
+
+  return (
+    <div className="mb-3">
+      <div className="form-label">{label}</div>
+      <p className="small mb-2">
+        {validated ? (
+          <i className="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
+        ) : (
+          <i className="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
+        )}
+        <span className="ms-1">
+          {validated ? t('profile.docs.validated') : t('profile.docs.pending')}
+        </span>
+      </p>
+      <p className="small mb-2">
+        <button
+          type="button"
+          className="btn btn-link link-primary text-break p-0 align-baseline"
+          onClick={() => {
+            setViewError(false);
+            view.mutate();
+          }}
+          disabled={view.isPending}
+        >
+          {t('profile.docs.viewFile')}
+        </button>
+      </p>
+      <div className="d-flex align-items-center gap-2 flex-wrap">
+        <Form.Control
+          size="sm"
+          type="file"
+          accept="image/*,application/pdf"
+          className="w-auto"
+          onChange={(e) => {
+            const target = e.target as HTMLInputElement;
+            const file = target.files?.[0];
+            if (file) upload.mutate(file);
+            target.value = '';
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline-danger"
+          size="sm"
+          onClick={() => remove.mutate()}
+          disabled={remove.isPending}
+        >
+          {t('profile.docs.remove')}
+        </Button>
+      </div>
+      {viewError && (
+        <div className="alert alert-warning mt-2 mb-0 py-2 small" role="alert">
+          {t('profile.docs.viewError')}
+        </div>
+      )}
+      {(upload.isError || remove.isError) && (
+        <div className="alert alert-danger mt-2 mb-0 py-2 small" role="alert">
+          {t('profile.common.error')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Cambio de contraseña ---------------------------------------------------
+function PasswordCard({ userUri }: { userUri: string }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: (patch: UserPatchDto) => patchUser(userUri, patch),
+    onSuccess: () => {
+      setDone(true);
+      setOpen(false);
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+    },
+  });
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setLocalError(null);
+    setDone(false);
+    if (next !== confirm) {
+      setLocalError(t('profile.me.passwordMismatch'));
+      return;
+    }
+    mutation.mutate({ password: next, currentPassword: current });
+  }
+
+  return (
+    <div className="profile-card profile-card--section">
+      <h2 className="profile-section-title">{t('profile.me.passwordSectionTitle')}</h2>
+      <hr className="profile-card__divider" />
+      <p className="text-muted small mb-3">{t('profile.me.passwordSectionHint')}</p>
+
+      {done && (
+        <div className="alert alert-success" role="alert">
+          {t('profile.me.passwordChanged')}
+        </div>
+      )}
+
+      {!open ? (
+        <Button variant="outline-primary" onClick={() => setOpen(true)}>
+          {t('profile.me.changePassword')}
+        </Button>
+      ) : (
+        <Form onSubmit={onSubmit} noValidate style={{ maxWidth: 520 }}>
+          <p className="text-muted small">{t('profile.me.passwordIntro')}</p>
+          <Form.Group className="mb-3" controlId="currentPassword">
+            <Form.Label>{t('profile.me.currentPassword')}</Form.Label>
+            <Form.Control
+              type="password"
+              value={current}
+              autoComplete="current-password"
+              onChange={(e) => setCurrent(e.target.value)}
+              required
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="newPassword">
+            <Form.Label>{t('profile.me.newPassword')}</Form.Label>
+            <Form.Control
+              type="password"
+              value={next}
+              autoComplete="new-password"
+              onChange={(e) => setNext(e.target.value)}
+              required
+            />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="newPasswordConfirm">
+            <Form.Label>{t('profile.me.newPasswordConfirm')}</Form.Label>
+            <Form.Control
+              type="password"
+              value={confirm}
+              autoComplete="new-password"
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+            />
+          </Form.Group>
+          {localError && (
+            <div className="alert alert-danger" role="alert">
+              {localError}
+            </div>
+          )}
+          {mutation.isError && (
+            <div className="alert alert-danger" role="alert">
+              {apiErrorMessage(t, mutation.error)}
+            </div>
+          )}
+          <div className="d-flex gap-2">
+            <Button
+              type="button"
+              variant="outline-secondary"
+              onClick={() => {
+                setOpen(false);
+                setLocalError(null);
+                setCurrent('');
+                setNext('');
+                setConfirm('');
+              }}
+            >
+              {t('profile.common.cancel')}
+            </Button>
+            <Button type="submit" variant="primary" disabled={mutation.isPending}>
+              {mutation.isPending ? t('profile.common.saving') : t('profile.me.changePassword')}
+            </Button>
+          </div>
+        </Form>
+      )}
+    </div>
+  );
+}

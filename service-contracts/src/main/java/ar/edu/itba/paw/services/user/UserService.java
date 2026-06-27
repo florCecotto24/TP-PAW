@@ -275,6 +275,30 @@ public interface UserService {
      */
     Page<User> findAllUsersPaginated(int page, int pageSize);
 
+    /**
+     * Admin user listing with optional filters ({@code blocked}, {@code role}, {@code query}).
+     */
+    Page<User> findUsersPaginated(int page, int pageSize, Boolean blocked, UserRole role, String query);
+
+    /**
+     * Demotes {@code targetUserId} from admin to user. No-op when the target is already a regular user.
+     *
+     * @throws ar.edu.itba.paw.exception.user.UserNotFoundException when either user does not exist
+     * @throws ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException when
+     *         {@code assignedByUserId} is not an administrator
+     */
+    void demoteFromAdmin(long targetUserId, long assignedByUserId);
+
+    /**
+     * Updates only the {@code identity_validated} flag (admin moderation).
+     */
+    void updateIdentityValidated(long userId, boolean validated);
+
+    /**
+     * Updates only the {@code license_validated} flag (admin moderation).
+     */
+    void updateLicenseValidated(long userId, boolean validated);
+
     // -----------------------------------------------------------------------------------------------------------
     // Profile-media-orchestrated operations on user rows.
     //
@@ -308,4 +332,11 @@ public interface UserService {
      * Clears the user's {@code identity_file_id} FK and resets {@code identity_validated} to {@code false}.
      */
     void clearIdentityDocumentFk(long userId);
+
+    /**
+     * Permanently deletes the user row. Related rows cascade at the database layer.
+     *
+     * @throws UserNotFoundException when {@code userId} does not exist
+     */
+    void deleteUser(long userId);
 }

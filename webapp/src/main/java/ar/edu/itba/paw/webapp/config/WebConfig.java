@@ -1,29 +1,24 @@
 package ar.edu.itba.paw.webapp.config;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
-
-import java.util.Properties;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Controller;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -32,29 +27,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.http.converter.HttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import org.springframework.validation.beanvalidation.SpringConstraintValidatorFactory;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.multipart.commons.CommonsMultipartResolver;
-import org.springframework.web.servlet.LocaleResolver;
-import org.springframework.web.servlet.ViewResolver;
-import org.springframework.format.FormatterRegistry;
-import org.springframework.web.servlet.config.annotation.DefaultServletHandlerConfigurer;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
-import ar.edu.itba.paw.services.user.UserService;
-import ar.edu.itba.paw.webapp.i18n.RydenLocaleResolver;
-import ar.edu.itba.paw.webapp.support.converter.StringToEnumConverterFactory;
-import ar.edu.itba.paw.webapp.support.converter.StringToSupportedLocaleConverter;
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
-import org.springframework.web.servlet.view.InternalResourceViewResolver;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
@@ -67,16 +41,15 @@ import ar.edu.itba.paw.policy.UserValidationPolicy;
 import ar.edu.itba.paw.policy.VerificationCodePolicy;
 import ar.edu.itba.paw.webapp.config.properties.AppMoneyProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppReservationChatProperties;
+import ar.edu.itba.paw.webapp.config.properties.AppSecurityJwtProperties;
 import ar.edu.itba.paw.webapp.config.properties.AppValidationProperties;
-import ar.edu.itba.paw.webapp.interceptor.NoCacheHtmlInterceptor;
-import ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver;
-import ar.edu.itba.paw.webapp.support.ViewerIsAdminArgumentResolver;
 
 /**
- * Central Spring MVC setup: view resolver, i18n, multipart, async mail executor, Flyway-ready property sources,
- * and component scan for controllers, advice, exception handlers, util, support, security, validation, interceptor, services, and persistence.
+ * Root Spring configuration for the SPA + REST stack: JPA, validation, async mail, security, and services.
+ *
+ * REST endpoints live in {@code controller/} as JAX-RS resources ({@code @Path} + {@code @Component}).
+ * Bean Validation is enabled via {@link SpringValidatorBinder} and {@code @Valid} / {@link FormValidationSupport}.
  */
-@EnableWebMvc
 @EnableAsync
 @EnableScheduling
 @EnableTransactionManagement
@@ -86,51 +59,28 @@ import ar.edu.itba.paw.webapp.support.ViewerIsAdminArgumentResolver;
     LocalApplicationEnvironmentConfig.class,
     DeployedApplicationEnvironmentConfig.class,
     SpringMailConfig.class,
-    WebAuthConfig.class,
-    ValidationWebConfig.class
+    WebAuthConfig.class
 })
 @PropertySource("classpath:application/application.properties")
-@ComponentScan({
-        "ar.edu.itba.paw.webapp.controller",
-        "ar.edu.itba.paw.webapp.advice",
-        "ar.edu.itba.paw.webapp.exception",
-        "ar.edu.itba.paw.webapp.util",
-        "ar.edu.itba.paw.webapp.support",
-        "ar.edu.itba.paw.webapp.security",
-        "ar.edu.itba.paw.webapp.validation",
-        "ar.edu.itba.paw.webapp.interceptor",
-        "ar.edu.itba.paw.webapp.config.properties",
-        "ar.edu.itba.paw.services",
-        "ar.edu.itba.paw.persistence",
-        "ar.edu.itba.paw.mail",
-        "ar.edu.itba.paw.policy",
-        "ar.edu.itba.paw.scheduling",
-        "ar.edu.itba.paw.util"
-})
-public class WebConfig implements WebMvcConfigurer {
-
-    private final ObjectProvider<NoCacheHtmlInterceptor> noCacheHtmlInterceptor;
-    private final ObjectMapper objectMapper;
-
-    /**
-     * Defer resolution until {@link #addInterceptors}: avoids a context cycle and avoids {@code @Lazy} (CGLIB cannot
-     * proxy interceptors because they are final).
-     */
-    public WebConfig(
-            final ObjectProvider<NoCacheHtmlInterceptor> noCacheHtmlInterceptor,
-            final ObjectMapper objectMapper) {
-        this.noCacheHtmlInterceptor = noCacheHtmlInterceptor;
-        this.objectMapper = objectMapper;
-    }
-
-    /**
-     * Needed for {@link org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher} with path variables
-     * (e.g. {@code /my-reservations/{reservationId}/**}), distinct from Ant {@code *} patterns.
-     */
-    @Bean
-    public HandlerMappingIntrospector handlerMappingIntrospector(final ApplicationContext applicationContext) {
-        return new HandlerMappingIntrospector(applicationContext);
-    }
+@ComponentScan(
+        basePackages = {
+                "ar.edu.itba.paw.webapp.controller",
+                "ar.edu.itba.paw.webapp.exception.mapper",
+                "ar.edu.itba.paw.webapp.util",
+                "ar.edu.itba.paw.webapp.support",
+                "ar.edu.itba.paw.webapp.security",
+                "ar.edu.itba.paw.webapp.validation",
+                "ar.edu.itba.paw.webapp.config.properties",
+                "ar.edu.itba.paw.services",
+                "ar.edu.itba.paw.persistence",
+                "ar.edu.itba.paw.mail",
+                "ar.edu.itba.paw.policy",
+                "ar.edu.itba.paw.scheduling",
+                "ar.edu.itba.paw.util"
+        },
+        excludeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION, classes = Controller.class)
+)
+public class WebConfig {
 
     @Bean
     public MessageSource messageSource() {
@@ -139,6 +89,11 @@ public class WebConfig implements WebMvcConfigurer {
         bundle.setDefaultEncoding(StandardCharsets.UTF_8.name());
         bundle.setFallbackToSystemLocale(false);
         return bundle;
+    }
+
+    @Bean
+    public AppSecurityJwtProperties appSecurityJwtProperties(final Environment environment) {
+        return AppSecurityJwtProperties.fromEnvironment(environment);
     }
 
     @Bean
@@ -215,14 +170,6 @@ public class WebConfig implements WebMvcConfigurer {
         return bean;
     }
 
-    /**
-     * Enables JSR-303 method-level validation on Spring beans annotated with
-     * {@link org.springframework.validation.annotation.Validated} so controllers can declare
-     * {@code @Min(0) int page} on @RequestParam parameters instead of clamping with
-     * {@code Math.max(0, page)}. Failed constraints surface as
-     * {@link javax.validation.ConstraintViolationException} which the global handler
-     * (RydenExceptionHandler) reports as a 400.
-     */
     @Bean
     public org.springframework.validation.beanvalidation.MethodValidationPostProcessor methodValidationPostProcessor(
             final LocalValidatorFactoryBean localValidatorFactoryBean) {
@@ -230,21 +177,6 @@ public class WebConfig implements WebMvcConfigurer {
                 new org.springframework.validation.beanvalidation.MethodValidationPostProcessor();
         processor.setValidator(localValidatorFactoryBean);
         return processor;
-    }
-
-    @Bean
-    public LocaleResolver localeResolver(final UserService userService) {
-        // Custom resolver: signed-in user's stored preference > cookie > default (Spanish).
-        // Accept-Language is intentionally ignored; the user picks the language explicitly via the navbar toggle.
-        return new RydenLocaleResolver(userService);
-    }
-
-    @Bean
-    public ViewResolver viewResolver() {
-        final InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
-        viewResolver.setPrefix("/WEB-INF/views/");
-        viewResolver.setSuffix(".jsp");
-        return viewResolver;
     }
 
     /**
@@ -263,10 +195,6 @@ public class WebConfig implements WebMvcConfigurer {
         return factoryBean;
     }
 
-    /**
-     * Pulls each Hibernate knob from the {@link Environment} so nothing is hardcoded. Only sets a key if the
-     * property is present (so missing keys fall back to Hibernate's own defaults rather than to a stale literal).
-     */
     private static Properties resolveHibernateProperties(final Environment environment) {
         final Properties properties = new Properties();
         copyIfPresent(environment, properties, "hibernate.hbm2ddl.auto");
@@ -297,11 +225,6 @@ public class WebConfig implements WebMvcConfigurer {
         executor.setMaxPoolSize(4);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("mail-async-");
-        /*
-         * JavaMail (MimeMessage / MimeMessageHelper) loads javax.activation.* from the context class loader.
-         * Jetty + @Async can leave worker threads with a TCCL that does not see WEB-INF/lib, causing
-         * ClassNotFoundException: javax.activation.DataSource even when com.sun.activation:javax.activation is packaged.
-         */
         final ClassLoader webAppClassLoader = WebConfig.class.getClassLoader();
         executor.setTaskDecorator(runnable -> () -> {
             final ClassLoader previous = Thread.currentThread().getContextClassLoader();
@@ -312,43 +235,15 @@ public class WebConfig implements WebMvcConfigurer {
                 Thread.currentThread().setContextClassLoader(previous);
             }
         });
-        // Graceful shutdown: drain the queue so a deploy does not lose mail already accepted by
-        // the application (verification codes, password resets, reservation confirmations).
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
-        // Backpressure: when the queue is saturated, run the email synchronously on the caller
-        // thread instead of throwing TaskRejectedException up to the controller. Mail sending is
-        // already best-effort (failures are logged) so the small latency hit on the calling
-        // request is preferable to surfacing a 500 to the user mid-flow.
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }
 
-    @Override
-    public void addResourceHandlers(final ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/css/**").addResourceLocations("/css/");
-        registry.addResourceHandler("/js/**").addResourceLocations("/js/");
-        registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
-    }
-
     /**
-     * Multipart using Apache Commons FileUpload (Spring {@link CommonsMultipartResolver}),
-     * with {@code MultipartFilter} in {@code web.xml} before Spring Security.
-     */
-    @Bean
-    public CommonsMultipartResolver multipartResolver(final Environment environment) {
-        final long maxRequest = resolveMaxMultipartRequestBytes(environment);
-        final CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
-        multipartResolver.setMaxUploadSize(maxRequest);
-        multipartResolver.setMaxInMemorySize(1048576);
-        multipartResolver.setDefaultEncoding(StandardCharsets.UTF_8.name());
-        return multipartResolver;
-    }
-
-    /**
-     * Prefer {@code app.upload.max-multipart-request-megabytes} (aligned with {@code application.properties});
-     * fall back to explicit bytes, then the legacy default (~180 MiB).
+     * Shared upload limit helper (legacy MVC multipart bean removed). Used by tests and future Jersey multipart wiring.
      */
     static long resolveMaxMultipartRequestBytes(final Environment environment) {
         final String bytesProperty = environment.getProperty("app.upload.max-multipart-request-bytes");
@@ -362,80 +257,6 @@ public class WebConfig implements WebMvcConfigurer {
             return megabytes * bytesPerMegabyte;
         }
         return 188743680L;
-    }
-
-    @Override
-    public void configureDefaultServletHandling(final DefaultServletHandlerConfigurer configurer) {
-        configurer.enable();
-    }
-
-    /** Ensures REST chat history returns ISO-8601 {@code createdAt} strings, not numeric epoch seconds. */
-    @Override
-    public void extendMessageConverters(final List<HttpMessageConverter<?>> converters) {
-        for (int i = 0; i < converters.size(); i++) {
-            if (converters.get(i) instanceof MappingJackson2HttpMessageConverter) {
-                converters.set(i, new MappingJackson2HttpMessageConverter(objectMapper));
-                return;
-            }
-        }
-    }
-
-    @Override
-    public void addInterceptors(final InterceptorRegistry registry) {
-        registry.addInterceptor(noCacheHtmlInterceptor.getObject()).addPathPatterns("/**");
-    }
-
-    /**
-     * Registers conversion strategies for {@code @RequestParam} / {@code @PathVariable} binding.
-     *
-     *   {@link StringToSupportedLocaleConverter}: {@code String → java.util.Locale}, validated
-     *       against the application whitelist; not handled by the enum factory because
-     *       {@link java.util.Locale} is not an enum, and we want unknown languages to fall back
-     *       silently rather than 400.</li>
-     *   {@link StringToEnumConverterFactory}: case-insensitive {@code String → Enum<?>} for
-     *       <em>every</em> enum used as {@code @RequestParam} / {@code @PathVariable}, including
-     *       {@code Car.Type}, {@code Car.Transmission}, {@code Car.Powertrain}, {@code Car.Status},
-     *       {@code Reservation.Status}, {@code UserDocumentType} and
-     *       {@link ar.edu.itba.paw.webapp.support.ReservationViewerRole}. Unknown tokens raise {@link IllegalArgumentException} → HTTP 400 
-     * If a future enum needs aliases or non-strict semantics, register a dedicated {@code Converter} for that specific type; Spring's binder picks the most specific converter, so the factory keeps covering the rest.
-     */
-    @Override
-    public void addFormatters(final FormatterRegistry registry) {
-        registry.addConverter(new StringToSupportedLocaleConverter());
-        registry.addConverterFactory(new StringToEnumConverterFactory());
-    }
-
-    /**
-     * {@link WebMvcConfigurer#addArgumentResolvers} appends after built-in resolvers;
-     * {@link org.springframework.web.method.annotation.ModelAttributeMethodProcessor}
-     * would otherwise claim {@code User} parameters before {@link ar.edu.itba.paw.webapp.support.CurrentUserArgumentResolver}.
-     * Registration runs on {@link ContextRefreshedEvent} so {@link RequestMappingHandlerAdapter} is not touched during
-     * {@code WebConfig} creation (that would re-enter MVC bootstrap and cycle with {@code messageSource} / {@code localValidatorFactoryBean}).
-     */
-    @Bean
-    public ApplicationListener<ContextRefreshedEvent> prependCurrentUserArgumentResolver() {
-        return event -> {
-            if (event.getApplicationContext().getParent() != null) {
-                return;
-            }
-            final RequestMappingHandlerAdapter adapter =
-                    event.getApplicationContext().getBean(RequestMappingHandlerAdapter.class);
-            adapter.setIgnoreDefaultModelOnRedirect(true);
-            final List<HandlerMethodArgumentResolver> resolvers =
-                    new ArrayList<>(adapter.getArgumentResolvers());
-            final boolean hasCurrentUser = resolvers.stream().anyMatch(r -> r instanceof CurrentUserArgumentResolver);
-            final boolean hasViewerIsAdmin = resolvers.stream().anyMatch(r -> r instanceof ViewerIsAdminArgumentResolver);
-            if (hasCurrentUser && hasViewerIsAdmin) {
-                return;
-            }
-            if (!hasCurrentUser) {
-                resolvers.add(0, new CurrentUserArgumentResolver());
-            }
-            if (!hasViewerIsAdmin) {
-                resolvers.add(0, new ViewerIsAdminArgumentResolver());
-            }
-            adapter.setArgumentResolvers(resolvers);
-        };
     }
 
 }

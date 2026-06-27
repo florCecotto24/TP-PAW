@@ -39,6 +39,22 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public List<Review> findReviewsForReservation(final long reservationId) {
+        return em.createQuery(
+                        "SELECT r FROM Review r "
+                                + "JOIN FETCH r.reservation res "
+                                + "JOIN FETCH res.car c "
+                                + "JOIN FETCH c.owner "
+                                + "JOIN FETCH res.rider "
+                                + "LEFT JOIN FETCH r.image "
+                                + "WHERE res.id = :reservationId",
+                        Review.class)
+                .setParameter("reservationId", reservationId)
+                .getResultList();
+    }
+
+    @Override
     @Transactional
     public void insertReview(
             final long reservationId,
@@ -122,6 +138,49 @@ public class ReviewJpaDao implements ReviewDao {
                 })
                 .collect(Collectors.toList());
         return new Page<>(content, page, pageSize, total != null ? total : 0L);
+    }
+
+    @Override
+    public Page<Review> findPublicReviewsForCar(final long carId, final int page, final int pageSize) {
+        final Long total = em.createQuery(
+                        "SELECT COUNT(r) FROM Review r "
+                                + "WHERE r.reservation.car.id = :carId AND r.rating IS NOT NULL",
+                        Long.class)
+                .setParameter("carId", carId)
+                .getSingleResult();
+
+        final List<Object[]> pkRows = em.createNativeQuery(
+                        "SELECT r.reservation_id, r.made_by_rider "
+                                + "FROM reviews r "
+                                + "JOIN reservations res ON res.id = r.reservation_id "
+                                + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
+                                + "ORDER BY r.created_at DESC "
+                                + "LIMIT :limit OFFSET :offset")
+                .setParameter("carId", carId)
+                .setParameter("limit", pageSize)
+                .setParameter("offset", page * pageSize)
+                .getResultList();
+
+        if (pkRows.isEmpty()) {
+            return new Page<>(Collections.emptyList(), page, pageSize, total != null ? total : 0L);
+        }
+
+        final List<ReviewId> ids = pkRows.stream()
+                .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
+                .collect(Collectors.toList());
+        final List<Review> reviews = em.createQuery(
+                        "FROM Review r "
+                                + "JOIN FETCH r.reservation res "
+                                + "JOIN FETCH res.rider rider "
+                                + "JOIN FETCH res.car c "
+                                + "JOIN FETCH c.owner owner "
+                                + "LEFT JOIN FETCH r.image img "
+                                + "WHERE r.id IN :ids "
+                                + "ORDER BY r.createdAt DESC",
+                        Review.class)
+                .setParameter("ids", ids)
+                .getResultList();
+        return new Page<>(reviews, page, pageSize, total != null ? total : 0L);
     }
 
     @Override

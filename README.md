@@ -1,6 +1,6 @@
 # PAW — Ryden
 
-Multi-module **Spring MVC** + **JSP** web application. **Java 21**.
+Plataforma de alquiler de autos. **Java 21**, backend **REST stateless** (Jersey + Spring) y frontend **SPA** (React + Vite + TypeScript) empaquetados en un WAR multi-módulo Maven.
 
 ## Prerequisites
 
@@ -14,6 +14,8 @@ Multi-module **Spring MVC** + **JSP** web application. **Java 21**.
 
 - Adjust host, user, and database to match `application-local.properties` in `webapp/src/main/resources/` (or your own overrides).
 
+Node.js **no es obligatorio** en la máquina de build: el módulo `frontend` descarga Node v20 vía `frontend-maven-plugin`. Para desarrollo SPA aislado (`npm run dev`) sí conviene tener Node 20+ local.
+
 ### Environment properties (required)
 
 Startup **requires** **`.properties`** files that are **not** in the repository (they are `.gitignore`d). **Create them from the matching `.example`** files in the same directory:
@@ -23,7 +25,7 @@ Startup **requires** **`.properties`** files that are **not** in the repository 
 | Local development (`-Dspring.profiles.active=local`, e.g. `mvn jetty:run` on the webapp module) | `webapp/src/main/resources/application/application-local.properties` | `application-local.properties.example` |
 | Deployment (without the `local` profile, e.g. Tomcat on Pampero) | `webapp/src/main/resources/application/application-deployed.properties` | `application-deployed.properties.example` |
 
-Those files hold JDBC settings, SMTP password, *remember-me* key, and `mail.app.base.url`, in addition to shared settings in committed `application.properties`. Without the `.properties` file for the active profile, the Spring context will not start.
+Those files hold JDBC settings, SMTP password, JWT secret (recommended in deployed), and `mail.app.base.url`, in addition to shared settings in committed `application.properties`. Without the `.properties` file for the active profile, the Spring context will not start.
 
 ## Build and run (from repository root)
 
@@ -31,6 +33,8 @@ Those files hold JDBC settings, SMTP password, *remember-me* key, and `mail.app.
 mvn clean install
 mvn jetty:run -pl webapp
 ```
+
+`mvn compile` / `mvn package` compilan también el frontend (`npm install` + `npm run build` en el módulo `frontend`) y empaquetan `frontend/dist/` en el WAR.
 
 **JVM options** (Spring profile + test Logback), same as configuring **VM options** in your IDE when you run Jetty/Tomcat:
 
@@ -47,9 +51,19 @@ export MAVEN_OPTS="-Dspring.profiles.active=local -Dlogback.configurationFile=cl
 mvn jetty:run -pl webapp
 ```
 
-Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** or another servlet container with the same JVM options, datasource, and profile settings.
+Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. Para Tomcat el build del frontend usa context path `/webapp/` (`npm run build:tomcat` vía Maven).
 
-Jetty is configured on port **8080** in the parent POM. The app may use a servlet context path (see `server.servlet.context-path` in `application.properties`); try `http://localhost:8080/` and `http://localhost:8080/webapp/` if the home page is not at the root you expect.
+Jetty local usa puerto **8080** y context path **`/`** (`server.servlet.context-path` en `application.properties`). La SPA y la API comparten el mismo origen; rutas de la API son sustantivos REST (`/users`, `/cars`, …) sin prefijo `/api`.
+
+### SPA dev server (opcional)
+
+Con el backend en `:8080`:
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Vite proxea los recursos REST al backend (ver `frontend/vite.config.ts`).
 
 ## Demo account
 
@@ -65,6 +79,9 @@ mvn test
 ```
 
 (`mvn clean install` already runs tests unless skipped.)
+
+- Backend: JUnit 5 + Mockito (`services`), HSQLDB (`persistence`)
+- Frontend: `mvn test -pl frontend` o `cd frontend && npm test` (Vitest)
 
 ## Deployed log files (HTTP)
 

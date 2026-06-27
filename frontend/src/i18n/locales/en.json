@@ -1,0 +1,148 @@
+{
+  "app": {
+    "name": "Ryden",
+    "loading": "Loading...",
+    "tagline": "Peer-to-peer car rental"
+  },
+  "title": {
+    "home": "Home",
+    "search": "Search cars",
+    "carDetail": "Car details",
+    "login": "Sign in",
+    "register": "Create account",
+    "verifyEmail": "Verify email",
+    "forgot": "Reset password",
+    "publish": "Publish a car",
+    "myCars": "My cars",
+    "newReservation": "New reservation",
+    "myReservations": "My reservations",
+    "reservationDetail": "Reservation details",
+    "profile": "My profile",
+    "favorites": "Favorites",
+    "publicProfile": "User profile",
+    "admin": "Administration",
+    "notFound": "Page not found"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "publish": "Publish",
+    "myCars": "My cars",
+    "myReservations": "My reservations",
+    "ownerReservations": "Reservations for my cars",
+    "favorites": "Favorites",
+    "profile": "Profile",
+    "admin": "Admin",
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "language": "Language"
+  },
+  "auth": {
+    "login": {
+      "title": "Log in",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Log in",
+      "submitting": "Logging in...",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "failed": "Wrong email or password."
+    },
+    "register": {
+      "title": "Create account",
+      "forename": "First name",
+      "surname": "Last name",
+      "email": "Email",
+      "password": "Password",
+      "passwordConfirm": "Confirm password",
+      "submit": "Sign up",
+      "submitting": "Creating account...",
+      "success": "Account created. Check your email to verify it.",
+      "haveAccount": "Already have an account?"
+    },
+    "verify": {
+      "title": "Verify email",
+      "code": "Verification code",
+      "submit": "Verify",
+      "resend": "Resend code",
+      "success": "Email verified."
+    },
+    "forgot": {
+      "title": "Reset password",
+      "email": "Email",
+      "submit": "Send code",
+      "sent": "If the account exists, we sent a code to your email.",
+      "code": "Code",
+      "newPassword": "New password",
+      "reset": "Reset password"
+    }
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email.",
+    "passwordMismatch": "Passwords do not match.",
+    "minLength": "Must be at least {{count}} characters.",
+    "maxLength": "Must be at most {{count}} characters."
+  },
+  "error": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Could not reach the server.",
+    "unauthorized": "You need to log in.",
+    "forbidden": "You don't have permission to do this.",
+    "notFound": "We couldn't find what you were looking for.",
+    "methodNotAllowed": "Operation not allowed.",
+    "conflict": "There is a conflict with the current state.",
+    "validation": "Please review the entered data.",
+    "internal": "Internal server error.",
+    "byCode": {
+      "user.email.alreadyExists": "That email is already registered.",
+      "user.account.notFound": "User not found.",
+      "user.verification.codeInvalid": "The verification code is invalid or expired.",
+      "user.verification.codeAlreadyActive": "The email is already verified.",
+      "user.passwordReset.codeInvalid": "The reset code is invalid or expired.",
+      "user.password.currentIncorrect": "The current password is incorrect.",
+      "user.registration.passwordMismatch": "Passwords do not match.",
+      "user.registration.passwordTooShort": "The password is too short.",
+      "user.registration.passwordTooLong": "The password is too long.",
+      "user.profile.phoneInvalid": "The phone number is not valid.",
+      "user.profile.birthDateFuture": "The birth date cannot be in the future.",
+      "user.profile.cbuInvalid": "The CBU is not valid.",
+      "car.plate.alreadyExists": "A car with that plate already exists.",
+      "car.notFound": "Car not found.",
+      "car.invalidStatusTransition": "The car cannot move to that status.",
+      "car.statusTransition.forbidden": "You are not allowed to change this car's status.",
+      "car.statusTransition.invalid": "The car cannot move to that status.",
+      "car.publish.cbuRequired": "You need to add your CBU to publish.",
+      "car.activate.cbuRequired": "You need to add your CBU to activate the car.",
+      "car.create.modelPending": "The model is pending approval.",
+      "favCar.cannotFavOwn": "You can't add your own car to favorites.",
+      "carAvailability.editConflict": "There are active reservations overlapping those days.",
+      "carAvailability.withdrawConflict": "Can't withdraw: there are active reservations.",
+      "carAvailability.notFound": "Availability period not found.",
+      "reservation.conflict.overlap": "The selected dates are not available.",
+      "reservation.cancel.notAllowed": "The reservation can't be cancelled in this state.",
+      "reservation.edit.notAllowed": "The reservation can't be edited in this state.",
+      "reservation.carReturned.notAllowed": "Can't mark as returned in this state.",
+      "reservation.rider.cannotReserveOwnListing": "You can't reserve your own car.",
+      "reservation.rider.documentationRequired": "You need to validate your documents to reserve.",
+      "reservation.rider.ownerBlocked": "The owner can't receive reservations right now.",
+      "review.alreadySubmitted": "You already reviewed this reservation.",
+      "review.notAllowed": "This reservation can't be reviewed.",
+      "admin.block.cannotBlockSelf": "You can't block yourself.",
+      "admin.block.cannotBlockGrantor": "You can't block the user who granted you permissions.",
+      "admin.promote.alreadyAdmin": "The user is already an admin.",
+      "admin.pause.cannotPauseAdminCar": "Can't pause a car already paused by an admin.",
+      "catalog.brand.notFound": "Brand not found.",
+      "catalog.model.notFound": "Model not found."
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "message": "The page you are looking for does not exist.",
+    "back": "Back to home"
+  },
+  "placeholder": {
+    "comingSoon": "This section is under construction."
+  }
+}

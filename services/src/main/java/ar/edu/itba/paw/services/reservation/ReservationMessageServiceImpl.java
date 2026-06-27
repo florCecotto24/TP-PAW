@@ -218,6 +218,15 @@ public final class ReservationMessageServiceImpl implements ReservationMessageSe
 
     @Override
     @Transactional(readOnly = true)
+    public List<ReservationMessage> findMessagesAfter(
+            final long reservationId, final long afterMessageId, final int limit) {
+        final int safeLimit = limit > 0 ? limit : chatPolicy.getHistoryPageSize();
+        return reservationMessageDao.findByReservationIdAfterIdOrderByCreatedAtAsc(
+                reservationId, Math.max(0L, afterMessageId), safeLimit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countMessages(final long reservationId) {
         return reservationMessageDao.countByReservationId(reservationId);
     }

@@ -48,6 +48,7 @@ class RydenLocaleResolverTest {
 
     @Test
     void resolveLocaleReturnsSpanishByDefaultForAnonymousUserWithoutCookie() {
+        // 1.Arrange
         SecurityContextHolder.getContext().setAuthentication(
                 new AnonymousAuthenticationToken(
                         "anon",
@@ -55,68 +56,85 @@ class RydenLocaleResolverTest {
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))));
         final MockHttpServletRequest request = new MockHttpServletRequest();
 
+        // 2.Act
         final Locale resolved = resolver.resolveLocale(request);
 
+        // 3.Assert
         assertEquals(SupportedLocales.SPANISH, resolved);
     }
 
     @Test
     void resolveLocaleIgnoresAcceptLanguageHeaderForAnonymousUser() {
+        // 1.Arrange
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Accept-Language", "en-US,en;q=0.9");
 
+        // 2.Act
         final Locale resolved = resolver.resolveLocale(request);
 
+        // 3.Assert
         assertEquals(SupportedLocales.SPANISH, resolved,
                 "Accept-Language must be ignored; default Spanish should win for anonymous visitors");
     }
 
     @Test
     void resolveLocaleReadsCookieWhenSetByLanguageToggleForAnonymousUser() {
+        // 1.Arrange
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "en"));
 
+        // 2.Act
         final Locale resolved = resolver.resolveLocale(request);
 
+        // 3.Assert
         assertEquals(SupportedLocales.ENGLISH, resolved);
     }
 
     @Test
     void resolveLocaleFallsBackToDefaultWhenCookieValueUnsupported() {
+        // 1.Arrange
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "fr"));
         lenient().when(userService.findUserPreferredLocale(anyLong())).thenReturn(Optional.empty());
 
+        // 2.Act
         final Locale resolved = resolver.resolveLocale(request);
 
+        // 3.Assert
         assertEquals(SupportedLocales.SPANISH, resolved);
     }
 
     @Test
     void resolveLocaleHonoursAuthenticatedUserPreferenceOverCookie() {
+        // 1.Arrange
         authenticateAs(USER_ID);
         when(userService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.of(SupportedLocales.ENGLISH));
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "es"));
 
+        // 2.Act
         final Locale resolved = resolver.resolveLocale(request);
 
+        // 3.Assert
         assertEquals(SupportedLocales.ENGLISH, resolved,
                 "When the signed-in user has a stored preference it must win over the cookie");
     }
 
     @Test
     void resolveLocaleFallsThroughToCookieWhenAuthenticatedUserHasNoStoredPreference() {
+        // 1.Arrange
         authenticateAs(USER_ID);
         when(userService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.empty());
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "en"));
 
+        // 2.Act
         final Locale resolved = resolver.resolveLocale(request);
 
+        // 3.Assert
         assertEquals(SupportedLocales.ENGLISH, resolved);
     }
 

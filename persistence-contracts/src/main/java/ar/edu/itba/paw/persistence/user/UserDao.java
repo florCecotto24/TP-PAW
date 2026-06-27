@@ -83,5 +83,18 @@ public interface UserDao {
 
     Page<User> findAllUsersPaginated(int page, int pageSize);
 
+    /**
+     * Admin user listing with optional filters. {@code role} and {@code query} may be {@code null}
+     * to skip that filter; {@code blocked} is tri-state ({@code null} = any).
+     */
+    Page<User> findUsersPaginated(int page, int pageSize, Boolean blocked, UserRole role, String query);
+
+    void updateIdentityValidated(long userId, boolean validated);
+
+    void updateLicenseValidated(long userId, boolean validated);
+
     void updateCbu(final long userId, final String cbu);
+
+    /** Permanently removes the user row (DB cascades related data). */
+    void deleteUser(long userId);
 }

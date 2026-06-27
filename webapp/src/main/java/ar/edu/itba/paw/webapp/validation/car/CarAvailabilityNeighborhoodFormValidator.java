@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.validation.car;
 
 import ar.edu.itba.paw.services.location.LocationService;
+import ar.edu.itba.paw.webapp.form.car.AvailabilityCreateForm;
 import ar.edu.itba.paw.webapp.form.car.CarAvailabilityEditForm;
 import ar.edu.itba.paw.webapp.form.car.CreateCarAvailabilityForm;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,9 @@ public final class CarAvailabilityNeighborhoodFormValidator implements Validator
 
     @Override
     public boolean supports(final Class<?> clazz) {
-        return CreateCarAvailabilityForm.class.isAssignableFrom(clazz) || CarAvailabilityEditForm.class.isAssignableFrom(clazz);
+        return CreateCarAvailabilityForm.class.isAssignableFrom(clazz)
+                || CarAvailabilityEditForm.class.isAssignableFrom(clazz)
+                || AvailabilityCreateForm.class.isAssignableFrom(clazz);
     }
 
     @Override
@@ -29,6 +32,8 @@ public final class CarAvailabilityNeighborhoodFormValidator implements Validator
             neighborhoodId = createCarAvailabilityForm.getNeighborhoodId();
         } else if (target instanceof CarAvailabilityEditForm carAvailabilityEditForm) {
             neighborhoodId = carAvailabilityEditForm.getNeighborhoodId();
+        } else if (target instanceof AvailabilityCreateForm availabilityCreateForm) {
+            neighborhoodId = availabilityCreateForm.getNeighborhoodId();
         } else {
             return;
         }

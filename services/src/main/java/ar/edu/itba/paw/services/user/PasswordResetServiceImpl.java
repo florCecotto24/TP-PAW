@@ -82,6 +82,20 @@ public final class PasswordResetServiceImpl implements PasswordResetService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean matchesResetCode(final String email, final String code) {
+        if (email == null || email.isBlank() || code == null || code.isBlank()) {
+            return false;
+        }
+        final String normalized = EmailNormalizer.normalize(email);
+        final Optional<User> userOpt = userService.findByEmail(normalized);
+        if (userOpt.isEmpty()) {
+            return false;
+        }
+        return passwordResetCodeDao.matchesValidCode(userOpt.get().getId(), code, Instant.now());
+    }
+
+    @Override
     @Transactional
     public void completePasswordReset(
             final String email,

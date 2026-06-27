@@ -99,4 +99,13 @@ public class CarPictureJpaDao implements CarPictureDao {
         }
         return result;
     }
+
+    @Override
+    @Transactional
+    public void deleteCarPicture(final long id) {
+        final CarPicture picture = em.find(CarPicture.class, id);
+        if (picture != null) {
+            em.remove(picture);
+        }
+    }
 }

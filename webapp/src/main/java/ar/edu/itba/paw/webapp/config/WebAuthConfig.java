@@ -22,6 +22,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +32,9 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.savedrequest.NullRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import ar.edu.itba.paw.services.user.UserService;
@@ -69,6 +74,27 @@ public class WebAuthConfig {
     }
 
     /**
+     * Legacy MVC beans ({@code UserSessionService}, etc.) still expect a {@link SessionRegistry}.
+     * Under JWT stateless no HTTP sessions are registered here; the bean exists only so the context
+     * starts while MVC controllers coexist with the migration (removed in F7).
+     */
+    @Bean
+    public SessionRegistry sessionRegistry() {
+        return new SessionRegistryImpl();
+    }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new RequestAttributeSecurityContextRepository();
+    }
+
+    /** Stateless: no SavedRequest / post-login redirects (legacy {@code RegistrationController}). */
+    @Bean
+    public RequestCache requestCache() {
+        return new NullRequestCache();
+    }
+
+    /**
      * Static SPA assets bypass the security filter chain entirely (no SecurityContext work, no headers
      * processing). Revved {@code /public} and non-revved {@code /assets} (LINEAMIENTOS §4.3).
      */
@@ -78,13 +104,19 @@ public class WebAuthConfig {
     }
 
     @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter(
+            final AuthenticationManager authenticationManager,
+            final TokenService tokenService) {
+        return new JwtAuthenticationFilter(authenticationManager, tokenService);
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(
             final HttpSecurity http,
             final AuthenticationManager authenticationManager,
-            final TokenService tokenService,
-            final CorsConfigurationSource corsConfigurationSource) throws Exception {
-
-        final JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(authenticationManager, tokenService);
+            final JwtAuthenticationFilter jwtFilter,
+            final CorsConfigurationSource corsConfigurationSource,
+            final SecurityContextRepository securityContextRepository) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -94,7 +126,7 @@ public class WebAuthConfig {
                 })
                 .authenticationManager(authenticationManager)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .securityContext(ctx -> ctx.securityContextRepository(new RequestAttributeSecurityContextRepository()))
+                .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
                 .authorizeHttpRequests(auth -> auth
                         // SPA entrypoint + static fallbacks (served by the default servlet on Jersey 404).
                         .requestMatchers(ant("/"), ant("/index.html"), ant("/favicon.ico")).permitAll()
@@ -123,14 +155,14 @@ public class WebAuthConfig {
                                 ant(HttpMethod.GET, "/neighborhoods/**"),
                                 ant(HttpMethod.GET, "/users/*"),
                                 ant(HttpMethod.GET, "/users/*/profile-picture"),
-                                ant(HttpMethod.GET, "/users/*/reviews"))
+                                ant(HttpMethod.GET, "/users/*/reviews"),
+                                ant(HttpMethod.GET, "/image/*"))
                         .permitAll()
-                        // Account bootstrap (no session, code acts as credential — decisions D3/D4).
+                        // Account bootstrap: registration + OTP credential issuance (no verb URLs).
                         .requestMatchers(ant(HttpMethod.POST, "/users")).permitAll()
-                        .requestMatchers(ant(HttpMethod.POST, "/password-reset-codes")).permitAll()
-                        .requestMatchers(ant(HttpMethod.POST, "/users/*/email-verification-codes")).permitAll()
-                        // PATCH /users/{id}: self (Bearer) OR anonymous-with-code (verify email / reset password).
-                        // The Users resource (F5) enforces "self OR valid code OR admin"; the chain only opens the door.
+                        .requestMatchers(ant(HttpMethod.POST, "/credentials")).permitAll()
+                        .requestMatchers(ant(HttpMethod.POST, "/users/*/credentials")).permitAll()
+                        // PATCH /users/{id}: password reset via Basic OTP, or self/admin profile updates.
                         .requestMatchers(ant(HttpMethod.PATCH, "/users/*")).permitAll()
                         // Everything else needs authentication; owner/admin/participant scoping is per-resource.
                         .anyRequest().authenticated())
@@ -150,7 +182,14 @@ public class WebAuthConfig {
         configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of(
+                "Link",
+                "X-Total-Count",
+                "X-Access-Token",
+                "X-Refresh-Token",
+                "Location",
+                "WWW-Authenticate",
+                "Content-Type"));
 
         final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

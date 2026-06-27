@@ -62,6 +62,9 @@ public interface ReservationMessageService {
     /** Admin-only: raw page of chat messages for a reservation, no participant check applied. */
     List<ReservationMessage> getAdminChatMessages(long reservationId, int offset, int limit);
 
+    /** Admin-only: messages with id greater than {@code afterMessageId}, ascending, capped at {@code limit}. */
+    List<ReservationMessage> findMessagesAfter(long reservationId, long afterMessageId, int limit);
+
     /** Total number of chat messages for a reservation. */
     long countMessages(long reservationId);
 }

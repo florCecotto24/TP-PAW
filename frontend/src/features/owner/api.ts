@@ -1,0 +1,239 @@
+// Adaptador de la API para el área OWNER. Centraliza llamadas y MIME types para
+// que las páginas queden delgadas. Sigue el contrato (vendor MIME, hipervínculos,
+// paginación por header). Reusa el cliente del core (sessionClient).
+
+import { sessionClient } from '../../session/sessionStore';
+import { MediaTypes } from '../../api/mediaTypes';
+import type { ApiResponse } from '../../api/client';
+import type { UserDto } from '../../api/types';
+import { idFromUri } from '../../api/uri';
+import type {
+  AvailabilityCreateDto,
+  AvailabilityDto,
+  BrandDto,
+  CarCreateDto,
+  CarDto,
+  CarPatchDto,
+  CarStatus,
+  ModelDto,
+  NeighborhoodDto,
+  PictureDto,
+} from './types';
+
+// Las URN de los DTOs son del tipo "/cars/42". Las rutas del SPA usan :id, así
+// que necesitamos pasar de URN -> id y de id -> URN (sin armar URLs "a mano":
+// reconstruimos la MISMA URN canónica que la API ya nos dio en `links.self`).
+// idFromUri vive en api/uri (helper compartido); se re-exporta para no tocar
+// los call sites que lo importan desde aquí.
+export { idFromUri };
+
+export function carUri(id: string): string {
+  return `/cars/${id}`;
+}
+
+// ---- Publisher / prerequisitos (identidad + CBU) ----
+// El viejo flujo exigía, ANTES de publicar, tener (a) identidad cargada y (b) CBU.
+// Replicamos esos dos prerequisitos contra el recurso user.
+
+/** Deriva un sub-recurso del usuario a partir de su URN canónica ("/users/{id}"). */
+function userSubResource(userUri: string, suffix: string): string {
+  const base = userUri.endsWith('/') ? userUri.slice(0, -1) : userUri;
+  return `${base}/${suffix}`;
+}
+
+/** GET /users/{id} → UserDto (para releer identidad/cbu tras cargarlos). Es el usuario propio
+ *  (publisher), así que pide la vista PRIVADA: necesita el cbu, que no viaja en la vista pública. */
+export function fetchUser(userUri: string): Promise<ApiResponse<UserDto>> {
+  return sessionClient.get<UserDto>(userUri, { accept: MediaTypes.userPrivate });
+}
+
+/** PATCH /users/{id} con { cbu } (carga del CBU del publisher; respuesta en vista privada). */
+export function patchCbu(userUri: string, cbu: string): Promise<ApiResponse<UserDto>> {
+  return sessionClient.patch<UserDto>(userUri, { cbu }, {
+    accept: MediaTypes.userPrivate,
+    contentType: MediaTypes.user,
+  });
+}
+
+/**
+ * PUT /users/{id}/documents/identity (multipart, campo `file`): sube el documento
+ * de identidad. Mismo mecanismo que usa el área PROFILE. Tras subirlo, la identidad
+ * queda "en revisión" (identityValidated lo fija el admin), pero el documento ya
+ * está en el sistema y el prerequisito de publicación se considera cumplido.
+ */
+export function uploadIdentityDocument(
+  user: UserDto,
+  file: File,
+): Promise<ApiResponse<unknown>> {
+  const base = user.links.documents ?? userSubResource(user.links.self, 'documents');
+  const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
+  const fd = new FormData();
+  fd.append('file', file);
+  return sessionClient.request(`${normalized}/identity`, { method: 'PUT', body: fd });
+}
+
+// ---- Catálogo ----
+export function fetchBrands(): Promise<ApiResponse<BrandDto[]>> {
+  return sessionClient.get<BrandDto[]>('/brands', {
+    accept: MediaTypes.brand,
+    query: { pageSize: 100 },
+  });
+}
+
+/** Modelos de una marca: se navega su link `models` (hipervínculo, no URL armada). */
+export function fetchModels(brand: BrandDto): Promise<ApiResponse<ModelDto[]>> {
+  return sessionClient.follow<ModelDto[]>(brand.links.models, {
+    accept: MediaTypes.model,
+  });
+}
+
+export function createBrand(name: string): Promise<ApiResponse<BrandDto>> {
+  return sessionClient.post<BrandDto>('/brands', { name }, {
+    accept: MediaTypes.brand,
+    contentType: MediaTypes.brand,
+  });
+}
+
+export function createModel(
+  brand: BrandDto,
+  name: string,
+  type: string,
+): Promise<ApiResponse<ModelDto>> {
+  return sessionClient.request<ModelDto>(brand.links.models, {
+    method: 'POST',
+    accept: MediaTypes.model,
+    contentType: MediaTypes.model,
+    body: { name, type },
+  });
+}
+
+// ---- Cars ----
+export function fetchOwnerCars(
+  ownerId: string,
+  opts: { page?: number; pageSize?: number; status?: CarStatus | ''; sort?: string } = {},
+): Promise<ApiResponse<CarDto[]>> {
+  return sessionClient.get<CarDto[]>('/cars', {
+    accept: MediaTypes.car,
+    query: {
+      ownerId,
+      page: opts.page ?? 1,
+      pageSize: opts.pageSize ?? 12,
+      status: opts.status || undefined,
+      sort: opts.sort || undefined,
+    },
+  });
+}
+
+export function fetchCar(id: string): Promise<ApiResponse<CarDto>> {
+  return sessionClient.get<CarDto>(carUri(id), { accept: MediaTypes.car });
+}
+
+/**
+ * POST /cars como multipart/form-data: parte `car` con el JSON del CarCreateDto
+ * (Blob con el vendor MIME), `pictures` (N partes binarias) e `insurance`
+ * (1 parte binaria, opcional). El browser arma el boundary => NO seteamos
+ * Content-Type. Ver SUPUESTO S1.
+ */
+export function publishCar(
+  car: CarCreateDto,
+  pictures: File[],
+  insurance: File | null,
+): Promise<ApiResponse<CarDto>> {
+  const fd = new FormData();
+  fd.append(
+    'car',
+    new Blob([JSON.stringify(car)], { type: MediaTypes.car }),
+  );
+  for (const pic of pictures) fd.append('pictures', pic);
+  if (insurance) fd.append('insurance', insurance);
+
+  return sessionClient.post<CarDto>('/cars', fd, { accept: MediaTypes.car });
+}
+
+export function patchCar(id: string, patch: CarPatchDto): Promise<ApiResponse<CarDto>> {
+  return sessionClient.patch<CarDto>(carUri(id), patch, {
+    accept: MediaTypes.car,
+    contentType: MediaTypes.car,
+  });
+}
+
+export function deactivateCar(id: string): Promise<ApiResponse<unknown>> {
+  return sessionClient.del(carUri(id), { accept: MediaTypes.car });
+}
+
+// ---- Availabilities (sub-recurso) ----
+export function fetchAvailabilities(
+  car: CarDto,
+  month?: string,
+): Promise<ApiResponse<AvailabilityDto[]>> {
+  return sessionClient.follow<AvailabilityDto[]>(car.links.availabilities, {
+    accept: MediaTypes.availability,
+    query: { month: month || undefined, pageSize: 100 },
+  });
+}
+
+export function createAvailability(
+  car: CarDto,
+  body: AvailabilityCreateDto,
+): Promise<ApiResponse<AvailabilityDto>> {
+  return sessionClient.request<AvailabilityDto>(car.links.availabilities, {
+    method: 'POST',
+    accept: MediaTypes.availability,
+    contentType: MediaTypes.availability,
+    body,
+  });
+}
+
+export function updateAvailability(
+  availability: AvailabilityDto,
+  body: AvailabilityCreateDto,
+): Promise<ApiResponse<AvailabilityDto>> {
+  return sessionClient.put<AvailabilityDto>(availability.links.self, body, {
+    accept: MediaTypes.availability,
+    contentType: MediaTypes.availability,
+  });
+}
+
+export function deleteAvailability(availability: AvailabilityDto): Promise<ApiResponse<unknown>> {
+  return sessionClient.del(availability.links.self, { accept: MediaTypes.availability });
+}
+
+// ---- Gallery (sub-recurso débil) ----
+export function fetchPictures(car: CarDto): Promise<ApiResponse<PictureDto[]>> {
+  return sessionClient.follow<PictureDto[]>(car.links.pictures, {
+    accept: MediaTypes.picture,
+  });
+}
+
+export function addPicture(
+  car: CarDto,
+  file: File,
+  displayOrder?: number,
+): Promise<ApiResponse<unknown>> {
+  const fd = new FormData();
+  fd.append('file', file);
+  if (displayOrder != null) fd.append('displayOrder', String(displayOrder));
+  return sessionClient.request(car.links.pictures, {
+    method: 'POST',
+    accept: MediaTypes.picture,
+    body: fd,
+  });
+}
+
+export function deletePicture(picture: PictureDto): Promise<ApiResponse<unknown>> {
+  return sessionClient.del(picture.links.self, { accept: MediaTypes.picture });
+}
+
+// ---- Insurance (binario, octet-stream, PUT) ----
+export function uploadInsurance(car: CarDto, file: File): Promise<ApiResponse<unknown>> {
+  return sessionClient.put(car.links.insurance, file, {
+    contentType: 'application/octet-stream',
+  });
+}
+
+// ---- Neighborhoods (catálogo para el select de disponibilidad) ----
+export function fetchNeighborhoods(): Promise<ApiResponse<NeighborhoodDto[]>> {
+  return sessionClient.get<NeighborhoodDto[]>('/neighborhoods', {
+    accept: MediaTypes.neighborhood,
+  });
+}

@@ -1,5 +1,6 @@
 package ar.edu.itba.paw.webapp.security.auth;
 
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Set;
 
@@ -10,44 +11,63 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.services.user.EmailVerificationService;
+import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.services.user.UserService;
-import ar.edu.itba.paw.webapp.security.auth.exception.EmailNotValidatedException;
 import ar.edu.itba.paw.webapp.security.auth.exception.LegacyPasswordMailedException;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.UserRoleAuthorities;
 
 /**
- * Email and password authentication backed by {@link UserService}, BCrypt, and email-validation rules.
+ * Email + secret authentication for the REST API:
+ *
+ * <ul>
+ *   <li>Verified account: {@code Basic email:password} (BCrypt).</li>
+ *   <li>Email confirmation (OTP): {@code Basic email:otp} — consumes the verification code and marks the email verified.</li>
+ *   <li>Password reset (OTP): {@code Basic email:otp} — grants {@link RydenAuthorities#PASSWORD_RESET_OTP}; the code is consumed on {@code PATCH /users/{id}} with the new password.</li>
+ * </ul>
  */
 @Component
 public final class RydenAuthenticationProvider implements AuthenticationProvider {
 
     private final UserService userService;
+    private final EmailVerificationService emailVerificationService;
+    private final PasswordResetService passwordResetService;
     private final PasswordEncoder passwordEncoder;
 
     public RydenAuthenticationProvider(
             final UserService userService,
+            final EmailVerificationService emailVerificationService,
+            final PasswordResetService passwordResetService,
             final PasswordEncoder passwordEncoder) {
         this.userService = userService;
+        this.emailVerificationService = emailVerificationService;
+        this.passwordResetService = passwordResetService;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public Authentication authenticate(final Authentication authentication) throws AuthenticationException {
         final String email = authentication.getName();
-        final String rawPassword = authentication.getCredentials() != null ? authentication.getCredentials().toString() : "";
+        final String rawSecret = authentication.getCredentials() != null
+                ? authentication.getCredentials().toString()
+                : "";
 
-        final User user = userService.findByEmailForAuthentication(email)
+        User user = userService.findByEmailForAuthentication(email)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        // NOTE: blocked users are intentionally allowed past authentication so owners blocked by the
-        // overdue-refund-proof sweep can log in and upload the missing receipts (which auto-unblocks
-        // them). All owner-side mutations that could re-introduce bookability are guarded at the
-        // service layer; the navbar shows a persistent banner explaining the block.
+        final boolean emailVerified = Boolean.TRUE.equals(user.getEmailValidated().orElse(false));
+
+        if (!emailVerified) {
+            return authenticateWithEmailVerificationOtp(email, rawSecret);
+        }
+
         final String hash = user.getPasswordHash().filter(h -> !h.isBlank()).orElse(null);
         if (hash == null) {
             final Locale locale = LocaleContextHolder.getLocale();
@@ -55,26 +75,47 @@ public final class RydenAuthenticationProvider implements AuthenticationProvider
             throw new LegacyPasswordMailedException();
         }
 
-        if (!passwordEncoder.matches(rawPassword, hash)) {
+        if (passwordEncoder.matches(rawSecret, hash)) {
+            return buildAuthentication(user, rawSecret, UserRoleAuthorities.fromUserRoles(
+                    userService.findRolesForUser(user.getId())));
+        }
+
+        if (passwordResetService.matchesResetCode(email, rawSecret)) {
+            final Set<GrantedAuthority> authorities = new java.util.LinkedHashSet<>(
+                    UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId())));
+            authorities.add(new SimpleGrantedAuthority(RydenAuthorities.PASSWORD_RESET_OTP));
+            return buildAuthentication(user, rawSecret, authorities);
+        }
+
+        throw new BadCredentialsException("Invalid credentials");
+    }
+
+    private Authentication authenticateWithEmailVerificationOtp(final String email, final String otp) {
+        try {
+            emailVerificationService.verifyEmailAndConsumeCode(email, otp);
+        } catch (RydenException ex) {
             throw new BadCredentialsException("Invalid credentials");
         }
+        final User verified = userService.findByEmailForAuthentication(email)
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+        return buildAuthentication(verified, otp, UserRoleAuthorities.fromUserRoles(
+                userService.findRolesForUser(verified.getId())));
+    }
 
-        if (!Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
-            throw new EmailNotValidatedException(user.getEmail());
-        }
-
-        final Set<GrantedAuthority> authorities =
-                UserRoleAuthorities.fromUserRoles(userService.findRolesForUser(user.getId()));
+    private Authentication buildAuthentication(
+            final User user,
+            final String rawSecret,
+            final Set<GrantedAuthority> authorities) {
+        final String hash = user.getPasswordHash().orElse("");
         final RydenUserDetails principal = new RydenUserDetails(
                 user.getId(),
                 user.getEmail(),
                 user.getForename(),
                 user.getSurname(),
                 hash,
-                authorities,
+                new ArrayList<>(authorities),
                 user.getRoleAssignedBy().orElse(null));
-
-        return new UsernamePasswordAuthenticationToken(principal, rawPassword, principal.getAuthorities());
+        return new UsernamePasswordAuthenticationToken(principal, rawSecret, principal.getAuthorities());
     }
 
     @Override

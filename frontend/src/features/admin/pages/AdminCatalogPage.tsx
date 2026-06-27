@@ -1,0 +1,180 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { MediaTypes } from '../../../api/mediaTypes';
+import { approveBrand, approveModel, fetchPendingModels, rejectBrand, rejectModel } from '../api';
+import AdminPageHeader from '../components/AdminPageHeader';
+import AdminPagination from '../components/AdminPagination';
+import type { BrandDto, ModelDto } from '../types';
+import { useAdminErrorMessage } from '../useAdminErrorMessage';
+import { usePagedList } from '../usePagedList';
+
+export default function AdminCatalogPage() {
+  const { t } = useTranslation();
+  const errorMessage = useAdminErrorMessage();
+
+  const brands = usePagedList<BrandDto>('/brands?validated=false&page=1', MediaTypes.brand);
+  const [models, setModels] = useState<ModelDto[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(true);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+  const [busyLink, setBusyLink] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const reloadModels = useCallback(() => {
+    setModelsLoading(true);
+    setModelsError(null);
+    fetchPendingModels()
+      .then((res) => setModels(Array.isArray(res.data) ? res.data : []))
+      .catch((err) => setModelsError(errorMessage(err)))
+      .finally(() => setModelsLoading(false));
+  }, [errorMessage]);
+
+  useEffect(() => {
+    reloadModels();
+  }, [reloadModels]);
+
+  const runBrandAction = async (link: string, action: () => Promise<unknown>) => {
+    setActionError(null);
+    setBusyLink(link);
+    try {
+      await action();
+      brands.reload();
+      reloadModels();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    } finally {
+      setBusyLink(null);
+    }
+  };
+
+  const runModelAction = async (link: string, action: () => Promise<unknown>) => {
+    setActionError(null);
+    setBusyLink(link);
+    try {
+      await action();
+      reloadModels();
+      brands.reload();
+    } catch (err) {
+      setActionError(errorMessage(err));
+    } finally {
+      setBusyLink(null);
+    }
+  };
+
+  const displayError =
+    actionError
+    ?? (brands.error ? errorMessage(brands.error) : null)
+    ?? modelsError;
+
+  return (
+    <>
+      <AdminPageHeader title={t('admin.catalog.title')} subtitle={t('admin.catalog.subtitle')} />
+
+      {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
+
+      <section className="mb-5">
+        <h2 className="h5 fw-semibold mb-3">{t('admin.catalog.pendingBrandsTitle')}</h2>
+        {brands.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+        {!brands.loading && brands.items.length === 0 ? (
+          <p className="text-secondary">{t('admin.catalog.empty')}</p>
+        ) : null}
+        {!brands.loading && brands.items.length > 0 ? (
+          <div className="card border-0 shadow-sm bg-white">
+            <ul className="list-group list-group-flush">
+              {brands.items.map((brand) => {
+                const busy = busyLink === brand.links.self;
+                return (
+                  <li
+                    key={brand.links.self}
+                    className="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-2"
+                  >
+                    <span className="fw-semibold">{brand.name}</span>
+                    <div className="d-flex gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-success btn-sm"
+                        disabled={busy}
+                        onClick={() => void runBrandAction(brand.links.self, () => approveBrand(brand.links.self))}
+                      >
+                        {t('admin.catalog.actions.approveBrand')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-outline-danger btn-sm"
+                        disabled={busy}
+                        onClick={() => void runBrandAction(brand.links.self, () => rejectBrand(brand.links.self))}
+                      >
+                        {t('admin.catalog.actions.rejectBrand')}
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
+        <AdminPagination page={brands.page} onGo={brands.goTo} />
+      </section>
+
+      <section>
+        <h2 className="h5 fw-semibold mb-3">{t('admin.catalog.pendingModelsTitle')}</h2>
+        {modelsLoading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+        {!modelsLoading && models.length === 0 ? (
+          <p className="text-secondary">{t('admin.catalog.emptyModels')}</p>
+        ) : null}
+        {!modelsLoading && models.length > 0 ? (
+          <div className="card border-0 shadow-sm bg-white overflow-hidden">
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th scope="col">{t('admin.catalog.brand')}</th>
+                    <th scope="col">{t('admin.catalog.col.model')}</th>
+                    <th scope="col">{t('admin.catalog.col.type')}</th>
+                    <th scope="col" className="text-end">{t('admin.users.col.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.map((model) => {
+                    const busy = busyLink === model.links.self;
+                    const typeLabel = model.type ? t(`admin.cars.types.${model.type}`) : '—';
+                    return (
+                      <tr key={model.links.self}>
+                        <td>{model.brandName ?? '—'}</td>
+                        <td>{model.name}</td>
+                        <td>{typeLabel}</td>
+                        <td className="text-end">
+                          <div className="d-flex flex-wrap gap-1 justify-content-end">
+                            <button
+                              type="button"
+                              className="btn btn-success btn-sm"
+                              disabled={busy}
+                              onClick={() =>
+                                void runModelAction(model.links.self, () => approveModel(model.links.self))
+                              }
+                            >
+                              {t('admin.catalog.actions.approveModel')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger btn-sm"
+                              disabled={busy}
+                              onClick={() =>
+                                void runModelAction(model.links.self, () => rejectModel(model.links.self))
+                              }
+                            >
+                              {t('admin.catalog.actions.rejectModel')}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+      </section>
+    </>
+  );
+}

@@ -71,6 +71,29 @@ public final class CarInsuranceUploadFacade {
         }
     }
 
+    public InsuranceUploadOutcome attemptUploadFromBytes(
+            final long ownerUserId,
+            final long carId,
+            final String filename,
+            final String contentType,
+            final byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return InsuranceUploadOutcome.missing(localeMessages.msg(MessageKeys.CAR_INSURANCE_INVALID));
+        }
+        if (bytes.length > profileDocumentUploadPolicy.getMaxBytes()) {
+            final int maxMb = profileDocumentUploadPolicy.getMaxMegabytesRoundedUp();
+            return InsuranceUploadOutcome.tooLarge(
+                    localeMessages.msg(MessageKeys.CAR_INSURANCE_TOO_LARGE, maxMb));
+        }
+        try {
+            carService.uploadValidatedCarInsuranceDocument(
+                    ownerUserId, carId, filename, contentType, bytes);
+            return InsuranceUploadOutcome.ok();
+        } catch (final RydenException e) {
+            return InsuranceUploadOutcome.businessError(localeMessages.msg(e));
+        }
+    }
+
     public static final class InsuranceUploadOutcome {
 
         private final Status status;

@@ -267,21 +267,42 @@ public class UserJpaDao implements UserDao {
 
     @Override
     public Page<User> findAllUsersPaginated(final int page, final int pageSize) {
-        /*
-         * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
-         * - Step 1 (native): paginate + order on the {@code users} table, projecting only the PKs
-         *   for the requested window.
-         * - Step 2 (JPQL):   hydrate the {@link User} entities by id. The reorder by id ASC happens
-         *   in memory because {@code WHERE id IN :ids} does not preserve native-step ordering.
-         */
-        final long total = em.createQuery("SELECT COUNT(u) FROM User u", Long.class)
-                .getSingleResult();
+        return findUsersPaginated(page, pageSize, null, null, null);
+    }
+
+    @Override
+    public Page<User> findUsersPaginated(
+            final int page,
+            final int pageSize,
+            final Boolean blocked,
+            final UserRole role,
+            final String query) {
+        final StringBuilder where = new StringBuilder(" WHERE 1=1 ");
+        if (blocked != null) {
+            where.append("AND u.blocked = :blocked ");
+        }
+        if (role != null) {
+            where.append("AND u.user_role = :role ");
+        }
+        if (query != null && !query.isBlank()) {
+            where.append("AND (LOWER(u.email) LIKE :q OR LOWER(u.forename || ' ' || u.surname) LIKE :q) ");
+        }
+        final String whereClause = where.toString();
+
+        final javax.persistence.Query countQuery = em.createNativeQuery(
+                "SELECT COUNT(*) FROM users u" + whereClause);
+        bindUserListFilters(countQuery, blocked, role, query);
+        final long total = ((Number) countQuery.getSingleResult()).longValue();
+
+        final javax.persistence.Query idQuery = em.createNativeQuery(
+                "SELECT u.id FROM users u"
+                        + whereClause
+                        + "ORDER BY u.id ASC LIMIT :limit OFFSET :offset");
+        bindUserListFilters(idQuery, blocked, role, query);
+        idQuery.setParameter("limit", pageSize);
+        idQuery.setParameter("offset", page * pageSize);
         @SuppressWarnings("unchecked")
-        final List<Number> pageIds = em.createNativeQuery(
-                        "SELECT u.id FROM users u ORDER BY u.id ASC LIMIT :limit OFFSET :offset")
-                .setParameter("limit", pageSize)
-                .setParameter("offset", page * pageSize)
-                .getResultList();
+        final List<Number> pageIds = idQuery.getResultList();
         if (pageIds.isEmpty()) {
             return new Page<>(Collections.emptyList(), page, pageSize, total);
         }
@@ -295,6 +316,42 @@ public class UserJpaDao implements UserDao {
         return new Page<>(sorted, page, pageSize, total);
     }
 
+    private static void bindUserListFilters(
+            final javax.persistence.Query query,
+            final Boolean blocked,
+            final UserRole role,
+            final String queryText) {
+        if (blocked != null) {
+            query.setParameter("blocked", blocked);
+        }
+        if (role != null) {
+            query.setParameter("role", role.persistenceName());
+        }
+        if (queryText != null && !queryText.isBlank()) {
+            query.setParameter("q", "%" + queryText.trim().toLowerCase(Locale.ROOT) + "%");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updateIdentityValidated(final long userId, final boolean validated) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setIdentityValidated(validated);
+    }
+
+    @Override
+    @Transactional
+    public void updateLicenseValidated(final long userId, final boolean validated) {
+        final User user = em.find(User.class, userId);
+        if (user == null) {
+            return;
+        }
+        user.setLicenseValidated(validated);
+    }
+
     @Override
     @Transactional
     public void updateCbu(final long userId, final String cbu) {
@@ -303,5 +360,14 @@ public class UserJpaDao implements UserDao {
             return;
         }
         user.setCbu(cbu);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(final long userId) {
+        final User user = em.find(User.class, userId);
+        if (user != null) {
+            em.remove(user);
+        }
     }
 }

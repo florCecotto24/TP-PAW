@@ -1,0 +1,163 @@
+import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link, useNavigate } from 'react-router-dom';
+import { Alert, Button, Form } from 'react-bootstrap';
+import { sessionClient } from '../../session/sessionStore';
+import { MediaTypes } from '../../api/mediaTypes';
+import { ApiError } from '../../api/client';
+import type { UserDto } from '../../api/types';
+import type { RegisterForm } from './types';
+import { apiErrorMessage } from './errorMessage';
+
+// Mismas cotas que la API (app.validation.registration-password-min/max-length).
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MAX_LENGTH = 72;
+
+// /registrarse — "registrarse" = crear el recurso usuario (POST /users,
+// anónimo, contentType vendor user). En 201 la API devuelve Location con la URN
+// canónica /users/{id}; la pasamos como `userUri` a /verificar-email junto con
+// el email, porque la verificación posterior es un PATCH sobre esa URN (D3).
+export default function RegisterPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState<RegisterForm>({
+    email: '',
+    forename: '',
+    surname: '',
+    password: '',
+    passwordConfirm: '',
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function update<K extends keyof RegisterForm>(key: K, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    // Validaciones que el register.jsp mostraba inline (Size/NotBlank).
+    if (form.password.length < PASSWORD_MIN_LENGTH) {
+      setError(t('auth.register.passwordTooShort', { count: PASSWORD_MIN_LENGTH }));
+      return;
+    }
+    if (form.password.length > PASSWORD_MAX_LENGTH) {
+      setError(t('auth.register.passwordTooLong', { count: PASSWORD_MAX_LENGTH }));
+      return;
+    }
+    if (form.password !== form.passwordConfirm) {
+      setError(t('validation.passwordMismatch'));
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await sessionClient.post<UserDto>('/users', form, {
+        accept: MediaTypes.user,
+        contentType: MediaTypes.user,
+        anonymous: true,
+      });
+
+      // 201 → Location = URN del nuevo usuario. La propagamos al flujo de
+      // verificación de email (el código se envía automáticamente al registrar).
+      const userUri = res.location ?? res.data?.links?.self;
+      const params = new URLSearchParams({ email: form.email });
+      if (userUri) params.set('userUri', userUri);
+      navigate(`/verificar-email?${params.toString()}`);
+    } catch (err) {
+      // 409 EmailAlreadyExists → code user.email.alreadyExists ("ya registrado").
+      if (err instanceof ApiError && err.status === 409 && !err.code) {
+        setError(t('auth.register.emailTaken'));
+      } else {
+        setError(apiErrorMessage(t, err));
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="auth-page__shell auth-page__shell--tall-form">
+      <div className="auth-page__brand">
+        <Link to="/" className="text-decoration-none">
+          <span className="auth-page__logo">{t('app.name')}</span>
+        </Link>
+      </div>
+      <div className="auth-page__main">
+        <div className="auth-page__card-wrap auth-page__card-wrap--wide">
+          <div className="bg-white rounded-4 shadow-sm p-4 p-md-5">
+            <h1 className="h4 mb-3">{t('auth.register.title')}</h1>
+
+            {error && (
+              <Alert variant="danger" role="alert">
+                {error}
+              </Alert>
+            )}
+
+            <Form onSubmit={onSubmit}>
+              <Form.Group className="mb-3" controlId="forename">
+                <Form.Label>{t('auth.register.forename')}</Form.Label>
+                <Form.Control
+                  value={form.forename}
+                  autoComplete="given-name"
+                  onChange={(e) => update('forename', e.target.value)}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="surname">
+                <Form.Label>{t('auth.register.surname')}</Form.Label>
+                <Form.Control
+                  value={form.surname}
+                  autoComplete="family-name"
+                  onChange={(e) => update('surname', e.target.value)}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="email">
+                <Form.Label>{t('auth.register.email')}</Form.Label>
+                <Form.Control
+                  type="email"
+                  value={form.email}
+                  autoComplete="email"
+                  onChange={(e) => update('email', e.target.value)}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3" controlId="password">
+                <Form.Label>{t('auth.register.password')}</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={form.password}
+                  autoComplete="new-password"
+                  onChange={(e) => update('password', e.target.value)}
+                  required
+                />
+                <Form.Text className="text-muted">{t('auth.register.passwordHint')}</Form.Text>
+              </Form.Group>
+              <Form.Group className="mb-4" controlId="passwordConfirm">
+                <Form.Label>{t('auth.register.passwordConfirm')}</Form.Label>
+                <Form.Control
+                  type="password"
+                  value={form.passwordConfirm}
+                  autoComplete="new-password"
+                  onChange={(e) => update('passwordConfirm', e.target.value)}
+                  required
+                />
+              </Form.Group>
+              <Button type="submit" variant="primary" className="w-100" disabled={submitting}>
+                {submitting ? t('auth.register.submitting') : t('auth.register.submit')}
+              </Button>
+            </Form>
+
+            <p className="text-center mt-3 small">
+              {t('auth.register.haveAccount')} <Link to="/ingresar">{t('auth.login.submit')}</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

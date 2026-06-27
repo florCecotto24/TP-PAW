@@ -17,14 +17,25 @@ import ar.edu.itba.paw.models.security.UserRole;
 public final class AuthenticationAuthorities {
 
     private static final String ROLE_ADMIN_AUTHORITY = UserRole.ADMIN.springAuthorityName();
+    private static final String PASSWORD_RESET_OTP_AUTHORITY = RydenAuthorities.PASSWORD_RESET_OTP;
 
     private AuthenticationAuthorities() {
     }
 
-    /**
-     * {@code true} when {@code authentication} represents an authenticated, non-anonymous principal
-     * carrying the {@link UserRole#ADMIN} granted authority.
-     */
+    public static boolean hasPasswordResetOtp(@Nullable final Authentication authentication) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return false;
+        }
+        for (final GrantedAuthority authority : authentication.getAuthorities()) {
+            if (PASSWORD_RESET_OTP_AUTHORITY.equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static boolean hasAdminRole(@Nullable final Authentication authentication) {
         if (authentication == null
                 || !authentication.isAuthenticated()

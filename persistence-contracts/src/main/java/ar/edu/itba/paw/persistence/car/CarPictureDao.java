@@ -24,4 +24,7 @@ public interface CarPictureDao {
      * car. Cars without any picture are absent from the returned map.
      */
     Map<Long, Long> findCoverImageIdsByCarIds(Collection<Long> carIds);
+
+    /** Deletes a gallery row by primary key when present. */
+    void deleteCarPicture(long id);
 }

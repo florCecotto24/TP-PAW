@@ -20,12 +20,19 @@ public interface AdminService {
 
     void promoteUserToAdmin(long targetUserId, long assignedByUserId);
 
+    void demoteUserFromAdmin(long targetUserId, long assignedByUserId);
+
     User createAdminUser(String email, String forename, String surname, String temporaryPassword,
                          long assignedByUserId, Locale locale);
 
     void blockUser(long targetUserId, long actingAdminId);
 
     void unblockUser(long targetUserId);
+
+    /**
+     * Deletes a user account. Applies the same grantor/self guards as {@link #blockUser}.
+     */
+    void deleteUser(long targetUserId, long actingAdminId);
 
     void adminPauseCar(long carId, long actingAdminId, Locale locale);
 
@@ -53,7 +60,7 @@ public interface AdminService {
      */
     void rejectCatalogEntry(long modelId, Locale locale);
 
-    Page<User> listUsers(int page, int pageSize);
+    Page<User> listUsers(int page, int pageSize, Boolean blocked, String role, String query);
 
     List<CarBrand> findPendingBrands();
 
@@ -68,6 +75,8 @@ public interface AdminService {
     Optional<Reservation> getReservationById(long reservationId);
 
     List<ReservationMessage> getAdminChatMessages(long reservationId, int offset, int limit);
+
+    List<ReservationMessage> getChatMessagesAfter(long reservationId, long afterMessageId, int limit);
 
     long countReservationMessages(long reservationId);
 

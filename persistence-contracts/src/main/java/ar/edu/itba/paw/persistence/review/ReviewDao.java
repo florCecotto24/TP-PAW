@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 
@@ -24,8 +25,14 @@ public interface ReviewDao {
      */
     void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment, Long imageId);
 
+    /** Reviews for one reservation (0–2 rows). */
+    List<Review> findReviewsForReservation(long reservationId);
+
     /** Public reviews for a car, paginated. */
     Page<CarPublicReview> findCarPublicReviews(long carId, int page, int pageSize);
+
+    /** Same rows as {@link #findCarPublicReviews} but returns hydrated {@link Review} entities. */
+    Page<Review> findPublicReviewsForCar(long carId, int page, int pageSize);
 
     /** Total reviews stored against the car. */
     long countReviewsForCar(long carId);

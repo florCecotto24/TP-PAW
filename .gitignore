@@ -85,7 +85,7 @@ skills-lock.json
 tmp/
 temp/
 
-# Node modules (if any frontend parts are added)
+# Node modules
 node_modules/
 
 # Credentials
@@ -95,3 +95,4 @@ application-deployed.properties
 # context files
 jpa_hibernate.md
 claude/
+context/

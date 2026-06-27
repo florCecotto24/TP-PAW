@@ -14,5 +14,8 @@ public interface PasswordResetCodeDao {
      */
     boolean deleteIfValid(long userId, String code, Instant now);
 
+    /** {@code true} when {@code code} matches a non-expired row (does not delete). */
+    boolean matchesValidCode(long userId, String code, Instant now);
+
     boolean hasActiveCode(long userId, Instant now);
 }

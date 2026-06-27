@@ -1,0 +1,2788 @@
+/* Font family is handled by ryden-theme.css (Inter / Plus Jakarta Sans) */
+
+.js-no-number-wheel-step::-webkit-outer-spin-button,
+.js-no-number-wheel-step::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.js-no-number-wheel-step {
+    -moz-appearance: textfield;
+}
+
+/* Custom Input Styles */
+.custom-label {
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.custom-input {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.custom-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    outline: none;
+}
+
+.custom-input:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.custom-input[readonly] {
+    background-color: #f9fafb;
+    color: #6b7280;
+}
+
+.custom-input::placeholder {
+    color: #9ca3af;
+}
+
+.form-control.form-control-verify-email-locked {
+    background-color: #e9ecef;
+    color: #495057;
+    cursor: not-allowed;
+    border-color: #ced4da;
+}
+
+.form-control.form-control-verify-email-locked:focus {
+    background-color: #e9ecef;
+    color: #495057;
+    border-color: #adb5bd;
+    box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.15);
+}
+
+/* Readonly form controls */
+.form-control[readonly] {
+    background-color: #ffffff;
+    color: #495057;
+    cursor: default;
+    border-color: #ced4da;
+}
+
+.form-control[readonly]:focus {
+    background-color: #ffffff;
+    color: #495057;
+    border-color: #ced4da;
+    box-shadow: none;
+    outline: none;
+}
+
+/* Required field indicator */
+.text-danger {
+    color: #ef4444;
+}
+
+/* Reusable required marker for form labels */
+.required-label::after {
+    content: " *";
+    color: #dc3545;
+}
+/* Modal — colour tokens owned by ryden-theme.css; only layout-critical vars live here */
+:root {
+    --navbar-height: 65px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--color-text);
+    background: var(--color-bg, #FAF9F7);
+    font-family: inherit;
+}
+
+body.has-fixed-navbar {
+    padding-top: var(--navbar-height);
+}
+
+/* Global "your account is blocked" banner injected by navbar.tag.
+   Stays in the normal document flow (scrolls away with the rest of the content) and only needs to
+   clear the .fixed-top navbar on its initial render.
+   - On pages with body.has-fixed-navbar the body already reserves padding-top equal to --navbar-height,
+     so the banner naturally sits right below it (margin-top is neutralised below).
+   - On pages without that class (e.g. home.jsp, where the hero is intentionally flush against the
+     top of the viewport) the banner needs an explicit margin-top equal to --navbar-height. The
+     paired padding-top: 0.1px on the body prevents that margin from collapsing into the body's
+     own margin (which would leave the banner hidden behind the fixed navbar). */
+.ryden-blocked-banner {
+    margin-top: var(--navbar-height);
+}
+body.has-fixed-navbar .ryden-blocked-banner {
+    margin-top: 0;
+}
+body:not(.has-fixed-navbar):has(.ryden-blocked-banner) {
+    padding-top: 0.1px;
+}
+
+/* Login / register: fit viewport; scroll only on very short screens inside main */
+body.auth-page {
+    overflow: hidden;
+}
+
+.auth-page__shell {
+    height: calc(100dvh - var(--navbar-height));
+    display: flex;
+    flex-direction: column;
+    padding: 0 1rem;
+    overflow: hidden;
+}
+
+.auth-page__brand {
+    flex-shrink: 0;
+    padding: 1rem 0 0.35rem;
+    text-align: center;
+}
+
+.auth-page__logo {
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: -0.04em;
+}
+
+/* Column + margin auto: centers short forms; tall forms scroll from the top without clipping */
+.auth-page__main {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 0 1rem;
+}
+
+.auth-page__shell--simple .auth-page__main {
+    padding-top: 0.75rem;
+}
+
+.auth-page__card-wrap {
+    width: 100%;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-bottom: auto;
+    flex-shrink: 0;
+}
+
+.auth-page__card-wrap--wide {
+    max-width: 440px;
+}
+
+.auth-page__shell--tall-form .auth-page__brand {
+    padding: 0.65rem 0 0.15rem;
+}
+
+.auth-page__shell--tall-form .auth-page__logo {
+    font-size: clamp(1.5rem, 3.5vw, 2rem);
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Modal: Boton de trigger y footer */
+/*.btn {*/
+/*    display: inline-flex;*/
+/*    align-items: center;*/
+/*    justify-content: center;*/
+/*    gap: 0.5rem;*/
+/*    border: 2px solid transparent;*/
+/*    border-radius: var(--radius-pill);*/
+/*    font-weight: 700;*/
+/*    line-height: 1;*/
+/*    text-align: center;*/
+/*    text-decoration: none;*/
+/*    cursor: pointer;*/
+/*    transition: transform var(--transition-base), box-shadow var(--transition-base), background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);*/
+/*}*/
+
+/*.btn:hover {*/
+/*    transform: translateY(-1px);*/
+/*    text-decoration: none;*/
+/*}*/
+
+/*.btn:focus-visible {*/
+/*    outline: 0;*/
+/*    box-shadow: 0 0 0 4px rgba(59, 123, 224, 0.18);*/
+/*}*/
+
+/*.btn:disabled {*/
+/*    opacity: 0.65;*/
+/*    cursor: not-allowed;*/
+/*    transform: none;*/
+/*    box-shadow: none;*/
+/*}*/
+
+/*.btn-sm {*/
+/*    min-height: 2.5rem;*/
+/*    padding: 0.65rem 1.15rem;*/
+/*    font-size: 0.95rem;*/
+/*}*/
+
+/*.btn-md {*/
+/*    min-height: 3rem;*/
+/*    padding: 0.85rem 1.6rem;*/
+/*    font-size: 1rem;*/
+/*}*/
+
+/*.btn-lg {*/
+/*    min-height: 3.4rem;*/
+/*    padding: 1rem 2rem;*/
+/*    font-size: 1.05rem;*/
+/*}*/
+
+/*.btn-primary {*/
+/*    color: #fff;*/
+/*    background: linear-gradient(180deg, #4b89ea 0%, #3b7be0 100%);*/
+/*    box-shadow: var(--shadow-button);*/
+/*}*/
+
+/*.btn-primary:hover {*/
+/*    background: linear-gradient(180deg, #5a95f0 0%, #326dcd 100%);*/
+/*}*/
+
+/*.btn-secondary {*/
+/*    color: var(--color-primary);*/
+/*    background: #fff;*/
+/*    border-color: var(--color-primary);*/
+/*    box-shadow: 0 10px 18px rgba(37, 48, 65, 0.12);*/
+/*}*/
+
+/*.btn-secondary:hover {*/
+/*    background: var(--color-primary-soft);*/
+/*}*/
+
+/* Modal: contenedor, overlay y estados de apertura */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+
+.modal-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--color-overlay);
+    backdrop-filter: blur(3px);
+}
+
+.modal__dialog {
+    position: relative;
+    width: min(100%, 640px);
+    z-index: 1;
+}
+
+.modal-overlay--sm .modal__dialog {
+    max-width: 460px;
+}
+
+.modal-overlay--md .modal__dialog {
+    max-width: 560px;
+}
+
+.modal-overlay--lg .modal__dialog {
+    max-width: 720px;
+}
+
+/* Modal: content, header, body, footer */
+.modal__content {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-modal);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-soft);
+    padding: 2rem;
+}
+
+.modal-overlay--info .modal__content,
+.modal-overlay--default .modal__content {
+    border-top: 6px solid var(--color-primary);
+}
+
+.modal-overlay--success .modal__content {
+    border-top: 6px solid #22a06b;
+}
+
+.modal-overlay--warning .modal__content {
+    border-top: 6px solid #f5a524;
+}
+
+.modal-overlay--danger .modal__content {
+    border-top: 6px solid #e5484d;
+}
+
+/* Modal: boton de cierre */
+.modal__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--color-primary-soft, rgba(110, 141, 184, 0.09));
+    color: var(--color-primary);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.modal__header {
+    padding-right: 3rem;
+}
+
+.modal__title {
+    margin: 0;
+    font-size: clamp(1.6rem, 1.2rem + 1vw, 2.3rem);
+    line-height: 1.1;
+    text-align: center;
+}
+
+.modal__body {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.modal__message,
+.modal__supporting-text {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 1.02rem;
+    line-height: 1.65;
+}
+
+.modal__supporting-text {
+    margin-top: 0.9rem;
+}
+
+/* Modal: acciones disponibles */
+.modal__footer {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.8rem;
+}
+
+.modal__footer .btn {
+    min-width: 150px;
+}
+
+/* Modal: responsiveness settings */
+@media (max-width: 640px) {
+    .modal__content {
+        padding: 1.25rem;
+    }
+
+    .modal__footer {
+        flex-direction: column;
+    }
+
+    .modal__footer .btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .modal-overlay {
+        padding: 1rem;
+    }
+}
+
+/* Car Card */
+.carcard {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 361px;
+    min-height: 350px;
+    height: 100%;
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.07));
+    border-radius: var(--radius-card, 12px);
+    overflow: hidden;
+    box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, 0.055));
+    background-color: var(--color-surface, #ffffff);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+    will-change: transform;
+}
+
+.carcard:hover,
+.carcard:focus-within {
+    transform: translateY(-0.5px); /* slight movement up */
+    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.07); /* optional depth */
+}
+
+
+
+/* Accessibility: respect system setting */
+@media (prefers-reduced-motion: reduce) {
+    .carcard {
+        transition: none;
+    }
+
+    .carcard:hover,
+    .carcard:focus-within {
+        transform: none;
+    }
+}
+
+.carcard-image {
+    width: 100%;
+    height: 220px;
+    flex: 0 0 220px;
+    overflow: hidden;
+    background-color: var(--color-surface-elevated, #F5F4F0);
+    border-radius: var(--radius-card, 12px) var(--radius-card, 12px) 0 0;
+}
+
+.carcard-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.no-image-badge {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #808080FF;
+}
+
+.carcard-info {
+    margin: 10px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 0;
+}
+
+.carcard-info > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.carcard-info-text {
+    text-align: left;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.carcard-info-text * {
+    margin: 2.5px;
+}
+
+.carcard-info-text p {
+    font-size: 18px;
+    font-weight: normal;
+}
+
+.carcard-brand,
+.carcard-model {
+    /* Single-line user text that may exceed the card width (legacy brand/model rows are up to 50
+       chars in the DB). Trailing edge fades into transparency so the user can tell the text
+       continues; the full string stays reachable via title="..." on hover/screen reader. */
+    overflow: hidden;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+
+.carcard-brand {
+    color: #808080FF;
+}
+
+.carcard-model {
+    line-height: 1.25;
+}
+
+/* Fallback for browsers without mask-image support: keep the layout sane with a hard clip. */
+@supports not ((mask-image: linear-gradient(to right, #000, transparent)) or (-webkit-mask-image: linear-gradient(to right, #000, transparent))) {
+    .carcard-brand,
+    .carcard-model {
+        text-overflow: ellipsis;
+    }
+}
+
+/* Same row: amount + "/ día" (override .carcard-info > div column). */
+.carcard-info > .carcard-price {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: auto;
+}
+
+.carcard-price-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    width: 100%;
+}
+
+.carcard-price-quote {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.35rem 0.5rem;
+}
+
+.carcard-price-market-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill, 99px);
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+    position: relative;
+    z-index: 2;
+    flex: 0 0 auto;
+}
+
+.carcard-price-market-badge--below_market {
+    background: #EAF3DE;
+    color: #3B6D11;
+}
+
+.carcard-price-market-badge--at_market {
+    background: #FAEEDA;
+    color: #854F0B;
+}
+
+.carcard-price-market-badge--above_market {
+    background: #FCEBEB;
+    color: #791F1F;
+}
+
+.carcard-price * {
+    margin: 0;
+    text-align: right;
+    font-weight: lighter;
+    font-size: 18px;
+    color: grey;
+}
+
+.carcard-price .carcard-price-amount {
+    color: var(--color-primary, #6E8DB8);
+    font-weight: bold;
+    font-size: clamp(1rem, 0.5rem + 1.9vmin, 1.75rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    flex: 0 1 auto;
+}
+
+/* Full-card hit target (Bootstrap stretched-link) */
+.carcard--clickable {
+    cursor: pointer;
+}
+
+.carcard-stretched-link::after {
+    z-index: 1;
+}
+
+.carcard--clickable .carcard-image,
+.carcard--clickable .carcard-info {
+    position: relative;
+    z-index: 0;
+}
+
+.carcard-favorite-form {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    z-index: 5;
+    margin: 0;
+    line-height: 1;
+}
+
+.carcard-favorite-btn,
+.car-detail-favorite-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.12s ease, color 0.12s ease;
+}
+
+.carcard-favorite-btn {
+    color: #ffffff;
+    font-size: 1.75rem;
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.55));
+}
+
+/* Match Bootstrap's .h2 sizing so the heart shares the title's vertical extent. */
+.car-detail-favorite-btn {
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(1.325rem + 0.9vw);
+}
+
+@media (min-width: 1200px) {
+    .car-detail-favorite-btn {
+        font-size: 2rem;
+    }
+}
+
+.car-detail-favorite-btn .bi {
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Wrapper form for the detail favorite button: collapse to the button's intrinsic
+   size so the parent flex header centers the heart visually against the title text. */
+.car-detail-favorite-form {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.carcard-favorite-btn:hover,
+.carcard-favorite-btn:focus,
+.car-detail-favorite-btn:hover,
+.car-detail-favorite-btn:focus {
+    transform: scale(1.08);
+    color: #e11d48;
+    outline: none;
+}
+
+.carcard-favorite-btn--on,
+.car-detail-favorite-btn--on {
+    color: #e11d48;
+}
+
+.carcard-favorite-btn--on {
+    filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
+}
+
+.carcard-favorite-btn--on:hover,
+.carcard-favorite-btn--on:focus,
+.car-detail-favorite-btn--on:hover,
+.car-detail-favorite-btn--on:focus {
+    color: #be123c;
+}
+
+.no-image-badge i {
+    font-size: 6rem;
+}
+
+/* Navigation Bar — colours owned by ryden-theme.css */
+
+/* Search Menu */
+
+.search-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-menu {
+    top: 55px;
+    z-index: 1000;
+    padding-top: 1.5rem;
+    /* The bottom breathing space below the search card lives in margin (not padding) so the
+       background colour does not paint an ugly rectangle below the inner card when the menu
+       sticks on scroll over content with a different background. */
+    padding-bottom: 0;
+    margin-bottom: 1rem;
+    background-color: var(--color-bg, #FAF9F7);
+}
+
+/* .btn-light colours owned by ryden-theme.css */
+
+/* --- Car detail page --- */
+.car-detail-page {
+    padding-top: 1.5rem;
+}
+
+.detail-verified-badge {
+    background-color: rgba(34, 160, 107, 0.12);
+    color: #15803d;
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.detail-toolbar-btn {
+    min-height: 2.5rem;
+}
+
+.car-detail-gallery {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-rows: 1fr 1fr;
+    gap: 0.75rem;
+    min-height: 280px;
+}
+
+.car-detail-gallery__cell {
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    min-width: 0;
+}
+
+.car-detail-gallery__open-btn {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+}
+
+.car-detail-gallery__main {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+}
+
+.car-detail-gallery__side {
+    min-height: 0;
+}
+
+.car-detail-gallery--single {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+}
+
+.car-detail-gallery--single .car-detail-gallery__main {
+    grid-row: 1;
+}
+
+.car-detail-gallery--pair {
+    grid-template-rows: 1fr;
+}
+
+.car-detail-gallery--pair .car-detail-gallery__main {
+    grid-row: 1;
+}
+
+.car-detail-gallery__more-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+}
+
+.car-detail-gallery__img,
+.car-detail-gallery__video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    display: block;
+}
+
+.car-detail-gallery__video {
+    background: #111827;
+    pointer-events: none;
+}
+
+.car-detail-gallery__play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-size: 2.5rem;
+    pointer-events: none;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.car-detail-carousel-img {
+    position: relative;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.car-detail-carousel-video {
+    position: relative;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.car-detail-carousel-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(28px) brightness(0.62) saturate(1.08);
+    transform: scale(1.12);
+    pointer-events: none;
+}
+
+.car-detail-gallery-modal .carousel-inner {
+    overflow: hidden;
+    height: min(70vh, 520px);
+}
+
+.car-detail-gallery-modal .carousel-item {
+    height: min(70vh, 520px);
+    transition: opacity 0.35s ease-out;
+}
+
+.car-detail-carousel-frame {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: 100%;
+    height: min(70vh, 520px);
+    background: #0a0a0a;
+}
+
+.car-detail-carousel-frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+}
+
+.car-detail-gallery-modal .carousel-control-prev,
+.car-detail-gallery-modal .carousel-control-next {
+    width: 3rem;
+    height: 3rem;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0.85;
+    transition: opacity var(--transition-base, 0.3s ease-out);
+}
+
+.car-detail-gallery-modal .carousel-control-prev:hover,
+.car-detail-gallery-modal .carousel-control-next:hover,
+.car-detail-gallery-modal .carousel-control-prev:focus-visible,
+.car-detail-gallery-modal .carousel-control-next:focus-visible {
+    opacity: 1;
+}
+
+.car-detail-gallery-modal .carousel-control-prev-icon,
+.car-detail-gallery-modal .carousel-control-next-icon {
+    pointer-events: auto;
+    transition: transform var(--transition-base, 0.3s ease-out);
+}
+
+.car-detail-gallery-modal .carousel-control-prev:hover .carousel-control-prev-icon,
+.car-detail-gallery-modal .carousel-control-prev:focus-visible .carousel-control-prev-icon {
+    transform: scale(1.08);
+}
+
+.car-detail-gallery-modal .carousel-control-next:hover .carousel-control-next-icon,
+.car-detail-gallery-modal .carousel-control-next:focus-visible .carousel-control-next-icon {
+    transform: scale(1.08);
+}
+
+.car-detail-gallery-modal--reduced-motion .carousel-item {
+    transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .car-detail-gallery-modal .carousel-item {
+        transition: none;
+    }
+
+    .car-detail-gallery-modal .carousel-control-prev-icon,
+    .car-detail-gallery-modal .carousel-control-next-icon {
+        transition: none;
+    }
+
+    .car-detail-carousel-backdrop {
+        filter: brightness(0.45);
+        transform: none;
+    }
+}
+
+.host-profile-bar {
+    background: var(--color-surface-elevated, #F5F4F0);
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.07));
+}
+
+.detail-contact-btn {
+    border-radius: 0.75rem !important;
+}
+
+.spec-card {
+    background: #ffffff;
+    min-height: 110px;
+}
+
+.pickup-map-placeholder {
+    background: #e8eef5;
+}
+
+.letter-spacing-tight {
+    letter-spacing: 0.04em;
+}
+
+.detail-price-amount {
+    color: var(--color-primary, #6E8DB8);
+    font-size: 2rem;
+    line-height: 1.1;
+}
+
+.detail-total-amount {
+    color: var(--color-primary, #6E8DB8);
+}
+
+.detail-reservation-disclaimer {
+    letter-spacing: 0.04em;
+    font-size: 0.7rem;
+}
+
+.detail-reservation-sticky {
+    position: sticky;
+    top: calc(var(--navbar-height) + 1rem);
+}
+
+@media (max-width: 991.98px) {
+    .detail-reservation-sticky {
+        position: static;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .car-detail-gallery {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        min-height: 0;
+    }
+
+    .car-detail-gallery__main {
+        grid-column: 1;
+        grid-row: auto;
+        min-height: 220px;
+    }
+
+    .car-detail-gallery__side {
+        min-height: 160px;
+    }
+}
+
+.listingDescriptionSection__intro {
+    line-height: 1.65;
+    max-width: 65ch;
+}
+
+.detailRatingsHeading {
+    color: var(--color-text, #253041);
+    letter-spacing: 0.08em;
+}
+
+.reviewStarsRow i {
+    font-size: 0.95rem;
+}
+
+.reviewCard__quote {
+    line-height: 1.55;
+}
+
+.reviewCard__avatar {
+    object-fit: cover;
+}
+
+.similarVehiclesSeeAll {
+    color: var(--color-primary, #6E8DB8);
+}
+
+.similarVehiclesSeeAll:hover {
+    color: var(--color-primary-dark, #4E6F99);
+}
+
+.similarVehiclesSection .carcard {
+    max-width: 100%;
+}
+
+.explore-filter-dropdown .dropdown-toggle::after {
+    margin-left: 0.35rem;
+}
+
+.explore-filter-dropdown__panel {
+    min-width: 16rem;
+}
+
+/* Toggle text of the neighborhood toggle + selects of the car details (type / powertrain / transmission) */
+.explore-filter-dropdown__label,
+select.form-select.ryden-car-spec-select {
+    font-weight: 400;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+select.form-select.ryden-car-spec-select option {
+    font-weight: 400;
+    font-size: 0.875rem;
+}
+
+/* Align with .form-select / .form-control (Bootstrap --bs-border-radius), not rounded-4 of the search bar */
+.neighborhood-picker .neighborhood-picker__toggle {
+    border-radius: var(--bs-border-radius);
+}
+
+/* Neighborhood picker styled as form-select: hide the Bootstrap dropdown caret (form-select provides its own arrow) */
+.neighborhood-picker .neighborhood-picker__toggle--form-select.dropdown-toggle::after {
+    display: none;
+}
+
+.neighborhood-picker__toggle--form-select {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* Ocultar el círculo del radio sin display:none: si el input no participa en el layout, el clic en la
+   etiqueta no activa el control en varios navegadores (el select nativo del resto del formulario sí funciona). */
+.neighborhood-picker:not(.neighborhood-picker--search-bar) input[type="radio"].js-neighborhood-pick {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.neighborhood-picker:not(.neighborhood-picker--search-bar) .neighborhood-picker__row label {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Blue hover on neighborhood rows (matches native select highlight) */
+.neighborhood-picker__menu .dropdown-item:hover,
+.neighborhood-picker__menu .dropdown-item:focus {
+    background-color: var(--bs-primary);
+    color: #fff;
+}
+
+/* Neighborhoods in the search bar: same visual criteria as From/To (form-control-sm, without chip btn-light) */
+.neighborhood-picker--search-bar .neighborhood-picker__toggle--search-bar.dropdown-toggle::after {
+    margin-left: auto;
+}
+
+.neighborhood-picker--search-bar .neighborhood-picker__toggle--search-bar {
+    cursor: pointer;
+}
+
+/* Search bar VR separators: stretch full row height; margin-right adds space between
+   the divider and the content to its right so it doesn't look cramped */
+.search-menu .vr {
+    align-self: stretch;
+    margin-right: 0.5rem;
+}
+
+/* Month flex dropdown: push caret to the right end, matching the neighborhood picker */
+.js-flex-month-wrapper .dropdown-toggle::after {
+    margin-left: auto;
+}
+
+/* Date mode stack: exact-dates and flex-controls overlap in the same grid cell so the
+   column height is always max(H_exact, H_flex) — toggling between them never causes reflow */
+.ryden-date-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+}
+.ryden-date-stack > * {
+    grid-area: 1 / 1;
+}
+.js-date-mode-hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.carouselSection .carcard {
+    max-width: 100%;
+}
+
+.hero-section {
+    background-image: url('../assets/images/homepage-photo.jpg');
+    background-size: cover;
+    background-position: center;
+    /*top: 0;*/
+    /*z-index: 1020;*/
+    width: 100%;
+}
+
+.hero-overlay {
+    /* gradient and alignment owned by ryden-theme.css */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem 2rem;
+}
+
+.alert-project {
+    background-color: var(--color-primary-soft);
+    border: 2px solid var(--color-primary);
+    border-radius: 8px;
+    color: var(--color-text);
+    padding: 14px 18px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#picturesChooseLabel.is-invalid {
+    border-color: var(--bs-danger, #dc3545);
+    color: var(--bs-danger, #dc3545);
+}
+
+.input-group .ryden-password-toggle {
+    flex-shrink: 0;
+}
+
+.reservation-management-header {
+    max-width: 70ch;
+}
+
+.reservation-card {
+    display: block;
+    border-radius: 1rem;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.reservation-card:hover,
+.reservation-card:focus-visible {
+    transform: translateY(-1px);
+}
+
+.reservation-card:focus-visible {
+    outline: 2px solid var(--color-primary, #6E8DB8);
+    outline-offset: 3px;
+}
+
+.reservation-card__surface {
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.07));
+}
+
+.reservation-card__media-wrap {
+    max-height: 190px;
+}
+
+.reservation-card__media {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.reservation-card__media--placeholder {
+    background: #f3f4f6;
+}
+
+.reservation-card__meta-label {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.reservation-price-compact {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.reservation-status-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.35rem 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.reservation-status-badge--accepted {
+    background: rgba(22, 163, 74, 0.14);
+    color: #166534;
+}
+
+.reservation-status-badge--started {
+    background: rgba(37, 99, 235, 0.14);
+    color: #1d4ed8;
+}
+
+.reservation-status-badge--cancelled {
+    background: rgba(220, 38, 38, 0.14);
+    color: #b91c1c;
+}
+
+.reservation-status-badge--finished {
+    background: rgba(71, 85, 105, 0.18);
+    color: #334155;
+}
+
+.reservation-detail-car-media {
+    width: min(100%, 220px);
+    aspect-ratio: 4 / 3;
+    flex-shrink: 0;
+    background: #f3f4f6;
+}
+
+.reservation-detail-sticky {
+    position: sticky;
+    top: calc(var(--navbar-height) + 1rem);
+}
+
+@media (max-width: 991.98px) {
+    .reservation-detail-sticky {
+        position: static;
+    }
+}
+
+body.reservation-chat-body {
+    overflow: hidden;
+    height: 100dvh;
+}
+
+body.reservation-chat-body.has-fixed-navbar {
+    height: 100dvh;
+}
+
+.reservation-chat-main {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.5rem;
+    height: calc(100dvh - var(--navbar-height));
+    max-height: calc(100dvh - var(--navbar-height));
+    overflow: hidden;
+    width: 100%;
+    max-width: 1140px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0.75rem var(--bs-gutter-x, 0.75rem) 0.5rem;
+}
+
+.reservation-chat-main__header {
+    min-width: 0;
+}
+
+.reservation-chat-main__header .breadcrumb {
+    margin-bottom: 0;
+}
+
+.reservation-chat-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--color-bg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, 0.055));
+}
+
+.reservation-chat-card__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.reservation-chat-shell {
+    --chat-attachment-width: 20rem;
+    --chat-attachment-max-height: 22.5rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+@media (min-width: 576px) {
+    .reservation-chat-shell {
+        --chat-attachment-width: 22.5rem;
+        --chat-attachment-max-height: 26.25rem;
+    }
+}
+
+.reservation-chat-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    min-height: 3.5rem;
+    padding: 0.625rem 1rem;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.reservation-chat-header__link:hover .reservation-chat-header__name {
+    color: #0f172a;
+}
+
+.reservation-chat-header__avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+}
+
+.reservation-chat-header__avatar--placeholder {
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+.reservation-chat-header__avatar--placeholder .bi {
+    font-size: 1.25rem;
+}
+
+.reservation-chat-header__name {
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.reservation-chat-page__messages {
+    position: relative;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: calc(0.75rem + var(--chat-top-inset)) 1rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.4;
+    background: var(--color-surface-elevated, #F5F4F0);
+}
+
+.reservation-chat-day-bar {
+    position: sticky;
+    top: calc(0.5rem + var(--chat-top-inset));
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    overflow: visible;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.reservation-chat-day-bar--scrolling {
+    opacity: 1;
+}
+
+.reservation-chat__day-pill {
+    display: inline-block;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.reservation-chat__history-nav {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.reservation-chat__messages-stage {
+    --chat-top-inset: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.reservation-chat__messages-stage:has(#reservationChatLoadOlder:not(.d-none)) {
+    --chat-top-inset: 2.75rem;
+}
+
+.reservation-chat__load-page-host {
+    position: absolute;
+    right: 0;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    padding: 0 1rem;
+    pointer-events: none;
+}
+
+.reservation-chat__load-page-host--older {
+    top: 0.625rem;
+}
+
+.reservation-chat__load-page-host--newer {
+    bottom: 2rem;
+}
+
+.reservation-chat__load-page-host .reservation-chat__load-page {
+    pointer-events: auto;
+}
+
+.reservation-chat__load-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: auto;
+    max-width: 100%;
+    padding: 0.4rem 0.9rem;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.96);
+    border-color: var(--color-border) !important;
+    border-radius: 2rem;
+}
+
+.reservation-chat__load-page:hover:not(:disabled) {
+    color: #0f172a;
+    background: #fff;
+}
+
+.reservation-chat__load-page:disabled {
+    opacity: 0.55;
+}
+
+.reservation-chat-page__composer {
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    flex-grow: 0;
+    flex-wrap: wrap;
+    padding: 0.625rem 1rem;
+    padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    position: relative;
+    z-index: 2;
+}
+
+.reservation-chat-page__input {
+    resize: none;
+    max-height: 6rem;
+    border-radius: 1.25rem;
+}
+
+.reservation-chat-page__error {
+    flex-shrink: 0;
+    padding: 0 1rem 0.5rem;
+    background: var(--color-bg);
+}
+
+.reservation-chat__day-separator {
+    display: flex;
+    justify-content: center;
+    margin: 0.75rem 0 0.5rem;
+}
+
+
+.reservation-chat__day-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.reservation-chat__message {
+    max-width: 85%;
+}
+
+.reservation-chat__message--mine {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.reservation-chat__message--mine .reservation-chat__bubble {
+    align-self: flex-end;
+    width: fit-content;
+    max-width: 100%;
+}
+
+.reservation-chat__bubble {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.375rem 0.625rem 0.25rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+    word-break: break-word;
+    text-align: left;
+}
+
+.reservation-chat__bubble--has-attachment {
+    align-items: stretch;
+    padding: 0.25rem;
+    box-sizing: border-box;
+}
+
+.reservation-chat__bubble--media-only {
+    padding: 0;
+    overflow: hidden;
+}
+
+.reservation-chat__bubble--media-only.reservation-chat__bubble--visual-only {
+    position: relative;
+    display: block;
+}
+
+.reservation-chat__attachment-media {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--chat-attachment-width);
+    max-width: 100%;
+    overflow: hidden;
+    line-height: 0;
+    background: rgba(15, 23, 42, 0.06);
+    border-radius: 0.375rem;
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__attachment-media {
+    border-radius: 0;
+}
+
+.reservation-chat__bubble-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.375rem;
+    width: var(--chat-attachment-width);
+    max-width: 100%;
+    margin-top: 0.125rem;
+    padding: 0 0.125rem 0.0625rem;
+}
+
+.reservation-chat__bubble--has-attachment .reservation-chat__attachment-caption {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.reservation-chat__bubble-footer .reservation-chat__meta {
+    flex-shrink: 0;
+    margin: 0;
+    align-self: auto;
+}
+
+.reservation-chat__bubble-text {
+    display: block;
+    font-size: inherit;
+    line-height: inherit;
+    padding-right: 0.25rem;
+}
+
+.reservation-chat__meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.2rem;
+    align-self: flex-end;
+    margin-top: 0.125rem;
+    white-space: nowrap;
+}
+
+.reservation-chat__time {
+    font-size: 0.6875rem;
+    line-height: 1.2;
+    color: rgba(15, 23, 42, 0.45);
+}
+
+.reservation-chat__receipt {
+    font-size: 0.75rem;
+    line-height: 1;
+    letter-spacing: -0.08em;
+    color: #8696a0;
+}
+
+.reservation-chat__receipt--seen {
+    color: #53bdeb;
+}
+
+.reservation-chat__message--mine .reservation-chat__bubble:not(.reservation-chat__bubble--has-attachment) {
+    align-items: flex-end;
+}
+
+.reservation-chat__bubble--theirs {
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+}
+
+.reservation-chat__bubble--mine {
+    background: var(--color-primary-soft, rgba(110, 141, 184, 0.12));
+    border: 1px solid rgba(110, 141, 184, 0.15);
+    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+}
+
+@media (min-width: 576px) {
+    .reservation-chat-page__composer {
+        flex-wrap: nowrap;
+    }
+}
+
+.reservation-chat__drop-zone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.reservation-chat__drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(245, 244, 240, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.reservation-chat__drop-overlay:not(.d-none) {
+    opacity: 1;
+    visibility: visible;
+}
+
+.reservation-chat__drop-overlay-text {
+    padding: 0.875rem 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #334155;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.92);
+    border: 2px dashed rgba(110, 141, 184, 0.55);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+.reservation-chat__pending {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    background: var(--color-surface-elevated, #f5f4f0);
+    border-top: 1px solid var(--color-border);
+}
+
+.reservation-chat__pending-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reservation-chat__upload-progress {
+    flex-shrink: 0;
+    height: 0.25rem;
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.reservation-chat__upload-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--color-primary, #6e8db8);
+    transition: width 0.15s ease;
+}
+
+.reservation-chat__attachment-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: var(--chat-attachment-max-height);
+    margin: 0;
+    border-radius: 0;
+    object-fit: contain;
+    cursor: pointer;
+}
+
+.reservation-chat__attachment-video {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: var(--chat-attachment-max-height);
+    margin: 0;
+    border-radius: 0;
+    background: #0f172a;
+    object-fit: contain;
+    vertical-align: top;
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__meta {
+    position: absolute;
+    right: 0.375rem;
+    bottom: 0.25rem;
+    z-index: 1;
+    margin: 0;
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__time {
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__receipt {
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.reservation-chat__bubble--visual-only .reservation-chat__receipt--seen {
+    color: #8fd0ff;
+}
+
+.reservation-chat__bubble--media-only:not(.reservation-chat__bubble--visual-only) {
+    padding: 0.25rem 0.375rem 0.125rem;
+}
+
+.reservation-chat__bubble--media-only:not(.reservation-chat__bubble--visual-only) .reservation-chat__meta {
+    align-self: flex-end;
+    margin-top: 0.125rem;
+}
+
+.reservation-chat__file-card {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: var(--chat-attachment-width);
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.5rem 0.625rem;
+    margin: 0;
+    box-sizing: border-box;
+    text-decoration: none;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 0.5rem;
+}
+
+.reservation-chat__bubble--mine .reservation-chat__file-card {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.reservation-chat__file-card:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: inherit;
+}
+
+.reservation-chat__file-card-icon {
+    flex-shrink: 0;
+    font-size: 1.75rem;
+    line-height: 1;
+    color: #64748b;
+}
+
+.reservation-chat__file-card-icon--pdf {
+    color: #dc2626;
+}
+
+.reservation-chat__file-card-icon--document {
+    color: #2563eb;
+}
+
+.reservation-chat__file-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.reservation-chat__file-card-name {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reservation-chat__file-card-meta {
+    display: block;
+    font-size: 0.6875rem;
+    color: rgba(15, 23, 42, 0.55);
+}
+
+/* Profile page styles */
+.profile-container {
+    max-width: 720px;
+    margin-top: 4rem;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.profile-header__title {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
+    flex: 1;
+}
+
+.profile-header__actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+#editingActions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.profile-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.07));
+    border-radius: var(--radius-card, 12px);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, 0.055));
+}
+
+.profile-card--section {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-card--section .profile-section-title {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+.profile-card__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-card__divider {
+    border: none;
+    border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.07));
+    margin: 1.5rem 0;
+}
+
+.profile-card__section {
+    margin-bottom: 1.5rem;
+}
+
+.profile-card__section:last-of-type {
+    margin-bottom: 0;
+}
+
+.profile-card__section form {
+    display: inline;
+}
+
+.profile-card__section > form:not(:first-of-type) {
+    margin-left: 0.75rem;
+}
+
+.profile-card__section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0 0 1rem 0;
+}
+
+.profile-card__avatar {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.profile-card__avatar-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 3px solid var(--color-primary);
+}
+
+.profile-card__avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary, #6E8DB8) 0%, var(--color-primary-dark, #4E6F99) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.75rem;
+    font-weight: 700;
+    border: 3px solid var(--color-primary);
+}
+
+.profile-card__info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-card__name {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.profile-card__member-since {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.5rem;
+}
+
+.profile-card__member-since-label {
+    font-weight: 500;
+    color: var(--color-text);
+}
+
+.profile-card__member-since-value {
+    color: var(--color-text-muted);
+}
+
+.profile-card__email {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+}
+
+.profile-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(34, 160, 107, 0.1);
+    color: #15803d;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.profile-card__badge i {
+    font-size: 0.9rem;
+}
+
+.profile-section-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.profile-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 1rem;
+    margin-top: 0;
+}
+
+.profile-email-display {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    margin-top: 0;
+}
+
+.profile-email-hint {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+    margin-top: 0;
+}
+
+.profile-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .profile-fields-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .profile-header__actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .profile-header__actions .btn {
+        width: 100%;
+    }
+
+    .profile-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .profile-card__header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .profile-card__info {
+        width: 100%;
+    }
+}
+
+/* Avatar pencil edit button */
+.profile-card__avatar-edit-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-primary);
+    font-size: 0.7rem;
+    padding: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+    transition: background-color 0.15s ease, color 0.15s ease;
+    z-index: 1;
+}
+
+.profile-card__avatar-edit-btn:hover,
+.profile-card__avatar-edit-btn:focus-visible {
+    background: var(--color-primary);
+    color: white;
+    outline: none;
+}
+
+/* Avatar dropdown menu */
+.profile-avatar-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 160px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    z-index: 20;
+    overflow: hidden;
+    display: none;
+}
+
+.profile-avatar-menu.is-open {
+    display: block;
+}
+
+.profile-avatar-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.12s ease;
+}
+
+.profile-avatar-menu__item:hover {
+    background: var(--color-primary-soft, rgba(110, 141, 184, 0.09));
+}
+
+.profile-avatar-menu__item--danger {
+    color: #dc3545;
+}
+
+.profile-avatar-menu__item--danger:hover {
+    background: rgba(220, 53, 69, 0.07);
+}
+
+/* Section header: title + inline action button */
+.profile-card__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.profile-card__section-header .profile-section-title {
+    margin-bottom: 0;
+}
+
+/* View-mode field display (no inputs) */
+.profile-field-view {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.profile-field-value {
+    font-size: 0.95rem;
+    color: var(--color-text);
+    min-height: 1.5rem;
+    line-height: 1.5;
+}
+
+/* Form action buttons row (bottom-right of editing section) */
+.profile-card__form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+/* Flatpickr birth date calendar: "Borrar selección" footer */
+.flatpickr-profile-clear-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.4rem 0.75rem 0.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.flatpickr-profile-clear-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.12s ease;
+}
+
+.flatpickr-profile-clear-btn:hover {
+    background: var(--color-primary-soft, rgba(110, 141, 184, 0.09));
+}
+
+/* Neighborhood: a single scroll in the panel (list / select) */
+.neighborhood-picker__scroll {
+    max-height: min(42vh, 14rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.neighborhood-picker__scroll .form-select {
+    width: 100%;
+}
+
+/* Payment receipt upload row (reservation confirmation + reservation detail) */
+.ryden-payment-receipt__file-label {
+    cursor: pointer;
+    min-height: calc(1.5em + 0.75rem + 2px);
+    width: auto;
+    min-width: 0;
+}
+
+.ryden-payment-receipt__file-input {
+    cursor: pointer;
+    z-index: 2;
+}
+
+.ryden-payment-receipt__file-label #paymentReceiptFileText {
+    position: relative;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.counterparty-summary-card {
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.counterparty-summary-card__identity {
+    min-width: 0;
+}
+
+.counterparty-summary-card__avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+}
+
+.counterparty-summary-card__avatar--placeholder {
+    background: #f1f5f9;
+}
+
+.counterparty-summary-card__avatar--placeholder .bi {
+    font-size: 1.1rem;
+}
+
+.counterparty-summary-card__email-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.counterparty-summary-card__email-link {
+    white-space: nowrap;
+}
+
+/* Star rating widget */
+.ryden-star-rating {
+    display: flex;
+    gap: 2px;
+    line-height: 1;
+}
+
+.ryden-star-rating .ryden-star {
+    font-size: 2rem;
+    cursor: pointer;
+    color: #d1d5db;
+    transition: color 0.1s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ryden-star-rating .ryden-star.ryden-star--selected {
+    color: #fbbc04;
+}
+
+.ryden-star-rating .ryden-star.ryden-star--hover {
+    color: #fbbc04;
+}
+
+/* Textarea / multiline user text shown with c:out: keep \n as line breaks in HTML. */
+.ryden-multiline-plaintext {
+    white-space: pre-line;
+    word-break: break-word;
+}
+
+/* Inline user-controlled text (names, titles, plate, email, address, brand/model) shown inside
+   single-line headings / cards. Forces continuous strings without spaces to wrap instead of pushing
+   the layout. Pair with min-width:0 on a flex parent when the text sits inside a flex row. */
+.ryden-text-break {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0;
+}
+
+/* Single-line user text that may exceed its container (e.g. legacy brand/model strings stored in
+   the DB before the current max length was tightened). Keeps the text on one line, clips overflow,
+   and fades the trailing edge into transparency so the user can tell the text continues. Pair with
+   title="..." so the full string is reachable via hover/screen reader. Requires min-width:0 on the
+   flex parent.
+   `!important` is used on the layout-defining properties because this class is intentionally a
+   final override for places where long unbroken user text would otherwise push the layout (e.g.
+   inside flex breadcrumbs / card titles where other utility classes might leak through). */
+.ryden-text-fade-end,
+.breadcrumb > .ryden-text-fade-end {
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+            mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+}
+
+/* Browsers without mask-image support (older Edge / very old Safari) still get a graceful
+   single-line ellipsis cut so the layout never breaks. */
+@supports not ((mask-image: linear-gradient(to right, #000, transparent)) or (-webkit-mask-image: linear-gradient(to right, #000, transparent))) {
+    .ryden-text-fade-end,
+    .breadcrumb > .ryden-text-fade-end {
+        text-overflow: ellipsis;
+    }
+}
+
+/* Multi-line user text capped at 2 lines (e.g. brand+model titles inside a card). Allows the
+   string to wrap, breaks unbroken long words, and clips after the second line with an ellipsis
+   so the title can never collide with sibling content (status badges, action buttons). Pair with
+   title="..." for full text on hover/screen readers. Requires min-width:0 on the flex parent. */
+.ryden-text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+            line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Price market insight card (owner publish / edit listing) */
+.ryden-price-insight {
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent !important;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 255, 255, 1) 55%);
+}
+
+.ryden-price-insight--zone-red {
+    border-color: rgba(220, 53, 69, 0.5) !important;
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.12) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.ryden-price-insight--zone-yellow {
+    border-color: rgba(255, 193, 7, 0.55) !important;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.16) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.ryden-price-insight--zone-green {
+    border-color: rgba(25, 135, 84, 0.5) !important;
+    background: linear-gradient(135deg, rgba(25, 135, 84, 0.12) 0%, rgba(255, 255, 255, 1) 60%);
+}
+
+.ryden-price-insight__bar-wrap {
+    padding: 0.35rem 0 2.1rem;
+}
+
+.ryden-price-insight__bar-track {
+    position: relative;
+    height: 0.75rem;
+    border-radius: 999px;
+    overflow: visible;
+    --avg-pct: 50%;
+    --fade-width: 18%;
+    touch-action: none;
+}
+
+.ryden-price-insight__bar-hit {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -0.85rem;
+    bottom: -1.35rem;
+    z-index: 3;
+    cursor: pointer;
+    background: transparent;
+}
+
+.ryden-price-insight__bar-gradient {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    /* Red extremes, green at average, yellow fade between */
+    background: linear-gradient(
+        90deg,
+        #dc3545 0%,
+        #ffc107 calc(var(--avg-pct) - var(--fade-width)),
+        #198754 var(--avg-pct),
+        #ffc107 calc(var(--avg-pct) + var(--fade-width)),
+        #dc3545 100%
+    );
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.ryden-price-insight__marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    gap: 0.2rem;
+}
+
+.ryden-price-insight__marker-dot {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.ryden-price-insight__marker-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: #0d6efd;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.ryden-price-insight__marker--bound {
+    z-index: 4;
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.ryden-price-insight__marker--bound:focus-visible .ryden-price-insight__marker-dot {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.ryden-price-insight__marker--min .ryden-price-insight__marker-dot,
+.ryden-price-insight__marker--max .ryden-price-insight__marker-dot {
+    background-color: #dc3545;
+}
+
+.ryden-price-insight__marker--avg .ryden-price-insight__marker-dot {
+    background-color: #198754;
+    width: 1rem;
+    height: 1rem;
+}
+
+.ryden-price-insight__marker--user {
+    top: 50%;
+    transform: translateX(-50%);
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    z-index: 5;
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ryden-price-insight__marker--user.ryden-price-insight__marker--animate {
+    transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ryden-price-insight__marker--user.ryden-price-insight__marker--dragging,
+.ryden-price-insight--drag-active .ryden-price-insight__marker--user {
+    transition: none;
+    cursor: grabbing;
+}
+
+.ryden-price-insight__marker--user .ryden-price-insight__marker-dot {
+    transform: translateY(-50%);
+    background-color: #0d6efd;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-width: 3px;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
+    cursor: inherit;
+}
+
+.ryden-price-insight--drag-active {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ryden-price-insight__marker--user .ryden-price-insight__marker-label {
+    margin-top: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    color: #0d6efd;
+}
+
+/* ─── Detail reservation panel: inline Flatpickr calendar ─────────────────── */
+
+/* Hidden anchor that Flatpickr binds to; the calendar renders as its next sibling */
+.detail-daterange-anchor {
+    display: block;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    outline: none;
+}
+
+/* Inline calendar: remove popup shadow/border, fill panel width */
+.detail-reservation-panel .flatpickr-calendar.inline {
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* Stretch the days grid to fill available width */
+.detail-reservation-panel .flatpickr-days,
+.detail-reservation-panel .dayContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Taller day cells to fit the price label below the day number */
+.detail-reservation-panel .flatpickr-day {
+    width: calc(100% / 7);
+    max-width: none;
+    flex-basis: calc(100% / 7);
+    height: 52px;
+    line-height: 1.3;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 6px;
+}
+
+/* Compact price label rendered by onDayCreate inside each day cell */
+.fp-day-price {
+    display: block;
+    font-size: 0.5rem;
+    line-height: 1;
+    color: var(--color-text-muted, #6c757d);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Price label colours when day is selected or in range */
+.flatpickr-day.selected .fp-day-price,
+.flatpickr-day.startRange .fp-day-price,
+.flatpickr-day.endRange .fp-day-price {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.detail-reservation-panel .flatpickr-day.inRange .fp-day-price {
+    color: var(--color-text, #212529);
+}
+
+/* In car-detail, avoid the light-blue bridge artifact between selected days */
+.detail-reservation-panel .flatpickr-day.inRange {
+    box-shadow: none !important;
+}
+
+/* ─── Owner availability calendar (read-only, myCarDetail & manageCarPeriods) ─── */
+
+/* Hidden anchor that Flatpickr binds to */
+.owner-cal-anchor {
+    display: block;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    outline: none;
+}
+
+/* Inline calendar: remove popup shadow/border, fill container width */
+.owner-cal-container .flatpickr-calendar.inline {
+    box-shadow: none;
+    border: none;
+    background: transparent;
+    width: 100%;
+    min-width: 0 !important;
+    margin: 0 auto;
+}
+
+/* Stretch inner containers to fill available width */
+.owner-cal-container .flatpickr-innerContainer,
+.owner-cal-container .flatpickr-rContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Stretch weekdays header to fill available width */
+.owner-cal-container .flatpickr-weekdays,
+.owner-cal-container .flatpickr-weekdaycontainer {
+    width: 100% !important;
+}
+
+/* Stretch days grid to fill available width */
+.owner-cal-container .flatpickr-days,
+.owner-cal-container .dayContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+}
+
+/* Taller day cells to fit the price label */
+.owner-cal-container .flatpickr-day {
+    width: calc(100% / 7);
+    max-width: none;
+    flex-basis: calc(100% / 7);
+    height: 52px;
+    line-height: 1.3;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 6px;
+    cursor: default;
+}
+
+/* Suppress hover/focus highlight on read-only days */
+.owner-cal-container .flatpickr-day:hover,
+.owner-cal-container .flatpickr-day:focus {
+    background: transparent;
+    border-color: transparent;
+}
+
+/* Read-only calendar: disable all day interaction */
+.owner-cal-readonly .flatpickr-day {
+    pointer-events: none;
+}
+
+/* ─── Manage periods: highlighted period card on calendar day click ─────────── */
+
+.manage-period-card.period-highlighted {
+    border-color: var(--bs-primary) !important;
+    background-color: rgba(13, 110, 253, 0.05) !important;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* ─── Manage periods: mark days with an active reservation inside the edited
+       period. Used by managePeriods.js#applyReservedDayMarkers via onDayCreate.
+       Visible cue: small red dot in the bottom-right of the day cell + subtle
+       background. Works on both selected and unselected states. ─────────── */
+
+.flatpickr-day.has-active-reservation {
+    position: relative;
+    background-color: rgba(220, 53, 69, 0.08);
+}
+
+.flatpickr-day.has-active-reservation::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--bs-danger, #dc3545);
+    pointer-events: none;
+}
+
+.flatpickr-day.has-active-reservation.selected,
+.flatpickr-day.has-active-reservation.startRange,
+.flatpickr-day.has-active-reservation.endRange,
+.flatpickr-day.has-active-reservation.inRange {
+    background-color: rgba(13, 110, 253, 0.85);
+}
+
+.flatpickr-day.has-active-reservation.selected::after,
+.flatpickr-day.has-active-reservation.startRange::after,
+.flatpickr-day.has-active-reservation.endRange::after,
+.flatpickr-day.has-active-reservation.inRange::after {
+    background-color: #fff;
+}

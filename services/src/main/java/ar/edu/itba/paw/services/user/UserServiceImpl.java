@@ -631,6 +631,47 @@ public final class UserServiceImpl implements UserService {
         return userDao.findAllUsersPaginated(page, pageSize);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<User> findUsersPaginated(
+            final int page,
+            final int pageSize,
+            final Boolean blocked,
+            final UserRole role,
+            final String query) {
+        return userDao.findUsersPaginated(page, pageSize, blocked, role, query);
+    }
+
+    @Override
+    @Transactional
+    public void demoteFromAdmin(final long targetUserId, final long assignedByUserId) {
+        final User granting = userDao.getUserById(assignedByUserId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!granting.isAdmin()) {
+            throw new AdminPromoterNotAdminException();
+        }
+        final User target = userDao.getUserById(targetUserId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!target.isAdmin()) {
+            return;
+        }
+        userDao.updateUserRoleAndGrantor(targetUserId, UserRole.USER, null);
+    }
+
+    @Override
+    @Transactional
+    public void updateIdentityValidated(final long userId, final boolean validated) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        userDao.updateIdentityValidated(userId, validated);
+    }
+
+    @Override
+    @Transactional
+    public void updateLicenseValidated(final long userId, final boolean validated) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        userDao.updateLicenseValidated(userId, validated);
+    }
+
     // -----------------------------------------------------------------------------------------------------------
     // Profile-media-orchestrated operations on user rows (see contract Javadoc): each call is a thin transactional
     // pass-through to UserDao so {@link UserProfileMediaServiceImpl} can mutate FKs without injecting UserDao itself.
@@ -664,5 +705,12 @@ public final class UserServiceImpl implements UserService {
     @Transactional
     public void clearIdentityDocumentFk(final long userId) {
         userDao.clearIdentityDocument(userId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(final long userId) {
+        userDao.getUserById(userId).orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        userDao.deleteUser(userId);
     }
 }

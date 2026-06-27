@@ -221,6 +221,9 @@ public interface CarService {
     /** Persists the car's average rating via dirty-checking; {@code null} clears the value. */
     void updateRatingAvg(long carId, BigDecimal average);
 
+    /** Updates optional free-text description for a car owned by {@code ownerId}. */
+    void updateDescription(long ownerId, long carId, String description);
+
     // -----------------------------------------------------------------------------------------------------------
     // Admin-orchestrated operations on car rows.
     //

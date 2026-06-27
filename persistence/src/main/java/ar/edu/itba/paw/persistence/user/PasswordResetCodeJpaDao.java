@@ -44,6 +44,19 @@ public class PasswordResetCodeJpaDao implements PasswordResetCodeDao {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean matchesValidCode(final long userId, final String code, final Instant now) {
+        final Number n = (Number) em.createQuery(
+                        "SELECT COUNT(e) FROM PasswordResetCode e "
+                                + "WHERE e.userId = :userId AND e.code = :code AND e.expiresAt > :now")
+                .setParameter("userId", userId)
+                .setParameter("code", code.trim())
+                .setParameter("now", now)
+                .getSingleResult();
+        return n != null && n.longValue() > 0;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public boolean hasActiveCode(final long userId, final Instant now) {
         final Number n = (Number) em.createQuery(
                         "SELECT COUNT(p) FROM PasswordResetCode p WHERE p.userId = :userId AND p.expiresAt > :now")

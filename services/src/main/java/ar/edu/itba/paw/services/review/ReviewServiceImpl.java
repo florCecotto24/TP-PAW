@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
@@ -65,6 +66,18 @@ public final class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public Page<CarPublicReview> getCarPublicReviews(final long carId, final int page, final int pageSize) {
         return reviewDao.findCarPublicReviews(carId, page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Review> getCarPublicReviewEntities(final long carId, final int page, final int pageSize) {
+        return reviewDao.findPublicReviewsForCar(carId, page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Review> getReviewsForReservation(final long reservationId) {
+        return reviewDao.findReviewsForReservation(reservationId);
     }
 
     @Override

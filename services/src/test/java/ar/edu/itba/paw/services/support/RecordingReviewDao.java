@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
@@ -59,6 +60,16 @@ public class RecordingReviewDao implements ReviewDao {
     public Page<CarPublicReview> findCarPublicReviews(final long carId, final int page, final int pageSize) {
         return carPublicReviewsByKey.getOrDefault(carId + ":" + page + ":" + pageSize,
                 new Page<>(List.of(), page, pageSize, 0L));
+    }
+
+    @Override
+    public Page<Review> findPublicReviewsForCar(final long carId, final int page, final int pageSize) {
+        return new Page<>(List.of(), page, pageSize, 0L);
+    }
+
+    @Override
+    public List<Review> findReviewsForReservation(final long reservationId) {
+        return List.of();
     }
 
     @Override

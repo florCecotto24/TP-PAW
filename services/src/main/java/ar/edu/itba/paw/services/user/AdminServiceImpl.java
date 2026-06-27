@@ -30,6 +30,7 @@ import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.AdminReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarPausedByAdminOwnerEmailPayload;
 import ar.edu.itba.paw.models.email.listing.CarRejectedByAdminOwnerEmailPayload;
@@ -90,6 +91,11 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public void demoteUserFromAdmin(final long targetUserId, final long assignedByUserId) {
+        userService.demoteFromAdmin(targetUserId, assignedByUserId);
+    }
+
+    @Override
     public User createAdminUser(
             final String email,
             final String forename,
@@ -127,6 +133,22 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void unblockUser(final long targetUserId) {
         userService.unblockUser(targetUserId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(final long targetUserId, final long actingAdminId) {
+        if (targetUserId == actingAdminId) {
+            throw new AdminCannotBlockSelfException();
+        }
+        final User target = userService.getUserById(targetUserId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        target.getRoleAssignedBy().ifPresent(grantorId -> {
+            if (grantorId == actingAdminId) {
+                throw new AdminCannotBlockGrantorException();
+            }
+        });
+        userService.deleteUser(targetUserId);
     }
 
     @Override
@@ -264,8 +286,27 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<User> listUsers(final int page, final int pageSize) {
-        return userService.findAllUsersPaginated(page, pageSize);
+    public Page<User> listUsers(
+            final int page,
+            final int pageSize,
+            final Boolean blocked,
+            final String role,
+            final String query) {
+        final UserRole roleFilter = parseAdminRoleFilter(role);
+        return userService.findUsersPaginated(page, pageSize, blocked, roleFilter, query);
+    }
+
+    private static UserRole parseAdminRoleFilter(final String role) {
+        if (role == null || role.isBlank()) {
+            return null;
+        }
+        if ("admin".equalsIgnoreCase(role.trim())) {
+            return UserRole.ADMIN;
+        }
+        if ("user".equalsIgnoreCase(role.trim())) {
+            return UserRole.USER;
+        }
+        throw new IllegalArgumentException("Invalid role filter: " + role);
     }
 
     @Override
@@ -308,6 +349,13 @@ public class AdminServiceImpl implements AdminService {
     @Transactional(readOnly = true)
     public List<ReservationMessage> getAdminChatMessages(final long reservationId, final int offset, final int limit) {
         return reservationMessageService.getAdminChatMessages(reservationId, offset, limit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReservationMessage> getChatMessagesAfter(
+            final long reservationId, final long afterMessageId, final int limit) {
+        return reservationMessageService.findMessagesAfter(reservationId, afterMessageId, limit);
     }
 
     @Override

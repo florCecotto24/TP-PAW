@@ -1,0 +1,148 @@
+{
+  "app": {
+    "name": "Ryden",
+    "loading": "Cargando...",
+    "tagline": "Alquiler de autos entre personas"
+  },
+  "title": {
+    "home": "Inicio",
+    "search": "Buscar autos",
+    "carDetail": "Detalle del auto",
+    "login": "Ingresar",
+    "register": "Crear cuenta",
+    "verifyEmail": "Verificar email",
+    "forgot": "Recuperar contraseña",
+    "publish": "Publicar auto",
+    "myCars": "Mis autos",
+    "newReservation": "Nueva reserva",
+    "myReservations": "Mis reservas",
+    "reservationDetail": "Detalle de la reserva",
+    "profile": "Mi perfil",
+    "favorites": "Favoritos",
+    "publicProfile": "Perfil de usuario",
+    "admin": "Administración",
+    "notFound": "Página no encontrada"
+  },
+  "nav": {
+    "home": "Inicio",
+    "search": "Buscar",
+    "publish": "Publicar",
+    "myCars": "Mis autos",
+    "myReservations": "Mis reservas",
+    "ownerReservations": "Reservas de mis autos",
+    "favorites": "Favoritos",
+    "profile": "Perfil",
+    "admin": "Administración",
+    "login": "Ingresar",
+    "register": "Registrarse",
+    "logout": "Salir",
+    "language": "Idioma"
+  },
+  "auth": {
+    "login": {
+      "title": "Ingresar",
+      "email": "Email",
+      "password": "Contraseña",
+      "submit": "Ingresar",
+      "submitting": "Ingresando...",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "noAccount": "¿No tenés cuenta?",
+      "failed": "Email o contraseña incorrectos."
+    },
+    "register": {
+      "title": "Crear cuenta",
+      "forename": "Nombre",
+      "surname": "Apellido",
+      "email": "Email",
+      "password": "Contraseña",
+      "passwordConfirm": "Confirmar contraseña",
+      "submit": "Registrarse",
+      "submitting": "Creando cuenta...",
+      "success": "Cuenta creada. Revisá tu email para verificarla.",
+      "haveAccount": "¿Ya tenés cuenta?"
+    },
+    "verify": {
+      "title": "Verificar email",
+      "code": "Código de verificación",
+      "submit": "Verificar",
+      "resend": "Reenviar código",
+      "success": "Email verificado."
+    },
+    "forgot": {
+      "title": "Recuperar contraseña",
+      "email": "Email",
+      "submit": "Enviar código",
+      "sent": "Si la cuenta existe, te enviamos un código por email.",
+      "code": "Código",
+      "newPassword": "Nueva contraseña",
+      "reset": "Restablecer contraseña"
+    }
+  },
+  "validation": {
+    "required": "Este campo es obligatorio.",
+    "email": "Ingresá un email válido.",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "minLength": "Debe tener al menos {{count}} caracteres.",
+    "maxLength": "No puede superar los {{count}} caracteres."
+  },
+  "error": {
+    "generic": "Ocurrió un error. Intentá de nuevo.",
+    "network": "No se pudo conectar con el servidor.",
+    "unauthorized": "Necesitás iniciar sesión.",
+    "forbidden": "No tenés permiso para hacer esto.",
+    "notFound": "No se encontró lo que buscabas.",
+    "methodNotAllowed": "Operación no permitida.",
+    "conflict": "Hay un conflicto con el estado actual.",
+    "validation": "Revisá los datos ingresados.",
+    "internal": "Error interno del servidor.",
+    "byCode": {
+      "user.email.alreadyExists": "Ese email ya está registrado.",
+      "user.account.notFound": "No se encontró el usuario.",
+      "user.verification.codeInvalid": "El código de verificación es inválido o expiró.",
+      "user.verification.codeAlreadyActive": "El email ya está verificado.",
+      "user.passwordReset.codeInvalid": "El código de recuperación es inválido o expiró.",
+      "user.password.currentIncorrect": "La contraseña actual es incorrecta.",
+      "user.registration.passwordMismatch": "Las contraseñas no coinciden.",
+      "user.registration.passwordTooShort": "La contraseña es demasiado corta.",
+      "user.registration.passwordTooLong": "La contraseña es demasiado larga.",
+      "user.profile.phoneInvalid": "El teléfono no es válido.",
+      "user.profile.birthDateFuture": "La fecha de nacimiento no puede ser futura.",
+      "user.profile.cbuInvalid": "El CBU no es válido.",
+      "car.plate.alreadyExists": "Ya existe un auto con esa patente.",
+      "car.notFound": "No se encontró el auto.",
+      "car.invalidStatusTransition": "No se puede cambiar el auto a ese estado.",
+      "car.statusTransition.forbidden": "No tenés permiso para cambiar el estado de este auto.",
+      "car.statusTransition.invalid": "No se puede cambiar el auto a ese estado.",
+      "car.publish.cbuRequired": "Necesitás cargar tu CBU para publicar.",
+      "car.activate.cbuRequired": "Necesitás cargar tu CBU para activar el auto.",
+      "car.create.modelPending": "El modelo quedó pendiente de aprobación.",
+      "favCar.cannotFavOwn": "No podés agregar tu propio auto a favoritos.",
+      "carAvailability.editConflict": "Hay reservas activas que se solapan con esos días.",
+      "carAvailability.withdrawConflict": "No se puede retirar: hay reservas activas.",
+      "carAvailability.notFound": "No se encontró el período de disponibilidad.",
+      "reservation.conflict.overlap": "Las fechas elegidas no están disponibles.",
+      "reservation.cancel.notAllowed": "No se puede cancelar la reserva en este estado.",
+      "reservation.edit.notAllowed": "No se puede editar la reserva en este estado.",
+      "reservation.carReturned.notAllowed": "No se puede marcar como devuelto en este estado.",
+      "reservation.rider.cannotReserveOwnListing": "No podés reservar tu propio auto.",
+      "reservation.rider.documentationRequired": "Necesitás validar tus documentos para reservar.",
+      "reservation.rider.ownerBlocked": "El dueño no puede recibir reservas en este momento.",
+      "review.alreadySubmitted": "Ya dejaste una reseña para esta reserva.",
+      "review.notAllowed": "No se puede reseñar esta reserva.",
+      "admin.block.cannotBlockSelf": "No podés bloquearte a vos mismo.",
+      "admin.block.cannotBlockGrantor": "No podés bloquear a quien te otorgó permisos.",
+      "admin.promote.alreadyAdmin": "El usuario ya es administrador.",
+      "admin.pause.cannotPauseAdminCar": "No se puede pausar un auto ya pausado por un admin.",
+      "catalog.brand.notFound": "No se encontró la marca.",
+      "catalog.model.notFound": "No se encontró el modelo."
+    }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "message": "La página que buscás no existe.",
+    "back": "Volver al inicio"
+  },
+  "placeholder": {
+    "comingSoon": "Esta sección está en construcción."
+  }
+}

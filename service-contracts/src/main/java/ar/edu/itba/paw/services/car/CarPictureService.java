@@ -26,4 +26,7 @@ public interface CarPictureService {
 
     /** Whether the stored file is linked to a public car gallery video. */
     boolean isStoredFileInCarGallery(final long storedFileId);
+
+    /** Removes a gallery row when it belongs to {@code carId}. */
+    void deleteCarPictureForCar(final long carId, final long pictureId);
 }

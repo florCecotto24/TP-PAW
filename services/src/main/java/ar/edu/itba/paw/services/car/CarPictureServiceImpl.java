@@ -68,4 +68,14 @@ public final class CarPictureServiceImpl implements CarPictureService {
     public boolean isStoredFileInCarGallery(final long storedFileId) {
         return carPictureDao.isStoredFileInCarGallery(storedFileId);
     }
+
+    @Override
+    @Transactional
+    public void deleteCarPictureForCar(final long carId, final long pictureId) {
+        final Optional<CarPicture> pictureOpt = carPictureDao.getCarPictureById(pictureId);
+        if (pictureOpt.isEmpty() || pictureOpt.get().getCarId() != carId) {
+            throw new ImageValidationException(MessageKeys.IMAGE_INVALID_ID);
+        }
+        carPictureDao.deleteCarPicture(pictureId);
+    }
 }

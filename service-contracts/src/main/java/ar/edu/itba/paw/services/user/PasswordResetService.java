@@ -16,4 +16,10 @@ public interface PasswordResetService {
 
     /** Completes password recovery after the user provides the code and a new password pair. */
     void completePasswordReset(String email, String code, String newPassword, String newPasswordConfirm);
+
+    /**
+     * Checks whether {@code code} is a valid, non-expired password-reset OTP for {@code email}
+     * (does not consume the code).
+     */
+    boolean matchesResetCode(String email, String code);
 }

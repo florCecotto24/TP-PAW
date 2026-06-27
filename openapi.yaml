@@ -1,0 +1,1787 @@
+openapi: 3.0.3
+
+##############################################################################
+# Ryden REST API — PAW 2026a-08
+#
+# Diseñado siguiendo LINEAMIENTOS-SPA-REST.md (cátedra purista REST).
+#
+# NOTA DE DISEÑO IMPORTANTE (ver PROPUESTA-TP3.md §4, decisión D1):
+#   En el código REAL no existe una entidad `Listing` ni `ListingUnpauseRequest`.
+#   Una "publicación" = un `Car` + sus filas `CarAvailability`. El estado de
+#   publicación (active/paused/admin_paused/...) vive en `Car.status`.
+#   Por eso NO hay recurso /listings ni /unpause-requests: el pausar/despausar
+#   es una transición de estado sobre /cars/{id} (PATCH).
+#
+# Convenciones transversales (aplican a TODAS las operaciones, no se repiten
+# en cada una para no inflar el spec):
+#   - Versionado y formato por MIME type propio (Accept / Content-Type):
+#       application/vnd.paw.<entidad>.v1+json   (y +xml)
+#     NUNCA application/json genérico.
+#   - Autenticación stateless por header Authorization (Basic para "loguear",
+#     Bearer para el resto). NO hay /login, /register, /refresh. Ver
+#     securitySchemes y PROPUESTA-TP3.md §2.
+#   - Tras autenticar con Basic o renovar con un Refresh token, el server
+#     agrega a CUALQUIER respuesta los headers `X-Access-Token`,
+#     `X-Refresh-Token` y un Link rel="authenticated-user" con la URN del
+#     usuario logueado (sustituto canónico de /me, ver decisión D2).
+#   - Paginación SIEMPRE por header `Link` (rel first/prev/next/last),
+#     honrando los query params de filtro. El body es solo la lista de
+#     entidades, nunca {content,page,totalPages}.
+#   - Toda representación trae un bloque `links` con `self` + relacionados.
+#     Nada embebido. Los links se generan on-the-fly con UriInfo.
+##############################################################################
+
+info:
+  title: Ryden REST API
+  version: "1.0"
+  description: >
+    API REST (Jersey/JAX-RS) de Ryden — plataforma P2P de alquiler de autos.
+    Reemplaza la capa Spring MVC + JSP. Consumida por una SPA servida como
+    estáticos desde Tomcat (sin SSR). Esta especificación es el contrato
+    público (DTOs), independiente del modelo de dominio.
+
+servers:
+  - url: /webapp
+    description: >
+      Context path en Tomcat local (WAR desplegado como webapp.war).
+      En Jetty dev (`mvn jetty:run`) el context path es `/` — ajustar el prefijo al probar.
+  - url: /
+    description: Raíz de la API en Jetty dev o despliegue sin context path
+
+tags:
+  - name: index
+    description: Descriptor de la API (clientes genéricos)
+  - name: users
+    description: Usuarios (registro, perfil, verificación de email, rol, bloqueo)
+  - name: credentials
+    description: Códigos de verificación de email y de reseteo de password (entidades débiles que actúan como credencial)
+  - name: cars
+    description: Autos y su publicación (status, disponibilidad, galería)
+  - name: reservations
+    description: Reservas y su ciclo de vida
+  - name: reviews
+    description: Reseñas post-reserva
+  - name: catalog
+    description: Catálogo de marcas y modelos (con aprobación admin)
+  - name: locations
+    description: Catálogo de barrios
+  - name: files
+    description: Binarios (imágenes, documentos, comprobantes, adjuntos)
+
+#############################################################################
+# SECURITY
+#############################################################################
+security:
+  - bearerAuth: []
+
+paths:
+
+  #############################################################################
+  # ÍNDICE
+  #############################################################################
+  /:
+    get:
+      tags: [index]
+      summary: Descriptor de la API (opcional, §1.10)
+      description: >
+        Devuelve los recursos top-level y los query params que aceptan, para
+        clientes genéricos / crawlers. También es un buen endpoint "neutro"
+        para autenticar con Basic (login) o renovar con Refresh: la respuesta
+        traerá los tokens en headers y el Link rel="authenticated-user".
+      security:
+        - {}
+        - basicAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Descriptor de la API.
+          headers:
+            X-Access-Token: { $ref: "#/components/headers/X-Access-Token" }
+            X-Refresh-Token: { $ref: "#/components/headers/X-Refresh-Token" }
+            Link: { $ref: "#/components/headers/Link-AuthenticatedUser" }
+          content:
+            application/vnd.paw.api.v1+json:
+              schema: { $ref: "#/components/schemas/ApiIndex" }
+
+  #############################################################################
+  # USERS
+  #############################################################################
+  /users:
+    get:
+      tags: [users]
+      summary: Listar usuarios (admin) — colección paginada y filtrable
+      description: >
+        Solo admin. Filtros y paginación por query params; la paginación se
+        devuelve en el header `Link` (NO en el body).
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - name: blocked
+          in: query
+          schema: { type: boolean }
+          description: Filtra por estado de bloqueo.
+        - name: role
+          in: query
+          schema: { type: string, enum: [user, admin] }
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Búsqueda por nombre/email.
+      responses:
+        "200":
+          description: Lista de usuarios.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+          content:
+            application/vnd.paw.user.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserDto" }
+        "204": { description: Colección vacía. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [users]
+      summary: Registrar usuario (reemplaza POST /register)
+      description: >
+        "Registrarse" = crear el recurso usuario. NO existe /register.
+        El usuario queda con emailVerified=false y dispara el envío de un
+        OTP por email. Reenviar OTP: POST /users/{id}/credentials.
+        Verificar: Basic auth email:otp (ver securitySchemes.basicAuth).
+      security:
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.user.v1+json:
+            schema: { $ref: "#/components/schemas/UserCreateDto" }
+      responses:
+        "201":
+          description: Usuario creado.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.user.v1+json:
+              schema: { $ref: "#/components/schemas/UserDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: Email ya registrado (EmailAlreadyExistsException).
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
+    delete:
+      tags: [users]
+      summary: No permitido sobre la colección
+      responses:
+        "405": { $ref: "#/components/responses/MethodNotAllowed" }
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [users]
+      summary: Obtener un usuario (perfil público o privado)
+      description: >
+        URN canónica del usuario. La representación depende del header Accept
+        (dos schemas fijos, no recorte por permisos):
+        - `application/vnd.paw.user.v1+json` — perfil público (sin email, CBU, teléfono, role, blocked).
+        - `application/vnd.paw.user.private.v1+json` — vista self/admin (403 si no autorizado).
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+            example: application/vnd.paw.user.v1+json
+      responses:
+        "200":
+          description: Usuario.
+          content:
+            application/vnd.paw.user.v1+json:
+              schema: { $ref: "#/components/schemas/UserDto" }
+            application/vnd.paw.user.private.v1+json:
+              schema: { $ref: "#/components/schemas/UserPrivateDto" }
+            application/vnd.paw.user.v1+xml:
+              schema: { $ref: "#/components/schemas/UserDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [users]
+      summary: Reemplazar el perfil completo del usuario (self/admin)
+      description: >
+        PUT reemplaza la entidad completa (atributos null se interpretan como
+        borrado del dato). Para cambios parciales/transiciones usar PATCH.
+        Los `links` NO se persisten, así que enviarlos o no es indistinto.
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.user.v1+json:
+            schema: { $ref: "#/components/schemas/UserDto" }
+      responses:
+        "200":
+          description: Usuario reemplazado.
+          content:
+            application/vnd.paw.user.v1+json:
+              schema: { $ref: "#/components/schemas/UserDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [users]
+      summary: Actualización parcial / transiciones de estado del usuario
+      description: >
+        Un único endpoint PATCH absorbe TODAS las "acciones" del MVC viejo
+        que eran cambios de estado sobre el usuario. El cuerpo solo lleva los
+        atributos a cambiar; el resource autoriza según quién sea el llamante:
+
+        - Actualizar perfil (nombre, teléfono, fecha nac., about, cbu, locale): self (Bearer).
+        - Cambiar password (logueado) → { "password": "...", "currentPassword": "..." }.
+        - Resetear password olvidado → { "password": "...", "passwordConfirm": "..." }
+          autenticado con Basic email:resetOtp (authority ROLE_PASSWORD_RESET_OTP).
+          El OTP se consume al completar el reset (decisión D4).
+        - Promover/degradar admin → { "role": "admin" | "user" } (solo admin).
+        - Bloquear/desbloquear → { "blocked": true | false } (solo admin).
+        - Validar documentos/identidad → { "identityValidated": true } (solo admin).
+
+        La verificación de email NO usa PATCH: el OTP se presenta como
+        Basic email:otp en cualquier request autenticado (p. ej. login);
+        el backend consume el código y marca emailVerified (decisión D3).
+
+        Reglas de negocio (no auto-bloqueo, no bloquear al grantor, etc.) se
+        mapean a 403 vía ExceptionMapper.
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.user.v1+json:
+            schema: { $ref: "#/components/schemas/UserPatchDto" }
+      responses:
+        "200":
+          description: Usuario actualizado.
+          content:
+            application/vnd.paw.user.v1+json:
+              schema: { $ref: "#/components/schemas/UserDto" }
+            application/vnd.paw.user.private.v1+json:
+              schema: { $ref: "#/components/schemas/UserPrivateDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [users]
+      summary: Eliminar usuario (self/admin)
+      responses:
+        "204": { description: Eliminado. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # --- Imagen de perfil (sub-recurso binario débil) ---
+  /users/{id}/profile-picture:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [users, files]
+      summary: Foto de perfil (binario público)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryImage" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [users, files]
+      summary: Subir/reemplazar foto de perfil (self)
+      requestBody:
+        required: true
+        content:
+          image/*:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Subida. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [users, files]
+      summary: Borrar foto de perfil (self)
+      responses:
+        "204": { description: Borrada. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # --- Documentos de perfil (licencia / identidad) ---
+  /users/{id}/documents/{documentType}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: documentType
+        in: path
+        required: true
+        schema: { type: string, enum: [license, identity] }
+    get:
+      tags: [users, files]
+      summary: Descargar documento de perfil (self/admin)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryFile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [users, files]
+      summary: Subir/reemplazar un documento (self)
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Subido. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [users, files]
+      summary: Borrar un documento (self)
+      responses:
+        "204": { description: Borrado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # --- Favoritos (entidad débil FavCar; colección privada del usuario) ---
+  /users/{id}/favorites:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [users]
+      summary: Autos favoritos del usuario (self) — colección paginada
+      description: Los miembros son autos; se hipervinculan, no se embeben.
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Lista de autos favoritos.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+          content:
+            application/vnd.paw.car.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CarDto" }
+        "204": { description: Sin favoritos. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /users/{id}/favorites/{carId}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: carId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      tags: [users]
+      summary: Marcar un auto como favorito (idempotente)
+      description: >
+        Reemplaza el "toggle" del MVC por operaciones idempotentes:
+        PUT agrega (favoritear), DELETE quita. El cliente ya sabe el estado.
+      responses:
+        "204": { description: Favorito agregado (o ya existía). }
+        "403":
+          description: No se puede favoritear el auto propio.
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [users]
+      summary: Quitar de favoritos (idempotente)
+      responses:
+        "204": { description: Quitado (o no estaba). }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /users/{id}/reviews:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [users, reviews]
+      summary: Reseñas recibidas por el usuario (perfil público)
+      description: >
+        Reseñas que el usuario RECIBIÓ, combinando las recibidas como dueño
+        (de conductores) y como conductor (de dueños) en una sola lista, más
+        recientes primero. Proyección de solo lectura: trae el nombre del autor,
+        rating, fecha y comentario (sin id ni datos sensibles). Pública.
+      security:
+        - {}
+      responses:
+        "200":
+          description: Lista de reseñas recibidas.
+          content:
+            application/vnd.paw.review.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserReviewDto" }
+        "204": { description: Sin reseñas. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  #############################################################################
+  # CREDENCIALES (OTP temporales) — sub-recursos sin verbos en la URL
+  #############################################################################
+  /users/{id}/credentials:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    post:
+      tags: [credentials, users]
+      summary: Reemitir OTP de verificación de email
+      description: >
+        Tras POST /users el servidor envía un OTP por mail. Este endpoint
+        reemite el código si el email aún no está verificado (202 Accepted).
+        La verificación en sí es Basic auth email:otp — el OTP actúa como
+        password, se consume al autenticar y devuelve JWT en headers (D3).
+      security:
+        - {}
+      responses:
+        "202":
+          description: OTP emitido y enviado por email (si el usuario aplica).
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: El email ya está verificado o hay un código activo sin expirar.
+
+  /credentials:
+    post:
+      tags: [credentials]
+      summary: Solicitar OTP de reseteo de password
+      description: >
+        Body con email. SIEMPRE responde 202 (anti-enumeración). El OTP se
+        envía por email y actúa como password en Basic auth para completar
+        el reset vía PATCH /users/{id} con password + passwordConfirm (D4).
+        No hay URLs con verbos (/forgot-password, /reset, /verify, etc.).
+      security:
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.credential.v1+json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+              required: [email]
+      responses:
+        "202":
+          description: Si la cuenta existe, se envió un OTP. (Respuesta uniforme.)
+
+  #############################################################################
+  # CARS  (incluye lo que el MVC llamaba "publicación")
+  #############################################################################
+  /cars:
+    get:
+      tags: [cars]
+      summary: Buscar / listar autos (reemplaza /search, home, /my-cars, /admin/cars)
+      description: >
+        Una sola colección con TODOS los filtros como query params. Las
+        distintas pantallas del MVC (home cheapest/recent, búsqueda pública,
+        "mis autos", listado admin) colapsan acá variando query params +
+        autorización. Paginación por header `Link`.
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Texto libre (marca/modelo/descripción).
+        - name: ownerId
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Filtra por dueño (sustituye "/my-cars" pasando el propio id).
+        - name: category
+          in: query
+          schema: { $ref: "#/components/schemas/CarType" }
+        - name: transmission
+          in: query
+          schema: { $ref: "#/components/schemas/Transmission" }
+        - name: powertrain
+          in: query
+          schema: { $ref: "#/components/schemas/Powertrain" }
+        - name: priceMin
+          in: query
+          schema: { type: number }
+        - name: priceMax
+          in: query
+          schema: { type: number }
+        - name: rating
+          in: query
+          schema: { type: number, minimum: 0, maximum: 5 }
+        - name: neighborhoodId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+          description: Inicio de la ventana de disponibilidad (wall date).
+        - name: until
+          in: query
+          schema: { type: string, format: date }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/CarStatus" }
+          description: >
+            Filtro por estado. Solo el dueño (vía ownerId propio) o un admin pueden
+            filtrar por estados no públicos.
+        - name: scope
+          in: query
+          schema: { type: string, enum: [admin] }
+          description: >
+            scope=admin lista TODOS los autos del catálogo, cualquier estado, paginados
+            (reemplaza la vieja vista /admin/cars). Solo admin (403 en caso contrario).
+            Distinto del browse público, que solo expone autos publicados. Ver Anexo B.
+        - name: sort
+          in: query
+          schema: { type: string, enum: [price_asc, price_desc, rating_desc, recent, name] }
+      responses:
+        "200":
+          description: Lista de autos.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+          content:
+            application/vnd.paw.car.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.v1+xml:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CarDto" }
+        "204": { description: Sin resultados. }
+    post:
+      tags: [cars]
+      summary: Publicar un auto (reemplaza POST /publish-car)
+      description: >
+        Crea el Car. Según prerequisitos (identidad+cbu) y si la marca/modelo
+        está validada, el server fija el `status` inicial (active / lack_doc) y
+        si el modelo quedó pendiente lo indica en la representación. La galería
+        y el seguro se suben luego como sub-recursos (PUT /cars/{id}/pictures,
+        PUT /cars/{id}/insurance) o en el mismo POST multipart.
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.car.v1+json:
+            schema: { $ref: "#/components/schemas/CarCreateDto" }
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                car: { $ref: "#/components/schemas/CarCreateDto" }
+                pictures:
+                  type: array
+                  items: { type: string, format: binary }
+                insurance: { type: string, format: binary }
+      responses:
+        "201":
+          description: Auto publicado.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.car.v1+json:
+              schema: { $ref: "#/components/schemas/CarDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: No cumple prerequisitos (identidad/cbu) o plate duplicada.
+
+  /cars/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars]
+      summary: Detalle de un auto
+      responses:
+        "200":
+          description: Auto.
+          content:
+            application/vnd.paw.car.v1+json:
+              schema: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.v1+xml:
+              schema: { $ref: "#/components/schemas/CarDto" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [cars]
+      summary: Reemplazar atributos del auto (owner)
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.car.v1+json:
+            schema: { $ref: "#/components/schemas/CarDto" }
+      responses:
+        "200":
+          description: Auto reemplazado.
+          content:
+            application/vnd.paw.car.v1+json:
+              schema: { $ref: "#/components/schemas/CarDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [cars]
+      summary: Transiciones de estado del auto (pausar/despausar/admin-pausar/desactivar)
+      description: >
+        Absorbe TODAS las "acciones" del MVC sobre el auto:
+        - Owner pausa/despausa → { "status": "paused" | "active" } (toggle viejo).
+        - Owner desactiva → { "status": "deactivated" } (irreversible). [También
+          podría ser DELETE como soft-delete; ver decisión D5.]
+        - Admin pausa/despausa → { "status": "admin_paused" | "active" } (solo
+          admin; reemplaza /admin/cars/{id}/pause y /resume). Dispara
+          cancelación en cascada de reservas y email al owner.
+        - Editar precio/min rental days / descripción → atributos sueltos.
+        El resource valida transición permitida (405/403/400 según el caso) y
+        que el llamante tenga permiso (owner vs admin).
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.car.v1+json:
+            schema: { $ref: "#/components/schemas/CarPatchDto" }
+      responses:
+        "200":
+          description: Auto actualizado.
+          content:
+            application/vnd.paw.car.v1+json:
+              schema: { $ref: "#/components/schemas/CarDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Transición no permitida desde el estado actual.
+    delete:
+      tags: [cars]
+      summary: Desactivar (soft-delete) el auto (owner) — ver decisión D5
+      responses:
+        "204": { description: Desactivado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # --- Disponibilidad: sub-recurso fuerte con identidad propia ---
+  /cars/{id}/availabilities:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars]
+      summary: Períodos de disponibilidad efectivos del auto
+      description: >
+        Devuelve las filas OFFERED efectivas (las que "ganan" por createdAt).
+        Para el calendario del rider. Admite ?month=YYYY-MM para la vista mensual.
+      parameters:
+        - name: month
+          in: query
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Períodos de disponibilidad.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+          content:
+            application/vnd.paw.availability.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AvailabilityDto" }
+    post:
+      tags: [cars]
+      summary: Crear un período de disponibilidad (owner)
+      description: Inserta una fila OFFERED. Valida lead time, overlaps, horizonte.
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.availability.v1+json:
+            schema: { $ref: "#/components/schemas/AvailabilityCreateDto" }
+      responses:
+        "201":
+          description: Período creado.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.availability.v1+json:
+              schema: { $ref: "#/components/schemas/AvailabilityDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /cars/{id}/availabilities/{availabilityId}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: availabilityId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [cars]
+      summary: Detalle de un período
+      responses:
+        "200":
+          description: Período.
+          content:
+            application/vnd.paw.availability.v1+json:
+              schema: { $ref: "#/components/schemas/AvailabilityDto" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [cars]
+      summary: Editar un período (owner)
+      description: >
+        Internamente inserta una fila OFFERED nueva + filas WITHDRAWN para los
+        días retirados (layering por createdAt). El cliente lo ve como una
+        edición sobre la misma URN.
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.availability.v1+json:
+            schema: { $ref: "#/components/schemas/AvailabilityCreateDto" }
+      responses:
+        "200":
+          description: Período editado.
+          content:
+            application/vnd.paw.availability.v1+json:
+              schema: { $ref: "#/components/schemas/AvailabilityDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [cars]
+      summary: Retirar un período (owner)
+      description: Inserta una fila WITHDRAWN cubriendo el período. Falla si hay reservas activas que se solapan.
+      responses:
+        "204": { description: Retirado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Hay reservas activas que se solapan (CarValidationException).
+
+  # --- Galería del auto (sub-recurso débil) ---
+  /cars/{id}/pictures:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars, files]
+      summary: Galería del auto (lista de metadatos hipervinculados)
+      responses:
+        "200":
+          description: Items de galería.
+          content:
+            application/vnd.paw.picture.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PictureDto" }
+    post:
+      tags: [cars, files]
+      summary: Agregar una imagen/video a la galería (owner)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                displayOrder: { type: integer }
+      responses:
+        "201":
+          description: Item agregado.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /cars/{id}/pictures/{pictureId}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: pictureId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [cars, files]
+      summary: Bytes de una imagen/video de la galería (público)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryImage" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [cars, files]
+      summary: Quitar item de la galería (owner)
+      responses:
+        "204": { description: Quitado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # --- Seguro del auto (sub-recurso binario débil) ---
+  /cars/{id}/insurance:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars, files]
+      summary: Descargar el seguro (owner/admin)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryFile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [cars, files]
+      summary: Subir/reemplazar el seguro (owner)
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Subido. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # --- Reviews de un auto (lectura pública por auto) ---
+  /cars/{id}/reviews:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reviews, cars]
+      summary: Reseñas públicas del auto (paginadas)
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Reseñas.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+          content:
+            application/vnd.paw.review.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReviewDto" }
+        "204": { description: Sin reseñas. }
+
+  #############################################################################
+  # RESERVATIONS
+  #############################################################################
+  /reservations:
+    get:
+      tags: [reservations]
+      summary: Listar reservas (reemplaza /my-reservations, /my-cars/reservations, /admin/reservations)
+      description: >
+        Una sola colección. El rol del llamante + query params determinan qué
+        ve: como rider (riderId propio), como owner (ownerId propio) o admin
+        (todas). Paginación por header `Link`.
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - name: riderId
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Reservas donde el usuario es rider.
+        - name: ownerId
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Reservas sobre autos del usuario (vista owner).
+        - name: carId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/ReservationStatus" }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [recent, start_date, price_asc, price_desc] }
+      responses:
+        "200":
+          description: Lista de reservas.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+          content:
+            application/vnd.paw.reservation.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReservationDto" }
+        "204": { description: Sin reservas. }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [reservations]
+      summary: Crear una reserva (rider) — reemplaza POST /reservation
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.reservation.v1+json:
+            schema: { $ref: "#/components/schemas/ReservationCreateDto" }
+      responses:
+        "201":
+          description: Reserva creada (status PENDING).
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.reservation.v1+json:
+              schema: { $ref: "#/components/schemas/ReservationDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403":
+          description: Rider sin documentos, owner sin cbu, o reserva sobre auto propio.
+        "409":
+          description: Conflicto de fechas (ReservationConflictException).
+
+  /reservations/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reservations]
+      summary: Detalle de una reserva (rider/owner/admin)
+      responses:
+        "200":
+          description: Reserva.
+          content:
+            application/vnd.paw.reservation.v1+json:
+              schema: { $ref: "#/components/schemas/ReservationDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [reservations]
+      summary: Transiciones de estado de la reserva (accept/cancel/return/finish + editar fechas)
+      description: >
+        Absorbe TODAS las acciones del MVC sobre la reserva:
+        - Editar fechas de una PENDING impaga (rider) → { "startDate", "endDate" }.
+        - Cancelar (rider u owner) → { "status": "cancelled_by_rider" |
+          "cancelled_by_owner" }. Reemplaza /cancel. Genera obligación de
+          refund si correspondía.
+        - Marcar auto devuelto (owner) → { "carReturned": true }. Reemplaza
+          /car-returned. Puede transicionar a FINISHED.
+        - (La transición PENDING→ACCEPTED ocurre al subir el comprobante de
+          pago — ver PUT .../payment-receipt — no por PATCH manual.)
+        El resource valida la transición permitida según estado y rol
+        (403/409 según corresponda).
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.reservation.v1+json:
+            schema: { $ref: "#/components/schemas/ReservationPatchDto" }
+      responses:
+        "200":
+          description: Reserva actualizada.
+          content:
+            application/vnd.paw.reservation.v1+json:
+              schema: { $ref: "#/components/schemas/ReservationDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Transición no permitida desde el estado actual.
+
+  # --- Comprobante de pago (rider) ---
+  /reservations/{id}/payment-receipt:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reservations, files]
+      summary: Descargar comprobante de pago (participantes)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryFile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [reservations, files]
+      summary: Subir comprobante de pago (rider) — dispara PENDING→ACCEPTED
+      description: >
+        Subir el comprobante es lo que confirma el pago: el server transiciona
+        la reserva a ACCEPTED. Por eso es un PUT al sub-recurso (crear/reemplazar
+        el comprobante), no un PATCH de status arbitrario.
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Comprobante subido; reserva ACCEPTED. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: La reserva no está PENDING.
+
+  # --- Comprobante de reintegro (owner) ---
+  /reservations/{id}/refund-receipt:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reservations, files]
+      summary: Descargar comprobante de reintegro (participantes)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryFile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [reservations, files]
+      summary: Subir comprobante de reintegro (owner)
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        "204": { description: Subido. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # --- Reviews de una reserva (entidad débil Review: PK = reserva + madeByRider) ---
+  /reservations/{id}/reviews:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reviews, reservations]
+      summary: Reseñas de la reserva (0, 1 o 2)
+      responses:
+        "200":
+          description: Reseñas de la reserva.
+          content:
+            application/vnd.paw.review.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReviewDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [reviews, reservations]
+      summary: Dejar una reseña (rider→owner u owner→rider)
+      description: >
+        Reemplaza /owner-review-rider y /rider-review-owner. El lado (made_by_rider)
+        se deriva del rol del llamante en la reserva. Solo si la reserva está
+        FINISHED y no existe ya una reseña de ese lado (PK compuesta).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string }
+                image: { type: string, format: binary }
+            encoding:
+              image: { contentType: image/* }
+      responses:
+        "201":
+          description: Reseña creada.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.review.v1+json:
+              schema: { $ref: "#/components/schemas/ReviewDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Ya existe reseña de ese lado, o la reserva no está FINISHED.
+
+  #############################################################################
+  # RESERVATION MESSAGES (chat) — entidad débil
+  #############################################################################
+  /reservations/{id}/messages:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reservations]
+      summary: Mensajes del chat (participantes/admin) — paginado y polleable
+      description: >
+        Reemplaza GET /messages y el endpoint de polling: el "polling" se hace
+        con el mismo recurso + query param `afterId` (o paginación por `Link`).
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - name: afterId
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Devuelve solo mensajes con id mayor (long-polling/refresh).
+      responses:
+        "200":
+          description: Mensajes.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+          content:
+            application/vnd.paw.message.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MessageDto" }
+        "204": { description: Sin mensajes (nuevos). }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [reservations]
+      summary: Enviar un mensaje (participantes)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                body: { type: string }
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Mensaje enviado.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.message.v1+json:
+              schema: { $ref: "#/components/schemas/MessageDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /reservations/{id}/messages/{messageId}/attachment:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: messageId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [reservations, files]
+      summary: Descargar el adjunto de un mensaje (participantes)
+      responses:
+        "200": { $ref: "#/components/responses/BinaryFile" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  #############################################################################
+  # CATÁLOGO: BRANDS / MODELS
+  #############################################################################
+  /brands:
+    get:
+      tags: [catalog]
+      summary: Listar marcas
+      parameters:
+        - name: validated
+          in: query
+          schema: { type: boolean }
+          description: Filtra pendientes (validated=false) — útil para el panel admin.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Marcas.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+          content:
+            application/vnd.paw.brand.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BrandDto" }
+    post:
+      tags: [catalog]
+      summary: Crear una marca
+      description: Si la crea un no-admin queda validated=false (pendiente de aprobación).
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.brand.v1+json:
+            schema: { $ref: "#/components/schemas/BrandCreateDto" }
+      responses:
+        "201":
+          description: Marca creada.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.brand.v1+json:
+              schema: { $ref: "#/components/schemas/BrandDto" }
+
+  /brands/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [catalog]
+      summary: Detalle de marca
+      responses:
+        "200":
+          description: Marca.
+          content:
+            application/vnd.paw.brand.v1+json:
+              schema: { $ref: "#/components/schemas/BrandDto" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [catalog]
+      summary: Aprobar marca (admin) — reemplaza /admin/catalog/.../validate
+      description: '{ "validated": true } aprueba la marca (solo admin). Rechazar = DELETE (decisión D6).'
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.brand.v1+json:
+            schema:
+              type: object
+              properties:
+                validated: { type: boolean }
+      responses:
+        "200":
+          description: Marca actualizada.
+          content:
+            application/vnd.paw.brand.v1+json:
+              schema: { $ref: "#/components/schemas/BrandDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [catalog]
+      summary: Rechazar/eliminar marca (admin)
+      description: Reemplaza /admin/catalog/.../reject. Borra la fila pendiente.
+      responses:
+        "204": { description: Eliminada. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /brands/{id}/models:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [catalog]
+      summary: Modelos de una marca
+      parameters:
+        - name: validated
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Modelos.
+          content:
+            application/vnd.paw.model.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ModelDto" }
+    post:
+      tags: [catalog]
+      summary: Crear modelo bajo una marca
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.model.v1+json:
+            schema: { $ref: "#/components/schemas/ModelCreateDto" }
+      responses:
+        "201":
+          description: Modelo creado.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.model.v1+json:
+              schema: { $ref: "#/components/schemas/ModelDto" }
+
+  /models:
+    get:
+      tags: [catalog]
+      summary: Listar modelos pendientes (admin)
+      description: >
+        Listado admin de modelos pendientes de aprobación. Sólo soporta la proyección
+        pendiente (validated=false): devuelve TODOS los modelos pendientes, incluidos
+        los de marcas ya validadas (que de otro modo quedarían invisibles para el admin).
+      parameters:
+        - name: validated
+          in: query
+          required: true
+          schema: { type: boolean, enum: [false] }
+          description: Sólo se admite validated=false. Cualquier otro valor → 400.
+      responses:
+        "200":
+          description: Modelos pendientes.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+          content:
+            application/vnd.paw.model.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ModelDto" }
+        "204": { description: No hay modelos pendientes. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /models/{id}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [catalog]
+      summary: Detalle de modelo
+      responses:
+        "200":
+          description: Modelo.
+          content:
+            application/vnd.paw.model.v1+json:
+              schema: { $ref: "#/components/schemas/ModelDto" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [catalog]
+      summary: Aprobar modelo (admin)
+      description: '{ "validated": true } aprueba el modelo (solo admin).'
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.model.v1+json:
+            schema:
+              type: object
+              properties:
+                validated: { type: boolean }
+      responses:
+        "200":
+          description: Modelo actualizado.
+          content:
+            application/vnd.paw.model.v1+json:
+              schema: { $ref: "#/components/schemas/ModelDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [catalog]
+      summary: Rechazar/eliminar modelo (admin)
+      responses:
+        "204": { description: Eliminado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  #############################################################################
+  # LOCATIONS
+  #############################################################################
+  /neighborhoods:
+    get:
+      tags: [locations]
+      summary: Listar barrios (catálogo para selects de ubicación)
+      responses:
+        "200":
+          description: Barrios.
+          content:
+            application/vnd.paw.neighborhood.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NeighborhoodDto" }
+
+#############################################################################
+# COMPONENTS
+#############################################################################
+components:
+
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: >
+        Authorization: Basic base64(email:secret) a CUALQUIER endpoint.
+        El secret depende del contexto:
+        - Cuenta verificada: password (BCrypt).
+        - Verificación de email (cuenta sin verificar): OTP de 6 dígitos enviado
+          por mail tras POST /users. Se consume al autenticar; devuelve JWT.
+        - Reset de password olvidado: OTP enviado tras POST /credentials. Otorga
+          authority ROLE_PASSWORD_RESET_OTP; se consume al completar PATCH
+          /users/{id} con password + passwordConfirm.
+        Tras auth válida el server responde con X-Access-Token, X-Refresh-Token
+        y Link rel="authenticated-user". No hay /login ni /verify.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Requests normales: Authorization: Bearer <access_token>. Cuando vence
+        (401), se manda el Refresh Token (también como Bearer) a cualquier
+        endpoint y el server devuelve un par nuevo en headers. No hay /refresh:
+        el JWT es autocontenido y el server distingue access de refresh.
+
+  parameters:
+    idPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+      description: Número de página (la metadata de paginación va en el header Link, no en el body).
+    pageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 12 }
+
+  headers:
+    Location:
+      description: URN canónica del recurso recién creado.
+      schema: { type: string, format: uri }
+    Link-Pagination:
+      description: >
+        Links de paginación con rel="first" | "prev" | "next" | "last",
+        honrando los query params de filtro activos. El cliente los navega
+        genéricamente; NO construye URLs a mano.
+      schema: { type: string }
+      example: '</cars?page=2&category=suv>; rel="next", </cars?page=5&category=suv>; rel="last"'
+    X-Total-Count:
+      description: Cantidad total de elementos (opcional, complementa Link).
+      schema: { type: integer }
+    Link-AuthenticatedUser:
+      description: Tras autenticar, Link rel="authenticated-user" con la URN del usuario logueado (sustituto canónico de /me).
+      schema: { type: string }
+      example: '</users/42>; rel="authenticated-user"'
+    X-Access-Token:
+      description: Access Token (JWT, vida corta). Devuelto tras Basic auth o refresh.
+      schema: { type: string }
+    X-Refresh-Token:
+      description: Refresh Token (JWT, vida larga). Devuelto tras Basic auth o refresh.
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: 401 — Falta autenticación o token inválido/vencido.
+      content:
+        application/vnd.paw.error.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorDto" }
+    Forbidden:
+      description: 403 — Autenticado pero sin permiso.
+      content:
+        application/vnd.paw.error.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorDto" }
+    NotFound:
+      description: 404 — El recurso no existe.
+      content:
+        application/vnd.paw.error.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorDto" }
+    MethodNotAllowed:
+      description: 405 — El recurso existe pero el verbo no aplica.
+      content:
+        application/vnd.paw.error.v1+json:
+          schema: { $ref: "#/components/schemas/ErrorDto" }
+    ValidationError:
+      description: 400 — Request mal formado o validación fallida.
+      content:
+        application/vnd.paw.error.v1+json:
+          schema: { $ref: "#/components/schemas/ValidationErrorDto" }
+    BinaryImage:
+      description: Bytes de una imagen (content-type detectado).
+      content:
+        image/*:
+          schema: { type: string, format: binary }
+    BinaryFile:
+      description: Bytes de un archivo (pdf/imagen/video).
+      content:
+        application/octet-stream:
+          schema: { type: string, format: binary }
+
+  schemas:
+
+    Links:
+      type: object
+      description: Bloque de hipervínculos generado on-the-fly. Siempre incluye self. NUNCA se persiste.
+      additionalProperties: { type: string, format: uri }
+      properties:
+        self: { type: string, format: uri }
+      required: [self]
+
+    ApiIndex:
+      type: object
+      properties:
+        resources:
+          type: object
+          additionalProperties: { type: string, format: uri }
+          example:
+            users: /users
+            cars: /cars
+            reservations: /reservations
+            brands: /brands
+            neighborhoods: /neighborhoods
+
+    # ----- USER -----
+    UserDto:
+      type: object
+      description: >
+        Representación pública fija (`Accept: application/vnd.paw.user.v1+json`).
+        NO incluye email, CBU, teléfono, role ni blocked — usar UserPrivateDto para eso.
+      properties:
+        forename: { type: string }
+        surname: { type: string }
+        memberSince: { type: string, format: date }
+        emailVerified: { type: boolean }
+        licenseValidated: { type: boolean }
+        identityValidated: { type: boolean }
+        licenseUploaded: { type: boolean }
+        identityUploaded: { type: boolean }
+        ratingAsRider: { type: number, nullable: true }
+        ratingAsOwner: { type: number, nullable: true }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, profilePicture, cars, reservations, favorites, documents, reviews.
+
+    UserPrivateDto:
+      type: object
+      description: >
+        Representación privada fija (`Accept: application/vnd.paw.user.private.v1+json`).
+        Solo self/admin; 403 si se pide sin permiso.
+      properties:
+        forename: { type: string }
+        surname: { type: string }
+        email: { type: string, format: email }
+        phoneNumber: { type: string, nullable: true }
+        birthDate: { type: string, format: date, nullable: true }
+        about: { type: string, nullable: true }
+        cbu: { type: string, nullable: true }
+        memberSince: { type: string, format: date }
+        latestLocale: { type: string, nullable: true }
+        emailVerified: { type: boolean }
+        licenseValidated: { type: boolean }
+        identityValidated: { type: boolean }
+        licenseUploaded: { type: boolean }
+        identityUploaded: { type: boolean }
+        blocked: { type: boolean }
+        role: { type: string, enum: [user, admin] }
+        ratingAsRider: { type: number, nullable: true }
+        ratingAsOwner: { type: number, nullable: true }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, profilePicture, cars, reservations, favorites, documents, reviews.
+
+    UserCreateDto:
+      type: object
+      required: [email, forename, surname, password, passwordConfirm]
+      properties:
+        email: { type: string, format: email }
+        forename: { type: string }
+        surname: { type: string }
+        password: { type: string, format: password, writeOnly: true }
+        passwordConfirm: { type: string, format: password, writeOnly: true }
+
+    UserPatchDto:
+      type: object
+      description: >
+        Todos opcionales; solo se envían los atributos a cambiar. OTPs de
+        verificación/reset NO van en el body — viajan en Authorization Basic
+        email:otp. La autorización depende de cada campo (self vs admin) y de
+        la credencial presentada.
+      properties:
+        forename: { type: string }
+        surname: { type: string }
+        phoneNumber: { type: string }
+        birthDate: { type: string, format: date }
+        about: { type: string }
+        cbu: { type: string }
+        latestLocale: { type: string }
+        password: { type: string, format: password, writeOnly: true }
+        passwordConfirm: { type: string, format: password, writeOnly: true, description: Requerido junto con password en reset olvidado. }
+        currentPassword: { type: string, format: password, writeOnly: true, description: Requerido al cambiar password estando logueado. }
+        role: { type: string, enum: [user, admin], description: Solo admin. }
+        blocked: { type: boolean, description: Solo admin. }
+        identityValidated: { type: boolean, description: Solo admin. }
+        licenseValidated: { type: boolean, description: Solo admin. }
+
+    # ----- CAR -----
+    CarType:
+      type: string
+      enum: [sedan, hatchback, suv, coupe, convertible, wagon, van, pickup]
+    Powertrain:
+      type: string
+      enum: [gasoline, diesel, electric, hybrid, cng]
+    Transmission:
+      type: string
+      enum: [manual, automatic, semi_automatic]
+    CarStatus:
+      type: string
+      enum: [active, paused, admin_paused, lack_doc, unavailable, deactivated]
+
+    CarDto:
+      type: object
+      properties:
+        plate: { type: string }
+        year: { type: integer, nullable: true }
+        powertrain: { $ref: "#/components/schemas/Powertrain" }
+        transmission: { $ref: "#/components/schemas/Transmission" }
+        type: { $ref: "#/components/schemas/CarType" }
+        status: { $ref: "#/components/schemas/CarStatus" }
+        description: { type: string, nullable: true }
+        minimumRentalDays: { type: integer }
+        ratingAvg: { type: number, nullable: true }
+        brandName: { type: string }
+        modelName: { type: string }
+        modelValidated: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, owner, model, brand, pictures, availabilities, insurance, reviews.
+
+    CarCreateDto:
+      type: object
+      required: [plate, transmission, powertrain]
+      properties:
+        plate: { type: string }
+        year: { type: integer }
+        powertrain: { $ref: "#/components/schemas/Powertrain" }
+        transmission: { $ref: "#/components/schemas/Transmission" }
+        description: { type: string }
+        minimumRentalDays: { type: integer, default: 1 }
+        # Catálogo: por nombre o por URN de modelo existente.
+        brandName: { type: string }
+        modelName: { type: string }
+        type: { $ref: "#/components/schemas/CarType" }
+        modelUri: { type: string, format: uri, description: Alternativa a brand/model name si el modelo ya existe (se navega su link). }
+
+    CarPatchDto:
+      type: object
+      description: Transiciones de estado y ediciones parciales del auto.
+      properties:
+        status: { $ref: "#/components/schemas/CarStatus" }
+        description: { type: string }
+        minimumRentalDays: { type: integer }
+
+    AvailabilityDto:
+      type: object
+      properties:
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        dayPrice: { type: number }
+        startPointStreet: { type: string }
+        startPointNumber: { type: string, nullable: true }
+        checkInTime: { type: string, example: "10:00" }
+        checkOutTime: { type: string, example: "20:00" }
+        kind: { type: string, enum: [offered, withdrawn] }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, car, neighborhood.
+
+    AvailabilityCreateDto:
+      type: object
+      required: [startDate, endDate, dayPrice, startPointStreet, checkInTime, checkOutTime]
+      properties:
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        dayPrice: { type: number }
+        startPointStreet: { type: string }
+        startPointNumber: { type: string }
+        neighborhoodId: { type: integer, format: int64 }
+        checkInTime: { type: string, example: "10:00" }
+        checkOutTime: { type: string, example: "20:00" }
+
+    PictureDto:
+      type: object
+      properties:
+        displayOrder: { type: integer }
+        kind: { type: string, enum: [image, video] }
+        contentType: { type: string }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self (bytes), car.
+
+    # ----- RESERVATION -----
+    ReservationStatus:
+      type: string
+      enum:
+        - pending
+        - accepted
+        - started
+        - cancelled
+        - cancelled_by_rider
+        - cancelled_by_owner
+        - cancelled_due_to_missing_payment_proof
+        - finished
+
+    ReservationDto:
+      type: object
+      properties:
+        startDate: { type: string, format: date-time, description: UTC. }
+        endDate: { type: string, format: date-time, description: UTC. }
+        status: { $ref: "#/components/schemas/ReservationStatus" }
+        totalPrice: { type: number }
+        carReturned: { type: boolean }
+        paymentProofDeadlineAt: { type: string, format: date-time, nullable: true }
+        refundProofDeadlineAt: { type: string, format: date-time, nullable: true }
+        paymentRefundRequired: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, car, rider, owner, messages, reviews, payment-receipt, refund-receipt.
+
+    ReservationCreateDto:
+      type: object
+      required: [carUri, availabilityUri, startDate, endDate]
+      properties:
+        carUri: { type: string, format: uri, description: URN del auto a reservar (se navega, no se arma a mano). }
+        availabilityUri: { type: string, format: uri, description: URN del período de disponibilidad. }
+        startDate: { type: string, format: date-time }
+        endDate: { type: string, format: date-time }
+
+    ReservationPatchDto:
+      type: object
+      properties:
+        status: { $ref: "#/components/schemas/ReservationStatus" }
+        carReturned: { type: boolean }
+        startDate: { type: string, format: date-time, description: Solo PENDING impaga (rider). }
+        endDate: { type: string, format: date-time }
+
+    MessageDto:
+      type: object
+      properties:
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+        seen: { type: boolean }
+        hasAttachment: { type: boolean }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, reservation, sender, attachment (si hay).
+
+    # ----- REVIEW -----
+    ReviewDto:
+      type: object
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        comment: { type: string, nullable: true }
+        madeByRider: { type: boolean, description: true = reseña del rider hacia el owner. }
+        createdAt: { type: string, format: date-time }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, reservation, car, author, image (si hay).
+
+    UserReviewDto:
+      type: object
+      description: >
+        Reseña RECIBIDA por un usuario (perfil público). Proyección de solo
+        lectura desde ReviewItemDto; trae el nombre del autor pero no el id.
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        authorName: { type: string, description: Nombre del que dejó la reseña. }
+        createdAt: { type: string, format: date, description: Fecha local de la reseña. }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self (apunta a la sub-colección de reseñas del usuario).
+
+    # ----- CATALOG -----
+    BrandDto:
+      type: object
+      properties:
+        name: { type: string }
+        validated: { type: boolean }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, models.
+    BrandCreateDto:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+    ModelDto:
+      type: object
+      properties:
+        name: { type: string }
+        type: { $ref: "#/components/schemas/CarType" }
+        brandName: { type: string }
+        validated: { type: boolean }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, brand.
+    ModelCreateDto:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string }
+        type: { $ref: "#/components/schemas/CarType" }
+
+    # ----- LOCATION -----
+    NeighborhoodDto:
+      type: object
+      properties:
+        name: { type: string }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self.
+
+    # ----- ERRORS -----
+    ErrorDto:
+      type: object
+      properties:
+        status: { type: integer }
+        code: { type: string }
+        message: { type: string }
+    ValidationErrorDto:
+      type: object
+      properties:
+        status: { type: integer, example: 400 }
+        message: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
