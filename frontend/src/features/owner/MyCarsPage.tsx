@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
+import { apiAssetUrl } from '../../api/uri';
 import { fetchOwnerCars, idFromUri } from './api';
 import { useApiErrorMessage, useCurrentUserId } from './hooks';
 import { STATUS_BADGE, type CarDto, type CarStatus } from './types';
+import { paths, myCarDetail } from '../../routes/paths';
 
 const STATUS_FILTERS: Array<CarStatus | ''> = [
   '', 'active', 'paused', 'admin_paused', 'lack_doc', 'unavailable', 'deactivated',
@@ -70,7 +72,7 @@ export default function MyCarsPage() {
           <h1 className="h3 fw-bold mb-2">{t('owner.myCars.title')}</h1>
           <p className="text-secondary mb-0">{t('owner.myCars.subheading')}</p>
         </div>
-        <Link to="/publicar" className="btn btn-primary">
+        <Link to={paths.publishCar} className="btn btn-primary">
           <i className="bi bi-plus-lg me-1" aria-hidden="true" />
           {t('owner.myCars.publishCta')}
         </Link>
@@ -115,7 +117,7 @@ export default function MyCarsPage() {
           <i className="bi bi-car-front fs-1 text-secondary d-block mb-3" aria-hidden="true" />
           <h2 className="h4 fw-semibold mb-2">{t('owner.myCars.empty')}</h2>
           <div className="mt-4">
-            <Link to="/publicar" className="btn btn-primary">{t('owner.myCars.publishCta')}</Link>
+            <Link to={paths.publishCar} className="btn btn-primary">{t('owner.myCars.publishCta')}</Link>
           </div>
         </div>
       )}
@@ -123,10 +125,12 @@ export default function MyCarsPage() {
       <div className="d-flex flex-column gap-3">
         {cars.map((car) => {
           const id = idFromUri(car.links.self);
+          if (!id) return null;
+          const coverUrl = car.links.cover ? apiAssetUrl(car.links.cover) : null;
           return (
             <Link
               key={car.links.self}
-              to={`/mis-autos/${id}`}
+              to={myCarDetail(id)}
               className="reservation-card text-decoration-none text-reset"
             >
               <article className="card border-0 shadow-sm rounded-4 overflow-hidden reservation-card__surface position-relative">
@@ -135,9 +139,17 @@ export default function MyCarsPage() {
                 </span>
                 <div className="row g-0 align-items-stretch">
                   <div className="col-12 col-md-3 reservation-card__media-wrap">
-                    <div className="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
-                      <i className="bi bi-car-front fs-1" aria-hidden="true" />
-                    </div>
+                    {coverUrl ? (
+                      <img
+                        src={coverUrl}
+                        alt={`${car.brandName} ${car.modelName}`}
+                        className="reservation-card__media"
+                      />
+                    ) : (
+                      <div className="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
+                        <i className="bi bi-car-front fs-1" aria-hidden="true" />
+                      </div>
+                    )}
                   </div>
                   <div className="col-12 col-md-9 min-w-0">
                     <div className="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-2">

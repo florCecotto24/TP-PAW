@@ -4,11 +4,9 @@ import RegisterPage from './RegisterPage';
 import VerifyEmailPage from './VerifyEmailPage';
 import ForgotResetPage from './ForgotResetPage';
 
-// Rutas del área AUTH (en español, §3.3). Aisladas en un .tsx porque contienen
-// JSX; el barrel index.ts (que debe ser .ts) las re-exporta.
 export const authRoutes: RouteObject[] = [
-  { path: 'ingresar', element: <LoginPage /> },
-  { path: 'registrarse', element: <RegisterPage /> },
-  { path: 'verificar-email', element: <VerifyEmailPage /> },
-  { path: 'recuperar-clave', element: <ForgotResetPage /> },
+  { path: 'login', element: <LoginPage /> },
+  { path: 'register', element: <RegisterPage /> },
+  { path: 'verify-email', element: <VerifyEmailPage /> },
+  { path: 'forgot-password', element: <ForgotResetPage /> },
 ];

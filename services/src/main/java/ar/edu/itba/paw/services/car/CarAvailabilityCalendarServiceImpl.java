@@ -82,11 +82,10 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
             return Map.of();
         }
         // Two batch reads instead of N+1: all availability rows for the requested cars and all
-        // blocking reservations for the same set. LocalDate.MIN passes the "endingOnOrAfter"
-        // filter for every row (the wall-day arithmetic itself does not care about the historical
-        // past — it just computes the bookable-day set per car).
+        // blocking reservations for the same set. A null min-end filter loads every row; do not
+        // use LocalDate.MIN here — PostgreSQL rejects that year when bound as a DATE parameter.
         final List<CarAvailability> allRows = carAvailabilityService.findByCarIdsEndingOnOrAfter(
-                carIds, LocalDate.MIN);
+                carIds, null);
         final Map<Long, List<CarAvailability>> rowsByCarId = allRows.stream()
                 .collect(Collectors.groupingBy(CarAvailability::getCarId));
         final Map<Long, List<Reservation>> blockingByCarId =
@@ -307,14 +306,43 @@ public final class CarAvailabilityCalendarServiceImpl implements CarAvailability
 
     private List<BookableSegmentProjection> computeBookableSegmentsForRiderDatePicker(
             final long carId, final Instant now, final Long excludingReservationIdOrNull) {
-        // Single fetch for both branches: the wall-day calculation AND the per-day "effective row"
-        // lookup share the same underlying availability rows. Replacing the previous N queries
-        // (one findEffectiveForDayByCar call per bookable day) with one in-memory scan removes the
-        // user-facing N+1 on the public car-detail / reservation-edit date pickers.
         final List<CarAvailability> allRows = carAvailabilityService.findByCarId(carId);
         final List<Reservation> blockingReservations = excludingReservationIdOrNull == null
                 ? reservationService.findBlockingReservationsByCarId(carId)
                 : reservationService.findBlockingReservationsByCarIdExcluding(carId, excludingReservationIdOrNull);
+        return buildRiderBookableSegments(allRows, blockingReservations, now);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, Boolean> hasRiderBookableSegmentsByCarIds(
+            final Collection<Long> carIds, final Instant now) {
+        if (carIds == null || carIds.isEmpty()) {
+            return Map.of();
+        }
+        final List<CarAvailability> allRows = carAvailabilityService.findByCarIdsEndingOnOrAfter(carIds, null);
+        final Map<Long, List<CarAvailability>> rowsByCarId = allRows.stream()
+                .collect(Collectors.groupingBy(CarAvailability::getCarId));
+        final Map<Long, List<Reservation>> blockingByCarId =
+                reservationService.findBlockingReservationsByCarIds(carIds);
+        final Map<Long, Boolean> result = new HashMap<>(carIds.size());
+        for (final Long carId : carIds) {
+            if (carId == null) {
+                continue;
+            }
+            final List<BookableSegmentProjection> segments = buildRiderBookableSegments(
+                    rowsByCarId.getOrDefault(carId, List.of()),
+                    blockingByCarId.getOrDefault(carId, List.of()),
+                    now);
+            result.put(carId, !segments.isEmpty());
+        }
+        return result;
+    }
+
+    private List<BookableSegmentProjection> buildRiderBookableSegments(
+            final List<CarAvailability> allRows,
+            final List<Reservation> blockingReservations,
+            final Instant now) {
         final SortedSet<LocalDate> bookableDays = computeBookableWallDaysFromRows(allRows, blockingReservations);
         if (bookableDays.isEmpty()) {
             return List.of();

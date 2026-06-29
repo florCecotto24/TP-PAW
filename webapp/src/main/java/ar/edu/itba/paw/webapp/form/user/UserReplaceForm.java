@@ -5,6 +5,7 @@ import javax.validation.constraints.NotBlank;
 import ar.edu.itba.paw.webapp.validation.constraint.user.OptionalCbu;
 import ar.edu.itba.paw.webapp.validation.constraint.user.PhoneNumber;
 import ar.edu.itba.paw.webapp.validation.constraint.user.UserValidationMaxLength;
+import ar.edu.itba.paw.webapp.validation.constraint.user.ValidIsoLocalDate;
 import ar.edu.itba.paw.webapp.validation.constraint.user.UserValidationMaxLength.Kind;
 
 /** REST body for {@code PUT /users/{id}} (self/admin replaces the editable profile fields). */
@@ -21,6 +22,7 @@ public final class UserReplaceForm {
     @PhoneNumber
     private String phoneNumber;
 
+    @ValidIsoLocalDate
     private String birthDate;
 
     @UserValidationMaxLength(kind = Kind.PROFILE_ABOUT, messageKey = "validation.profile.about.maxLength")

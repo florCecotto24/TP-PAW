@@ -1,25 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import CarCardImage from '../../components/CarCardImage';
+import { ConsumerCarCard, Pagination } from '../../components/ryden';
+import { pageCount } from '../browse/hooks';
+import { carDetailHref, carDtoToConsumerCard } from '../browse/carCardAdapter';
 import { useMyUserUri } from './hooks';
-import { favoritesPath, fetchFavorites, fetchUser, removeFavorite } from './api';
-import CarCard from './CarCard';
+import { paths } from '../../routes/paths';
+import { fetchFavoritesPage, fetchUser, removeFavorite } from './api';
 import type { UserDto } from './types';
 
-// =============================================================================
-// FavoritesPage — autos favoritos del usuario (/favoritos).
-//   GET /users/{myId}/favorites (accept car, paginado por header Link).
-//   Quitar favorito → DELETE /users/{myId}/favorites/{carId} (idempotente).
-// Paginación: se navega next/prev del header Link (PageLinks), no se arman URLs.
-// =============================================================================
+export const FAVORITES_PAGE_SIZE = 8;
 
 export default function FavoritesPage() {
   const { t } = useTranslation();
   const myUri = useMyUserUri();
 
-  // Necesitamos el UserDto para resolver el link de favoritos (y el path de
-  // borrado). Se cachea junto al perfil propio.
+  useEffect(() => {
+    document.body.classList.add('has-fixed-navbar');
+    return () => document.body.classList.remove('has-fixed-navbar');
+  }, []);
+
   const userQuery = useQuery({
     queryKey: ['profile', 'me', myUri],
     queryFn: () => fetchUser(myUri as string, { private: true }),
@@ -61,12 +63,15 @@ export default function FavoritesPage() {
 function FavoritesList({ user }: { user: UserDto }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  // `cursor` es el path/link de la página actual; arranca en la colección base.
-  const [cursor, setCursor] = useState<string>(() => favoritesPath(user));
+  const [searchParams] = useSearchParams();
+  const pageIndex = useMemo(() => {
+    const raw = Number(searchParams.get('page') ?? '0');
+    return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+  }, [searchParams]);
 
   const favQuery = useQuery({
-    queryKey: ['profile', 'favorites', cursor],
-    queryFn: () => fetchFavorites(cursor),
+    queryKey: ['profile', 'favorites', user.links.self, pageIndex],
+    queryFn: () => fetchFavoritesPage(user, pageIndex, FAVORITES_PAGE_SIZE),
   });
 
   const remove = useMutation({
@@ -76,6 +81,10 @@ function FavoritesList({ user }: { user: UserDto }) {
     },
   });
 
+  const cars = favQuery.data?.data ?? [];
+  const total = favQuery.data?.page.total;
+  const totalPages = pageCount(total, FAVORITES_PAGE_SIZE);
+
   return (
     <div className="container my-4">
       <div className="mb-3">
@@ -83,11 +92,11 @@ function FavoritesList({ user }: { user: UserDto }) {
         <p className="text-secondary mb-0">{t('profile.favorites.subtitle')}</p>
       </div>
 
-      {remove.isError && (
+      {remove.isError ? (
         <div className="alert alert-warning" role="alert">
           {t('profile.common.error')}
         </div>
-      )}
+      ) : null}
 
       {favQuery.isLoading ? (
         <p role="status" className="text-secondary">
@@ -97,95 +106,62 @@ function FavoritesList({ user }: { user: UserDto }) {
         <div className="alert alert-danger" role="alert">
           {t('profile.common.error')}
         </div>
+      ) : cars.length === 0 ? (
+        <div className="search-empty-state text-center">
+          <div className="search-empty-state__icon" aria-hidden="true">
+            <i className="bi bi-heart"></i>
+          </div>
+          <h2 className="h4 fw-semibold mb-2">{t('profile.favorites.emptyTitle')}</h2>
+          <p className="text-secondary mb-0 search-empty-state__text">{t('profile.favorites.empty')}</p>
+          <div className="search-empty-state__actions mt-4">
+            <Link to={paths.search} className="btn btn-primary btn-action btn-action-md">
+              {t('profile.favorites.emptyCta')}
+            </Link>
+          </div>
+        </div>
       ) : (
-        <FavoritesContent
-          cars={favQuery.data?.data ?? []}
-          page={favQuery.data?.page}
-          onRemove={(self) => remove.mutate(self)}
-          removing={remove.isPending}
-          onCursor={setCursor}
-        />
+        <>
+          <div className="text-center">
+            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-2 g-3">
+              {cars.map((car) => {
+                const card = {
+                  ...carDtoToConsumerCard(car),
+                  favoritable: true,
+                  favorited: true,
+                };
+                const href = carDetailHref(car, { src: 'my-favorites' });
+                return (
+                  <div key={car.links.self} className="col d-flex justify-content-center">
+                    <ConsumerCarCard
+                      card={card}
+                      href={href}
+                      onToggleFavorite={() => remove.mutate(car.links.self)}
+                      imageSlot={
+                        <CarCardImage coverUri={car.links.cover}>
+                          {href ? (
+                            <span className="carcard-view-chip" aria-hidden="true">
+                              {t('carCard.viewChip')}
+                            </span>
+                          ) : null}
+                        </CarCardImage>
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {totalPages > 1 ? (
+            <Pagination
+              currentPage={pageIndex}
+              totalPages={totalPages}
+              baseUrl={paths.myFavorites}
+              pageParam="page"
+            />
+          ) : null}
+        </>
       )}
     </div>
-  );
-}
-
-function FavoritesContent({
-  cars,
-  page,
-  onRemove,
-  removing,
-  onCursor,
-}: {
-  cars: Awaited<ReturnType<typeof fetchFavorites>>['data'];
-  page?: Awaited<ReturnType<typeof fetchFavorites>>['page'];
-  onRemove: (self: string) => void;
-  removing: boolean;
-  onCursor: (c: string) => void;
-}) {
-  const { t } = useTranslation();
-
-  if (cars.length === 0) {
-    return (
-      <div className="text-center py-5">
-        <div className="display-4 text-secondary-subtle mb-3" aria-hidden="true">
-          <i className="bi bi-heart"></i>
-        </div>
-        <h2 className="h4 fw-semibold mb-2">{t('profile.favorites.emptyTitle')}</h2>
-        <p className="text-secondary mb-4">{t('profile.favorites.empty')}</p>
-        <Link to="/buscar" className="btn btn-primary">
-          {t('profile.favorites.emptyCta')}
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3 pt-2">
-        {cars.map((car) => (
-          <div key={car.links.self} className="col d-flex justify-content-center">
-            <CarCard
-              car={car}
-              action={
-                <div className="carcard-favorite-form">
-                  <button
-                    type="button"
-                    className="carcard-favorite-btn carcard-favorite-btn--on"
-                    onClick={() => onRemove(car.links.self)}
-                    disabled={removing}
-                    aria-label={t('profile.favorites.remove')}
-                    title={t('profile.favorites.remove')}
-                  >
-                    <i className="bi bi-heart-fill" aria-hidden="true"></i>
-                  </button>
-                </div>
-              }
-            />
-          </div>
-        ))}
-      </div>
-
-      {(page?.prev || page?.next) && (
-        <nav className="d-flex justify-content-center gap-2 mt-4" aria-label="pagination">
-          <button
-            type="button"
-            className="btn btn-outline-primary"
-            disabled={!page?.prev}
-            onClick={() => page?.prev && onCursor(page.prev)}
-          >
-            <i className="bi bi-chevron-left" aria-hidden="true"></i> {t('profile.favorites.prev')}
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline-primary"
-            disabled={!page?.next}
-            onClick={() => page?.next && onCursor(page.next)}
-          >
-            {t('profile.favorites.next')} <i className="bi bi-chevron-right" aria-hidden="true"></i>
-          </button>
-        </nav>
-      )}
-    </>
   );
 }

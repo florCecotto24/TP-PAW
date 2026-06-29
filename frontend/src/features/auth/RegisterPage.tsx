@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
+import { paths } from '../../routes/paths';
 import { ApiError } from '../../api/client';
 import type { UserDto } from '../../api/types';
 import type { RegisterForm } from './types';
@@ -66,7 +67,7 @@ export default function RegisterPage() {
       const userUri = res.location ?? res.data?.links?.self;
       const params = new URLSearchParams({ email: form.email });
       if (userUri) params.set('userUri', userUri);
-      navigate(`/verificar-email?${params.toString()}`);
+      navigate(`${paths.verifyEmail}?${params.toString()}`);
     } catch (err) {
       // 409 EmailAlreadyExists → code user.email.alreadyExists ("ya registrado").
       if (err instanceof ApiError && err.status === 409 && !err.code) {
@@ -153,7 +154,7 @@ export default function RegisterPage() {
             </Form>
 
             <p className="text-center mt-3 small">
-              {t('auth.register.haveAccount')} <Link to="/ingresar">{t('auth.login.submit')}</Link>
+              {t('auth.register.haveAccount')} <Link to={paths.login}>{t('auth.login.submit')}</Link>
             </p>
           </div>
         </div>

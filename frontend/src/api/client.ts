@@ -36,14 +36,14 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface RequestOptions {
   method?: HttpMethod;
-  /** MIME que se manda en `Accept` (lectura). Default: ninguno. */
+  /** MIME that se manda en `Accept` (lectura). Default: ninguno. */
   accept?: string;
   /** MIME que se manda en `Content-Type` (escritura JSON). */
   contentType?: string;
   /** Cuerpo: objeto (se serializa a JSON) o un BodyInit ya armado (multipart). */
   body?: unknown;
-  /** Query params; se serializan a `?k=v`. */
-  query?: Record<string, string | number | boolean | undefined | null>;
+  /** Query params; arrays append repeated keys. */
+  query?: Record<string, string | number | boolean | string[] | undefined | null>;
   /** Si true, no agrega Authorization (endpoints anónimos: registro, etc.). */
   anonymous?: boolean;
   /** Authorization explícito (p.ej. Basic en login). Tiene prioridad. */
@@ -142,6 +142,20 @@ export class HypermediaClient {
     }
   }
 
+  private appendQueryParam(usp: URLSearchParams, key: string, value: string | number | boolean | string[]): void {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined && item !== null && String(item) !== '') {
+          usp.append(key, String(item));
+        }
+      }
+      return;
+    }
+    if (value !== undefined && value !== null) {
+      usp.append(key, String(value));
+    }
+  }
+
   private buildUrl(path: string, query?: RequestOptions['query']): string {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       if (!query) {
@@ -149,9 +163,8 @@ export class HypermediaClient {
       }
       const url = new URL(path);
       for (const [k, v] of Object.entries(query)) {
-        if (v !== undefined && v !== null) {
-          url.searchParams.set(k, String(v));
-        }
+        if (v === undefined || v === null) continue;
+        this.appendQueryParam(url.searchParams, k, v);
       }
       return url.toString();
     }
@@ -159,7 +172,8 @@ export class HypermediaClient {
     if (!query) return absolutePath;
     const usp = new URLSearchParams();
     for (const [k, v] of Object.entries(query)) {
-      if (v !== undefined && v !== null) usp.append(k, String(v));
+      if (v === undefined || v === null) continue;
+      this.appendQueryParam(usp, k, v);
     }
     const qs = usp.toString();
     return qs ? `${absolutePath}${absolutePath.includes('?') ? '&' : '?'}${qs}` : absolutePath;

@@ -6,6 +6,7 @@ import AdminPagination from '../components/AdminPagination';
 import { idFromSelf, type ReservationDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
+import { adminReservationChat } from '../../../routes/paths';
 
 function formatDate(iso: string): string {
   try {
@@ -60,7 +61,7 @@ export default function AdminReservationsPage() {
                       <td>{reservation.totalPrice}</td>
                       <td className="text-end">
                         <Link
-                          to={`/admin/reservas/${reservationId}/chat`}
+                          to={adminReservationChat(reservationId)}
                           className="btn btn-outline-primary btn-sm"
                         >
                           {t('admin.reservations.actions.viewChat')}

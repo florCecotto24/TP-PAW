@@ -1,5 +1,8 @@
 package ar.edu.itba.paw.webapp.controller.reservation;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,9 +25,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
+import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
 import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.services.user.AdminService;
@@ -35,12 +40,17 @@ import ar.edu.itba.paw.webapp.dto.rest.ReservationDto;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationCreateForm;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationPatchForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.ReservationResourceAccess;
 import ar.edu.itba.paw.webapp.support.ReservationRestDateTimes;
 import ar.edu.itba.paw.webapp.support.ReservationRestEnums;
 import ar.edu.itba.paw.webapp.support.RestUriPaths;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrainList;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmissionList;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTypeList;
+import ar.edu.itba.paw.webapp.validation.constraint.reservation.ValidReservationStatusList;
 
 /**
  * Reservations resource ({@code /reservations}, {@code /reservations/{id}}).
@@ -48,6 +58,8 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
 @Path("/reservations")
 @Component
 public final class ReservationController {
+
+    private static final String DEFAULT_HUB_SORT = "date,desc";
 
     private final ReservationService reservationService;
     private final AdminService adminService;
@@ -80,7 +92,15 @@ public final class ReservationController {
             @QueryParam("riderId") final Long riderId,
             @QueryParam("ownerId") final Long ownerId,
             @QueryParam("carId") final Long carId,
-            @QueryParam("status") final String status,
+            @QueryParam("status") @ValidReservationStatusList final List<String> status,
+            @QueryParam("riderStatus") @ValidReservationStatusList final List<String> riderStatus,
+            @QueryParam("q") final String q,
+            @QueryParam("category") @ValidCarTypeList final List<String> category,
+            @QueryParam("transmission") @ValidCarTransmissionList final List<String> transmission,
+            @QueryParam("powertrain") @ValidCarPowertrainList final List<String> powertrain,
+            @QueryParam("priceMin") final BigDecimal priceMin,
+            @QueryParam("priceMax") final BigDecimal priceMax,
+            @QueryParam("rating") final List<String> rating,
             @QueryParam("sort") final String sort) {
         final int safePage = Math.max(1, page);
         final int pageSize = pageSizeParam != null && pageSizeParam > 0
@@ -92,12 +112,14 @@ public final class ReservationController {
         final Page<ReservationCard> resultPage;
         if (riderId != null) {
             reservationResourceAccess.requireSelfOrAdmin(riderId, viewer);
-            resultPage = reservationService.getRiderReservationCards(buildCriteria(
-                    null, riderId, carId, status, zeroBasedPage, pageSize, sort));
+            resultPage = reservationService.getRiderReservationCards(buildListCriteria(
+                    null, riderId, carId, status, riderStatus, category, transmission, powertrain,
+                    priceMin, priceMax, rating, q, zeroBasedPage, pageSize, sort));
         } else if (ownerId != null) {
             reservationResourceAccess.requireSelfOrAdmin(ownerId, viewer);
-            resultPage = reservationService.getOwnerReservationCards(buildCriteria(
-                    ownerId, null, carId, status, zeroBasedPage, pageSize, sort));
+            resultPage = reservationService.getOwnerReservationCards(buildListCriteria(
+                    ownerId, null, carId, status, riderStatus, category, transmission, powertrain,
+                    priceMin, priceMax, rating, q, zeroBasedPage, pageSize, sort));
         } else {
             reservationResourceAccess.requireAdmin();
             resultPage = adminService.listAllReservations(zeroBasedPage, pageSize);
@@ -136,9 +158,6 @@ public final class ReservationController {
         final long carId = RestUriPaths.parseCarId(form.getCarUri());
         final RestUriPaths.CarAvailabilityIds availabilityIds =
                 RestUriPaths.parseAvailabilityUri(form.getAvailabilityUri());
-        if (availabilityIds.carId() != carId) {
-            throw new javax.ws.rs.BadRequestException("availabilityUri does not belong to carUri.");
-        }
         final String from = ReservationRestDateTimes.toWallLocalInput(form.getStartDate());
         final String until = ReservationRestDateTimes.toWallLocalInput(form.getEndDate());
         final Reservation created = reservationService.submitRiderReservationByCar(
@@ -180,12 +199,7 @@ public final class ReservationController {
     }
 
     private void applyStatusPatch(final long id, final RydenUserDetails viewer, final String statusRaw) {
-        final Reservation.Status status;
-        try {
-            status = ReservationRestEnums.parseStatus(statusRaw);
-        } catch (final IllegalArgumentException ex) {
-            throw new javax.ws.rs.BadRequestException(ex.getMessage());
-        }
+        final Reservation.Status status = ReservationRestEnums.parseStatus(statusRaw);
         if (status == Reservation.Status.CANCELLED_BY_RIDER) {
             reservationService.cancelReservationAsParticipantScoped(viewer.getUserId(), id, "rider");
             return;
@@ -194,7 +208,6 @@ public final class ReservationController {
             reservationService.cancelReservationAsParticipantScoped(viewer.getUserId(), id, "owner");
             return;
         }
-        throw new javax.ws.rs.BadRequestException("Unsupported status transition: " + statusRaw);
     }
 
     private ReservationDto toReservationDto(final long id, final RydenUserDetails viewer) {
@@ -211,57 +224,103 @@ public final class ReservationController {
         return ReservationDto.from(reservation, reservation.getCar().getOwnerId(), uriInfo);
     }
 
-    private ReservationSearchCriteria buildCriteria(
+    private ReservationSearchCriteria buildListCriteria(
             final Long ownerId,
             final Long riderId,
             final Long carId,
-            final String status,
+            final List<String> status,
+            final List<String> riderStatus,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
+            final BigDecimal priceMin,
+            final BigDecimal priceMax,
+            final List<String> rating,
+            final String q,
             final int page,
             final int pageSize,
             final String sort) {
-        final List<String> statusFilters;
-        if (status != null && !status.isBlank()) {
-            try {
-                statusFilters = List.of(ReservationRestEnums.parseStatus(status).name().toLowerCase());
-            } catch (final IllegalArgumentException ex) {
-                throw new javax.ws.rs.BadRequestException(ex.getMessage());
-            }
-        } else {
-            statusFilters = List.of();
-        }
-        final String sortBy;
-        final String sortDirection;
-        if (sort == null || sort.isBlank() || "recent".equalsIgnoreCase(sort)) {
-            sortBy = "date";
-            sortDirection = "desc";
-        } else if ("start_date".equalsIgnoreCase(sort)) {
-            sortBy = "startDate";
-            sortDirection = "asc";
-        } else if ("price_asc".equalsIgnoreCase(sort)) {
-            sortBy = "price";
-            sortDirection = "asc";
-        } else if ("price_desc".equalsIgnoreCase(sort)) {
-            sortBy = "price";
-            sortDirection = "desc";
-        } else {
-            throw new javax.ws.rs.BadRequestException("Unknown sort: " + sort);
-        }
-        return new ReservationSearchCriteria(
+        return reservationService.buildReservationSearchCriteria(
                 ownerId,
                 riderId,
-                carId,
+                toCarTypes(category),
+                toTransmissions(transmission),
+                toPowertrains(powertrain),
+                priceMin,
+                priceMax,
+                rating,
+                parseStatuses(status, riderStatus),
                 page,
                 pageSize,
-                statusFilters,
-                List.of(),
-                List.of(),
-                List.of(),
-                null,
-                null,
-                List.of(),
-                sortBy,
-                sortDirection,
-                null);
+                toHubSort(sort),
+                q,
+                carId);
+    }
+
+    private static List<Car.Type> toCarTypes(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parseType);
+    }
+
+    private static List<Car.Transmission> toTransmissions(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parseTransmission);
+    }
+
+    private static List<Car.Powertrain> toPowertrains(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parsePowertrain);
+    }
+
+    private static <E> List<E> toDistinctCarEnums(
+            final List<String> raw,
+            final java.util.function.Function<String, E> parser) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        final LinkedHashSet<E> out = new LinkedHashSet<>();
+        for (final String token : raw) {
+            if (token != null && !token.isBlank()) {
+                out.add(parser.apply(token));
+            }
+        }
+        return new ArrayList<>(out);
+    }
+
+    private static List<Reservation.Status> parseStatuses(
+            final List<String> status,
+            final List<String> riderStatus) {
+        final LinkedHashSet<Reservation.Status> out = new LinkedHashSet<>();
+        addStatusTokens(out, status);
+        addStatusTokens(out, riderStatus);
+        return new ArrayList<>(out);
+    }
+
+    private static void addStatusTokens(
+            final LinkedHashSet<Reservation.Status> out,
+            final List<String> tokens) {
+        if (tokens == null) {
+            return;
+        }
+        for (final String token : tokens) {
+            if (token == null || token.isBlank()) {
+                continue;
+            }
+            out.add(ReservationRestEnums.parseStatus(token));
+        }
+    }
+
+    private static String toHubSort(final String sort) {
+        if (sort == null || sort.isBlank() || "recent".equalsIgnoreCase(sort)) {
+            return DEFAULT_HUB_SORT;
+        }
+        if ("start_date".equalsIgnoreCase(sort)) {
+            return "date,asc";
+        }
+        if ("price_asc".equalsIgnoreCase(sort)) {
+            return "price,asc";
+        }
+        if ("price_desc".equalsIgnoreCase(sort)) {
+            return "price,desc";
+        }
+        return MyHubSortSanitizer.sanitize(sort, DEFAULT_HUB_SORT);
     }
 
     private Response pagedReservations(

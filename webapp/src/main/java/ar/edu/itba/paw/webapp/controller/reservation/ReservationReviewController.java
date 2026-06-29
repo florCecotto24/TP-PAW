@@ -21,7 +21,6 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.services.review.ReviewService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
@@ -85,8 +84,11 @@ public final class ReservationReviewController {
         final ReservationReviewSubmitForm form = new ReservationReviewSubmitForm();
         form.setRating(rating);
         form.setComment(comment);
-        formValidationSupport.validate(form);
         final ReviewImagePayload image = readImage(imagePart);
+        form.setImageBytes(image.bytes);
+        form.setImageContentType(image.contentType);
+        form.setImageFileName(image.fileName);
+        formValidationSupport.validate(form);
         if ("owner".equals(role)) {
             reviewService.submitOwnerReviewOfRider(
                     viewer.getUserId(), reservationId, form.getRating(), form.getComment(),
@@ -122,9 +124,6 @@ public final class ReservationReviewController {
         final String contentType = imagePart.getMediaType() != null
                 ? imagePart.getMediaType().toString()
                 : null;
-        if (contentType == null || !Image.isImageContentType(contentType)) {
-            throw new javax.ws.rs.BadRequestException("Review image must be an image.");
-        }
         final String fileName = imagePart.getContentDisposition() != null
                 ? imagePart.getContentDisposition().getFileName()
                 : "review-image";

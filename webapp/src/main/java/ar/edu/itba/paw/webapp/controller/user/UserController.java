@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller.user;
 
 import java.net.URI;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -56,6 +55,7 @@ import ar.edu.itba.paw.webapp.support.UserRepresentationSupport;
 import ar.edu.itba.paw.webapp.support.UserResourceAccess;
 import ar.edu.itba.paw.webapp.support.UserSessionService;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 
 /**
  * Users resource ({@code /users}, {@code /users/{id}}).
@@ -120,19 +120,14 @@ public final class UserController {
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam,
             @QueryParam("blocked") final Boolean blocked,
-            @QueryParam("role") final String role,
+            @QueryParam("role") @ValidUserRole final String role,
             @QueryParam("q") final String query) {
         userResourceAccess.requireAdmin();
         final int safePage = Math.max(1, page);
         final int pageSize = pageSizeParam != null && pageSizeParam > 0
                 ? pageSizeParam
                 : paginationProperties.getDefaultPageSize();
-        final Page<User> usersPage;
-        try {
-            usersPage = adminService.listUsers(safePage - 1, pageSize, blocked, role, query);
-        } catch (final IllegalArgumentException ex) {
-            throw new javax.ws.rs.BadRequestException(ex.getMessage());
-        }
+        final Page<User> usersPage = adminService.listUsers(safePage - 1, pageSize, blocked, role, query);
         if (usersPage.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
@@ -191,14 +186,7 @@ public final class UserController {
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
         userResourceAccess.requireSelfOrAdmin(id, viewer);
 
-        LocalDate birthDate = null;
-        if (form.getBirthDate() != null && !form.getBirthDate().isBlank()) {
-            try {
-                birthDate = LocalDate.parse(form.getBirthDate());
-            } catch (DateTimeParseException ex) {
-                throw new javax.ws.rs.BadRequestException("Invalid birthDate.");
-            }
-        }
+        final LocalDate birthDate = toBirthDate(form.getBirthDate());
         userService.updateProfile(id, ProfileUpdateRequest.builder()
                 .forename(form.getForename())
                 .surname(form.getSurname())
@@ -278,11 +266,7 @@ public final class UserController {
             userService.updatePhoneNumber(user.getId(), patch.getPhoneNumber());
         }
         if (patch.getBirthDate() != null) {
-            try {
-                userService.updateBirthDate(user.getId(), LocalDate.parse(patch.getBirthDate()));
-            } catch (DateTimeParseException ex) {
-                throw new javax.ws.rs.BadRequestException("Invalid birthDate.");
-            }
+            userService.updateBirthDate(user.getId(), toBirthDate(patch.getBirthDate()));
         }
         if (patch.getAbout() != null) {
             userService.updateAbout(user.getId(), patch.getAbout());
@@ -305,10 +289,8 @@ public final class UserController {
         if (patch.getRole() != null) {
             if ("admin".equalsIgnoreCase(patch.getRole())) {
                 adminService.promoteUserToAdmin(user.getId(), actingAdminId);
-            } else if ("user".equalsIgnoreCase(patch.getRole())) {
-                adminService.demoteUserFromAdmin(user.getId(), actingAdminId);
             } else {
-                throw new javax.ws.rs.BadRequestException("Invalid role.");
+                adminService.demoteUserFromAdmin(user.getId(), actingAdminId);
             }
         }
         if (patch.getBlocked() != null) {
@@ -359,6 +341,13 @@ public final class UserController {
                 passwordForm.getCurrentPassword(),
                 passwordForm.getPassword(),
                 passwordForm.getPasswordConfirm());
+    }
+
+    private static LocalDate toBirthDate(final String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(raw.trim());
     }
 
     private static boolean hasProfilePatchFields(final UserPatchForm patch) {

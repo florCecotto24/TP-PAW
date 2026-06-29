@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AdminPageHeader from '../components/AdminPageHeader';
+import { paths } from '../../../routes/paths';
 
 const sections = [
-  { to: '/admin/usuarios', titleKey: 'admin.users.title', descKey: 'admin.users.subtitle', icon: 'bi-people' },
-  { to: '/admin/catalogo', titleKey: 'admin.catalog.title', descKey: 'admin.catalog.subtitle', icon: 'bi-tags' },
-  { to: '/admin/autos', titleKey: 'admin.cars.title', descKey: 'admin.cars.subtitle', icon: 'bi-car-front' },
-  { to: '/admin/reservas', titleKey: 'admin.reservations.title', descKey: 'admin.reservations.subtitle', icon: 'bi-calendar-check' },
+  { to: paths.admin.users, titleKey: 'admin.users.title', descKey: 'admin.users.subtitle', icon: 'bi-people' },
+  { to: paths.admin.catalog, titleKey: 'admin.catalog.title', descKey: 'admin.catalog.subtitle', icon: 'bi-tags' },
+  { to: paths.admin.cars, titleKey: 'admin.cars.title', descKey: 'admin.cars.subtitle', icon: 'bi-car-front' },
+  { to: paths.admin.reservations, titleKey: 'admin.reservations.title', descKey: 'admin.reservations.subtitle', icon: 'bi-calendar-check' },
 ] as const;
 
 export default function AdminPanelPage() {

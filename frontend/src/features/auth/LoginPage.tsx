@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { useSessionStore } from '../../session/sessionStore';
+import { paths } from '../../routes/paths';
 
 // /ingresar — autentica con email+password vía useSessionStore.login (que hace
 // Basic → tokens, sin /login). Al autenticar navega a la ruta de origen (o "/").
@@ -64,7 +65,7 @@ export default function LoginPage() {
               <Form.Group className="mb-3" controlId="password">
                 <div className="d-flex justify-content-between align-items-baseline mb-1">
                   <Form.Label className="mb-0">{t('auth.login.password')}</Form.Label>
-                  <Link to="/recuperar-clave" className="small text-muted">
+                  <Link to={paths.forgotPassword} className="small text-muted">
                     {t('auth.login.forgotPassword')}
                   </Link>
                 </div>
@@ -83,10 +84,10 @@ export default function LoginPage() {
 
             <p className="text-center text-muted small mt-4 mb-0">
               {t('auth.login.noAccount')}{' '}
-              <Link to="/registrarse">{t('auth.register.submit')}</Link>
+              <Link to={paths.register}>{t('auth.register.submit')}</Link>
             </p>
             <p className="text-center mt-2">
-              <Link to="/verificar-email" className="text-muted small">
+              <Link to={paths.verifyEmail} className="text-muted small">
                 {t('auth.login.verifyEmailLink')}
               </Link>
             </p>

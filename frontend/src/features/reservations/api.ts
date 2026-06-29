@@ -24,23 +24,45 @@ export interface ReservationListQuery {
   riderId?: string | number;
   ownerId?: string | number;
   carId?: string | number;
-  status?: string;
+  status?: string | string[];
+  riderStatus?: string | string[];
+  q?: string;
+  category?: string | string[];
+  transmission?: string | string[];
+  powertrain?: string | string[];
+  priceMin?: number;
+  priceMax?: number;
+  rating?: string | string[];
   sort?: 'recent' | 'start_date' | 'price_asc' | 'price_desc';
   page?: number;
   pageSize?: number;
 }
 
+function toQueryArray(value?: string | string[]): string[] | undefined {
+  if (value == null) return undefined;
+  const items = Array.isArray(value) ? value : [value];
+  const out = items.map((v) => String(v).trim()).filter(Boolean);
+  return out.length > 0 ? out : undefined;
+}
+
 export function listReservations(
   q: ReservationListQuery,
 ): Promise<ApiResponse<ReservationDto[]>> {
-  // 204 (sin reservas) llega como data undefined; la página lo normaliza a [].
   return sessionClient.get<ReservationDto[]>('/reservations', {
     accept: MediaTypes.reservation,
     query: {
       riderId: q.riderId,
       ownerId: q.ownerId,
       carId: q.carId,
-      status: q.status,
+      status: toQueryArray(q.status),
+      riderStatus: toQueryArray(q.riderStatus),
+      q: q.q,
+      category: toQueryArray(q.category),
+      transmission: toQueryArray(q.transmission),
+      powertrain: toQueryArray(q.powertrain),
+      priceMin: q.priceMin,
+      priceMax: q.priceMax,
+      rating: toQueryArray(q.rating),
       sort: q.sort,
       page: q.page,
       pageSize: q.pageSize,

@@ -30,4 +30,24 @@ describe('i18n es/en parity', () => {
     // 3.Assert
     expect({ missingInEn, missingInEs }).toEqual({ missingInEn: [], missingInEs: [] });
   });
+
+  it('resuelve etiquetas de búsqueda como strings (no objetos)', () => {
+    const keys = [
+      'searchBar.from.label',
+      'searchBar.until.label',
+      'search.filter.neighborhood.label',
+      'search.filter.category.label',
+      'search.filter.transmission.label',
+      'search.filter.powertrain.label',
+      'search.filter.price.label',
+      'search.filter.rating',
+    ];
+    for (const locale of ['es', 'en'] as const) {
+      for (const key of keys) {
+        const value = i18n.t(key, { lng: locale });
+        expect(typeof value, `${locale}:${key}`).toBe('string');
+        expect(value.length, `${locale}:${key}`).toBeGreaterThan(0);
+      }
+    }
+  });
 });

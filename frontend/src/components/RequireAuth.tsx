@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../session/sessionStore';
+import { paths } from '../routes/paths';
 
 /**
  * Route guard: replica el comportamiento de Spring Security del proyecto original
@@ -16,7 +17,7 @@ export default function RequireAuth({ children, admin = false }: { children: Rea
   const location = useLocation();
 
   if (status !== 'authenticated') {
-    return <Navigate to="/ingresar" state={{ from: location.pathname + location.search }} replace />;
+    return <Navigate to={paths.login} state={{ from: location.pathname + location.search }} replace />;
   }
 
   if (admin) {
@@ -26,7 +27,7 @@ export default function RequireAuth({ children, admin = false }: { children: Rea
       return <p className="container py-5 text-secondary" role="status">{t('app.loading')}</p>;
     }
     if (currentUser.role !== 'admin') {
-      return <Navigate to="/" replace />;
+      return <Navigate to={paths.home} replace />;
     }
   }
 

@@ -4,6 +4,8 @@ import ar.edu.itba.paw.webapp.validation.constraint.user.OptionalCbu;
 import ar.edu.itba.paw.webapp.validation.constraint.user.PhoneNumber;
 import ar.edu.itba.paw.webapp.validation.constraint.user.UserPatchHasField;
 import ar.edu.itba.paw.webapp.validation.constraint.user.UserValidationMaxLength;
+import ar.edu.itba.paw.webapp.validation.constraint.user.ValidIsoLocalDate;
+import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 import ar.edu.itba.paw.webapp.validation.constraint.user.UserValidationMaxLength.Kind;
 
 /**
@@ -21,6 +23,7 @@ public final class UserPatchForm {
 
     @PhoneNumber
     private String phoneNumber;
+    @ValidIsoLocalDate
     private String birthDate;
 
     @UserValidationMaxLength(kind = Kind.PROFILE_ABOUT, messageKey = "validation.profile.about.maxLength")
@@ -32,6 +35,7 @@ public final class UserPatchForm {
     private String password;
     private String passwordConfirm;
     private String currentPassword;
+    @ValidUserRole
     private String role;
     private Boolean blocked;
     private Boolean identityValidated;

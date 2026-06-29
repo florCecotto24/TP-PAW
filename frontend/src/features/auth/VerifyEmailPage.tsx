@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { apiErrorMessage } from './errorMessage';
+import { paths } from '../../routes/paths';
 
 // /verificar-email — tras POST /users el servidor envía un OTP por mail.
 // Verificar = Basic auth email:otp (el OTP actúa como password); el backend
@@ -121,7 +122,7 @@ export default function VerifyEmailPage() {
 
             <p className="text-center mt-3 small mb-1">
               <span className="text-muted">{t('auth.verify.alreadyVerified')}</span>
-              <Link className="ms-1" to="/ingresar">
+              <Link className="ms-1" to={paths.login}>
                 {t('auth.login.submit')}
               </Link>
             </p>

@@ -130,15 +130,12 @@ public class WebAuthConfig {
                 .authorizeHttpRequests(auth -> auth
                         // SPA entrypoint + static fallbacks (served by the default servlet on Jersey 404).
                         .requestMatchers(ant("/"), ant("/index.html"), ant("/favicon.ico")).permitAll()
-                        // SPA client-side routes (Spanish nouns — no overlap with the English API resources).
-                        // They must fall through to index.html, so they are permitted at the chain level;
-                        // the SPA performs its own authenticated API calls with Bearer tokens.
+                        // SPA deep-links (same-origin shell; API auth via Bearer).
                         .requestMatchers(
-                                ant("/buscar"), ant("/autos/**"), ant("/publicar"),
-                                ant("/mis-autos/**"), ant("/mis-reservas"), ant("/reservas/**"),
-                                ant("/reservar/**"), ant("/ingresar"), ant("/registrarse"),
-                                ant("/verificar-email"), ant("/recuperar-clave"), ant("/perfil"),
-                                ant("/usuarios/**"), ant("/favoritos"), ant("/admin/**"))
+                                ant("/search"), ant("/home"), ant("/cars/**"), ant("/login"), ant("/register"),
+                                ant("/verify-email"), ant("/forgot-password"), ant("/publish-car"),
+                                ant("/my-cars/**"), ant("/my-reservations/**"), ant("/profile"),
+                                ant("/my-favorites"), ant("/users/**"), ant("/admin/**"))
                         .permitAll()
                         // CORS preflight (harmless when same-origin).
                         .requestMatchers(ant(HttpMethod.OPTIONS, "/**")).permitAll()

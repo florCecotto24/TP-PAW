@@ -2,6 +2,7 @@ package ar.edu.itba.paw.webapp.form.reservation;
 
 import ar.edu.itba.paw.webapp.validation.constraint.reservation.ReservationPatchDatesTogether;
 import ar.edu.itba.paw.webapp.validation.constraint.reservation.ReservationPatchHasField;
+import ar.edu.itba.paw.webapp.validation.constraint.reservation.ValidReservationPatchStatus;
 
 /**
  * REST body for {@code PATCH /reservations/{id}} ({@code ReservationPatchDto} in openapi.yaml).
@@ -10,6 +11,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.reservation.ReservationPatch
 @ReservationPatchDatesTogether
 public final class ReservationPatchForm {
 
+    @ValidReservationPatchStatus
     private String status;
     private Boolean carReturned;
     private String startDate;

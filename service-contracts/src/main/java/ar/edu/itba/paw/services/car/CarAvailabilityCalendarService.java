@@ -40,6 +40,13 @@ public interface CarAvailabilityCalendarService {
     List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsForRiderDatePickerByCar(
             long carId, LocalTime checkInTime, Instant now);
 
+    /**
+     * Batch variant of the rider date-picker check: {@code true} when
+     * {@link #getBookableSegmentsForRiderDatePickerByCar(long, Instant)} would return a non-empty list
+     * (pickup lead + blocking reservations applied).
+     */
+    Map<Long, Boolean> hasRiderBookableSegmentsByCarIds(Collection<Long> carIds, Instant now);
+
     /** See {@link CarAvailabilityService#getBookableSegmentsForRiderDatePickerByCar(long, Instant)}. */
     List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(long carId, Instant now);
 

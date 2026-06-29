@@ -2,21 +2,24 @@ package ar.edu.itba.paw.webapp.form.reservation;
 
 import javax.validation.constraints.NotBlank;
 
+import ar.edu.itba.paw.webapp.validation.constraint.reservation.ReservationAvailabilityMatchesCar;
+
 /**
  * REST body for {@code POST /reservations} ({@code ReservationCreateDto} in openapi.yaml).
  */
+@ReservationAvailabilityMatchesCar
 public final class ReservationCreateForm {
 
-    @NotBlank
+    @NotBlank(message = "{validation.reservation.carUri.notBlank}")
     private String carUri;
 
-    @NotBlank
+    @NotBlank(message = "{validation.reservation.availabilityUri.notBlank}")
     private String availabilityUri;
 
-    @NotBlank
+    @NotBlank(message = "{validation.reservation.startDate.notBlank}")
     private String startDate;
 
-    @NotBlank
+    @NotBlank(message = "{validation.reservation.endDate.notBlank}")
     private String endDate;
 
     public String getCarUri() {

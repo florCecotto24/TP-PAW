@@ -130,6 +130,15 @@ export async function fetchFavorites(pathOrLink: string) {
   return { data: res.data ?? [], page: res.page, status: res.status };
 }
 
+/** GET favoritos por índice de página (0-based URL, API 1-based). */
+export async function fetchFavoritesPage(user: UserDto, pageIndex: number, pageSize?: number) {
+  const res = await sessionClient.get<CarDto[]>(favoritesPath(user), {
+    accept: MediaTypes.car,
+    query: { page: pageIndex + 1, pageSize },
+  });
+  return { data: res.data ?? [], page: res.page, status: res.status };
+}
+
 /** DELETE /users/{id}/favorites/{carId} (idempotente). */
 export async function removeFavorite(user: UserDto, carSelfLink: string): Promise<void> {
   // El carId sale del self del auto ("/cars/{id}").

@@ -1,285 +1,158 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
-import { idFromUri } from '../../../api/uri';
+import { Pagination, SortBar } from '../../../components/ryden';
 import BrowseCarCard from '../components/BrowseCarCard';
+import ExploreSearchForm from '../components/ExploreSearchForm';
 import {
-  flattenCars,
-  searchTotal,
-  useNeighborhoods,
-  useSearchCars,
-} from '../hooks';
-import {
-  filtersToSearchParams,
-  parseFilters,
-  type SearchFilters,
-} from '../searchFilters';
-import {
-  CAR_SORTS,
-  CAR_TYPES,
-  POWERTRAINS,
-  TRANSMISSIONS,
-  type CarSort,
-  type CarType,
-  type Powertrain,
-  type Transmission,
-} from '../types';
+  SEARCH_PAGE_SIZE,
+  apiSortToJspSort,
+  hasActiveSearchFilters,
+  jspSortToApiSort,
+  searchBasePath,
+} from '../exploreSearch';
+import { pageCount, useSearchCarsPage } from '../hooks';
+import { filtersToSearchParams, parseFilters } from '../searchFilters';
+import { paths } from '../../../routes/paths';
 
 export default function SearchPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
+  const pageIndex = Math.max(0, Number(searchParams.get('page') ?? '0') || 0);
+  const search = useSearchCarsPage(filters, pageIndex + 1, SEARCH_PAGE_SIZE);
+  const cars = search.data?.items ?? [];
+  const total = search.data?.page.total;
+  const totalPages = pageCount(total, SEARCH_PAGE_SIZE);
 
-  const [draft, setDraft] = useState<SearchFilters>(() => ({ ...filters }));
-  const syncDraftFromUrl = useCallback(() => setDraft({ ...filters }), [filters]);
+  useEffect(() => {
+    document.body.classList.add('has-fixed-navbar');
+    return () => {
+      document.body.classList.remove('has-fixed-navbar');
+    };
+  }, []);
 
-  const search = useSearchCars(filters);
-  const neighborhoods = useNeighborhoods();
-  const cars = flattenCars(search.data);
-  const total = searchTotal(search.data);
-
-  const applyFilters = (next: SearchFilters) => {
-    setSearchParams(filtersToSearchParams(next), { replace: true });
+  const applyFilters = (next: typeof filters) => {
+    const params = filtersToSearchParams(next);
+    params.set('page', '0');
+    setSearchParams(params, { replace: true });
   };
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    applyFilters(draft);
+  const onSortChange = (jspSort: string) => {
+    const params = filtersToSearchParams({ ...filters, sort: jspSortToApiSort(jspSort) });
+    params.set('page', '0');
+    setSearchParams(params, { replace: true });
   };
 
-  const onClear = () => {
-    setDraft({});
-    setSearchParams({}, { replace: true });
-  };
-
-  const displayError = search.isError ? t('browse.search.loadError') : null;
+  const baseUrl = searchBasePath(searchParams);
+  const activeFilters = hasActiveSearchFilters(searchParams);
+  const firstItem = total != null && total > 0 ? pageIndex * SEARCH_PAGE_SIZE + 1 : 0;
+  const lastItem = total != null ? Math.min((pageIndex + 1) * SEARCH_PAGE_SIZE, total) : 0;
 
   return (
-    <main className="container py-4">
-      <h1 className="h3 fw-semibold mb-4">{t('browse.search.title')}</h1>
+    <>
+      <ExploreSearchForm
+        formId="exploreSearchForm"
+        formClass="search-menu sticky-top w-100"
+        actionPath={paths.search}
+        allowFlexibleSearch
+        showClearFilters={activeFilters}
+        clearFiltersHref={paths.search}
+        initial={filters}
+        onApply={applyFilters}
+      />
 
-      <section className="bg-white rounded-4 shadow-sm p-4 mb-4">
-        <h2 className="h6 fw-semibold mb-3">{t('browse.search.filters')}</h2>
-        <form onSubmit={onSubmit} onReset={onClear}>
-          <div className="row g-3">
-            <div className="col-12 col-md-6 col-lg-4">
-              <label className="form-label small" htmlFor="searchQ">{t('browse.search.q')}</label>
-              <input
-                id="searchQ"
-                type="search"
-                className="form-control form-control-sm"
-                value={draft.q ?? ''}
-                onChange={(e) => setDraft((d) => ({ ...d, q: e.target.value || undefined }))}
-              />
+      <div className="container">
+        <div className="mb-3 pt-5 d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <h4 className="font-semibold mb-0">
+            {total != null && total > 0
+              ? t('search.resultsRange', { from: firstItem, to: lastItem, total })
+              : t('search.resultsCount', { count: 0 })}
+          </h4>
+          {cars.length > 0 ? (
+            <SortBar
+              baseUrl={baseUrl}
+              currentSort={apiSortToJspSort(filters.sort)}
+              onSortChange={onSortChange}
+            />
+          ) : null}
+        </div>
+
+        {search.isError ? (
+          <div className="alert alert-danger" role="alert">
+            {t('browse.search.loadError')}
+          </div>
+        ) : null}
+        {search.isLoading ? (
+          <p className="text-secondary" role="status">
+            {t('app.loading')}
+          </p>
+        ) : null}
+
+        {!search.isLoading && cars.length === 0 ? (
+          <div className="search-empty-state text-center">
+            <div className="search-empty-state__icon" aria-hidden="true">
+              <i className="bi bi-search"></i>
             </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchFrom">{t('browse.search.from')}</label>
-              <input
-                id="searchFrom"
-                type="date"
-                className="form-control form-control-sm"
-                value={draft.from ?? ''}
-                onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value || undefined }))}
-              />
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchUntil">{t('browse.search.until')}</label>
-              <input
-                id="searchUntil"
-                type="date"
-                className="form-control form-control-sm"
-                value={draft.until ?? ''}
-                onChange={(e) => setDraft((d) => ({ ...d, until: e.target.value || undefined }))}
-              />
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchCategory">{t('browse.search.category')}</label>
-              <select
-                id="searchCategory"
-                className="form-select form-select-sm"
-                value={draft.category ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    category: (e.target.value || undefined) as CarType | undefined,
-                  }))
-                }
-              >
-                <option value="">{t('browse.search.any')}</option>
-                {CAR_TYPES.map((c) => (
-                  <option key={c} value={c}>{t(`browse.carType.${c}`)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchTransmission">{t('browse.search.transmission')}</label>
-              <select
-                id="searchTransmission"
-                className="form-select form-select-sm"
-                value={draft.transmission ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    transmission: (e.target.value || undefined) as Transmission | undefined,
-                  }))
-                }
-              >
-                <option value="">{t('browse.search.any')}</option>
-                {TRANSMISSIONS.map((tr) => (
-                  <option key={tr} value={tr}>{t(`browse.transmission.${tr}`)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchPowertrain">{t('browse.search.powertrain')}</label>
-              <select
-                id="searchPowertrain"
-                className="form-select form-select-sm"
-                value={draft.powertrain ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    powertrain: (e.target.value || undefined) as Powertrain | undefined,
-                  }))
-                }
-              >
-                <option value="">{t('browse.search.any')}</option>
-                {POWERTRAINS.map((p) => (
-                  <option key={p} value={p}>{t(`browse.powertrain.${p}`)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchNeighborhood">{t('browse.search.neighborhood')}</label>
-              <select
-                id="searchNeighborhood"
-                className="form-select form-select-sm"
-                value={draft.neighborhoodId ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    neighborhoodId: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-              >
-                <option value="">{t('browse.search.any')}</option>
-                {(neighborhoods.data ?? []).map((n) => {
-                  const nid = idFromUri(n.links.self);
-                  return nid ? (
-                    <option key={n.links.self} value={nid}>{n.name}</option>
-                  ) : null;
-                })}
-              </select>
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchPriceMin">{t('browse.search.priceMin')}</label>
-              <input
-                id="searchPriceMin"
-                type="number"
-                min={0}
-                className="form-control form-control-sm"
-                value={draft.priceMin ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    priceMin: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-              />
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchPriceMax">{t('browse.search.priceMax')}</label>
-              <input
-                id="searchPriceMax"
-                type="number"
-                min={0}
-                className="form-control form-control-sm"
-                value={draft.priceMax ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    priceMax: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-              />
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchRating">{t('browse.search.rating')}</label>
-              <input
-                id="searchRating"
-                type="number"
-                min={0}
-                max={5}
-                step={0.5}
-                className="form-control form-control-sm"
-                value={draft.rating ?? ''}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    rating: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-              />
-            </div>
-            <div className="col-6 col-md-3 col-lg-2">
-              <label className="form-label small" htmlFor="searchSort">{t('browse.search.sort')}</label>
-              <select
-                id="searchSort"
-                className="form-select form-select-sm"
-                value={draft.sort ?? 'recent'}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, sort: (e.target.value || undefined) as CarSort | undefined }))
-                }
-              >
-                {CAR_SORTS.map((s) => (
-                  <option key={s} value={s}>{t(`browse.sort.${s}`)}</option>
-                ))}
-              </select>
+            {activeFilters ? (
+              <>
+                <h2 className="h4 fw-semibold mb-2">{t('search.empty.title')}</h2>
+                <p className="text-secondary mb-2 search-empty-state__text">{t('search.empty.description')}</p>
+                <div className="search-empty-state__actions">
+                  <Link to={paths.search} className="btn btn-primary btn-action btn-action-md">
+                    {t('search.empty.reset')}
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="h4 fw-semibold mb-2">{t('search.empty.noCars.title')}</h2>
+                <p className="text-secondary mb-0 search-empty-state__text">
+                  {t('search.empty.noCars.description')}
+                </p>
+                <div className="search-empty-state__actions mt-4">
+                  <Link to={paths.search} className="btn btn-primary btn-action btn-action-md">
+                    {t('search.empty.noCars.cta')}
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {cars.length > 0 ? (
+          <div className="text-center">
+            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 pt-4 g-3">
+              {cars.map((car) => (
+                <div key={car.links.self} className="col d-flex justify-content-center">
+                  <BrowseCarCard
+                    car={car}
+                    searchQuery={
+                      filters.flexible && filters.flexMonth
+                        ? { flexMonth: filters.flexMonth }
+                        : {
+                            ...(filters.from ? { from: filters.from } : {}),
+                            ...(filters.until ? { until: filters.until } : {}),
+                          }
+                    }
+                  />
+                </div>
+              ))}
             </div>
           </div>
-          <div className="d-flex flex-wrap gap-2 mt-3">
-            <button type="submit" className="btn btn-primary btn-sm">{t('browse.home.searchCta')}</button>
-            <button type="reset" className="btn btn-outline-secondary btn-sm">{t('browse.search.clear')}</button>
-            <button type="button" className="btn btn-link btn-sm" onClick={syncDraftFromUrl}>
-              {t('app.cancel', { defaultValue: 'Descartar cambios' })}
-            </button>
-          </div>
-        </form>
-      </section>
+        ) : null}
 
-      {total != null ? (
-        <p className="text-secondary small mb-3">{t('browse.search.results', { count: total })}</p>
-      ) : null}
-
-      {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {search.isLoading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
-
-      {!search.isLoading && cars.length === 0 ? (
-        <p className="text-secondary">{t('browse.search.empty')}</p>
-      ) : null}
-
-      {cars.length > 0 ? (
-        <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 gy-4">
-          {cars.map((car) => (
-            <div key={car.links.self} className="col d-flex justify-content-center">
-              <BrowseCarCard car={car} />
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {search.hasNextPage ? (
-        <div className="text-center mt-4">
-          <button
-            type="button"
-            className="btn btn-outline-primary"
-            disabled={search.isFetchingNextPage}
-            onClick={() => void search.fetchNextPage()}
-          >
-            {search.isFetchingNextPage ? t('app.loading') : t('browse.search.loadMore')}
-          </button>
-        </div>
-      ) : null}
-    </main>
+        {totalPages > 1 ? (
+          <Pagination
+            currentPage={pageIndex}
+            totalPages={totalPages}
+            baseUrl={baseUrl}
+            sortParam={apiSortToJspSort(filters.sort)}
+            pageParam="page"
+            sortParamName="sort"
+          />
+        ) : null}
+      </div>
+    </>
   );
 }

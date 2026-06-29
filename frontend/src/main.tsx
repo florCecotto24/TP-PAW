@@ -7,6 +7,7 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 // Flatpickr base styles ANTES de components.css, que trae los overrides del tema
 // Ryden para los calendarios inline (galería de precios por día, días reservados…).
 import 'flatpickr/dist/flatpickr.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './styles/components.css';
 import './styles/ryden-theme.css';
 import './styles/counterparty-profile.css';

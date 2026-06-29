@@ -2,29 +2,24 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-// Título dinámico por ruta (corrección devolución "Zeke 2": el <title> era estático "Ryden" en TODA
-// ruta, así que cada entrada del history del browser se veía igual). Mapea la ruta client-side activa
-// a una clave i18n y setea `document.title = "<página> · Ryden"`. El idioma se respeta (depende de t).
 const ROUTE_TITLES: Array<{ test: RegExp; key: string }> = [
   { test: /^\/$/, key: 'title.home' },
-  { test: /^\/buscar/, key: 'title.search' },
-  { test: /^\/autos\//, key: 'title.carDetail' },
-  { test: /^\/ingresar/, key: 'title.login' },
-  { test: /^\/registrarse/, key: 'title.register' },
-  { test: /^\/verificar-email/, key: 'title.verifyEmail' },
-  { test: /^\/recuperar-clave/, key: 'title.forgot' },
-  { test: /^\/publicar/, key: 'title.publish' },
-  { test: /^\/mis-autos/, key: 'title.myCars' },
-  { test: /^\/reservar\//, key: 'title.newReservation' },
-  { test: /^\/mis-reservas/, key: 'title.myReservations' },
-  { test: /^\/reservas\//, key: 'title.reservationDetail' },
-  { test: /^\/perfil/, key: 'title.profile' },
-  { test: /^\/favoritos/, key: 'title.favorites' },
-  { test: /^\/usuarios\//, key: 'title.publicProfile' },
+  { test: /^\/search/, key: 'title.search' },
+  { test: /^\/cars\//, key: 'title.carDetail' },
+  { test: /^\/login/, key: 'title.login' },
+  { test: /^\/register/, key: 'title.register' },
+  { test: /^\/verify-email/, key: 'title.verifyEmail' },
+  { test: /^\/forgot-password/, key: 'title.forgot' },
+  { test: /^\/publish-car/, key: 'title.publish' },
+  { test: /^\/my-cars/, key: 'title.myCars' },
+  { test: /^\/cars\/[^/]+\/reservation\/new/, key: 'title.newReservation' },
+  { test: /^\/my-reservations/, key: 'title.myReservations' },
+  { test: /^\/profile/, key: 'title.profile' },
+  { test: /^\/my-favorites/, key: 'title.favorites' },
+  { test: /^\/users\//, key: 'title.publicProfile' },
   { test: /^\/admin/, key: 'title.admin' },
 ];
 
-/** Mantiene `document.title` sincronizado con la ruta y el idioma activos. */
 export function useDocumentTitle(): void {
   const { pathname } = useLocation();
   const { t, i18n } = useTranslation();

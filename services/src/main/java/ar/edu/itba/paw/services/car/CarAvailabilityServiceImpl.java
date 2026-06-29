@@ -360,6 +360,13 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
 
     @Override
     @Transactional(readOnly = true)
+    public Map<Long, Boolean> hasRiderBookableSegmentsByCarIds(
+            final Collection<Long> carIds, final Instant now) {
+        return carAvailabilityCalendarService.hasRiderBookableSegmentsByCarIds(carIds, now);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<BookableSegmentProjection> getBookableSegmentsForRiderDatePickerByCar(
             final long carId, final Instant now) {
         return carAvailabilityCalendarService.getBookableSegmentsForRiderDatePickerByCar(carId, now);

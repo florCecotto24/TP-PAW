@@ -54,7 +54,10 @@ public interface CarAvailabilityDao {
     /** All availability segments for the car (typically ordered by start date ascending). */
     List<CarAvailability> findByCarId(long carId);
 
-    /** Availability rows for the given car ids whose window reaches {@code minEndDate} or later. */
+    /**
+     * Availability rows for the given car ids whose window reaches {@code minEndDate} or later.
+     * When {@code minEndDate} is {@code null}, every row for those cars is returned.
+     */
     List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
     /**

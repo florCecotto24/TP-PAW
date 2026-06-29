@@ -87,6 +87,10 @@ public interface CarAvailabilityService {
     boolean existsAnyOfferedByCar(long carId);
 
     /** Batch load: rows for the given car ids whose {@code end_inclusive} is on or after {@code minEndDate}. */
+    /**
+     * Availability rows for the given car ids whose window reaches {@code minEndDate} or later.
+     * When {@code minEndDate} is {@code null}, every row for those cars is returned.
+     */
     List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
     /**
@@ -132,6 +136,12 @@ public interface CarAvailabilityService {
             long carId,
             LocalTime checkInTime,
             Instant now);
+
+    /**
+     * Batch variant of the rider date-picker check: {@code true} when
+     * {@link #getBookableSegmentsForRiderDatePickerByCar(long, Instant)} would return a non-empty list.
+     */
+    Map<Long, Boolean> hasRiderBookableSegmentsByCarIds(Collection<Long> carIds, Instant now);
 
     /**
      * Returns the rider-facing bookable wall-day segments for the car, each carrying the effective per-day

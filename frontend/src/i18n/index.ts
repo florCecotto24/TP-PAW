@@ -8,6 +8,7 @@ import { ownerI18n } from '../features/owner';
 import { reservationsI18n } from '../features/reservations';
 import { profileI18n } from '../features/profile';
 import { adminI18n } from '../features/admin';
+import { rydenI18n } from '../components/ryden/i18n';
 
 // i18n 100% client-side (LINEAMIENTOS §3 / §4). Default es, fallback en.
 // La preferencia del usuario logueado se persiste como atributo `latestLocale`
@@ -35,15 +36,28 @@ function unflatten(source: Record<string, unknown>): Tree {
     let node = out;
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
-      if (typeof node[part] !== 'object' || node[part] === null) {
+      const existing = node[part];
+      if (existing === undefined) {
+        node[part] = {};
+      } else if (typeof existing === 'string') {
+        node[part] = { label: existing };
+      } else if (existing === null || typeof existing !== 'object') {
         node[part] = {};
       }
       node = node[part] as Tree;
     }
     const leaf = parts[parts.length - 1];
     const existing = node[leaf];
-    if (typeof nestedValue === 'object' && typeof existing === 'object' && existing !== null) {
-      node[leaf] = deepMerge(existing, nestedValue);
+    if (typeof nestedValue === 'object') {
+      if (typeof existing === 'object' && existing !== null) {
+        node[leaf] = deepMerge(existing, nestedValue);
+      } else if (typeof existing === 'string') {
+        node[leaf] = deepMerge({ label: existing }, nestedValue);
+      } else {
+        node[leaf] = nestedValue;
+      }
+    } else if (typeof existing === 'object' && existing !== null) {
+      (existing as Tree).label = nestedValue;
     } else {
       node[leaf] = nestedValue;
     }
@@ -68,8 +82,26 @@ function bundle(...parts: Array<Record<string, unknown>>): Tree {
   return parts.map(unflatten).reduce(deepMerge, {} as Tree);
 }
 
-const esBundle = bundle(es, authI18n.es, browseI18n.es, ownerI18n.es, reservationsI18n.es, profileI18n.es, adminI18n.es);
-const enBundle = bundle(en, authI18n.en, browseI18n.en, ownerI18n.en, reservationsI18n.en, profileI18n.en, adminI18n.en);
+const esBundle = bundle(
+  es,
+  rydenI18n.es,
+  authI18n.es,
+  browseI18n.es,
+  ownerI18n.es,
+  reservationsI18n.es,
+  profileI18n.es,
+  adminI18n.es,
+);
+const enBundle = bundle(
+  en,
+  rydenI18n.en,
+  authI18n.en,
+  browseI18n.en,
+  ownerI18n.en,
+  reservationsI18n.en,
+  profileI18n.en,
+  adminI18n.en,
+);
 
 void i18n.use(initReactI18next).init({
   resources: {

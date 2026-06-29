@@ -504,9 +504,28 @@ body.modal-open {
     margin: 2.5px;
 }
 
+.carcard-info-text .carcard-model,
+.carcard-info-text .carcard-brand {
+    margin: 0;
+}
+
+.carcard-info-text .carcard-brand {
+    margin-top: 0.125rem;
+}
+
 .carcard-info-text p {
     font-size: 18px;
     font-weight: normal;
+}
+
+.carcard-model {
+    line-height: 1.25;
+    font-size: inherit;
+}
+
+.carcard-brand {
+    color: #808080FF;
+    font-size: inherit;
 }
 
 .carcard-brand,
@@ -522,14 +541,6 @@ body.modal-open {
             mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
     -webkit-mask-repeat: no-repeat;
             mask-repeat: no-repeat;
-}
-
-.carcard-brand {
-    color: #808080FF;
-}
-
-.carcard-model {
-    line-height: 1.25;
 }
 
 /* Fallback for browsers without mask-image support: keep the layout sane with a hard clip. */
@@ -1169,22 +1180,12 @@ select.form-select.ryden-car-spec-select option {
     max-width: 100%;
 }
 
+/* Hero photo: served like RYDEN-APP from WAR /public/assets/images/ (see HomePage.tsx). */
 .hero-section {
-    background-image: url('../assets/images/homepage-photo.jpg');
     background-size: cover;
+    background-repeat: no-repeat;
     background-position: center;
-    /*top: 0;*/
-    /*z-index: 1020;*/
     width: 100%;
-}
-
-.hero-overlay {
-    /* gradient and alignment owned by ryden-theme.css */
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 3rem 2rem;
 }
 
 .alert-project {

@@ -15,6 +15,7 @@ import { formatDateTime, formatPrice } from '../format';
 import { reservationActionError } from '../reservationError';
 import { useCurrentUser } from '../useCurrentUser';
 import { useSessionStore } from '../../../session/sessionStore';
+import { paths, carDetail, myReservationDetail } from '../../../routes/paths';
 
 function isoFromDateAndTime(date: string, time: string): string {
   if (!date || !time) return '';
@@ -64,9 +65,13 @@ export default function NewReservationPage() {
 
   const offered: AvailabilityView[] = availQuery.data ?? [];
   const initialAvailabilityId = searchParams.get('availabilityId') ?? '';
+  const fromDateTimeParam =
+    searchParams.get('fromDateTime') ?? searchParams.get('from') ?? '';
+  const untilDateTimeParam =
+    searchParams.get('untilDateTime') ?? searchParams.get('until') ?? '';
   const [availabilityUri, setAvailabilityUri] = useState('');
-  const [startDate, setStartDate] = useState(searchParams.get('from')?.slice(0, 10) ?? '');
-  const [endDate, setEndDate] = useState(searchParams.get('until')?.slice(0, 10) ?? '');
+  const [startDate, setStartDate] = useState(fromDateTimeParam.slice(0, 10));
+  const [endDate, setEndDate] = useState(untilDateTimeParam.slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [docBusy, setDocBusy] = useState<'license' | 'identity' | null>(null);
@@ -83,12 +88,16 @@ export default function NewReservationPage() {
 
   const effectiveAvailabilityUri = availabilityUri || selectedAvailability?.links.self || '';
 
-  const startIso = selectedAvailability
-    ? isoFromDateAndTime(startDate, selectedAvailability.checkInTime ?? '10:00')
-    : '';
-  const endIso = selectedAvailability
-    ? isoFromDateAndTime(endDate, selectedAvailability.checkOutTime ?? '18:00')
-    : '';
+  const startIso = fromDateTimeParam.includes('T')
+    ? fromDateTimeParam
+    : selectedAvailability
+      ? isoFromDateAndTime(startDate, selectedAvailability.checkInTime ?? '10:00')
+      : '';
+  const endIso = untilDateTimeParam.includes('T')
+    ? untilDateTimeParam
+    : selectedAvailability
+      ? isoFromDateAndTime(endDate, selectedAvailability.checkOutTime ?? '18:00')
+      : '';
 
   const estimatedTotal =
     selectedAvailability && startIso && endIso
@@ -96,8 +105,16 @@ export default function NewReservationPage() {
       : null;
 
   const docsOk =
-    userQuery.data?.licenseUploaded &&
-    userQuery.data?.identityUploaded;
+    userQuery.data?.licenseUploaded === true &&
+    userQuery.data?.identityUploaded === true;
+
+  const isOwnCar = Boolean(
+    carQuery.data?.links.owner
+    && myId
+    && idFromUri(carQuery.data.links.owner) === myId,
+  );
+
+  const ownCarMessage = t('error.byCode.reservation.rider.cannotReserveOwnListing');
 
   const onUploadDoc = async (type: 'license' | 'identity', file: File) => {
     if (!userUri) return;
@@ -113,6 +130,10 @@ export default function NewReservationPage() {
   };
 
   const onConfirm = async () => {
+    if (isOwnCar) {
+      setActionError(ownCarMessage);
+      return;
+    }
     if (!carUri || !effectiveAvailabilityUri || !startIso || !endIso) {
       setActionError(t('res.new.missingParams'));
       return;
@@ -128,9 +149,9 @@ export default function NewReservationPage() {
       });
       const reservationId = idFromUri(res.data?.links.self ?? res.location);
       if (reservationId) {
-        navigate(`/reservas/${reservationId}`);
+        navigate(myReservationDetail(reservationId));
       } else {
-        navigate('/mis-reservas');
+        navigate(paths.myReservations);
       }
     } catch (err) {
       setActionError(reservationActionError(t, err, 'new'));
@@ -143,7 +164,7 @@ export default function NewReservationPage() {
     return (
       <main className="container py-4">
         <div className="alert alert-warning">{t('res.list.needLogin')}</div>
-        <Link to="/ingresar" className="btn btn-primary">{t('res.list.login')}</Link>
+        <Link to={paths.login} className="btn btn-primary">{t('res.list.login')}</Link>
       </main>
     );
   }
@@ -152,7 +173,7 @@ export default function NewReservationPage() {
     return (
       <main className="container py-4">
         <div className="alert alert-warning">{t('res.new.missingParams')}</div>
-        <Link to="/buscar" className="btn btn-link">{t('res.new.backToSearch')}</Link>
+        <Link to={paths.search} className="btn btn-link">{t('res.new.backToSearch')}</Link>
       </main>
     );
   }
@@ -163,7 +184,7 @@ export default function NewReservationPage() {
   return (
     <main className="container py-4">
       <div className="mb-3">
-        <Link to={`/autos/${carId}`} className="btn btn-link ps-0">{t('res.new.back')}</Link>
+        <Link to={carDetail(carId)} className="btn btn-link ps-0">{t('res.new.back')}</Link>
       </div>
 
       <h1 className="h3 fw-semibold mb-4">{t('res.new.heading')}</h1>
@@ -234,25 +255,29 @@ export default function NewReservationPage() {
             <section className="bg-white rounded-4 shadow-sm p-4">
               <h2 className="h5 fw-semibold mb-3">{t('res.new.docs.title')}</h2>
               <p className="small text-secondary">{t('res.new.docs.intro')}</p>
-              {(['license', 'identity'] as const).map((type) => (
-                <div key={type} className="mb-3">
-                  <label className="form-label small" htmlFor={`doc-${type}`}>
-                    {t(`res.new.docs.${type}`)}
-                    {userQuery.data?.[`${type}Uploaded` as 'licenseUploaded'] ? ' ✓' : ''}
-                  </label>
-                  <input
-                    id={`doc-${type}`}
-                    type="file"
-                    className="form-control form-control-sm"
-                    accept="image/*,application/pdf"
-                    disabled={docBusy === type}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void onUploadDoc(type, f);
-                    }}
-                  />
-                </div>
-              ))}
+              {(['license', 'identity'] as const).map((type) => {
+                const uploaded = userQuery.data?.[`${type}Uploaded` as 'licenseUploaded'] === true;
+                return (
+                  <div key={type} className="mb-3">
+                    <p className="form-label small mb-1">{t(`res.new.docs.${type}`)}</p>
+                    {uploaded ? (
+                      <p className="small text-success mb-0">✓ {t('res.new.docs.uploaded')}</p>
+                    ) : (
+                      <input
+                        id={`doc-${type}`}
+                        type="file"
+                        className="form-control form-control-sm"
+                        accept="image/*,application/pdf"
+                        disabled={docBusy === type}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void onUploadDoc(type, f);
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </section>
           </div>
 
@@ -286,20 +311,26 @@ export default function NewReservationPage() {
                 </div>
               ) : null}
               <p className="small text-secondary">{t('res.new.paymentNotice')}</p>
-              {actionError ? <div className="alert alert-danger py-2">{actionError}</div> : null}
+              {isOwnCar || actionError ? (
+                <div className="alert alert-danger py-2">{isOwnCar ? ownCarMessage : actionError}</div>
+              ) : null}
               <button
                 type="button"
                 className="btn btn-primary w-100"
-                disabled={submitting || !docsOk || offered.length === 0 || !startDate || !endDate}
+                disabled={
+                  submitting
+                  || isOwnCar
+                  || !docsOk
+                  || offered.length === 0
+                  || !startDate
+                  || !endDate
+                }
                 onClick={() => void onConfirm()}
               >
                 {submitting ? t('res.new.submitting') : t('res.new.confirm')}
               </button>
               {!docsOk && userQuery.data ? (
                 <p className="small text-warning mt-2 mb-0">{t('res.new.docs.intro')}</p>
-              ) : null}
-              {car.links.owner && myId && idFromUri(car.links.owner) === myId ? (
-                <p className="small text-danger mt-2 mb-0">{t('res.new.ownCar')}</p>
               ) : null}
             </aside>
           </div>

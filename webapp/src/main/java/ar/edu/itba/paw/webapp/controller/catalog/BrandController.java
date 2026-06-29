@@ -108,7 +108,7 @@ public final class BrandController {
     public Response createBrand(@Valid final BrandCreateForm form) {
         currentUserResolver.requireUserId();
         final CarBrand brand = carBrandService.findOrCreateUnvalidated(form.getName())
-                .orElseThrow(() -> new javax.ws.rs.BadRequestException("Brand name must not be blank."));
+                .orElseThrow(IllegalStateException::new);
 
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("brands")
@@ -187,7 +187,7 @@ public final class BrandController {
 
         final Car.Type type = CarRestEnums.parseType(form.getType());
         final CarModel model = carModelService.findOrCreateUnvalidated(id, form.getName(), type)
-                .orElseThrow(() -> new javax.ws.rs.BadRequestException("Model name must not be blank."));
+                .orElseThrow(IllegalStateException::new);
 
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("models")

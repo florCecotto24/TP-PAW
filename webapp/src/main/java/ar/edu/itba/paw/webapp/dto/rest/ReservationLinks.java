@@ -31,9 +31,15 @@ public final class ReservationLinks {
 
     public static LinksDto forCard(final ReservationCard card, final UriInfo uriInfo) {
         final long reservationId = card.getReservationId();
-        return LinksDto.ofSelf(RestUriUtils.reservationUri(uriInfo, reservationId).toString())
+        LinksDto links = LinksDto.ofSelf(RestUriUtils.reservationUri(uriInfo, reservationId).toString())
                 .withRelated("car", RestUriUtils.carUri(uriInfo, card.getCarId()).toString())
                 .withRelated("messages", RestUriUtils.reservationMessagesUri(uriInfo, reservationId).toString())
                 .withRelated("reviews", RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString());
+        if (card.getImageId() > 0) {
+            links = links.withRelated(
+                    "cover",
+                    RestUriUtils.imageUri(uriInfo, card.getImageId()).toString());
+        }
+        return links;
     }
 }

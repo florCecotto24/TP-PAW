@@ -125,12 +125,17 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
         if (carIds == null || carIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return em.createQuery(
-                        "FROM CarAvailability la WHERE la.car.id IN :carIds AND la.endInclusive >= :minEndDate",
-                        CarAvailability.class)
-                .setParameter("carIds", carIds)
-                .setParameter("minEndDate", minEndDate)
-                .getResultList();
+        final StringBuilder jpql = new StringBuilder(
+                "FROM CarAvailability la WHERE la.car.id IN :carIds");
+        if (minEndDate != null) {
+            jpql.append(" AND la.endInclusive >= :minEndDate");
+        }
+        final var query = em.createQuery(jpql.toString(), CarAvailability.class)
+                .setParameter("carIds", carIds);
+        if (minEndDate != null) {
+            query.setParameter("minEndDate", minEndDate);
+        }
+        return query.getResultList();
     }
 
     @Override

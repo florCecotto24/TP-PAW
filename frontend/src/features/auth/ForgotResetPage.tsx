@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
+import { paths } from '../../routes/paths';
 import type { ForgotStep, PasswordResetCodeRequest, PasswordResetPatch } from './types';
 import { apiErrorMessage } from './errorMessage';
 
@@ -85,7 +86,7 @@ export default function ForgotResetPage() {
         anonymous: true,
         authorization: basicAuthHeader(email.trim(), resetCode.trim()),
       });
-      navigate('/ingresar');
+      navigate(paths.login);
     } catch (err) {
       setError(apiErrorMessage(t, err));
     } finally {
@@ -212,7 +213,7 @@ export default function ForgotResetPage() {
             )}
 
             <p className="text-center mt-3 small">
-              <Link to="/ingresar">{t('auth.forgot.back')}</Link>
+              <Link to={paths.login}>{t('auth.forgot.back')}</Link>
             </p>
           </div>
         </div>

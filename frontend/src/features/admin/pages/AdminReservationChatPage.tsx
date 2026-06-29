@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { fetchUserPublic, openAuthenticatedBinary } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
+import { paths } from '../../../routes/paths';
 import AdminPagination from '../components/AdminPagination';
 import type { MessageDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
@@ -78,7 +79,7 @@ export default function AdminReservationChatPage() {
       <AdminPageHeader
         title={t('admin.reservationChat.title')}
         actions={(
-          <Link to="/admin/reservas" className="btn btn-outline-secondary btn-sm">
+          <Link to={paths.admin.reservations} className="btn btn-outline-secondary btn-sm">
             ← {t('admin.nav.reservations')}
           </Link>
         )}

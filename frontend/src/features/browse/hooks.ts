@@ -17,8 +17,8 @@ import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
 import type { ApiResponse } from '../../api/client';
 import type { UserDto } from '../../api/types';
-import { lastPathSegment } from '../../api/uri';
-import { filtersToParams, type SearchFilters } from './searchFilters';
+import { lastPathSegment, idFromUri } from '../../api/uri';
+import { filtersToApiParams, type SearchFilters } from './searchFilters';
 import type {
   AvailabilityDto,
   CarDto,
@@ -29,34 +29,38 @@ import type {
 
 const CARS_PATH = '/cars';
 
-// --- Home: dos carruseles (8 autos c/u) --------------------------------------
-function useCarCarousel(sort: string) {
+export const HOME_CAROUSEL_PAGE_SIZE = 8;
+
+// --- Home: two carousels (8 cars each, 0-based page index in URL) ----------------
+function useCarCarousel(sort: string, pageIndex: number) {
   return useQuery({
-    queryKey: ['browse', 'cars', 'carousel', sort],
+    queryKey: ['browse', 'cars', 'carousel', sort, pageIndex],
     queryFn: async () => {
       const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
         accept: MediaTypes.car,
-        query: { sort, pageSize: 8 },
+        query: { sort, page: pageIndex + 1, pageSize: HOME_CAROUSEL_PAGE_SIZE },
       });
-      // 204 -> data undefined; normalizo a array vacío.
-      return res.data ?? [];
+      return {
+        items: res.data ?? [],
+        page: res.page,
+      };
     },
   });
 }
 
-export function useCheapestCars() {
-  return useCarCarousel('price_asc');
+export function useCheapestCars(pageIndex = 0) {
+  return useCarCarousel('price_asc', pageIndex);
 }
 
-export function useRecentCars() {
-  return useCarCarousel('recent');
+export function useRecentCars(pageIndex = 0) {
+  return useCarCarousel('recent', pageIndex);
 }
 
 // --- Búsqueda paginada (navega res.page.next/prev) ---------------------------
 // pageParam = URL absoluta de la página (null = primera, usa CARS_PATH+filtros).
 export function useSearchCars(filters: SearchFilters, pageSize = 12) {
   return useInfiniteQuery({
-    queryKey: ['browse', 'cars', 'search', filtersToParams(filters), pageSize],
+    queryKey: ['browse', 'cars', 'search', filtersToApiParams(filters), pageSize],
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
       if (pageParam) {
@@ -66,7 +70,7 @@ export function useSearchCars(filters: SearchFilters, pageSize = 12) {
       }
       const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
         accept: MediaTypes.car,
-        query: { ...filtersToParams(filters), pageSize },
+        query: { ...filtersToApiParams(filters), pageSize },
       });
       return { items: res.data ?? [], page: res.page };
     },
@@ -87,6 +91,27 @@ export function searchTotal(
   data: InfiniteData<{ page: { total?: number } }> | undefined,
 ): number | undefined {
   return data?.pages[0]?.page.total;
+}
+
+const SEARCH_PAGE_SIZE = 12;
+
+/** Búsqueda paginada (una página) — alineada con search.jsp + ryden:pagination. */
+export function useSearchCarsPage(filters: SearchFilters, page: number, pageSize = SEARCH_PAGE_SIZE) {
+  return useQuery({
+    queryKey: ['browse', 'cars', 'search-page', filtersToApiParams(filters), page, pageSize],
+    queryFn: async () => {
+      const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
+        accept: MediaTypes.car,
+        query: { ...filtersToApiParams(filters), page, pageSize },
+      });
+      return { items: res.data ?? [], page: res.page };
+    },
+  });
+}
+
+export function pageCount(total: number | undefined, pageSize: number): number {
+  if (total == null || total <= 0) return 0;
+  return Math.ceil(total / pageSize);
 }
 
 // --- Detalle de auto ---------------------------------------------------------
@@ -237,4 +262,73 @@ export function useToggleFavorite() {
 
 function stripTrailingSlash(s: string): string {
   return s.endsWith('/') ? s.slice(0, -1) : s;
+}
+
+/** Public reviews for car detail (one page, 1-based API page param). */
+export const CAR_REVIEWS_PAGE_SIZE = 6;
+
+export function useCarReviewsPage(carId: string | undefined, page: number, pageSize = CAR_REVIEWS_PAGE_SIZE) {
+  return useQuery({
+    queryKey: ['browse', 'reviews-page', carId, page, pageSize],
+    enabled: !!carId,
+    queryFn: async () => {
+      const res = await sessionClient.get<ReviewDto[]>(`/cars/${carId}/reviews`, {
+        accept: MediaTypes.review,
+        query: { page: page + 1, pageSize },
+      });
+      return { items: res.data ?? [], page: res.page };
+    },
+  });
+}
+
+/** Active cars of the same category, excluding the current listing. */
+export function useSimilarCars(car: CarDto | undefined, limit = 4) {
+  const carId = car ? idFromUri(car.links.self) : null;
+  return useQuery({
+    queryKey: ['browse', 'similar', carId, car?.type],
+    enabled: !!car && !!carId,
+    queryFn: async () => {
+      const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
+        accept: MediaTypes.car,
+        query: { category: car!.type, pageSize: limit + 1, sort: 'rating_desc' },
+      });
+      return (res.data ?? []).filter((c) => idFromUri(c.links.self) !== carId).slice(0, limit);
+    },
+  });
+}
+
+/** Minimal user fetch for review author names and owner avatar on car detail. */
+export function useUserBrief(userLink: string | undefined) {
+  return useQuery({
+    queryKey: ['browse', 'user-brief', userLink],
+    enabled: !!userLink,
+    queryFn: async () => {
+      const res = await sessionClient.follow<UserDto>(userLink!, { accept: MediaTypes.user });
+      return res.data;
+    },
+  });
+}
+
+export interface BookableSegmentDto {
+  from: string;
+  to: string;
+  dayPrice: number | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  location: string;
+  neighborhoodId: number | null;
+}
+
+/** Rider bookable wall-day segments for the car-detail reservation picker. */
+export function useCarBookableSegments(carId: string | undefined) {
+  return useQuery({
+    queryKey: ['browse', 'bookable-segments', carId],
+    enabled: !!carId,
+    queryFn: async () => {
+      const res = await sessionClient.get<BookableSegmentDto[]>(`/cars/${carId}/bookable-segments`, {
+        accept: 'application/json',
+      });
+      return res.data ?? [];
+    },
+  });
 }

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Alert, Button } from 'react-bootstrap';
 import { useSessionStore } from '../../session/sessionStore';
 import type { UserDto } from '../../api/types';
+import { paths, myCarDetail } from '../../routes/paths';
 import {
   createBrand,
   createModel,
@@ -256,7 +257,7 @@ function PublishPrerequisites({
               <p className="text-muted small mt-3 mb-3">{t('owner.prereq.footnote')}</p>
 
               <div className="d-flex flex-wrap gap-2">
-                <Link className="btn btn-outline-secondary" to="/mis-autos">{t('owner.myCars.title')}</Link>
+                <Link className="btn btn-outline-secondary" to={paths.myCars}>{t('owner.myCars.title')}</Link>
               </div>
             </div>
           </article>
@@ -309,7 +310,7 @@ function PublishResult({
 
                 <div className="d-grid gap-2 d-sm-flex justify-content-sm-center">
                   {carId && (
-                    <Link to={`/mis-autos/${carId}`} className="btn btn-primary">
+                    <Link to={myCarDetail(carId)} className="btn btn-primary">
                       <i className="bi bi-car-front me-1" aria-hidden="true" />
                       {t('owner.pending.viewInMyCars')}
                     </Link>
@@ -369,12 +370,12 @@ function PublishResult({
 
               <div className="d-grid gap-2 d-sm-flex justify-content-sm-center">
                 {carId && (
-                  <Link to={`/mis-autos/${carId}`} className="btn btn-primary">
+                  <Link to={myCarDetail(carId)} className="btn btn-primary">
                     <i className="bi bi-plus-lg me-1" aria-hidden="true" />
                     {t('owner.confirmation.addAvailabilityCta')}
                   </Link>
                 )}
-                <Link to="/mis-autos" className="btn btn-outline-primary">
+                <Link to={paths.myCars} className="btn btn-outline-primary">
                   <i className="bi bi-car-front me-1" aria-hidden="true" />
                   {t('owner.confirmation.myCarsCta')}
                 </Link>

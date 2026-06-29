@@ -12,6 +12,7 @@ import { useApiErrorMessage } from './hooks';
 import AvailabilityManager from './AvailabilityManager';
 import GalleryManager from './GalleryManager';
 import { STATUS_BADGE, type CarDto } from './types';
+import { paths, ownerReservationsCar } from '../../routes/paths';
 
 export default function OwnerCarDetailPage() {
   const { t } = useTranslation();
@@ -90,7 +91,7 @@ export default function OwnerCarDetailPage() {
     setError(null);
     try {
       await deactivateCar(id);
-      navigate('/mis-autos');
+      navigate(paths.myCars);
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.deactivateFailed'));
     } finally {
@@ -145,7 +146,7 @@ export default function OwnerCarDetailPage() {
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb mb-0">
           <li className="breadcrumb-item">
-            <Link to="/mis-autos">{t('owner.myCars.title')}</Link>
+            <Link to={paths.myCars}>{t('owner.myCars.title')}</Link>
           </li>
           <li className="breadcrumb-item active" aria-current="page">
             {car.brandName} {car.modelName}
@@ -269,6 +270,13 @@ export default function OwnerCarDetailPage() {
                   {isPaused ? t('owner.detail.unpause') : t('owner.detail.pause')}
                 </Button>
               )}
+
+              {id ? (
+                <Link to={ownerReservationsCar(id)} className="btn btn-outline-primary w-100">
+                  <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                  {t('owner.detail.viewReservations')}
+                </Link>
+              ) : null}
 
               {!isDeactivated && (
                 <Button

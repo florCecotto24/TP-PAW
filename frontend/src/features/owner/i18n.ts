@@ -122,6 +122,7 @@ export const ownerI18n = {
         confirmDeactivate: '¿Seguro que querés desactivar este auto? Es irreversible.',
         insuranceSection: 'Seguro',
         uploadInsurance: 'Subir / reemplazar seguro',
+        viewReservations: 'Ver reservas',
         errors: {
           loadFailed: 'No se pudo cargar el auto.',
           saveFailed: 'No se pudieron guardar los cambios.',
@@ -313,6 +314,7 @@ export const ownerI18n = {
         confirmDeactivate: 'Are you sure you want to deactivate this car? This is irreversible.',
         insuranceSection: 'Insurance',
         uploadInsurance: 'Upload / replace insurance',
+        viewReservations: 'View reservations',
         errors: {
           loadFailed: 'Could not load the car.',
           saveFailed: 'Could not save changes.',

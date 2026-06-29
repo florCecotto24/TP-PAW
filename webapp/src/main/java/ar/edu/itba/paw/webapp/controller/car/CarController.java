@@ -67,6 +67,11 @@ import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.RestCarSortMapper;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrain;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarStatus;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmission;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarType;
+import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
 
 /**
  * Cars resource ({@code /cars}, {@code /cars/{id}}).
@@ -123,16 +128,19 @@ public final class CarController {
             @QueryParam("pageSize") final Integer pageSizeParam,
             @QueryParam("q") final String query,
             @QueryParam("ownerId") final Long ownerId,
-            @QueryParam("category") final String category,
-            @QueryParam("transmission") final String transmission,
-            @QueryParam("powertrain") final String powertrain,
+            @QueryParam("category") @ValidCarType final String category,
+            @QueryParam("transmission") @ValidCarTransmission final String transmission,
+            @QueryParam("powertrain") @ValidCarPowertrain final String powertrain,
             @QueryParam("priceMin") final BigDecimal priceMin,
             @QueryParam("priceMax") final BigDecimal priceMax,
             @QueryParam("rating") final BigDecimal rating,
             @QueryParam("neighborhoodId") final Long neighborhoodId,
             @QueryParam("from") final String from,
             @QueryParam("until") final String until,
-            @QueryParam("status") final String status,
+            @QueryParam("flexible") @DefaultValue("false") final boolean flexible,
+            @QueryParam("flexMonth") @ValidYearMonth final String flexMonth,
+            @QueryParam("flexDays") final Integer flexDays,
+            @QueryParam("status") @ValidCarStatus final String status,
             @QueryParam("scope") final String scope,
             @QueryParam("sort") final String sort) {
         final int safePage = Math.max(1, page);
@@ -181,7 +189,7 @@ public final class CarController {
         }
 
         if (RestCarSortMapper.isBrowseShortcut(sort) && isPublicBrowseShortcut(query, category, transmission,
-                powertrain, priceMin, priceMax, rating, neighborhoodId, from, until, status)) {
+                powertrain, priceMin, priceMax, rating, neighborhoodId, from, until, status, flexible)) {
             final Page<CarCard> shortcutPage = "price_asc".equalsIgnoreCase(sort.trim())
                     ? carService.getCheapestCarCards(zeroBasedPage, pageSize)
                     : carService.getMostRecentCarCards(zeroBasedPage, pageSize);
@@ -202,7 +210,9 @@ public final class CarController {
                 .uiPageSize(pageSize)
                 .sort(RestCarSortMapper.toInternalSort(sort))
                 .neighborhoodIds(neighborhoodId == null ? Collections.emptyList() : List.of(neighborhoodId))
-                .flexible(false)
+                .flexible(flexible)
+                .flexMonth(flexMonth)
+                .flexDays(flexDays)
                 .build();
         final Page<CarCard> searchPage = carService.searchCarCards(carService.buildSearchCriteria(searchRequest));
         return pagedCarsFromCards(searchPage, safePage, pageSize);
@@ -224,7 +234,6 @@ public final class CarController {
 
         final CarCreateForm form = resolveCreateForm(jsonBody, carPart);
         formValidationSupport.validate(form, ValidationGroups.OnPublishCar.class);
-        carCreateRequestSupport.validateCatalogFields(form);
 
         final PublishCarRequest request = carCreateRequestSupport.toPublishRequest(form);
         final List<GalleryMediaUpload> galleryUploads = readGalleryUploads(pictureParts);
@@ -340,9 +349,6 @@ public final class CarController {
 
     private void applyStatusPatch(final Car car, final String rawStatus, final RydenUserDetails viewer) {
         final Car.Status target = CarRestEnums.parseStatus(rawStatus);
-        if (target == null) {
-            throw new javax.ws.rs.BadRequestException("Unknown status: " + rawStatus);
-        }
         switch (target) {
             case ACTIVE -> {
                 if (car.getStatus() == Car.Status.ADMIN_PAUSED) {
@@ -416,7 +422,8 @@ public final class CarController {
             final Long neighborhoodId,
             final String from,
             final String until,
-            final String status) {
+            final String status,
+            final boolean flexible) {
         return (query == null || query.isBlank())
                 && category == null
                 && transmission == null
@@ -427,7 +434,8 @@ public final class CarController {
                 && neighborhoodId == null
                 && (from == null || from.isBlank())
                 && (until == null || until.isBlank())
-                && (status == null || status.isBlank());
+                && (status == null || status.isBlank())
+                && !flexible;
     }
 
     private CarCreateForm resolveCreateForm(final CarCreateForm jsonBody, final InputStream carPart)

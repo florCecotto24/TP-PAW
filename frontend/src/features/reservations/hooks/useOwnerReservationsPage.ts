@@ -1,0 +1,57 @@
+import { useQuery } from '@tanstack/react-query';
+import { pageCount } from '../../browse/hooks';
+import { listReservations, type ReservationListQuery } from '../api';
+import { jspReservationSortToApi } from '../reservationListSort';
+import {
+  OWNER_RESERVATIONS_PAGE_SIZE,
+  type OwnerReservationFilters,
+} from '../ownerReservationFilters';
+import type { ReservationDto } from '../types';
+
+function filtersToApiQuery(
+  ownerId: string | number,
+  filters: OwnerReservationFilters,
+  pageIndex: number,
+  carId?: string | number,
+): ReservationListQuery {
+  return {
+    ownerId,
+    carId,
+    page: pageIndex + 1,
+    pageSize: OWNER_RESERVATIONS_PAGE_SIZE,
+    q: filters.ownerQ,
+    status: filters.ownerStatus,
+    category: filters.ownerCategory,
+    transmission: filters.ownerTransmission,
+    powertrain: filters.ownerPowertrain,
+    priceMin: filters.ownerPriceMin,
+    priceMax: filters.ownerPriceMax,
+    rating: filters.ownerRating,
+    sort: jspReservationSortToApi(filters.ownerSort),
+  };
+}
+
+export function useOwnerReservationsPage(
+  ownerId: string | number | null | undefined,
+  filters: OwnerReservationFilters,
+  pageIndex: number,
+  carId?: string | number,
+) {
+  return useQuery({
+    queryKey: ['reservations', 'owner-page', ownerId, carId, filters, pageIndex],
+    enabled: ownerId != null,
+    queryFn: async () => {
+      const res = await listReservations(
+        filtersToApiQuery(ownerId as string | number, filters, pageIndex, carId),
+      );
+      return {
+        items: (res.data ?? []) as ReservationDto[],
+        total: res.page.total,
+      };
+    },
+  });
+}
+
+export function ownerReservationsPageCount(total: number | undefined): number {
+  return pageCount(total, OWNER_RESERVATIONS_PAGE_SIZE);
+}

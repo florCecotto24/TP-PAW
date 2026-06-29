@@ -12,12 +12,14 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
+import ar.edu.itba.paw.webapp.validation.constraint.car.EndDateOnOrAfterStartDate;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ListingFormValidationSize;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ListingPricePerDay;
 import ar.edu.itba.paw.webapp.validation.constraint.reservation.CheckOutAfterCheckIn;
 
 /** REST body for availability create/edit ({@code AvailabilityCreateDto}). */
 @CheckOutAfterCheckIn(groups = ValidationGroups.OnCreateListing.class)
+@EndDateOnOrAfterStartDate(groups = ValidationGroups.OnCreateListing.class)
 public final class AvailabilityCreateForm implements CarAvailabilityTimeWindow {
 
     @NotNull(groups = ValidationGroups.OnCreateListing.class)
@@ -46,6 +48,7 @@ public final class AvailabilityCreateForm implements CarAvailabilityTimeWindow {
     @Pattern(regexp = "^[0-9]*$", message = "{validation.startPointNumber.digitsOnly}", groups = ValidationGroups.OnCreateListing.class)
     private String startPointNumber;
 
+    @NotNull(message = "{validation.neighborhood.notNull}", groups = ValidationGroups.OnCreateListing.class)
     private Long neighborhoodId;
 
     @NotNull(message = "{validation.checkInTime.notNull}", groups = ValidationGroups.OnCreateListing.class)

@@ -5,6 +5,9 @@ import javax.validation.constraints.Size;
 
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.car.CarValidationSize;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrain;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmission;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarType;
 import ar.edu.itba.paw.webapp.validation.constraint.user.NoPunctuation;
 
 /** REST body for {@code POST /cars} ({@code CarCreateDto}). */
@@ -21,9 +24,11 @@ public final class CarCreateForm {
     private Integer year;
 
     @NotBlank(message = "{validation.powertrain.notNull}", groups = ValidationGroups.OnPublishCar.class)
+    @ValidCarPowertrain(groups = ValidationGroups.OnPublishCar.class)
     private String powertrain;
 
     @NotBlank(message = "{validation.transmission.notNull}", groups = ValidationGroups.OnPublishCar.class)
+    @ValidCarTransmission(groups = ValidationGroups.OnPublishCar.class)
     private String transmission;
 
     @CarValidationSize(
@@ -38,6 +43,7 @@ public final class CarCreateForm {
 
     private String modelName;
 
+    @ValidCarType(groups = ValidationGroups.OnPublishCar.class)
     private String type;
 
     /** Alternative to brand/model when the catalog model already exists. */

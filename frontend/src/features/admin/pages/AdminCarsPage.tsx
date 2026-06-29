@@ -8,6 +8,7 @@ import AdminPagination from '../components/AdminPagination';
 import { idFromSelf, type CarDto, type CarStatus } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
+import { carDetail } from '../../../routes/paths';
 
 const STATUS_FILTERS: Array<CarStatus | ''> = [
   '', 'active', 'paused', 'admin_paused', 'lack_doc', 'unavailable', 'deactivated',
@@ -107,7 +108,7 @@ export default function AdminCarsPage() {
                       <td>{t(`admin.cars.statuses.${car.status}`)}</td>
                       <td className="text-end">
                         <div className="d-flex flex-wrap gap-1 justify-content-end">
-                          <Link to={`/autos/${carId}`} className="btn btn-outline-secondary btn-sm">
+                          <Link to={carDetail(carId)} className="btn btn-outline-secondary btn-sm">
                             {t('admin.cars.actions.view')}
                           </Link>
                           {canPause ? (

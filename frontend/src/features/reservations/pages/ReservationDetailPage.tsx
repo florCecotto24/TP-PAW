@@ -15,6 +15,7 @@ import {
 } from '../api';
 import ReservationChatPanel from '../components/ReservationChatPanel';
 import { formatDateTime, formatPrice, statusLabelKey } from '../format';
+import { paths, carDetail, publicProfile } from '../../../routes/paths';
 import { reservationActionError } from '../reservationError';
 import {
   availableActions,
@@ -197,7 +198,7 @@ export default function ReservationDetailPage() {
     return (
       <main className="container py-4">
         <div className="alert alert-warning">{t('res.list.needLogin')}</div>
-        <Link to="/ingresar" className="btn btn-primary">{t('res.list.login')}</Link>
+        <Link to={paths.login} className="btn btn-primary">{t('res.list.login')}</Link>
       </main>
     );
   }
@@ -222,7 +223,7 @@ export default function ReservationDetailPage() {
     return (
       <main className="container py-4">
         <div className="alert alert-danger">{t('res.detail.error')}</div>
-        <Link to="/mis-reservas" className="btn btn-link">{t('res.list.title')}</Link>
+        <Link to={paths.myReservations} className="btn btn-link">{t('res.list.title')}</Link>
       </main>
     );
   }
@@ -239,7 +240,7 @@ export default function ReservationDetailPage() {
     <main className="container py-4">
       <div className="mb-3">
         <Link
-          to={side === 'owner' ? '/mis-autos/reservas' : '/mis-reservas'}
+          to={side === 'owner' ? paths.ownerReservations : paths.myReservations}
           className="btn btn-link ps-0"
         >
           ← {side === 'owner' ? t('res.list.ownerTitle') : t('res.list.title')}
@@ -269,7 +270,7 @@ export default function ReservationDetailPage() {
                   </p>
                 ) : null}
                 {carId ? (
-                  <Link to={`/autos/${carId}`} className="btn btn-outline-primary btn-sm">
+                  <Link to={carDetail(carId)} className="btn btn-outline-primary btn-sm">
                     {t('res.detail.viewCar')}
                   </Link>
                 ) : null}
@@ -452,7 +453,7 @@ export default function ReservationDetailPage() {
                 </p>
               ) : null}
               {counterpartyId ? (
-                <Link to={`/usuarios/${counterpartyId}`} className="btn btn-outline-secondary btn-sm">
+                <Link to={publicProfile(counterpartyId)} className="btn btn-outline-secondary btn-sm">
                   {t('res.detail.counterparty.viewProfile')}
                 </Link>
               ) : null}

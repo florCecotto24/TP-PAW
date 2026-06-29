@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.car;
 
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -226,7 +227,11 @@ public final class CarServiceImpl implements CarService {
         if (limit <= 0) {
             return List.of();
         }
-        return carDao.findSimilarCarCards(carId, limit, carSearchService.publicBrowseMinBookableWallDate(), null);
+        final LocalDate minBookableWallDate = carSearchService.publicBrowseMinBookableWallDate();
+        return BookableBrowseSupport.retainBookableCards(
+                carDao.findSimilarCarCards(carId, limit, minBookableWallDate, null),
+                minBookableWallDate,
+                carAvailabilityService);
     }
 
     @Override
@@ -234,19 +239,64 @@ public final class CarServiceImpl implements CarService {
     public Page<CarCard> getCheapestCarCards(final int page, final int pageSize) {
         // Home browse intentionally does not exclude the viewer's own cars: owners want to see
         // how their own listings render alongside the rest of the catalog.
-        return carDao.getCheapestCarCards(page, pageSize, carSearchService.publicBrowseMinBookableWallDate(), null);
+        final LocalDate minBookableWallDate = carSearchService.publicBrowseMinBookableWallDate();
+        return BookableBrowseSupport.paginateBookableCards(
+                (p, ps) -> carDao.getCheapestCarCards(p, ps, minBookableWallDate, null),
+                page,
+                pageSize,
+                minBookableWallDate,
+                carAvailabilityService);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> getMostRecentCarCards(final int page, final int pageSize) {
-        return carDao.getMostRecentCarCards(page, pageSize, carSearchService.publicBrowseMinBookableWallDate(), null);
+        final LocalDate minBookableWallDate = carSearchService.publicBrowseMinBookableWallDate();
+        return BookableBrowseSupport.paginateBookableCards(
+                (p, ps) -> carDao.getMostRecentCarCards(p, ps, minBookableWallDate, null),
+                page,
+                pageSize,
+                minBookableWallDate,
+                carAvailabilityService);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<CarCard> searchCarCards(final CarSearchCriteria criteria) {
-        return carDao.searchCarCards(criteria);
+        if (!BookableBrowseSupport.needsBookableDayFilter(criteria)) {
+            return carDao.searchCarCards(criteria);
+        }
+        final LocalDate minBookableWallDate = criteria.getBrowseWallDate();
+        return BookableBrowseSupport.paginateBookableCards(
+                (p, ps) -> carDao.searchCarCards(withPage(criteria, p, ps)),
+                criteria.getPage(),
+                criteria.getUiPageSize(),
+                minBookableWallDate,
+                carAvailabilityService);
+    }
+
+    private static CarSearchCriteria withPage(final CarSearchCriteria criteria, final int page, final int pageSize) {
+        return CarSearchCriteria.builder()
+                .query(criteria.getQuery())
+                .transmissions(criteria.getTransmissions())
+                .powertrains(criteria.getPowertrains())
+                .carTypes(criteria.getCarTypes())
+                .minPrice(criteria.getMinPrice())
+                .maxPrice(criteria.getMaxPrice())
+                .ratingBands(criteria.getRatingBands())
+                .page(page)
+                .uiPageSize(pageSize)
+                .sortBy(criteria.getSortBy())
+                .sortDirection(criteria.getSortDirection())
+                .browseWallDate(criteria.getBrowseWallDate())
+                .excludeOwnerUserId(criteria.getExcludeOwnerUserId())
+                .neighborhoodIds(criteria.getNeighborhoodIds())
+                .availabilityRange(
+                        criteria.getAvailabilityRangeStart(),
+                        criteria.getAvailabilityRangeEndExclusive())
+                .flexibleMonth(criteria.getFlexibleMonth())
+                .flexibleDays(criteria.getFlexibleDays())
+                .build();
     }
 
     @Override
