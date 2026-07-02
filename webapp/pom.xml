@@ -14,10 +14,10 @@
 
   <dependencies>
     <dependency>
-      <groupId>${project.groupId}</groupId>
+      <groupId>ar.edu.itba.paw</groupId>
       <artifactId>frontend</artifactId>
-      <version>${project.version}</version>
       <type>pom</type>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
@@ -210,14 +210,12 @@
     <finalName>webapp</finalName>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
         <configuration>
           <packagingExcludes>deprecated/**</packagingExcludes>
           <webResources>
             <resource>
               <directory>../frontend/dist</directory>
-              <targetPath>/</targetPath>
             </resource>
           </webResources>
         </configuration>

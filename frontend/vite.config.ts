@@ -3,12 +3,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // Build de producción 100% estático (Pampero = Tomcat sin Node, sin SSR).
-// Tomcat local despliega el WAR como /webapp → `npm run build:tomcat` (--base=/webapp/).
-// Jetty dev (`mvn jetty:run`) sirve en / → `npm run build` con base '/'.
-// outDir:'dist' + war-plugin copia dist/ a la raíz del WAR (ver PROPUESTA §5).
+// El WAR se despliega como /webapp → base '/webapp/' (LINEAMIENTOS: configurar el bundler).
+// outDir:'dist' + war-plugin copia dist/ a la raíz del WAR.
 export default defineConfig({
   plugins: [react()],
-  base: process.env.VITE_BASE_PATH ?? '/',
+  base: '/webapp/',
   build: {
     outDir: 'dist',
     assetsDir: 'public',

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:tomcat": "tsc && vite build --base=/webapp/",
+    "build:root": "tsc && vite build --base=/",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"

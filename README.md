@@ -1,6 +1,6 @@
 # PAW — Ryden
 
-Plataforma de alquiler de autos. **Java 21**, backend **REST stateless** (Jersey + Spring) y frontend **SPA** (React + Vite + TypeScript) empaquetados en un WAR multi-módulo Maven.
+Car rental platform. **Java 21**, **stateless REST** backend (Jersey + Spring) and **SPA** frontend (React + Vite + TypeScript) packaged in a multi-module Maven WAR.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Plataforma de alquiler de autos. **Java 21**, backend **REST stateless** (Jersey
 
 - Adjust host, user, and database to match `application-local.properties` in `webapp/src/main/resources/` (or your own overrides).
 
-Node.js **no es obligatorio** en la máquina de build: el módulo `frontend` descarga Node v20 vía `frontend-maven-plugin`. Para desarrollo SPA aislado (`npm run dev`) sí conviene tener Node 20+ local.
+Node.js is **not required** on the build machine: the `frontend` module downloads Node v20 via `frontend-maven-plugin`. For isolated SPA development (`npm run dev`), having Node 20+ locally is recommended.
 
 ### Environment properties (required)
 
@@ -34,7 +34,7 @@ mvn clean install
 mvn jetty:run -pl webapp
 ```
 
-`mvn compile` / `mvn package` compilan también el frontend (`npm install` + `npm run build` en el módulo `frontend`) y empaquetan `frontend/dist/` en el WAR.
+`mvn compile` / `mvn package` also build the frontend (`npm install` + `npm run build` in the `frontend` module) and package `frontend/dist/` into the WAR.
 
 **JVM options** (Spring profile + test Logback), same as configuring **VM options** in your IDE when you run Jetty/Tomcat:
 
@@ -51,19 +51,19 @@ export MAVEN_OPTS="-Dspring.profiles.active=local -Dlogback.configurationFile=cl
 mvn jetty:run -pl webapp
 ```
 
-Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. Para Tomcat el build del frontend usa context path `/webapp/` (`npm run build:tomcat` vía Maven).
+Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. The Vite `base` is set in `frontend/vite.config.ts` (`/webapp/`, matching the WAR name).
 
-Jetty local usa puerto **8080** y context path **`/`** (`server.servlet.context-path` en `application.properties`). La SPA y la API comparten el mismo origen; rutas de la API son sustantivos REST (`/users`, `/cars`, …) sin prefijo `/api`.
+Local Jetty uses port **8080** and context path **`/`** (`server.servlet.context-path` in `application.properties`). If you test the WAR embedded in Jetty with that context path, build the frontend with `npm run build:root` in `frontend/` (base `/`). The SPA and API share the same origin; API routes are REST nouns (`/users`, `/cars`, …) with no `/api` prefix.
 
-### SPA dev server (opcional)
+### SPA dev server (optional)
 
-Con el backend en `:8080`:
+With the backend on `:8080`:
 
 ```bash
 cd frontend && npm install && npm run dev
 ```
 
-Vite proxea los recursos REST al backend (ver `frontend/vite.config.ts`).
+Vite proxies REST resources to the backend (see `frontend/vite.config.ts`).
 
 ## Demo account
 
@@ -81,7 +81,7 @@ mvn test
 (`mvn clean install` already runs tests unless skipped.)
 
 - Backend: JUnit 5 + Mockito (`services`), HSQLDB (`persistence`)
-- Frontend: `mvn test -pl frontend` o `cd frontend && npm test` (Vitest)
+- Frontend: `mvn test -pl frontend` or `cd frontend && npm test` (Vitest)
 
 ## Deployed log files (HTTP)
 
