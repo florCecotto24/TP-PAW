@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Ryden SPA (React + Vite + TypeScript) — consume la REST API hypermedia de Ryden.",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --base=/",
+    "dev:war": "vite",
     "build": "tsc && vite build",
     "build:root": "tsc && vite build --base=/",
     "preview": "vite preview",

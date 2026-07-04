@@ -228,13 +228,17 @@
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-maven-plugin</artifactId>
         <configuration>
-          <scanIntervalSeconds>10</scanIntervalSeconds>
           <useTestScope>true</useTestScope>
           <httpConnector>
             <port>8080</port>
           </httpConnector>
-          <!-- dev: PAW log files + Logback console -->
-          <jvmArgs>-Dspring.profiles.active=local -Dlogback.configurationFile=classpath:logback/logback-local.xml -Dfile.encoding=UTF-8 --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED</jvmArgs>
+          <!-- EMBED mode: systemProperties reach Spring; jvmArgs alone does not set spring.profiles.active. -->
+          <systemProperties>
+            <spring.profiles.active>local</spring.profiles.active>
+            <logback.configurationFile>classpath:logback/logback-local.xml</logback.configurationFile>
+            <file.encoding>UTF-8</file.encoding>
+          </systemProperties>
+          <jvmArgs>--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED</jvmArgs>
         </configuration>
       </plugin>
       <plugin>

@@ -1,6 +1,29 @@
 /// <reference types="vitest" />
+import type { IncomingMessage } from 'node:http';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+
+/** Vite dev + base `/webapp/`: do not proxy the SPA shell or HMR to the API backend. */
+function bypassWebappDevProxy(req: IncomingMessage): string | undefined {
+  const url = req.url ?? '';
+  const accept = req.headers.accept ?? '';
+  if (accept.includes('text/html')) {
+    return url;
+  }
+  if (
+    url.includes('/@vite/') ||
+    url.includes('/@react-refresh') ||
+    url.includes('/@id/') ||
+    url.includes('/src/') ||
+    url.includes('/node_modules/')
+  ) {
+    return url;
+  }
+  if (/\.(tsx?|jsx?|css|map|svg|png|jpe?g|gif|webp|ico|woff2?)(\?|$)/i.test(url)) {
+    return url;
+  }
+  return undefined;
+}
 
 // Build de producción 100% estático (Pampero = Tomcat sin Node, sin SSR).
 // El WAR se despliega como /webapp → base '/webapp/' (LINEAMIENTOS: configurar el bundler).
@@ -24,10 +47,25 @@ export default defineConfig({
     // Dev server: proxy de los recursos de la API al backend (mismo origen en prod).
     // Se listan los prefijos de recursos REST (la API NO tiene prefijo /api).
     proxy: {
-      // Tomcat WAR at /webapp (npm run build:tomcat) — dev server at :5173 needs CORS + proxy.
+      // Auth probe (Basic → JWT): GET / with Accept application/vnd.paw.* (npm run dev, base /).
+      '/': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        bypass(req) {
+          const accept = req.headers.accept ?? '';
+          if (accept.includes('application/vnd.paw')) {
+            return undefined;
+          }
+          return req.url;
+        },
+      },
+      // Local Jetty (context /): API lives at /cars, not /webapp/cars — strip prefix on proxy.
+      // Use `npm run dev` (--base=/). For Tomcat at /webapp use `npm run dev:war` without rewrite.
       '/webapp': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/webapp(?=\/|$)/, '') || '/',
+        bypass: bypassWebappDevProxy,
       },
       '/users': 'http://localhost:8080',
       '/cars': 'http://localhost:8080',
