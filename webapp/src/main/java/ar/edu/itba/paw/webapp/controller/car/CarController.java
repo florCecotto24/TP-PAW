@@ -219,24 +219,19 @@ public final class CarController {
     }
 
     @POST
-    @Consumes({VndMediaType.CAR_V1_JSON, MediaType.MULTIPART_FORM_DATA})
+    @Consumes(VndMediaType.CAR_V1_JSON)
     @Produces(VndMediaType.CAR_V1_JSON)
-    public Response publishCar(
-            final CarCreateForm jsonBody,
+    public Response publishCarJson(final CarCreateForm form) throws IOException {
+        return publishCar(form, List.of(), null, null, null);
+    }
+
+    @POST
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces(VndMediaType.CAR_V1_JSON)
+    public Response publishCarMultipart(
             @FormDataParam("car") final InputStream carPart,
             @FormDataParam("pictures") final List<FormDataBodyPart> pictureParts,
             @FormDataParam("insurance") final FormDataBodyPart insurancePart) throws IOException {
-        final long ownerId = currentUserResolver.requireUserId();
-        final User owner = userService.getUserById(ownerId).orElseThrow();
-        if (!userService.meetsPublishingPrerequisites(owner)) {
-            throw new javax.ws.rs.ForbiddenException(MessageKeys.PUBLISH_PREREQUISITES_MISSING);
-        }
-
-        final CarCreateForm form = resolveCreateForm(jsonBody, carPart);
-        formValidationSupport.validate(form, ValidationGroups.OnPublishCar.class);
-
-        final PublishCarRequest request = carCreateRequestSupport.toPublishRequest(form);
-        final List<GalleryMediaUpload> galleryUploads = readGalleryUploads(pictureParts);
         final byte[] insuranceBytes;
         final String insuranceName;
         final String insuranceType;
@@ -253,6 +248,29 @@ public final class CarController {
             insuranceName = null;
             insuranceType = null;
         }
+        return publishCar(
+                readCarCreateForm(carPart),
+                readGalleryUploads(pictureParts),
+                insuranceName,
+                insuranceType,
+                insuranceBytes);
+    }
+
+    private Response publishCar(
+            final CarCreateForm form,
+            final List<GalleryMediaUpload> galleryUploads,
+            final String insuranceName,
+            final String insuranceType,
+            final byte[] insuranceBytes) throws IOException {
+        final long ownerId = currentUserResolver.requireUserId();
+        final User owner = userService.getUserById(ownerId).orElseThrow();
+        if (!userService.meetsPublishingPrerequisites(owner)) {
+            throw new javax.ws.rs.ForbiddenException(MessageKeys.PUBLISH_PREREQUISITES_MISSING);
+        }
+
+        formValidationSupport.validate(form, ValidationGroups.OnPublishCar.class);
+
+        final PublishCarRequest request = carCreateRequestSupport.toPublishRequest(form);
 
         final PublishCarRequest fullRequest = PublishCarRequest.builder()
                 .brand(request.getBrand())
@@ -438,11 +456,7 @@ public final class CarController {
                 && !flexible;
     }
 
-    private CarCreateForm resolveCreateForm(final CarCreateForm jsonBody, final InputStream carPart)
-            throws IOException {
-        if (jsonBody != null) {
-            return jsonBody;
-        }
+    private CarCreateForm readCarCreateForm(final InputStream carPart) throws IOException {
         final byte[] carJson = binaryPayloadSupport.readValidatedBody(carPart);
         return objectMapper.readValue(carJson, CarCreateForm.class);
     }
