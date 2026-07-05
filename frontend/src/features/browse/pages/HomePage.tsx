@@ -49,8 +49,8 @@ export default function BrowseHomePage() {
         formId="homeSearchForm"
         formClass="search-menu sticky-top w-100"
         actionPath={paths.search}
+        clearFiltersHref={paths.home}
         allowFlexibleSearch
-        clearFiltersHref="/"
       />
 
       <div className="container mt-5">

@@ -3,13 +3,15 @@ package ar.edu.itba.paw.webapp.controller.car;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.file.ImageService;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 
 /**
  * Serves public image bytes at {@code GET /image/{id}} (profile pictures, review photos, etc.).
@@ -23,6 +25,9 @@ public final class ImageController {
 
     private final ImageService imageService;
 
+    @Context
+    private Request request;
+
     @Autowired
     public ImageController(final ImageService imageService) {
         this.imageService = imageService;
@@ -32,13 +37,7 @@ public final class ImageController {
     @Path("/{id}")
     public Response getImage(@PathParam("id") final long id) {
         return imageService.getImageContent(id)
-                .map(this::binaryResponse)
+                .map(content -> CacheableBinaryResponses.of(request, content))
                 .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
-    }
-
-    private Response binaryResponse(final BinaryContent content) {
-        return Response.ok(content.getBytes())
-                .type(content.getContentType())
-                .build();
     }
 }

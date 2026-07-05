@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
@@ -183,6 +184,70 @@ class CarJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getMaxPrice()));
         Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(excluded.getAveragePrice()));
         Assertions.assertEquals(1L, excluded.getSampleCount());
+    }
+
+    @Test
+    void testFindActiveDayPricesForBrandModelPairsReturnsOneRowPerEligibleCarAcrossPairs() {
+        // 1. Arrange — same fixture shape as the single-pair insight test, but requesting both
+        // brand/model pairs in one batched call.
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Toyota", true);
+        final long toyotaBrandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Toyota");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                toyotaBrandId, "Corolla", true, "SEDAN");
+        final long corollaModelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Corolla");
+
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Ford", true);
+        final long fordBrandId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_brands WHERE name = ?", Long.class, "Ford");
+        jdbcTemplate.update(
+                "INSERT INTO car_models (brand_id, name, validated, type) VALUES (?, ?, ?, ?)",
+                fordBrandId, "Ka", true, "HATCHBACK");
+        final long kaModelId = jdbcTemplate.queryForObject(
+                "SELECT id FROM car_models WHERE name = ?", Long.class, "Ka");
+
+        final long corollaAId = insertCar(
+                ownerId, "COR001", corollaModelId,
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+        final long corollaBId = insertCar(
+                ownerId, "COR002", corollaModelId,
+                2020, Car.Powertrain.GASOLINE, Car.Transmission.AUTOMATIC);
+        final long kaId = insertCar(
+                ownerId, "KA0001", kaModelId,
+                2018, Car.Powertrain.GASOLINE, Car.Transmission.MANUAL);
+
+        final OffsetDateTime t = OffsetDateTime.parse("2026-07-01T10:00:00Z");
+        insertOfferedAvailability(corollaAId, new BigDecimal("80.00"), t);
+        insertOfferedAvailability(corollaAId, new BigDecimal("50.00"), t.plusDays(1));
+        insertOfferedAvailability(corollaBId, new BigDecimal("120.00"), t);
+        insertOfferedAvailability(kaId, new BigDecimal("200.00"), t);
+
+        // 2. Act — one call for both pairs at once (this is what replaced the former per-card N+1 loop).
+        final List<CarModelPriceSample> samples =
+                dao.findActiveDayPricesForBrandModelPairs(List.of("Toyota", "Ford"), List.of("Corolla", "Ka"));
+
+        // 3. Assert — one row per eligible car (its per-car MIN(day_price)), across both pairs.
+        Assertions.assertEquals(3, samples.size());
+        final var byCarId = samples.stream()
+                .collect(Collectors.toMap(CarModelPriceSample::getCarId, s -> s));
+        Assertions.assertEquals(0, new BigDecimal("50.00").compareTo(byCarId.get(corollaAId).getMinPrice()));
+        Assertions.assertEquals(0, new BigDecimal("120.00").compareTo(byCarId.get(corollaBId).getMinPrice()));
+        Assertions.assertEquals(0, new BigDecimal("200.00").compareTo(byCarId.get(kaId).getMinPrice()));
+        Assertions.assertEquals("Ka", byCarId.get(kaId).getModel());
+    }
+
+    @Test
+    void testFindActiveDayPricesForBrandModelPairsReturnsEmptyForEmptyInput() {
+        // 1. Arrange — no fixtures needed.
+
+        // 2. Act
+        final List<CarModelPriceSample> samples =
+                dao.findActiveDayPricesForBrandModelPairs(List.of(), List.of());
+
+        // 3. Assert
+        Assertions.assertTrue(samples.isEmpty());
     }
 
     @Test

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { latestMessageId, mergeMessages, messageId } from './chatLog';
+import { dayKey, formatDayLabel, groupMessagesByDay, latestMessageId, mergeMessages, messageId } from './chatLog';
 import type { MessageDto } from './types';
 
 function msg(id: number, body = `m${id}`, extra: Partial<MessageDto> = {}): MessageDto {
@@ -127,5 +127,74 @@ describe('chatLog.mergeMessages', () => {
 
     // 3.Assert
     expect(cursor).toBe(3);
+  });
+});
+
+describe('chatLog.dayKey', () => {
+  it('extracts the local calendar day from an ISO timestamp', () => {
+    // 1.Arrange
+    const iso = new Date(2026, 5, 15, 23, 30).toISOString();
+
+    // 2.Act / 3.Assert
+    expect(dayKey(iso)).toBe('2026-06-15');
+  });
+
+  it('returns an empty string for an invalid timestamp', () => {
+    expect(dayKey('not-a-date')).toBe('');
+  });
+});
+
+describe('chatLog.formatDayLabel', () => {
+  const t = (key: string) => (key === 'res.chat.today' ? 'Hoy' : 'Ayer');
+
+  it('labels today as "Hoy"', () => {
+    // 1.Arrange
+    const today = dayKey(new Date().toISOString());
+
+    // 2.Act / 3.Assert
+    expect(formatDayLabel(today, t)).toBe('Hoy');
+  });
+
+  it('labels yesterday as "Ayer"', () => {
+    // 1.Arrange
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // 2.Act / 3.Assert
+    expect(formatDayLabel(dayKey(yesterday.toISOString()), t)).toBe('Ayer');
+  });
+
+  it('formats older days as a localized long date', () => {
+    // 1.Arrange / 2.Act
+    const label = formatDayLabel('2026-01-05', t, 'es-AR');
+
+    // 3.Assert
+    expect(label).toContain('2026');
+    expect(label).toContain('ene');
+  });
+});
+
+describe('chatLog.groupMessagesByDay', () => {
+  it('groups consecutive same-day messages into a single block', () => {
+    // 1.Arrange
+    const messages = [
+      msg(1, 'a', { createdAt: new Date(2026, 0, 1, 10).toISOString() }),
+      msg(2, 'b', { createdAt: new Date(2026, 0, 1, 11).toISOString() }),
+      msg(3, 'c', { createdAt: new Date(2026, 0, 2, 9).toISOString() }),
+    ];
+
+    // 2.Act
+    const groups = groupMessagesByDay(messages);
+
+    // 3.Assert
+    expect(groups).toHaveLength(2);
+    expect(groups[0].dayKey).toBe('2026-01-01');
+    expect(groups[0].messages).toHaveLength(2);
+    expect(groups[1].dayKey).toBe('2026-01-02');
+    expect(groups[1].messages).toHaveLength(1);
+  });
+
+  it('returns an empty array for an empty message list', () => {
+    expect(groupMessagesByDay([])).toEqual([]);
   });
 });

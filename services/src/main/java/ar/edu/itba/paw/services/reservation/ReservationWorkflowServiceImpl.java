@@ -29,6 +29,7 @@ import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.services.reservation.ReservationPricingService.ReservationPlan;
@@ -48,7 +49,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * and mutations are funneled through {@link ReservationService} (the sole DAO owner).</p>
  */
 @Service
-public final class ReservationWorkflowServiceImpl implements ReservationWorkflowService {
+public class ReservationWorkflowServiceImpl implements ReservationWorkflowService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationWorkflowServiceImpl.class);
 
@@ -306,13 +307,13 @@ public final class ReservationWorkflowServiceImpl implements ReservationWorkflow
     @Override
     @Transactional
     public Reservation cancelReservationAsParticipantScoped(
-            final long viewerUserId, final long reservationId, final String viewerRole) {
-        final String normalizedRole = viewerRole == null ? "" : viewerRole.trim().toLowerCase(Locale.ROOT);
-        final Optional<Reservation> reservationOpt = switch (normalizedRole) {
-            case "rider" -> queryService.getRiderReservationById(viewerUserId, reservationId);
-            case "owner" -> queryService.getOwnerReservationById(viewerUserId, reservationId);
-            default -> Optional.<Reservation>empty();
-        };
+            final long viewerUserId, final long reservationId, final ReservationParticipantRole viewerRole) {
+        final Optional<Reservation> reservationOpt = viewerRole == null
+                ? Optional.empty()
+                : switch (viewerRole) {
+                    case RIDER -> queryService.getRiderReservationById(viewerUserId, reservationId);
+                    case OWNER -> queryService.getOwnerReservationById(viewerUserId, reservationId);
+                };
         if (reservationOpt.isEmpty()) {
             throw new ReservationAccessDeniedException();
         }

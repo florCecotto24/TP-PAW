@@ -40,7 +40,7 @@ import ar.edu.itba.paw.services.location.LocationService;
  * builder methods. The persistence layer reads its own DB fetch window.</p>
  */
 @Service
-public final class CarSearchServiceImpl implements CarSearchService {
+public class CarSearchServiceImpl implements CarSearchService {
 
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 

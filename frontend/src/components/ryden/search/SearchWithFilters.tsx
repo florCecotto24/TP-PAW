@@ -27,6 +27,7 @@ export interface SearchWithFiltersProps {
   allowFlexibleSearch?: boolean;
   showClearFilters?: boolean;
   clearFiltersHref?: string;
+  onClearFilters?: () => void;
   datePickerSlot?: ReactNode;
   flexControlsSlot?: ReactNode;
   onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
@@ -63,6 +64,7 @@ export default function SearchWithFilters({
   allowFlexibleSearch = false,
   showClearFilters = false,
   clearFiltersHref,
+  onClearFilters,
   datePickerSlot,
   flexControlsSlot,
   onSubmit,
@@ -155,22 +157,34 @@ export default function SearchWithFilters({
 
             <div className="vr flex-shrink-0 d-none d-md-block" />
 
-            {showClearFilters && clearFiltersHref ? (
-              <a
-                href={clearFiltersHref}
-                className="btn btn-outline-primary btn-action btn-action-md flex-shrink-0 align-self-center"
+            <div className="d-flex gap-2 flex-shrink-0 align-self-center">
+              <button
+                type="submit"
+                className="btn btn-primary rounded-3 ms-md-3 p-2 flex-shrink-0"
+                aria-label={t('searchBar.submit.ariaLabel')}
               >
-                {t('search.empty.reset')}
-              </a>
-            ) : null}
+                <i className="bi bi-search fs-5 search-btn" aria-hidden="true"></i>
+              </button>
 
-            <button
-              type="submit"
-              className="btn btn-primary rounded-3 ms-md-3 p-2 flex-shrink-0 align-self-center"
-              aria-label={t('searchBar.submit.ariaLabel')}
-            >
-              <i className="bi bi-search fs-5 search-btn" aria-hidden="true"></i>
-            </button>
+              {showClearFilters && (onClearFilters || clearFiltersHref) ? (
+                onClearFilters ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary btn-action btn-action-md flex-shrink-0"
+                    onClick={onClearFilters}
+                  >
+                    {t('search.empty.reset')}
+                  </button>
+                ) : (
+                  <a
+                    href={clearFiltersHref}
+                    className="btn btn-outline-primary btn-action btn-action-md flex-shrink-0"
+                  >
+                    {t('search.empty.reset')}
+                  </a>
+                )
+              ) : null}
+            </div>
           </div>
 
           {showFilters ? (

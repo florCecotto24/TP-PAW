@@ -26,6 +26,9 @@ import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -42,13 +45,13 @@ import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.rest.UserPrivateDto;
+import ar.edu.itba.paw.webapp.form.admin.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.form.user.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.user.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.form.user.UserPatchForm;
 import ar.edu.itba.paw.webapp.form.user.UserReplaceForm;
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
-import ar.edu.itba.paw.webapp.security.jwt.TokenService;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.UserRepresentationSupport;
@@ -65,14 +68,13 @@ import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
  */
 @Path("/users")
 @Component
-public final class UserController {
+public class UserController {
 
     private final UserService userService;
     private final AdminService adminService;
     private final PasswordResetService passwordResetService;
     private final FormValidationSupport formValidationSupport;
     private final CurrentUserResolver currentUserResolver;
-    private final TokenService tokenService;
     private final UserRepresentationSupport userRepresentationSupport;
     private final UserResourceAccess userResourceAccess;
     private final UserSessionService userSessionService;
@@ -84,12 +86,6 @@ public final class UserController {
     @Context
     private HttpHeaders httpHeaders;
 
-    @Context
-    private javax.servlet.http.HttpServletRequest httpRequest;
-
-    @Context
-    private javax.servlet.http.HttpServletResponse httpResponse;
-
     @Autowired
     public UserController(
             final UserService userService,
@@ -97,7 +93,6 @@ public final class UserController {
             final PasswordResetService passwordResetService,
             final FormValidationSupport formValidationSupport,
             final CurrentUserResolver currentUserResolver,
-            final TokenService tokenService,
             final UserRepresentationSupport userRepresentationSupport,
             final UserResourceAccess userResourceAccess,
             final UserSessionService userSessionService,
@@ -107,7 +102,6 @@ public final class UserController {
         this.passwordResetService = passwordResetService;
         this.formValidationSupport = formValidationSupport;
         this.currentUserResolver = currentUserResolver;
-        this.tokenService = tokenService;
         this.userRepresentationSupport = userRepresentationSupport;
         this.userResourceAccess = userResourceAccess;
         this.userSessionService = userSessionService;
@@ -116,13 +110,13 @@ public final class UserController {
 
     @GET
     @Produces(VndMediaType.USER_PRIVATE_V1_JSON)
+    @PreAuthorize("@userResourceAccess.isAdmin()")
     public Response listUsers(
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam,
             @QueryParam("blocked") final Boolean blocked,
             @QueryParam("role") @ValidUserRole final String role,
             @QueryParam("q") final String query) {
-        userResourceAccess.requireAdmin();
         final int safePage = Math.max(1, page);
         final int pageSize = pageSizeParam != null && pageSizeParam > 0
                 ? pageSizeParam
@@ -166,6 +160,37 @@ public final class UserController {
                 .build();
     }
 
+    /**
+     * Admin-only variant of user creation, discriminated from {@link #register} by
+     * {@code Content-Type}: provisions a pre-verified admin account with a temporary
+     * password and emails an invitation (replaces the MVC {@code /admin/users/create}).
+     */
+    @POST
+    @Consumes(VndMediaType.ADMIN_CREATE_USER_V1_JSON)
+    @Produces(VndMediaType.USER_PRIVATE_V1_JSON)
+    @PreAuthorize("@userResourceAccess.isAdmin()")
+    public Response createAdminUser(final CreateAdminUserForm form) {
+        formValidationSupport.validate(form, ValidationGroups.OnCreateAdminUser.class);
+        final long actingAdminId = currentUserResolver.requireUserId();
+        final User created = adminService.createAdminUser(
+                form.getEmail(),
+                form.getForename(),
+                form.getSurname(),
+                form.getPassword(),
+                actingAdminId,
+                LocaleContextHolder.getLocale());
+
+        final URI location = uriInfo.getBaseUriBuilder()
+                .path("users")
+                .path(String.valueOf(created.getId()))
+                .build();
+        return Response.status(Response.Status.CREATED)
+                .location(location)
+                .type(VndMediaType.USER_PRIVATE_V1_JSON)
+                .entity(userRepresentationSupport.toPrivateDto(created, uriInfo))
+                .build();
+    }
+
     @GET
     @Path("/{id}")
     @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON, VndMediaType.USER_V1_XML})
@@ -180,11 +205,11 @@ public final class UserController {
     @Path("/{id}")
     @Consumes(VndMediaType.USER_V1_JSON)
     @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON})
-    public Response replaceUser(@PathParam("id") final long id, @Valid final UserReplaceForm form) {
+    @PreAuthorize("@userResourceAccess.isSelfOrAdmin(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response replaceUser(@P("id") @PathParam("id") final long id, @Valid final UserReplaceForm form) {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        userResourceAccess.requireSelfOrAdmin(id, viewer);
 
         final LocalDate birthDate = toBirthDate(form.getBirthDate());
         userService.updateProfile(id, ProfileUpdateRequest.builder()
@@ -198,21 +223,16 @@ public final class UserController {
 
         final User updated = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final Response response = userRepresentationSupport.buildUserResponse(
-                updated, uriInfo, viewer, httpHeaders);
-        if (viewer != null) {
-            tokenService.attachTokenHeaders(httpResponse, viewer, httpRequest);
-        }
-        return response;
+        return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
     }
 
     @DELETE
     @Path("/{id}")
-    public Response deleteUser(@PathParam("id") final long id) {
+    @PreAuthorize("@userResourceAccess.isSelfOrAdmin(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response deleteUser(@P("id") @PathParam("id") final long id) {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        userResourceAccess.requireSelfOrAdmin(id, viewer);
         final long actingUserId = viewer.getUserId();
         if (actingUserId == id) {
             userSessionService.invalidateSessionsForUser(id);
@@ -224,6 +244,11 @@ public final class UserController {
         return Response.noContent().build();
     }
 
+    // Not a @PreAuthorize candidate: this single PATCH endpoint routes password/profile/admin
+    // fields to three *different* authorization rules depending on which fields the caller
+    // actually sent (plus an OTP bypass branch for password reset) — a method-level precondition
+    // can't express that, so the three sub-checks stay imperative, delegated to the same
+    // UserResourceAccess predicates used everywhere else.
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.USER_V1_JSON)
@@ -247,12 +272,7 @@ public final class UserController {
 
         final User updated = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final Response response = userRepresentationSupport.buildUserResponse(
-                updated, uriInfo, viewer, httpHeaders);
-        if (viewer != null) {
-            tokenService.attachTokenHeaders(httpResponse, viewer, httpRequest);
-        }
-        return response;
+        return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
     }
 
     private void applyProfilePatch(final User user, final UserPatchForm patch) {
@@ -317,7 +337,7 @@ public final class UserController {
         if (AuthenticationAuthorities.hasPasswordResetOtp(authentication)) {
             if (!(authentication.getPrincipal() instanceof RydenUserDetails principal)
                     || principal.getUserId() != user.getId()) {
-                throw new javax.ws.rs.ForbiddenException();
+                throw new AccessDeniedException("You do not have permission to perform this action.");
             }
             final String otp = authentication.getCredentials() != null
                     ? authentication.getCredentials().toString()

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.dto.Page;
 
 /**
  * Catalog operations for vehicle brands. Lookup methods are normalized at this layer (trim, case-insensitive)
@@ -13,6 +14,9 @@ public interface CarBrandService {
 
     /** All brands ordered validated-first, then alphabetical. Used by publish-car pickers. */
     List<CarBrand> findAllOrdered();
+
+    /** SQL-paginated brand listing for {@code GET /brands} (see {@code CarBrandDao#findPage}). */
+    Page<CarBrand> findPage(Boolean validated, int page, int pageSize);
 
     /** Only validated brands, alphabetical. */
     List<CarBrand> findValidatedOrdered();

@@ -19,6 +19,7 @@ import type { ApiResponse } from '../../api/client';
 import type { UserDto } from '../../api/types';
 import { lastPathSegment, idFromUri } from '../../api/uri';
 import { filtersToApiParams, type SearchFilters } from './searchFilters';
+import { isCarFavoritable } from './carCardAdapter';
 import type {
   AvailabilityDto,
   CarDto,
@@ -212,6 +213,32 @@ export function useNeighborhoods() {
 // favorito individual es `${favorites}/{carId}`. carId se obtiene del car.links.self
 // (último segmento de la URN del auto). Hipermedia: no se arma /users/{id}/...
 
+async function loadFavoritedCarIds(favoritesLink: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  let pageLink: string | undefined = favoritesLink;
+  while (pageLink) {
+    const res: ApiResponse<CarDto[]> = await sessionClient.follow<CarDto[]>(pageLink, {
+      accept: MediaTypes.car,
+    });
+    for (const c of res.data ?? []) {
+      const id = lastPathSegment(c.links.self);
+      if (id) ids.add(id);
+    }
+    pageLink = res.page.next ?? undefined;
+  }
+  return ids;
+}
+
+/** IDs de autos favoritos del usuario logueado (para grids de browse). */
+export function useFavoritedCarIds() {
+  const favoritesLink = useSessionStore((s) => s.currentUser?.links.favorites);
+  return useQuery({
+    queryKey: ['browse', 'favorites', 'ids'],
+    enabled: !!favoritesLink,
+    queryFn: () => loadFavoritedCarIds(favoritesLink as string),
+  });
+}
+
 /**
  * ¿Está este auto en los favoritos del usuario logueado? El back no expone un
  * GET de membresía individual (`/favorites/{carId}` solo soporta PUT/DELETE),
@@ -225,20 +252,32 @@ export function useIsFavorite(carSelf: string | undefined) {
     queryKey: ['browse', 'favorites', carSelf],
     enabled: !!carSelf && !!favoritesLink,
     queryFn: async () => {
-      // Comparo por id (último segmento) y no por `===`: el self del listado y el
-      // del detalle pueden diferir en absoluto/relativo (mismo criterio que isOwner).
       const targetId = lastPathSegment(carSelf as string);
-      let pageLink: string | undefined = favoritesLink as string;
-      while (pageLink) {
-        const res: ApiResponse<CarDto[]> = await sessionClient.follow<CarDto[]>(pageLink, {
-          accept: MediaTypes.car,
-        });
-        if ((res.data ?? []).some((c: CarDto) => lastPathSegment(c.links.self) === targetId)) return true;
-        pageLink = res.page.next ?? undefined;
-      }
-      return false;
+      const ids = await loadFavoritedCarIds(favoritesLink as string);
+      return ids.has(targetId);
     },
   });
+}
+
+/** Estado del corazón en tarjetas de browse (home, búsqueda, similares, perfil público). */
+export function useBrowseCarFavorite(car: CarDto) {
+  const isLoggedIn = useSessionStore((s) => s.status === 'authenticated');
+  const userSelf = useSessionStore((s) => s.currentUser?.links.self);
+  const favoritable = isCarFavoritable(car, isLoggedIn, userSelf);
+  const carId = lastPathSegment(car.links.self);
+  const favIdsQuery = useFavoritedCarIds();
+  const favorited =
+    favoritable && carId !== '' && (favIdsQuery.data?.has(carId) ?? false);
+  const toggleFavorite = useToggleFavorite();
+
+  return {
+    favoritable,
+    favorited,
+    favoriteBusy: toggleFavorite.isPending || favIdsQuery.isLoading,
+    onToggleFavorite: () => {
+      void toggleFavorite.mutateAsync({ car, makeFavorite: !favorited });
+    },
+  };
 }
 
 export function useToggleFavorite() {
@@ -281,18 +320,40 @@ export function useCarReviewsPage(carId: string | undefined, page: number, pageS
   });
 }
 
-/** Active cars of the same category, excluding the current listing. */
+/** Active bookable cars of the same category (server-side filter), excluding the current listing. */
 export function useSimilarCars(car: CarDto | undefined, limit = 4) {
   const carId = car ? idFromUri(car.links.self) : null;
   return useQuery({
-    queryKey: ['browse', 'similar', carId, car?.type],
-    enabled: !!car && !!carId,
+    queryKey: ['browse', 'similar', carId],
+    enabled: !!carId,
     queryFn: async () => {
-      const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
+      const res = await sessionClient.get<CarDto[]>(`/cars/${carId}/similar`, {
         accept: MediaTypes.car,
-        query: { category: car!.type, pageSize: limit + 1, sort: 'rating_desc' },
+        query: { limit },
       });
-      return (res.data ?? []).filter((c) => idFromUri(c.links.self) !== carId).slice(0, limit);
+      return res.data ?? [];
+    },
+  });
+}
+
+/** Admin: pausar/reactivar una publicación desde el detalle del auto (`PATCH /cars/{id}`). */
+export function useAdminSetCarStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      carSelfLink,
+      status,
+    }: {
+      carSelfLink: string;
+      status: 'active' | 'admin_paused';
+    }) =>
+      sessionClient.patch<CarDto>(
+        carSelfLink,
+        { status },
+        { accept: MediaTypes.car, contentType: MediaTypes.car },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['browse', 'car'] });
     },
   });
 }
@@ -326,7 +387,7 @@ export function useCarBookableSegments(carId: string | undefined) {
     enabled: !!carId,
     queryFn: async () => {
       const res = await sessionClient.get<BookableSegmentDto[]>(`/cars/${carId}/bookable-segments`, {
-        accept: 'application/json',
+        accept: MediaTypes.bookableSegment,
       });
       return res.data ?? [];
     },

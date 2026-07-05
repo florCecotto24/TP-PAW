@@ -11,6 +11,7 @@ import java.util.Set;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
@@ -124,19 +125,19 @@ public interface ReservationService {
     /**
      * Role-scoped variant of {@link #cancelReservationAsParticipant(long, long)} that performs the access
      * pre-check internally, eliminating the double {@code getOwnerReservationById}/{@code getRiderReservationById}
-     * call that controllers used to do before invoking the cancel API. Either {@code "rider"} or {@code "owner"}
-     * is accepted; any other value is treated as access denied.
+     * call that controllers used to do before invoking the cancel API.
      *
      * @param viewerUserId  id of the signed-in user attempting the cancellation
      * @param reservationId reservation primary key
-     * @param viewerRole    {@code "rider"} or {@code "owner"} — the hat the viewer wears for this request
+     * @param viewerRole    the hat the viewer wears for this request
      * @return the cancelled reservation row (with refreshed state)
      * @throws ar.edu.itba.paw.exception.reservation.ReservationAccessDeniedException when the reservation does not
-     *         exist, the role is unknown, or the user is not a participant under {@code viewerRole}
+     *         exist or the user is not a participant under {@code viewerRole}
      * @throws ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException when the reservation exists
      *         and the viewer has access but the current state does not allow self-cancellation
      */
-    Reservation cancelReservationAsParticipantScoped(long viewerUserId, long reservationId, String viewerRole);
+    Reservation cancelReservationAsParticipantScoped(
+            long viewerUserId, long reservationId, ReservationParticipantRole viewerRole);
 
     /**
      * Batch job: cancels pending reservations whose payment-proof deadline passed without a receipt, and notifies.

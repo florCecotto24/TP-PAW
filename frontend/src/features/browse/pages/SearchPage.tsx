@@ -56,7 +56,6 @@ export default function SearchPage() {
         formClass="search-menu sticky-top w-100"
         actionPath={paths.search}
         allowFlexibleSearch
-        showClearFilters={activeFilters}
         clearFiltersHref={paths.search}
         initial={filters}
         onApply={applyFilters}

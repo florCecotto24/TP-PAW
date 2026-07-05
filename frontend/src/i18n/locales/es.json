@@ -25,7 +25,7 @@
   },
   "nav": {
     "home": "Inicio",
-    "search": "Buscar",
+    "search": "Explorar",
     "publish": "Publicar",
     "myCars": "Mis autos",
     "myReservations": "Mis reservas",
@@ -37,6 +37,9 @@
     "register": "Registrarse",
     "logout": "Salir",
     "language": "Idioma"
+  },
+  "footer": {
+    "copyright": "© {{year}} {{name}}"
   },
   "auth": {
     "login": {
@@ -109,6 +112,8 @@
       "user.profile.birthDateFuture": "La fecha de nacimiento no puede ser futura.",
       "user.profile.cbuInvalid": "El CBU no es válido.",
       "car.plate.alreadyExists": "Ya existe un auto con esa patente.",
+      "car.gallery.media.invalidType": "Solo se permiten imágenes o videos (mp4, webm, mov).",
+      "publish.prerequisites.missing": "Agregá tu CBU y tu documento de identidad antes de publicar un auto.",
       "car.notFound": "No se encontró el auto.",
       "car.invalidStatusTransition": "No se puede cambiar el auto a ese estado.",
       "car.statusTransition.forbidden": "No tenés permiso para cambiar el estado de este auto.",

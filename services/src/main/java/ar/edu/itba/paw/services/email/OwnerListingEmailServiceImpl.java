@@ -36,7 +36,7 @@ import ar.edu.itba.paw.policy.ReservationTimingPolicy;
  * {@link MailDispatchSupport}), no JPA touch. {@code @Transactional} is intentionally omitted
  */
 @Service
-public final class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
+public class OwnerListingEmailServiceImpl implements OwnerListingEmailService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OwnerListingEmailServiceImpl.class);
 

@@ -13,7 +13,7 @@ import ar.edu.itba.paw.persistence.car.CarModelDao;
 
 /** Catalog reads via {@link CarModelDao}; "Other" creation is normalized here before delegating. */
 @Service
-public final class CarModelServiceImpl implements CarModelService {
+public class CarModelServiceImpl implements CarModelService {
 
     private final CarModelDao carModelDao;
 

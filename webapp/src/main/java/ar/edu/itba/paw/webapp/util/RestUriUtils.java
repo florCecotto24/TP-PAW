@@ -30,10 +30,15 @@ public final class RestUriUtils {
                 .build();
     }
 
+    /**
+     * Reservations made by {@code userId} as a rider — {@code GET /reservations} keys collection
+     * filters off {@code riderId}/{@code ownerId} (a plain {@code userId} is not a recognized
+     * param and would 403 non-admin viewers, since it falls through to the admin-only branch).
+     */
     public static URI userReservationsUri(final UriInfo uriInfo, final long userId) {
         return uriInfo.getBaseUriBuilder()
                 .path("reservations")
-                .queryParam("userId", userId)
+                .queryParam("riderId", userId)
                 .build();
     }
 
@@ -126,6 +131,26 @@ public final class RestUriUtils {
                 .build();
     }
 
+    public static URI carAvailabilityRangeUri(
+            final UriInfo uriInfo,
+            final long carId,
+            final String startDate,
+            final String endDate) {
+        return uriInfo.getBaseUriBuilder()
+                .path("cars").path(String.valueOf(carId))
+                .path("availabilities").path("range")
+                .queryParam("from", startDate)
+                .queryParam("until", endDate)
+                .build();
+    }
+
+    public static URI carSimilarUri(final UriInfo uriInfo, final long carId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("cars").path(String.valueOf(carId))
+                .path("similar")
+                .build();
+    }
+
     public static URI carInsuranceUri(final UriInfo uriInfo, final long carId) {
         return uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
@@ -144,6 +169,14 @@ public final class RestUriUtils {
         return uriInfo.getBaseUriBuilder()
                 .path("reservations").path(String.valueOf(reservationId))
                 .path("reviews")
+                .build();
+    }
+
+    /** Canonical URN for a single review — unique per row, unlike {@link #reservationReviewsUri}. */
+    public static URI reservationReviewUri(final UriInfo uriInfo, final long reservationId, final long reviewId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("reservations").path(String.valueOf(reservationId))
+                .path("reviews").path(String.valueOf(reviewId))
                 .build();
     }
 

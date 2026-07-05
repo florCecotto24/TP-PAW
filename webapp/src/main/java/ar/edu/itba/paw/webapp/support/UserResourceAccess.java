@@ -1,47 +1,56 @@
 package ar.edu.itba.paw.webapp.support;
 
-import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
-/** Authorization helpers for user profile resources. */
+/**
+ * Authorization predicates for user profile resources.
+ *
+ * <p>The {@code is*} boolean methods are the primary API: they back {@code @PreAuthorize} on the
+ * JAX-RS resources, so Spring Security's method-security interceptor enforces them declaratively
+ * before the resource method runs, throwing {@link AccessDeniedException} on denial (mapped to a
+ * 401/403 {@code vnd.paw.error} body by {@code AccessDeniedExceptionMapper}). The {@code require*}
+ * methods remain only for the checks that are conditional on parsed request-body content — e.g.
+ * {@code UserController#patchUser} routes password/profile/admin fields to different checks
+ * depending on which fields the caller actually sent, which cannot be a single method-level
+ * precondition.
+ */
 @Component
 public final class UserResourceAccess {
 
-    public boolean canViewPrivate(final long userId, final RydenUserDetails viewer) {
-        if (viewer == null) {
-            return false;
-        }
-        if (viewer.getUserId() == userId) {
-            return true;
-        }
-        return AuthenticationAuthorities.hasAdminRole(
-                SecurityContextHolder.getContext().getAuthentication());
+    private static final String ACCESS_DENIED_MESSAGE = "You do not have permission to perform this action.";
+
+    public boolean isAdmin() {
+        return AuthenticationAuthorities.hasAdminRole(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    public boolean isSelf(final long userId, final RydenUserDetails viewer) {
+        return viewer != null && viewer.getUserId() == userId;
+    }
+
+    public boolean isSelfOrAdmin(final long userId, final RydenUserDetails viewer) {
+        return isSelf(userId, viewer) || isAdmin();
     }
 
     public void requireSelf(final long userId, final RydenUserDetails viewer) {
-        if (viewer == null || viewer.getUserId() != userId) {
-            throw new javax.ws.rs.ForbiddenException();
+        if (!isSelf(userId, viewer)) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
     }
 
     public void requireSelfOrAdmin(final long userId, final RydenUserDetails viewer) {
-        if (!canViewPrivate(userId, viewer)) {
-            throw new javax.ws.rs.ForbiddenException();
+        if (!isSelfOrAdmin(userId, viewer)) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
     }
 
-    public void requirePrivateView(final long userId, final RydenUserDetails viewer) {
-        requireSelfOrAdmin(userId, viewer);
-    }
-
     public void requireAdmin() {
-        if (!AuthenticationAuthorities.hasAdminRole(
-                SecurityContextHolder.getContext().getAuthentication())) {
-            throw new javax.ws.rs.ForbiddenException();
+        if (!isAdmin()) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
         }
     }
 }

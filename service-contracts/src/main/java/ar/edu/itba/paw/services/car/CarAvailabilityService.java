@@ -114,6 +114,13 @@ public interface CarAvailabilityService {
     CarAvailability applyOwnerWithdrawByCar(long carId, long availabilityId);
 
     /**
+     * Soft-deletes a contiguous wall-day range by inserting a {@link CarAvailability.Kind#WITHDRAWN}
+     * row for {@code [startInclusive, endInclusive]}. Used when the owner calendar shows merged
+     * effective segments that may be narrower than a stored availability row.
+     */
+    void applyOwnerWithdrawRangeByCar(long carId, LocalDate startInclusive, LocalDate endInclusive);
+
+    /**
      * Computes the set of bookable wall-calendar days for the car.
      * Availability OFFERED rows are expanded to days; blocking reservations are subtracted.
      * The result is a compressed list of contiguous {@link AvailabilityPeriod} ranges.

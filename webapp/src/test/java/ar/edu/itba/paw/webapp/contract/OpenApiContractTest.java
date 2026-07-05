@@ -215,6 +215,14 @@ class OpenApiContractTest {
         dto.setPaymentProofDeadlineAt(null);
         dto.setRefundProofDeadlineAt(null);
         dto.setPaymentRefundRequired(false);
+        dto.setHasPaymentReceipt(false);
+        dto.setHasRefundReceipt(false);
+        dto.setOwnerCbu("0000003100010000000001");
+        dto.setPickupStreet("Av. Siempre Viva");
+        dto.setPickupNumber("742");
+        dto.setPickupNeighborhood("Palermo");
+        dto.setCheckInTime("10:00");
+        dto.setCheckOutTime("18:00");
         dto.setCreatedAt("2026-06-01T09:00:00+00:00");
         dto.setLinks(LinksDto.ofSelf("/reservations/1")
                 .withRelated("car", "/cars/10")

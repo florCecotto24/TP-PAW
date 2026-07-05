@@ -45,7 +45,7 @@ import ar.edu.itba.paw.services.reservation.ReservationService;
  * the original service keeps the persistence + mutation + publish-flow validations.</p>
  */
 @Service
-public final class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalendarService {
+public class CarAvailabilityCalendarServiceImpl implements CarAvailabilityCalendarService {
 
     private final CarAvailabilityService carAvailabilityService;
     private final ReservationService reservationService;

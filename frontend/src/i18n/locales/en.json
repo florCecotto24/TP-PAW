@@ -25,7 +25,7 @@
   },
   "nav": {
     "home": "Home",
-    "search": "Search",
+    "search": "Explore",
     "publish": "Publish",
     "myCars": "My cars",
     "myReservations": "My reservations",
@@ -37,6 +37,9 @@
     "register": "Sign up",
     "logout": "Log out",
     "language": "Language"
+  },
+  "footer": {
+    "copyright": "© {{year}} {{name}}"
   },
   "auth": {
     "login": {
@@ -109,6 +112,8 @@
       "user.profile.birthDateFuture": "The birth date cannot be in the future.",
       "user.profile.cbuInvalid": "The CBU is not valid.",
       "car.plate.alreadyExists": "A car with that plate already exists.",
+      "car.gallery.media.invalidType": "Only images or videos (mp4, webm, mov) are allowed.",
+      "publish.prerequisites.missing": "Add your CBU and identity document before publishing a car.",
       "car.notFound": "Car not found.",
       "car.invalidStatusTransition": "The car cannot move to that status.",
       "car.statusTransition.forbidden": "You are not allowed to change this car's status.",

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from './NavBar';
+import Footer from './Footer';
 import { BlockedUserBanner } from './ryden';
 import { useDocumentTitle } from '../i18n/useDocumentTitle';
 import { useSessionStore } from '../session/sessionStore';
@@ -28,10 +29,13 @@ export default function Layout() {
   return (
     <div className="bg-cream min-vh-100">
       <NavBar />
-      {showBlockedBanner ? <BlockedUserBanner /> : null}
+      {showBlockedBanner ? (
+        <BlockedUserBanner singleReservationId={currentUser?.blockedOverdueReservationId} />
+      ) : null}
       <main>
         <Outlet />
       </main>
+      <Footer />
     </div>
   );
 }

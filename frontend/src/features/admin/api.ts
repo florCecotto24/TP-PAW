@@ -1,6 +1,6 @@
-import { sessionClient, useSessionStore } from '../../session/sessionStore';
-import { appBasePath } from '../../appBasePath';
+import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
+import { openAuthenticatedBinary as openAuthenticatedBinaryCore } from '../../api/openAuthenticatedBinary';
 import type { ApiResponse } from '../../api/client';
 import type { UserDto } from '../../api/types';
 import type { BrandDto, CarDto, CarStatus, ModelDto } from './types';
@@ -24,23 +24,7 @@ export async function patchUser(
 
 /** Abre un recurso binario autenticado (documento KYC, adjunto de chat). */
 export async function openAuthenticatedBinary(link: string): Promise<boolean> {
-  const token = useSessionStore.getState().accessToken;
-  const path = link.startsWith('http')
-    ? link
-    : `${appBasePath()}${link.startsWith('/') ? link : `/${link}`}`;
-  const res = await fetch(path, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!res.ok) return false;
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  const win = window.open(objectUrl, '_blank', 'noopener,noreferrer');
-  if (!win) {
-    URL.revokeObjectURL(objectUrl);
-    return false;
-  }
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-  return true;
+  return openAuthenticatedBinaryCore(link);
 }
 
 export function userDocumentPath(userSelfLink: string, type: 'license' | 'identity'): string {
@@ -88,4 +72,21 @@ export async function patchCarStatus(
 
 export async function fetchUserPublic(userUri: string): Promise<ApiResponse<UserDto>> {
   return sessionClient.get<UserDto>(userUri, { accept: MediaTypes.user });
+}
+
+export interface CreateAdminUserPayload {
+  forename: string;
+  surname: string;
+  email: string;
+  password: string;
+}
+
+/** POST /users con Content-Type admincreateuser: crea un admin pre-verificado con contraseña temporal. */
+export async function createAdminUser(
+  payload: CreateAdminUserPayload,
+): Promise<ApiResponse<UserDto>> {
+  return sessionClient.post<UserDto>('/users', payload, {
+    accept: MediaTypes.userPrivate,
+    contentType: MediaTypes.adminCreateUser,
+  });
 }

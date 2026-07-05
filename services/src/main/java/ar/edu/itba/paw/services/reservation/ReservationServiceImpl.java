@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
@@ -47,7 +48,7 @@ import ar.edu.itba.paw.persistence.reservation.ReservationDao;
  * every call site in the same change.
  */
 @Service
-public final class ReservationServiceImpl implements ReservationService {
+public class ReservationServiceImpl implements ReservationService {
 
     /**
      * The architectural rule "each ServiceImpl may only call its own DAO" makes this facade the sole
@@ -302,7 +303,7 @@ public final class ReservationServiceImpl implements ReservationService {
     @Override
     @Transactional
     public Reservation cancelReservationAsParticipantScoped(
-            final long viewerUserId, final long reservationId, final String viewerRole) {
+            final long viewerUserId, final long reservationId, final ReservationParticipantRole viewerRole) {
         return workflowService.cancelReservationAsParticipantScoped(viewerUserId, reservationId, viewerRole);
     }
 

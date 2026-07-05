@@ -41,7 +41,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * VehicleCardView}s for the JSP tag.
  */
 @Service
-public final class CarDetailViewServiceImpl implements CarDetailViewService {
+public class CarDetailViewServiceImpl implements CarDetailViewService {
 
     private static final String REVIEWS_VIEW_LIST = "list";
     private static final String REVIEWS_VIEW_CAROUSEL = "carousel";

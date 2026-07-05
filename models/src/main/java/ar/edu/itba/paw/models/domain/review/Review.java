@@ -6,32 +6,44 @@ import java.util.Optional;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.MapsId;
 import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.internal.EntityEquality;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 
-/** Review left by a rider or owner after a reservation. Composite PK: (reservation_id, made_by_rider). */
+/**
+ * Review left by a rider or owner after a reservation. Strong entity keyed by its own surrogate
+ * {@code id} (so it can be addressed by a unique URN regardless of whether it is reached from a
+ * car page, a user page or the owning reservation); {@code (reservation_id, made_by_rider)} keeps
+ * the "one review per side" invariant as a UNIQUE constraint instead of the primary key.
+ */
 @Entity
-@Table(name = "reviews")
+@Table(name = "reviews", uniqueConstraints = @UniqueConstraint(columnNames = {"reservation_id", "made_by_rider"}))
 public class Review {
 
-    @EmbeddedId
-    private ReviewId id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "reviews_id_seq")
+    @SequenceGenerator(name = "reviews_id_seq", sequenceName = "reviews_id_seq", allocationSize = 1)
+    private long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("reservationId")
-    @JoinColumn(name = "reservation_id")
+    @JoinColumn(name = "reservation_id", nullable = false)
     private Reservation reservation;
+
+    @Column(name = "made_by_rider", nullable = false)
+    private boolean madeByRider;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id", nullable = false)
@@ -55,8 +67,8 @@ public class Review {
     }
 
     private Review(final Builder b) {
-        this.id = new ReviewId(b.reservation.getId(), b.madeByRider);
         this.reservation = b.reservation;
+        this.madeByRider = b.madeByRider;
         this.car = b.reservation.getCar();
         this.createdAt = b.createdAt;
         this.rating = b.rating;
@@ -119,12 +131,16 @@ public class Review {
         }
     }
 
-    public ReviewId getId() {
+    public long getId() {
         return id;
     }
 
     public Reservation getReservation() {
         return reservation;
+    }
+
+    public long getReservationId() {
+        return reservation.getId();
     }
 
     public Car getCar() {
@@ -137,7 +153,7 @@ public class Review {
     }
 
     public boolean isMadeByRider() {
-        return id.isMadeByRider();
+        return madeByRider;
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -168,11 +184,11 @@ public class Review {
         if (!(o instanceof Review)) {
             return false;
         }
-        return EntityEquality.equalsByEmbeddedId(this.id, ((Review) o).id);
+        return EntityEquality.equalsByLongId(this, this.id, ((Review) o).id);
     }
 
     @Override
     public int hashCode() {
-        return EntityEquality.hashByEmbeddedId(this, id);
+        return EntityEquality.hashByLongId(this, id);
     }
 }

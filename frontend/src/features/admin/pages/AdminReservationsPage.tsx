@@ -1,25 +1,23 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
 import { idFromSelf, type ReservationDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
+import { useAdminGuard } from '../useAdminGuard';
 import { usePagedList } from '../usePagedList';
 import { adminReservationChat } from '../../../routes/paths';
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
 export default function AdminReservationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const errorMessage = useAdminErrorMessage();
-  const list = usePagedList<ReservationDto>('/reservations?page=1', MediaTypes.reservation);
+  const { isAdmin, loading: guardLoading } = useAdminGuard();
+  const list = usePagedList<ReservationDto>(
+    guardLoading || !isAdmin ? '' : '/reservations?page=1',
+    MediaTypes.reservation,
+  );
 
   const displayError = list.error ? errorMessage(list.error) : null;
 
@@ -31,7 +29,7 @@ export default function AdminReservationsPage() {
       />
 
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {list.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+      {guardLoading || list.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
 
       {!list.loading && list.items.length === 0 ? (
         <p className="text-secondary">{t('admin.reservations.empty')}</p>
@@ -55,8 +53,8 @@ export default function AdminReservationsPage() {
                   const reservationId = idFromSelf(reservation.links);
                   return (
                     <tr key={reservation.links.self}>
-                      <td>{formatDate(reservation.startDate)}</td>
-                      <td>{formatDate(reservation.endDate)}</td>
+                      <td>{formatDateTime(reservation.startDate, i18n.language)}</td>
+                      <td>{formatDateTime(reservation.endDate, i18n.language)}</td>
                       <td>{t(`admin.reservations.statuses.${reservation.status}`)}</td>
                       <td>{reservation.totalPrice}</td>
                       <td className="text-end">

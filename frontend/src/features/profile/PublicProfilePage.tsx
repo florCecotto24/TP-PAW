@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser, fetchUserCars, getUserReviews, userCarsLink, userReviewsLink } from './api';
+import { formatDateLong } from '../../i18n/dateFormat';
 import CarCard from './CarCard';
-import type { UserDto } from './types';
+import type { CarDto, UserDto, UserReviewDto } from './types';
 
 // =============================================================================
 // PublicProfilePage — perfil público de un usuario (/usuarios/:id).
@@ -64,6 +65,15 @@ export default function PublicProfilePage() {
     enabled: !!userUri,
   });
 
+  const reviewsLink = userQuery.data ? userReviewsLink(userQuery.data) : null;
+  const reviewsQuery = useQuery({
+    queryKey: ['profile', 'public', 'reviews', reviewsLink],
+    queryFn: () => getUserReviews(reviewsLink as string),
+    enabled: !!reviewsLink,
+  });
+  const reviews = reviewsQuery.data?.data ?? [];
+  const reviewCount = reviewsQuery.data?.total ?? 0;
+
   if (userQuery.isLoading) {
     return (
       <main className="counterparty-profile-page">
@@ -111,6 +121,11 @@ export default function PublicProfilePage() {
                         <>
                           <span className="counterparty-rating-value">{rating.toFixed(1)}</span>
                           <StarRow rating={rating} />
+                          {reviewCount > 0 && (
+                            <span className="text-secondary small">
+                              {t('profile.public.reviewsCount', { count: reviewCount })}
+                            </span>
+                          )}
                         </>
                       ) : (
                         <span className="counterparty-rating-value">
@@ -155,7 +170,11 @@ export default function PublicProfilePage() {
             <UserCars user={user} />
 
             {/* Reviews received */}
-            <UserReviews user={user} />
+            <UserReviews
+              reviews={reviews}
+              isLoading={reviewsQuery.isLoading}
+              isError={reviewsQuery.isError}
+            />
           </div>
         </div>
       </div>
@@ -172,6 +191,7 @@ function DocStatus({
   label: string;
   className?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <li className={className}>
       {validated ? (
@@ -179,11 +199,16 @@ function DocStatus({
       ) : (
         <i className="bi bi-x-circle-fill text-danger" aria-hidden="true"></i>
       )}
+      <span className="visually-hidden">
+        {t(validated ? 'profile.docs.statusValidated' : 'profile.docs.statusNotValidated')}
+      </span>
       <span className="fw-semibold ms-1">{label}</span>
     </li>
   );
 }
 
+// Réplica de "Ver más" de counterparty-profile.js: sigue el link `next` de
+// paginación (Link header) en vez de re-fetchear con un `page` a mano.
 function UserCars({ user }: { user: UserDto }) {
   const { t } = useTranslation();
   const carsLink = userCarsLink(user);
@@ -194,7 +219,30 @@ function UserCars({ user }: { user: UserDto }) {
     enabled: !!carsLink,
   });
 
-  const cars = carsQuery.data?.data ?? [];
+  const [cars, setCars] = useState<CarDto[]>([]);
+  const [nextLink, setNextLink] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+
+  useEffect(() => {
+    setCars(carsQuery.data?.data ?? []);
+    setNextLink(carsQuery.data?.page.next ?? null);
+  }, [carsQuery.data]);
+
+  async function onLoadMore() {
+    if (!nextLink) return;
+    setLoadingMore(true);
+    setLoadMoreError(false);
+    try {
+      const res = await fetchUserCars(nextLink);
+      setCars((prev) => [...prev, ...res.data]);
+      setNextLink(res.page.next ?? null);
+    } catch {
+      setLoadMoreError(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <section className="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4">
@@ -217,47 +265,65 @@ function UserCars({ user }: { user: UserDto }) {
           <p className="mb-0 text-secondary small">{t('profile.public.noCars')}</p>
         )}
         {cars.length > 0 && (
-          <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 gy-4">
-            {cars.map((car) => (
-              <div key={car.links.self} className="col d-flex justify-content-center">
-                <CarCard car={car} />
+          <>
+            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3 gy-4">
+              {cars.map((car) => (
+                <div key={car.links.self} className="col d-flex justify-content-center">
+                  <CarCard car={car} />
+                </div>
+              ))}
+            </div>
+            {loadMoreError && (
+              <div className="alert alert-danger mt-3 mb-0 py-2" role="alert">
+                {t('profile.common.error')}
               </div>
-            ))}
-          </div>
+            )}
+            {nextLink && (
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? t('profile.common.loading') : t('profile.public.viewMoreCars')}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
   );
 }
 
-function UserReviews({ user }: { user: UserDto }) {
-  const { t } = useTranslation();
-  const reviewsLink = userReviewsLink(user);
-
-  const reviewsQuery = useQuery({
-    queryKey: ['profile', 'public', 'reviews', reviewsLink],
-    queryFn: () => getUserReviews(reviewsLink as string),
-    enabled: !!reviewsLink,
-  });
-
-  const reviews = reviewsQuery.data ?? [];
+function UserReviews({
+  reviews,
+  isLoading,
+  isError,
+}: {
+  reviews: UserReviewDto[];
+  isLoading: boolean;
+  isError: boolean;
+}) {
+  const { t, i18n } = useTranslation();
 
   return (
     <section className="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4">
       <div className="card-body p-4">
         <h2 className="h5 fw-semibold mb-3">{t('profile.public.reviews')}</h2>
 
-        {reviewsQuery.isLoading && (
+        {isLoading && (
           <p role="status" className="text-secondary small mb-0">
             {t('profile.common.loading')}
           </p>
         )}
-        {reviewsQuery.isError && (
+        {isError && (
           <div className="alert alert-danger mb-0" role="alert">
             {t('profile.common.error')}
           </div>
         )}
-        {reviewsQuery.data && reviews.length === 0 && (
+        {!isLoading && !isError && reviews.length === 0 && (
           <p className="mb-0 text-secondary small">{t('profile.public.noReviews')}</p>
         )}
         {reviews.length > 0 && (
@@ -268,7 +334,9 @@ function UserReviews({ user }: { user: UserDto }) {
                   <span className="fw-semibold ryden-text-break">{review.authorName}</span>
                   <StarRow rating={review.rating} />
                   {review.createdAt && (
-                    <span className="text-secondary small ms-auto">{review.createdAt}</span>
+                    <span className="text-secondary small ms-auto">
+                      {formatDateLong(review.createdAt, i18n.language)}
+                    </span>
                   )}
                 </div>
                 {review.comment && review.comment.trim() ? (

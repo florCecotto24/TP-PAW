@@ -8,11 +8,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.car.CarBrandDao;
 
 /** Catalog reads via {@link CarBrandDao}; "Other" creation is normalized here before delegating. */
 @Service
-public final class CarBrandServiceImpl implements CarBrandService {
+public class CarBrandServiceImpl implements CarBrandService {
 
     private final CarBrandDao carBrandDao;
 
@@ -31,6 +32,12 @@ public final class CarBrandServiceImpl implements CarBrandService {
     @Transactional(readOnly = true)
     public List<CarBrand> findValidatedOrdered() {
         return carBrandDao.findValidatedOrdered();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CarBrand> findPage(final Boolean validated, final int page, final int pageSize) {
+        return carBrandDao.findPage(validated, page, pageSize);
     }
 
     @Override

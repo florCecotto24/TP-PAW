@@ -2,12 +2,16 @@ package ar.edu.itba.paw.services.car;
 
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +32,7 @@ import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
@@ -46,7 +51,7 @@ import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.services.user.UserService;
 @Service
-public final class CarServiceImpl implements CarService {
+public class CarServiceImpl implements CarService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CarServiceImpl.class);
 
@@ -345,6 +350,15 @@ public final class CarServiceImpl implements CarService {
     }
 
     @Override
+    public List<Car.Status> resolveOwnerListingStatuses(
+            final List<Car.Status> requestedStatuses, final boolean viewerIsSelfOrAdmin) {
+        if (requestedStatuses != null && !requestedStatuses.isEmpty()) {
+            return requestedStatuses;
+        }
+        return viewerIsSelfOrAdmin ? null : List.of(Car.Status.ACTIVE);
+    }
+
+    @Override
     @Transactional
     public void refreshExhaustedCarsToPaused() {
         final List<Car> activeCars = carDao.findCarsByStatus(Car.Status.ACTIVE);
@@ -597,21 +611,73 @@ public final class CarServiceImpl implements CarService {
         if (cards == null || cards.isEmpty()) {
             return Map.of();
         }
-        final Map<String, Optional<CarPriceMarketInsight>> insightCache = new HashMap<>();
+        // Distinct (brand, model) pairs across the whole page, keyed case-insensitively so "Toyota"
+        // and "toyota" on two cards share one entry.
+        final Map<String, String[]> distinctPairs = new LinkedHashMap<>();
+        for (final CarCard card : cards) {
+            normalizedBrandModel(card.getBrand(), card.getModel())
+                    .ifPresent(bm -> distinctPairs.putIfAbsent(pairKey(bm[0], bm[1]), bm));
+        }
+        if (distinctPairs.isEmpty()) {
+            return Map.of();
+        }
+
+        // Was previously one findActiveDayPriceMarketInsightByBrandAndModel call per card (N+1):
+        // the cache key included card.getCarId(), which is unique per card, so it never deduplicated
+        // anything. A single batched query fetches every eligible car's price for every distinct
+        // brand/model on the page, and the per-card min/max/avg (excluding that card itself) is
+        // aggregated here in memory instead of once per card in the database.
+        final List<String> brands = new ArrayList<>(distinctPairs.size());
+        final List<String> models = new ArrayList<>(distinctPairs.size());
+        for (final String[] bm : distinctPairs.values()) {
+            brands.add(bm[0]);
+            models.add(bm[1]);
+        }
+        final List<CarModelPriceSample> samples = carDao.findActiveDayPricesForBrandModelPairs(brands, models);
+        final Map<String, List<CarModelPriceSample>> samplesByPair = samples.stream()
+                .collect(Collectors.groupingBy(s -> pairKey(s.getBrand(), s.getModel())));
+
         final Map<Long, ConsumerCarCardMarketContext> contexts = new HashMap<>();
         for (final CarCard card : cards) {
             normalizedBrandModel(card.getBrand(), card.getModel())
                     .flatMap(bm -> {
-                        final String cacheKey = bm[0] + "|" + bm[1] + "|" + card.getCarId();
-                        final Optional<CarPriceMarketInsight> insight = insightCache.computeIfAbsent(
-                                cacheKey,
-                                k -> carDao.findActiveDayPriceMarketInsightByBrandAndModel(
-                                        bm[0], bm[1], card.getCarId()));
-                        return ConsumerCarCardMarketContext.fromInsight(insight, card.getDayPrice());
+                        final List<CarModelPriceSample> group =
+                                samplesByPair.getOrDefault(pairKey(bm[0], bm[1]), List.of());
+                        final List<BigDecimal> otherPrices = group.stream()
+                                .filter(s -> s.getCarId() != card.getCarId())
+                                .map(CarModelPriceSample::getMinPrice)
+                                .collect(Collectors.toList());
+                        return ConsumerCarCardMarketContext.fromInsight(
+                                aggregate(otherPrices), card.getDayPrice());
                     })
                     .ifPresent(ctx -> contexts.put(card.getCarId(), ctx));
         }
         return contexts;
+    }
+
+    private static String pairKey(final String brand, final String model) {
+        return brand.toLowerCase(Locale.ROOT) + "|" + model.toLowerCase(Locale.ROOT);
+    }
+
+    /** Min/max/average of {@code prices}, mirroring the SQL aggregation this replaces per card. */
+    private static Optional<CarPriceMarketInsight> aggregate(final List<BigDecimal> prices) {
+        if (prices.isEmpty()) {
+            return Optional.empty();
+        }
+        BigDecimal min = prices.get(0);
+        BigDecimal max = prices.get(0);
+        BigDecimal sum = BigDecimal.ZERO;
+        for (final BigDecimal price : prices) {
+            if (price.compareTo(min) < 0) {
+                min = price;
+            }
+            if (price.compareTo(max) > 0) {
+                max = price;
+            }
+            sum = sum.add(price);
+        }
+        final BigDecimal avg = sum.divide(BigDecimal.valueOf(prices.size()), 4, RoundingMode.HALF_UP);
+        return Optional.of(new CarPriceMarketInsight(min, max, avg, prices.size()));
     }
 
     private static Optional<String[]> normalizedBrandModel(final String brand, final String model) {

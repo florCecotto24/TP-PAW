@@ -1,5 +1,6 @@
-import { sessionClient, useSessionStore } from '../../session/sessionStore';
+import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
+import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
 import type { CarDto, DocumentType, UserDto, UserPatchDto, UserReviewDto } from './types';
 
 // =============================================================================
@@ -85,34 +86,13 @@ export async function deleteDocument(user: UserDto, type: DocumentType): Promise
  * El GET del documento exige `Authorization` (self/admin) y devuelve binario
  * (octet-stream / image / pdf). Un `<a href>` plano NO manda el Bearer token
  * (auth stateless por header, no cookies) → daría 401/403. Por eso replicamos
- * el viewer del JSP viejo: se baja el binario autenticado, se crea un blob URL
- * y se abre en una pestaña nueva. Devuelve false si falla (p.ej. no subido).
- *
- * LIMITACIÓN: usamos `fetch()` directo (con el Bearer del store) en vez del
- * sessionClient porque éste parsea TODA respuesta como texto/JSON
- * (`toApiResponse` → `res.text()`) y no sabe devolver un Blob. Como contrapartida,
- * este path NO hace el reintento 401→refresh del cliente: si el access token está
- * vencido el documento no se abre (se devuelve false) hasta que otra request lo
- * renueve. Se revoca el object URL para no filtrar memoria.
+ * el viewer del JSP viejo: se baja el binario autenticado (vía el cliente
+ * central, con el mismo reintento 401→refresh que cualquier otro request), se
+ * crea un blob URL y se abre en una pestaña nueva. Devuelve false si falla
+ * (p.ej. no subido, o el navegador bloqueó el popup).
  */
 export async function openDocument(user: UserDto, type: DocumentType): Promise<boolean> {
-  const token = useSessionStore.getState().accessToken;
-  const res = await fetch(documentPath(user, type), {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!res.ok) return false;
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  const win = window.open(objectUrl, '_blank', 'noopener,noreferrer');
-  if (!win) {
-    // No se pudo abrir la pestaña (bloqueo de pop-ups): la URL no se usa, revocar ya.
-    URL.revokeObjectURL(objectUrl);
-    return false;
-  }
-  // La pestaña recién abierta todavía está cargando el blob; revocar de inmediato
-  // abortaría la carga. Damos un margen y luego liberamos la URL.
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-  return true;
+  return openAuthenticatedBinary(documentPath(user, type));
 }
 
 /** Path de la colección de favoritos del usuario. */
@@ -167,9 +147,13 @@ export function userReviewsLink(user: UserDto): string | null {
 /**
  * GET reseñas recibidas por un usuario navegando user.links.reviews.
  * Combina (en el server) las recibidas como dueño y como conductor, más
- * recientes primero. 204 (sin reseñas) → data [].
+ * recientes primero. 204 (sin reseñas) → data []. `total` viene de
+ * X-Total-Count y puede superar `data.length` (la respuesta está paginada).
  */
-export async function getUserReviews(reviewsLink: string): Promise<UserReviewDto[]> {
+export async function getUserReviews(
+  reviewsLink: string,
+): Promise<{ data: UserReviewDto[]; total: number }> {
   const res = await sessionClient.get<UserReviewDto[]>(reviewsLink, { accept: MediaTypes.review });
-  return res.data ?? [];
+  const data = res.data ?? [];
+  return { data, total: res.page.total ?? data.length };
 }

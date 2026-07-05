@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.webapp.controller.user;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,6 +18,7 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.services.review.ReviewService;
 import ar.edu.itba.paw.services.user.UserService;
@@ -63,29 +62,18 @@ public final class UserReviewController {
         final int pageSize = pageSizeParam != null && pageSizeParam > 0
                 ? pageSizeParam
                 : paginationProperties.getDefaultPageSize();
-        final long total = reviewService.countReviewsForCounterparty(id, true)
-                + reviewService.countReviewsForCounterparty(id, false);
-        if (total == 0L) {
+        final Page<ReviewItemDto> reviews = reviewService.getReviewsForUser(id, safePage - 1, pageSize);
+        if (reviews.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
 
-        final int fetchLimit = safePage * pageSize;
-        final List<ReviewItemDto> merged = new ArrayList<>();
-        merged.addAll(reviewService.getRecentReviewsForCounterparty(id, true, fetchLimit));
-        merged.addAll(reviewService.getRecentReviewsForCounterparty(id, false, fetchLimit));
-        merged.sort(Comparator.comparing(ReviewItemDto::getReviewDate).reversed());
-
-        final int from = (safePage - 1) * pageSize;
-        if (from >= merged.size()) {
-            return Response.noContent().build();
-        }
-        final int to = Math.min(from + pageSize, merged.size());
-        final List<UserReviewDto> dtos = merged.subList(from, to).stream()
-                .map(item -> UserReviewDto.from(item, id, uriInfo))
+        final List<UserReviewDto> dtos = reviews.getContent().stream()
+                .map(item -> UserReviewDto.from(item, uriInfo))
                 .collect(Collectors.toList());
 
-        final Response.ResponseBuilder builder = Response.ok(dtos).header("X-Total-Count", total);
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, (int) total);
+        final Response.ResponseBuilder builder = Response.ok(dtos)
+                .header("X-Total-Count", reviews.getTotalItems());
+        PaginationLinks.add(builder, uriInfo, safePage, pageSize, (int) reviews.getTotalItems());
         return builder.build();
     }
 }

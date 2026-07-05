@@ -33,7 +33,9 @@ public final class AccessDeniedExceptionMapper implements ExceptionMapper<Access
                         anonymous ? "unauthorized" : "forbidden",
                         exception.getMessage()));
         if (anonymous) {
-            builder.header("WWW-Authenticate", "Basic realm=\"ryden\", Bearer realm=\"ryden\"");
+            // Bearer only — see WebAuthConfig#restAuthenticationEntryPoint for why "Basic" must not be
+            // advertised here (native browser credential popup on any 401 that reaches a real browser).
+            builder.header("WWW-Authenticate", "Bearer realm=\"ryden\"");
         }
         return builder.build();
     }

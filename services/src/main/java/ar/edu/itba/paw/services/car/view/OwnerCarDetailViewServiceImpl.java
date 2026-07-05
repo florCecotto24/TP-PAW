@@ -37,7 +37,7 @@ import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 @Service
-public final class OwnerCarDetailViewServiceImpl implements OwnerCarDetailViewService {
+public class OwnerCarDetailViewServiceImpl implements OwnerCarDetailViewService {
 
     private final CarService carService;
     private final CarPictureService carPictureService;

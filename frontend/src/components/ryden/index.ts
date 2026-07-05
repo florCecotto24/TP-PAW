@@ -93,6 +93,10 @@ export { default as ReviewCarousel } from './review/ReviewCarousel';
 export type { ReviewCarouselProps, ReviewCarouselItem } from './review/ReviewCarousel';
 export { default as ReviewStarsRow } from './review/ReviewStarsRow';
 export type { ReviewStarsRowProps } from './review/ReviewStarsRow';
+export { default as StarRatingInput } from './review/StarRatingInput';
+export type { StarRatingInputProps } from './review/StarRatingInput';
+export { default as ReviewImageInput } from './review/ReviewImageInput';
+export type { ReviewImageInputProps } from './review/ReviewImageInput';
 
 // Reservation
 export { default as CarReservationCard } from './reservation/CarReservationCard';

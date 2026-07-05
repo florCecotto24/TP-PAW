@@ -4,6 +4,7 @@ package ar.edu.itba.paw.services.reservation;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 
 /**
  * Mutating reservation lifecycle: rider submissions, rider-driven edits of unpaid pending
@@ -58,15 +59,15 @@ public interface ReservationWorkflowService {
     /**
      * Role-scoped variant of {@link #cancelReservationAsParticipant(long, long)} that performs
      * the access pre-check internally and signals failure with typed domain exceptions instead
-     * of {@link Optional}. Accepts {@code "rider"} or {@code "owner"} (case-insensitive); any
-     * other value is treated as access denied.
+     * of {@link Optional}.
      *
      * @throws ar.edu.itba.paw.exception.reservation.ReservationAccessDeniedException when the
      *         reservation does not exist or the user is not a participant under {@code viewerRole}
      * @throws ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException when the
      *         reservation exists and the viewer has access but the state does not allow cancel
      */
-    Reservation cancelReservationAsParticipantScoped(long viewerUserId, long reservationId, String viewerRole);
+    Reservation cancelReservationAsParticipantScoped(
+            long viewerUserId, long reservationId, ReservationParticipantRole viewerRole);
 
     /**
      * Owner confirms vehicle returned after checkout; irreversible. When both return and

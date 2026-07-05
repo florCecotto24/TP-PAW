@@ -60,6 +60,8 @@ export const profileI18n = {
         replace: 'Cambiar foto',
         remove: 'Quitar foto',
         none: 'Sin foto de perfil.',
+        saved: 'Foto de perfil actualizada.',
+        removed: 'Foto de perfil eliminada.',
       },
       docs: {
         title: 'Documentos',
@@ -77,6 +79,8 @@ export const profileI18n = {
         validated: 'Validado',
         pending: 'Pendiente de validación',
         none: 'No subido',
+        statusValidated: 'Validada',
+        statusNotValidated: 'No validada',
       },
       public: {
         title: 'Perfil de {{name}}',
@@ -91,6 +95,7 @@ export const profileI18n = {
         activeCars: 'Autos publicados',
         noCars: 'Este usuario no tiene autos publicados.',
         viewCar: 'Ver auto',
+        viewMoreCars: 'Ver más',
         reviews: 'Reseñas recibidas',
         noReviews: 'Este usuario todavía no recibió reseñas.',
         reviewNoComment: 'Sin comentario.',
@@ -168,6 +173,8 @@ export const profileI18n = {
         replace: 'Change picture',
         remove: 'Remove picture',
         none: 'No profile picture.',
+        saved: 'Profile picture updated.',
+        removed: 'Profile picture removed.',
       },
       docs: {
         title: 'Documents',
@@ -185,6 +192,8 @@ export const profileI18n = {
         validated: 'Validated',
         pending: 'Pending validation',
         none: 'Not uploaded',
+        statusValidated: 'Validated',
+        statusNotValidated: 'Not validated',
       },
       public: {
         title: "{{name}}'s profile",
@@ -199,6 +208,7 @@ export const profileI18n = {
         activeCars: 'Published cars',
         noCars: 'This user has no published cars.',
         viewCar: 'View car',
+        viewMoreCars: 'View more',
         reviews: 'Reviews received',
         noReviews: "This user hasn't received any reviews yet.",
         reviewNoComment: 'No comment.',

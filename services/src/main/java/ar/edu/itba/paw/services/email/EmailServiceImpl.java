@@ -60,7 +60,7 @@ import ar.edu.itba.paw.policy.ReservationTimingPolicy;
  * permits public service methods without {@code @Transactional} under documented justification.
  */
 @Service
-public final class EmailServiceImpl implements EmailService {
+public class EmailServiceImpl implements EmailService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
 

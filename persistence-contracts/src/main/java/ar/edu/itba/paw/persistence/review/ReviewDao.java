@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.review;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.domain.review.Review;
@@ -12,6 +13,9 @@ import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 public interface ReviewDao {
 
     boolean existsReview(long reservationId, boolean madeByRider);
+
+    /** Hydrated single review by its own surrogate id (canonical {@code /reservations/{id}/reviews/{reviewId}}). */
+    Optional<Review> findById(long reviewId);
 
     /** {@code rating} {@code null} persists an omitted review (same PK slot; excluded from public aggregates). */
     default void insertReview(long reservationId, boolean madeByRider, Integer rating, String comment) {
@@ -65,4 +69,12 @@ public interface ReviewDao {
      * "rating (count)" the same way the public car page does.
      */
     long countReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
+
+    /**
+     * SQL-paginated feed of every rated review left to {@code userId}, merging both directions
+     * (as owner and as rider) in a single {@code LIMIT}/{@code OFFSET} query ordered by date desc —
+     * unlike {@link #findRecentReviewsForCounterparty}, which only supports an unpaginated "recent
+     * N" preview per direction. Backs {@code GET /users/{id}/reviews}.
+     */
+    Page<ReviewItemDto> findReviewsForUserPage(long userId, int page, int pageSize);
 }

@@ -31,7 +31,7 @@ import ar.edu.itba.paw.models.util.search.ReservationSearchCriteria;
  * {@code AppPaginationProperties} and pass {@code pageSize} into the criteria builder.
  */
 @Service
-public final class ReservationQueryServiceImpl implements ReservationQueryService {
+public class ReservationQueryServiceImpl implements ReservationQueryService {
 
     private static final Set<String> RATING_BANDS = Set.of("UNDER_2", "2_TO_3", "3_TO_4", "OVER_4");
 

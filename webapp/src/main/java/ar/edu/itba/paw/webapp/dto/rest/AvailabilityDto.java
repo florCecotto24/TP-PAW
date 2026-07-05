@@ -5,7 +5,9 @@ import java.time.format.DateTimeFormatter;
 
 import javax.ws.rs.core.UriInfo;
 
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
@@ -44,6 +46,31 @@ public final class AvailabilityDto {
         availability.getNeighborhoodId()
                 .map(id -> RestUriUtils.neighborhoodUri(uriInfo, id).toString())
                 .ifPresent(uri -> dto.links.withRelated("neighborhood", uri));
+        return dto;
+    }
+
+    public static AvailabilityDto fromSegment(
+            final BookableSegmentProjection segment,
+            final long carId,
+            final UriInfo uriInfo) {
+        final AvailabilityDto dto = new AvailabilityDto();
+        dto.startDate = ISO_DATE.format(segment.getFrom());
+        dto.endDate = ISO_DATE.format(segment.getTo());
+        dto.dayPrice = segment.getDayPrice();
+        dto.startPointStreet = segment.getPublicLocation();
+        dto.startPointNumber = null;
+        dto.checkInTime = segment.getCheckInTime().toString();
+        dto.checkOutTime = segment.getCheckOutTime().toString();
+        dto.kind = CarRestEnums.toRestName(CarAvailability.Kind.OFFERED);
+        dto.links = LinksDto.ofSelf(
+                        RestUriUtils.carAvailabilityRangeUri(uriInfo, carId, dto.startDate, dto.endDate)
+                                .toString())
+                .withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString());
+        final Long neighborhoodId = segment.getNeighborhoodId();
+        if (neighborhoodId != null) {
+            dto.links.withRelated("neighborhood",
+                    RestUriUtils.neighborhoodUri(uriInfo, neighborhoodId).toString());
+        }
         return dto;
     }
 

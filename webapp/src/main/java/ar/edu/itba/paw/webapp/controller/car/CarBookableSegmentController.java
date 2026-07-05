@@ -9,7 +9,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.GenericEntity;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +18,7 @@ import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.BookableSegmentDto;
 
 /**
@@ -41,7 +41,7 @@ public final class CarBookableSegmentController {
     }
 
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(VndMediaType.BOOKABLE_SEGMENT_V1_JSON)
     public Response listBookableSegments(@PathParam("id") final long carId) {
         carService.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
@@ -53,6 +53,8 @@ public final class CarBookableSegmentController {
         final List<BookableSegmentDto> dtos = segments.stream()
                 .map(BookableSegmentDto::from)
                 .collect(Collectors.toList());
-        return Response.ok(new GenericEntity<List<BookableSegmentDto>>(dtos) {}).build();
+        return Response.ok(new GenericEntity<List<BookableSegmentDto>>(dtos) {})
+                .header("X-Total-Count", dtos.size())
+                .build();
     }
 }

@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import i18n, { SUPPORTED_LOCALES, type Locale } from '../i18n';
 import { useSessionStore } from '../session/sessionStore';
 import { paths } from '../routes/paths';
+import {
+  isMyCarsNavActive,
+  isOwnerReservationsNavActive,
+  isRiderReservationsNavActive,
+} from '../routes/navActive';
 import { apiAssetUrl } from '../api/uri';
 import { LogoutConfirmModal } from './ryden';
 import logoUrl from '../assets/images/Ryden_logo.ico';
@@ -12,6 +17,7 @@ import logoUrl from '../assets/images/Ryden_logo.ico';
 export default function NavBar() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const status = useSessionStore((s) => s.status);
   const currentUser = useSessionStore((s) => s.currentUser);
   const logout = useSessionStore((s) => s.logout);
@@ -36,6 +42,10 @@ export default function NavBar() {
   const avatarUrl = currentUser?.links.profilePicture
     ? apiAssetUrl(currentUser.links.profilePicture)
     : null;
+
+  const riderReservationsActive = isRiderReservationsNavActive(location.pathname, location.search);
+  const myCarsActive = isMyCarsNavActive(location.pathname, location.search);
+  const ownerReservationsActive = isOwnerReservationsNavActive(location.pathname, location.search);
 
   return (
     <>
@@ -68,9 +78,13 @@ export default function NavBar() {
                 {t('nav.publish')}
               </Nav.Link>
               {isAuthenticated && (
-                <Nav.Link as={NavLink} to={paths.myReservations} className="px-1">
+                <NavLink
+                  to={paths.myReservations}
+                  className={`nav-link px-1${riderReservationsActive ? ' active' : ''}`}
+                  aria-current={riderReservationsActive ? 'page' : undefined}
+                >
                   {t('nav.myReservations')}
-                </Nav.Link>
+                </NavLink>
               )}
 
               <div className="ryden-language-toggle ms-1 me-1" role="group" aria-label={t('nav.language')}>
@@ -128,10 +142,18 @@ export default function NavBar() {
                     {t('nav.profile')}
                   </NavDropdown.Item>
                   <NavDropdown.Divider />
-                  <NavDropdown.Item as={Link} to={paths.myCars}>
+                  <NavDropdown.Item
+                    as={NavLink}
+                    to={paths.myCars}
+                    active={myCarsActive}
+                  >
                     {t('nav.myCars')}
                   </NavDropdown.Item>
-                  <NavDropdown.Item as={Link} to={paths.ownerReservations}>
+                  <NavDropdown.Item
+                    as={NavLink}
+                    to={paths.ownerReservations}
+                    active={ownerReservationsActive}
+                  >
                     {t('nav.ownerReservations')}
                   </NavDropdown.Item>
                   <NavDropdown.Item as={Link} to={paths.myFavorites}>

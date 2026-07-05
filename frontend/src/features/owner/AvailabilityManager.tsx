@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'react-bootstrap';
+import flatpickr from 'flatpickr';
+import type { Instance } from 'flatpickr/dist/types/instance';
 import type { Options } from 'flatpickr/dist/types/options';
 import FlatpickrCalendar, { compactPrice, dayStartFromYmd, dayEndFromYmd, ymd } from '../../components/FlatpickrCalendar';
+import { NeighborhoodPicker } from '../../components/ryden';
+import PriceMarketInsightCard from '../../components/ryden/car/PriceMarketInsightCard';
+import { formatDateRange, flatpickrLocale, formatMonthYear, shiftMonth } from '../../i18n/dateFormat';
+import { idFromUri } from '../../api/uri';
 import {
   createAvailability,
   deleteAvailability,
   fetchAvailabilities,
   fetchNeighborhoods,
+  fetchPriceMarketInsight,
   updateAvailability,
 } from './api';
 import { useApiErrorMessage } from './hooks';
@@ -41,7 +48,7 @@ const EMPTY_FORM: AvailabilityCreateDto = {
 };
 
 export default function AvailabilityManager({ car }: { car: CarDto }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const errorMessage = useApiErrorMessage();
 
   const [month, setMonth] = useState(currentMonth());
@@ -50,9 +57,109 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   const [form, setForm] = useState<AvailabilityCreateDto>(EMPTY_FORM);
   const [editing, setEditing] = useState<AvailabilityDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [highlightedSelf, setHighlightedSelf] = useState<string | null>(null);
+  const [priceInsight, setPriceInsight] = useState<{
+    minPrice: number;
+    maxPrice: number;
+    averagePrice: number;
+  } | null>(null);
+  const rangePickerRef = useRef<HTMLDivElement>(null);
+  const rangeFpRef = useRef<Instance | null>(null);
+
+  const neighborhoodOptions = useMemo(
+    () =>
+      neighborhoods.map((n) => {
+        const nid = n.links.self.split('?')[0].replace(/\/+$/, '').split('/').pop();
+        return { id: Number(nid), name: n.name };
+      }),
+    [neighborhoods],
+  );
+
+  useEffect(() => {
+    let active = true;
+    const modelUri = car.links.model;
+    const carId = idFromUri(car.links.self);
+    if (!modelUri || !carId) {
+      setPriceInsight(null);
+      return undefined;
+    }
+    fetchPriceMarketInsight(modelUri, carId)
+      .then((res) => {
+        if (!active) return;
+        const data = res.data;
+        if (data && data.sampleCount > 0) {
+          setPriceInsight({
+            minPrice: data.minPrice,
+            maxPrice: data.maxPrice,
+            averagePrice: data.averagePrice,
+          });
+        } else {
+          setPriceInsight(null);
+        }
+      })
+      .catch(() => { if (active) setPriceInsight(null); });
+    return () => { active = false; };
+  }, [car]);
+
+  useEffect(() => {
+    if (priceInsight) {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('ryden-price-insight-refresh'));
+      });
+    }
+  }, [priceInsight, form.dayPrice, editing]);
+
+  useEffect(() => {
+    const node = rangePickerRef.current;
+    if (!node) return undefined;
+    rangeFpRef.current?.destroy();
+    const defaultDates: Date[] = [];
+    if (form.startDate) {
+      const start = dayStartFromYmd(form.startDate);
+      if (start) defaultDates.push(start);
+    }
+    if (form.endDate) {
+      const end = dayStartFromYmd(form.endDate);
+      if (end) defaultDates.push(end);
+    }
+    rangeFpRef.current = flatpickr(node, {
+      locale: flatpickrLocale(i18n.language),
+      disableMobile: true,
+      mode: 'range',
+      inline: true,
+      minDate: 'today',
+      dateFormat: 'Y-m-d',
+      defaultDate: defaultDates.length > 0 ? defaultDates : undefined,
+      onChange: (dates) => {
+        if (dates.length >= 1) update('startDate', ymd(dates[0]));
+        if (dates.length >= 2) update('endDate', ymd(dates[1]));
+        else if (dates.length === 1) update('endDate', '');
+      },
+    });
+    return () => {
+      rangeFpRef.current?.destroy();
+      rangeFpRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [i18n.language, editing]);
+
+  useEffect(() => {
+    const fp = rangeFpRef.current;
+    if (!fp) return;
+    if (form.startDate && form.endDate) {
+      const start = dayStartFromYmd(form.startDate);
+      const end = dayStartFromYmd(form.endDate);
+      if (start && end) fp.setDate([start, end], false);
+    } else if (form.startDate) {
+      const start = dayStartFromYmd(form.startDate);
+      if (start) fp.setDate([start], false);
+    } else {
+      fp.clear(false);
+    }
+  }, [form.startDate, form.endDate]);
 
   useEffect(() => {
     let active = true;
@@ -174,9 +281,10 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     }
     setBusy(true);
     try {
-      if (editing) await updateAvailability(editing, form);
+      if (editing) await updateAvailability(editing, car, form);
       else await createAvailability(car, form);
       resetForm();
+      setNotice(editing ? t('owner.availability.updatedNotice') : t('owner.availability.createdNotice'));
       setReloadTick((n) => n + 1);
     } catch (err) {
       setError(errorMessage(err, 'owner.availability.errors.saveFailed'));
@@ -204,22 +312,36 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
       <div className="card-body p-4">
         <div className="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
           <h2 className="h5 fw-semibold mb-0">{t('owner.availability.title')}</h2>
-          <div className="d-flex align-items-center gap-2">
-            <label className="form-label small mb-0 text-secondary" htmlFor="availMonth">
+          <div className="d-flex align-items-center gap-2" role="group" aria-labelledby="availMonthLabel">
+            <span id="availMonthLabel" className="form-label small mb-0 text-secondary">
               {t('owner.availability.month')}
-            </label>
-            <input
-              id="availMonth"
-              type="month"
-              className="form-control form-control-sm"
-              style={{ width: 'auto' }}
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-            />
+            </span>
+            <div className="d-flex align-items-center gap-1">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                aria-label={t('owner.availability.prevMonth')}
+                onClick={() => setMonth((m) => shiftMonth(m, -1))}
+              >
+                <i className="bi bi-chevron-left" aria-hidden="true" />
+              </button>
+              <span className="small fw-semibold text-nowrap px-1" id="availMonth">
+                {formatMonthYear(month, i18n.language)}
+              </span>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                aria-label={t('owner.availability.nextMonth')}
+                onClick={() => setMonth((m) => shiftMonth(m, 1))}
+              >
+                <i className="bi bi-chevron-right" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
 
         {error && <div className="alert alert-danger py-2 small" role="alert">{error}</div>}
+        {notice && <div className="alert alert-success py-2 small" role="status">{notice}</div>}
 
         <div className="owner-cal-container owner-cal-readonly mb-3">
           <FlatpickrCalendar options={ownerCalendarOptions} onChange={onCalendarDayClick} />
@@ -237,7 +359,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
                 <div className="d-flex align-items-center gap-2 min-w-0">
                   <i className="bi bi-calendar-range text-primary flex-shrink-0" aria-hidden="true" />
                   <div className="min-w-0">
-                    <span className="fw-medium d-block">{p.startDate} &ndash; {p.endDate}</span>
+                    <span className="fw-medium d-block">{formatDateRange(p.startDate, p.endDate, i18n.language)}</span>
                     <span className="small text-secondary">
                       ${p.dayPrice}/{t('owner.availability.perDay')} · {p.startPointStreet} {p.startPointNumber ?? ''} · {p.checkInTime}&ndash;{p.checkOutTime}
                     </span>
@@ -273,46 +395,59 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
             {editing ? t('owner.availability.editTitle') : t('owner.availability.createTitle')}
           </h3>
           <form onSubmit={onSubmit}>
-            <div className="row g-3 mb-3">
-              <div className="col-md-6">
-                <label className="form-label required-label" htmlFor="availStart">{t('owner.availability.startDate')}</label>
-                <input id="availStart" type="date" className="form-control" value={form.startDate} onChange={(e) => update('startDate', e.target.value)} required />
-              </div>
-              <div className="col-md-6">
-                <label className="form-label required-label" htmlFor="availEnd">{t('owner.availability.endDate')}</label>
-                <input id="availEnd" type="date" className="form-control" value={form.endDate} onChange={(e) => update('endDate', e.target.value)} required />
-              </div>
+            <div className="mb-3">
+              <label className="form-label required-label" htmlFor="availFormRangePicker">
+                {t('owner.availability.dateRange')}
+              </label>
+              <div id="availFormRangePicker" ref={rangePickerRef} className="owner-cal-container" />
+              {(form.startDate || form.endDate) && (
+                <p className="small text-secondary mt-2 mb-0">
+                  {formatDateRange(form.startDate, form.endDate, i18n.language)}
+                </p>
+              )}
             </div>
 
             <div className="mb-3">
-              <label className="form-label required-label" htmlFor="availPrice">{t('owner.availability.dayPrice')}</label>
-              <input
-                id="availPrice"
-                type="number"
-                min={0}
-                step="0.01"
-                className="form-control"
-                style={{ maxWidth: '12rem' }}
-                value={form.dayPrice}
-                onChange={(e) => update('dayPrice', Number(e.target.value))}
-                required
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label" htmlFor="availNeighborhood">{t('owner.availability.neighborhood')}</label>
-              <select
-                id="availNeighborhood"
-                className="form-select"
-                value={form.neighborhoodId ?? ''}
-                onChange={(e) => update('neighborhoodId', e.target.value ? Number(e.target.value) : undefined)}
+              <PriceMarketInsightCard
+                insight={priceInsight}
+                priceInputId="availPrice"
+                initialUserPrice={form.dayPrice > 0 ? form.dayPrice : null}
               >
-                <option value="">{t('owner.publish.selectPlaceholder')}</option>
-                {neighborhoods.map((n) => {
-                  const nid = n.links.self.split('?')[0].replace(/\/+$/, '').split('/').pop();
-                  return <option key={n.links.self} value={nid}>{n.name}</option>;
-                })}
-              </select>
+                <input
+                  id="availPrice"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="form-control js-listing-price-decimal"
+                  style={{ maxWidth: '12rem' }}
+                  value={form.dayPrice === 0 ? '' : form.dayPrice}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    update('dayPrice', raw === '' ? 0 : Number(raw));
+                  }}
+                  required
+                />
+              </PriceMarketInsightCard>
+            </div>
+
+            <div className="mb-3">
+              <label className="form-label" htmlFor="nb_dd_btn_availNeighborhood">
+                {t('owner.availability.neighborhood')}
+              </label>
+              <NeighborhoodPicker
+                pickerId="availNeighborhood"
+                neighborhoodList={neighborhoodOptions}
+                anyLabel={t('owner.publish.selectPlaceholder')}
+                searchPlaceholder={t('search.filter.neighborhood.search')}
+                selectFieldLabel={t('owner.availability.neighborhood')}
+                toggleAriaLabel={t('owner.availability.neighborhood')}
+                allowMultiple={false}
+                selectedNeighborhoodId={form.neighborhoodId ?? null}
+                onSelectionChange={(ids) => {
+                  const raw = ids[0];
+                  update('neighborhoodId', raw != null && raw !== '' ? Number(raw) : undefined);
+                }}
+              />
             </div>
 
             <div className="row g-3 mb-3">

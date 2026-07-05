@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
@@ -47,11 +48,22 @@ import ar.edu.itba.paw.webapp.security.jwt.TokenService;
 /**
  * Stateless Spring Security for the REST API (LINEAMIENTOS-SPA-REST.md §1.8): no sessions, no form login,
  * no remember-me, no CSRF. Authentication is resolved per-request from the {@code Authorization} header by
- * {@link JwtAuthenticationFilter}. Coarse path rules live here (public reads vs. authenticated writes);
- * fine-grained owner/admin/participant checks are enforced inside the JAX-RS resources (F5).
+ * {@link JwtAuthenticationFilter}. Coarse path rules live here (public reads vs. authenticated writes).
+ *
+ * Fine-grained owner/admin/participant scoping is delegated to Spring Security's method-security AOP
+ * interceptor via {@code @PreAuthorize} on the JAX-RS resource methods (backed by the predicate beans in
+ * {@code webapp.support}, e.g. {@code UserResourceAccess}/{@code ReservationResourceAccess}/
+ * {@code CarResourceAccess}), instead of the resources throwing {@code ForbiddenException} by hand.
+ * {@code proxyTargetClass = true} is required because JAX-RS resources are concrete classes with no
+ * interface (Jersey's {@code SpringComponentProvider} only recognizes {@code @Component} beans and resolves
+ * them through the Spring proxy, so the advised bean must be CGLIB-proxyable — the resource classes touched
+ * by {@code @PreAuthorize} are therefore non-final). A handful of checks stay imperative in the resource
+ * body where the decision genuinely depends on parsed request content (e.g. per-field PATCH routing) rather
+ * than being a pure precondition on the path/query parameters.
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(proxyTargetClass = true)
 public class WebAuthConfig {
 
     /** Thread-safe; reused to serialize the error body so message text is always JSON-escaped. */
@@ -204,10 +216,16 @@ public class WebAuthConfig {
     /** 401 (no authentication) as a vnd.paw.error body — never a redirect to a login page. */
     private static AuthenticationEntryPoint restAuthenticationEntryPoint() {
         return (request, response, authException) -> {
-            // RFC 7235 §4.1 requires WWW-Authenticate on every 401. We accept Basic (to obtain tokens)
-            // and Bearer (access/refresh JWT); advertise both. This belongs on the 401 only — never on
-            // the 403 (the caller IS authenticated there) — Q&A G11 Vitae "Header www-authenticate".
-            response.setHeader("WWW-Authenticate", "Basic realm=\"ryden\", Bearer realm=\"ryden\"");
+            // RFC 7235 §4.1 requires WWW-Authenticate on every 401. This belongs on the 401 only —
+            // never on the 403 (the caller IS authenticated there) — Q&A G11 Vitae "Header
+            // www-authenticate". Only advertise Bearer: Basic is accepted on login-style requests
+            // (`Authorization: Basic` built by the SPA's own JS, never a browser-native prompt) but is
+            // never the scheme actually protecting a resource here — advertising "Basic" in the
+            // challenge makes any browser that reaches a 401 directly (typed URL, broken subresource
+            // link, no-JS request) pop up its native credential dialog, which this stateless JWT API
+            // never wants (another group's graded correction: "login form nativo del browser producto
+            // de un 401 mal manejado").
+            response.setHeader("WWW-Authenticate", "Bearer realm=\"ryden\"");
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "unauthorized",
                     "Authentication required.");
         };

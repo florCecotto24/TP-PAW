@@ -2,7 +2,10 @@ import { useEffect, useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BreadcrumbTrail, Pagination, SortBar } from '../../../components/ryden';
+import { appBasePath } from '../../../appBasePath';
 import { useCar } from '../../browse/hooks';
+
+const CAR_EMPTY_ILLUSTRATION_URL = `${appBasePath()}/assets/images/filmore-cars.png`;
 import MyReservationsOwnerFilterForm from '../components/MyReservationsOwnerFilterForm';
 import MyReservationsRiderFilterForm from '../components/MyReservationsRiderFilterForm';
 import ReservationListCard from '../components/ReservationListCard';
@@ -302,6 +305,12 @@ function OwnerReservationsView({ ownerId }: { ownerId: string | null }) {
             </>
           ) : scopedToCar ? (
             <>
+              <img
+                src={CAR_EMPTY_ILLUSTRATION_URL}
+                alt=""
+                className="mb-4 img-fluid"
+                style={{ maxWidth: 260 }}
+              />
               <h2 className="h4 fw-semibold mb-2">{t('res.list.ownerCarEmpty.title')}</h2>
               <p className="text-secondary mb-0 search-empty-state__text">
                 {t('res.list.ownerCarEmpty.description')}

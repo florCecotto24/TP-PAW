@@ -78,6 +78,7 @@ function FavoritesList({ user }: { user: UserDto }) {
     mutationFn: (carSelfLink: string) => removeFavorite(user, carSelfLink),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', 'favorites'] });
+      void queryClient.invalidateQueries({ queryKey: ['browse', 'favorites'] });
     },
   });
 

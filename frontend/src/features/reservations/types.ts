@@ -26,6 +26,8 @@ export interface ReservationDto {
   paymentProofDeadlineAt?: string | null;
   refundProofDeadlineAt?: string | null;
   paymentRefundRequired: boolean;
+  hasPaymentReceipt?: boolean;
+  hasRefundReceipt?: boolean;
   createdAt: string;
   // CBU del dueño para que el inquilino transfiera (útil sólo en PENDING). Nullable.
   ownerCbu?: string | null;

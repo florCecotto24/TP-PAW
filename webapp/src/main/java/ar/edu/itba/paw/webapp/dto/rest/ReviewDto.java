@@ -26,15 +26,16 @@ public final class ReviewDto {
         final ReviewDto dto = new ReviewDto();
         dto.rating = review.getRating().orElse(null);
         dto.comment = review.getComment().orElse(null);
-        dto.madeByRider = review.getId().isMadeByRider();
+        dto.madeByRider = review.isMadeByRider();
         dto.createdAt = review.getCreatedAt() == null ? null : ISO_OFFSET.format(review.getCreatedAt());
-        final long reservationId = review.getId().getReservationId();
+        final long reservationId = review.getReservationId();
         final long carId = review.getReservation().getCarId();
         final User author = dto.madeByRider
                 ? review.getReservation().getRider()
                 : review.getReservation().getCar().getOwner();
-        dto.links = LinksDto.ofSelf(RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString())
-                .withRelated("reservation", RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString())
+        dto.links = LinksDto.ofSelf(
+                        RestUriUtils.reservationReviewUri(uriInfo, reservationId, review.getId()).toString())
+                .withRelated("reservation", RestUriUtils.reservationUri(uriInfo, reservationId).toString())
                 .withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString())
                 .withRelated("author", RestUriUtils.userUri(uriInfo, author.getId()).toString());
         review.getImage().map(img -> img.getId()).ifPresent(imageId ->

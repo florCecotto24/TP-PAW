@@ -166,6 +166,15 @@ public interface CarService {
             Long excludeCarId);
 
     /**
+     * Resolves which car statuses are visible for an owner-scoped listing ({@code GET /cars?ownerId=}):
+     * the caller's own explicit filter when present (assumes the caller already checked the viewer is
+     * allowed to filter by status), or {@code null} (no filter, i.e. every status) for the owner/admin
+     * default view, or {@code ACTIVE}-only for any other viewer — browsing "cars owned by X" publicly
+     * only shows currently-active listings, paused/deactivated/pending cars stay private to their owner.
+     */
+    List<Car.Status> resolveOwnerListingStatuses(List<Car.Status> requestedStatuses, boolean viewerIsSelfOrAdmin);
+
+    /**
      * Market price stats (min / max / average) for active cars with the same brand and model.
      * {@code excludeCarId} omits one car when editing (typically the current one).
      */

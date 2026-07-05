@@ -1,6 +1,8 @@
 package ar.edu.itba.paw.services.email;
 
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.slf4j.Logger;
@@ -29,7 +31,7 @@ import ar.edu.itba.paw.mail.MailPublicUrls;
  * through {@link MailDispatchSupport}, no JPA touch. {@code @Transactional} is intentionally omitted.
  */
 @Service
-public final class UserAccountEmailServiceImpl implements UserAccountEmailService {
+public class UserAccountEmailServiceImpl implements UserAccountEmailService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserAccountEmailServiceImpl.class);
 
@@ -186,7 +188,12 @@ public final class UserAccountEmailServiceImpl implements UserAccountEmailServic
         final Context ctx = new Context(mailLocale);
         mailDispatch.setHtmlLangFromLocale(ctx, mailLocale);
         ctx.setVariable("code", code);
-        ctx.setVariable("resetUrl", mailPublicUrls.absolutePath("/forgot-password/reset"));
+        // SPA route is "/forgot-password"; the email query param lets
+        // ForgotResetPage skip straight to the code+password step instead of "/forgot-password/reset",
+        // which is not a route the client-side router (or the security allow-list) recognizes.
+        final String resetUrl = mailPublicUrls.absolutePath("/forgot-password")
+                + "?email=" + URLEncoder.encode(to, StandardCharsets.UTF_8);
+        ctx.setVariable("resetUrl", resetUrl);
         try {
             mailDispatch.runMail(() -> {
                 final String htmlContent = htmlTemplateEngine.process(PASSWORD_RESET_TEMPLATE, ctx);

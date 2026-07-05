@@ -2,12 +2,17 @@ package ar.edu.itba.paw.webapp.dto.rest;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.UriInfo;
 
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 
 /**
@@ -31,7 +36,12 @@ public final class CarDto {
     private String brandName;
     private String modelName;
     private boolean modelValidated;
+    private boolean hasInsurance;
     private String createdAt;
+    /** Consumer browse cards only: below_market, at_market, above_market. */
+    private String priceMarketPositionModifier;
+    private BigDecimal marketAveragePrice;
+    private Long marketSampleCount;
     private LinksDto links;
 
     public CarDto() {
@@ -53,12 +63,20 @@ public final class CarDto {
         dto.brandName = car.getBrand();
         dto.modelName = car.getModel();
         dto.modelValidated = !car.isModelPendingValidation();
+        dto.hasInsurance = car.getInsuranceFileId().isPresent();
         dto.createdAt = car.getCreatedAt() == null ? null : ISO_OFFSET.format(car.getCreatedAt());
         dto.links = CarLinks.forCar(car, uriInfo);
         return dto;
     }
 
     public static CarDto fromCarCard(final CarCard card, final UriInfo uriInfo) {
+        return fromCarCard(card, uriInfo, null);
+    }
+
+    public static CarDto fromCarCard(
+            final CarCard card,
+            final UriInfo uriInfo,
+            final ConsumerCarCardMarketContext marketContext) {
         final CarDto dto = new CarDto();
         dto.plate = "";
         dto.year = null;
@@ -74,8 +92,31 @@ public final class CarDto {
         dto.brandName = card.getBrand();
         dto.modelName = card.getModel();
         dto.modelValidated = !card.isModelPendingValidation();
+        dto.hasInsurance = false;
         dto.links = CarLinks.forCarCard(card, uriInfo);
+        applyConsumerMarketContext(dto, marketContext);
         return dto;
+    }
+
+    private static void applyConsumerMarketContext(
+            final CarDto dto, final ConsumerCarCardMarketContext marketContext) {
+        if (marketContext == null) {
+            return;
+        }
+        final PriceMarketPosition position = marketContext.getPosition();
+        dto.priceMarketPositionModifier = position.name().toLowerCase(Locale.ROOT);
+        dto.marketAveragePrice = marketContext.getInsight().getAveragePrice();
+        dto.marketSampleCount = marketContext.getInsight().getSampleCount();
+    }
+
+    /** Maps browse/favorites card rows with pre-resolved consumer market badge data. */
+    public static List<CarDto> fromConsumerBrowseCarCards(
+            final List<CarCard> cards,
+            final UriInfo uriInfo,
+            final Map<Long, ConsumerCarCardMarketContext> marketContexts) {
+        return cards.stream()
+                .map(card -> fromCarCard(card, uriInfo, marketContexts.get(card.getCarId())))
+                .collect(Collectors.toList());
     }
 
     public String getPlate() {
@@ -182,12 +223,44 @@ public final class CarDto {
         this.modelValidated = modelValidated;
     }
 
+    public boolean getHasInsurance() {
+        return hasInsurance;
+    }
+
+    public void setHasInsurance(final boolean hasInsurance) {
+        this.hasInsurance = hasInsurance;
+    }
+
     public String getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(final String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getPriceMarketPositionModifier() {
+        return priceMarketPositionModifier;
+    }
+
+    public void setPriceMarketPositionModifier(final String priceMarketPositionModifier) {
+        this.priceMarketPositionModifier = priceMarketPositionModifier;
+    }
+
+    public BigDecimal getMarketAveragePrice() {
+        return marketAveragePrice;
+    }
+
+    public void setMarketAveragePrice(final BigDecimal marketAveragePrice) {
+        this.marketAveragePrice = marketAveragePrice;
+    }
+
+    public Long getMarketSampleCount() {
+        return marketSampleCount;
+    }
+
+    public void setMarketSampleCount(final Long marketSampleCount) {
+        this.marketSampleCount = marketSampleCount;
     }
 
     public LinksDto getLinks() {

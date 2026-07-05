@@ -1,3 +1,5 @@
+import { formatMonthYear } from '../../i18n/dateFormat';
+
 const FLEX_MONTH = /^\d{4}-\d{2}$/;
 
 export interface FlexMonthOption {
@@ -16,7 +18,7 @@ export function daysInFlexMonth(yyyyMm: string): number {
 }
 
 /** Next 12 calendar months from today (wall), for the flex-month dropdown. */
-export function buildFlexMonthOptions(locale: string, selected?: string): FlexMonthOption[] {
+export function buildFlexMonthOptions(language: string, selected?: string): FlexMonthOption[] {
   const now = new Date();
   const options: FlexMonthOption[] = [];
   for (let i = 0; i < 12; i += 1) {
@@ -24,16 +26,11 @@ export function buildFlexMonthOptions(locale: string, selected?: string): FlexMo
     const y = d.getFullYear();
     const mo = d.getMonth() + 1;
     const value = `${y}-${mo < 10 ? `0${mo}` : mo}`;
-    let label = d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-    label = label.charAt(0).toUpperCase() + label.slice(1);
+    const label = formatMonthYear(value, language);
     options.push({ value, label });
   }
   if (selected && FLEX_MONTH.test(selected) && !options.some((o) => o.value === selected)) {
-    const [y, m] = selected.split('-').map(Number);
-    const d = new Date(y, m - 1, 1);
-    let label = d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-    label = label.charAt(0).toUpperCase() + label.slice(1);
-    options.unshift({ value: selected, label });
+    options.unshift({ value: selected, label: formatMonthYear(selected, language) });
   }
   return options;
 }

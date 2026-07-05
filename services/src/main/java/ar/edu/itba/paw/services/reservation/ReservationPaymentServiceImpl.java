@@ -41,7 +41,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * and mutations are funneled through {@link ReservationService} (the sole DAO owner).</p>
  */
 @Service
-public final class ReservationPaymentServiceImpl implements ReservationPaymentService {
+public class ReservationPaymentServiceImpl implements ReservationPaymentService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationPaymentServiceImpl.class);
 

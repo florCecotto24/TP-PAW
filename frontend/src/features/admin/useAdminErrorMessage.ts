@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '../../api/client';
 
@@ -13,8 +14,8 @@ import { ApiError } from '../../api/client';
  */
 export function useAdminErrorMessage(): (err: unknown) => string {
   const { t } = useTranslation();
-  return (err) => {
+  return useCallback((err) => {
     const code = err instanceof ApiError ? (err.body?.message ?? err.code) : undefined;
     return code ? t([`error.byCode.${code}`, 'error.generic']) : t('error.generic');
-  };
+  }, [t]);
 }

@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.dto.PublishCarOutcome;
 import ar.edu.itba.paw.dto.PublishCarRequest;
+import ar.edu.itba.paw.exception.car.CarPublishPrerequisitesMissingException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -25,7 +26,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * {@link PublishCarOutcome} the controller can switch on.
  */
 @Service
-public final class CarPublishingServiceImpl implements CarPublishingService {
+public class CarPublishingServiceImpl implements CarPublishingService {
 
     private final CarService carService;
     private final CarBrandService carBrandService;
@@ -53,6 +54,9 @@ public final class CarPublishingServiceImpl implements CarPublishingService {
             final long ownerId, final PublishCarRequest request, final Locale locale) {
         final User owner = userService.getUserById(ownerId)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!userService.meetsPublishingPrerequisites(owner)) {
+            throw new CarPublishPrerequisitesMissingException();
+        }
 
         // Resolve brand/model strings (already non-blank-validated upstream) to a catalog row.
         // findOrCreateUnvalidated() returns a row marked validated=false when the value is new.

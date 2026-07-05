@@ -3,6 +3,7 @@
 // se navega por esos links, nunca se arman URLs a mano.
 
 import type { Links } from '../../api/types';
+import type { PriceMarketPosition } from '../../components/ryden/car/CarCard';
 
 // --- Enums del dominio (openapi.yaml §components/schemas) ---------------------
 export type CarType =
@@ -83,9 +84,14 @@ export interface CarDto {
   ratingAvg?: number | null;
   // Solo en listados (proyección CarCard); en el detalle es null (el precio vive en availabilities).
   dayPrice?: number | null;
+  /** Badge de mercado en home/búsqueda/favoritos cuando hay datos comparables. */
+  priceMarketPositionModifier?: PriceMarketPosition | null;
+  marketAveragePrice?: number | null;
+  marketSampleCount?: number | null;
   brandName: string;
   modelName: string;
   modelValidated: boolean;
+  hasInsurance?: boolean;
   createdAt: string;
   links: CarLinks;
 }

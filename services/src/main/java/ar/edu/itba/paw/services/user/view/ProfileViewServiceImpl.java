@@ -20,7 +20,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * formatting, document validation flags, and license / identity stored file names.
  */
 @Service
-public final class ProfileViewServiceImpl implements ProfileViewService {
+public class ProfileViewServiceImpl implements ProfileViewService {
 
     private static final DateTimeFormatter MEMBER_SINCE_PATTERN = DateTimeFormatter.ofPattern("LLLL uuuu");
     private static final DateTimeFormatter BIRTH_DATE_PATTERN_ES = DateTimeFormatter.ofPattern("dd/MM/yyyy");

@@ -24,11 +24,15 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
+import ar.edu.itba.paw.exception.car.CarNotFoundException;
+import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.services.car.CarModelService;
+import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.ModelDto;
+import ar.edu.itba.paw.webapp.dto.rest.PriceMarketInsightDto;
 import ar.edu.itba.paw.webapp.form.catalog.CatalogApprovalForm;
 
 /** Catalog models ({@code /models}, {@code /models/{id}}). */
@@ -37,14 +41,19 @@ import ar.edu.itba.paw.webapp.form.catalog.CatalogApprovalForm;
 public final class ModelController {
 
     private final CarModelService carModelService;
+    private final CarService carService;
     private final AdminService adminService;
 
     @Context
     private UriInfo uriInfo;
 
     @Autowired
-    public ModelController(final CarModelService carModelService, final AdminService adminService) {
+    public ModelController(
+            final CarModelService carModelService,
+            final CarService carService,
+            final AdminService adminService) {
         this.carModelService = carModelService;
+        this.carService = carService;
         this.adminService = adminService;
     }
 
@@ -71,6 +80,24 @@ public final class ModelController {
         final CarModel model = carModelService.findById(id)
                 .orElseThrow(() -> new CarModelNotFoundException(id));
         return Response.ok(ModelDto.from(model, uriInfo)).build();
+    }
+
+    @GET
+    @Path("/{id}/price-insight")
+    @Produces(VndMediaType.PRICE_MARKET_INSIGHT_V1_JSON)
+    public Response priceInsight(
+            @PathParam("id") final long id,
+            @QueryParam("excludeCarId") final Long excludeCarId) {
+        carModelService.findById(id)
+                .orElseThrow(() -> new CarModelNotFoundException(id));
+        if (excludeCarId == null) {
+            return Response.noContent().build();
+        }
+        final Car car = carService.getCarById(excludeCarId)
+                .orElseThrow(() -> new CarNotFoundException(excludeCarId));
+        return carService.getPriceMarketInsightForCar(car, excludeCarId)
+                .map(insight -> Response.ok(PriceMarketInsightDto.from(insight)).build())
+                .orElse(Response.noContent().build());
     }
 
     @PATCH

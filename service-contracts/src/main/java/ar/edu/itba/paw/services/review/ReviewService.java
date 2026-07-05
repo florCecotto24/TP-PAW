@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.review;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
@@ -29,6 +30,9 @@ public interface ReviewService {
 
     /** Reviews attached to a single reservation (participants/admin). */
     List<Review> getReviewsForReservation(long reservationId);
+
+    /** Single review by its own surrogate id, backing {@code GET /reservations/{id}/reviews/{reviewId}}. */
+    Optional<Review> getReviewById(long reviewId);
 
     /** Total public reviews stored for the car. */
     long countReviewsForCar(long carId);
@@ -92,4 +96,10 @@ public interface ReviewService {
 
     /** Total rated reviews stored against the counterparty (owner side or rider side). */
     long countReviewsForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
+
+    /**
+     * SQL-paginated feed of every rated review left to {@code userId} (both as owner and as
+     * rider), ordered by date desc. Backs {@code GET /users/{id}/reviews}.
+     */
+    Page<ReviewItemDto> getReviewsForUser(long userId, int page, int pageSize);
 }

@@ -6,8 +6,11 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.validation.Valid;
@@ -32,6 +35,8 @@ import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,14 +48,13 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.services.car.CarPublishingService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.user.AdminService;
-import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
@@ -67,10 +71,10 @@ import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.RestCarSortMapper;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
-import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrain;
-import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarStatus;
-import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmission;
-import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarType;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrainList;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarStatusList;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmissionList;
+import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTypeList;
 import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
 
 /**
@@ -78,12 +82,11 @@ import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
  */
 @Path("/cars")
 @Component
-public final class CarController {
+public class CarController {
 
     private final CarService carService;
     private final CarPublishingService carPublishingService;
     private final AdminService adminService;
-    private final UserService userService;
     private final FormValidationSupport formValidationSupport;
     private final CurrentUserResolver currentUserResolver;
     private final CarResourceAccess carResourceAccess;
@@ -100,7 +103,6 @@ public final class CarController {
             final CarService carService,
             final CarPublishingService carPublishingService,
             final AdminService adminService,
-            final UserService userService,
             final FormValidationSupport formValidationSupport,
             final CurrentUserResolver currentUserResolver,
             final CarResourceAccess carResourceAccess,
@@ -111,7 +113,6 @@ public final class CarController {
         this.carService = carService;
         this.carPublishingService = carPublishingService;
         this.adminService = adminService;
-        this.userService = userService;
         this.formValidationSupport = formValidationSupport;
         this.currentUserResolver = currentUserResolver;
         this.carResourceAccess = carResourceAccess;
@@ -121,6 +122,12 @@ public final class CarController {
         this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
+    // A14 (audit): documented decision — a single collection whose visibility is a query-param
+    // filter, not a different operation per role (see openapi.yaml for the full per-branch
+    // breakdown): scope=admin (admin-only, whole catalog) / ownerId (self-or-admin sees every
+    // status, anyone else sees active-only and can't pass status) / neither (public browse,
+    // active-only). Not a @PreAuthorize candidate: each branch's rule is chosen by which query
+    // params the caller sent, not a precondition on path/query alone.
     @GET
     @Produces({VndMediaType.CAR_V1_JSON, VndMediaType.CAR_V1_XML})
     public Response listCars(
@@ -128,19 +135,19 @@ public final class CarController {
             @QueryParam("pageSize") final Integer pageSizeParam,
             @QueryParam("q") final String query,
             @QueryParam("ownerId") final Long ownerId,
-            @QueryParam("category") @ValidCarType final String category,
-            @QueryParam("transmission") @ValidCarTransmission final String transmission,
-            @QueryParam("powertrain") @ValidCarPowertrain final String powertrain,
+            @QueryParam("category") @ValidCarTypeList final List<String> category,
+            @QueryParam("transmission") @ValidCarTransmissionList final List<String> transmission,
+            @QueryParam("powertrain") @ValidCarPowertrainList final List<String> powertrain,
             @QueryParam("priceMin") final BigDecimal priceMin,
             @QueryParam("priceMax") final BigDecimal priceMax,
-            @QueryParam("rating") final BigDecimal rating,
+            @QueryParam("rating") final List<String> rating,
             @QueryParam("neighborhoodId") final Long neighborhoodId,
             @QueryParam("from") final String from,
             @QueryParam("until") final String until,
             @QueryParam("flexible") @DefaultValue("false") final boolean flexible,
             @QueryParam("flexMonth") @ValidYearMonth final String flexMonth,
             @QueryParam("flexDays") final Integer flexDays,
-            @QueryParam("status") @ValidCarStatus final String status,
+            @QueryParam("status") @ValidCarStatusList final List<String> status,
             @QueryParam("scope") final String scope,
             @QueryParam("sort") final String sort) {
         final int safePage = Math.max(1, page);
@@ -149,6 +156,10 @@ public final class CarController {
                 : paginationProperties.getDefaultPageSize();
         final int zeroBasedPage = safePage - 1;
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
+        final List<Car.Type> categories = toCarTypes(category);
+        final List<Car.Transmission> transmissions = toTransmissions(transmission);
+        final List<Car.Powertrain> powertrains = toPowertrains(powertrain);
+        final List<String> ratingBands = rating == null ? List.of() : rating;
 
         if ("admin".equalsIgnoreCase(scope)) {
             carResourceAccess.requireAdmin();
@@ -159,33 +170,27 @@ public final class CarController {
         if (ownerId != null) {
             final boolean selfOrAdmin = viewer != null
                     && (viewer.getUserId() == ownerId || carResourceAccess.isAdmin());
-            if (status != null && !status.isBlank() && !selfOrAdmin) {
+            if (status != null && !status.isEmpty() && !selfOrAdmin) {
                 throw new javax.ws.rs.ForbiddenException();
             }
-            final List<Car.Status> statuses;
-            if (status != null && !status.isBlank()) {
-                statuses = List.of(CarRestEnums.parseStatus(status));
-            } else if (selfOrAdmin) {
-                statuses = null;
-            } else {
-                statuses = List.of(Car.Status.ACTIVE);
-            }
+            final List<Car.Status> statuses =
+                    carService.resolveOwnerListingStatuses(toCarStatuses(status), selfOrAdmin);
             final String internalSort = RestCarSortMapper.toInternalSort(sort);
             final var criteria = carService.buildOwnerCarSearchCriteria(
                     ownerId,
-                    category == null ? null : List.of(CarRestEnums.parseType(category)),
-                    transmission == null ? null : List.of(CarRestEnums.parseTransmission(transmission)),
-                    powertrain == null ? null : List.of(CarRestEnums.parsePowertrain(powertrain)),
+                    categories.isEmpty() ? null : categories,
+                    transmissions.isEmpty() ? null : transmissions,
+                    powertrains.isEmpty() ? null : powertrains,
                     priceMin,
                     priceMax,
                     statuses,
-                    null,
+                    ratingBands.isEmpty() ? null : ratingBands,
                     query,
                     zeroBasedPage,
                     pageSize,
                     internalSort);
             final Page<CarCard> ownerPage = carService.getOwnerCarCards(criteria);
-            return pagedCarsFromCards(ownerPage, safePage, pageSize);
+            return pagedCarsFromCards(ownerPage, safePage, pageSize, false);
         }
 
         if (RestCarSortMapper.isBrowseShortcut(sort) && isPublicBrowseShortcut(query, category, transmission,
@@ -193,17 +198,17 @@ public final class CarController {
             final Page<CarCard> shortcutPage = "price_asc".equalsIgnoreCase(sort.trim())
                     ? carService.getCheapestCarCards(zeroBasedPage, pageSize)
                     : carService.getMostRecentCarCards(zeroBasedPage, pageSize);
-            return pagedCarsFromCards(shortcutPage, safePage, pageSize);
+            return pagedCarsFromCards(shortcutPage, safePage, pageSize, true);
         }
 
         final CarSearchRequest searchRequest = CarSearchRequest.builder()
                 .query(query)
-                .categories(category == null ? null : List.of(CarRestEnums.parseType(category)))
-                .transmissions(transmission == null ? null : List.of(CarRestEnums.parseTransmission(transmission)))
-                .powertrains(powertrain == null ? null : List.of(CarRestEnums.parsePowertrain(powertrain)))
+                .categories(categories.isEmpty() ? null : categories)
+                .transmissions(transmissions.isEmpty() ? null : transmissions)
+                .powertrains(powertrains.isEmpty() ? null : powertrains)
                 .priceMin(priceMin)
                 .priceMax(priceMax)
-                .ratingBands(rating == null ? null : List.of(String.valueOf(rating)))
+                .ratingBands(ratingBands.isEmpty() ? null : ratingBands)
                 .from(from)
                 .until(until)
                 .page(zeroBasedPage)
@@ -215,7 +220,7 @@ public final class CarController {
                 .flexDays(flexDays)
                 .build();
         final Page<CarCard> searchPage = carService.searchCarCards(carService.buildSearchCriteria(searchRequest));
-        return pagedCarsFromCards(searchPage, safePage, pageSize);
+        return pagedCarsFromCards(searchPage, safePage, pageSize, true);
     }
 
     @POST
@@ -263,10 +268,6 @@ public final class CarController {
             final String insuranceType,
             final byte[] insuranceBytes) throws IOException {
         final long ownerId = currentUserResolver.requireUserId();
-        final User owner = userService.getUserById(ownerId).orElseThrow();
-        if (!userService.meetsPublishingPrerequisites(owner)) {
-            throw new javax.ws.rs.ForbiddenException(MessageKeys.PUBLISH_PREREQUISITES_MISSING);
-        }
 
         formValidationSupport.validate(form, ValidationGroups.OnPublishCar.class);
 
@@ -309,15 +310,32 @@ public final class CarController {
         return Response.ok(CarDto.from(car, uriInfo)).build();
     }
 
+    @GET
+    @Path("/{id}/similar")
+    @Produces(VndMediaType.CAR_V1_JSON)
+    public Response similarCars(
+            @PathParam("id") final long id,
+            @QueryParam("limit") @DefaultValue("4") final int limit) {
+        carService.getCarById(id).orElseThrow(() -> new CarNotFoundException(id));
+        final int safeLimit = Math.max(1, Math.min(limit, 20));
+        final List<CarCard> cards = carService.findSimilarCarCards(id, safeLimit, null);
+        if (cards.isEmpty()) {
+            return Response.noContent().build();
+        }
+        final List<CarDto> dtos = toConsumerBrowseCarDtos(cards);
+        return Response.ok(new GenericEntity<List<CarDto>>(dtos) {})
+                .header("X-Total-Count", dtos.size())
+                .build();
+    }
+
     @PUT
     @Path("/{id}")
     @Consumes(VndMediaType.CAR_V1_JSON)
     @Produces(VndMediaType.CAR_V1_JSON)
-    public Response replaceCar(@PathParam("id") final long id, @Valid final CarReplaceForm form) {
+    @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response replaceCar(@P("id") @PathParam("id") final long id, @Valid final CarReplaceForm form) {
         final Car car = carService.getCarById(id)
                 .orElseThrow(() -> new CarNotFoundException(id));
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        carResourceAccess.requireOwner(car, viewer);
         carService.updateDescription(car.getOwnerId(), id, form.getDescription());
         carService.updateMinimumRentalDays(id, form.getMinimumRentalDays());
         final Car updated = carService.getCarById(id)
@@ -325,6 +343,11 @@ public final class CarController {
         return Response.ok(CarDto.from(updated, uriInfo)).build();
     }
 
+    // Not a @PreAuthorize candidate: "status" transitions apply owner- or admin-only rules
+    // depending on the *target* status (a state-machine decision, see applyStatusPatch below),
+    // and "description"/"minimumRentalDays" apply an owner-or-admin rule — both depend on which
+    // fields the caller sent, so they stay imperative (this overlaps with A12's broader point
+    // about status-transition business rules living in this controller).
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.CAR_V1_JSON)
@@ -354,11 +377,10 @@ public final class CarController {
 
     @DELETE
     @Path("/{id}")
-    public Response deactivateCar(@PathParam("id") final long id) {
+    @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response deactivateCar(@P("id") @PathParam("id") final long id) {
         final Car car = carService.getCarById(id)
                 .orElseThrow(() -> new CarNotFoundException(id));
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        carResourceAccess.requireOwner(car, viewer);
         if (!carService.deactivateCar(car.getOwnerId(), id)) {
             throw new CarNotFoundException(id);
         }
@@ -400,14 +422,23 @@ public final class CarController {
         }
     }
 
-    private Response pagedCarsFromCards(final Page<CarCard> page, final int safePage, final int pageSize) {
+    private Response pagedCarsFromCards(
+            final Page<CarCard> page, final int safePage, final int pageSize, final boolean consumerBrowse) {
         if (page.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
-        final List<CarDto> dtos = page.getContent().stream()
-                .map(card -> CarDto.fromCarCard(card, uriInfo))
-                .collect(Collectors.toList());
+        final List<CarDto> dtos = consumerBrowse
+                ? toConsumerBrowseCarDtos(page.getContent())
+                : page.getContent().stream()
+                        .map(card -> CarDto.fromCarCard(card, uriInfo))
+                        .collect(Collectors.toList());
         return pagedOk(dtos, safePage, pageSize, (int) page.getTotalItems());
+    }
+
+    private List<CarDto> toConsumerBrowseCarDtos(final List<CarCard> cards) {
+        final Map<Long, ConsumerCarCardMarketContext> marketContexts =
+                carService.resolveConsumerPriceMarketContexts(cards);
+        return CarDto.fromConsumerBrowseCarCards(cards, uriInfo, marketContexts);
     }
 
     private Response pagedCarsFromEntities(final Page<Car> page, final int safePage, final int pageSize) {
@@ -431,29 +462,59 @@ public final class CarController {
 
     private static boolean isPublicBrowseShortcut(
             final String query,
-            final String category,
-            final String transmission,
-            final String powertrain,
+            final List<String> category,
+            final List<String> transmission,
+            final List<String> powertrain,
             final BigDecimal priceMin,
             final BigDecimal priceMax,
-            final BigDecimal rating,
+            final List<String> rating,
             final Long neighborhoodId,
             final String from,
             final String until,
-            final String status,
+            final List<String> status,
             final boolean flexible) {
         return (query == null || query.isBlank())
-                && category == null
-                && transmission == null
-                && powertrain == null
+                && (category == null || category.isEmpty())
+                && (transmission == null || transmission.isEmpty())
+                && (powertrain == null || powertrain.isEmpty())
                 && priceMin == null
                 && priceMax == null
-                && rating == null
+                && (rating == null || rating.isEmpty())
                 && neighborhoodId == null
                 && (from == null || from.isBlank())
                 && (until == null || until.isBlank())
-                && (status == null || status.isBlank())
+                && (status == null || status.isEmpty())
                 && !flexible;
+    }
+
+    private static List<Car.Type> toCarTypes(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parseType);
+    }
+
+    private static List<Car.Transmission> toTransmissions(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parseTransmission);
+    }
+
+    private static List<Car.Powertrain> toPowertrains(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parsePowertrain);
+    }
+
+    private static List<Car.Status> toCarStatuses(final List<String> raw) {
+        return toDistinctCarEnums(raw, CarRestEnums::parseStatus);
+    }
+
+    private static <E> List<E> toDistinctCarEnums(final List<String> raw, final Function<String, E> parser) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        final LinkedHashSet<E> out = new LinkedHashSet<>();
+        for (final String token : raw) {
+            final E parsed = parser.apply(token);
+            if (parsed != null) {
+                out.add(parsed);
+            }
+        }
+        return List.copyOf(out);
     }
 
     private CarCreateForm readCarCreateForm(final InputStream carPart) throws IOException {

@@ -3,6 +3,7 @@
 // paginación por header). Reusa el cliente del core (sessionClient).
 
 import { sessionClient } from '../../session/sessionStore';
+import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
 import { MediaTypes } from '../../api/mediaTypes';
 import type { ApiResponse } from '../../api/client';
 import type { UserDto } from '../../api/types';
@@ -108,9 +109,23 @@ export function createModel(
 }
 
 // ---- Cars ----
+export interface OwnerCarsQuery {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  status?: CarStatus[];
+  category?: string[];
+  transmission?: string[];
+  powertrain?: string[];
+  priceMin?: number;
+  priceMax?: number;
+  rating?: string[];
+  sort?: string;
+}
+
 export function fetchOwnerCars(
   ownerId: string,
-  opts: { page?: number; pageSize?: number; status?: CarStatus | ''; sort?: string } = {},
+  opts: OwnerCarsQuery = {},
 ): Promise<ApiResponse<CarDto[]>> {
   return sessionClient.get<CarDto[]>('/cars', {
     accept: MediaTypes.car,
@@ -118,7 +133,14 @@ export function fetchOwnerCars(
       ownerId,
       page: opts.page ?? 1,
       pageSize: opts.pageSize ?? 12,
-      status: opts.status || undefined,
+      q: opts.q || undefined,
+      status: opts.status?.length ? opts.status : undefined,
+      category: opts.category?.length ? opts.category : undefined,
+      transmission: opts.transmission?.length ? opts.transmission : undefined,
+      powertrain: opts.powertrain?.length ? opts.powertrain : undefined,
+      priceMin: opts.priceMin != null ? String(opts.priceMin) : undefined,
+      priceMax: opts.priceMax != null ? String(opts.priceMax) : undefined,
+      rating: opts.rating?.length ? opts.rating : undefined,
       sort: opts.sort || undefined,
     },
   });
@@ -139,15 +161,33 @@ export function publishCar(
   pictures: File[],
   insurance: File | null,
 ): Promise<ApiResponse<CarDto>> {
+  if (pictures.length === 0 && !insurance) {
+    return sessionClient.post<CarDto>('/cars', car, {
+      accept: MediaTypes.car,
+      contentType: MediaTypes.car,
+    });
+  }
   const fd = new FormData();
   fd.append(
     'car',
     new Blob([JSON.stringify(car)], { type: MediaTypes.car }),
+    'car.json',
   );
   for (const pic of pictures) fd.append('pictures', pic);
   if (insurance) fd.append('insurance', insurance);
 
   return sessionClient.post<CarDto>('/cars', fd, { accept: MediaTypes.car });
+}
+
+export function fetchPriceMarketInsight(
+  modelUri: string,
+  excludeCarId: string,
+): Promise<ApiResponse<{ minPrice: number; maxPrice: number; averagePrice: number; sampleCount: number } | undefined>> {
+  const base = modelUri.endsWith('/') ? modelUri.slice(0, -1) : modelUri;
+  return sessionClient.get(`${base}/price-insight`, {
+    accept: MediaTypes.priceMarketInsight,
+    query: { excludeCarId },
+  });
 }
 
 export function patchCar(id: string, patch: CarPatchDto): Promise<ApiResponse<CarDto>> {
@@ -184,11 +224,17 @@ export function createAvailability(
   });
 }
 
-export function updateAvailability(
+export async function updateAvailability(
   availability: AvailabilityDto,
+  car: CarDto,
   body: AvailabilityCreateDto,
 ): Promise<ApiResponse<AvailabilityDto>> {
-  return sessionClient.put<AvailabilityDto>(availability.links.self, body, {
+  const self = availability.links.self;
+  if (self.includes('/range')) {
+    await deleteAvailability(availability);
+    return createAvailability(car, body);
+  }
+  return sessionClient.put<AvailabilityDto>(self, body, {
     accept: MediaTypes.availability,
     contentType: MediaTypes.availability,
   });
@@ -227,8 +273,13 @@ export function deletePicture(picture: PictureDto): Promise<ApiResponse<unknown>
 // ---- Insurance (binario, octet-stream, PUT) ----
 export function uploadInsurance(car: CarDto, file: File): Promise<ApiResponse<unknown>> {
   return sessionClient.put(car.links.insurance, file, {
-    contentType: 'application/octet-stream',
+    contentType: file.type || 'application/octet-stream',
+    extraHeaders: file.name ? { 'X-Ryden-Filename': file.name } : undefined,
   });
+}
+
+export async function openInsurance(car: CarDto): Promise<boolean> {
+  return openAuthenticatedBinary(car.links.insurance);
 }
 
 // ---- Neighborhoods (catálogo para el select de disponibilidad) ----

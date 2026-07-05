@@ -34,7 +34,7 @@ import ar.edu.itba.paw.services.car.CarAvailabilityService;
  * in both entry points.
  */
 @Service
-public final class ReservationPricingServiceImpl implements ReservationPricingService {
+public class ReservationPricingServiceImpl implements ReservationPricingService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationPricingServiceImpl.class);
 

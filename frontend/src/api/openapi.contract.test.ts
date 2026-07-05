@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MediaTypes } from './mediaTypes';
+import type { PriceMarketPosition } from '../components/ryden/car/CarCard';
 import type { ReservationStatus } from '../features/reservations/types';
 
 const OPENAPI_PATH = resolve(import.meta.dirname, '../../../openapi.yaml');
@@ -11,17 +12,32 @@ function loadOpenApi(): string {
 }
 
 function enumValues(yaml: string, enumName: string): string[] {
-  const block = new RegExp(
+  const multiline = new RegExp(
     `^    ${enumName}:\\s*\\r?\\n      type: string\\s*\\r?\\n      enum:\\s*\\r?\\n((?:        - .+\\r?\\n)+)`,
     'm',
   );
-  const match = yaml.match(block);
-  if (!match) throw new Error(`Enum not found: ${enumName}`);
-  return match[1]
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith('- '))
-    .map((line) => line.slice(2).trim());
+  const multilineMatch = yaml.match(multiline);
+  if (multilineMatch) {
+    return multilineMatch[1]
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('- '))
+      .map((line) => line.slice(2).trim());
+  }
+
+  const inline = new RegExp(
+    `^    ${enumName}:\\s*\\r?\\n      type: string\\s*\\r?\\n      enum: \\[(.+?)\\]`,
+    'm',
+  );
+  const inlineMatch = yaml.match(inline);
+  if (inlineMatch) {
+    return inlineMatch[1]
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  }
+
+  throw new Error(`Enum not found: ${enumName}`);
 }
 
 function schemaProperties(yaml: string, schemaName: string): string[] {
@@ -59,6 +75,13 @@ const FRONTEND_RESERVATION_STATUSES: ReservationStatus[] = [
   'cancelled_by_owner',
   'cancelled_due_to_missing_payment_proof',
   'finished',
+];
+
+/** Posiciones de badge de mercado — deben coincidir con openapi PriceMarketPosition. */
+const FRONTEND_PRICE_MARKET_POSITIONS: PriceMarketPosition[] = [
+  'below_market',
+  'at_market',
+  'above_market',
 ];
 
 describe('openapi.yaml contract (frontend)', () => {
@@ -108,6 +131,52 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendStatuses).toEqual(specStatuses);
   });
 
+  it('PriceMarketPosition del frontend coincide con openapi', () => {
+    // 1.Arrange
+    const specPositions = enumValues(yaml, 'PriceMarketPosition');
+    const frontendPositions = [...FRONTEND_PRICE_MARKET_POSITIONS];
+
+    // 2.Act
+    frontendPositions.sort();
+    specPositions.sort();
+
+    // 3.Assert
+    expect(frontendPositions).toEqual(specPositions);
+  });
+
+  it('CarDto del frontend cubre las propiedades de openapi', () => {
+    // 1.Arrange
+    const spec = schemaProperties(yaml, 'CarDto');
+    const frontendShape = [
+      'plate',
+      'year',
+      'powertrain',
+      'transmission',
+      'type',
+      'status',
+      'description',
+      'minimumRentalDays',
+      'ratingAvg',
+      'dayPrice',
+      'brandName',
+      'modelName',
+      'modelValidated',
+      'hasInsurance',
+      'priceMarketPositionModifier',
+      'marketAveragePrice',
+      'marketSampleCount',
+      'createdAt',
+      'links',
+    ];
+
+    // 2.Act
+    frontendShape.sort();
+    spec.sort();
+
+    // 3.Assert
+    expect(frontendShape).toEqual(spec);
+  });
+
   it('ReservationDto del frontend cubre las propiedades de openapi', () => {
     // 1.Arrange
     const spec = schemaProperties(yaml, 'ReservationDto');
@@ -120,6 +189,14 @@ describe('openapi.yaml contract (frontend)', () => {
       'paymentProofDeadlineAt',
       'refundProofDeadlineAt',
       'paymentRefundRequired',
+      'hasPaymentReceipt',
+      'hasRefundReceipt',
+      'ownerCbu',
+      'pickupStreet',
+      'pickupNumber',
+      'pickupNeighborhood',
+      'checkInTime',
+      'checkOutTime',
       'createdAt',
       'links',
     ];

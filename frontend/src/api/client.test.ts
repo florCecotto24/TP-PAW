@@ -3,6 +3,7 @@ import {
   HypermediaClient,
   parseLinkHeader,
   extractPageLinks,
+  parseContentDispositionFileName,
   type TokenAccessors,
 } from './client';
 
@@ -168,6 +169,40 @@ describe('HypermediaClient 401 -> refresh flow', () => {
     expect(onAuthenticatedUser).toHaveBeenCalledWith('/users/42');
   });
 
+  it('testGetBlobRetriesOnceWithRefreshTokenAfterA401', async () => {
+    // 1.Arrange
+    fetchMock
+      .mockResolvedValueOnce(makeResponse(401, { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response('%PDF-fake-bytes', {
+          status: 200,
+          headers: { 'X-Access-Token': 'new-access', 'X-Refresh-Token': 'new-refresh' },
+        }),
+      );
+
+    // 2.Act
+    const blob = await client.getBlob('/users/1/documents/license');
+
+    // 3.Assert
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondInit = fetchMock.mock.calls[1][1] as RequestInit;
+    expect((secondInit.headers as Headers).get('Authorization')).toBe('Bearer valid-refresh');
+    expect(onTokens).toHaveBeenCalledWith('new-access', 'new-refresh');
+    expect(blob).not.toBeNull();
+    expect(await blob?.text()).toBe('%PDF-fake-bytes');
+  });
+
+  it('testGetBlobReturnsNullWhenResponseIsNotOk', async () => {
+    // 1.Arrange
+    fetchMock.mockResolvedValueOnce(makeResponse(404, { status: 404 }));
+
+    // 2.Act
+    const blob = await client.getBlob('/users/1/documents/license');
+
+    // 3.Assert
+    expect(blob).toBeNull();
+  });
+
   it('testFollowUsesAbsolutePaginationLinksWithoutDoublePrefix', async () => {
     // 1.Arrange
     fetchMock.mockResolvedValueOnce(
@@ -184,5 +219,9 @@ describe('HypermediaClient 401 -> refresh flow', () => {
     // 3.Assert
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8080/webapp/cars?page=2');
+  });
+
+  it('testParseContentDispositionFileNameReadsQuotedFilename', () => {
+    expect(parseContentDispositionFileName('inline; filename="insurance.pdf"')).toBe('insurance.pdf');
   });
 });

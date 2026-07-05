@@ -48,6 +48,8 @@ export interface RequestOptions {
   anonymous?: boolean;
   /** Authorization explícito (p.ej. Basic en login). Tiene prioridad. */
   authorization?: string;
+  /** Headers adicionales (p.ej. nombre de archivo en uploads binarios). */
+  extraHeaders?: Record<string, string>;
   /** Habilita/inhabilita el reintento 401→refresh (default: true). */
   retryOnUnauthorized?: boolean;
 }
@@ -201,6 +203,11 @@ export class HypermediaClient {
     }
 
     if (authorization) headers.set('Authorization', authorization);
+    if (opts.extraHeaders) {
+      for (const [name, value] of Object.entries(opts.extraHeaders)) {
+        headers.set(name, value);
+      }
+    }
 
     return { method: opts.method ?? 'GET', headers, body };
   }
@@ -232,17 +239,20 @@ export class HypermediaClient {
   }
 
   /**
-   * Núcleo del cliente: arma el request, agrega Authorization, absorbe tokens
-   * de la respuesta y, ante 401, reintenta UNA vez con el refresh token.
+   * Arma el request, agrega Authorization, absorbe tokens de la respuesta y, ante 401,
+   * reintenta UNA vez con el refresh token — sobre el mismo request, sin roundtrip dedicado
+   * (§1.8). Devuelve la `Response` cruda: la capa de arriba decide cómo leer el body
+   * (JSON/texto vía `toApiResponse`, o binario vía `.blob()` en {@link getBlob}).
    */
-  async request<T = unknown>(path: string, opts: RequestOptions = {}): Promise<ApiResponse<T>> {
+  private async fetchWithRetry(path: string, opts: RequestOptions, method: HttpMethod): Promise<Response> {
     const url = this.buildUrl(path, opts.query);
+    const requestOpts = { ...opts, method };
 
     const explicitAuth = opts.authorization ?? null;
     const access = opts.anonymous ? null : this.tokens.getAccessToken();
     const firstAuth = explicitAuth ?? (access ? `Bearer ${access}` : null);
 
-    const res = await fetch(url, this.buildInit(opts, firstAuth));
+    const res = await fetch(url, this.buildInit(requestOpts, firstAuth));
     this.absorbAuthHeaders(res.headers);
 
     // Reintento 401 -> refresh (solo si no fue un intento explícito/anónimo).
@@ -255,13 +265,48 @@ export class HypermediaClient {
     if (canRetry) {
       const refresh = this.tokens.getRefreshToken();
       if (refresh) {
-        const retryRes = await fetch(url, this.buildInit(opts, `Bearer ${refresh}`));
+        const retryRes = await fetch(url, this.buildInit(requestOpts, `Bearer ${refresh}`));
         this.absorbAuthHeaders(retryRes.headers);
-        return this.toApiResponse<T>(retryRes);
+        return retryRes;
       }
     }
 
+    return res;
+  }
+
+  /** Núcleo del cliente para respuestas JSON/texto (ver {@link fetchWithRetry}). */
+  async request<T = unknown>(path: string, opts: RequestOptions = {}): Promise<ApiResponse<T>> {
+    const res = await this.fetchWithRetry(path, opts, opts.method ?? 'GET');
     return this.toApiResponse<T>(res);
+  }
+
+  /**
+   * GET de un recurso binario autenticado (documento KYC, comprobante, adjunto de chat) con el
+   * mismo manejo de `Authorization` + reintento 401→refresh que {@link request}, pero devolviendo
+   * un `Blob` en vez de intentar parsear el body como JSON/texto (`toApiResponse` asume texto y
+   * rompería con bytes binarios). Reemplaza los `fetch()` manuales con Bearer a mano que había
+   * repetidos en cada feature (perfil, reservas, admin) para "abrir en pestaña nueva" — quedan sin
+   * el reintento de refresh que sí tiene cualquier otro request del cliente central.
+   * Devuelve `null` si la respuesta no es 2xx (404, 401 sin refresh disponible, etc.).
+   */
+  async getBlob(path: string, opts: RequestOptions = {}): Promise<Blob | null> {
+    const download = await this.getBlobDownload(path, opts);
+    return download?.blob ?? null;
+  }
+
+  /**
+   * Igual que {@link getBlob}, pero conserva el nombre sugerido del header
+   * {@code Content-Disposition} cuando el server lo envía.
+   */
+  async getBlobDownload(
+    path: string,
+    opts: RequestOptions = {},
+  ): Promise<{ blob: Blob; fileName?: string } | null> {
+    const res = await this.fetchWithRetry(path, opts, 'GET');
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const fileName = parseContentDispositionFileName(res.headers.get('Content-Disposition'));
+    return { blob, fileName };
   }
 
   // --- Helpers por verbo -----------------------------------------------------
@@ -309,4 +354,21 @@ export function encodeBase64(value: string): string {
   let binary = '';
   for (const byte of utf8) binary += String.fromCharCode(byte);
   return btoa(binary);
+}
+
+export function parseContentDispositionFileName(header: string | null): string | undefined {
+  if (!header) return undefined;
+  const utf8 = /filename\*=UTF-8''([^;\n]+)/i.exec(header);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]);
+    } catch {
+      return utf8[1];
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(header);
+  if (quoted?.[1]) return quoted[1];
+  const plain = /filename=([^;\n]+)/i.exec(header);
+  if (plain?.[1]) return plain[1].trim();
+  return undefined;
 }

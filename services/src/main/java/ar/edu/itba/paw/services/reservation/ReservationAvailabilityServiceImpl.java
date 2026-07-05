@@ -13,7 +13,7 @@ import ar.edu.itba.paw.persistence.reservation.ReservationAvailabilityDao;
 
 /** Pass-through to {@link ReservationAvailabilityDao}; joins the caller's transaction when one is active. */
 @Service
-public final class ReservationAvailabilityServiceImpl implements ReservationAvailabilityService {
+public class ReservationAvailabilityServiceImpl implements ReservationAvailabilityService {
 
     private final ReservationAvailabilityDao reservationAvailabilityDao;
 

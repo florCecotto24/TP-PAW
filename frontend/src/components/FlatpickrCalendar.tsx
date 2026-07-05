@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import flatpickr from 'flatpickr';
-import { Spanish } from 'flatpickr/dist/l10n/es.js';
 import type { Instance } from 'flatpickr/dist/types/instance';
 import type { Options } from 'flatpickr/dist/types/options';
+import { flatpickrLocale } from '../i18n/dateFormat';
 
 // Wrapper React liviano sobre Flatpickr (vanilla) — reemplaza los calendarios
 // inline que el sitio JSP dibujaba con flatpickr + ownerCalendar.js /
@@ -30,11 +30,10 @@ export default function FlatpickrCalendar({ options, onChange, className }: Flat
 
   useEffect(() => {
     if (!nodeRef.current) return;
-    const isEs = (i18n.language || 'es').toLowerCase().startsWith('es');
     const instance = flatpickr(nodeRef.current, {
       disableMobile: true,
       ...options,
-      locale: isEs ? Spanish : 'default',
+      locale: flatpickrLocale(i18n.language),
       onChange: (dates) => onChangeRef.current?.(dates as Date[]),
     });
     fpRef.current = Array.isArray(instance) ? instance[0] : instance;

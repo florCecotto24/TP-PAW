@@ -110,7 +110,11 @@ describe('availableActions', () => {
   it('refund upload only when the server flagged paymentRefundRequired', () => {
     // 1.Arrange
     const withoutRefund = res('cancelled_by_owner');
-    const withRefund = res('cancelled_by_owner', { paymentRefundRequired: true });
+    const withRefund = res('cancelled_by_owner', { paymentRefundRequired: true, hasRefundReceipt: false });
+    const withReceipt = res('cancelled_by_owner', {
+      paymentRefundRequired: true,
+      hasRefundReceipt: true,
+    });
 
     // 2.Act
     const blocked = availableActions(withoutRefund, 'owner');
@@ -119,6 +123,7 @@ describe('availableActions', () => {
     // 3.Assert
     expect(blocked.canUploadRefund).toBe(false);
     expect(allowed.canUploadRefund).toBe(true);
+    expect(availableActions(withReceipt, 'owner').canUploadRefund).toBe(false);
   });
 
   it('cancel is blocked in terminal states', () => {

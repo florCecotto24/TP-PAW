@@ -26,7 +26,7 @@ import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarPictureService;
 @Service
-public final class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsViewService {
+public class ManageCarPeriodsViewServiceImpl implements ManageCarPeriodsViewService {
 
     private final CarAvailabilityService carAvailabilityService;
     private final CarPictureService carPictureService;

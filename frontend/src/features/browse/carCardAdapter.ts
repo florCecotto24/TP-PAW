@@ -1,6 +1,20 @@
-import { idFromUri } from '../../api/uri';
+import { idFromUri, lastPathSegment } from '../../api/uri';
 import { carDetail } from '../../routes/paths';
 import type { CarDto } from './types';
+
+export function isCarOwnedByUser(car: CarDto, userSelf: string | null | undefined): boolean {
+  if (!userSelf || !car.links.owner) return false;
+  return lastPathSegment(car.links.owner) === lastPathSegment(userSelf);
+}
+
+export function isCarFavoritable(
+  car: CarDto,
+  isLoggedIn: boolean,
+  userSelf: string | null | undefined,
+): boolean {
+  if (!isLoggedIn || !userSelf || !car.links.owner) return false;
+  return !isCarOwnedByUser(car, userSelf);
+}
 
 export function carDtoToConsumerCard(car: CarDto) {
   const carIdRaw = idFromUri(car.links.self);
@@ -12,6 +26,9 @@ export function carDtoToConsumerCard(car: CarDto) {
     price: car.dayPrice ?? 0,
     ratingAvg: car.ratingAvg,
     minimumRentalDays: car.minimumRentalDays,
+    priceMarketPositionModifier: car.priceMarketPositionModifier ?? undefined,
+    marketAveragePrice: car.marketAveragePrice ?? undefined,
+    marketSampleCount: car.marketSampleCount ?? undefined,
   };
 }
 

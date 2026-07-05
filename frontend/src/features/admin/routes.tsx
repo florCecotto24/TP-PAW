@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router-dom';
 import AdminLayout from './components/AdminLayout';
 import AdminPanelPage from './pages/AdminPanelPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminCreateUserPage from './pages/AdminCreateUserPage';
 import AdminCatalogPage from './pages/AdminCatalogPage';
 import AdminCarsPage from './pages/AdminCarsPage';
 import AdminReservationsPage from './pages/AdminReservationsPage';
@@ -15,6 +16,7 @@ export const adminRoutes: RouteObject[] = [
       { index: true, element: <AdminPanelPage /> },
       { path: 'panel', element: <AdminPanelPage /> },
       { path: 'users', element: <AdminUsersPage /> },
+      { path: 'users/create', element: <AdminCreateUserPage /> },
       { path: 'catalog', element: <AdminCatalogPage /> },
       { path: 'cars', element: <AdminCarsPage /> },
       { path: 'reservations', element: <AdminReservationsPage /> },

@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { formatDateLong } from '../../../i18n/dateFormat';
 
 export interface CounterpartyReviewItem {
   reviewerName: string;
@@ -13,7 +14,7 @@ export interface CounterpartyProfileReviewsProps {
 
 /** Espejo de {@code ryden:counterpartyProfileReviews}. */
 export default function CounterpartyProfileReviews({ reviews = [] }: CounterpartyProfileReviewsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <section className="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4">
@@ -40,7 +41,7 @@ export default function CounterpartyProfileReviews({ reviews = [] }: Counterpart
                         ))}
                       </div>
                     </div>
-                    <span className="text-secondary small">{review.reviewDate}</span>
+                    <span className="text-secondary small">{formatDateLong(review.reviewDate, i18n.language)}</span>
                   </div>
                   {review.commentText ? (
                     <p className="mb-0 text-secondary ryden-multiline-plaintext">{review.commentText}</p>

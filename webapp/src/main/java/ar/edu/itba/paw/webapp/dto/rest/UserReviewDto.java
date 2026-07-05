@@ -19,14 +19,14 @@ public final class UserReviewDto {
 
     public static UserReviewDto from(
             final ReviewItemDto item,
-            final long userId,
             final UriInfo uriInfo) {
         final UserReviewDto dto = new UserReviewDto();
         dto.rating = item.getRating();
         dto.comment = item.getComment().orElse(null);
         dto.authorName = item.getReviewerName();
         dto.createdAt = item.getReviewDate() != null ? item.getReviewDate().toString() : null;
-        dto.links = LinksDto.ofSelf(RestUriUtils.userReviewsUri(uriInfo, userId).toString());
+        dto.links = LinksDto.ofSelf(
+                RestUriUtils.reservationReviewUri(uriInfo, item.getReservationId(), item.getId()).toString());
         return dto;
     }
 

@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * entity stays owned by its respective DAO.
  */
 @Service
-public final class ReviewServiceImpl implements ReviewService {
+public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewDao reviewDao;
     private final ReservationService reservationService;
@@ -82,6 +83,12 @@ public final class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Review> getReviewById(final long reviewId) {
+        return reviewDao.findById(reviewId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countReviewsForCar(final long carId) {
         return reviewDao.countReviewsForCar(carId);
     }
@@ -117,6 +124,12 @@ public final class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public long countReviewsForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         return reviewDao.countReviewsForCounterparty(counterpartyUserId, counterpartyIsOwner);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ReviewItemDto> getReviewsForUser(final long userId, final int page, final int pageSize) {
+        return reviewDao.findReviewsForUserPage(userId, page, pageSize);
     }
 
     @Override

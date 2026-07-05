@@ -14,7 +14,7 @@ import ar.edu.itba.paw.models.dto.car.PublishCarPendingPageModel;
 
 import ar.edu.itba.paw.services.car.CarService;
 @Service
-public final class CarPublishViewServiceImpl implements CarPublishViewService {
+public class CarPublishViewServiceImpl implements CarPublishViewService {
 
     private final CarService carService;
 

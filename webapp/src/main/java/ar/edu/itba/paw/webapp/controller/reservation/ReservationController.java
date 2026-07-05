@@ -22,11 +22,14 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
@@ -36,7 +39,10 @@ import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
+import ar.edu.itba.paw.webapp.dto.rest.CounterpartyContactDto;
 import ar.edu.itba.paw.webapp.dto.rest.ReservationDto;
+import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.webapp.support.ReservationDtoEnricher;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationCreateForm;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationPatchForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
@@ -57,7 +63,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.reservation.ValidReservation
  */
 @Path("/reservations")
 @Component
-public final class ReservationController {
+public class ReservationController {
 
     private static final String DEFAULT_HUB_SORT = "date,desc";
 
@@ -66,6 +72,7 @@ public final class ReservationController {
     private final CurrentUserResolver currentUserResolver;
     private final ReservationResourceAccess reservationResourceAccess;
     private final AppPaginationProperties paginationProperties;
+    private final ReservationDtoEnricher reservationDtoEnricher;
 
     @Context
     private UriInfo uriInfo;
@@ -76,14 +83,23 @@ public final class ReservationController {
             final AdminService adminService,
             final CurrentUserResolver currentUserResolver,
             final ReservationResourceAccess reservationResourceAccess,
-            final AppPaginationProperties paginationProperties) {
+            final AppPaginationProperties paginationProperties,
+            final ReservationDtoEnricher reservationDtoEnricher) {
         this.reservationService = reservationService;
         this.adminService = adminService;
         this.currentUserResolver = currentUserResolver;
         this.reservationResourceAccess = reservationResourceAccess;
         this.paginationProperties = paginationProperties;
+        this.reservationDtoEnricher = reservationDtoEnricher;
     }
 
+    // A14 (audit): documented decision — a single collection whose visibility is a query-param
+    // filter, not a different operation per role (see openapi.yaml for the full per-branch
+    // breakdown): riderId (self-or-admin) / ownerId (self-or-admin) / neither (admin-only, every
+    // reservation). Not a @PreAuthorize candidate: which check applies depends on *which* query
+    // params the caller sent — a single method-level precondition can't express that three-way
+    // routing, so it stays imperative, delegated to the same ReservationResourceAccess predicates
+    // used everywhere else.
     @GET
     @Produces(VndMediaType.RESERVATION_V1_JSON)
     public Response listReservations(
@@ -131,9 +147,9 @@ public final class ReservationController {
     @GET
     @Path("/{id}")
     @Produces(VndMediaType.RESERVATION_V1_JSON)
-    public Response getReservation(@PathParam("id") final long id) {
+    @PreAuthorize("@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response getReservation(@P("id") @PathParam("id") final long id) {
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        reservationResourceAccess.requireViewReservation(id, viewer);
 
         final Reservation reservation;
         if (reservationResourceAccess.isAdmin()) {
@@ -146,8 +162,20 @@ public final class ReservationController {
                     .orElseThrow(() -> new javax.ws.rs.NotFoundException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
         }
 
-        final long ownerId = reservation.getCar().getOwnerId();
-        return Response.ok(ReservationDto.from(reservation, ownerId, uriInfo)).build();
+        return Response.ok(toReservationDto(reservation, viewer)).build();
+    }
+
+    @GET
+    @Path("/{id}/counterparty")
+    @Produces(VndMediaType.COUNTERPARTY_CONTACT_V1_JSON)
+    @PreAuthorize("@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response getCounterparty(@P("id") @PathParam("id") final long id) {
+        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
+        final Reservation reservation = loadReservationForViewer(id, viewer);
+        final User counterparty = reservationDtoEnricher
+                .resolveCounterparty(reservation, viewer.getUserId())
+                .orElseThrow(javax.ws.rs.NotFoundException::new);
+        return Response.ok(CounterpartyContactDto.from(counterparty, uriInfo)).build();
     }
 
     @POST
@@ -162,22 +190,25 @@ public final class ReservationController {
         final String until = ReservationRestDateTimes.toWallLocalInput(form.getEndDate());
         final Reservation created = reservationService.submitRiderReservationByCar(
                 riderId, carId, availabilityIds.availabilityId(), from, until);
-        final long ownerId = created.getCar().getOwnerId();
-        final ReservationDto dto = ReservationDto.from(created, ownerId, uriInfo);
+        final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
+        final ReservationDto dto = toReservationDto(created, viewer);
         return Response.created(RestUriUtils.reservationUri(uriInfo, created.getId()))
                 .entity(dto)
                 .build();
     }
 
+    // The base "must be a participant or admin" gate is declarative below; the per-field escalation
+    // to rider/owner (carReturned, startDate) depends on which fields the caller actually sent in
+    // the PATCH body, so those narrower checks stay imperative.
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.RESERVATION_V1_JSON)
     @Produces(VndMediaType.RESERVATION_V1_JSON)
+    @PreAuthorize("@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response patchReservation(
-            @PathParam("id") final long id,
+            @P("id") @PathParam("id") final long id,
             @Valid final ReservationPatchForm form) {
         final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
-        reservationResourceAccess.requireViewReservation(id, viewer);
 
         if (form.getStatus() != null && !form.getStatus().isBlank()) {
             applyStatusPatch(id, viewer, form.getStatus());
@@ -201,27 +232,35 @@ public final class ReservationController {
     private void applyStatusPatch(final long id, final RydenUserDetails viewer, final String statusRaw) {
         final Reservation.Status status = ReservationRestEnums.parseStatus(statusRaw);
         if (status == Reservation.Status.CANCELLED_BY_RIDER) {
-            reservationService.cancelReservationAsParticipantScoped(viewer.getUserId(), id, "rider");
+            reservationService.cancelReservationAsParticipantScoped(
+                    viewer.getUserId(), id, ReservationParticipantRole.RIDER);
             return;
         }
         if (status == Reservation.Status.CANCELLED_BY_OWNER) {
-            reservationService.cancelReservationAsParticipantScoped(viewer.getUserId(), id, "owner");
+            reservationService.cancelReservationAsParticipantScoped(
+                    viewer.getUserId(), id, ReservationParticipantRole.OWNER);
             return;
         }
     }
 
     private ReservationDto toReservationDto(final long id, final RydenUserDetails viewer) {
-        final Reservation reservation;
+        return toReservationDto(loadReservationForViewer(id, viewer), viewer);
+    }
+
+    private Reservation loadReservationForViewer(final long id, final RydenUserDetails viewer) {
         if (reservationResourceAccess.isAdmin()) {
-            reservation = adminService.getReservationById(id)
-                    .orElseThrow(() -> new javax.ws.rs.NotFoundException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
-        } else {
-            final long userId = viewer.getUserId();
-            reservation = reservationService.getRiderReservationById(userId, id)
-                    .or(() -> reservationService.getOwnerReservationById(userId, id))
+            return adminService.getReservationById(id)
                     .orElseThrow(() -> new javax.ws.rs.NotFoundException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
         }
-        return ReservationDto.from(reservation, reservation.getCar().getOwnerId(), uriInfo);
+        final long userId = viewer.getUserId();
+        return reservationService.getRiderReservationById(userId, id)
+                .or(() -> reservationService.getOwnerReservationById(userId, id))
+                .orElseThrow(() -> new javax.ws.rs.NotFoundException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
+    }
+
+    private ReservationDto toReservationDto(final Reservation reservation, final RydenUserDetails viewer) {
+        final long ownerId = reservation.getCar().getOwnerId();
+        return reservationDtoEnricher.toDto(reservation, ownerId, uriInfo);
     }
 
     private ReservationSearchCriteria buildListCriteria(

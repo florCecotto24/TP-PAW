@@ -38,7 +38,7 @@ import ar.edu.itba.paw.services.review.ReviewService;
  * and mutations are funneled through {@link ReservationService} (the sole DAO owner).
  */
 @Service
-public final class ReservationLifecycleSchedulerServiceImpl implements ReservationLifecycleSchedulerService {
+public class ReservationLifecycleSchedulerServiceImpl implements ReservationLifecycleSchedulerService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationLifecycleSchedulerServiceImpl.class);
 

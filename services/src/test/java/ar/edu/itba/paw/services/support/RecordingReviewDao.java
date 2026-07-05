@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.Page;
@@ -73,6 +74,11 @@ public class RecordingReviewDao implements ReviewDao {
     }
 
     @Override
+    public Optional<Review> findById(final long reviewId) {
+        return Optional.empty();
+    }
+
+    @Override
     public long countReviewsForCar(final long carId) {
         return reviewCountByCarId.getOrDefault(carId, 0L);
     }
@@ -96,5 +102,10 @@ public class RecordingReviewDao implements ReviewDao {
     public long countReviewsForCounterparty(
             final long counterpartyUserId, final boolean counterpartyIsOwner) {
         return 0L;
+    }
+
+    @Override
+    public Page<ReviewItemDto> findReviewsForUserPage(final long userId, final int page, final int pageSize) {
+        return new Page<>(List.of(), page, pageSize, 0L);
     }
 }

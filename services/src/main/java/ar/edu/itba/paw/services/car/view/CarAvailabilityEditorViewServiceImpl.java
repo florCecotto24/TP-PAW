@@ -27,7 +27,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * {@code buildCreateListingView} and {@code buildEditAvailabilityView} used to perform inline.
  */
 @Service
-public final class CarAvailabilityEditorViewServiceImpl implements CarAvailabilityEditorViewService {
+public class CarAvailabilityEditorViewServiceImpl implements CarAvailabilityEditorViewService {
 
     private final UserService userService;
     private final LocationService locationService;

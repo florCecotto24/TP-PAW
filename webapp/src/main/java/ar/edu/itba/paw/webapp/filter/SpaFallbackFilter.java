@@ -14,7 +14,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Serves {@code index.html} for SPA deep-links before Jersey/Security reject unknown HTML paths.
+ * Serves {@code index.html} for SPA deep-links before Jersey/Security reject unknown HTML paths,
+ * and routes static assets straight to the container's {@code default} servlet before Jersey.
  * Vendor JSON ({@code Accept: application/vnd.paw.*}) and binary sub-resources ({@code image/*},
  * {@code video/*}, etc.) pass through to Jersey unchanged.
  */
@@ -27,9 +28,22 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
     protected void doFilterInternal(final HttpServletRequest request,
                                     final HttpServletResponse response,
                                     final FilterChain filterChain) throws ServletException, IOException {
+        if (isStaticAsset(request)) {
+            // Bypass Jersey entirely: the jersey filter is mapped to "/*" (its @Path resources
+            // assume the request path is matched from the context root), so it can't be scoped to
+            // exclude these prefixes without shifting how it resolves every other @Path. Since none
+            // of the filters declared below (jersey included) request FORWARD dispatch in web.xml,
+            // this forward skips straight to the "default" servlet mapping for /public|/assets|etc.
+            // Without this, an unmatched path here becomes Jersey's own internal NotFoundException,
+            // which WebApplicationExceptionMapper (a catch-all with no way to tell "no route matched"
+            // apart from an application-thrown 404) turns into a real JSON 404 response — defeating
+            // jersey.config.servlet.filter.forwardOn404 and breaking every static asset (see B4).
+            request.getRequestDispatcher(staticAssetPath(request)).forward(request, response);
+            return;
+        }
+
         if (!"GET".equalsIgnoreCase(request.getMethod())
                 || isApiRequest(request)
-                || isStaticAsset(request)
                 || !acceptsHtmlDocument(request)) {
             filterChain.doFilter(request, response);
             return;
@@ -61,9 +75,13 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
     }
 
     private static boolean isStaticAsset(final HttpServletRequest request) {
-        final String path = request.getRequestURI().substring(request.getContextPath().length());
+        final String path = staticAssetPath(request);
         return path.startsWith("/public/") || path.startsWith("/assets/") || path.startsWith("/css/")
                 || path.startsWith("/js/") || path.startsWith("/WEB-INF/");
+    }
+
+    private static String staticAssetPath(final HttpServletRequest request) {
+        return request.getRequestURI().substring(request.getContextPath().length());
     }
 
     private static boolean indexExists(final ServletContext servletContext) {

@@ -407,6 +407,7 @@ public class UserServiceImplTest {
                 .emailValidated(true)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.findByEmail("newadmin@test.com")).thenReturn(Optional.empty());
         Mockito.when(userDao.createUser(
                         Mockito.eq("newadmin@test.com"),
                         Mockito.eq("New"),
@@ -426,6 +427,32 @@ public class UserServiceImplTest {
         Assertions.assertEquals(99L, result.getId());
         Assertions.assertEquals(UserRole.ADMIN, result.getUserRole());
         Assertions.assertEquals(10L, result.getRoleAssignedBy().orElse(null));
+    }
+
+    @Test
+    public void testCreateAdminUserWithEncodedPasswordThrowsWhenEmailAlreadyExists() {
+        // 1. Arrange
+        final User granting = User.builder()
+                .id(10L)
+                .email("admin@test.com")
+                .forename("Grant")
+                .surname("Admin")
+                .userRole(UserRole.ADMIN)
+                .build();
+        final User existing = User.builder()
+                .id(55L)
+                .email("newadmin@test.com")
+                .forename("Existing")
+                .surname("User")
+                .userRole(UserRole.USER)
+                .build();
+        Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.findByEmail("newadmin@test.com")).thenReturn(Optional.of(existing));
+
+        // 2. Execute and 3. Assert
+        Assertions.assertThrows(EmailAlreadyExistsException.class,
+                () -> userService.createAdminUserWithEncodedPassword(
+                        "newadmin@test.com", "New", "Admin", "HASH", 10L));
     }
 
     @Test
@@ -479,6 +506,7 @@ public class UserServiceImplTest {
                 .emailValidated(true)
                 .build();
         Mockito.when(userDao.getUserById(10L)).thenReturn(Optional.of(granting));
+        Mockito.when(userDao.findByEmail("newadmin@test.com")).thenReturn(Optional.empty());
         Mockito.when(userDao.createUser(
                         Mockito.eq("newadmin@test.com"),
                         Mockito.eq("New"),

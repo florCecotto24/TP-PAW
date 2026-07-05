@@ -53,7 +53,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * service's interface (back-compat) and delegated through.</p>
  */
 @Service
-public final class CarAvailabilityServiceImpl implements CarAvailabilityService {
+public class CarAvailabilityServiceImpl implements CarAvailabilityService {
 
     private final CarAvailabilityDao carAvailabilityDao;
     private final ReservationService reservationService;
@@ -332,6 +332,44 @@ public final class CarAvailabilityServiceImpl implements CarAvailabilityService 
                 target.getNeighborhoodId().orElse(null),
                 target.getCheckInTime(),
                 target.getCheckOutTime(),
+                CarAvailability.Kind.WITHDRAWN);
+    }
+
+    @Override
+    @Transactional
+    public void applyOwnerWithdrawRangeByCar(
+            final long carId,
+            final LocalDate startInclusive,
+            final LocalDate endInclusive) {
+        Objects.requireNonNull(startInclusive, "startInclusive");
+        Objects.requireNonNull(endInclusive, "endInclusive");
+        if (endInclusive.isBefore(startInclusive)) {
+            throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_INVALID_ORDER);
+        }
+        requireOwnerOfCarNotBlocked(carId);
+
+        final List<DateRange> withdrawnChunks = List.of(new DateRange(startInclusive, endInclusive));
+        rejectIfReservationsOverlapAnyChunkByCar(carId, withdrawnChunks,
+                MessageKeys.CAR_AVAILABILITY_WITHDRAW_CONFLICT);
+
+        final Optional<CarAvailability> template = findEffectiveForDayByCar(carId, startInclusive);
+        final BigDecimal dayPrice = template.map(CarAvailability::getDayPriceValue).orElse(BigDecimal.ZERO);
+        final String street = template.map(CarAvailability::getStartPointStreet).orElse("");
+        final String number = template.flatMap(CarAvailability::getStartPointNumber).orElse(null);
+        final Long neighborhoodId = template.flatMap(CarAvailability::getNeighborhoodId).orElse(null);
+        final LocalTime checkIn = template.map(CarAvailability::getCheckInTime).orElse(LocalTime.of(10, 0));
+        final LocalTime checkOut = template.map(CarAvailability::getCheckOutTime).orElse(LocalTime.of(20, 0));
+
+        carAvailabilityDao.createFullForCar(
+                carId,
+                startInclusive,
+                endInclusive,
+                dayPrice,
+                street,
+                number,
+                neighborhoodId,
+                checkIn,
+                checkOut,
                 CarAvailability.Kind.WITHDRAWN);
     }
 

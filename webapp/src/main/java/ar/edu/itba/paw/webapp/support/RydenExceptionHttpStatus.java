@@ -7,6 +7,7 @@ import ar.edu.itba.paw.exception.RydenException;
 import ar.edu.itba.paw.exception.car.CarBrandNotFoundException;
 import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
+import ar.edu.itba.paw.exception.car.CarPublishPrerequisitesMissingException;
 import ar.edu.itba.paw.exception.reservation.ReservationAccessDeniedException;
 import ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException;
 import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
@@ -34,7 +35,8 @@ public final class RydenExceptionHttpStatus {
                 || exception instanceof ReservationCancelNotAllowedException) {
             return Response.Status.CONFLICT;
         }
-        if (exception instanceof ReservationAccessDeniedException) {
+        if (exception instanceof ReservationAccessDeniedException
+                || exception instanceof CarPublishPrerequisitesMissingException) {
             return Response.Status.FORBIDDEN;
         }
         if (exception instanceof ReservationMessageException messageException) {

@@ -22,6 +22,8 @@ import javax.ws.rs.core.UriInfo;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.reservation.ReservationMessage;
@@ -45,7 +47,7 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
  */
 @Path("/reservations/{id}/messages")
 @Component
-public final class ReservationMessageController {
+public class ReservationMessageController {
 
     private final ReservationMessageService reservationMessageService;
     private final AdminService adminService;
@@ -75,13 +77,14 @@ public final class ReservationMessageController {
 
     @GET
     @Produces(VndMediaType.MESSAGE_V1_JSON)
+    @PreAuthorize(
+            "@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response listMessages(
-            @PathParam("id") final long reservationId,
+            @P("id") @PathParam("id") final long reservationId,
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam,
             @QueryParam("afterId") final Long afterId) {
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        reservationResourceAccess.requireViewReservation(reservationId, viewer);
 
         if (afterId != null) {
             return listMessagesAfter(reservationId, viewer, afterId);
@@ -101,12 +104,13 @@ public final class ReservationMessageController {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(VndMediaType.MESSAGE_V1_JSON)
+    @PreAuthorize(
+            "@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response postMessage(
-            @PathParam("id") final long reservationId,
+            @P("id") @PathParam("id") final long reservationId,
             @FormDataParam("body") final String body,
             @FormDataParam("file") final FormDataBodyPart filePart) throws IOException {
         final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
-        reservationResourceAccess.requireViewReservation(reservationId, viewer);
         final byte[] fileBytes = readFileBytes(filePart);
         formValidationSupport.validate(new ReservationMessageCreateForm(body, fileBytes != null));
         final String fileName = filePart != null && filePart.getContentDisposition() != null

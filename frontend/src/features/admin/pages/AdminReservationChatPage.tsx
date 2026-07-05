@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { fetchUserPublic, openAuthenticatedBinary } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -10,17 +11,8 @@ import type { MessageDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
 
-function formatDate(iso: string | undefined): string {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
 export default function AdminReservationChatPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const errorMessage = useAdminErrorMessage();
 
@@ -103,7 +95,7 @@ export default function AdminReservationChatPage() {
                   <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
                     <span className="fw-semibold">{senderLabel}</span>
                     <time className="text-secondary small" dateTime={message.createdAt}>
-                      {formatDate(message.createdAt)}
+                      {formatDateTime(message.createdAt, i18n.language)}
                     </time>
                   </div>
                   <p className="mb-1">{message.body}</p>

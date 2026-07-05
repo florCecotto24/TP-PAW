@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Form } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { BreadcrumbTrail } from '../../components/ryden';
 import { useMyUserUri } from './hooks';
 import {
   deleteDocument,
@@ -14,6 +15,7 @@ import {
 } from './api';
 import type { DocumentType, ProfileFormValues, UserDto, UserPatchDto } from './types';
 import { apiErrorMessage } from '../auth/errorMessage';
+import { formatDate } from '../../i18n/dateFormat';
 
 // =============================================================================
 // MyProfilePage — perfil propio editable. Markup espejo del profile.jsp original
@@ -99,6 +101,7 @@ export default function MyProfilePage() {
 
   return (
     <div className="container profile-container">
+      <BreadcrumbTrail currentLabel={t('profile.me.title')} />
       <div className="profile-header">
         <h1 className="profile-header__title">{t('profile.me.title')}</h1>
       </div>
@@ -122,6 +125,7 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
   const pictureLink = imgFailed ? undefined : user.links.profilePicture;
   const fileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [banner, setBanner] = useState<'saved' | 'removed' | null>(null);
 
   // Si cambia la foto (tras subir/borrar), reseteamos el estado de error.
   useEffect(() => setImgFailed(false), [user.links.profilePicture]);
@@ -136,11 +140,17 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
 
   const upload = useMutation({
     mutationFn: (file: File) => uploadProfilePicture(user, file),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      setBanner('saved');
+      onChanged();
+    },
   });
   const remove = useMutation({
     mutationFn: () => deleteProfilePicture(user),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      setBanner('removed');
+      onChanged();
+    },
   });
 
   return (
@@ -229,6 +239,11 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
         </div>
       </div>
 
+      {banner && !upload.isError && !remove.isError && (
+        <div className="alert alert-success mt-3 mb-0" role="alert">
+          {t(banner === 'saved' ? 'profile.photo.saved' : 'profile.photo.removed')}
+        </div>
+      )}
       {(upload.isError || remove.isError) && (
         <div className="alert alert-danger mt-3 mb-0" role="alert">
           {t('profile.common.error')}
@@ -248,7 +263,7 @@ function ProfileDataCard({
   userUri: string;
   onSaved: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<ProfileFormValues>(() => toForm(user));
   const [done, setDone] = useState(false);
@@ -319,7 +334,10 @@ function ProfileDataCard({
           <FieldView label={t('profile.me.forename')} value={orDash(form.forename)} />
           <FieldView label={t('profile.me.surname')} value={orDash(form.surname)} />
           <FieldView label={t('profile.me.phoneNumber')} value={orDash(form.phoneNumber)} />
-          <FieldView label={t('profile.me.birthDate')} value={orDash(form.birthDate)} />
+          <FieldView
+            label={t('profile.me.birthDate')}
+            value={form.birthDate ? formatDate(form.birthDate, i18n.language) : orDash('')}
+          />
           <FieldView label={t('profile.me.cbu')} value={orDash(form.cbu)} />
           <FieldView label={t('profile.me.about')} value={orDash(form.about)} multiline />
         </div>
@@ -469,18 +487,24 @@ function DocumentRow({
   const { t } = useTranslation();
   const label = type === 'license' ? t('profile.docs.license') : t('profile.docs.identity');
   const validated = type === 'license' ? user.licenseValidated : user.identityValidated;
+  const uploaded = type === 'license' ? user.licenseUploaded : user.identityUploaded;
   const [viewError, setViewError] = useState(false);
+  const [banner, setBanner] = useState<'uploaded' | 'removed' | null>(null);
 
   const upload = useMutation({
     mutationFn: (file: File) => uploadDocument(user, type, file),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      setBanner('uploaded');
+      onChanged();
+    },
   });
   const remove = useMutation({
     mutationFn: () => deleteDocument(user, type),
-    onSuccess: onChanged,
+    onSuccess: () => {
+      setBanner('removed');
+      onChanged();
+    },
   });
-  // El GET del documento exige Authorization → no se puede usar un <a href>.
-  // Se baja autenticado y se abre como blob (espejo del viewer del JSP viejo).
   const view = useMutation({
     mutationFn: () => openDocument(user, type),
     onSuccess: (ok) => setViewError(!ok),
@@ -488,7 +512,11 @@ function DocumentRow({
 
   return (
     <div className="mb-3">
-      <div className="form-label">{label}</div>
+      {uploaded ? (
+        <div className="form-label">{label}</div>
+      ) : (
+        <label className="form-label" htmlFor={`docFile-${type}`}>{label}</label>
+      )}
       <p className="small mb-2">
         {validated ? (
           <i className="bi bi-check-circle-fill text-success" aria-hidden="true"></i>
@@ -499,25 +527,62 @@ function DocumentRow({
           {validated ? t('profile.docs.validated') : t('profile.docs.pending')}
         </span>
       </p>
-      <p className="small mb-2">
-        <button
-          type="button"
-          className="btn btn-link link-primary text-break p-0 align-baseline"
-          onClick={() => {
-            setViewError(false);
-            view.mutate();
-          }}
-          disabled={view.isPending}
-        >
-          {t('profile.docs.viewFile')}
-        </button>
-      </p>
-      <div className="d-flex align-items-center gap-2 flex-wrap">
+      {uploaded && (
+        <>
+          <p className="small mb-2">
+            <i className="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>
+            <span>{t('profile.docs.uploaded')}</span>
+          </p>
+          <p className="small mb-2">
+            <button
+              type="button"
+              className="btn btn-link link-primary text-break p-0 align-baseline"
+              onClick={() => {
+                setViewError(false);
+                view.mutate();
+              }}
+              disabled={view.isPending}
+            >
+              {t('profile.docs.viewFile')}
+            </button>
+          </p>
+          <Button
+            type="button"
+            variant="outline-danger"
+            size="sm"
+            className="d-block mb-3"
+            onClick={() => remove.mutate()}
+            disabled={remove.isPending}
+          >
+            {t('profile.docs.remove')}
+          </Button>
+          <div>
+            <label className="form-label small mb-1" htmlFor={`docReplace-${type}`}>
+              {t('profile.docs.replace')}
+            </label>
+            <Form.Control
+              id={`docReplace-${type}`}
+              size="sm"
+              type="file"
+              accept="image/*,application/pdf"
+              className="form-control-sm mb-0"
+              onChange={(e) => {
+                const target = e.target as HTMLInputElement;
+                const file = target.files?.[0];
+                if (file) upload.mutate(file);
+                target.value = '';
+              }}
+            />
+          </div>
+        </>
+      )}
+      {!uploaded && (
         <Form.Control
+          id={`docFile-${type}`}
           size="sm"
           type="file"
           accept="image/*,application/pdf"
-          className="w-auto"
+          className="form-control-sm"
           onChange={(e) => {
             const target = e.target as HTMLInputElement;
             const file = target.files?.[0];
@@ -525,16 +590,12 @@ function DocumentRow({
             target.value = '';
           }}
         />
-        <Button
-          type="button"
-          variant="outline-danger"
-          size="sm"
-          onClick={() => remove.mutate()}
-          disabled={remove.isPending}
-        >
-          {t('profile.docs.remove')}
-        </Button>
-      </div>
+      )}
+      {banner && !upload.isError && !remove.isError && (
+        <div className="alert alert-success mt-2 mb-0 py-2 small" role="alert">
+          {t(banner === 'uploaded' ? 'profile.docs.uploaded' : 'profile.docs.removed')}
+        </div>
+      )}
       {viewError && (
         <div className="alert alert-warning mt-2 mb-0 py-2 small" role="alert">
           {t('profile.docs.viewError')}

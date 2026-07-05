@@ -13,7 +13,7 @@ import {
 import { useNeighborhoods } from '../hooks';
 import { useSearchDatePickers } from '../hooks/useSearchDatePickers';
 import FlexibleDateControls from './FlexibleDateControls';
-import { filtersToSearchParams, type SearchFilters } from '../searchFilters';
+import { filtersToSearchParams, isEmptyFilters, type SearchFilters } from '../searchFilters';
 import type { CarType, Powertrain, Transmission } from '../types';
 
 export interface ExploreSearchFormProps {
@@ -21,7 +21,6 @@ export interface ExploreSearchFormProps {
   formClass?: string;
   actionPath?: string;
   allowFlexibleSearch?: boolean;
-  showClearFilters?: boolean;
   clearFiltersHref?: string;
   /** Initial values (e.g. from URL on /search). */
   initial?: SearchFilters;
@@ -63,7 +62,6 @@ export default function ExploreSearchForm({
   formClass = 'search-menu sticky-top w-100',
   actionPath = paths.search,
   allowFlexibleSearch = true,
-  showClearFilters,
   clearFiltersHref = paths.search,
   initial = {},
   onApply,
@@ -89,7 +87,13 @@ export default function ExploreSearchForm({
 
   const onFromChange = useCallback((v: string) => setFrom(v), []);
   const onUntilChange = useCallback((v: string) => setUntil(v), []);
-  useSearchDatePickers(formId, flexible ? '' : from, flexible ? '' : until, onFromChange, onUntilChange);
+  const { clearPickers } = useSearchDatePickers(
+    formId,
+    flexible ? '' : from,
+    flexible ? '' : until,
+    onFromChange,
+    onUntilChange,
+  );
 
   const neighborhoodList = useMemo(
     () =>
@@ -168,20 +172,27 @@ export default function ExploreSearchForm({
     navigate(`${actionPath}?${filtersToSearchParams(filters)}`);
   };
 
-  const showClear =
-    showClearFilters ??
-    Boolean(
-      query.trim() ||
-        from ||
-        until ||
-        flexible ||
-        flexMonth ||
-        flexDays ||
-        priceMin ||
-        priceMax ||
-        neighborhoodIds.length > 0 ||
-        Object.values(selectedFilters).some((v) => v.length > 0),
-    );
+  const resetFilters = () => {
+    setQuery('');
+    setPriceMin('');
+    setPriceMax('');
+    setSelectedFilters({});
+    setNeighborhoodIds([]);
+    setFlexible(false);
+    setFlexMonth('');
+    setFlexDays('');
+    clearPickers();
+    if (onApply) {
+      onApply({});
+      return;
+    }
+    navigate(clearFiltersHref);
+  };
+
+  // Misma regla que el JSP: solo filtros con valor real. buildFilters() ya descarta flexMonth/
+  // flexDays cuando flexible=false (FlexibleDateControls pre-selecciona un mes en state local
+  // aunque el toggle esté apagado — no debe contar como filtro activo).
+  const showClear = !isEmptyFilters(buildFilters());
 
   return (
     <SearchWithFilters
@@ -191,6 +202,7 @@ export default function ExploreSearchForm({
       allowFlexibleSearch={allowFlexibleSearch}
       showClearFilters={showClear}
       clearFiltersHref={clearFiltersHref}
+      onClearFilters={resetFilters}
       categoryFilterOptions={categoryFilterOptions(t)}
       transmissionFilterOptions={transmissionFilterOptions(t)}
       powertrainFilterOptions={powertrainFilterOptions(t)}

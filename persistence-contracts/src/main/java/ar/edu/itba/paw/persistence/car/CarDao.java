@@ -8,6 +8,7 @@ import java.util.Optional;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
@@ -82,6 +83,16 @@ public interface CarDao {
      */
     Optional<CarPriceMarketInsight> findActiveDayPriceMarketInsightByBrandAndModel(
             String brand, String model, Long excludeCarId);
+
+    /**
+     * Batched variant of {@link #findActiveDayPriceMarketInsightByBrandAndModel}: one row per
+     * eligible active car (same brand/model, catalog validated, owner not blocked, at least one
+     * {@code offered} availability) across every {@code (brands.get(i), models.get(i))} pair, in a
+     * single round trip. Callers group by brand/model and aggregate min/max/average per card,
+     * excluding that card's own sample, instead of issuing one query per card. Parallel lists (rather
+     * than a list of pairs) so callers/tests can pass and match plain {@code List<String>} literals.
+     */
+    List<CarModelPriceSample> findActiveDayPricesForBrandModelPairs(List<String> brands, List<String> models);
 
     /** Updates the minimum rental days for a car via dirty-checking (load + mutate). */
     void updateMinimumRentalDays(long carId, int days);

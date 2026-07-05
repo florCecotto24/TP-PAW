@@ -22,7 +22,7 @@ import ar.edu.itba.paw.persistence.car.FavCarDao;
  * owner check delegates to {@link CarService} so we don't bypass the car aggregate.
  */
 @Service
-public final class FavCarServiceImpl implements FavCarService {
+public class FavCarServiceImpl implements FavCarService {
 
     /** Cars in any other status are hidden from "Mis favoritos" (e.g. deactivated, lacking docs). */
     private static final Set<Car.Status> FAVORITES_VISIBLE_STATUSES =

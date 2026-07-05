@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
@@ -9,10 +9,7 @@ import { ApiError } from '../../api/client';
 import type { UserDto } from '../../api/types';
 import type { RegisterForm } from './types';
 import { apiErrorMessage } from './errorMessage';
-
-// Mismas cotas que la API (app.validation.registration-password-min/max-length).
-const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_MAX_LENGTH = 72;
+import PasswordField from './PasswordField';
 
 // /registrarse — "registrarse" = crear el recurso usuario (POST /users,
 // anónimo, contentType vendor user). En 201 la API devuelve Location con la URN
@@ -30,7 +27,15 @@ export default function RegisterPage() {
     passwordConfirm: '',
   });
   const [error, setError] = useState<string | null>(null);
+  // Errores por campo devueltos por el server (ValidationErrorDto.errors[]),
+  // igual que `form:errors path="..."` en register.jsp: mensajes ya localizados.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.add('auth-page');
+    return () => document.body.classList.remove('auth-page');
+  }, []);
 
   function update<K extends keyof RegisterForm>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -39,20 +44,7 @@ export default function RegisterPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-
-    // Validaciones que el register.jsp mostraba inline (Size/NotBlank).
-    if (form.password.length < PASSWORD_MIN_LENGTH) {
-      setError(t('auth.register.passwordTooShort', { count: PASSWORD_MIN_LENGTH }));
-      return;
-    }
-    if (form.password.length > PASSWORD_MAX_LENGTH) {
-      setError(t('auth.register.passwordTooLong', { count: PASSWORD_MAX_LENGTH }));
-      return;
-    }
-    if (form.password !== form.passwordConfirm) {
-      setError(t('validation.passwordMismatch'));
-      return;
-    }
+    setFieldErrors({});
 
     setSubmitting(true);
     try {
@@ -69,8 +61,12 @@ export default function RegisterPage() {
       if (userUri) params.set('userUri', userUri);
       navigate(`${paths.verifyEmail}?${params.toString()}`);
     } catch (err) {
-      // 409 EmailAlreadyExists → code user.email.alreadyExists ("ya registrado").
-      if (err instanceof ApiError && err.status === 409 && !err.code) {
+      if (err instanceof ApiError && err.body?.errors?.length) {
+        const byField: Record<string, string> = {};
+        for (const fe of err.body.errors) byField[fe.field] = fe.message;
+        setFieldErrors(byField);
+      } else if (err instanceof ApiError && err.status === 409 && !err.code) {
+        // 409 EmailAlreadyExists → code user.email.alreadyExists ("ya registrado").
         setError(t('auth.register.emailTaken'));
       } else {
         setError(apiErrorMessage(t, err));
@@ -105,8 +101,12 @@ export default function RegisterPage() {
                   value={form.forename}
                   autoComplete="given-name"
                   onChange={(e) => update('forename', e.target.value)}
+                  isInvalid={!!fieldErrors.forename}
                   required
                 />
+                {fieldErrors.forename ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.forename}</div>
+                ) : null}
               </Form.Group>
               <Form.Group className="mb-3" controlId="surname">
                 <Form.Label>{t('auth.register.surname')}</Form.Label>
@@ -114,8 +114,12 @@ export default function RegisterPage() {
                   value={form.surname}
                   autoComplete="family-name"
                   onChange={(e) => update('surname', e.target.value)}
+                  isInvalid={!!fieldErrors.surname}
                   required
                 />
+                {fieldErrors.surname ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.surname}</div>
+                ) : null}
               </Form.Group>
               <Form.Group className="mb-3" controlId="email">
                 <Form.Label>{t('auth.register.email')}</Form.Label>
@@ -124,29 +128,41 @@ export default function RegisterPage() {
                   value={form.email}
                   autoComplete="email"
                   onChange={(e) => update('email', e.target.value)}
+                  isInvalid={!!fieldErrors.email}
                   required
                 />
+                {fieldErrors.email ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.email}</div>
+                ) : null}
               </Form.Group>
               <Form.Group className="mb-3" controlId="password">
                 <Form.Label>{t('auth.register.password')}</Form.Label>
-                <Form.Control
-                  type="password"
+                <PasswordField
+                  id="password"
                   value={form.password}
+                  onChange={(v) => update('password', v)}
                   autoComplete="new-password"
-                  onChange={(e) => update('password', e.target.value)}
+                  isInvalid={!!fieldErrors.password}
                   required
                 />
+                {fieldErrors.password ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.password}</div>
+                ) : null}
                 <Form.Text className="text-muted">{t('auth.register.passwordHint')}</Form.Text>
               </Form.Group>
               <Form.Group className="mb-4" controlId="passwordConfirm">
                 <Form.Label>{t('auth.register.passwordConfirm')}</Form.Label>
-                <Form.Control
-                  type="password"
+                <PasswordField
+                  id="passwordConfirm"
                   value={form.passwordConfirm}
+                  onChange={(v) => update('passwordConfirm', v)}
                   autoComplete="new-password"
-                  onChange={(e) => update('passwordConfirm', e.target.value)}
+                  isInvalid={!!fieldErrors.passwordConfirm}
                   required
                 />
+                {fieldErrors.passwordConfirm ? (
+                  <div className="text-danger small d-block mt-1">{fieldErrors.passwordConfirm}</div>
+                ) : null}
               </Form.Group>
               <Button type="submit" variant="primary" className="w-100" disabled={submitting}>
                 {submitting ? t('auth.register.submitting') : t('auth.register.submit')}

@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
@@ -212,13 +213,10 @@ public class CarServiceImplTest {
                 .dayPrice(new BigDecimal("9000.00"))
                 .status(Car.Status.ACTIVE)
                 .build();
-        final CarPriceMarketInsight insight = new CarPriceMarketInsight(
-                new BigDecimal("8000.00"),
-                new BigDecimal("12000.00"),
-                new BigDecimal("10000.00"),
-                1L);
-        Mockito.when(carDao.findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 5L))
-                .thenReturn(Optional.of(insight));
+        // Only one other car of the same brand/model exists besides the card itself: sampleCount
+        // ends up at 1 after excluding carId 5, below the minimum of 2 required to classify a position.
+        Mockito.when(carDao.findActiveDayPricesForBrandModelPairs(List.of("Toyota"), List.of("Corolla")))
+                .thenReturn(List.of(new CarModelPriceSample("Toyota", "Corolla", 6L, new BigDecimal("8000.00"))));
 
         final Map<Long, ConsumerCarCardMarketContext> contexts =
                 carService.resolveConsumerPriceMarketContexts(List.of(card));
@@ -236,13 +234,12 @@ public class CarServiceImplTest {
                 .dayPrice(new BigDecimal("9000.00"))
                 .status(Car.Status.ACTIVE)
                 .build();
-        final CarPriceMarketInsight insight = new CarPriceMarketInsight(
-                new BigDecimal("8000.00"),
-                new BigDecimal("12000.00"),
-                new BigDecimal("10000.00"),
-                2L);
-        Mockito.when(carDao.findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 5L))
-                .thenReturn(Optional.of(insight));
+        // Two other cars of the same brand/model (excluding the card itself, carId 5) average to
+        // 10000.00; 9000.00 sits at/below the 90% threshold, so it classifies as BELOW_MARKET.
+        Mockito.when(carDao.findActiveDayPricesForBrandModelPairs(List.of("Toyota"), List.of("Corolla")))
+                .thenReturn(List.of(
+                        new CarModelPriceSample("Toyota", "Corolla", 6L, new BigDecimal("8000.00")),
+                        new CarModelPriceSample("Toyota", "Corolla", 7L, new BigDecimal("12000.00"))));
 
         final Map<Long, ConsumerCarCardMarketContext> contexts =
                 carService.resolveConsumerPriceMarketContexts(List.of(card));
@@ -251,6 +248,28 @@ public class CarServiceImplTest {
         Assertions.assertEquals(
                 PriceMarketPosition.BELOW_MARKET,
                 contexts.get(5L).getPosition());
+    }
+
+    @Test
+    public void testResolveConsumerPriceMarketContextsIssuesOneDaoCallForMultipleCardsSharingModel() {
+        // Regression test for the N+1 bug: the old cache key wrongly included card.getCarId(), so a
+        // page with N cards issued N DAO calls even when several cards shared the same brand/model.
+        final CarCard cardA = CarCard.builder()
+                .carId(5L).brand("Toyota").model("Corolla").imageId(1L)
+                .dayPrice(new BigDecimal("9000.00")).status(Car.Status.ACTIVE).build();
+        final CarCard cardB = CarCard.builder()
+                .carId(6L).brand("Toyota").model("Corolla").imageId(1L)
+                .dayPrice(new BigDecimal("11000.00")).status(Car.Status.ACTIVE).build();
+        Mockito.when(carDao.findActiveDayPricesForBrandModelPairs(List.of("Toyota"), List.of("Corolla")))
+                .thenReturn(List.of(
+                        new CarModelPriceSample("Toyota", "Corolla", 5L, new BigDecimal("9000.00")),
+                        new CarModelPriceSample("Toyota", "Corolla", 6L, new BigDecimal("11000.00")),
+                        new CarModelPriceSample("Toyota", "Corolla", 7L, new BigDecimal("10000.00"))));
+
+        final Map<Long, ConsumerCarCardMarketContext> contexts =
+                carService.resolveConsumerPriceMarketContexts(List.of(cardA, cardB));
+
+        Assertions.assertEquals(2, contexts.size());
     }
 
     @Test
@@ -400,5 +419,28 @@ public class CarServiceImplTest {
         carService.releaseAdminCarPause(carId);
 
         Assertions.assertEquals(Car.Status.ACTIVE, adminPausedCar.getStatus());
+    }
+
+    @Test
+    public void testResolveOwnerListingStatusesReturnsRequestedStatusesWhenPresent() {
+        final List<Car.Status> requested = List.of(Car.Status.PAUSED, Car.Status.DEACTIVATED);
+
+        final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(requested, false);
+
+        Assertions.assertEquals(requested, resolved);
+    }
+
+    @Test
+    public void testResolveOwnerListingStatusesReturnsNullForSelfOrAdminWithoutFilter() {
+        final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(List.of(), true);
+
+        Assertions.assertNull(resolved);
+    }
+
+    @Test
+    public void testResolveOwnerListingStatusesDefaultsToActiveOnlyForOtherViewers() {
+        final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(null, false);
+
+        Assertions.assertEquals(List.of(Car.Status.ACTIVE), resolved);
     }
 }

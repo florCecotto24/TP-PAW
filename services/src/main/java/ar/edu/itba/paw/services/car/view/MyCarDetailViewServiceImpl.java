@@ -24,7 +24,7 @@ import ar.edu.itba.paw.services.reservation.view.ReservationViewService;
  * and, in the rich case, fetches the top-N preview reservations and maps them to display rows.
  */
 @Service
-public final class MyCarDetailViewServiceImpl implements MyCarDetailViewService {
+public class MyCarDetailViewServiceImpl implements MyCarDetailViewService {
 
     private final CarService carService;
     private final CarPictureService carPictureService;

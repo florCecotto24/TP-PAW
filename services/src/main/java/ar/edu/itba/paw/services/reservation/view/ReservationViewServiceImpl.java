@@ -52,7 +52,7 @@ import ar.edu.itba.paw.services.review.ReviewService;
 import ar.edu.itba.paw.services.user.UserService;
 /** Read-only reservation views; domain reads and billable-day math go through {@link ReservationService}. */
 @Service
-public final class ReservationViewServiceImpl implements ReservationViewService {
+public class ReservationViewServiceImpl implements ReservationViewService {
 
     private final ReservationService reservationService;
     private final CarService carService;

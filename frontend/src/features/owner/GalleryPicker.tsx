@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { publishValidationI18nParams, validateGalleryFiles } from './publishCarValidation';
 
 // Replica el selector de galería del viejo publishCarForm.jsp (+ js/components.js):
 // permite elegir VARIAS fotos/videos (acumulando entre selecciones, sin duplicar),
@@ -74,12 +75,15 @@ export default function GalleryPicker({ onChange }: GalleryPickerProps) {
       const hadItems = prev.length > 0;
       const merged = [...prev];
       for (const f of valid) {
-        // Identidad por nombre+tamaño+lastModified (name+size solos colisionan en
-        // exports de cámara con nombres 0-padded del mismo tamaño).
         const dup = merged.some(
           (m) => m.name === f.name && m.size === f.size && m.lastModified === f.lastModified,
         );
         if (!dup) merged.push(f);
+      }
+      const galleryError = validateGalleryFiles(merged);
+      if (galleryError) {
+        setError(t(galleryError, publishValidationI18nParams()));
+        return prev;
       }
       if (!hadItems && merged.length > 0) {
         setCoverIndex(defaultCoverIndex(merged));

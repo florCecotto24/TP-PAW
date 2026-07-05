@@ -27,7 +27,7 @@ import ar.edu.itba.paw.persistence.user.PasswordResetCodeDao;
 import ar.edu.itba.paw.services.email.EmailService;
 /** Uses only {@link PasswordResetCodeDao}; user lookup and password hash updates go through {@link UserService}. */
 @Service
-public final class PasswordResetServiceImpl implements PasswordResetService {
+public class PasswordResetServiceImpl implements PasswordResetService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PasswordResetServiceImpl.class);
 

@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -13,8 +14,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
+import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
 class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
@@ -61,13 +64,17 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     // ----- Fixture helpers (jdbc-only: never call into the DAO under test) -------------------
 
     private long insertCar(final String plate) {
+        return insertCar(plate, ownerId);
+    }
+
+    private long insertCar(final String plate, final long carOwnerId) {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         // The Car entity persists Powertrain/Transmission as STRING (uppercase). The JPA hydration
         // path used by findCarPublicReviews fails if the stored value does not match the enum name.
         jdbcTemplate.update(
                 "INSERT INTO cars (owner_id, model_id, plate, powertrain, transmission, status, created_at, updated_at, minimum_rental_days) "
                         + "VALUES (?, ?, ?, 'GASOLINE', 'MANUAL', 'active', ?, ?, 1)",
-                ownerId, modelId, plate, Timestamp.from(now.toInstant()), Timestamp.from(now.toInstant()));
+                carOwnerId, modelId, plate, Timestamp.from(now.toInstant()), Timestamp.from(now.toInstant()));
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM cars WHERE plate = ?", Long.class, plate);
     }
@@ -96,6 +103,16 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
                 reservationId, carId, Timestamp.from(createdAt.toInstant()), rating, comment);
     }
 
+    /** Owner-authored review of the rider ({@code made_by_rider = FALSE}). */
+    private void insertOwnerReview(
+            final long reservationId, final long carId, final Integer rating, final String comment,
+            final OffsetDateTime createdAt) {
+        jdbcTemplate.update(
+                "INSERT INTO reviews (reservation_id, made_by_rider, car_id, created_at, rating, comment) "
+                        + "VALUES (?, FALSE, ?, ?, ?, ?)",
+                reservationId, carId, Timestamp.from(createdAt.toInstant()), rating, comment);
+    }
+
     private long insertImage() {
         jdbcTemplate.update(
                 "INSERT INTO images (image_name, content_type, byte_array) VALUES (?, ?, ?)",
@@ -108,6 +125,12 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
         jdbcTemplate.update(
                 "UPDATE reviews SET image_id = ? WHERE reservation_id = ? AND made_by_rider = TRUE",
                 imageId, reservationId);
+    }
+
+    private long reviewIdFor(final long reservationId, final boolean madeByRider) {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM reviews WHERE reservation_id = ? AND made_by_rider = ?",
+                Long.class, reservationId, madeByRider);
     }
 
     // ----- Tests -----------------------------------------------------------------------------
@@ -245,5 +268,116 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
 
         // 3. Assert
         Assertions.assertEquals(0L, total);
+    }
+
+    @Test
+    void findReviewsForUserPageMergesOwnerAndRiderDirectionsOrderedByDateDesc() {
+        // 1. Arrange — ownerId receives a rider review as owner of carA, and an owner review as
+        // rider of carB (owned by otherRiderId). The two rows come from opposite `made_by_rider`
+        // branches and must be merged into a single date-ordered feed.
+        final long carA = insertCar("REV070", ownerId);
+        final long carB = insertCar("REV071", otherRiderId);
+        final long resOnA = insertFinishedReservation(carA, riderId);
+        final long resOnB = insertFinishedReservation(carB, ownerId);
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        insertRiderReview(resOnA, carA, 4, "Rider praises owner's car", now.minusHours(2));
+        insertOwnerReview(resOnB, carB, 5, "Owner praises this rider", now.minusHours(1));
+
+        // 2. Act
+        final Page<ReviewItemDto> page = dao.findReviewsForUserPage(ownerId, 0, 10);
+
+        // 3. Assert — most recent (owner review) first.
+        Assertions.assertEquals(2L, page.getTotalItems());
+        Assertions.assertEquals(
+                List.of("Owner praises this rider", "Rider praises owner's car"),
+                page.getContent().stream().map(ReviewItemDto::getCommentText).toList());
+    }
+
+    @Test
+    void findReviewsForUserPagePaginatesAtSqlLevel() {
+        // 1. Arrange — three rider reviews of the same owner, paged 2-per-page.
+        final long carId = insertCar("REV080", ownerId);
+        final long resA = insertFinishedReservation(carId, riderId);
+        final long resB = insertFinishedReservation(carId, otherRiderId);
+        final long resC = insertFinishedReservation(carId, riderId);
+        final OffsetDateTime base = OffsetDateTime.now(ZoneOffset.UTC).minusDays(2);
+        insertRiderReview(resA, carId, 3, "A", base);
+        insertRiderReview(resB, carId, 4, "B", base.plusHours(1));
+        insertRiderReview(resC, carId, 5, "C", base.plusHours(2));
+
+        // 2. Act
+        final Page<ReviewItemDto> firstPage = dao.findReviewsForUserPage(ownerId, 0, 2);
+        final Page<ReviewItemDto> secondPage = dao.findReviewsForUserPage(ownerId, 1, 2);
+
+        // 3. Assert — newest-first ordering means firstPage = [C, B], secondPage = [A].
+        Assertions.assertEquals(3L, firstPage.getTotalItems());
+        Assertions.assertEquals(List.of("C", "B"),
+                firstPage.getContent().stream().map(ReviewItemDto::getCommentText).toList());
+        Assertions.assertEquals(1, secondPage.getContent().size());
+        Assertions.assertEquals("A", secondPage.getContent().get(0).getCommentText());
+    }
+
+    @Test
+    void findReviewsForUserPageExcludesOmittedReviewsAndOtherUsers() {
+        // 1. Arrange
+        final long carId = insertCar("REV090", ownerId);
+        final long resRated = insertFinishedReservation(carId, riderId);
+        final long resOmitted = insertFinishedReservation(carId, riderId);
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        insertRiderReview(resRated, carId, 5, "Great", now.minusHours(1));
+        insertRiderReview(resOmitted, carId, null, null, now);
+
+        // 2. Act
+        final Page<ReviewItemDto> ownerPage = dao.findReviewsForUserPage(ownerId, 0, 10);
+        final Page<ReviewItemDto> unrelatedUserPage = dao.findReviewsForUserPage(otherRiderId, 0, 10);
+
+        // 3. Assert
+        Assertions.assertEquals(1L, ownerPage.getTotalItems(), "Omitted (rating=null) review must be excluded");
+        Assertions.assertEquals(0L, unrelatedUserPage.getTotalItems());
+    }
+
+    @Test
+    void findByIdReturnsHydratedReviewMatchingItsOwnSurrogateId() {
+        // 1. Arrange
+        final long carId = insertCar("REV100");
+        final long reservationId = insertFinishedReservation(carId, riderId);
+        insertRiderReview(reservationId, carId, 5, "Great trip", OffsetDateTime.now(ZoneOffset.UTC));
+        final long reviewId = reviewIdFor(reservationId, true);
+
+        // 2. Act
+        final Optional<Review> found = dao.findById(reviewId);
+
+        // 3. Assert
+        Assertions.assertTrue(found.isPresent());
+        Assertions.assertEquals(reviewId, found.get().getId());
+        Assertions.assertEquals(reservationId, found.get().getReservationId());
+        Assertions.assertTrue(found.get().isMadeByRider());
+        Assertions.assertEquals("Great trip", found.get().getComment().orElse(null));
+    }
+
+    @Test
+    void findByIdReturnsEmptyForUnknownId() {
+        // 2. Act
+        final Optional<Review> found = dao.findById(Long.MAX_VALUE);
+
+        // 3. Assert
+        Assertions.assertTrue(found.isEmpty());
+    }
+
+    @Test
+    void reviewsOnTheSameReservationGetDistinctSurrogateIds() {
+        // 1. Arrange — owner and rider both review the same finished reservation.
+        final long carId = insertCar("REV110");
+        final long reservationId = insertFinishedReservation(carId, riderId);
+        insertRiderReview(reservationId, carId, 4, "Rider side", OffsetDateTime.now(ZoneOffset.UTC));
+        insertOwnerReview(reservationId, carId, 5, "Owner side", OffsetDateTime.now(ZoneOffset.UTC));
+
+        // 2. Act
+        final long riderReviewId = reviewIdFor(reservationId, true);
+        final long ownerReviewId = reviewIdFor(reservationId, false);
+
+        // 3. Assert — each side of the same reservation has its own unique URN-backing id.
+        Assertions.assertNotEquals(riderReviewId, ownerReviewId,
+                "Reviews on the same reservation must not share a surrogate id");
     }
 }

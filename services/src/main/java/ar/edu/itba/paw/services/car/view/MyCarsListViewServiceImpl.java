@@ -19,7 +19,7 @@ import ar.edu.itba.paw.services.reservation.ReservationService;
  * single page model keeps the GET handler down to one view-service call.
  */
 @Service
-public final class MyCarsListViewServiceImpl implements MyCarsListViewService {
+public class MyCarsListViewServiceImpl implements MyCarsListViewService {
 
     private final CarService carService;
     private final ReservationService reservationService;

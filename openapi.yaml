@@ -143,19 +143,24 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [users]
-      summary: Registrar usuario (reemplaza POST /register)
+      summary: Registrar usuario (reemplaza POST /register), o provisionar un admin
       description: >
-        "Registrarse" = crear el recurso usuario. NO existe /register.
-        El usuario queda con emailVerified=false y dispara el envío de un
-        OTP por email. Reenviar OTP: POST /users/{id}/credentials.
-        Verificar: Basic auth email:otp (ver securitySchemes.basicAuth).
-      security:
-        - {}
+        Mismo endpoint de colección, dos variantes discriminadas por Content-Type:
+        - `application/vnd.paw.user.v1+json` (anónimo): "registrarse" = crear el
+          recurso usuario. NO existe /register. Queda con emailVerified=false y
+          dispara un OTP por email. Reenviar OTP: POST /users/{id}/credentials.
+          Verificar: Basic auth email:otp (ver securitySchemes.basicAuth).
+        - `application/vnd.paw.admincreateuser.v1+json` (solo admin, Bearer): crea
+          una cuenta ya pre-verificada con `role=admin` y una contraseña temporal;
+          dispara un email de invitación con esa contraseña (reemplaza
+          `/admin/users/create` del MVC viejo).
       requestBody:
         required: true
         content:
           application/vnd.paw.user.v1+json:
             schema: { $ref: "#/components/schemas/UserCreateDto" }
+          application/vnd.paw.admincreateuser.v1+json:
+            schema: { $ref: "#/components/schemas/AdminCreateUserDto" }
       responses:
         "201":
           description: Usuario creado.
@@ -164,7 +169,11 @@ paths:
           content:
             application/vnd.paw.user.v1+json:
               schema: { $ref: "#/components/schemas/UserDto" }
+            application/vnd.paw.user.private.v1+json:
+              schema: { $ref: "#/components/schemas/UserPrivateDto" }
         "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409":
           description: Email ya registrado (EmailAlreadyExistsException).
           content:
@@ -471,7 +480,17 @@ paths:
         Una sola colección con TODOS los filtros como query params. Las
         distintas pantallas del MVC (home cheapest/recent, búsqueda pública,
         "mis autos", listado admin) colapsan acá variando query params +
-        autorización. Paginación por header `Link`.
+        autorización. Paginación por header `Link`. Semántica según query
+        (decisión documentada, ver auditoría A14): (1) `scope=admin` → TODO
+        el catálogo sin filtro de estado, solo admin; (2) `ownerId` sin
+        `scope` → "autos de este usuario": si el llamante es ese usuario o
+        admin, ve cualquier estado (o el filtro `status` explícito que
+        mande); cualquier otro llamante ve solo `active` y no puede pasar
+        `status` (403); (3) sin `ownerId` ni `scope` → browse público,
+        siempre `active` únicamente.         Es un filtro de colección legítimo
+        (no una operación distinta por rol), pero al ser 3 ramas con
+        autorización propia se documenta acá en vez de separarlo en
+        3 endpoints distintos.
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/pageSize"
@@ -485,13 +504,22 @@ paths:
           description: Filtra por dueño (sustituye "/my-cars" pasando el propio id).
         - name: category
           in: query
-          schema: { $ref: "#/components/schemas/CarType" }
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/CarType" } }
+          description: Repetible (`category=suv&category=sedan`) para filtrar por varias categorías a la vez.
         - name: transmission
           in: query
-          schema: { $ref: "#/components/schemas/Transmission" }
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/Transmission" } }
+          description: Repetible, igual que `category`.
         - name: powertrain
           in: query
-          schema: { $ref: "#/components/schemas/Powertrain" }
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/Powertrain" } }
+          description: Repetible, igual que `category`.
         - name: priceMin
           in: query
           schema: { type: number }
@@ -500,7 +528,10 @@ paths:
           schema: { type: number }
         - name: rating
           in: query
-          schema: { type: number, minimum: 0, maximum: 5 }
+          style: form
+          explode: true
+          schema: { type: array, items: { type: number, minimum: 0, maximum: 5 } }
+          description: Repetible; cada valor es un piso de calificación mínima (p.ej. `rating=4&rating=5`).
         - name: neighborhoodId
           in: query
           schema: { type: integer, format: int64 }
@@ -513,9 +544,11 @@ paths:
           schema: { type: string, format: date }
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/CarStatus" }
+          style: form
+          explode: true
+          schema: { type: array, items: { $ref: "#/components/schemas/CarStatus" } }
           description: >
-            Filtro por estado. Solo el dueño (vía ownerId propio) o un admin pueden
+            Repetible. Filtro por estado. Solo el dueño (vía ownerId propio) o un admin pueden
             filtrar por estados no públicos.
         - name: scope
           in: query
@@ -523,11 +556,17 @@ paths:
           description: >
             scope=admin lista TODOS los autos del catálogo, cualquier estado, paginados
             (reemplaza la vieja vista /admin/cars). Solo admin (403 en caso contrario).
-            Distinto del browse público, que solo expone autos publicados. Ver Anexo B.
+            Distinto del browse público, que solo expone autos publicados.
         - name: sort
           in: query
           schema: { type: string, enum: [price_asc, price_desc, rating_desc, recent, name] }
       responses:
+        "403":
+          description: >
+            scope=admin sin ser admin, o status explícito en ownerId de otro usuario sin ser admin.
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
         "200":
           description: Lista de autos.
           headers:
@@ -742,6 +781,29 @@ paths:
           description: Hay reservas activas que se solapan (CarValidationException).
 
   # --- Galería del auto (sub-recurso débil) ---
+  /cars/{id}/bookable-segments:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars]
+      summary: Segmentos de días reservables para el selector de fechas del rider
+      description: >
+        Colección acotada por diseño (los tramos de disponibilidad efectiva ya
+        publicados del auto desde "ahora"): sin paginación por page/pageSize,
+        solo X-Total-Count con el tamaño de la lista devuelta.
+      responses:
+        "200":
+          description: Segmentos reservables.
+          headers:
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+          content:
+            application/vnd.paw.bookablesegment.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BookableSegmentDto" }
+        "204": { description: Sin segmentos reservables. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /cars/{id}/pictures:
     parameters:
       - $ref: "#/components/parameters/idPath"
@@ -850,8 +912,13 @@ paths:
       summary: Listar reservas (reemplaza /my-reservations, /my-cars/reservations, /admin/reservations)
       description: >
         Una sola colección. El rol del llamante + query params determinan qué
-        ve: como rider (riderId propio), como owner (ownerId propio) o admin
-        (todas). Paginación por header `Link`.
+        ve (decisión documentada, ver auditoría A14): (1) `riderId` → reservas
+        donde el usuario es rider, requiere ser ese usuario o admin (403 si
+        no); (2) sin `riderId`, `ownerId` → reservas sobre autos del usuario,
+        mismo chequeo self-o-admin; (3) sin `riderId` ni `ownerId` → TODAS las
+        reservas, solo admin (403 en caso contrario). Como en `GET /cars`, es
+        un filtro de colección legítimo, no una operación distinta por rol.
+        Paginación por header `Link`.
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/pageSize"
@@ -885,6 +952,11 @@ paths:
                 items: { $ref: "#/components/schemas/ReservationDto" }
         "204": { description: Sin reservas. }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: riderId/ownerId de otro usuario sin ser admin, o listado admin (sin filtro) sin ser admin.
+          content:
+            application/vnd.paw.error.v1+json:
+              schema: { $ref: "#/components/schemas/ErrorDto" }
     post:
       tags: [reservations]
       summary: Crear una reserva (rider) — reemplaza POST /reservation
@@ -953,6 +1025,21 @@ paths:
         "409":
           description: Transición no permitida desde el estado actual.
 
+  /reservations/{id}/counterparty:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [reservations]
+      summary: Datos de contacto de la contraparte de la reserva (rider ve al owner, owner ve al rider)
+      responses:
+        "200":
+          description: Contacto de la contraparte.
+          content:
+            application/vnd.paw.counterpartycontact.v1+json:
+              schema: { $ref: "#/components/schemas/CounterpartyContactDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # --- Comprobante de pago (rider) ---
   /reservations/{id}/payment-receipt:
     parameters:
@@ -1006,7 +1093,7 @@ paths:
         "204": { description: Subido. }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # --- Reviews de una reserva (entidad débil Review: PK = reserva + madeByRider) ---
+  # --- Reviews de una reserva (entidad fuerte: id propio; UNIQUE(reserva, made_by_rider)) ---
   /reservations/{id}/reviews:
     parameters:
       - $ref: "#/components/parameters/idPath"
@@ -1028,7 +1115,7 @@ paths:
       description: >
         Reemplaza /owner-review-rider y /rider-review-owner. El lado (made_by_rider)
         se deriva del rol del llamante en la reserva. Solo si la reserva está
-        FINISHED y no existe ya una reseña de ese lado (PK compuesta).
+        FINISHED y no existe ya una reseña de ese lado (UNIQUE(reservation_id, made_by_rider)).
       requestBody:
         required: true
         content:
@@ -1053,6 +1140,29 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409":
           description: Ya existe reseña de ese lado, o la reserva no está FINISHED.
+
+  /reservations/{id}/reviews/{reviewId}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: reviewId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [reviews, reservations]
+      summary: Reseña individual por su id propio (URN única)
+      description: >
+        Recurso canónico de una Review — es el mismo destino de links.self tanto
+        en ReviewDto (/cars/{id}/reviews, /reservations/{id}/reviews) como en
+        UserReviewDto (/users/{id}/reviews).
+      responses:
+        "200":
+          description: La reseña.
+          content:
+            application/vnd.paw.review.v1+json:
+              schema: { $ref: "#/components/schemas/ReviewDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   #############################################################################
   # RESERVATION MESSAGES (chat) — entidad débil
@@ -1306,6 +1416,31 @@ paths:
         "204": { description: Eliminado. }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /models/{id}/price-insight:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [catalog]
+      summary: Estadísticas de precio comparables para el modelo (marca/modelo), excluyendo un auto
+      description: >
+        Sin `excludeCarId`, 204 (no hay auto de referencia a excluir). Con
+        `excludeCarId`, agrega min/max/promedio de `dayPrice` entre los autos
+        elegibles del mismo par marca/modelo (catálogo validado, dueño no
+        bloqueado, con disponibilidad activa), excluyendo ese auto; 204 si no
+        hay comparables.
+      parameters:
+        - name: excludeCarId
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Estadísticas de precio.
+          content:
+            application/vnd.paw.pricemarketinsight.v1+json:
+              schema: { $ref: "#/components/schemas/PriceMarketInsightDto" }
+        "204": { description: Sin auto de referencia o sin comparables. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   #############################################################################
   # LOCATIONS
   #############################################################################
@@ -1451,7 +1586,10 @@ components:
             cars: /cars
             reservations: /reservations
             brands: /brands
+            models: /models
             neighborhoods: /neighborhoods
+            credentials: /credentials
+            image: /image
 
     # ----- USER -----
     UserDto:
@@ -1514,6 +1652,18 @@ components:
         password: { type: string, format: password, writeOnly: true }
         passwordConfirm: { type: string, format: password, writeOnly: true }
 
+    AdminCreateUserDto:
+      type: object
+      description: >
+        Body de POST /users con Content-Type admincreateuser: sin passwordConfirm
+        (la escribe el admin una sola vez como contraseña temporal a rotar).
+      required: [email, forename, surname, password]
+      properties:
+        email: { type: string, format: email }
+        forename: { type: string }
+        surname: { type: string }
+        password: { type: string, format: password, writeOnly: true, description: Contraseña temporal; se envía por email al nuevo admin. }
+
     UserPatchDto:
       type: object
       description: >
@@ -1550,6 +1700,10 @@ components:
     CarStatus:
       type: string
       enum: [active, paused, admin_paused, lack_doc, unavailable, deactivated]
+    PriceMarketPosition:
+      type: string
+      enum: [below_market, at_market, above_market]
+      description: Consumer browse card badge relative to same brand/model market average.
 
     CarDto:
       type: object
@@ -1563,9 +1717,28 @@ components:
         description: { type: string, nullable: true }
         minimumRentalDays: { type: integer }
         ratingAvg: { type: number, nullable: true }
+        dayPrice:
+          type: number
+          nullable: true
+          description: Lowest active day price; populated on browse card projections only.
         brandName: { type: string }
         modelName: { type: string }
         modelValidated: { type: boolean }
+        hasInsurance: { type: boolean }
+        priceMarketPositionModifier:
+          allOf:
+            - $ref: "#/components/schemas/PriceMarketPosition"
+          nullable: true
+          description: Consumer browse/favorites cards when comparable market data exists.
+        marketAveragePrice:
+          type: number
+          nullable: true
+          description: Same brand/model market average day price backing the badge.
+        marketSampleCount:
+          type: integer
+          format: int64
+          nullable: true
+          description: Number of comparable active listings used for the badge.
         createdAt: { type: string, format: date-time }
         links:
           allOf:
@@ -1636,6 +1809,20 @@ components:
             - $ref: "#/components/schemas/Links"
           description: self (bytes), car.
 
+    BookableSegmentDto:
+      type: object
+      description: >
+        Recurso de solo lectura, sin URN propia (no es una entidad de dominio): una fila
+        agregada de disponibilidad efectiva para el selector de fechas del rider.
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        dayPrice: { type: number, nullable: true }
+        checkInTime: { type: string, nullable: true, example: "10:00" }
+        checkOutTime: { type: string, nullable: true, example: "10:00" }
+        location: { type: string }
+        neighborhoodId: { type: integer, format: int64, nullable: true }
+
     # ----- RESERVATION -----
     ReservationStatus:
       type: string
@@ -1660,11 +1847,34 @@ components:
         paymentProofDeadlineAt: { type: string, format: date-time, nullable: true }
         refundProofDeadlineAt: { type: string, format: date-time, nullable: true }
         paymentRefundRequired: { type: boolean }
+        hasPaymentReceipt: { type: boolean }
+        hasRefundReceipt: { type: boolean }
+        ownerCbu:
+          type: string
+          nullable: true
+          description: CBU del dueño del auto, para que el rider transfiera el pago.
+        pickupStreet: { type: string, nullable: true, description: Calle de entrega/devolución. }
+        pickupNumber: { type: string, nullable: true }
+        pickupNeighborhood: { type: string, nullable: true }
+        checkInTime: { type: string, nullable: true, example: "10:00" }
+        checkOutTime: { type: string, nullable: true, example: "18:00" }
         createdAt: { type: string, format: date-time }
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
           description: self, car, rider, owner, messages, reviews, payment-receipt, refund-receipt.
+
+    CounterpartyContactDto:
+      type: object
+      properties:
+        forename: { type: string }
+        surname: { type: string }
+        email: { type: string, format: email }
+        phoneNumber: { type: string, nullable: true }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self (perfil público de la contraparte).
 
     ReservationCreateDto:
       type: object
@@ -1698,6 +1908,11 @@ components:
     # ----- REVIEW -----
     ReviewDto:
       type: object
+      description: >
+        Review es una entidad fuerte (id propio); (reservation_id, made_by_rider)
+        queda como UNIQUE para la regla de "una reseña por lado", ya no como PK.
+        Esto le da a cada reseña una URN única (links.self), aunque se la liste
+        desde /cars/{id}/reviews, /users/{id}/reviews o /reservations/{id}/reviews.
       properties:
         rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
         comment: { type: string, nullable: true }
@@ -1706,13 +1921,16 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, reservation, car, author, image (si hay).
+          description: >
+            self (único, /reservations/{id}/reviews/{reviewId}), reservation, car,
+            author, image (si hay).
 
     UserReviewDto:
       type: object
       description: >
         Reseña RECIBIDA por un usuario (perfil público). Proyección de solo
-        lectura desde ReviewItemDto; trae el nombre del autor pero no el id.
+        lectura desde ReviewItemDto; no expone el id en el cuerpo, pero
+        links.self ya es la URN única de la reseña (mismo recurso que ReviewDto).
       properties:
         rating: { type: integer, minimum: 1, maximum: 5 }
         comment: { type: string, nullable: true }
@@ -1721,7 +1939,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self (apunta a la sub-colección de reseñas del usuario).
+          description: self (único, /reservations/{id}/reviews/{reviewId}).
 
     # ----- CATALOG -----
     BrandDto:
@@ -1749,6 +1967,19 @@ components:
           allOf:
             - $ref: "#/components/schemas/Links"
           description: self, brand.
+
+    PriceMarketInsightDto:
+      type: object
+      description: >
+        Estadísticas de `dayPrice` entre autos comparables (mismo par
+        marca/modelo, catálogo validado, dueño no bloqueado, con disponibilidad
+        activa), excluyendo el auto de referencia.
+      properties:
+        minPrice: { type: number }
+        maxPrice: { type: number }
+        averagePrice: { type: number }
+        sampleCount: { type: integer, format: int64 }
+
     ModelCreateDto:
       type: object
       required: [name, type]

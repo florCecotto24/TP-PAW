@@ -33,6 +33,7 @@ import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
+import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
@@ -756,6 +757,54 @@ public class CarJpaDao implements CarDao {
         final BigDecimal max = toBigDecimal(row[1]);
         final BigDecimal avg = toBigDecimal(row[2]).setScale(4, RoundingMode.HALF_UP);
         return Optional.of(new CarPriceMarketInsight(min, max, avg, count));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<CarModelPriceSample> findActiveDayPricesForBrandModelPairs(
+            final List<String> brands, final List<String> models) {
+        if (brands == null || brands.isEmpty()) {
+            return List.of();
+        }
+        // Same eligibility rules and per-car MIN(day_price) shape as
+        // findActiveDayPriceMarketInsightByBrandAndModel, but for every requested (brand, model) pair
+        // in one round trip and without pre-aggregating: callers need the raw per-car samples so they
+        // can exclude a specific car (their own) before computing min/max/avg themselves. This is what
+        // resolveConsumerPriceMarketContexts uses to resolve a whole page of CarCards without issuing
+        // one query per card.
+        final Map<String, Object> params = new HashMap<>();
+        final StringBuilder pairsClause = new StringBuilder();
+        for (int i = 0; i < brands.size(); i++) {
+            if (i > 0) {
+                pairsClause.append(" OR ");
+            }
+            pairsClause.append("(LOWER(cb.name) = LOWER(:brand").append(i)
+                    .append(") AND LOWER(cm.name) = LOWER(:model").append(i).append(")) ");
+            params.put("brand" + i, brands.get(i));
+            params.put("model" + i, models.get(i));
+        }
+        final String sql =
+                // Explicit aliases on cb.name/cm.name: both columns are named "name" in their tables,
+                // and Hibernate's native-query column auto-discovery rejects duplicate result aliases.
+                "SELECT cb.name AS brand_name, cm.name AS model_name, per_car.car_id, per_car.min_price "
+                        + "FROM (SELECT c.id AS car_id, c.model_id, MIN(la.day_price) AS min_price "
+                        + "      FROM car_availability la "
+                        + "      JOIN cars c ON c.id = la.car_id "
+                        + OWNER_NOT_BLOCKED_JOIN
+                        + "      WHERE la.kind = '" + KIND_OFFERED + "' "
+                        + "      AND c.status = '" + STATUS_ACTIVE + "' "
+                        + "      GROUP BY c.id, c.model_id) per_car "
+                        + "JOIN car_models cm ON cm.id = per_car.model_id AND cm.validated = TRUE "
+                        + "JOIN car_brands cb ON cb.id = cm.brand_id AND cb.validated = TRUE "
+                        + "WHERE " + pairsClause;
+
+        final List<Object[]> rows = bindParams(em.createNativeQuery(sql), params).getResultList();
+        final List<CarModelPriceSample> samples = new ArrayList<>(rows.size());
+        for (final Object[] row : rows) {
+            samples.add(new CarModelPriceSample(
+                    (String) row[0], (String) row[1], ((Number) row[2]).longValue(), toBigDecimal(row[3])));
+        }
+        return samples;
     }
 
     // -------------------------------------------------------------------------

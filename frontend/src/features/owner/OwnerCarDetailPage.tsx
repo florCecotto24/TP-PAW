@@ -2,29 +2,38 @@ import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Modal } from 'react-bootstrap';
+import { apiAssetUrl } from '../../api/uri';
+import { useSessionStore } from '../../session/sessionStore';
 import {
   deactivateCar,
   fetchCar,
+  fetchPictures,
+  openInsurance,
   patchCar,
   uploadInsurance,
 } from './api';
-import { useApiErrorMessage } from './hooks';
+import { hasCbu, useApiErrorMessage } from './hooks';
 import AvailabilityManager from './AvailabilityManager';
 import GalleryManager from './GalleryManager';
-import { STATUS_BADGE, type CarDto } from './types';
-import { paths, ownerReservationsCar } from '../../routes/paths';
+import { STATUS_BADGE, type CarDto, type PictureDto } from './types';
+import { paths, carDetail, ownerReservationsCar } from '../../routes/paths';
 
 export default function OwnerCarDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const errorMessage = useApiErrorMessage();
+  const currentUser = useSessionStore((s) => s.currentUser);
 
   const [car, setCar] = useState<CarDto | null>(null);
+  const [coverImage, setCoverImage] = useState<PictureDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [showPause, setShowPause] = useState(false);
+  const [insuranceSuccess, setInsuranceSuccess] = useState(false);
+  const [insuranceViewError, setInsuranceViewError] = useState(false);
+  const [insuranceViewBusy, setInsuranceViewBusy] = useState(false);
 
   // Edición de atributos.
   const [description, setDescription] = useState('');
@@ -45,6 +54,21 @@ export default function OwnerCarDetailPage() {
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Imagen de portada de la cabecera (reservation-detail-car-media del JSP):
+  // la primera imagen de la galería, si hay alguna.
+  useEffect(() => {
+    if (!car) return;
+    let active = true;
+    fetchPictures(car)
+      .then((res) => {
+        if (!active) return;
+        setCoverImage((res.data ?? []).find((p) => p.kind === 'image') ?? null);
+      })
+      .catch(() => { /* la cabecera cae al ícono placeholder si falla */ });
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [car?.links.self]);
 
   async function applyPatch(patch: Parameters<typeof patchCar>[1], failKey?: string) {
     if (!id) return;
@@ -101,16 +125,32 @@ export default function OwnerCarDetailPage() {
 
   async function onInsurance(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !car) return;
+    if (!file || !car || !id) return;
     setBusy(true);
     setError(null);
+    setInsuranceSuccess(false);
     try {
       await uploadInsurance(car, file);
+      const refreshed = await fetchCar(id);
+      setCar(refreshed.data);
+      setInsuranceSuccess(true);
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.insuranceFailed'));
     } finally {
       setBusy(false);
       e.target.value = '';
+    }
+  }
+
+  async function onViewInsurance() {
+    if (!car) return;
+    setInsuranceViewError(false);
+    setInsuranceViewBusy(true);
+    try {
+      const ok = await openInsurance(car);
+      setInsuranceViewError(!ok);
+    } finally {
+      setInsuranceViewBusy(false);
     }
   }
 
@@ -137,9 +177,17 @@ export default function OwnerCarDetailPage() {
   }
 
   const isPaused = car.status === 'paused';
+  // Igual que myCarDetail.jsp: el bloqueo de cuenta (comprobante de devolución
+  // vencido) pisa el estado ACTIVE/PAUSED/LACK_DOC en el sidebar, salvo que el
+  // auto ya esté desactivado o pausado por un admin (esos estados mandan).
+  const ownerBlocked = !!currentUser?.blocked && car.status !== 'deactivated' && car.status !== 'admin_paused';
   // Solo el owner puede pausar/despausar; admin_paused no es revertible por el owner.
-  const canTogglePause = car.status === 'active' || car.status === 'paused';
-  const isDeactivated = car.status === 'deactivated';
+  const canTogglePause = !ownerBlocked && (car.status === 'active' || car.status === 'paused');
+  // admin_paused y deactivated no tienen ninguna acción disponible para el owner
+  // (el admin_paused solo se revierte por soporte); antes se mostraba "Desactivar"
+  // también en admin_paused, lo cual no refleja el JSP de referencia.
+  const canDeactivate = car.status !== 'deactivated' && car.status !== 'admin_paused';
+  const missingCbu = car.status === 'lack_doc' && !hasCbu(currentUser);
 
   return (
     <main className="container pt-5 pb-4">
@@ -162,30 +210,48 @@ export default function OwnerCarDetailPage() {
           {/* Cabecera del auto */}
           <article className="card border-0 shadow-sm rounded-4 mb-4 bg-white">
             <div className="card-body p-4">
-              <div className="d-flex align-items-start gap-3 mb-3 flex-wrap">
-                <h2 className="h4 fw-semibold mb-0 flex-grow-1 min-w-0">
-                  {car.brandName} {car.modelName}
-                  {car.year ? <span className="text-secondary fw-normal"> ({car.year})</span> : null}
-                </h2>
-                <span className={`badge ${STATUS_BADGE[car.status]}`}>
-                  {t(`owner.enums.status.${car.status}`)}
-                </span>
+              <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
+                <div className="reservation-detail-car-media rounded-3 overflow-hidden border flex-shrink-0">
+                  {coverImage ? (
+                    <img
+                      src={apiAssetUrl(coverImage.links.self)}
+                      alt={`${car.brandName} ${car.modelName}`}
+                      className="w-100 h-100"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                      <i className="bi bi-car-front fs-1" aria-hidden="true" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-grow-1 min-w-0">
+                  <div className="d-flex align-items-start gap-3 mb-2 flex-wrap">
+                    <h2 className="h5 fw-semibold mb-0 flex-grow-1 min-w-0">
+                      {car.brandName} {car.modelName}
+                      {car.year ? <span className="text-secondary fw-normal"> ({car.year})</span> : null}
+                    </h2>
+                    <span className={`badge ${STATUS_BADGE[car.status]}`}>
+                      {t(`owner.enums.status.${car.status}`)}
+                    </span>
+                  </div>
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    <span className="badge text-bg-light border">{t(`owner.enums.type.${car.type}`)}</span>
+                    <span className="badge text-bg-light border">{t(`owner.enums.transmission.${car.transmission}`)}</span>
+                    <span className="badge text-bg-light border">{t(`owner.enums.powertrain.${car.powertrain}`)}</span>
+                  </div>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="small text-secondary">{t('owner.publish.plate')}:</span>
+                    <span className="small fw-medium">{car.plate}</span>
+                  </div>
+                  {!car.modelValidated && (
+                    <p className="small text-info-emphasis mt-3 mb-0">
+                      <i className="bi bi-clock-history me-1" aria-hidden="true" />
+                      {t('owner.detail.modelPending')}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                <span className="badge text-bg-light border">{t(`owner.enums.type.${car.type}`)}</span>
-                <span className="badge text-bg-light border">{t(`owner.enums.transmission.${car.transmission}`)}</span>
-                <span className="badge text-bg-light border">{t(`owner.enums.powertrain.${car.powertrain}`)}</span>
-              </div>
-              <div className="d-flex align-items-center gap-2">
-                <span className="small text-secondary">{t('owner.publish.plate')}:</span>
-                <span className="small fw-medium">{car.plate}</span>
-              </div>
-              {!car.modelValidated && (
-                <p className="small text-info-emphasis mt-3 mb-0">
-                  <i className="bi bi-clock-history me-1" aria-hidden="true" />
-                  {t('owner.detail.modelPending')}
-                </p>
-              )}
             </div>
           </article>
 
@@ -254,10 +320,25 @@ export default function OwnerCarDetailPage() {
                 <span className="text-secondary small text-uppercase fw-semibold d-block mb-2" style={{ letterSpacing: '.04em' }}>
                   {t('owner.detail.statusLabel')}
                 </span>
-                <span className={`badge w-100 py-2 ${STATUS_BADGE[car.status]}`} style={{ whiteSpace: 'normal' }}>
-                  {t(`owner.enums.status.${car.status}`)}
-                </span>
+                {/* El bloqueo de cuenta pisa el badge de estado normal, igual que
+                    myCarDetail.jsp (owner.blocked overrides ACTIVE/PAUSED/LACK_DOC). */}
+                {ownerBlocked ? (
+                  <span className="badge text-bg-danger w-100 py-2" style={{ whiteSpace: 'normal' }}>
+                    {t('owner.detail.ownerBlockedBadge')}
+                  </span>
+                ) : (
+                  <span className={`badge w-100 py-2 ${STATUS_BADGE[car.status]}`} style={{ whiteSpace: 'normal' }}>
+                    {t(`owner.enums.status.${car.status}`)}
+                  </span>
+                )}
               </div>
+
+              {id ? (
+                <Link to={carDetail(id)} className="btn btn-outline-secondary w-100">
+                  <i className="bi bi-eye me-2" aria-hidden="true" />
+                  {t('owner.detail.viewCar')}
+                </Link>
+              ) : null}
 
               {canTogglePause && (
                 <Button
@@ -278,7 +359,29 @@ export default function OwnerCarDetailPage() {
                 </Link>
               ) : null}
 
-              {!isDeactivated && (
+              {ownerBlocked && (
+                <p className="text-secondary small mb-0">{t('owner.detail.ownerBlockedHint')}</p>
+              )}
+
+              {missingCbu && (
+                <div>
+                  <p className="text-secondary small mb-2">{t('owner.detail.missingCbuHint')}</p>
+                  <Link to={paths.profile} className="btn btn-primary w-100">
+                    <i className="bi bi-person-fill me-2" aria-hidden="true" />
+                    {t('owner.detail.missingCbuCta')}
+                  </Link>
+                </div>
+              )}
+
+              {car.status === 'admin_paused' && (
+                <p className="text-secondary small mb-0">{t('owner.detail.adminPausedHint')}</p>
+              )}
+
+              {car.status === 'deactivated' && (
+                <p className="text-secondary small mb-0">{t('owner.detail.finishedHint')}</p>
+              )}
+
+              {canDeactivate && (
                 <Button
                   variant="outline-danger"
                   className="w-100"
@@ -293,17 +396,52 @@ export default function OwnerCarDetailPage() {
               {/* Seguro */}
               <div className="border rounded-3 p-3 bg-light">
                 <div className="d-flex align-items-center gap-2 mb-2">
-                  <i className="bi bi-shield-check text-secondary fs-5" aria-hidden="true" />
-                  <span className="fw-semibold">{t('owner.detail.insuranceSection')}</span>
+                  {car.hasInsurance ? (
+                    <>
+                      <i className="bi bi-shield-check text-success fs-5" aria-hidden="true" />
+                      <span className="fw-semibold">{t('owner.detail.insurance.uploaded')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-shield-exclamation text-warning fs-5" aria-hidden="true" />
+                      <span className="fw-semibold">{t('owner.detail.insurance.missing')}</span>
+                    </>
+                  )}
                 </div>
-                <label className="form-label small mb-1" htmlFor="detailInsurance">{t('owner.detail.uploadInsurance')}</label>
+                <p className="small text-secondary mb-2">{t('owner.detail.insurance.hint')}</p>
+                {car.hasInsurance ? (
+                  <p className="small mb-2">
+                    <button
+                      type="button"
+                      className="btn btn-link link-primary text-break p-0 align-baseline"
+                      onClick={() => void onViewInsurance()}
+                      disabled={insuranceViewBusy || busy}
+                    >
+                      {t('owner.detail.insurance.viewDocument')}
+                    </button>
+                  </p>
+                ) : null}
+                <label className="form-label small mb-1" htmlFor="detailInsurance">
+                  {car.hasInsurance ? t('owner.detail.insurance.replace') : t('owner.detail.insurance.upload')}
+                </label>
                 <input
                   id="detailInsurance"
                   type="file"
                   className="form-control form-control-sm"
+                  accept="image/*,application/pdf"
                   disabled={busy}
                   onChange={onInsurance}
                 />
+                {insuranceSuccess ? (
+                  <div className="alert alert-success mt-2 mb-0 py-2 small" role="alert">
+                    {t('owner.detail.insurance.uploadSuccess')}
+                  </div>
+                ) : null}
+                {insuranceViewError ? (
+                  <div className="alert alert-warning mt-2 mb-0 py-2 small" role="alert">
+                    {t('owner.detail.insurance.viewError')}
+                  </div>
+                ) : null}
               </div>
             </div>
           </article>

@@ -1364,6 +1364,34 @@ body.reservation-chat-body.has-fixed-navbar {
     overflow: hidden;
 }
 
+/* Chat embebido en detalle de reserva (no ocupa viewport completo). */
+.reservation-chat-card--embedded {
+    height: auto;
+    overflow: visible;
+}
+
+.reservation-chat-card--embedded .reservation-chat-card__body,
+.reservation-chat-card--embedded .reservation-chat-shell,
+.reservation-chat-card--embedded .reservation-chat__drop-zone,
+.reservation-chat-card--embedded .reservation-chat__history-nav,
+.reservation-chat-card--embedded .reservation-chat__messages-stage {
+    height: auto;
+    flex: none;
+    min-height: 0;
+    overflow: visible;
+}
+
+.reservation-chat-card--embedded .reservation-chat__messages-stage {
+    min-height: 20rem;
+}
+
+.reservation-chat-card--embedded .reservation-chat-page__messages {
+    flex: none;
+    height: 20rem;
+    min-height: 20rem;
+    max-height: 20rem;
+}
+
 .reservation-chat-shell {
     --chat-attachment-width: 20rem;
     --chat-attachment-max-height: 22.5rem;
@@ -1427,6 +1455,19 @@ body.reservation-chat-body.has-fixed-navbar {
     font-size: 1rem;
     line-height: 1.4;
     background: var(--color-surface-elevated, #F5F4F0);
+}
+
+.reservation-chat-page__messages--empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.reservation-chat__empty {
+    max-width: 18rem;
+    margin: 0;
 }
 
 .reservation-chat-day-bar {
@@ -2786,4 +2827,101 @@ body.reservation-chat-body.has-fixed-navbar {
 .flatpickr-day.has-active-reservation.endRange::after,
 .flatpickr-day.has-active-reservation.inRange::after {
     background-color: #fff;
+}
+
+/* ─── Admin panel (panel.jsp): header band + nav cards + quick-action pill.
+       Réplica de los estilos inline de panel.jsp (antes solo en el JSP). ─── */
+
+.admin-panel-header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 2rem 0 1.75rem;
+}
+
+.admin-panel-header__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--radius-card);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.admin-nav-card {
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
+    cursor: pointer;
+}
+
+.admin-nav-card:hover {
+    box-shadow: var(--shadow-soft) !important;
+    transform: translateY(-2px);
+}
+
+.admin-nav-card__icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.admin-nav-card__arrow {
+    opacity: 0;
+    transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.admin-nav-card:hover .admin-nav-card__arrow {
+    opacity: 1;
+    transform: translateX(3px);
+}
+
+.admin-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--transition-base), box-shadow var(--transition-base);
+    cursor: pointer;
+}
+
+.admin-action-btn:hover {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+}
+
+.admin-action-btn__icon {
+    font-size: 1rem;
+}
+
+.section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    margin-bottom: 1rem;
+}
+
+/* ─── Publish form catalog picker (publishCarForm.jsp + publish-wizard.js):
+       searchable brand/model dropdown button. `form-select` already paints the
+       caret background-image, so the Bootstrap-generated one is hidden. ─── */
+.ryden-select-btn.dropdown-toggle::after {
+    display: none;
 }

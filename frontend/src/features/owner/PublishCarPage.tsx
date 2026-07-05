@@ -5,6 +5,7 @@ import { Alert, Button } from 'react-bootstrap';
 import { useSessionStore } from '../../session/sessionStore';
 import type { UserDto } from '../../api/types';
 import { paths, myCarDetail } from '../../routes/paths';
+import { BreadcrumbTrail } from '../../components/ryden';
 import {
   createBrand,
   createModel,
@@ -17,8 +18,17 @@ import {
   publishCar,
   uploadIdentityDocument,
 } from './api';
+import CatalogSelect from './CatalogSelect';
 import GalleryPicker from './GalleryPicker';
-import { useApiErrorMessage } from './hooks';
+import { hasCbu, useApiErrorMessage } from './hooks';
+import {
+  CAR_VALIDATION,
+  currentCarYearMax,
+  firstPublishCarValidationError,
+  normalizePlate,
+  normalizeYearDigits,
+  publishValidationI18nParams,
+} from './publishCarValidation';
 import type {
   BrandDto,
   CarCreateDto,
@@ -43,9 +53,6 @@ const OTHER = '__other__';
 // "documento subido pero no validado", usamos identityValidated como señal y, si
 // el owner sube el documento en esta misma pantalla, marcamos el paso como hecho
 // localmente (identityJustUploaded) para no bloquearlo.
-function hasCbu(user: UserDto | null): boolean {
-  return !!user?.cbu && user.cbu.trim().length > 0;
-}
 
 // =============================================================================
 // Coordinador: decide entre (1) prerequisitos, (2) formulario, (3) resultado.
@@ -59,7 +66,7 @@ export default function PublishCarPage() {
   const [user, setUser] = useState<UserDto | null>(sessionUser);
   const [identityJustUploaded, setIdentityJustUploaded] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [published, setPublished] = useState<CarDto | null>(null);
+  const [published, setPublished] = useState<{ car: CarDto; newCatalogEntry: boolean } | null>(null);
 
   // Releemos el usuario para tener cbu/identityValidated frescos (el del store
   // puede estar desactualizado tras cargar documento/cbu en otra pantalla).
@@ -93,7 +100,7 @@ export default function PublishCarPage() {
 
   // (3) Resultado tras publicar.
   if (published) {
-    return <PublishResult car={published} user={user} />;
+    return <PublishResult car={published.car} user={user} newCatalogEntry={published.newCatalogEntry} />;
   }
 
   const cbuOk = hasCbu(user);
@@ -116,8 +123,8 @@ export default function PublishCarPage() {
   // (2) Formulario de publicación.
   return (
     <PublishCarForm
-      onPublished={(car) => {
-        setPublished(car);
+      onPublished={(car, newCatalogEntry) => {
+        setPublished({ car, newCatalogEntry });
         window.scrollTo({ top: 0 });
       }}
     />
@@ -188,6 +195,7 @@ function PublishPrerequisites({
 
   return (
     <main className="container py-5">
+      <BreadcrumbTrail currentLabel={t('owner.prereq.title')} />
       <div className="row justify-content-center">
         <div className="col-md-8 col-lg-6">
           <article className="card border-0 shadow-sm rounded-4 bg-white">
@@ -274,9 +282,11 @@ function PublishPrerequisites({
 function PublishResult({
   car,
   user,
+  newCatalogEntry,
 }: {
   car: CarDto;
   user: UserDto | null;
+  newCatalogEntry: boolean;
 }) {
   const { t } = useTranslation();
   const carId = idFromUri(car.links.self);
@@ -285,6 +295,7 @@ function PublishResult({
   if (!car.modelValidated) {
     return (
       <main className="container py-5">
+        <BreadcrumbTrail currentLabel={t('owner.pending.title')} />
         <div className="row justify-content-center">
           <div className="col-md-9 col-lg-7">
             <div className="card border-0 shadow-sm rounded-4 bg-white">
@@ -331,6 +342,7 @@ function PublishResult({
   const lackDoc = car.status === 'lack_doc';
   return (
     <main className="container py-5">
+      <BreadcrumbTrail currentLabel={t('owner.confirmation.title')} />
       <div className="row justify-content-center">
         <div className="col-md-9 col-lg-7">
           <div className="card border-0 shadow-sm rounded-4 bg-white">
@@ -360,6 +372,15 @@ function PublishResult({
                   <p className="mb-0"><strong>{t('owner.confirmation.transmission')}</strong> {t(`owner.enums.transmission.${car.transmission}`)}</p>
                 </div>
               </div>
+
+              {newCatalogEntry && (
+                <div className="alert alert-info d-flex align-items-start gap-2 text-start mb-4" role="alert">
+                  <i className="bi bi-info-circle-fill flex-shrink-0 mt-1" aria-hidden="true" />
+                  <span>
+                    {t('owner.confirmation.newCatalogEntry', { brand: car.brandName, model: car.modelName })}
+                  </span>
+                </div>
+              )}
 
               {lackDoc && (
                 <div className="alert alert-warning d-flex align-items-start gap-2 text-start mb-4" role="alert">
@@ -394,7 +415,7 @@ function PublishResult({
 function PublishCarForm({
   onPublished,
 }: {
-  onPublished: (car: CarDto) => void;
+  onPublished: (car: CarDto, newCatalogEntry: boolean) => void;
 }) {
   const { t } = useTranslation();
   const errorMessage = useApiErrorMessage();
@@ -421,6 +442,9 @@ function PublishCarForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  /** Categoría solo al crear un modelo nuevo ("Otro…"); si el modelo ya existe en catálogo, viene de la BD. */
+  const showCategory = modelSel === OTHER;
+
   useEffect(() => {
     let active = true;
     fetchBrands()
@@ -445,13 +469,15 @@ function PublishCarForm({
   }, [brandSel, brands]);
 
   /** Resuelve marca/modelo a las partes del CarCreateDto, creando catálogo si "Otro". */
-  async function resolveCatalog(): Promise<Partial<CarCreateDto>> {
+  async function resolveCatalog(): Promise<{ dto: Partial<CarCreateDto>; newCatalogEntry: boolean }> {
     // Marca.
     let brand: BrandDto | undefined;
+    let createdEntry = false;
     if (brandSel === OTHER) {
       const name = newBrandName.trim();
       if (!name) throw new Error('owner.publish.errors.brandRequired');
       brand = (await createBrand(name)).data;
+      createdEntry = true;
     } else {
       brand = brands.find((b) => b.links.self === brandSel);
     }
@@ -462,33 +488,55 @@ function PublishCarForm({
       const name = newModelName.trim();
       if (!name) throw new Error('owner.publish.errors.modelRequired');
       const model = (await createModel(brand, name, type)).data;
-      return { modelUri: model.links.self };
+      return { dto: { modelUri: model.links.self }, newCatalogEntry: true };
     }
     if (modelSel) {
       const existing = models.find((m) => m.links.self === modelSel);
-      if (existing) return { modelUri: existing.links.self };
+      if (existing) return { dto: { modelUri: existing.links.self }, newCatalogEntry: createdEntry };
     }
     // Sin modelo elegido: mandamos por nombre (el server resuelve/crea).
-    return { brandName: brand.name };
+    return { dto: { brandName: brand.name }, newCatalogEntry: createdEntry };
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (!plate.trim()) { setError(t('owner.publish.errors.plateRequired')); return; }
+    const validationKey = firstPublishCarValidationError({
+      brandSel,
+      modelSel,
+      newBrandName,
+      newModelName,
+      plate,
+      year,
+      description,
+      pictures,
+      insurance,
+    });
+    if (validationKey) {
+      setError(t(validationKey, publishValidationI18nParams()));
+      return;
+    }
+
+    const minDays = minimumRentalDays ? Number(minimumRentalDays) : 0;
+    if (!Number.isFinite(minDays) || minDays < 1) {
+      setError(t('owner.publish.errors.minimumRentalDaysInvalid'));
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const catalog = await resolveCatalog();
+      const { dto: catalog, newCatalogEntry } = await resolveCatalog();
+      const normalizedPlate = normalizePlate(plate);
+      const yearNum = year.trim() ? Number(year.trim()) : undefined;
       const body: CarCreateDto = {
-        plate: plate.trim(),
-        year: year ? Number(year) : undefined,
-        type,
+        plate: normalizedPlate,
+        year: yearNum,
+        ...(showCategory ? { type } : {}),
         transmission,
         powertrain,
         description: description.trim() || undefined,
-        minimumRentalDays: minimumRentalDays ? Number(minimumRentalDays) : undefined,
+        minimumRentalDays: Number(minimumRentalDays),
         ...catalog,
       };
       const res = await publishCar(body, pictures, insurance);
@@ -502,7 +550,7 @@ function PublishCarForm({
         if (newId) car = (await fetchCar(newId)).data;
       }
       if (car) {
-        onPublished(car);
+        onPublished(car, newCatalogEntry);
       }
     } catch (err) {
       if (err instanceof Error && err.message.startsWith('owner.')) {
@@ -517,6 +565,7 @@ function PublishCarForm({
 
   return (
     <main className="container py-5">
+      <BreadcrumbTrail currentLabel={t('owner.publish.title')} />
       <div className="row justify-content-center">
         <div className="col-md-8 col-lg-6">
           <div className="card border-0 shadow-sm rounded-4 bg-white">
@@ -534,21 +583,18 @@ function PublishCarForm({
 
                 <div className="mb-3">
                   <label className="form-label required-label" htmlFor="publishBrand">{t('owner.publish.brand')}</label>
-                  <select
+                  <CatalogSelect
                     id="publishBrand"
-                    className="form-select"
+                    placeholder={t('owner.publish.selectPlaceholder')}
+                    searchPlaceholder={t('owner.publish.search')}
+                    pendingLabel={t('owner.publish.pending')}
                     value={brandSel}
-                    onChange={(e) => setBrandSel(e.target.value)}
-                    required
-                  >
-                    <option value="">{t('owner.publish.selectPlaceholder')}</option>
-                    {brands.map((b) => (
-                      <option key={b.links.self} value={b.links.self}>
-                        {b.name}{!b.validated ? ` (${t('owner.publish.pending')})` : ''}
-                      </option>
-                    ))}
-                    <option value={OTHER}>{t('owner.publish.other')}</option>
-                  </select>
+                    onChange={setBrandSel}
+                    options={[
+                      ...brands.map((b) => ({ value: b.links.self, label: b.name, pending: !b.validated })),
+                      { value: OTHER, label: t('owner.publish.other') },
+                    ]}
+                  />
                 </div>
 
                 {brandSel === OTHER && (
@@ -558,6 +604,7 @@ function PublishCarForm({
                       id="publishNewBrand"
                       className="form-control"
                       value={newBrandName}
+                      maxLength={CAR_VALIDATION.brandMaxLength}
                       onChange={(e) => setNewBrandName(e.target.value)}
                       required
                     />
@@ -565,22 +612,21 @@ function PublishCarForm({
                 )}
 
                 <div className="mb-3">
-                  <label className="form-label" htmlFor="publishModel">{t('owner.publish.model')}</label>
-                  <select
+                  <label className="form-label required-label" htmlFor="publishModel">{t('owner.publish.model')}</label>
+                  <CatalogSelect
                     id="publishModel"
-                    className="form-select"
+                    placeholder={t('owner.publish.selectPlaceholder')}
+                    disabledPlaceholder={t('owner.publish.selectBrandFirst')}
+                    searchPlaceholder={t('owner.publish.search')}
+                    pendingLabel={t('owner.publish.pending')}
                     value={modelSel}
-                    onChange={(e) => setModelSel(e.target.value)}
+                    onChange={setModelSel}
                     disabled={!brandSel}
-                  >
-                    <option value="">{t('owner.publish.selectPlaceholder')}</option>
-                    {models.map((m) => (
-                      <option key={m.links.self} value={m.links.self}>
-                        {m.name}{!m.validated ? ` (${t('owner.publish.pending')})` : ''}
-                      </option>
-                    ))}
-                    <option value={OTHER}>{t('owner.publish.other')}</option>
-                  </select>
+                    options={[
+                      ...models.map((m) => ({ value: m.links.self, label: m.name, pending: !m.validated })),
+                      { value: OTHER, label: t('owner.publish.other') },
+                    ]}
+                  />
                 </div>
 
                 {modelSel === OTHER && (
@@ -590,6 +636,7 @@ function PublishCarForm({
                       id="publishNewModel"
                       className="form-control"
                       value={newModelName}
+                      maxLength={CAR_VALIDATION.modelMaxLength}
                       onChange={(e) => setNewModelName(e.target.value)}
                       required
                     />
@@ -608,7 +655,8 @@ function PublishCarForm({
                     className="form-control"
                     style={{ textTransform: 'uppercase' }}
                     value={plate}
-                    onChange={(e) => setPlate(e.target.value)}
+                    maxLength={CAR_VALIDATION.plateMaxLength}
+                    onChange={(e) => setPlate(normalizePlate(e.target.value))}
                     required
                   />
                 </div>
@@ -617,25 +665,31 @@ function PublishCarForm({
                   <label className="form-label" htmlFor="publishYear">{t('owner.publish.year')}</label>
                   <input
                     id="publishYear"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="form-control"
                     value={year}
-                    min={1900}
-                    max={2100}
-                    onChange={(e) => setYear(e.target.value)}
+                    maxLength={4}
+                    placeholder={String(currentCarYearMax())}
+                    onChange={(e) => setYear(normalizeYearDigits(e.target.value))}
                   />
+                  <small className="text-muted">
+                    {t('owner.publish.yearHint', publishValidationI18nParams())}
+                  </small>
                 </div>
 
                 <div className="row g-3 mb-3">
-                  <div className="col-md-4">
-                    <label className="form-label" htmlFor="publishType">{t('owner.publish.type')}</label>
-                    <select id="publishType" className="form-select" value={type} onChange={(e) => setType(e.target.value as CarType)}>
-                      {CAR_TYPES.map((v) => (
-                        <option key={v} value={v}>{t(`owner.enums.type.${v}`)}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-md-4">
+                  {showCategory ? (
+                    <div className="col-md-4">
+                      <label className="form-label required-label" htmlFor="publishType">{t('owner.publish.type')}</label>
+                      <select id="publishType" className="form-select" value={type} onChange={(e) => setType(e.target.value as CarType)}>
+                        {CAR_TYPES.map((v) => (
+                          <option key={v} value={v}>{t(`owner.enums.type.${v}`)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className={showCategory ? 'col-md-4' : 'col-md-6'}>
                     <label className="form-label" htmlFor="publishTransmission">{t('owner.publish.transmission')}</label>
                     <select id="publishTransmission" className="form-select" value={transmission} onChange={(e) => setTransmission(e.target.value as Transmission)}>
                       {TRANSMISSIONS.map((v) => (
@@ -643,7 +697,7 @@ function PublishCarForm({
                       ))}
                     </select>
                   </div>
-                  <div className="col-md-4">
+                  <div className={showCategory ? 'col-md-4' : 'col-md-6'}>
                     <label className="form-label" htmlFor="publishPowertrain">{t('owner.publish.powertrain')}</label>
                     <select id="publishPowertrain" className="form-select" value={powertrain} onChange={(e) => setPowertrain(e.target.value as Powertrain)}>
                       {POWERTRAINS.map((v) => (
@@ -654,7 +708,7 @@ function PublishCarForm({
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label" htmlFor="publishMinDays">{t('owner.publish.minimumRentalDays')}</label>
+                  <label className="form-label required-label" htmlFor="publishMinDays">{t('owner.publish.minimumRentalDays')}</label>
                   <input
                     id="publishMinDays"
                     type="number"
@@ -663,6 +717,7 @@ function PublishCarForm({
                     style={{ maxWidth: '10rem' }}
                     value={minimumRentalDays}
                     onChange={(e) => setMinimumRentalDays(e.target.value)}
+                    required
                   />
                 </div>
 
@@ -672,6 +727,7 @@ function PublishCarForm({
                     id="publishDescription"
                     className="form-control"
                     rows={3}
+                    maxLength={CAR_VALIDATION.descriptionMaxLength}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
@@ -690,7 +746,16 @@ function PublishCarForm({
                     id="publishInsurance"
                     type="file"
                     className="form-control"
-                    onChange={(e) => setInsurance(e.target.files?.[0] ?? null)}
+                    accept="image/*,application/pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setInsurance(file);
+                      if (file && file.size > CAR_VALIDATION.maxInsuranceBytes) {
+                        setError(t('owner.publish.errors.insuranceTooLarge', publishValidationI18nParams()));
+                        e.target.value = '';
+                        setInsurance(null);
+                      }
+                    }}
                   />
                 </div>
 

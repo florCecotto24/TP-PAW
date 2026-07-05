@@ -28,9 +28,12 @@ function bypassWebappDevProxy(req: IncomingMessage): string | undefined {
 // Build de producción 100% estático (Pampero = Tomcat sin Node, sin SSR).
 // El WAR se despliega como /webapp → base '/webapp/' (LINEAMIENTOS: configurar el bundler).
 // outDir:'dist' + war-plugin copia dist/ a la raíz del WAR.
-export default defineConfig({
+// Vitest corre con mode 'test' por defecto: ahí forzamos base '/' porque los
+// tests ejercitan lógica pura (resolveApiUrl, sessionStore) contra URNs
+// relativas tal cual las devuelve la API, sin querer el prefijo de despliegue.
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: '/webapp/',
+  base: mode === 'test' ? '/' : '/webapp/',
   build: {
     outDir: 'dist',
     assetsDir: 'public',
@@ -83,4 +86,4 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
   },
-});
+}));

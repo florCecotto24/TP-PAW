@@ -35,7 +35,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * controller no longer needs a {@code WallDateTimeUiFormatter} of its own.</p>
  */
 @Service
-public final class ReservationFormViewServiceImpl implements ReservationFormViewService {
+public class ReservationFormViewServiceImpl implements ReservationFormViewService {
 
     private final CarService carService;
     private final CarAvailabilityService carAvailabilityService;

@@ -15,6 +15,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -23,17 +25,20 @@ import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
-import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
-import ar.edu.itba.paw.webapp.support.UserResourceAccess;
 
-/** Profile documents ({@code /users/{id}/documents/{documentType}}). */
+/**
+ * Profile documents ({@code /users/{id}/documents/{documentType}}).
+ *
+ * Authorization is fully declarative here ({@code @PreAuthorize}, backed by the
+ * {@code userResourceAccess}/{@code currentUserResolver} beans referenced by name in the
+ * expressions) — this controller has no imperative checks left, so it no longer needs those
+ * beans injected as fields.
+ */
 @Path("/users/{id}/documents/{documentType}")
 @Component
-public final class UserDocumentController {
+public class UserDocumentController {
 
     private final UserService userService;
-    private final CurrentUserResolver currentUserResolver;
-    private final UserResourceAccess userResourceAccess;
     private final BinaryPayloadSupport binaryPayloadSupport;
 
     @Context
@@ -42,20 +47,16 @@ public final class UserDocumentController {
     @Autowired
     public UserDocumentController(
             final UserService userService,
-            final CurrentUserResolver currentUserResolver,
-            final UserResourceAccess userResourceAccess,
             final BinaryPayloadSupport binaryPayloadSupport) {
         this.userService = userService;
-        this.currentUserResolver = currentUserResolver;
-        this.userResourceAccess = userResourceAccess;
         this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
     @GET
+    @PreAuthorize("@userResourceAccess.isSelfOrAdmin(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response downloadDocument(
-            @PathParam("id") final long id,
+            @P("id") @PathParam("id") final long id,
             @PathParam("documentType") final String documentType) {
-        userResourceAccess.requireSelfOrAdmin(id, currentUserResolver.currentPrincipalOrNull());
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final UserDocumentType type = parseDocumentType(documentType);
@@ -66,11 +67,11 @@ public final class UserDocumentController {
 
     @PUT
     @Consumes({MediaType.APPLICATION_OCTET_STREAM, MediaType.WILDCARD, MediaType.MULTIPART_FORM_DATA})
+    @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response uploadDocument(
-            @PathParam("id") final long id,
+            @P("id") @PathParam("id") final long id,
             @PathParam("documentType") final String documentType,
             final InputStream body) throws IOException {
-        userResourceAccess.requireSelf(id, currentUserResolver.currentPrincipalOrNull());
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         final UserDocumentType type = parseDocumentType(documentType);
@@ -84,10 +85,10 @@ public final class UserDocumentController {
     }
 
     @DELETE
+    @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response deleteDocument(
-            @PathParam("id") final long id,
+            @P("id") @PathParam("id") final long id,
             @PathParam("documentType") final String documentType) {
-        userResourceAccess.requireSelf(id, currentUserResolver.currentPrincipalOrNull());
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         userService.clearProfileDocument(id, parseDocumentType(documentType));

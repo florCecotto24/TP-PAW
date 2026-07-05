@@ -30,6 +30,7 @@ public final class UserPrivateDto {
     private boolean licenseUploaded;
     private boolean identityUploaded;
     private boolean blocked;
+    private Long blockedOverdueReservationId;
     private String role;
     private BigDecimal ratingAsRider;
     private BigDecimal ratingAsOwner;
@@ -38,34 +39,64 @@ public final class UserPrivateDto {
     public UserPrivateDto() {
     }
 
-    public static UserPrivateDto from(
-            final User user,
-            final UriInfo uriInfo,
-            final BigDecimal ratingAsOwner,
-            final BigDecimal ratingAsRider) {
-        final UserPrivateDto dto = new UserPrivateDto();
-        dto.forename = user.getForename();
-        dto.surname = user.getSurname();
-        dto.email = user.getEmail();
-        dto.phoneNumber = user.getPhoneNumber().orElse(null);
-        dto.birthDate = user.getBirthDate().map(Object::toString).orElse(null);
-        dto.about = user.getAbout().orElse(null);
-        dto.cbu = user.getCbu().orElse(null);
-        dto.memberSince = user.getMemberSince().map(Object::toString).orElse(null);
-        dto.latestLocale = user.getLatestLocale().map(Locale::toLanguageTag).orElse(null);
-        dto.emailVerified = user.getEmailValidated().orElse(Boolean.FALSE);
-        dto.licenseValidated = user.isLicenseValidated();
-        dto.identityValidated = user.isIdentityValidated();
-        dto.licenseUploaded = user.getLicenseFileId().isPresent();
-        dto.identityUploaded = user.getIdentityFileId().isPresent();
-        dto.blocked = user.isBlocked();
-        dto.role = user.getUserRole() == null
-                ? UserRole.USER.name().toLowerCase(Locale.ROOT)
-                : user.getUserRole().name().toLowerCase(Locale.ROOT);
-        dto.ratingAsOwner = ratingAsOwner;
-        dto.ratingAsRider = ratingAsRider;
-        dto.links = UserLinks.build(user, uriInfo);
-        return dto;
+    public static Builder builder(final User user, final UriInfo uriInfo) {
+        return new Builder(user, uriInfo);
+    }
+
+    public static final class Builder {
+
+        private final User user;
+        private final UriInfo uriInfo;
+        private BigDecimal ratingAsOwner;
+        private BigDecimal ratingAsRider;
+        private Long blockedOverdueReservationId;
+
+        private Builder(final User user, final UriInfo uriInfo) {
+            this.user = user;
+            this.uriInfo = uriInfo;
+        }
+
+        public Builder ratings(final BigDecimal ratingAsOwner, final BigDecimal ratingAsRider) {
+            this.ratingAsOwner = ratingAsOwner;
+            this.ratingAsRider = ratingAsRider;
+            return this;
+        }
+
+        /**
+         * When the account is blocked and exactly one reservation has an overdue refund proof, its id
+         * (deep-link target for the blocked banner CTA); {@code null} otherwise (zero or many candidates).
+         */
+        public Builder blockedOverdueReservationId(final Long blockedOverdueReservationId) {
+            this.blockedOverdueReservationId = blockedOverdueReservationId;
+            return this;
+        }
+
+        public UserPrivateDto build() {
+            final UserPrivateDto dto = new UserPrivateDto();
+            dto.forename = user.getForename();
+            dto.surname = user.getSurname();
+            dto.email = user.getEmail();
+            dto.phoneNumber = user.getPhoneNumber().orElse(null);
+            dto.birthDate = user.getBirthDate().map(Object::toString).orElse(null);
+            dto.about = user.getAbout().orElse(null);
+            dto.cbu = user.getCbu().orElse(null);
+            dto.memberSince = user.getMemberSince().map(Object::toString).orElse(null);
+            dto.latestLocale = user.getLatestLocale().map(Locale::toLanguageTag).orElse(null);
+            dto.emailVerified = user.getEmailValidated().orElse(Boolean.FALSE);
+            dto.licenseValidated = user.isLicenseValidated();
+            dto.identityValidated = user.isIdentityValidated();
+            dto.licenseUploaded = user.getLicenseFileId().isPresent();
+            dto.identityUploaded = user.getIdentityFileId().isPresent();
+            dto.blocked = user.isBlocked();
+            dto.blockedOverdueReservationId = user.isBlocked() ? blockedOverdueReservationId : null;
+            dto.role = user.getUserRole() == null
+                    ? UserRole.USER.name().toLowerCase(Locale.ROOT)
+                    : user.getUserRole().name().toLowerCase(Locale.ROOT);
+            dto.ratingAsOwner = ratingAsOwner;
+            dto.ratingAsRider = ratingAsRider;
+            dto.links = UserLinks.build(user, uriInfo);
+            return dto;
+        }
     }
 
     public String getForename() {
@@ -186,6 +217,14 @@ public final class UserPrivateDto {
 
     public void setBlocked(final boolean blocked) {
         this.blocked = blocked;
+    }
+
+    public Long getBlockedOverdueReservationId() {
+        return blockedOverdueReservationId;
+    }
+
+    public void setBlockedOverdueReservationId(final Long blockedOverdueReservationId) {
+        this.blockedOverdueReservationId = blockedOverdueReservationId;
     }
 
     public String getRole() {

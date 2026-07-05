@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import flatpickr from 'flatpickr';
-import { Spanish } from 'flatpickr/dist/l10n/es.js';
 import type { Instance } from 'flatpickr/dist/types/instance';
 import { compactPrice } from '../../../components/FlatpickrCalendar';
+import { flatpickrLocale } from '../../../i18n/dateFormat';
 import {
   dayEndFromYmd,
   dayStartFromYmd,
@@ -42,7 +42,6 @@ export default function DetailReservationInlineCalendar({
       }))
       .filter((r): r is { from: Date; to: Date } => r.from != null && r.to != null);
 
-    const isEs = locale.toLowerCase().startsWith('es');
     const instance: Instance = flatpickr(anchor, {
       mode: 'range',
       inline: true,
@@ -50,7 +49,7 @@ export default function DetailReservationInlineCalendar({
       dateFormat: 'Y-m-d',
       minDate: 'today',
       defaultDate: defaultDates.length > 0 ? defaultDates : undefined,
-      locale: isEs ? Spanish : 'default',
+      locale: flatpickrLocale(locale),
       disableMobile: true,
       enable: enable.length > 0 ? enable : [() => false],
       onDayCreate: (_dObj, _dStr, _fp, dayElem) => {

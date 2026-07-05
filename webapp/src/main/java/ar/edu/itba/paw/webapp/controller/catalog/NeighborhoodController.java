@@ -43,7 +43,9 @@ public final class NeighborhoodController {
         if (dtos.isEmpty()) {
             return Response.noContent().build();
         }
-        return Response.ok(new GenericEntity<List<NeighborhoodDto>>(dtos) {}).build();
+        return Response.ok(new GenericEntity<List<NeighborhoodDto>>(dtos) {})
+                .header("X-Total-Count", dtos.size())
+                .build();
     }
 
     private NeighborhoodDto toDto(final Neighborhood neighborhood) {

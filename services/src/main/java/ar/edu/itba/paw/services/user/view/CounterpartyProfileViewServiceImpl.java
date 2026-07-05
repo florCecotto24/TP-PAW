@@ -35,7 +35,7 @@ import ar.edu.itba.paw.services.user.UserService;
  * arguments in three different controller handlers.
  */
 @Service
-public final class CounterpartyProfileViewServiceImpl implements CounterpartyProfileViewService {
+public class CounterpartyProfileViewServiceImpl implements CounterpartyProfileViewService {
 
     private final UserService userService;
     private final CarService carService;

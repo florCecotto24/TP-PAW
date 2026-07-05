@@ -1,10 +1,11 @@
 // Capa de acceso a la API para el área RESERVATIONS.
 // Thin wrapper sobre sessionClient: una llamada por operación, sin lógica de UI.
 import { type ApiResponse } from '../../api/client';
-import { appBasePath } from '../../appBasePath';
-import { sessionClient, useSessionStore } from '../../session/sessionStore';
+import { sessionClient } from '../../session/sessionStore';
+import { CHAT_HISTORY_PAGE_SIZE } from './chatAttachment';
 import { MediaTypes } from '../../api/mediaTypes';
 import { idFromUri } from '../../api/uri';
+import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
 import type {
   MessageDto,
   ReservationCreateDto,
@@ -139,8 +140,10 @@ export interface CounterpartyView {
   links: Record<string, string>;
 }
 
-export function getCounterparty(userUri: string): Promise<ApiResponse<CounterpartyView>> {
-  return sessionClient.follow<CounterpartyView>(userUri, { accept: MediaTypes.user });
+export function getCounterparty(counterpartyUri: string): Promise<ApiResponse<CounterpartyView>> {
+  return sessionClient.follow<CounterpartyView>(counterpartyUri, {
+    accept: MediaTypes.counterpartyContact,
+  });
 }
 
 export function getAvailability(uri: string): Promise<ApiResponse<AvailabilityView>> {
@@ -171,21 +174,7 @@ export function listCarAvailabilities(
 
 /** Abre un recurso binario autenticado (comprobante, adjunto) en pestaña nueva. */
 export async function openBinaryLink(link: string): Promise<boolean> {
-  const token = useSessionStore.getState().accessToken;
-  const path = link.startsWith('http') ? link : `${appBasePath()}${link.startsWith('/') ? link : `/${link}`}`;
-  const res = await fetch(path, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  });
-  if (!res.ok) return false;
-  const blob = await res.blob();
-  const objectUrl = URL.createObjectURL(blob);
-  const win = window.open(objectUrl, '_blank', 'noopener,noreferrer');
-  if (!win) {
-    URL.revokeObjectURL(objectUrl);
-    return false;
-  }
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-  return true;
+  return openAuthenticatedBinary(link);
 }
 
 export function createReservation(
@@ -246,6 +235,25 @@ export function listMessages(
     accept: MediaTypes.message,
     query: { afterId: opts.afterId, page: opts.page, pageSize: opts.pageSize },
   });
+}
+
+/** Carga la página más reciente del historial (Link rel=last o cálculo por X-Total-Count). */
+export async function listMessagesLatestPage(
+  messagesUri: string,
+): Promise<ApiResponse<MessageDto[]>> {
+  const probe = await sessionClient.get<MessageDto[]>(messagesUri, {
+    accept: MediaTypes.message,
+    query: { page: 1, pageSize: CHAT_HISTORY_PAGE_SIZE },
+  });
+  if (probe.status === 204 || (probe.page.total ?? 0) === 0) {
+    return { ...probe, data: [] };
+  }
+  if (probe.page.last) {
+    return sessionClient.follow<MessageDto[]>(probe.page.last, { accept: MediaTypes.message });
+  }
+  const total = probe.page.total ?? 0;
+  const lastPage = Math.max(1, Math.ceil(total / CHAT_HISTORY_PAGE_SIZE));
+  return listMessages(messagesUri, { page: lastPage, pageSize: CHAT_HISTORY_PAGE_SIZE });
 }
 
 /** Envía un mensaje (multipart: body + file opcional). */

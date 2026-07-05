@@ -11,7 +11,7 @@ import java.util.Optional;
 
 /** Pass-through to {@link StoredFileDao}. */
 @Service
-public final class StoredFileServiceImpl implements StoredFileService {
+public class StoredFileServiceImpl implements StoredFileService {
 
     private final StoredFileDao storedFileDao;
 

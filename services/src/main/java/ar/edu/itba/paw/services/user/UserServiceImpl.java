@@ -54,7 +54,7 @@ import ar.edu.itba.paw.services.email.EmailService;
  * {@code @Lazy} breaks cycles with {@link EmailVerificationService} and {@link CarService}.
  */
 @Service
-public final class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserServiceImpl.class);
 
@@ -619,9 +619,13 @@ public final class UserServiceImpl implements UserService {
         if (!granting.isAdmin()) {
             throw new AdminPromoterNotAdminException();
         }
+        final String normalizedEmail = EmailNormalizer.normalize(email);
+        if (userDao.findByEmail(normalizedEmail).isPresent()) {
+            throw new EmailAlreadyExistsException(MessageKeys.USER_EMAIL_ALREADY_EXISTS);
+        }
         // Service decides the role/verification state that distinguishes an admin-created account
         // from self-registration; UserDao#createUser persists what it is told.
-        return userDao.createUser(email, forename, surname, bcryptEncodedHash,
+        return userDao.createUser(normalizedEmail, forename, surname, bcryptEncodedHash,
                 UserRole.ADMIN, true, assignedByUserId);
     }
 

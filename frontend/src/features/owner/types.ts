@@ -55,6 +55,7 @@ export interface CarDto {
   brandName: string;
   modelName: string;
   modelValidated: boolean;
+  hasInsurance?: boolean;
   createdAt: string;
   links: Links;
 }

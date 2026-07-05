@@ -46,7 +46,7 @@ import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.services.user.UserService;
 @Service
-public final class ReservationMessageServiceImpl implements ReservationMessageService {
+public class ReservationMessageServiceImpl implements ReservationMessageService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationMessageServiceImpl.class);
     private static final int EMAIL_PREVIEW_MAX_LENGTH = 200;

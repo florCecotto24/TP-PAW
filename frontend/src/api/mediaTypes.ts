@@ -12,15 +12,21 @@ export const MediaTypes = {
   // Vista privada del usuario (email, cbu, teléfono, rol, blocked, KYC). El server la devuelve solo a
   // self/admin y tira 403 si se pide sin permiso. Se usa para "mi perfil", el publisher y el admin.
   userPrivate: 'application/vnd.paw.user.private.v1+json',
+  // Content-Type dedicado para POST /users cuando lo crea un admin (cuenta admin
+  // pre-verificada + contraseña temporal). Discrimina del alta pública (`user`).
+  adminCreateUser: 'application/vnd.paw.admincreateuser.v1+json',
   car: 'application/vnd.paw.car.v1+json',
   availability: 'application/vnd.paw.availability.v1+json',
   picture: 'application/vnd.paw.picture.v1+json',
   reservation: 'application/vnd.paw.reservation.v1+json',
+  counterpartyContact: 'application/vnd.paw.counterpartycontact.v1+json',
   message: 'application/vnd.paw.message.v1+json',
   review: 'application/vnd.paw.review.v1+json',
   brand: 'application/vnd.paw.brand.v1+json',
   model: 'application/vnd.paw.model.v1+json',
+  priceMarketInsight: 'application/vnd.paw.pricemarketinsight.v1+json',
   neighborhood: 'application/vnd.paw.neighborhood.v1+json',
+  bookableSegment: 'application/vnd.paw.bookablesegment.v1+json',
   credential: 'application/vnd.paw.credential.v1+json',
   emailVerificationCode: 'application/vnd.paw.emailverificationcode.v1+json',
   error: 'application/vnd.paw.error.v1+json',

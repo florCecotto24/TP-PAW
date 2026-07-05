@@ -16,7 +16,7 @@ import java.util.Set;
 
 /** Catalog reads via {@link LocationDao}; search query fragments are normalized here (ids, de-duplication, order). */
 @Service
-public final class LocationServiceImpl implements LocationService {
+public class LocationServiceImpl implements LocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(LocationServiceImpl.class);
 

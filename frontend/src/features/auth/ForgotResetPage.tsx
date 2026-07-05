@@ -1,26 +1,31 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
-import { sessionClient } from '../../session/sessionStore';
+import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
 import { paths } from '../../routes/paths';
 import type { ForgotStep, PasswordResetCodeRequest, PasswordResetPatch } from './types';
 import { apiErrorMessage } from './errorMessage';
+import PasswordField from './PasswordField';
 
 function basicAuthHeader(email: string, secret: string): string {
   return `Basic ${btoa(`${email}:${secret}`)}`;
 }
 
-// /recuperar-clave — paso 1: POST /credentials { email } (202 uniforme).
-// paso 2: PATCH <userUri> { password, passwordConfirm } con Basic email:otp.
+// /forgot-password — sin verbos en la URL, dos pasos en una sola página:
+//   1) POST /credentials { email } (202 uniforme, anti-enumeración).
+//   2) La URN /users/{id} a completar no viaja por el mail (revelaría la cuenta);
+//      se resuelve con el mismo "auth probe" que login/verify-email: Basic email:otp
+//      a GET / trae el Link rel="authenticated-user" (no consume el código). Con esa
+//      URN se hace PATCH { password, passwordConfirm } con el mismo Basic, que ahí sí
+//      consume el OTP y aplica la nueva contraseña.
 export default function ForgotResetPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  const userUri = params.get('userUri');
-  const [step, setStep] = useState<ForgotStep>(userUri ? 'reset' : 'request');
+  const [step, setStep] = useState<ForgotStep>(params.get('email') ? 'reset' : 'request');
 
   const [email, setEmail] = useState(params.get('email') ?? '');
   const [resetCode, setResetCode] = useState('');
@@ -30,6 +35,11 @@ export default function ForgotResetPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.add('auth-page');
+    return () => document.body.classList.remove('auth-page');
+  }, []);
 
   async function onRequest(e: FormEvent) {
     e.preventDefault();
@@ -68,28 +78,39 @@ export default function ForgotResetPage() {
       setError(t('validation.passwordMismatch'));
       return;
     }
-    if (!userUri) {
-      setError(t('auth.forgot.missingUser'));
-      return;
-    }
-    if (!email.trim()) {
+    if (!email.trim() || !resetCode.trim()) {
       setError(t('auth.forgot.missingUser'));
       return;
     }
 
-    const body: PasswordResetPatch = { password, passwordConfirm };
+    const trimmedEmail = email.trim();
+    const trimmedCode = resetCode.trim();
+    const auth = basicAuthHeader(trimmedEmail, trimmedCode);
+
     setSubmitting(true);
     try {
+      // Probe: no consume el OTP, solo resuelve la URN vía Link rel="authenticated-user".
+      await sessionClient.loginBasic(trimmedEmail, trimmedCode);
+      const userUri = useSessionStore.getState().currentUserUri;
+      if (!userUri) {
+        setError(t('auth.forgot.missingUser'));
+        return;
+      }
+
+      const body: PasswordResetPatch = { password, passwordConfirm };
       await sessionClient.patch(userUri, body, {
         accept: MediaTypes.user,
         contentType: MediaTypes.user,
         anonymous: true,
-        authorization: basicAuthHeader(email.trim(), resetCode.trim()),
+        authorization: auth,
       });
       navigate(paths.login);
     } catch (err) {
       setError(apiErrorMessage(t, err));
     } finally {
+      // El probe Basic deja tokens/URN transitorios en el store; nunca queremos
+      // que el usuario quede "logueado" con un OTP que puede haber sido consumido.
+      useSessionStore.getState().logout();
       setSubmitting(false);
     }
   }
@@ -152,11 +173,6 @@ export default function ForgotResetPage() {
 
             {step === 'reset' && (
               <Form onSubmit={onReset} className="needs-validation">
-                {!userUri && (
-                  <Alert variant="danger" role="alert">
-                    {t('auth.forgot.missingUser')}
-                  </Alert>
-                )}
                 {!params.get('email') && (
                   <Form.Group className="mb-3" controlId="emailReset">
                     <Form.Label>{t('auth.forgot.email')}</Form.Label>
@@ -182,31 +198,26 @@ export default function ForgotResetPage() {
                 </Form.Group>
                 <Form.Group className="mb-3" controlId="password">
                   <Form.Label>{t('auth.forgot.newPassword')}</Form.Label>
-                  <Form.Control
-                    type="password"
+                  <PasswordField
+                    id="password"
                     value={password}
+                    onChange={setPassword}
                     autoComplete="new-password"
-                    onChange={(e) => setPassword(e.target.value)}
                     required
                   />
                   <Form.Text className="text-muted">{t('auth.register.passwordHint')}</Form.Text>
                 </Form.Group>
                 <Form.Group className="mb-4" controlId="passwordConfirm">
                   <Form.Label>{t('auth.forgot.confirmPassword')}</Form.Label>
-                  <Form.Control
-                    type="password"
+                  <PasswordField
+                    id="passwordConfirm"
                     value={passwordConfirm}
+                    onChange={setPasswordConfirm}
                     autoComplete="new-password"
-                    onChange={(e) => setPasswordConfirm(e.target.value)}
                     required
                   />
                 </Form.Group>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-100"
-                  disabled={submitting || !userUri}
-                >
+                <Button type="submit" variant="primary" className="w-100" disabled={submitting}>
                   {submitting ? t('auth.forgot.resetting') : t('auth.forgot.reset')}
                 </Button>
               </Form>

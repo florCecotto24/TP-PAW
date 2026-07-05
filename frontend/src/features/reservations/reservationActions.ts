@@ -49,11 +49,12 @@ export function availableActions(
   const isPending = status === 'pending';
   const isTerminal = TERMINAL.has(status);
   const isFinished = status === 'finished';
-  // El comprobante ya subido se delata por el link al sub-recurso.
-  const hasRefundReceipt = Boolean(reservation.links['refund-receipt']);
+  // Comprobante ya subido (flags del server; los links de descarga son condicionales).
+  const hasPaymentReceipt = reservation.hasPaymentReceipt === true;
+  const hasRefundReceipt = reservation.hasRefundReceipt === true;
 
   return {
-    canUploadPayment: side === 'rider' && isPending,
+    canUploadPayment: side === 'rider' && isPending && !hasPaymentReceipt,
     // El reintegro solo aplica si: el server marcó la obligación, la reserva
     // fue cancelada (no por falta de pago) y todavía no se subió el comprobante.
     // Espeja el guard del myReservationDetail.jsp original.

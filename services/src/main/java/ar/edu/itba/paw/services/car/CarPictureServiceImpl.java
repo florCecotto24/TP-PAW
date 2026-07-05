@@ -16,7 +16,7 @@ import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 /** Gallery rows via {@link CarPictureDao}; validates referenced media ids on create. */
 @Service
-public final class CarPictureServiceImpl implements CarPictureService {
+public class CarPictureServiceImpl implements CarPictureService {
 
     private final CarPictureDao carPictureDao;
     private final ImageService imageService;

@@ -22,7 +22,7 @@ import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
 import ar.edu.itba.paw.services.email.EmailService;
 /** Uses only {@link EmailVerificationCodeDao}; user and mail side effects go through {@link UserService} and {@link EmailService}. */
 @Service
-public final class EmailVerificationServiceImpl implements EmailVerificationService {
+public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailVerificationServiceImpl.class);
 

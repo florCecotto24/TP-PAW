@@ -27,6 +27,7 @@ import ar.edu.itba.paw.exception.car.CarBrandNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarBrand;
 import ar.edu.itba.paw.models.domain.car.CarModel;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.car.CarBrandService;
 import ar.edu.itba.paw.services.car.CarModelService;
 import ar.edu.itba.paw.services.user.AdminService;
@@ -74,21 +75,10 @@ public final class BrandController {
             @QueryParam("validated") final Boolean validated,
             @QueryParam("page") @javax.ws.rs.DefaultValue("1") final int page,
             @QueryParam("pageSize") @javax.ws.rs.DefaultValue("12") final int pageSize) {
-        final List<CarBrand> all;
-        if (validated == null) {
-            all = carBrandService.findAllOrdered();
-        } else if (validated) {
-            all = carBrandService.findValidatedOrdered();
-        } else {
-            all = carBrandService.findPendingOrdered();
-        }
-
         final int safePage = Math.max(1, page);
         final int safeSize = Math.max(1, pageSize);
-        final int total = all.size();
-        final int fromIndex = Math.min((safePage - 1) * safeSize, total);
-        final int toIndex = Math.min(fromIndex + safeSize, total);
-        final List<BrandDto> dtos = all.subList(fromIndex, toIndex).stream()
+        final Page<CarBrand> brandPage = carBrandService.findPage(validated, safePage - 1, safeSize);
+        final List<BrandDto> dtos = brandPage.getContent().stream()
                 .map(brand -> BrandDto.from(brand, uriInfo))
                 .collect(Collectors.toList());
 
@@ -96,9 +86,9 @@ public final class BrandController {
             return Response.noContent().build();
         }
 
-        final Response.ResponseBuilder builder =
-                Response.ok(new GenericEntity<List<BrandDto>>(dtos) {});
-        PaginationLinks.add(builder, uriInfo, safePage, safeSize, total);
+        final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<BrandDto>>(dtos) {})
+                .header("X-Total-Count", brandPage.getTotalItems());
+        PaginationLinks.add(builder, uriInfo, safePage, safeSize, (int) brandPage.getTotalItems());
         return builder.build();
     }
 
@@ -171,7 +161,9 @@ public final class BrandController {
         if (dtos.isEmpty()) {
             return Response.noContent().build();
         }
-        return Response.ok(new GenericEntity<List<ModelDto>>(dtos) {}).build();
+        return Response.ok(new GenericEntity<List<ModelDto>>(dtos) {})
+                .header("X-Total-Count", dtos.size())
+                .build();
     }
 
     @POST

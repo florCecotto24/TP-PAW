@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BreadcrumbTrail, ConfirmModal, ReviewImageInput, StarRatingInput } from '../../../components/ryden';
+import { apiAssetUrl } from '../../../api/uri';
 import {
   getCar,
   getCounterparty,
@@ -14,8 +16,10 @@ import {
   uploadReceipt,
 } from '../api';
 import ReservationChatPanel from '../components/ReservationChatPanel';
+import ReservationReviewItem from '../components/ReservationReviewItem';
 import { formatDateTime, formatPrice, statusLabelKey } from '../format';
-import { paths, carDetail, publicProfile } from '../../../routes/paths';
+import { isChatAvailable } from '../reservationChat';
+import { paths, carDetail, publicProfile, ownerReservationsCar } from '../../../routes/paths';
 import { reservationActionError } from '../reservationError';
 import {
   availableActions,
@@ -46,6 +50,8 @@ function userAlreadyReviewed(reviews: ReviewDto[], side: Side): boolean {
 export default function ReservationDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const fromCarId = searchParams.get('fromCar');
   const queryClient = useQueryClient();
   const { id: myId, isAuthenticated } = useCurrentUser();
 
@@ -60,6 +66,17 @@ export default function ReservationDetailPage() {
   const reservation = reservationQuery.data;
   const side: Side = reservation && myId ? sideOf(reservation, myId) : 'none';
   const actions = reservation ? availableActions(reservation, side) : null;
+  const chatAvailable = reservation ? isChatAvailable(reservation) : false;
+
+  const reservationInfoAlert = useMemo(() => {
+    if (!reservation) return null;
+    const status = reservation.status;
+    if (status === 'pending' && side === 'owner') return t('res.detail.alert.pendingPaymentOwner');
+    if (status.startsWith('cancelled')) return t('res.detail.alert.cancelled');
+    if (status === 'started') return t('res.detail.alert.inProgress');
+    if (status === 'finished') return t('res.detail.alert.finished');
+    return null;
+  }, [reservation, side, t]);
 
   const carQuery = useQuery({
     queryKey: ['reservations', 'detail', 'car', reservation?.links.car],
@@ -67,12 +84,7 @@ export default function ReservationDetailPage() {
     enabled: Boolean(reservation?.links.car),
   });
 
-  const counterpartyUri =
-    reservation && side === 'rider'
-      ? reservation.links.owner
-      : reservation && side === 'owner'
-        ? reservation.links.rider
-        : null;
+  const counterpartyUri = reservation?.links.counterparty ?? null;
 
   const counterpartyQuery = useQuery({
     queryKey: ['reservations', 'detail', 'counterparty', counterpartyUri],
@@ -101,12 +113,23 @@ export default function ReservationDetailPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewImage, setReviewImage] = useState<File | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
 
   const carId = reservation ? idFromUri(reservation.links.car) : null;
-  const counterpartyId = counterpartyUri ? idFromUri(counterpartyUri) : null;
+  const counterpartyId = counterpartyQuery.data?.links.self
+    ? idFromUri(counterpartyQuery.data.links.self)
+    : null;
 
-  const paymentReceiptLink = reservation?.links['payment-receipt'];
-  const refundReceiptLink = reservation?.links['refund-receipt'];
+  const reservationSelf = reservation?.links.self.replace(/\/$/, '') ?? '';
+  const paymentReceiptDownloadLink =
+    reservation?.hasPaymentReceipt && reservation.links['payment-receipt']
+      ? reservation.links['payment-receipt']
+      : null;
+  const refundReceiptDownloadLink =
+    reservation?.hasRefundReceipt && reservation.links['refund-receipt']
+      ? reservation.links['refund-receipt']
+      : null;
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({ queryKey: ['reservations', 'detail', id] });
@@ -131,20 +154,20 @@ export default function ReservationDetailPage() {
 
   const onCancel = () => {
     if (!reservation || side === 'none') return;
-    if (!window.confirm(t('res.detail.cancel'))) return;
     void runAction(async () => {
       await patchReservation(reservation.links.self, { status: cancelStatusFor(side) });
       setNotice(t('res.detail.cancelledNotice'));
     });
+    setCancelModalOpen(false);
   };
 
   const onMarkReturned = () => {
     if (!reservation) return;
-    if (!window.confirm(t('res.detail.markReturnedTitle'))) return;
     void runAction(async () => {
       await patchReservation(reservation.links.self, { carReturned: true });
       setNotice(t('res.detail.markReturnedNotice'));
     });
+    setReturnModalOpen(false);
   };
 
   const onSaveDates = () => {
@@ -154,6 +177,7 @@ export default function ReservationDetailPage() {
     void runAction(async () => {
       await patchReservation(reservation.links.self, { startDate: startIso, endDate: endIso });
       setEditDatesOpen(false);
+      setNotice(t('res.detail.datesSavedNotice'));
     });
   };
 
@@ -161,10 +185,12 @@ export default function ReservationDetailPage() {
     if (!reservation) return;
     const uri =
       kind === 'payment'
-        ? reservation.links['payment-receipt']
-        : reservation.links['refund-receipt'];
-    if (!uri) return;
-    void runAction(() => uploadReceipt(uri, file).then(() => undefined));
+        ? `${reservationSelf}/payment-receipt`
+        : `${reservationSelf}/refund-receipt`;
+    void runAction(
+      () => uploadReceipt(uri, file).then(() => undefined),
+      t('res.confirmation.uploadSuccess'),
+    );
   };
 
   const onSubmitReview = () => {
@@ -181,6 +207,7 @@ export default function ReservationDetailPage() {
       });
       setReviewComment('');
       setReviewImage(null);
+      setNotice(t('res.review.success'));
     });
   };
 
@@ -236,45 +263,222 @@ export default function ReservationDetailPage() {
     );
   }
 
-  return (
-    <main className="container py-4">
-      <div className="mb-3">
-        <Link
-          to={side === 'owner' ? paths.ownerReservations : paths.myReservations}
-          className="btn btn-link ps-0"
-        >
-          ← {side === 'owner' ? t('res.list.ownerTitle') : t('res.list.title')}
-        </Link>
-      </div>
+  const carLabel = carQuery.data ? `${carQuery.data.brandName} ${carQuery.data.modelName}` : '';
 
-      <header className="mb-4">
-        <h1 className="h3 fw-semibold mb-1">{t('res.detail.title')}</h1>
+  return (
+    <main className="container pt-5 pb-4">
+      {fromCarId ? (
+        <BreadcrumbTrail
+          homeLabel={t('nav.myCars')}
+          homeHref={paths.myCars}
+          midLabel={t('res.list.ownerTitle')}
+          midHref={paths.ownerReservations}
+          mid2Label={carLabel}
+          mid2Href={ownerReservationsCar(fromCarId)}
+          currentLabel={t('res.detail.title')}
+        />
+      ) : (
+        <BreadcrumbTrail
+          homeLabel={side === 'owner' ? t('res.list.ownerTitle') : t('res.list.title')}
+          homeHref={side === 'owner' ? paths.ownerReservations : paths.myReservations}
+          currentLabel={carLabel || t('res.detail.title')}
+        />
+      )}
+
+      <section className="reservation-management-header mb-4">
+        <h1 className="h3 fw-bold mb-2">{t('res.detail.title')}</h1>
         <p className="text-secondary mb-0">{t('res.detail.subheading')}</p>
-      </header>
+      </section>
 
       {notice ? <div className="alert alert-success">{notice}</div> : null}
       {actionError ? <div className="alert alert-danger">{actionError}</div> : null}
 
-      <div className="row g-4">
+      <div className="row g-4 align-items-start">
         <div className="col-lg-8">
+          {side === 'rider' && actions?.canUploadPayment ? (
+            <section className="card border border-warning shadow-sm rounded-4 mb-4 bg-warning-subtle">
+              <div className="card-body p-4">
+                <h2 className="h5 fw-semibold mb-3">
+                  <i className="bi bi-clock text-primary me-1" aria-hidden="true"></i>
+                  {t('res.detail.payment.title')}
+                </h2>
+                <p className="text-secondary mb-3">{t('res.detail.payment.intro')}</p>
+                {reservation.ownerCbu ? (
+                  <p className="mb-3">
+                    <span className="fw-semibold">{t('res.detail.payment.cbu')}</span> {reservation.ownerCbu}
+                  </p>
+                ) : null}
+                {reservation.paymentProofDeadlineAt ? (
+                  <p className="mb-3">
+                    <span className="fw-semibold">{t('res.detail.payment.deadline')}</span>{' '}
+                    {formatDateTime(reservation.paymentProofDeadlineAt)}
+                  </p>
+                ) : null}
+                <label className="form-label small mb-1" htmlFor="paymentFile">
+                  {t('res.detail.uploadPayment')}
+                </label>
+                <div className="d-flex align-items-stretch gap-2 ryden-payment-receipt__form">
+                  <label className="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
+                    <span className="text-truncate text-muted pe-1 flex-grow-1 min-w-0">
+                      {t('res.confirmation.chooseFile')}
+                    </span>
+                    <input
+                      id="paymentFile"
+                      type="file"
+                      className="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
+                      accept="image/*,application/pdf"
+                      disabled={busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onUploadReceipt('payment', f);
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {side === 'rider' && reservation.hasPaymentReceipt ? (
+            <section className="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+              <div className="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div>
+                  <h2 className="h6 fw-semibold mb-1">{t('res.detail.payment.viewReceipt')}</h2>
+                </div>
+                {paymentReceiptDownloadLink ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary"
+                    onClick={() => void openBinaryLink(paymentReceiptDownloadLink)}
+                  >
+                    {t('res.detail.payment.viewReceipt')}
+                  </button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {side === 'owner'
+          && reservation.hasPaymentReceipt
+          && ['accepted', 'started', 'finished'].includes(reservation.status) ? (
+            <section className="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+              <div className="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h2 className="h6 fw-semibold mb-0">{t('res.detail.payment.ownerTitle')}</h2>
+                {paymentReceiptDownloadLink ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary"
+                    onClick={() => void openBinaryLink(paymentReceiptDownloadLink)}
+                  >
+                    {t('res.detail.payment.viewReceipt')}
+                  </button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
+          {actions?.canUploadRefund ? (
+            <section className="card border-0 shadow-sm rounded-4 mb-4 border-warning bg-white">
+              <div className="card-body p-4">
+                <h2 className="h5 fw-semibold mb-3">{t('res.detail.refund.ownerTitle')}</h2>
+                <p className="text-secondary mb-3">{t('res.detail.refund.ownerIntro')}</p>
+                {reservation.refundProofDeadlineAt ? (
+                  <p className="mb-3">
+                    <span className="fw-semibold">{t('res.detail.refund.deadline')}</span>{' '}
+                    {formatDateTime(reservation.refundProofDeadlineAt)}
+                  </p>
+                ) : null}
+                <label className="form-label small mb-1" htmlFor="refundFile">
+                  {t('res.detail.uploadRefund')}
+                </label>
+                <div className="d-flex align-items-stretch gap-2 ryden-payment-receipt__form">
+                  <label className="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
+                    <span className="text-truncate text-muted pe-1 flex-grow-1 min-w-0">
+                      {t('res.confirmation.chooseFile')}
+                    </span>
+                    <input
+                      id="refundFile"
+                      type="file"
+                      className="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
+                      accept="image/*,application/pdf"
+                      disabled={busy}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onUploadReceipt('refund', f);
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {side === 'rider'
+          && reservation.paymentRefundRequired
+          && !reservation.hasRefundReceipt
+          && (reservation.status === 'cancelled_by_owner' || reservation.status === 'cancelled_by_rider') ? (
+            <section className="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+              <div className="card-body p-4">
+                <h2 className="h5 fw-semibold mb-2">{t('res.detail.refund.riderWaitingTitle')}</h2>
+                <p className="text-secondary small mb-0">{t('res.detail.refund.riderWaitingIntro')}</p>
+              </div>
+            </section>
+          ) : null}
+
+          {reservation.hasRefundReceipt ? (
+            <section className="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+              <div className="card-body p-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <h2 className="h6 fw-semibold mb-0">
+                  {side === 'owner' ? t('res.detail.refund.ownerUploadedTitle') : t('res.detail.refund.riderTitle')}
+                </h2>
+                {refundReceiptDownloadLink ? (
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary"
+                    onClick={() => void openBinaryLink(refundReceiptDownloadLink)}
+                  >
+                    {t('res.detail.refund.viewReceipt')}
+                  </button>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
           <section className="bg-white rounded-4 shadow-sm p-4 mb-4">
             <h2 className="h5 fw-semibold mb-3">{t('res.detail.carSummaryTitle')}</h2>
             {carQuery.data ? (
-              <>
-                <p className="fw-semibold mb-1">
-                  {carQuery.data.brandName} {carQuery.data.modelName}
-                </p>
-                {(transmissionLabel || powertrainLabel) ? (
-                  <p className="small text-secondary mb-2">
-                    {[transmissionLabel, powertrainLabel].filter(Boolean).join(' · ')}
+              <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
+                <div className="reservation-detail-car-media rounded-3 overflow-hidden border">
+                  {carQuery.data.links.cover ? (
+                    <img
+                      src={apiAssetUrl(carQuery.data.links.cover)}
+                      alt={`${carQuery.data.brandName} ${carQuery.data.modelName}`}
+                      className="w-100 h-100"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                      <i className="bi bi-car-front fs-1" aria-hidden="true"></i>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="fw-semibold mb-1">
+                    {carQuery.data.brandName} {carQuery.data.modelName}
                   </p>
-                ) : null}
-                {carId ? (
-                  <Link to={carDetail(carId)} className="btn btn-outline-primary btn-sm">
-                    {t('res.detail.viewCar')}
-                  </Link>
-                ) : null}
-              </>
+                  {(transmissionLabel || powertrainLabel) ? (
+                    <div className="d-flex flex-wrap gap-2 mb-2">
+                      {transmissionLabel ? <span className="badge text-bg-light border">{transmissionLabel}</span> : null}
+                      {powertrainLabel ? <span className="badge text-bg-light border">{powertrainLabel}</span> : null}
+                    </div>
+                  ) : null}
+                  {carId ? (
+                    <Link to={carDetail(carId)} className="btn btn-outline-primary btn-sm">
+                      {t('res.detail.viewCar')}
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
             ) : (
               <p className="text-secondary small mb-0">{t('res.detail.loading')}</p>
             )}
@@ -332,48 +536,20 @@ export default function ReservationDetailPage() {
             </dl>
           </section>
 
-          {side === 'rider' && reservation.status === 'pending' ? (
-            <section className="bg-white rounded-4 shadow-sm p-4 mb-4">
-              <h2 className="h5 fw-semibold mb-2">{t('res.detail.payment.title')}</h2>
-              <p className="small text-secondary">{t('res.detail.payment.intro')}</p>
-              {reservation.ownerCbu ? (
-                <p className="small mb-2">
-                  <strong>{t('res.detail.payment.cbu')}</strong> {reservation.ownerCbu}
-                </p>
-              ) : null}
-              {reservation.paymentProofDeadlineAt ? (
-                <p className="small mb-0">
-                  <strong>{t('res.detail.payment.deadline')}</strong>{' '}
-                  {formatDateTime(reservation.paymentProofDeadlineAt)}
-                </p>
-              ) : null}
-            </section>
+          {chatAvailable ? (
+            <div id="reservation-chat">
+              <ReservationChatPanel reservation={reservation} />
+            </div>
           ) : null}
-
-          <ReservationChatPanel reservation={reservation} />
 
           {reviews.length > 0 ? (
             <section className="bg-white rounded-4 shadow-sm p-4 mt-4">
               <h2 className="h5 fw-semibold mb-3">{t('res.review.existing')}</h2>
-              <ul className="list-unstyled mb-0">
+              <div className="d-flex flex-column gap-3">
                 {reviews.map((review) => (
-                  <li key={review.links.self} className="border-bottom pb-3 mb-3">
-                    <div className="small text-secondary mb-1">
-                      {'★'.repeat(review.rating ?? 0)} · {formatDateTime(review.createdAt)}
-                    </div>
-                    {review.comment ? <p className="mb-2">{review.comment}</p> : null}
-                    {review.links.image ? (
-                      <button
-                        type="button"
-                        className="btn btn-link btn-sm p-0"
-                        onClick={() => void openBinaryLink(review.links.image as string)}
-                      >
-                        {t('res.review.viewImage')}
-                      </button>
-                    ) : null}
-                  </li>
+                  <ReservationReviewItem key={review.links.self} review={review} />
                 ))}
-              </ul>
+              </div>
             </section>
           ) : null}
 
@@ -381,17 +557,8 @@ export default function ReservationDetailPage() {
             <section className="bg-white rounded-4 shadow-sm p-4 mt-4">
               <h2 className="h5 fw-semibold mb-3">{t('res.review.title')}</h2>
               <div className="mb-3">
-                <label className="form-label small" htmlFor="reviewRating">{t('res.review.rating')}</label>
-                <select
-                  id="reviewRating"
-                  className="form-select form-select-sm w-auto"
-                  value={reviewRating}
-                  onChange={(e) => setReviewRating(Number(e.target.value))}
-                >
-                  {[5, 4, 3, 2, 1].map((n) => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
+                <label className="form-label small">{t('res.review.rating')}</label>
+                <StarRatingInput id="reviewRating" value={reviewRating} onChange={setReviewRating} />
               </div>
               <div className="mb-3">
                 <label className="form-label small" htmlFor="reviewComment">{t('res.review.comment')}</label>
@@ -408,14 +575,8 @@ export default function ReservationDetailPage() {
                 </div>
               </div>
               <div className="mb-3">
-                <label className="form-label small" htmlFor="reviewImage">{t('res.review.image')}</label>
-                <input
-                  id="reviewImage"
-                  type="file"
-                  className="form-control form-control-sm"
-                  accept="image/*"
-                  onChange={(e) => setReviewImage(e.target.files?.[0] ?? null)}
-                />
+                <span className="form-label small d-block">{t('res.review.image')}</span>
+                <ReviewImageInput id="reviewImage" value={reviewImage} onChange={setReviewImage} />
               </div>
               <button
                 type="button"
@@ -430,57 +591,78 @@ export default function ReservationDetailPage() {
         </div>
 
         <div className="col-lg-4">
-          {counterpartyQuery.data ? (
-            <aside className="bg-white rounded-4 shadow-sm p-4 mb-4">
-              <h2 className="h6 fw-semibold mb-3">
-                {side === 'rider'
-                  ? t('res.detail.counterparty.ownerTitle')
-                  : t('res.detail.counterparty.riderTitle')}
-              </h2>
-              <p className="mb-1 fw-semibold">
-                {counterpartyQuery.data.forename} {counterpartyQuery.data.surname}
-              </p>
-              {counterpartyQuery.data.email ? (
-                <p className="small mb-1">
-                  <span className="text-secondary">{t('res.detail.counterparty.email')}: </span>
-                  {counterpartyQuery.data.email}
-                </p>
+          <aside className="card border-0 shadow-sm rounded-4 reservation-detail-sticky bg-white">
+            <div className="card-body p-4">
+              <div className="reservation-price-compact mb-3">
+                <span className="reservation-card__meta-label mb-0">{t('res.detail.total')}</span>
+                <span className="h2 fw-bold text-primary mb-0">{formatPrice(reservation.totalPrice)}</span>
+              </div>
+
+              {chatAvailable ? (
+                <a href="#reservation-chat" className="btn btn-primary w-100 mb-3">
+                  {t('res.detail.openChat')}
+                </a>
               ) : null}
-              {counterpartyQuery.data.phoneNumber ? (
-                <p className="small mb-2">
-                  <span className="text-secondary">{t('res.detail.counterparty.phone')}: </span>
-                  {counterpartyQuery.data.phoneNumber}
-                </p>
+
+              {counterpartyQuery.data ? (
+                <section className="card border-0 shadow-sm rounded-4 mb-3 counterparty-summary-card">
+                  <div className="card-body p-4">
+                    <h2 className="h6 fw-semibold mb-3">
+                      {side === 'rider'
+                        ? t('res.detail.counterparty.ownerTitle')
+                        : t('res.detail.counterparty.riderTitle')}
+                    </h2>
+                    <div className="counterparty-summary-card__identity d-flex align-items-center gap-2 mb-3">
+                      {counterpartyId ? (
+                        <Link to={publicProfile(counterpartyId)} className="text-decoration-none">
+                          {counterpartyQuery.data.links.profilePicture ? (
+                            <img
+                              src={apiAssetUrl(counterpartyQuery.data.links.profilePicture)}
+                              alt=""
+                              className="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"
+                            />
+                          ) : (
+                            <div
+                              className="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar counterparty-summary-card__avatar--placeholder d-flex align-items-center justify-content-center"
+                              aria-hidden="true"
+                            >
+                              <i className="bi bi-person-fill" />
+                            </div>
+                          )}
+                        </Link>
+                      ) : null}
+                      <p className="mb-0 fw-semibold">
+                        {counterpartyQuery.data.forename} {counterpartyQuery.data.surname}
+                      </p>
+                    </div>
+                    {counterpartyQuery.data.email ? (
+                      <p className="small mb-1 counterparty-summary-card__email-wrap">
+                        <span className="text-secondary">{t('res.detail.counterparty.email')}: </span>
+                        <a href={`mailto:${counterpartyQuery.data.email}`} className="counterparty-summary-card__email-link">
+                          {counterpartyQuery.data.email}
+                        </a>
+                      </p>
+                    ) : null}
+                    {counterpartyQuery.data.phoneNumber ? (
+                      <p className="small mb-2">
+                        <span className="text-secondary">{t('res.detail.counterparty.phone')}: </span>
+                        <a href={`tel:${counterpartyQuery.data.phoneNumber}`}>{counterpartyQuery.data.phoneNumber}</a>
+                      </p>
+                    ) : null}
+                    {counterpartyId ? (
+                      <Link to={publicProfile(counterpartyId)} className="btn btn-outline-secondary btn-sm">
+                        {t('res.detail.counterparty.viewProfile')}
+                      </Link>
+                    ) : null}
+                  </div>
+                </section>
               ) : null}
-              {counterpartyId ? (
-                <Link to={publicProfile(counterpartyId)} className="btn btn-outline-secondary btn-sm">
-                  {t('res.detail.counterparty.viewProfile')}
+
+              <div className="d-flex flex-column gap-2">
+              {carId ? (
+                <Link to={carDetail(carId)} className="btn btn-outline-warm w-100">
+                  <i className="bi bi-eye me-2"></i>{t('res.detail.viewCar')}
                 </Link>
-              ) : null}
-            </aside>
-          ) : null}
-
-          <aside className="bg-white rounded-4 shadow-sm p-4">
-            <h2 className="h6 fw-semibold mb-3">{t('res.detail.actionsTitle')}</h2>
-            <div className="d-grid gap-2">
-              {paymentReceiptLink ? (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={() => void openBinaryLink(paymentReceiptLink)}
-                >
-                  {t('res.detail.downloadPayment')}
-                </button>
-              ) : null}
-
-              {refundReceiptLink ? (
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={() => void openBinaryLink(refundReceiptLink)}
-                >
-                  {t('res.detail.downloadRefund')}
-                </button>
               ) : null}
 
               {actions?.canEditDates ? (
@@ -539,50 +721,12 @@ export default function ReservationDetailPage() {
                 </>
               ) : null}
 
-              {actions?.canUploadPayment ? (
-                <div>
-                  <label className="form-label small mb-1" htmlFor="paymentFile">
-                    {t('res.detail.uploadPayment')}
-                  </label>
-                  <input
-                    id="paymentFile"
-                    type="file"
-                    className="form-control form-control-sm"
-                    accept="image/*,application/pdf"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) onUploadReceipt('payment', f);
-                    }}
-                  />
-                </div>
-              ) : null}
-
-              {actions?.canUploadRefund ? (
-                <div>
-                  <label className="form-label small mb-1" htmlFor="refundFile">
-                    {t('res.detail.uploadRefund')}
-                  </label>
-                  <input
-                    id="refundFile"
-                    type="file"
-                    className="form-control form-control-sm"
-                    accept="image/*,application/pdf"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) onUploadReceipt('refund', f);
-                    }}
-                  />
-                </div>
-              ) : null}
-
               {actions?.canMarkReturned ? (
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-sm"
+                  className="btn btn-primary w-100"
                   disabled={busy}
-                  onClick={onMarkReturned}
+                  onClick={() => setReturnModalOpen(true)}
                 >
                   {t('res.detail.markReturned')}
                 </button>
@@ -591,17 +735,54 @@ export default function ReservationDetailPage() {
               {actions?.canCancel ? (
                 <button
                   type="button"
-                  className="btn btn-outline-danger btn-sm"
+                  className="btn btn-outline-danger w-100"
                   disabled={busy}
-                  onClick={onCancel}
+                  onClick={() => setCancelModalOpen(true)}
                 >
-                  {t('res.detail.cancel')}
+                  <i className="bi bi-x-circle me-2"></i>{t('res.detail.cancelAction')}
                 </button>
+              ) : reservationInfoAlert ? (
+                <div className="alert alert-info mb-0" role="alert">
+                  <p className="mb-0">{reservationInfoAlert}</p>
+                </div>
               ) : null}
+              </div>
             </div>
           </aside>
         </div>
       </div>
+
+      <ConfirmModal
+        id="reservationCancelModal"
+        title={t('res.detail.cancelModalTitle')}
+        message={t('res.detail.cancelModalMessage')}
+        action="#"
+        cancelLabel={t('res.detail.cancelEdit')}
+        confirmLabel={t('res.detail.cancelAction')}
+        variant="danger"
+        confirmButtonClass="btn btn-danger"
+        open={cancelModalOpen}
+        onOpenChange={setCancelModalOpen}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onCancel();
+        }}
+      />
+
+      <ConfirmModal
+        id="reservationReturnModal"
+        title={t('res.detail.markReturnedTitle')}
+        message={t('res.detail.markReturnedConfirm')}
+        action="#"
+        cancelLabel={t('res.detail.cancelEdit')}
+        confirmLabel={t('res.detail.markReturned')}
+        open={returnModalOpen}
+        onOpenChange={setReturnModalOpen}
+        onSubmit={(e) => {
+          e.preventDefault();
+          onMarkReturned();
+        }}
+      />
     </main>
   );
 }

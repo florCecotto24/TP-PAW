@@ -24,31 +24,25 @@ public final class ReservationDto {
     private String paymentProofDeadlineAt;
     private String refundProofDeadlineAt;
     private Boolean paymentRefundRequired;
+    private Boolean hasPaymentReceipt;
+    private Boolean hasRefundReceipt;
+    private String ownerCbu;
+    private String pickupStreet;
+    private String pickupNumber;
+    private String pickupNeighborhood;
+    private String checkInTime;
+    private String checkOutTime;
     private String createdAt;
     private LinksDto links;
 
     public ReservationDto() {
     }
 
-    public static ReservationDto from(final Reservation reservation, final long ownerId, final UriInfo uriInfo) {
-        final ReservationDto dto = new ReservationDto();
-        dto.startDate = ISO_OFFSET.format(reservation.getStartDate());
-        dto.endDate = ISO_OFFSET.format(reservation.getEndDate());
-        dto.status = ReservationRestEnums.toRestName(reservation.getStatus());
-        dto.totalPrice = reservation.getTotalPrice();
-        dto.carReturned = reservation.isCarReturned();
-        dto.paymentProofDeadlineAt = reservation.getPaymentProofDeadlineAt()
-                .map(ISO_OFFSET::format)
-                .orElse(null);
-        dto.refundProofDeadlineAt = reservation.getRefundProofDeadlineAt()
-                .map(ISO_OFFSET::format)
-                .orElse(null);
-        dto.paymentRefundRequired = reservation.isPaymentRefundRequired();
-        dto.createdAt = reservation.getCreatedAt() == null
-                ? null
-                : ISO_OFFSET.format(reservation.getCreatedAt());
-        dto.links = ReservationLinks.forReservation(reservation, ownerId, uriInfo);
-        return dto;
+    public static Builder builder(
+            final Reservation reservation,
+            final long ownerId,
+            final UriInfo uriInfo) {
+        return new Builder(reservation, ownerId, uriInfo);
     }
 
     public static ReservationDto fromCard(final ReservationCard card, final UriInfo uriInfo) {
@@ -59,6 +53,99 @@ public final class ReservationDto {
         dto.totalPrice = card.getTotalPrice();
         dto.links = ReservationLinks.forCard(card, uriInfo);
         return dto;
+    }
+
+    public static final class Builder {
+
+        private final Reservation reservation;
+        private final long ownerId;
+        private final UriInfo uriInfo;
+        private boolean hasPaymentReceipt;
+        private boolean hasRefundReceipt;
+        private String ownerCbu;
+        private String pickupStreet;
+        private String pickupNumber;
+        private String pickupNeighborhood;
+        private String checkInTime;
+        private String checkOutTime;
+
+        private Builder(final Reservation reservation, final long ownerId, final UriInfo uriInfo) {
+            this.reservation = reservation;
+            this.ownerId = ownerId;
+            this.uriInfo = uriInfo;
+        }
+
+        public Builder hasPaymentReceipt(final boolean hasPaymentReceipt) {
+            this.hasPaymentReceipt = hasPaymentReceipt;
+            return this;
+        }
+
+        public Builder hasRefundReceipt(final boolean hasRefundReceipt) {
+            this.hasRefundReceipt = hasRefundReceipt;
+            return this;
+        }
+
+        public Builder ownerCbu(final String ownerCbu) {
+            this.ownerCbu = ownerCbu;
+            return this;
+        }
+
+        public Builder pickupStreet(final String pickupStreet) {
+            this.pickupStreet = pickupStreet;
+            return this;
+        }
+
+        public Builder pickupNumber(final String pickupNumber) {
+            this.pickupNumber = pickupNumber;
+            return this;
+        }
+
+        public Builder pickupNeighborhood(final String pickupNeighborhood) {
+            this.pickupNeighborhood = pickupNeighborhood;
+            return this;
+        }
+
+        public Builder checkInTime(final String checkInTime) {
+            this.checkInTime = checkInTime;
+            return this;
+        }
+
+        public Builder checkOutTime(final String checkOutTime) {
+            this.checkOutTime = checkOutTime;
+            return this;
+        }
+
+        public ReservationDto build() {
+            final ReservationDto dto = new ReservationDto();
+            dto.startDate = ISO_OFFSET.format(reservation.getStartDate());
+            dto.endDate = ISO_OFFSET.format(reservation.getEndDate());
+            dto.status = ReservationRestEnums.toRestName(reservation.getStatus());
+            dto.totalPrice = reservation.getTotalPrice();
+            dto.carReturned = reservation.isCarReturned();
+            dto.paymentProofDeadlineAt = reservation.getPaymentProofDeadlineAt()
+                    .map(ISO_OFFSET::format)
+                    .orElse(null);
+            dto.refundProofDeadlineAt = reservation.getRefundProofDeadlineAt()
+                    .map(ISO_OFFSET::format)
+                    .orElse(null);
+            dto.paymentRefundRequired = reservation.isPaymentRefundRequired();
+            dto.hasPaymentReceipt = hasPaymentReceipt;
+            dto.hasRefundReceipt = hasRefundReceipt;
+            dto.ownerCbu = ownerCbu;
+            dto.pickupStreet = pickupStreet;
+            dto.pickupNumber = pickupNumber;
+            dto.pickupNeighborhood = pickupNeighborhood;
+            dto.checkInTime = checkInTime;
+            dto.checkOutTime = checkOutTime;
+            dto.createdAt = reservation.getCreatedAt() == null
+                    ? null
+                    : ISO_OFFSET.format(reservation.getCreatedAt());
+            dto.links = ReservationLinks.reservation(reservation, ownerId, uriInfo)
+                    .hasPaymentReceipt(hasPaymentReceipt)
+                    .hasRefundReceipt(hasRefundReceipt)
+                    .build();
+            return dto;
+        }
     }
 
     public String getStartDate() {
@@ -139,5 +226,69 @@ public final class ReservationDto {
 
     public void setLinks(final LinksDto links) {
         this.links = links;
+    }
+
+    public Boolean getHasPaymentReceipt() {
+        return hasPaymentReceipt;
+    }
+
+    public void setHasPaymentReceipt(final Boolean hasPaymentReceipt) {
+        this.hasPaymentReceipt = hasPaymentReceipt;
+    }
+
+    public Boolean getHasRefundReceipt() {
+        return hasRefundReceipt;
+    }
+
+    public void setHasRefundReceipt(final Boolean hasRefundReceipt) {
+        this.hasRefundReceipt = hasRefundReceipt;
+    }
+
+    public String getOwnerCbu() {
+        return ownerCbu;
+    }
+
+    public void setOwnerCbu(final String ownerCbu) {
+        this.ownerCbu = ownerCbu;
+    }
+
+    public String getPickupStreet() {
+        return pickupStreet;
+    }
+
+    public void setPickupStreet(final String pickupStreet) {
+        this.pickupStreet = pickupStreet;
+    }
+
+    public String getPickupNumber() {
+        return pickupNumber;
+    }
+
+    public void setPickupNumber(final String pickupNumber) {
+        this.pickupNumber = pickupNumber;
+    }
+
+    public String getPickupNeighborhood() {
+        return pickupNeighborhood;
+    }
+
+    public void setPickupNeighborhood(final String pickupNeighborhood) {
+        this.pickupNeighborhood = pickupNeighborhood;
+    }
+
+    public String getCheckInTime() {
+        return checkInTime;
+    }
+
+    public void setCheckInTime(final String checkInTime) {
+        this.checkInTime = checkInTime;
+    }
+
+    public String getCheckOutTime() {
+        return checkOutTime;
+    }
+
+    public void setCheckOutTime(final String checkOutTime) {
+        this.checkOutTime = checkOutTime;
     }
 }

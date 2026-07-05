@@ -13,12 +13,14 @@ import {
   type GalleryMediaItem,
 } from '../../../components/ryden';
 import { apiAssetUrl, idFromUri } from '../../../api/uri';
+import { formatDateLong } from '../../../i18n/dateFormat';
 import { useSessionStore } from '../../../session/sessionStore';
 import { carDetail, paths, publicProfile } from '../../../routes/paths';
 import DetailReservationForm from '../components/DetailReservationForm';
 import BrowseCarCard from '../components/BrowseCarCard';
 import {
   CAR_REVIEWS_PAGE_SIZE,
+  useAdminSetCarStatus,
   useCar,
   useCarAvailabilities,
   useCarOwner,
@@ -58,18 +60,6 @@ function picturesToGalleryMedia(pictures: PictureDto[]): GalleryMediaItem[] {
   }));
 }
 
-function formatReviewDate(iso: string, locale: string): string {
-  try {
-    return new Date(iso).toLocaleDateString(locale, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 function ReviewCardWithAuthor({ review }: { review: ReviewDto }) {
   const { i18n } = useTranslation();
   const authorQuery = useUserBrief(review.links.author);
@@ -81,7 +71,7 @@ function ReviewCardWithAuthor({ review }: { review: ReviewDto }) {
     <ReviewCard
       forename={forename}
       surname={surname}
-      dateLabel={formatReviewDate(review.createdAt, i18n.language)}
+      dateLabel={formatDateLong(review.createdAt, i18n.language)}
       rating={review.rating ?? 0}
       comment={review.comment}
       imageUrl={imageUrl}
@@ -101,8 +91,10 @@ export default function CarDetailPage() {
   const similarQuery = useSimilarCars(car);
   const isLoggedIn = useSessionStore((s) => s.status === 'authenticated');
   const currentUser = useSessionStore((s) => s.currentUser);
+  const isAdmin = currentUser?.role === 'admin';
   const favoriteQuery = useIsFavorite(car?.links.self);
   const toggleFavorite = useToggleFavorite();
+  const adminSetCarStatus = useAdminSetCarStatus();
 
   const src = searchParams.get('src');
   const fromParam = searchParams.get('from') ?? undefined;
@@ -418,6 +410,45 @@ export default function CarDetailPage() {
         </div>
 
         <div className="col-lg-4 order-2">
+          {isAdmin && ownerQuery.data && ownerQuery.data.role !== 'admin' ? (
+            <div className="card bg-white border-0 shadow-sm rounded-4 mb-3 p-3">
+              <h6 className="fw-semibold mb-2">{t('carDetail.admin.sectionTitle')}</h6>
+              {adminSetCarStatus.isSuccess ? (
+                <div className="alert alert-success py-2 small mb-2">
+                  {adminSetCarStatus.variables?.status === 'active'
+                    ? t('carDetail.admin.resumedSuccess')
+                    : t('carDetail.admin.pausedSuccess')}
+                </div>
+              ) : null}
+              {adminSetCarStatus.isError ? (
+                <div className="alert alert-danger py-2 small mb-2">{t('carDetail.admin.error')}</div>
+              ) : null}
+              {car.status === 'active' ? (
+                <button
+                  type="button"
+                  className="btn btn-warning btn-sm rounded-3 w-100"
+                  disabled={adminSetCarStatus.isPending}
+                  onClick={() =>
+                    adminSetCarStatus.mutate({ carSelfLink: car.links.self, status: 'admin_paused' })
+                  }
+                >
+                  {t('carDetail.admin.pause')}
+                </button>
+              ) : null}
+              {car.status === 'admin_paused' ? (
+                <button
+                  type="button"
+                  className="btn btn-success btn-sm rounded-3 w-100"
+                  disabled={adminSetCarStatus.isPending}
+                  onClick={() =>
+                    adminSetCarStatus.mutate({ carSelfLink: car.links.self, status: 'active' })
+                  }
+                >
+                  {t('carDetail.admin.resume')}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <div className="detail-reservation-sticky">
             {resolvedId ? (
               <DetailReservationForm

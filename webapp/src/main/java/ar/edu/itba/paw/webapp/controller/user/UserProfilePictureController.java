@@ -12,48 +12,51 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.user.User;
-import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.form.user.ProfilePictureRestForm;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
-import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
-import ar.edu.itba.paw.webapp.support.UserResourceAccess;
 
-/** Profile picture sub-resource ({@code /users/{id}/profile-picture}). */
+/**
+ * Profile picture sub-resource ({@code /users/{id}/profile-picture}).
+ *
+ * Mutations are gated declaratively ({@code @PreAuthorize}, backed by the
+ * {@code userResourceAccess}/{@code currentUserResolver} beans referenced by name); GET is public.
+ */
 @Path("/users/{id}/profile-picture")
 @Component
-public final class UserProfilePictureController {
+public class UserProfilePictureController {
 
     private final UserService userService;
     private final ImageService imageService;
-    private final CurrentUserResolver currentUserResolver;
-    private final UserResourceAccess userResourceAccess;
     private final BinaryPayloadSupport binaryPayloadSupport;
     private final FormValidationSupport formValidationSupport;
+
+    @Context
+    private Request request;
 
     @Autowired
     public UserProfilePictureController(
             final UserService userService,
             final ImageService imageService,
-            final CurrentUserResolver currentUserResolver,
-            final UserResourceAccess userResourceAccess,
             final BinaryPayloadSupport binaryPayloadSupport,
             final FormValidationSupport formValidationSupport) {
         this.userService = userService;
         this.imageService = imageService;
-        this.currentUserResolver = currentUserResolver;
-        this.userResourceAccess = userResourceAccess;
         this.binaryPayloadSupport = binaryPayloadSupport;
         this.formValidationSupport = formValidationSupport;
     }
@@ -67,20 +70,20 @@ public final class UserProfilePictureController {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return imageService.getImageContent(imageId)
-                .map(this::binaryResponse)
+                .map(content -> CacheableBinaryResponses.of(request, content))
                 .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
     }
 
     @PUT
     @Consumes({MediaType.WILDCARD, "image/*", MediaType.MULTIPART_FORM_DATA})
+    @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response uploadProfilePicture(
-            @PathParam("id") final long id,
+            @P("id") @PathParam("id") final long id,
             @Context final HttpHeaders headers,
             final InputStream body,
             @FormDataParam("file") final InputStream multipartBody,
             @FormDataParam("file") final org.glassfish.jersey.media.multipart.FormDataContentDisposition fileMeta)
             throws IOException {
-        userResourceAccess.requireSelf(id, currentUserResolver.currentPrincipalOrNull());
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
 
@@ -95,18 +98,12 @@ public final class UserProfilePictureController {
     }
 
     @DELETE
-    public Response deleteProfilePicture(@PathParam("id") final long id) {
-        userResourceAccess.requireSelf(id, currentUserResolver.currentPrincipalOrNull());
+    @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response deleteProfilePicture(@P("id") @PathParam("id") final long id) {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         userService.clearProfilePicture(id);
         return Response.noContent().build();
-    }
-
-    private Response binaryResponse(final BinaryContent content) {
-        return Response.ok(content.getBytes())
-                .type(content.getContentType())
-                .build();
     }
 
     private static String resolveContentType(

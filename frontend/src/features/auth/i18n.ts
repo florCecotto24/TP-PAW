@@ -3,6 +3,9 @@
 // de auth. Las claves comunes (validation.*, error.*) viven en el bundle global.
 
 const es: Record<string, string> = {
+  'auth.password.show': 'Mostrar contraseña',
+  'auth.password.hide': 'Ocultar contraseña',
+
   'auth.login.title': 'Ingresar',
   'auth.login.email': 'Email',
   'auth.login.password': 'Contraseña',
@@ -53,10 +56,13 @@ const es: Record<string, string> = {
   'auth.forgot.confirmPassword': 'Confirmar nueva contraseña',
   'auth.forgot.reset': 'Restablecer contraseña',
   'auth.forgot.resetting': 'Restableciendo...',
-  'auth.forgot.missingUser': 'Para restablecer la contraseña abrí el enlace que te enviamos por email.',
+  'auth.forgot.missingUser': 'Completá tu email y el código que te enviamos para poder continuar.',
 };
 
 const en: Record<string, string> = {
+  'auth.password.show': 'Show password',
+  'auth.password.hide': 'Hide password',
+
   'auth.login.title': 'Sign in',
   'auth.login.email': 'Email',
   'auth.login.password': 'Password',
@@ -107,7 +113,7 @@ const en: Record<string, string> = {
   'auth.forgot.confirmPassword': 'Confirm new password',
   'auth.forgot.reset': 'Reset password',
   'auth.forgot.resetting': 'Resetting...',
-  'auth.forgot.missingUser': 'To reset your password, open the link we emailed you.',
+  'auth.forgot.missingUser': 'Enter your email and the code we sent you to continue.',
 };
 
 export const authI18n: { es: Record<string, string>; en: Record<string, string> } = { es, en };

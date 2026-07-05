@@ -18,4 +18,14 @@ public class JacksonConfig {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
     }
+
+    // Bean explícito (no @Component + component-scan): "ar.edu.itba.paw.webapp.config" no está entre
+    // los basePackages de @ComponentScan en WebConfig, así que Jersey's SpringComponentProvider no
+    // encontraba ningún bean Spring de este tipo y caía a instanciarlo por su cuenta vía HK2 (log GRAVE
+    // "None or multiple beans found ... skipping the type" en cada arranque). Registrarlo acá lo deja
+    // como bean real, resoluble sin ambigüedad.
+    @Bean
+    public JacksonContextResolver jacksonContextResolver(final ObjectMapper objectMapper) {
+        return new JacksonContextResolver(objectMapper);
+    }
 }

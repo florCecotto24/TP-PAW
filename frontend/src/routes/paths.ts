@@ -21,6 +21,7 @@ export const paths = {
     catalog: '/admin/catalog',
     cars: '/admin/cars',
     reservations: '/admin/reservations',
+    createAdmin: '/admin/users/create',
   },
 } as const;
 
@@ -46,6 +47,10 @@ export function myReservationDetail(id: string | number, query?: Record<string, 
   const base = `/my-reservations/${id}`;
   if (!query || Object.keys(query).length === 0) return base;
   return `${base}?${new URLSearchParams(query)}`;
+}
+
+export function reservationConfirmation(id: string | number): string {
+  return `/my-reservations/${id}/confirmation`;
 }
 
 export function publicProfile(userId: string | number): string {

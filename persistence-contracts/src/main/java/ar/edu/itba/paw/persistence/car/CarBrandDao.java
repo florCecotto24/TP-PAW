@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.dto.Page;
 
 /**
  * Read/write catalog of vehicle brands. Validated brands surface first in pickers; unvalidated brands are
@@ -13,6 +14,14 @@ public interface CarBrandDao {
 
     /** All brands ordered with validated first, then alphabetical name. */
     List<CarBrand> findAllOrdered();
+
+    /**
+     * SQL-paginated brand listing for {@code GET /brands}: {@code validated=null} keeps the
+     * validated-first/alphabetical ordering of {@link #findAllOrdered()}, {@code true}/{@code false}
+     * filter the same way as {@link #findValidatedOrdered()}/{@link #findPendingOrdered()}. Counts
+     * via {@code SELECT COUNT} rather than sizing an already-loaded list.
+     */
+    Page<CarBrand> findPage(Boolean validated, int page, int pageSize);
 
     /** Only validated brands, alphabetical. */
     List<CarBrand> findValidatedOrdered();

@@ -19,7 +19,10 @@ public final class ApiIndexDto {
         dto.resources.put("cars", base.clone().path("cars").build().toString());
         dto.resources.put("reservations", base.clone().path("reservations").build().toString());
         dto.resources.put("brands", base.clone().path("brands").build().toString());
+        dto.resources.put("models", base.clone().path("models").build().toString());
         dto.resources.put("neighborhoods", base.clone().path("neighborhoods").build().toString());
+        dto.resources.put("credentials", base.clone().path("credentials").build().toString());
+        dto.resources.put("image", base.clone().path("image").build().toString());
         return dto;
     }
 

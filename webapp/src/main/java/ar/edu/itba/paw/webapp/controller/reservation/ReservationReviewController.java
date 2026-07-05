@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -19,8 +20,11 @@ import javax.ws.rs.core.UriInfo;
 import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.services.review.ReviewService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
@@ -35,7 +39,7 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
 /** Reservation-scoped reviews ({@code /reservations/{id}/reviews}). */
 @Path("/reservations/{id}/reviews")
 @Component
-public final class ReservationReviewController {
+public class ReservationReviewController {
 
     private final ReviewService reviewService;
     private final CurrentUserResolver currentUserResolver;
@@ -59,9 +63,8 @@ public final class ReservationReviewController {
 
     @GET
     @Produces(VndMediaType.REVIEW_V1_JSON)
-    public Response listReviews(@PathParam("id") final long reservationId) {
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-        reservationResourceAccess.requireViewReservation(reservationId, viewer);
+    @PreAuthorize("@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response listReviews(@P("id") @PathParam("id") final long reservationId) {
         final List<ReviewDto> dtos = reviewService.getReviewsForReservation(reservationId).stream()
                 .map(review -> ReviewDto.from(review, uriInfo))
                 .collect(Collectors.toList());
@@ -71,6 +74,22 @@ public final class ReservationReviewController {
         return Response.ok(new GenericEntity<List<ReviewDto>>(dtos) {}).build();
     }
 
+    @GET
+    @Path("/{reviewId}")
+    @Produces(VndMediaType.REVIEW_V1_JSON)
+    @PreAuthorize("@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response getReview(
+            @P("id") @PathParam("id") final long reservationId,
+            @PathParam("reviewId") final long reviewId) {
+        final Review review = reviewService.getReviewById(reviewId)
+                .filter(r -> r.getReservationId() == reservationId)
+                .orElseThrow(NotFoundException::new);
+        return Response.ok(ReviewDto.from(review, uriInfo)).build();
+    }
+
+    // Not a @PreAuthorize candidate: the participant check also decides *which* role the caller
+    // is submitting as (rider-of-owner vs. owner-of-rider), a business-routing value the method
+    // body needs, not just a pure gate — see ReservationResourceAccess#requireParticipantRole.
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(VndMediaType.REVIEW_V1_JSON)
@@ -80,7 +99,7 @@ public final class ReservationReviewController {
             @FormDataParam("comment") final String comment,
             @FormDataParam("image") final FormDataBodyPart imagePart) throws IOException {
         final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
-        final String role = reservationResourceAccess.requireParticipantRole(reservationId, viewer);
+        final ReservationParticipantRole role = reservationResourceAccess.requireParticipantRole(reservationId, viewer);
         final ReservationReviewSubmitForm form = new ReservationReviewSubmitForm();
         form.setRating(rating);
         form.setComment(comment);
@@ -89,7 +108,7 @@ public final class ReservationReviewController {
         form.setImageContentType(image.contentType);
         form.setImageFileName(image.fileName);
         formValidationSupport.validate(form);
-        if ("owner".equals(role)) {
+        if (role == ReservationParticipantRole.OWNER) {
             reviewService.submitOwnerReviewOfRider(
                     viewer.getUserId(), reservationId, form.getRating(), form.getComment(),
                     image.fileName, image.contentType, image.bytes);
@@ -100,11 +119,11 @@ public final class ReservationReviewController {
         }
         final List<Review> reviews = reviewService.getReviewsForReservation(reservationId);
         final Review created = reviews.stream()
-                .filter(r -> r.isMadeByRider() == "rider".equals(role))
+                .filter(r -> r.isMadeByRider() == (role == ReservationParticipantRole.RIDER))
                 .findFirst()
                 .orElseThrow(() -> new javax.ws.rs.InternalServerErrorException("Review not found after submit."));
         final ReviewDto dto = ReviewDto.from(created, uriInfo);
-        return Response.created(RestUriUtils.reservationReviewsUri(uriInfo, reservationId))
+        return Response.created(RestUriUtils.reservationReviewUri(uriInfo, reservationId, created.getId()))
                 .entity(dto)
                 .build();
     }

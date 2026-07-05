@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { useSessionStore } from '../../session/sessionStore';
 import { paths } from '../../routes/paths';
+import PasswordField from './PasswordField';
 
 // /ingresar — autentica con email+password vía useSessionStore.login (que hace
 // Basic → tokens, sin /login). Al autenticar navega a la ruta de origen (o "/").
@@ -20,6 +21,13 @@ export default function LoginPage() {
 
   const submitting = status === 'authenticating';
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
+
+  // Réplica de `body.auth-page` del JSP: encaja el formulario en el viewport
+  // (scroll solo adentro de `.auth-page__main` en pantallas muy chicas).
+  useEffect(() => {
+    document.body.classList.add('auth-page');
+    return () => document.body.classList.remove('auth-page');
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -69,11 +77,11 @@ export default function LoginPage() {
                     {t('auth.login.forgotPassword')}
                   </Link>
                 </div>
-                <Form.Control
-                  type="password"
+                <PasswordField
+                  id="password"
                   value={password}
+                  onChange={setPassword}
                   autoComplete="current-password"
-                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </Form.Group>

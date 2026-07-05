@@ -27,7 +27,7 @@ import ar.edu.itba.paw.services.file.StoredFileService;
  * back-compat {@link UserService} façade or directly via this contract.</p>
  */
 @Service
-public final class UserProfileMediaServiceImpl implements UserProfileMediaService {
+public class UserProfileMediaServiceImpl implements UserProfileMediaService {
 
     private final UserService userService;
     private final ImageService imageService;

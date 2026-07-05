@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -19,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.review.Review;
-import ar.edu.itba.paw.models.domain.review.ReviewId;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
@@ -35,7 +35,31 @@ public class ReviewJpaDao implements ReviewDao {
 
     @Override
     public boolean existsReview(final long reservationId, final boolean madeByRider) {
-        return em.find(Review.class, new ReviewId(reservationId, madeByRider)) != null;
+        final Long count = em.createQuery(
+                        "SELECT COUNT(r) FROM Review r "
+                                + "WHERE r.reservation.id = :reservationId AND r.madeByRider = :madeByRider",
+                        Long.class)
+                .setParameter("reservationId", reservationId)
+                .setParameter("madeByRider", madeByRider)
+                .getSingleResult();
+        return count != null && count > 0;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Optional<Review> findById(final long reviewId) {
+        return em.createQuery(
+                        "SELECT r FROM Review r "
+                                + "JOIN FETCH r.reservation res "
+                                + "JOIN FETCH res.car c "
+                                + "JOIN FETCH c.owner "
+                                + "JOIN FETCH res.rider "
+                                + "LEFT JOIN FETCH r.image "
+                                + "WHERE r.id = :reviewId",
+                        Review.class)
+                .setParameter("reviewId", reviewId)
+                .getResultStream()
+                .findFirst();
     }
 
     @Override
@@ -91,8 +115,8 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("carId", carId)
                 .getSingleResult();
 
-        final List<Object[]> pkRows = em.createNativeQuery(
-                        "SELECT r.reservation_id, r.made_by_rider "
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT r.id "
                                 + "FROM reviews r "
                                 + "JOIN reservations res ON res.id = r.reservation_id "
                                 + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
@@ -103,13 +127,11 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("offset", page * pageSize)
                 .getResultList();
 
-        if (pkRows.isEmpty()) {
+        if (idRows.isEmpty()) {
             return new Page<>(Collections.emptyList(), page, pageSize, total != null ? total : 0L);
         }
 
-        final List<ReviewId> ids = pkRows.stream()
-                .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
-                .collect(Collectors.toList());
+        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
         final List<Review> reviews = em.createQuery(
                         "FROM Review r "
                                 + "JOIN FETCH r.reservation res "
@@ -125,7 +147,7 @@ public class ReviewJpaDao implements ReviewDao {
 
         final List<CarPublicReview> content = reviews.stream()
                 .map(r -> {
-                    final User reviewer = r.getId().isMadeByRider()
+                    final User reviewer = r.isMadeByRider()
                             ? r.getReservation().getRider()
                             : r.getReservation().getCar().getOwner();
                     return new CarPublicReview(
@@ -141,6 +163,7 @@ public class ReviewJpaDao implements ReviewDao {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Page<Review> findPublicReviewsForCar(final long carId, final int page, final int pageSize) {
         final Long total = em.createQuery(
                         "SELECT COUNT(r) FROM Review r "
@@ -149,8 +172,8 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("carId", carId)
                 .getSingleResult();
 
-        final List<Object[]> pkRows = em.createNativeQuery(
-                        "SELECT r.reservation_id, r.made_by_rider "
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT r.id "
                                 + "FROM reviews r "
                                 + "JOIN reservations res ON res.id = r.reservation_id "
                                 + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
@@ -161,13 +184,11 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("offset", page * pageSize)
                 .getResultList();
 
-        if (pkRows.isEmpty()) {
+        if (idRows.isEmpty()) {
             return new Page<>(Collections.emptyList(), page, pageSize, total != null ? total : 0L);
         }
 
-        final List<ReviewId> ids = pkRows.stream()
-                .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
-                .collect(Collectors.toList());
+        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
         final List<Review> reviews = em.createQuery(
                         "FROM Review r "
                                 + "JOIN FETCH r.reservation res "
@@ -208,10 +229,10 @@ public class ReviewJpaDao implements ReviewDao {
     public long countReviewsForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final String jpql = counterpartyIsOwner
                 ? "SELECT COUNT(r) FROM Review r "
-                        + "WHERE r.id.madeByRider = true AND r.reservation.car.owner.id = :userId "
+                        + "WHERE r.madeByRider = true AND r.reservation.car.owner.id = :userId "
                         + "AND r.rating IS NOT NULL"
                 : "SELECT COUNT(r) FROM Review r "
-                        + "WHERE r.id.madeByRider = false AND r.reservation.rider.id = :userId "
+                        + "WHERE r.madeByRider = false AND r.reservation.rider.id = :userId "
                         + "AND r.rating IS NOT NULL";
         return em.createQuery(jpql, Long.class)
                 .setParameter("userId", counterpartyUserId)
@@ -222,10 +243,10 @@ public class ReviewJpaDao implements ReviewDao {
     public BigDecimal findAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         final String jpql = counterpartyIsOwner
                 ? "SELECT AVG(r.rating) FROM Review r "
-                        + "WHERE r.id.madeByRider = true AND r.reservation.car.owner.id = :userId "
+                        + "WHERE r.madeByRider = true AND r.reservation.car.owner.id = :userId "
                         + "AND r.rating IS NOT NULL"
                 : "SELECT AVG(r.rating) FROM Review r "
-                        + "WHERE r.id.madeByRider = false AND r.reservation.rider.id = :userId "
+                        + "WHERE r.madeByRider = false AND r.reservation.rider.id = :userId "
                         + "AND r.rating IS NOT NULL";
         final Double avg = em.createQuery(jpql, Double.class)
                 .setParameter("userId", counterpartyUserId)
@@ -242,7 +263,7 @@ public class ReviewJpaDao implements ReviewDao {
          * 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL):
          * - Step 1 (native): filter, order and apply LIMIT on the {@code reviews} table joined
          *   against {@code reservations}/{@code cars} for the counterparty constraint, projecting
-         *   only the composite PK ({@code reservation_id}, {@code made_by_rider}).
+         *   only the surrogate {@code id}.
          * - Step 2 (JPQL):  hydrate the {@link Review} entities by their PK with {@code JOIN FETCH}
          *   on the reviewer side (rider or owner depending on branch) plus the nullable
          *   {@code profilePicture} via {@code LEFT JOIN FETCH}. The mapping loop respects the order
@@ -260,7 +281,7 @@ public class ReviewJpaDao implements ReviewDao {
         final String idSql;
         if (counterpartyIsOwner) {
             // counterparty is the owner -> reviews written by riders -> reviewer = rider
-            idSql = "SELECT r.reservation_id, r.made_by_rider "
+            idSql = "SELECT r.id "
                     + "FROM reviews r "
                     + "JOIN reservations res ON res.id = r.reservation_id "
                     + "JOIN cars c ON c.id = res.car_id "
@@ -270,7 +291,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "LIMIT :limit";
         } else {
             // counterparty is the rider -> reviews written by owners -> reviewer = owner
-            idSql = "SELECT r.reservation_id, r.made_by_rider "
+            idSql = "SELECT r.id "
                     + "FROM reviews r "
                     + "JOIN reservations res ON res.id = r.reservation_id "
                     + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId "
@@ -279,17 +300,15 @@ public class ReviewJpaDao implements ReviewDao {
                     + "LIMIT :limit";
         }
         @SuppressWarnings("unchecked")
-        final List<Object[]> pkRows = em.createNativeQuery(idSql)
+        final List<Number> idRows = em.createNativeQuery(idSql)
                 .setParameter("userId", counterpartyUserId)
                 .setParameter("limit", limit)
                 .getResultList();
-        if (pkRows.isEmpty()) {
+        if (idRows.isEmpty()) {
             return Collections.emptyList();
         }
 
-        final List<ReviewId> ids = pkRows.stream()
-                .map(row -> new ReviewId(((Number) row[0]).longValue(), Boolean.TRUE.equals(row[1])))
-                .collect(Collectors.toList());
+        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
 
         final String hydrateJpql;
         if (counterpartyIsOwner) {
@@ -309,25 +328,100 @@ public class ReviewJpaDao implements ReviewDao {
         final List<Review> hydrated = em.createQuery(hydrateJpql, Review.class)
                 .setParameter("ids", ids)
                 .getResultList();
-        final Map<ReviewId, Review> byId = hydrated.stream()
+        final Map<Long, Review> byId = hydrated.stream()
                 .collect(Collectors.toMap(Review::getId, Function.identity()));
 
         final List<ReviewItemDto> result = new ArrayList<>(ids.size());
-        for (final ReviewId id : ids) {
+        for (final Long id : ids) {
             final Review r = byId.get(id);
             if (r == null) {
                 continue;
             }
-            final User reviewer = r.getId().isMadeByRider()
+            final User reviewer = r.isMadeByRider()
                     ? r.getReservation().getRider()
                     : r.getReservation().getCar().getOwner();
             result.add(new ReviewItemDto(
+                    r.getId(),
+                    r.getReservationId(),
                     reviewer.getForename() + " " + reviewer.getSurname(),
                     r.getRating().orElse(0),
                     r.getCreatedAt().toLocalDate(),
                     r.getComment().orElse(null)));
         }
         return result;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Page<ReviewItemDto> findReviewsForUserPage(final long userId, final int page, final int pageSize) {
+        final Long total = em.createQuery(
+                        "SELECT COUNT(r) FROM Review r "
+                                + "WHERE r.rating IS NOT NULL AND ("
+                                + "  (r.madeByRider = true AND r.reservation.car.owner.id = :userId)"
+                                + "  OR (r.madeByRider = false AND r.reservation.rider.id = :userId)"
+                                + ")",
+                        Long.class)
+                .setParameter("userId", userId)
+                .getSingleResult();
+        if (total == null || total == 0L) {
+            return new Page<>(Collections.emptyList(), page, pageSize, 0L);
+        }
+
+        // 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL): filter/order/page the two
+        // review directions in one native query keyed by the surrogate id, then hydrate via
+        // JOIN FETCH — same shape as findRecentReviewsForCounterparty, but with a single merged
+        // ORDER BY/LIMIT/OFFSET instead of one unpaginated LIMIT per direction.
+        final List<Number> idRows = em.createNativeQuery(
+                        "SELECT r.id "
+                                + "FROM reviews r "
+                                + "JOIN reservations res ON res.id = r.reservation_id "
+                                + "JOIN cars c ON c.id = res.car_id "
+                                + "WHERE r.rating IS NOT NULL AND ("
+                                + "  (r.made_by_rider = TRUE AND c.owner_id = :userId)"
+                                + "  OR (r.made_by_rider = FALSE AND res.rider_id = :userId)"
+                                + ") "
+                                + "ORDER BY r.created_at DESC "
+                                + "LIMIT :limit OFFSET :offset")
+                .setParameter("userId", userId)
+                .setParameter("limit", pageSize)
+                .setParameter("offset", page * pageSize)
+                .getResultList();
+        if (idRows.isEmpty()) {
+            return new Page<>(Collections.emptyList(), page, pageSize, total);
+        }
+
+        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
+        final List<Review> hydrated = em.createQuery(
+                        "FROM Review r "
+                                + "JOIN FETCH r.reservation res "
+                                + "JOIN FETCH res.rider rider "
+                                + "JOIN FETCH res.car c "
+                                + "JOIN FETCH c.owner owner "
+                                + "WHERE r.id IN :ids",
+                        Review.class)
+                .setParameter("ids", ids)
+                .getResultList();
+        final Map<Long, Review> byId = hydrated.stream()
+                .collect(Collectors.toMap(Review::getId, Function.identity()));
+
+        final List<ReviewItemDto> content = new ArrayList<>(ids.size());
+        for (final Long id : ids) {
+            final Review r = byId.get(id);
+            if (r == null) {
+                continue;
+            }
+            final User reviewer = r.isMadeByRider()
+                    ? r.getReservation().getRider()
+                    : r.getReservation().getCar().getOwner();
+            content.add(new ReviewItemDto(
+                    r.getId(),
+                    r.getReservationId(),
+                    reviewer.getForename() + " " + reviewer.getSurname(),
+                    r.getRating().orElse(0),
+                    r.getCreatedAt().toLocalDate(),
+                    r.getComment().orElse(null)));
+        }
+        return new Page<>(content, page, pageSize, total);
     }
 
     private static BigDecimal round2(final Double avg) {

@@ -16,7 +16,7 @@ import ar.edu.itba.paw.util.UploadBinaryMegabyte;
 
 /** Validates upload size then persists via {@link ImageDao}. */
 @Service
-public final class ImageServiceImpl implements ImageService {
+public class ImageServiceImpl implements ImageService {
 
     private final ImageDao imageDao;
     private final long maxImageBytes;

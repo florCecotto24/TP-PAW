@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.car.CarBrand;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.car.CarBrandDao;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
@@ -95,5 +96,53 @@ class CarBrandJpaDaoTest extends DaoIntegrationTestSupport {
         // 3. Assert
         Assertions.assertTrue(blank.isEmpty());
         Assertions.assertTrue(nullArg.isEmpty());
+    }
+
+    @Test
+    void testFindPageWithNullValidatedPaginatesAtSqlLevelValidatedFirst() {
+        // 1. Arrange — 3 brands, paged 2-per-page; validated-first then alphabetical.
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "zeta", true);
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Alpha", false);
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Beta", true);
+
+        // 2. Act
+        final Page<CarBrand> firstPage = dao.findPage(null, 0, 2);
+        final Page<CarBrand> secondPage = dao.findPage(null, 1, 2);
+
+        // 3. Assert
+        Assertions.assertEquals(3L, firstPage.getTotalItems());
+        Assertions.assertEquals(List.of("Beta", "zeta"),
+                firstPage.getContent().stream().map(CarBrand::getName).toList());
+        Assertions.assertEquals(List.of("Alpha"),
+                secondPage.getContent().stream().map(CarBrand::getName).toList());
+    }
+
+    @Test
+    void testFindPageFiltersByValidatedFlag() {
+        // 1. Arrange
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Honda", true);
+        jdbcTemplate.update("INSERT INTO car_brands (name, validated) VALUES (?, ?)", "Otro", false);
+
+        // 2. Act
+        final Page<CarBrand> validatedPage = dao.findPage(true, 0, 10);
+        final Page<CarBrand> pendingPage = dao.findPage(false, 0, 10);
+
+        // 3. Assert
+        Assertions.assertEquals(1L, validatedPage.getTotalItems());
+        Assertions.assertEquals("Honda", validatedPage.getContent().get(0).getName());
+        Assertions.assertEquals(1L, pendingPage.getTotalItems());
+        Assertions.assertEquals("Otro", pendingPage.getContent().get(0).getName());
+    }
+
+    @Test
+    void testFindPageReturnsEmptyPageWhenNoBrandsMatch() {
+        // 1. Arrange — empty catalog.
+
+        // 2. Act
+        final Page<CarBrand> page = dao.findPage(null, 0, 10);
+
+        // 3. Assert
+        Assertions.assertTrue(page.getContent().isEmpty());
+        Assertions.assertEquals(0L, page.getTotalItems());
     }
 }
