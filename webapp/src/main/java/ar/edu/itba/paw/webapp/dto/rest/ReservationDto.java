@@ -21,6 +21,7 @@ public final class ReservationDto {
     private String status;
     private BigDecimal totalPrice;
     private Boolean carReturned;
+    private String carReturnedAt;
     private String paymentProofDeadlineAt;
     private String refundProofDeadlineAt;
     private Boolean paymentRefundRequired;
@@ -122,6 +123,9 @@ public final class ReservationDto {
             dto.status = ReservationRestEnums.toRestName(reservation.getStatus());
             dto.totalPrice = reservation.getTotalPrice();
             dto.carReturned = reservation.isCarReturned();
+            dto.carReturnedAt = reservation.getCarReturnedAt()
+                    .map(ISO_OFFSET::format)
+                    .orElse(null);
             dto.paymentProofDeadlineAt = reservation.getPaymentProofDeadlineAt()
                     .map(ISO_OFFSET::format)
                     .orElse(null);
@@ -186,6 +190,14 @@ public final class ReservationDto {
 
     public void setCarReturned(final Boolean carReturned) {
         this.carReturned = carReturned;
+    }
+
+    public String getCarReturnedAt() {
+        return carReturnedAt;
+    }
+
+    public void setCarReturnedAt(final String carReturnedAt) {
+        this.carReturnedAt = carReturnedAt;
     }
 
     public String getPaymentProofDeadlineAt() {

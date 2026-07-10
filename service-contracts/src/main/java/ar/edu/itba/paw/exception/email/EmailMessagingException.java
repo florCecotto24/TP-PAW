@@ -5,15 +5,19 @@ package ar.edu.itba.paw.exception.email;
  */
 public final class EmailMessagingException extends Exception {
 
-    public EmailMessagingException(final String message) {
-        super(message);
-    }
-
-    public EmailMessagingException(final String message, final Throwable cause) {
+    private EmailMessagingException(final String message, final Throwable cause) {
         super(message, cause);
     }
 
-    public EmailMessagingException(final Throwable cause) {
-        super(cause);
+    public static EmailMessagingException withMessage(final String message) {
+        return new EmailMessagingException(message, null);
+    }
+
+    public static EmailMessagingException withMessageAndCause(final String message, final Throwable cause) {
+        return new EmailMessagingException(message, cause);
+    }
+
+    public static EmailMessagingException wrapping(final Throwable cause) {
+        return new EmailMessagingException(cause != null ? cause.getMessage() : null, cause);
     }
 }

@@ -2,7 +2,9 @@ package ar.edu.itba.paw.persistence.car;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -105,6 +107,59 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
         // 2. Act / 3. Assert
         Assertions.assertTrue(dao.isStoredFileInCarGallery(storedFileId));
         Assertions.assertFalse(dao.isStoredFileInCarGallery(storedFileId + 9999));
+    }
+
+    @Test
+    void testFindByCarIdOrderByDisplayOrderAscPaginatesInSql() {
+        // 1. Arrange — seed three pictures
+        insertCarPicture(imageId, 1);
+        insertCarPicture(imageId, 2);
+        insertCarPicture(imageId, 3);
+
+        // 2. Act
+        final List<CarPicture> pageOne = dao.findByCarIdOrderByDisplayOrderAsc(carId, 0, 2);
+        final List<CarPicture> pageTwo = dao.findByCarIdOrderByDisplayOrderAsc(carId, 2, 2);
+
+        // 3. Assert
+        Assertions.assertEquals(2, pageOne.size());
+        Assertions.assertEquals(1, pageTwo.size());
+        Assertions.assertEquals(1, pageOne.get(0).getDisplayOrder());
+        Assertions.assertEquals(2, pageOne.get(1).getDisplayOrder());
+        Assertions.assertEquals(3, pageTwo.get(0).getDisplayOrder());
+        Assertions.assertEquals(3L, dao.countByCarId(carId));
+    }
+
+    @Test
+    void testFindFirstByCarIdOrderByDisplayOrderAscReturnsLowestDisplayOrder() {
+        // 1. Arrange — seed two pictures
+        insertCarPicture(imageId, 3);
+        insertCarPicture(imageId, 1);
+
+        // 2. Act
+        final Optional<CarPicture> primary = dao.findFirstByCarIdOrderByDisplayOrderAsc(carId);
+
+        // 3. Assert
+        Assertions.assertTrue(primary.isPresent());
+        Assertions.assertEquals(1, primary.get().getDisplayOrder());
+    }
+
+    @Test
+    void testFindMaxDisplayOrderByCarIdReturnsHighestValue() {
+        // 1. Arrange — seed two pictures
+        insertCarPicture(imageId, 2);
+        insertCarPicture(imageId, 5);
+
+        // 2. Act / 3. Assert
+        Assertions.assertEquals(Optional.of(5), dao.findMaxDisplayOrderByCarId(carId));
+        Assertions.assertTrue(dao.findMaxDisplayOrderByCarId(carId + 9999).isEmpty());
+    }
+
+    private void insertCarPicture(final long imageId, final int displayOrder) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO car_pictures (car_id, image_id, display_order, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                carId, imageId, displayOrder, now, now);
     }
 
     private void insertCarPictureFromVideo(final long carId, final long storedFileId, final int displayOrder) {

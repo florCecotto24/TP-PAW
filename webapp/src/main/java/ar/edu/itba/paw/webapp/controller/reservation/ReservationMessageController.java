@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -33,12 +34,13 @@ import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.rest.MessageDto;
 import ar.edu.itba.paw.webapp.form.reservation.ReservationMessageCreateForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.support.ReservationResourceAccess;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
@@ -53,7 +55,7 @@ public class ReservationMessageController {
     private final AdminService adminService;
     private final CurrentUserResolver currentUserResolver;
     private final ReservationResourceAccess reservationResourceAccess;
-    private final AppPaginationProperties paginationProperties;
+    private final PaginationSupport paginationSupport;
     private final FormValidationSupport formValidationSupport;
 
     @Context
@@ -65,13 +67,13 @@ public class ReservationMessageController {
             final AdminService adminService,
             final CurrentUserResolver currentUserResolver,
             final ReservationResourceAccess reservationResourceAccess,
-            final AppPaginationProperties paginationProperties,
+            final PaginationSupport paginationSupport,
             final FormValidationSupport formValidationSupport) {
         this.reservationMessageService = reservationMessageService;
         this.adminService = adminService;
         this.currentUserResolver = currentUserResolver;
         this.reservationResourceAccess = reservationResourceAccess;
-        this.paginationProperties = paginationProperties;
+        this.paginationSupport = paginationSupport;
         this.formValidationSupport = formValidationSupport;
     }
 
@@ -90,15 +92,31 @@ public class ReservationMessageController {
             return listMessagesAfter(reservationId, viewer, afterId);
         }
 
-        final int safePage = Math.max(1, page);
-        final int pageSize = pageSizeParam != null && pageSizeParam > 0
-                ? pageSizeParam
-                : paginationProperties.getAdminReservationChatPageSize();
+        final PaginationParams paging = paginationSupport.forMessages(page, pageSizeParam);
 
         if (reservationResourceAccess.isAdmin()) {
-            return listMessagesAdmin(reservationId, safePage, pageSize);
+            return listMessagesAdmin(reservationId, paging);
         }
-        return listMessagesParticipant(reservationId, viewer, safePage, pageSize);
+        return listMessagesParticipant(reservationId, viewer, paging);
+    }
+
+    @GET
+    @Path("/{messageId}")
+    @Produces(VndMediaType.MESSAGE_V1_JSON)
+    @PreAuthorize(
+            "@reservationResourceAccess.canViewReservation(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response getMessage(
+            @P("id") @PathParam("id") final long reservationId,
+            @PathParam("messageId") final long messageId) {
+        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
+        if (reservationResourceAccess.isAdmin()) {
+            return reservationMessageService.findMessageForAdmin(reservationId, messageId)
+                    .map(message -> Response.ok(MessageDto.from(message, uriInfo)).build())
+                    .orElseThrow(NotFoundException::new);
+        }
+        return reservationMessageService.getMessageForParticipant(viewer.getUserId(), reservationId, messageId)
+                .map(dto -> Response.ok(MessageDto.fromDto(dto, uriInfo)).build())
+                .orElseThrow(NotFoundException::new);
     }
 
     @POST
@@ -112,7 +130,7 @@ public class ReservationMessageController {
             @FormDataParam("file") final FormDataBodyPart filePart) throws IOException {
         final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
         final byte[] fileBytes = readFileBytes(filePart);
-        formValidationSupport.validate(new ReservationMessageCreateForm(body, fileBytes != null));
+        formValidationSupport.validate(ReservationMessageCreateForm.of(body, fileBytes != null));
         final String fileName = filePart != null && filePart.getContentDisposition() != null
                 ? filePart.getContentDisposition().getFileName()
                 : null;
@@ -128,11 +146,10 @@ public class ReservationMessageController {
                 .build();
     }
 
-    private Response listMessagesAdmin(final long reservationId, final int safePage, final int pageSize) {
-        final int zeroBasedPage = safePage - 1;
-        final int offset = zeroBasedPage * pageSize;
+    private Response listMessagesAdmin(final long reservationId, final PaginationParams paging) {
+        final int offset = paging.getZeroBasedPage() * paging.getPageSize();
         final List<ReservationMessage> messages =
-                adminService.getAdminChatMessages(reservationId, offset, pageSize);
+                adminService.getAdminChatMessages(reservationId, offset, paging.getPageSize());
         final long total = adminService.countReservationMessages(reservationId);
         if (total == 0L) {
             return Response.noContent().build();
@@ -142,17 +159,16 @@ public class ReservationMessageController {
                 .collect(Collectors.toList());
         final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<MessageDto>>(dtos) {})
                 .header("X-Total-Count", total);
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, (int) total);
+        PaginationLinks.add(builder, uriInfo, paging.getPage(), paging.getPageSize(), (int) total);
         return builder.build();
     }
 
     private Response listMessagesParticipant(
             final long reservationId,
             final RydenUserDetails viewer,
-            final int safePage,
-            final int pageSize) {
+            final PaginationParams paging) {
         final Page<ReservationMessageDto> page = reservationMessageService.getMessagesForParticipant(
-                viewer.getUserId(), reservationId, safePage - 1, pageSize);
+                viewer.getUserId(), reservationId, paging.getZeroBasedPage(), paging.getPageSize());
         if (page.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
@@ -161,7 +177,8 @@ public class ReservationMessageController {
                 .collect(Collectors.toList());
         final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<MessageDto>>(dtos) {})
                 .header("X-Total-Count", page.getTotalItems());
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, (int) page.getTotalItems());
+        PaginationLinks.add(
+                builder, uriInfo, paging.getPage(), paging.getPageSize(), (int) page.getTotalItems());
         return builder.build();
     }
 
@@ -169,7 +186,7 @@ public class ReservationMessageController {
             final long reservationId,
             final RydenUserDetails viewer,
             final long afterId) {
-        final int limit = paginationProperties.getAdminReservationChatPageSize();
+        final int limit = paginationSupport.forMessages(1, null).getPageSize();
         if (reservationResourceAccess.isAdmin()) {
             final List<ReservationMessage> messages =
                     adminService.getChatMessagesAfter(reservationId, afterId, limit);

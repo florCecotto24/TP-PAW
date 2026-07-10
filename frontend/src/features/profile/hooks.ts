@@ -9,7 +9,9 @@ import { useSessionStore } from '../../session/sessionStore';
  * Link rel="authenticated-user" (decisión D2). Null si anónimo.
  */
 export function useMyUserUri(): string | null {
-  return useSessionStore((s) => s.currentUserUri);
+  const userUri = useSessionStore((s) => s.currentUserUri);
+  const self = useSessionStore((s) => s.currentUser?.links?.self);
+  return userUri ?? self ?? null;
 }
 
 /** Id numérico propio extraído de la URN, o null. Útil para comparaciones. */

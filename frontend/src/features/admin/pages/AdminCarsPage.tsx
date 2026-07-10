@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { patchCarStatus } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
@@ -26,7 +27,7 @@ export default function AdminCarsPage() {
   const [pending, setPending] = useState<PendingCarAction | null>(null);
 
   const listPath = useMemo(() => {
-    const params = new URLSearchParams({ scope: 'admin', page: '1' });
+    const params = new URLSearchParams({ page: '1' });
     if (statusFilter) params.set('status', statusFilter);
     return `/cars?${params.toString()}`;
   }, [statusFilter]);
@@ -74,22 +75,22 @@ export default function AdminCarsPage() {
       </div>
 
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {list.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+      {list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {!list.loading && list.items.length === 0 ? (
-        <p className="text-secondary">{t('admin.cars.empty')}</p>
+        <EmptyState icon="car-front" title={t('admin.cars.empty')} inCard />
       ) : null}
 
       {!list.loading && list.items.length > 0 ? (
         <div className="card border-0 shadow-sm bg-white overflow-hidden">
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
+            <table className="table table-hover align-middle mb-0 admin-table admin-table--cars">
               <thead className="table-light">
                 <tr>
                   <th scope="col">{t('admin.cars.col.car')}</th>
                   <th scope="col">{t('admin.cars.col.plate')}</th>
                   <th scope="col">{t('admin.cars.col.status')}</th>
-                  <th scope="col" className="text-end">{t('admin.cars.col.actions')}</th>
+                  <th scope="col" className="text-end admin-table__cell--wrap">{t('admin.cars.col.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -106,7 +107,7 @@ export default function AdminCarsPage() {
                       </td>
                       <td>{car.plate}</td>
                       <td>{t(`admin.cars.statuses.${car.status}`)}</td>
-                      <td className="text-end">
+                      <td className="text-end admin-table__cell--wrap">
                         <div className="d-flex flex-wrap gap-1 justify-content-end">
                           <Link to={carDetail(carId)} className="btn btn-outline-secondary btn-sm">
                             {t('admin.cars.actions.view')}
@@ -155,7 +156,7 @@ export default function AdminCarsPage() {
                 <button
                   type="button"
                   className="btn-close"
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                   onClick={() => setPending(null)}
                 />
               </div>

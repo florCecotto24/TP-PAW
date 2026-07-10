@@ -23,6 +23,12 @@ public interface EmailVerificationService {
     void resendVerificationCode(long userId, String email, Locale locale);
 
     /**
+     * Public OTP re-issue for {@code POST /users/{id}/credentials}. Anti-enumeration: never throws;
+     * unknown user, already verified, or active code are silent no-ops so the caller can always respond 200.
+     */
+    void issuePublicVerificationCode(long userId, Locale locale);
+
+    /**
      * Validates the code for {@code email}, marks the account verified, and returns the user id.
      *
      * @throws ar.edu.itba.paw.exception.RydenException when the code is unknown, expired, or already consumed

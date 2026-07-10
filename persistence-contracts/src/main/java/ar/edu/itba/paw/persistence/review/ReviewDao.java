@@ -14,7 +14,7 @@ public interface ReviewDao {
 
     boolean existsReview(long reservationId, boolean madeByRider);
 
-    /** Hydrated single review by its own surrogate id (canonical {@code /reservations/{id}/reviews/{reviewId}}). */
+    /** Hydrated single review by its own surrogate id (canonical {@code /reviews/{id}}). */
     Optional<Review> findById(long reviewId);
 
     /** {@code rating} {@code null} persists an omitted review (same PK slot; excluded from public aggregates). */
@@ -37,6 +37,11 @@ public interface ReviewDao {
 
     /** Same rows as {@link #findCarPublicReviews} but returns hydrated {@link Review} entities. */
     Page<Review> findPublicReviewsForCar(long carId, int page, int pageSize);
+
+    /**
+     * SQL-paginated rated reviews received by {@code userId} (both directions), hydrated entities.
+     */
+    Page<Review> findReviewsReceivedByUser(long userId, int page, int pageSize);
 
     /** Total reviews stored against the car. */
     long countReviewsForCar(long carId);
@@ -74,7 +79,7 @@ public interface ReviewDao {
      * SQL-paginated feed of every rated review left to {@code userId}, merging both directions
      * (as owner and as rider) in a single {@code LIMIT}/{@code OFFSET} query ordered by date desc —
      * unlike {@link #findRecentReviewsForCounterparty}, which only supports an unpaginated "recent
-     * N" preview per direction. Backs {@code GET /users/{id}/reviews}.
+     * N" preview per direction. Backs {@code GET /reviews?recipientUserId=…}.
      */
     Page<ReviewItemDto> findReviewsForUserPage(long userId, int page, int pageSize);
 }

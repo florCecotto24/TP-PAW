@@ -11,6 +11,7 @@ const ROUTE_TITLES: Array<{ test: RegExp; key: string }> = [
   { test: /^\/verify-email/, key: 'title.verifyEmail' },
   { test: /^\/forgot-password/, key: 'title.forgot' },
   { test: /^\/publish-car/, key: 'title.publish' },
+  { test: /^\/my-cars\/reservations/, key: 'title.ownerReservations' },
   { test: /^\/my-cars/, key: 'title.myCars' },
   { test: /^\/cars\/[^/]+\/reservation\/new/, key: 'title.newReservation' },
   { test: /^\/my-reservations/, key: 'title.myReservations' },

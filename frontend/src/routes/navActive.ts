@@ -23,13 +23,10 @@ export function isOwnerReservationsNavActive(pathname: string, search: string): 
   return isOwnerReservationDetailPath(pathname, search);
 }
 
-/** Dropdown "Mis autos". */
-export function isMyCarsNavActive(pathname: string, search: string): boolean {
+/** Dropdown "Mis autos" — solo flota / detalle de auto, no el flujo de reservas. */
+export function isMyCarsNavActive(pathname: string, _search: string = ''): boolean {
   if (pathname === paths.ownerReservations || pathname.startsWith(`${paths.ownerReservations}/`)) {
     return false;
   }
-  if (pathname === paths.myCars || pathname.startsWith(`${paths.myCars}/`)) {
-    return true;
-  }
-  return isOwnerReservationDetailPath(pathname, search);
+  return pathname === paths.myCars || pathname.startsWith(`${paths.myCars}/`);
 }

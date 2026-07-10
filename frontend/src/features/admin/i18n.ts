@@ -29,9 +29,10 @@ export const adminI18n = {
         title: 'Usuarios',
         subtitle: 'Promover, bloquear, validar documentos y filtrar usuarios.',
         empty: 'No hay usuarios para mostrar.',
+        emptyFiltered: 'Ningún usuario coincide con esos filtros.',
         filter: {
           search: 'Buscar',
-          searchPlaceholder: 'Nombre o email…',
+          searchPlaceholder: 'Nombre, apellido o email…',
           role: 'Rol',
           roleAll: 'Todos los roles',
           status: 'Estado',
@@ -39,6 +40,7 @@ export const adminI18n = {
           statusActive: 'Activos',
           statusBlocked: 'Bloqueados',
           apply: 'Filtrar',
+          clear: 'Limpiar',
         },
         col: {
           name: 'Nombre',
@@ -195,9 +197,10 @@ export const adminI18n = {
         title: 'Users',
         subtitle: 'Promote, block, validate documents and filter users.',
         empty: 'No users to show.',
+        emptyFiltered: 'No users match those filters.',
         filter: {
           search: 'Search',
-          searchPlaceholder: 'Name or email…',
+          searchPlaceholder: 'Name, surname or email…',
           role: 'Role',
           roleAll: 'All roles',
           status: 'Status',
@@ -205,6 +208,7 @@ export const adminI18n = {
           statusActive: 'Active',
           statusBlocked: 'Blocked',
           apply: 'Filter',
+          clear: 'Clear',
         },
         col: {
           name: 'Name',

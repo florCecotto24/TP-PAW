@@ -121,6 +121,7 @@ public final class MessageKeys {
     public static final String IMAGE_INVALID_ID = "image.invalidId";
     public static final String IMAGE_FILE_TOO_LARGE = "image.file.tooLarge";
     public static final String CAR_GALLERY_MEDIA_INVALID_TYPE = "car.gallery.media.invalidType";
+    public static final String CAR_GALLERY_PICTURES_REQUIRED = "car.gallery.pictures.required";
     public static final String CAR_GALLERY_VIDEO_TOO_LARGE = "car.gallery.video.tooLarge";
     public static final String IMAGE_CONTENT_TYPE_NOT_IMAGE = "image.contentType.notImage";
 
@@ -148,4 +149,7 @@ public final class MessageKeys {
     public static final String CAR_MIN_RENTAL_DAYS_INVALID = "car.minRentalDays.invalid";
     public static final String RESERVATION_RIDER_BELOW_MINIMUM_DAYS = "reservation.rider.belowMinimumDays";
     public static final String SEARCH_FLEXIBLE_MONTH_REQUIRED = "search.flexible.monthRequired";
+
+    /** Catch-all for unmapped server failures (never expose raw {@code Throwable#getMessage()}). */
+    public static final String ERROR_UNEXPECTED = "error.unexpected";
 }

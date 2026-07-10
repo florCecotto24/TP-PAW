@@ -159,9 +159,10 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 - **Exceptions & UX**: Domain failures → `RydenException` + message keys; `UnhandledExceptionHandler` must not expose raw `Throwable#getMessage()` (i18n keys; escape dynamic text with JSTL `c:out` when shown).
 - **SQL / queries**: Use parameterized JQL or native SQL with **bound parameters** (named or positional); never concatenate user input into queries.
 - **N+1 queries (strictly prohibited)**: Never return a `List<entity>` from a DAO and let callers trigger per-row lazy loads on LAZY associations. DAO methods that return a list of entities must pre-hydrate every association the known caller chain will navigate — typically via `JOIN FETCH` in JPQL, or ID-page + `IN` fetch / DTO-native projections (see **Pagination**). FK-only convenience accessors like `Reservation#getCarId()` / `#getRiderId()` are safe and need no fetch; property navigation across a non-FK association (`car.getOwner()`, `carModel.getBrand()`, …) is not. The fix belongs in the DAO; services and controllers must not work around it. Existing pattern examples: `findReservationsWithOverdueRefundProof`, `findReservationsRequiringRefundProofForOwner`, and `loadReservationCardsByIdNativeQuery` in `ReservationJpaDao`.
-- **Logging**: Production `logback/logback-prod.xml` (typically **INFO+** for `ar.edu.itba.paw`); local may use `logback-local.xml` with **DEBUG** or **TRACE** on persistence packages when diagnosing listing/reservation SQL. Use **SLF4J** with parameterized messages; prefer **DEBUG** (optionally SLF4J 2 **fluent** `atDebug().setMessage(...).addArgument(...).setCause(...).log()`) for swallowed parse/IO fallbacks where you still need traceability.
+- **Logging**: Production `logback/logback-prod.xml` (typically **INFO+** for `ar.edu.itba.paw`); local may use `logback-local.xml` with **DEBUG** or **TRACE** on persistence packages when diagnosing listing/reservation SQL. Use **SLF4J 2** with parameterized messages — never string concatenation. **DEBUG** must use the fluent API (`LOGGER.atDebug()…log()`), not `LOGGER.debug(…)`; use `.setCause(throwable)` when the catch block swallows an exception but still needs traceability. **INFO** / **WARN** / **ERROR** use the matching fluent helpers (`atInfo`, `atWarn`, `atError`) for the same style.
 - **Tests**: Arrange / Act / assert outcomes, not wiring. **No `Mockito.verify`** (or call-count tricks). Skip tests that only mirror a one-line delegate.
 - **Style**: `final` where appropriate, private constructors on utility classes, immutable DTOs/criteria where practical; avoid magic numbers — read limits from `application.properties` (documented JVM fallbacks only where needed, e.g. `AppPaginationProperties`).
+- **Constructors (Effective Java)**: At most **one public constructor** per class. Do not overload constructors — use **static factories** (`of`, `forUpload`, `denied`, `wrapping`, …) or a **builder** when several creation shapes exist. JPA entities may keep a **package-private** no-arg constructor for Hibernate plus a single public constructor (or static factory) for application code. Spring beans: one `@Autowired` constructor only.
 - **Comments**: English only; remove obsolete chatty notes.
 
 ### Dependency management
@@ -180,6 +181,13 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 - **Do not emulate verify**: No counters or collector lists whose sole purpose is call counts.
 - **Matchers**: Do not use `Mockito.anyLong()` (or `any*()`) as the **value** inside `when(...)` — use fixed literals.
 - **Strict Mockito**: Remove unused stubbings (`UnnecessaryStubbingException`).
+
+#### Frontend (`frontend/`, Vitest)
+
+- **Solo contrato**: tests en `*.contract.test.ts` — alineación con `openapi.yaml`, hipermedia (`Link`, `X-Total-Count`, resolución de URNs `/webapp/api`), multipart y paridad i18n `es`/`en`. Sin tests de lógica UI, routing ni validación cliente aislada.
+- **Unitarios**: sin red real; `fetch` mockeado cuando hace falta.
+- **AAA**: cada `it` con `// 1.Arrange`, `// 2.Act`, `// 3.Assert` (o `// 2.Act / 3.Assert` cuando aplique).
+- **Nombres**: prefijo `test` + comportamiento (`testParseLinkHeaderReadsNextAndLastRels`).
 
 ### Message keys
 
@@ -207,18 +215,29 @@ Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`
 
 ## Logging
 
-Use SLF4J (not Log4j or `java.util.logging`):
+Use SLF4J 2 (not Log4j or `java.util.logging`):
 
 ```java
 private static final Logger LOGGER = LoggerFactory.getLogger(ClassName.class);
 ```
 
-Use **parameterized** logging:
+**Always use the fluent API** — do not call `LOGGER.debug(…)`, `LOGGER.info(…)`, etc.:
 
 ```java
-LOGGER.debug("Creating user with email {}", email); // correct
-LOGGER.debug("Creating user with email " + email);  // wrong
+// DEBUG — routine trace, expected no-ops, swallowed parse/IO fallbacks
+LOGGER.atDebug().addArgument(userId).log("Public verification-code request for unknown user id={} (silent no-op)");
+LOGGER.atDebug().setCause(ex).log("Reservation max-billable-days check skipped: unparseable wall datetimes");
+
+// INFO / WARN / ERROR — same pattern with atInfo / atWarn / atError
+LOGGER.atInfo().addArgument(user.getId()).log("Email verified for user id={}");
+LOGGER.atWarn().setCause(e).addArgument(to).log("Failed to send email to {}");
 ```
+
+Rules:
+
+- Placeholders `{}` in `.setMessage(…)` / `.log(…)`; bind values with `.addArgument(…)` — never concatenate into the message string.
+- When a `catch` block continues after logging, attach the throwable with `.setCause(ex)` so the stack trace is preserved.
+- `.log()` at the end actually emits the event; nothing is written before that call.
 
 ## Transactions
 
@@ -258,6 +277,67 @@ Use `@ControllerAdvice` to expose `@ModelAttribute` beans across controllers.
 - **Resource identity on GET**: Identifiers that name the resource being accessed (`carId`, `userId`, `reservationId`, `documentType`, …) belong in the path as `@PathVariable`s — e.g. `GET /cars/{carId}`, `GET /users/{userId}/profile`, `GET /profile/documents/{documentType}` — not as `@RequestParam` query parameters. Prefer `/cars/123` over `/car-detail?carId=123`.
 - **Query params for everything else**: Pagination, sorting, filters, and UI/breadcrumb state (`page`, `sort`, `status`, `role`, `src`, `fromCar`, `tab`, …) stay as query params.
 - **Consistency**: New controllers, JSP/tag links, mail CTA URLs, JS fetch endpoints, and `redirect:` strings must follow the same shape. Canonical examples already in the app: `/my-cars/car/{carId}`, `/my-reservations/{reservationId}`.
+
+### Hypermedia collections (embedded teasers vs link-only)
+
+Reference: `openapi.yaml` `info.description`.
+
+#### What cátedra corrections actually penalize
+
+- Embedding **another aggregate’s resources** inside a parent (e.g. `user` JSON with a `cars[]` array) — breaks canonical URN and ACL (LINEAMIENTOS §1.5).
+- **Empty or unused** `links.*` on DTOs while the client hardcodes URL shapes (Correcciones PAW: *error grave*).
+- Passing **bare IDs** in bodies where the API should speak in **URNs** (`productId`, `documentId` in PATCH — Dic2025 corrections).
+- **Client-side URL construction** from IDs instead of following `links.self`.
+
+Not the same as: a **paginated primary collection** (`GET /cars`) returning teasers with `links.self` on each row (LINEAMIENTOS §1.6).
+
+#### Two kinds of “N+1”
+
+| Kind | Rule |
+|------|------|
+| **Persistence N+1** | **Prohibited** — fix in DAO (`JOIN FETCH`, ID-page + `IN`, native DTO). See **N+1 queries** above. |
+| **HTTP follow N+1** | **Sometimes intentional** — link-only collection + one `GET` per `links.self`. Trade REST purity vs round-trips. Document in OpenAPI. |
+
+#### Decision checklist for new collections
+
+1. **Does each member already have a canonical URN elsewhere?** (car → `/cars/{id}`, review → `/reviews/{id}`)  
+   - Small/bounded set (similar, favorites, …) → **link-only** (pattern A).  
+   - Large paginated grid where this URI *is* the main entry → **embedded teasers** with `links.self` (pattern B).
+
+2. **Is the collection the natural home of the sub-resource?** (pictures under car, messages under reservation) → **embedded** OK if each item has `links.self`.
+
+3. **Are items values without their own resource URI?** (bookable segments) → **embedded** only; no link-only migration.
+
+4. **Never** return bare IDs in the collection body — only `Links` (`self` URI) or DTOs that include `links.self`.
+
+#### Pattern A — link-only (intentional HTTP N+1)
+
+Collection MIME returns `array` of `Links`. Client `Accept`s item MIME on each `self`.
+
+| Endpoint | Collection MIME | Follow with |
+|----------|-------------------|-------------|
+| `GET /cars/{id}/similar` | `car.similar.v1+json` | `car.summary.v1+json` |
+| `GET /users/{id}/favorites` | `user.favorites.v1+json` | `car.summary.v1+json` |
+| `GET /reviews` | `review.links.v1+json` | `review.v1+json` |
+| `GET /reservations` | `reservation.links.v1+json` | `reservation.summary.v1+json` |
+
+Frontend helper: `frontend/src/api/linkCollection.ts` (`followLinkCollection`, `getLinkCollectionPage`).
+
+#### Pattern B — embedded (documented tradeoff)
+
+Body returns DTOs; **each item must include `links.self`** pointing at the canonical item URI. Defensible in oral/defensa when the collection is primary, sub-resource, catalog, or computed values.
+
+| Endpoint | MIME | Why embedded |
+|----------|------|--------------|
+| `GET /cars` | `car.summary` / `car` | Primary browse/search collection (LINEAMIENTOS §1.6); paginated grids. |
+| `GET /cars/{id}/pictures` | `picture` | Gallery sub-resource; metadata + pagination in one response. |
+| `GET /cars/{id}/availabilities` | `availability` | Owner/rider calendar view; dates/prices needed together. |
+| `GET /cars/{id}/bookable-segments` | `bookablesegment` | Computed segments; no per-item REST URI. |
+| `GET /reservations/{id}/messages` | `message` | Chat/polling; body needed in list. |
+| `GET /brands`, `/models`, `/neighborhoods` | catalog MIMEs | Small reference catalogues. |
+| `GET /users` (admin) | `user.private` | Admin roster of the collection itself. |
+
+When adding a collection of **existing canonical resources** referenced from another aggregate, default to **pattern A**. Use **pattern B** only when one of the “why embedded” rows above applies and OpenAPI documents it.
 
 ## Spring AOP (enabled in `WebConfig`)
 

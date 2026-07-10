@@ -82,7 +82,7 @@ export default function Pagination({
   };
 
   return (
-    <nav aria-label="Page navigation" className="mt-4">
+    <nav aria-label={t('pagination.navAria')} className="mt-4">
       <ul className="pagination justify-content-center flex-wrap gap-1">
         <li className={`page-item${currentPage === 0 ? ' disabled' : ''}`}>
           {currentPage > 0 ? (

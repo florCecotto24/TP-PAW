@@ -315,10 +315,10 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
                     case OWNER -> queryService.getOwnerReservationById(viewerUserId, reservationId);
                 };
         if (reservationOpt.isEmpty()) {
-            throw new ReservationAccessDeniedException();
+            throw ReservationAccessDeniedException.denied();
         }
         return cancelReservationAsParticipant(viewerUserId, reservationId)
-                .orElseThrow(ReservationCancelNotAllowedException::new);
+                .orElseThrow(ReservationCancelNotAllowedException::notAllowed);
     }
 
     private Optional<Reservation> cancelPendingAsParticipant(
@@ -379,7 +379,11 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
             throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
-        if (r.getStatus() != Reservation.Status.ACCEPTED && r.getStatus() != Reservation.Status.STARTED) {
+        // ACCEPTED/STARTED: flujo normal. FINISHED sin carReturned: permite destrabar
+        // la reseña del owner (el submit exige carReturned).
+        if (r.getStatus() != Reservation.Status.ACCEPTED
+                && r.getStatus() != Reservation.Status.STARTED
+                && r.getStatus() != Reservation.Status.FINISHED) {
             throw new RiderReservationException(MessageKeys.RESERVATION_MARK_RETURNED_NOT_ALLOWED);
         }
         if (r.isCarReturned()) {

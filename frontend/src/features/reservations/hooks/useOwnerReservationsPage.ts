@@ -6,7 +6,7 @@ import {
   OWNER_RESERVATIONS_PAGE_SIZE,
   type OwnerReservationFilters,
 } from '../ownerReservationFilters';
-import type { ReservationDto } from '../types';
+import type { ReservationSummaryDto } from '../types';
 
 function filtersToApiQuery(
   ownerId: string | number,
@@ -45,7 +45,7 @@ export function useOwnerReservationsPage(
         filtersToApiQuery(ownerId as string | number, filters, pageIndex, carId),
       );
       return {
-        items: (res.data ?? []) as ReservationDto[],
+        items: (res.data ?? []) as ReservationSummaryDto[],
         total: res.page.total,
       };
     },

@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Pagination, SortBar } from '../../../components/ryden';
+import { Pagination, SortBar, LoadingBlock } from '../../../components/ryden';
 import BrowseCarCard from '../components/BrowseCarCard';
 import ExploreSearchForm from '../components/ExploreSearchForm';
 import {
@@ -24,13 +24,6 @@ export default function SearchPage() {
   const cars = search.data?.items ?? [];
   const total = search.data?.page.total;
   const totalPages = pageCount(total, SEARCH_PAGE_SIZE);
-
-  useEffect(() => {
-    document.body.classList.add('has-fixed-navbar');
-    return () => {
-      document.body.classList.remove('has-fixed-navbar');
-    };
-  }, []);
 
   const applyFilters = (next: typeof filters) => {
     const params = filtersToSearchParams(next);
@@ -63,7 +56,7 @@ export default function SearchPage() {
 
       <div className="container">
         <div className="mb-3 pt-5 d-flex flex-wrap align-items-center justify-content-between gap-2">
-          <h4 className="font-semibold mb-0">
+          <h4 className="fw-semibold mb-0">
             {total != null && total > 0
               ? t('search.resultsRange', { from: firstItem, to: lastItem, total })
               : t('search.resultsCount', { count: 0 })}
@@ -82,11 +75,7 @@ export default function SearchPage() {
             {t('browse.search.loadError')}
           </div>
         ) : null}
-        {search.isLoading ? (
-          <p className="text-secondary" role="status">
-            {t('app.loading')}
-          </p>
-        ) : null}
+        {search.isLoading ? <LoadingBlock variant="grid" /> : null}
 
         {!search.isLoading && cars.length === 0 ? (
           <div className="search-empty-state text-center">

@@ -76,10 +76,11 @@ public final class ReservationLinks {
                 .withRelated("car", RestUriUtils.carUri(uriInfo, card.getCarId()).toString())
                 .withRelated("messages", RestUriUtils.reservationMessagesUri(uriInfo, reservationId).toString())
                 .withRelated("reviews", RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString());
+        // Same canonical cover URI as CarLinks (not /image/{id}).
         if (card.getImageId() > 0) {
             links = links.withRelated(
                     "cover",
-                    RestUriUtils.imageUri(uriInfo, card.getImageId()).toString());
+                    RestUriUtils.carPrimaryPictureUri(uriInfo, card.getCarId()).toString());
         }
         return links;
     }

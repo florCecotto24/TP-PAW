@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.controller.car;
 
-import java.math.BigDecimal;
 import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -13,7 +12,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
+import javax.ws.rs.PATCH;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -32,23 +31,26 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
-import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.AvailabilityCreateInput;
+import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.services.car.CarAvailabilityService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.rest.AvailabilityDto;
 import ar.edu.itba.paw.webapp.form.car.AvailabilityCreateForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CarResourceAccess;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
+
 
 /** Car availability sub-resource ({@code /cars/{id}/availabilities}). */
 @Path("/cars/{id}/availabilities")
@@ -60,7 +62,7 @@ public class CarAvailabilityController {
     private final FormValidationSupport formValidationSupport;
     private final CurrentUserResolver currentUserResolver;
     private final CarResourceAccess carResourceAccess;
-    private final AppPaginationProperties paginationProperties;
+    private final PaginationSupport paginationSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -72,13 +74,13 @@ public class CarAvailabilityController {
             final FormValidationSupport formValidationSupport,
             final CurrentUserResolver currentUserResolver,
             final CarResourceAccess carResourceAccess,
-            final AppPaginationProperties paginationProperties) {
+            final PaginationSupport paginationSupport) {
         this.carService = carService;
         this.carAvailabilityService = carAvailabilityService;
         this.formValidationSupport = formValidationSupport;
         this.currentUserResolver = currentUserResolver;
         this.carResourceAccess = carResourceAccess;
-        this.paginationProperties = paginationProperties;
+        this.paginationSupport = paginationSupport;
     }
 
     @GET
@@ -88,53 +90,47 @@ public class CarAvailabilityController {
             @QueryParam("month") @ValidYearMonth final String month,
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam) {
-        requireCarExists(carId);
-        final int safePage = Math.max(1, page);
-        final int pageSize = pageSizeParam != null && pageSizeParam > 0
-                ? pageSizeParam
-                : paginationProperties.getDefaultPageSize();
-        final int zeroBasedPage = safePage - 1;
+        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
+        final PaginationParams paging = paginationSupport.forAvailabilities(page, pageSizeParam);
 
         if (month != null && !month.isBlank()) {
             final YearMonth yearMonth = YearMonth.parse(month);
-            final LocalDate monthStart = yearMonth.atDay(1);
-            final LocalDate monthEnd = yearMonth.atEndOfMonth();
-            final List<BookableSegmentProjection> segments =
-                    carAvailabilityService.getEffectiveSegmentsForOwnerCalendarInRange(
-                            carId, monthStart, monthEnd);
-            final int segmentTotal = segments.size();
-            if (segmentTotal == 0L) {
-                return Response.noContent().build();
-            }
-            final int fromIndex = Math.min(Math.max(0, zeroBasedPage) * pageSize, segmentTotal);
-            final int toIndex = Math.min(fromIndex + pageSize, segmentTotal);
-            final List<AvailabilityDto> dtos = segments.subList(fromIndex, toIndex).stream()
-                    .map(segment -> AvailabilityDto.fromSegment(segment, carId, uriInfo))
-                    .collect(Collectors.toList());
-            final Response.ResponseBuilder builder =
-                    Response.ok(new GenericEntity<List<AvailabilityDto>>(dtos) {})
-                            .header("X-Total-Count", segmentTotal);
-            PaginationLinks.add(builder, uriInfo, safePage, pageSize, segmentTotal);
-            return builder.build();
+            final Page<BookableSegmentProjection> segmentPage =
+                    carAvailabilityService.getEffectiveSegmentsForOwnerCalendarInRangePaginated(
+                            carId,
+                            yearMonth.atDay(1),
+                            yearMonth.atEndOfMonth(),
+                            paging.getZeroBasedPage(),
+                            paging.getPageSize());
+            return pagedAvailabilityDtos(
+                    segmentPage.getContent().stream()
+                            .map(segment -> AvailabilityDto.fromSegment(segment, carId, uriInfo))
+                            .collect(Collectors.toList()),
+                    paging,
+                    (int) segmentPage.getTotalItems());
         }
 
-        final List<CarAvailability> rows = carAvailabilityService.findEffectiveOfferedByCar(carId);
-        final int total = rows.size();
-        if (total == 0) {
-            return Response.noContent().build();
-        }
-        final int fromIndex = Math.min(zeroBasedPage * pageSize, total);
-        final int toIndex = Math.min(fromIndex + pageSize, total);
-        final List<AvailabilityDto> dtos = rows.subList(fromIndex, toIndex).stream()
-                .map(row -> AvailabilityDto.from(row, uriInfo))
-                .collect(Collectors.toList());
-        if (dtos.isEmpty()) {
+        final Page<CarAvailability> availabilityPage = carAvailabilityService.findEffectiveOfferedByCarPaginated(
+                carId, paging.getZeroBasedPage(), paging.getPageSize());
+        return pagedAvailabilityDtos(
+                availabilityPage.getContent().stream()
+                        .map(row -> AvailabilityDto.from(row, uriInfo))
+                        .collect(Collectors.toList()),
+                paging,
+                (int) availabilityPage.getTotalItems());
+    }
+
+    private Response pagedAvailabilityDtos(
+            final List<AvailabilityDto> dtos,
+            final PaginationParams paging,
+            final int totalItems) {
+        if (totalItems == 0L || dtos.isEmpty()) {
             return Response.noContent().build();
         }
         final Response.ResponseBuilder builder =
                 Response.ok(new GenericEntity<List<AvailabilityDto>>(dtos) {})
-                        .header("X-Total-Count", total);
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, total);
+                        .header("X-Total-Count", totalItems);
+        PaginationLinks.add(builder, uriInfo, paging.getPage(), paging.getPageSize(), totalItems);
         return builder.build();
     }
 
@@ -150,7 +146,7 @@ public class CarAvailabilityController {
         formValidationSupport.validate(form, ValidationGroups.OnCreateListing.class);
 
         final List<CarAvailability> created = carAvailabilityService.createListing(
-                viewer.getUserId(), carId, toInput(form), Instant.now());
+                viewer.getUserId(), carId, toInput(form), java.time.Instant.now());
         final CarAvailability availability = created.get(created.size() - 1);
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
@@ -165,18 +161,18 @@ public class CarAvailabilityController {
     public Response getAvailability(
             @PathParam("id") final long carId,
             @PathParam("availabilityId") final long availabilityId) {
-        requireCarExists(carId);
+        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
         final CarAvailability availability = carAvailabilityService.findByIdForCar(carId, availabilityId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         return Response.ok(AvailabilityDto.from(availability, uriInfo)).build();
     }
 
-    @PUT
+    @PATCH
     @Path("/{availabilityId}")
     @Consumes(VndMediaType.AVAILABILITY_V1_JSON)
     @Produces(VndMediaType.AVAILABILITY_V1_JSON)
     @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
-    public Response updateAvailability(
+    public Response patchAvailability(
             @P("id") @PathParam("id") final long carId,
             @PathParam("availabilityId") final long availabilityId,
             final AvailabilityCreateForm form) {

@@ -23,6 +23,7 @@ import ar.edu.itba.paw.models.dto.reservation.ReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationDetailPageModel;
 import ar.edu.itba.paw.policy.MoneyFormatPolicy;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
+import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
 import ar.edu.itba.paw.util.format.MoneyFormat;
 
@@ -77,6 +78,9 @@ public class ReservationViewServiceImplTest {
     @Mock
     private ReservationMessageService reservationMessageService;
 
+    @Mock
+    private ReservationTimingPolicy reservationTimingPolicy;
+
     private MoneyFormat moneyFormat;
 
     private ReservationViewServiceImpl reservationViewService;
@@ -85,6 +89,7 @@ public class ReservationViewServiceImplTest {
     public void setUp() {
         moneyFormat = new MoneyFormat(
                 MoneyFormatPolicy.fromValidatedConfiguration("ARS", "es-AR", 2, 2));
+        Mockito.lenient().when(reservationTimingPolicy.getReviewAutoSkipDays()).thenReturn(15);
         reservationViewService = new ReservationViewServiceImpl(
                 reservationService,
                 carService,
@@ -97,6 +102,7 @@ public class ReservationViewServiceImplTest {
                 paymentReceiptUploadPolicy,
                 reviewService,
                 reservationMessageService,
+                reservationTimingPolicy,
                 moneyFormat);
     }
 

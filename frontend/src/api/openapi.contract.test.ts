@@ -1,11 +1,16 @@
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { MediaTypes } from './mediaTypes';
 import type { PriceMarketPosition } from '../components/ryden/car/CarCard';
+import { filtersToApiParams } from '../features/browse/searchFilters';
 import type { ReservationStatus } from '../features/reservations/types';
 
-const OPENAPI_PATH = resolve(import.meta.dirname, '../../../openapi.yaml');
+const OPENAPI_PATH = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../openapi.yaml',
+);
 
 function loadOpenApi(): string {
   return readFileSync(OPENAPI_PATH, 'utf8');
@@ -58,6 +63,20 @@ function schemaProperties(yaml: string, schemaName: string): string[] {
   return props;
 }
 
+function openapiCarSearchQueryParams(yaml: string): string[] {
+  const match = yaml.match(
+    /  \/cars:\r?\n    get:[\s\S]*?      parameters:\r?\n([\s\S]*?)      responses:/,
+  );
+  if (!match) throw new Error('GET /cars parameters not found in openapi.yaml');
+  const names: string[] = [];
+  for (const entry of match[1].split(/\r?\n        - /)) {
+    const name = entry.match(/^name: (\w+)/)?.[1];
+    if (!name || entry.includes('in: header')) continue;
+    names.push(name);
+  }
+  return names;
+}
+
 function vendorJsonMediaTypes(yaml: string): Set<string> {
   const mime = /application\/vnd\.paw\.[^\s"']+\+json/g;
   return new Set(
@@ -87,7 +106,7 @@ const FRONTEND_PRICE_MARKET_POSITIONS: PriceMarketPosition[] = [
 describe('openapi.yaml contract (frontend)', () => {
   const yaml = loadOpenApi();
 
-  it('openapi vendor JSON types tienen entrada en MediaTypes del cliente', () => {
+  it('testOpenApiVendorJsonTypesExistInClientMediaTypes', () => {
     // 1.Arrange
     const inSpec = vendorJsonMediaTypes(yaml);
     const clientValues = new Set(Object.values(MediaTypes));
@@ -104,7 +123,7 @@ describe('openapi.yaml contract (frontend)', () => {
     ).toEqual([]);
   });
 
-  it('MediaTypes del cliente usados en REST están declarados en openapi', () => {
+  it('testClientRestMediaTypesAreDeclaredInOpenApi', () => {
     // 1.Arrange
     const inSpec = vendorJsonMediaTypes(yaml);
     const clientTypes = Object.values(MediaTypes).filter(
@@ -118,7 +137,7 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(missing, `client MIME types missing in openapi: ${missing.join(', ')}`).toEqual([]);
   });
 
-  it('ReservationStatus del frontend coincide con openapi', () => {
+  it('testReservationStatusMatchesOpenApi', () => {
     // 1.Arrange
     const specStatuses = enumValues(yaml, 'ReservationStatus');
     const frontendStatuses = [...FRONTEND_RESERVATION_STATUSES];
@@ -131,7 +150,7 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendStatuses).toEqual(specStatuses);
   });
 
-  it('PriceMarketPosition del frontend coincide con openapi', () => {
+  it('testPriceMarketPositionMatchesOpenApi', () => {
     // 1.Arrange
     const specPositions = enumValues(yaml, 'PriceMarketPosition');
     const frontendPositions = [...FRONTEND_PRICE_MARKET_POSITIONS];
@@ -144,7 +163,32 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendPositions).toEqual(specPositions);
   });
 
-  it('CarDto del frontend cubre las propiedades de openapi', () => {
+  it('testCarSummaryDtoShapeMatchesOpenApi', () => {
+    // 1.Arrange
+    const spec = schemaProperties(yaml, 'CarSummaryDto');
+    const frontendShape = [
+      'brandName',
+      'modelName',
+      'status',
+      'minimumRentalDays',
+      'ratingAvg',
+      'dayPrice',
+      'modelValidated',
+      'priceMarketPositionModifier',
+      'marketAveragePrice',
+      'marketSampleCount',
+      'links',
+    ];
+
+    // 2.Act
+    frontendShape.sort();
+    spec.sort();
+
+    // 3.Assert
+    expect(frontendShape).toEqual(spec);
+  });
+
+  it('testCarDtoShapeMatchesOpenApi', () => {
     // 1.Arrange
     const spec = schemaProperties(yaml, 'CarDto');
     const frontendShape = [
@@ -177,7 +221,20 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendShape).toEqual(spec);
   });
 
-  it('ReservationDto del frontend cubre las propiedades de openapi', () => {
+  it('testReservationSummaryDtoShapeMatchesOpenApi', () => {
+    // 1.Arrange
+    const spec = schemaProperties(yaml, 'ReservationSummaryDto');
+    const frontendShape = ['startDate', 'endDate', 'status', 'totalPrice', 'brandName', 'modelName', 'links'];
+
+    // 2.Act
+    frontendShape.sort();
+    spec.sort();
+
+    // 3.Assert
+    expect(frontendShape).toEqual(spec);
+  });
+
+  it('testReservationDtoShapeMatchesOpenApi', () => {
     // 1.Arrange
     const spec = schemaProperties(yaml, 'ReservationDto');
     const frontendShape = [
@@ -186,6 +243,7 @@ describe('openapi.yaml contract (frontend)', () => {
       'status',
       'totalPrice',
       'carReturned',
+      'carReturnedAt',
       'paymentProofDeadlineAt',
       'refundProofDeadlineAt',
       'paymentRefundRequired',
@@ -209,7 +267,7 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendShape).toEqual(spec);
   });
 
-  it('MessageDto del frontend cubre las propiedades de openapi', () => {
+  it('testMessageDtoShapeMatchesOpenApi', () => {
     // 1.Arrange
     const spec = schemaProperties(yaml, 'MessageDto');
     const frontendShape = ['body', 'createdAt', 'seen', 'hasAttachment', 'links'];
@@ -222,7 +280,7 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendShape).toEqual(spec);
   });
 
-  it('ErrorDto del frontend cubre las propiedades de openapi', () => {
+  it('testErrorDtoShapeMatchesOpenApi', () => {
     // 1.Arrange
     const spec = schemaProperties(yaml, 'ErrorDto');
     const frontendShape = ['status', 'code', 'message'];
@@ -235,7 +293,7 @@ describe('openapi.yaml contract (frontend)', () => {
     expect(frontendShape).toEqual(spec);
   });
 
-  it('ReservationCreateDto requeridos están en el tipo de escritura del cliente', () => {
+  it('testReservationCreateDtoRequiredFieldsMatchOpenApi', () => {
     // 1.Arrange
     const requiredBlock = yaml.match(
       /^    ReservationCreateDto:\s*\r?\n      type: object\s*\r?\n      required: \[(.+)\]/m,
@@ -249,5 +307,30 @@ describe('openapi.yaml contract (frontend)', () => {
     // 3.Assert
     expect(requiredBlock).not.toBeNull();
     expect(required).toEqual(['carUri', 'availabilityUri', 'startDate', 'endDate']);
+  });
+
+  it('testFiltersToApiParamsOnlyEmitOpenApiCarSearchQueryParams', () => {
+    // 1.Arrange
+    const specParams = new Set(openapiCarSearchQueryParams(yaml));
+    const sample = filtersToApiParams({
+      q: 'corolla',
+      category: 'sedan',
+      transmission: 'automatic',
+      powertrain: 'hybrid',
+      priceMin: 10,
+      priceMax: 50,
+      priceMarket: 'below_market',
+      rating: 4,
+      neighborhoodId: 7,
+      from: '2026-07-01',
+      until: '2026-07-10',
+      sort: 'price_asc',
+    });
+
+    // 2.Act
+    const unknown = Object.keys(sample).filter((key) => !specParams.has(key));
+
+    // 3.Assert
+    expect(unknown, `query params not in openapi GET /cars: ${unknown.join(', ')}`).toEqual([]);
   });
 });

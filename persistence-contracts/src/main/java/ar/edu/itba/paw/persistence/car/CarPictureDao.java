@@ -17,6 +17,14 @@ public interface CarPictureDao {
 
     List<CarPicture> getCarPicturesByCarId(final long carId);
 
+    long countByCarId(long carId);
+
+    List<CarPicture> findByCarIdOrderByDisplayOrderAsc(long carId, int offset, int limit);
+
+    Optional<CarPicture> findFirstByCarIdOrderByDisplayOrderAsc(long carId);
+
+    Optional<Integer> findMaxDisplayOrderByCarId(long carId);
+
     boolean isStoredFileInCarGallery(final long storedFileId);
 
     /**

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.ApiIndexDto;
 
-/** API entrypoint ({@code GET /}, {@code openapi.yaml} {@code ApiIndex}). */
+/** API entrypoint ({@code GET /api/}, {@code openapi.yaml} {@code ApiIndex}). */
 @Path("/")
 @Component
 public final class ApiIndexController {

@@ -1,9 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import CarCardImage from '../../components/CarCardImage';
-import { ConsumerCarCard, Pagination } from '../../components/ryden';
+import { ConsumerCarCard, LoadingBlock, Pagination } from '../../components/ryden';
 import { pageCount } from '../browse/hooks';
 import { carDetailHref, carDtoToConsumerCard } from '../browse/carCardAdapter';
 import { useMyUserUri } from './hooks';
@@ -16,11 +16,6 @@ export const FAVORITES_PAGE_SIZE = 8;
 export default function FavoritesPage() {
   const { t } = useTranslation();
   const myUri = useMyUserUri();
-
-  useEffect(() => {
-    document.body.classList.add('has-fixed-navbar');
-    return () => document.body.classList.remove('has-fixed-navbar');
-  }, []);
 
   const userQuery = useQuery({
     queryKey: ['profile', 'me', myUri],
@@ -41,9 +36,7 @@ export default function FavoritesPage() {
   if (userQuery.isLoading) {
     return (
       <div className="container my-4">
-        <p role="status" className="text-secondary">
-          {t('profile.common.loading')}
-        </p>
+        <LoadingBlock variant="page" className="py-4" />
       </div>
     );
   }
@@ -100,9 +93,7 @@ function FavoritesList({ user }: { user: UserDto }) {
       ) : null}
 
       {favQuery.isLoading ? (
-        <p role="status" className="text-secondary">
-          {t('profile.common.loading')}
-        </p>
+        <LoadingBlock variant="grid" />
       ) : favQuery.isError ? (
         <div className="alert alert-danger" role="alert">
           {t('profile.common.error')}

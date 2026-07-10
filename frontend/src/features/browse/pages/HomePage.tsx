@@ -138,7 +138,6 @@ export default function BrowseHomePage() {
 
       <section
         className="cta-banner animate-on-scroll text-center text-white py-5 w-100"
-        style={{ backgroundColor: 'var(--color-primary, #3b7be0)' }}
       >
         <div className="container py-4 my-2">
           <h2 className="fw-bold mb-3">{t('home.cta.title')}</h2>

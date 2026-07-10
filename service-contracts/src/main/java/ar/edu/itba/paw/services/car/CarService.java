@@ -87,9 +87,9 @@ public interface CarService {
     boolean deactivateCar(long ownerId, long carId);
 
     /**
-     * Returns a list of at most {@code limit} active cars similar to the given car
-     * (matching type, powertrain, and transmission) that are bookable on or after {@code browseWallDate},
-     * excluding the reference car and optionally the owner's own cars.
+     * Returns a list of at most {@code limit} active cars in the same body type / category as the
+     * reference car, bookable on or after {@code browseWallDate}, excluding the reference car and
+     * optionally the owner's own cars.
      */
     List<CarCard> findSimilarCarCards(long carId, int limit, User viewer);
 

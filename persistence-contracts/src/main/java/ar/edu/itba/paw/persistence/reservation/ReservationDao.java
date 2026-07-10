@@ -201,4 +201,7 @@ public interface ReservationDao {
 
     /** All reservations paginated for admin view; ordered by creation date descending. */
     Page<ReservationCard> findAllReservationCards(int page, int pageSize);
+
+    /** Single card projection for teaser reads ({@code GET /reservations/{id}} with summary MIME). */
+    Optional<ReservationCard> findReservationCardById(long reservationId);
 }

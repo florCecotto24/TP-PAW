@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAnimatedSearchPlaceholder } from './useAnimatedSearchPlaceholder';
 
 export interface SearchBarFieldProps {
   query?: string;
@@ -22,6 +24,8 @@ export default function SearchBar({
   onSubmit,
 }: SearchBarFieldProps) {
   const { t } = useTranslation();
+  const queryRef = useRef<HTMLInputElement>(null);
+  const { placeholder, animating } = useAnimatedSearchPlaceholder(queryRef, query);
 
   return (
     <div className="container mb-4">
@@ -32,15 +36,19 @@ export default function SearchBar({
           onSubmit?.();
         }}
       >
-        <div className="form-floating flex-grow-1" style={{ minWidth: '12rem' }}>
+        <div
+          className={`form-floating flex-grow-1${animating ? ' placeholder-anim' : ''}`}
+          style={{ minWidth: '12rem' }}
+        >
           <input
+            ref={queryRef}
             type="text"
             className="form-control border-0 shadow-none"
             aria-label={t('searchBar.query.ariaLabel')}
             id="search_query"
             name="query"
             value={query}
-            placeholder=" "
+            placeholder={placeholder}
             onChange={(e) => onQueryChange?.(e.target.value)}
           />
           <label htmlFor="search_query">{t('searchBar.query.label')}</label>

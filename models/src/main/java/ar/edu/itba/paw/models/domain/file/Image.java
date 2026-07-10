@@ -63,10 +63,8 @@ public class Image {
         this.data = data;
     }
 
-    public Image(final String name, final String contentType, final byte[] data) {
-        this.name = name;
-        this.contentType = contentType;
-        this.data = data;
+    public static Image forUpload(final String name, final String contentType, final byte[] data) {
+        return new Image(0L, name, contentType, data);
     }
 
     public String getContentType() {

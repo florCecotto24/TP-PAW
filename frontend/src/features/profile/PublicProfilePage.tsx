@@ -4,8 +4,12 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser, fetchUserCars, getUserReviews, userCarsLink, userReviewsLink } from './api';
 import { formatDateLong } from '../../i18n/dateFormat';
+import { LoadingBlock, ReviewCard } from '../../components/ryden';
+import { apiAssetUrl, profilePictureAssetUrl } from '../../api/uri';
+import { useUserBrief } from '../browse/hooks';
+import type { ReviewDto, CarSummaryDto } from '../browse/types';
 import CarCard from './CarCard';
-import type { CarDto, UserDto, UserReviewDto } from './types';
+import type { UserDto } from './types';
 
 // =============================================================================
 // PublicProfilePage — perfil público de un usuario (/usuarios/:id).
@@ -65,7 +69,7 @@ export default function PublicProfilePage() {
     enabled: !!userUri,
   });
 
-  const reviewsLink = userQuery.data ? userReviewsLink(userQuery.data) : null;
+  const reviewsLink = userQuery.data?.links ? userReviewsLink(userQuery.data) : null;
   const reviewsQuery = useQuery({
     queryKey: ['profile', 'public', 'reviews', reviewsLink],
     queryFn: () => getUserReviews(reviewsLink as string),
@@ -76,24 +80,18 @@ export default function PublicProfilePage() {
 
   if (userQuery.isLoading) {
     return (
-      <main className="counterparty-profile-page">
-        <div className="counterparty-profile-container">
-          <p role="status" className="text-secondary">
-            {t('profile.common.loading')}
-          </p>
-        </div>
-      </main>
+      <div className="container counterparty-profile-page pb-4">
+        <LoadingBlock variant="page" className="py-4" />
+      </div>
     );
   }
   if (userQuery.isError || !userQuery.data) {
     return (
-      <main className="counterparty-profile-page">
-        <div className="counterparty-profile-container">
-          <div className="alert alert-danger" role="alert">
-            {t('profile.common.notFound')}
-          </div>
+      <div className="container counterparty-profile-page pb-4">
+        <div className="alert alert-danger" role="alert">
+          {t('profile.common.notFound')}
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -103,15 +101,14 @@ export default function PublicProfilePage() {
   const rating = user.ratingAsOwner ?? user.ratingAsRider ?? null;
 
   return (
-    <main className="counterparty-profile-page">
-      <div className="counterparty-profile-container">
-        <div className="row g-4">
-          <div className="col-12">
+    <div className="container counterparty-profile-page pb-4">
+      <div className="row g-4">
+        <div className="col-12">
             {/* Header card */}
             <section className="card border-0 shadow-sm rounded-4 counterparty-section-card counterparty-header-card">
               <div className="card-body p-4">
                 <div className="d-flex flex-column flex-md-row align-items-start gap-4">
-                  <Avatar src={user.links.profilePicture} alt={name} initials={init} />
+                  <Avatar src={profilePictureAssetUrl(user.links) ?? undefined} alt={name} initials={init} />
                   <div className="flex-grow-1 min-w-0">
                     <div className="d-flex flex-wrap align-items-center gap-2">
                       <h1 className="h4 fw-semibold mb-0 ryden-text-break">{name}</h1>
@@ -178,7 +175,6 @@ export default function PublicProfilePage() {
           </div>
         </div>
       </div>
-    </main>
   );
 }
 
@@ -219,7 +215,7 @@ function UserCars({ user }: { user: UserDto }) {
     enabled: !!carsLink,
   });
 
-  const [cars, setCars] = useState<CarDto[]>([]);
+  const [cars, setCars] = useState<CarSummaryDto[]>([]);
   const [nextLink, setNextLink] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
@@ -252,9 +248,7 @@ function UserCars({ user }: { user: UserDto }) {
         </div>
 
         {carsQuery.isLoading && (
-          <p role="status" className="text-secondary small mb-0">
-            {t('profile.common.loading')}
-          </p>
+          <LoadingBlock variant="inline" />
         )}
         {carsQuery.isError && (
           <div className="alert alert-danger mb-0" role="alert">
@@ -297,16 +291,37 @@ function UserCars({ user }: { user: UserDto }) {
   );
 }
 
+function ProfileReviewItem({ review }: { review: ReviewDto }) {
+  const { i18n } = useTranslation();
+  const authorQuery = useUserBrief(review.links.author);
+  const forename = authorQuery.data?.forename ?? '';
+  const surname = authorQuery.data?.surname ?? '';
+  const imageUrl = review.links.image ? apiAssetUrl(review.links.image) : null;
+  const avatarUrl = profilePictureAssetUrl(authorQuery.data?.links);
+
+  return (
+    <ReviewCard
+      forename={forename}
+      surname={surname}
+      dateLabel={formatDateLong(review.createdAt, i18n.language)}
+      rating={review.rating ?? 0}
+      comment={review.comment}
+      imageUrl={imageUrl}
+      avatarUrl={avatarUrl}
+    />
+  );
+}
+
 function UserReviews({
   reviews,
   isLoading,
   isError,
 }: {
-  reviews: UserReviewDto[];
+  reviews: ReviewDto[];
   isLoading: boolean;
   isError: boolean;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <section className="counterparty-section-card counterparty-reviews-card card border-0 shadow-sm rounded-4 mt-4">
@@ -314,9 +329,7 @@ function UserReviews({
         <h2 className="h5 fw-semibold mb-3">{t('profile.public.reviews')}</h2>
 
         {isLoading && (
-          <p role="status" className="text-secondary small mb-0">
-            {t('profile.common.loading')}
-          </p>
+          <LoadingBlock variant="inline" />
         )}
         {isError && (
           <div className="alert alert-danger mb-0" role="alert">
@@ -328,24 +341,9 @@ function UserReviews({
         )}
         {reviews.length > 0 && (
           <ul className="list-unstyled mb-0 d-flex flex-column gap-3">
-            {reviews.map((review, i) => (
-              <li key={`${review.authorName}-${review.createdAt}-${i}`} className="border-bottom pb-3">
-                <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
-                  <span className="fw-semibold ryden-text-break">{review.authorName}</span>
-                  <StarRow rating={review.rating} />
-                  {review.createdAt && (
-                    <span className="text-secondary small ms-auto">
-                      {formatDateLong(review.createdAt, i18n.language)}
-                    </span>
-                  )}
-                </div>
-                {review.comment && review.comment.trim() ? (
-                  <p className="mb-0 ryden-multiline-plaintext">{review.comment}</p>
-                ) : (
-                  <p className="mb-0 text-secondary small fst-italic">
-                    {t('profile.public.reviewNoComment')}
-                  </p>
-                )}
+            {reviews.map((review) => (
+              <li key={review.links.self} className="border-bottom pb-3">
+                <ProfileReviewItem review={review} />
               </li>
             ))}
           </ul>

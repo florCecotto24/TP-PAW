@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CarouselSection } from '../../../components/ryden';
+import { CarouselSection, LoadingBlock } from '../../../components/ryden';
 import BrowseCarCard from './BrowseCarCard';
-import type { CarDto } from '../types';
+import type { CarSummaryDto } from '../types';
 
 export interface HomeCarouselBlockProps {
   sectionId: string;
@@ -10,7 +10,7 @@ export interface HomeCarouselBlockProps {
   sectionClassName?: string;
   title: string;
   subtitle: string;
-  items: CarDto[];
+  items: CarSummaryDto[];
   isLoading: boolean;
   isError: boolean;
   prevPageHref?: string;
@@ -36,11 +36,7 @@ export default function HomeCarouselBlock({
 
   return (
     <section className={sectionClassName} id={sectionId}>
-      {isLoading ? (
-        <p className="text-secondary" role="status">
-          {t('app.loading')}
-        </p>
-      ) : null}
+      {isLoading ? <LoadingBlock variant="grid" /> : null}
       {isError ? (
         <div className="alert alert-danger" role="alert">
           {t('browse.home.loadError')}
@@ -54,7 +50,7 @@ export default function HomeCarouselBlock({
           emptyMessage={emptyMessage ?? t('carousel.noVehicles')}
           prevPageHref={prevPageHref}
           nextPageHref={nextPageHref}
-          renderItem={(car: CarDto): ReactNode => <BrowseCarCard car={car} />}
+          renderItem={(car: CarSummaryDto): ReactNode => <BrowseCarCard car={car} />}
         />
       )}
     </section>

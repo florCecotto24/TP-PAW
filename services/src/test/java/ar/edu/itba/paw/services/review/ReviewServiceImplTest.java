@@ -23,6 +23,7 @@ import ar.edu.itba.paw.exception.reservation.RiderReservationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;
@@ -53,23 +54,33 @@ class ReviewServiceImplTest {
     @Mock
     private ImageService imageService;
 
+    @Mock
+    private ReservationTimingPolicy reservationTimingPolicy;
+
     private ReviewServiceImpl service;
 
     @BeforeEach
     void setUp() {
         reviewDao = new RecordingReviewDao();
+        Mockito.lenient().when(reservationTimingPolicy.getReviewAutoSkipDays()).thenReturn(15);
         service = new ReviewServiceImpl(
                 reviewDao,
                 reservationService,
                 carService,
                 userService,
                 imageService,
-                ReviewValidationPolicy.fromValidatedCommentMaxLength(500));
+                ReviewValidationPolicy.fromValidatedCommentMaxLength(500),
+                reservationTimingPolicy);
     }
 
     private static final long CAR_ID = 77L;
 
     private static Reservation reservation(final boolean carReturned, final OffsetDateTime endDate) {
+        return reservation(carReturned, endDate, carReturned ? endDate : null);
+    }
+
+    private static Reservation reservation(
+            final boolean carReturned, final OffsetDateTime endDate, final OffsetDateTime carReturnedAt) {
         final Car carRef = Mockito.mock(Car.class);
         // lenient(): only the happy paths reach refreshAggregatesAfter*Review which queries the car;
         // negative-path tests short-circuit before resolving the car id, so strict-stubs would flag
@@ -86,6 +97,7 @@ class ReviewServiceImplTest {
                 .updatedAt(OffsetDateTime.of(2026, 4, 5, 10, 0, 0, 0, ZoneOffset.UTC))
                 .totalPrice(new BigDecimal("100"))
                 .carReturned(carReturned)
+                .carReturnedAt(carReturnedAt)
                 .build();
     }
 
@@ -251,6 +263,51 @@ class ReviewServiceImplTest {
                 () -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, null));
 
         Assertions.assertEquals(MessageKeys.REVIEW_ALREADY_SUBMITTED, ex.getMessageCode());
+    }
+
+    @Test
+    void testSubmitRiderReviewOfOwnerRejectsRatedReviewAfterAutoSkipWindow() {
+        // 1.Arrange
+        final OffsetDateTime endDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(16);
+        final Reservation res = reservation(true, endDate);
+        Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(res));
+
+        // 2.Act
+        final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
+                () -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, 5, "Late"));
+
+        // 3.Assert
+        Assertions.assertEquals(MessageKeys.REVIEW_NOT_ALLOWED, ex.getMessageCode());
+    }
+
+    @Test
+    void testSubmitOwnerReviewOfRiderRejectsRatedReviewAfterAutoSkipWindow() {
+        // 1.Arrange
+        final OffsetDateTime returnedAt = OffsetDateTime.now(ZoneOffset.UTC).minusDays(16);
+        final Reservation res = reservation(true, returnedAt.minusDays(1), returnedAt);
+        Mockito.when(reservationService.getOwnerReservationById(OWNER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(res));
+
+        // 2.Act
+        final RiderReservationException ex = Assertions.assertThrows(RiderReservationException.class,
+                () -> service.submitOwnerReviewOfRider(OWNER_ID, RESERVATION_ID, 4, "Late"));
+
+        // 3.Assert
+        Assertions.assertEquals(MessageKeys.REVIEW_NOT_ALLOWED, ex.getMessageCode());
+    }
+
+    @Test
+    void testSubmitRiderReviewOfOwnerAllowsOmitAfterAutoSkipWindow() {
+        // 1.Arrange
+        final OffsetDateTime endDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(16);
+        final Reservation res = reservation(true, endDate);
+        Mockito.when(reservationService.getRiderReservationById(RIDER_ID, RESERVATION_ID))
+                .thenReturn(Optional.of(res));
+        Mockito.when(carService.getCarById(CAR_ID)).thenReturn(Optional.empty());
+
+        // 2.Act / 3.Assert
+        Assertions.assertDoesNotThrow(() -> service.submitRiderReviewOfOwner(RIDER_ID, RESERVATION_ID, null, null));
     }
 
     @Test

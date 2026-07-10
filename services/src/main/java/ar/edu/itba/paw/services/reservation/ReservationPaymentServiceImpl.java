@@ -86,9 +86,9 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         final Reservation.Status status = Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF;
         int cancelled = 0;
         for (final Reservation r : reservationService.findPendingPaymentPastDeadline(OffsetDateTime.now(ZoneOffset.UTC))) {
-            reservationService.updateReservationStatus(r.getId(), status.name().toLowerCase(Locale.ROOT));
-            reservationService.getReservationById(r.getId()).ifPresent(
-                    refreshed -> mailComposer.sendCancellationEmail(refreshed, true));
+            if (reservationService.updateReservationStatus(r.getId(), status.name().toLowerCase(Locale.ROOT)) > 0) {
+                mailComposer.sendCancellationEmail(r, true);
+            }
             cancelled++;
         }
         LOGGER.atInfo().addArgument(cancelled).log("Payment proof deadline sweep: cancelled {} pending reservation(s)");

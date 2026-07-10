@@ -50,18 +50,34 @@
         return parseMoney(raw);
     }
 
+    function hasMarketSpread(min, max) {
+        return isFinite(min) && isFinite(max) && max > min;
+    }
+
+    /**
+     * Rango visual del slider. Con spread de mercado: extremos = min/max.
+     * Sin spread (min≈max): 0 → 2×mercado, con el precio de mercado al 50%,
+     * para poder arrastrar sin mentir la posición de min/max (esos dots se ocultan).
+     */
     function barRange(min, max) {
-        if (isFinite(min) && isFinite(max) && max > min) {
+        if (hasMarketSpread(min, max)) {
             return { min: min, max: max };
         }
         var center = isFinite(min) ? min : isFinite(max) ? max : 0;
-        var pad = Math.max(center * 0.15, 500);
-        return { min: Math.max(0, center - pad), max: center + pad };
+        if (!isFinite(center) || center < 0) {
+            center = 0;
+        }
+        var high = Math.max(center * 2, center + 100, 200);
+        return { min: 0, max: high };
     }
 
     function pctOnBar(value, min, max) {
         var range = barRange(min, max);
-        var p = ((value - range.min) / (range.max - range.min)) * 100;
+        var span = range.max - range.min;
+        if (!(span > 0)) {
+            return 50;
+        }
+        var p = ((value - range.min) / span) * 100;
         return Math.min(100, Math.max(0, p));
     }
 
@@ -82,9 +98,14 @@
     }
 
     function getBarZoneLayout(min, max, avg) {
-        var avgPct = pctOnBar(avg, min, max);
-        var fadeWidth = Math.min(22, Math.max(10, avgPct * 0.2));
+        var spread = hasMarketSpread(min, max);
+        var avgPct = pctOnBar(isFinite(avg) ? avg : min, min, max);
+        var fadeWidth = Math.min(22, Math.max(10, 18));
         var greenHalf = Math.max(4, fadeWidth * 0.35);
+        // Con spread: min/max en los extremos (alineados con las etiquetas).
+        // Sin spread: un solo punto de mercado al centro; no mostrar dots rojos.
+        var minMarkerPct = spread ? 0 : avgPct;
+        var maxMarkerPct = spread ? 100 : avgPct;
         return {
             avgPct: avgPct,
             fadeWidth: fadeWidth,
@@ -92,8 +113,9 @@
             redOuterRight: avgPct + fadeWidth,
             greenLeft: avgPct - greenHalf,
             greenRight: avgPct + greenHalf,
-            minMarkerPct: pctOnBar(min, min, max),
-            maxMarkerPct: pctOnBar(max, min, max)
+            minMarkerPct: minMarkerPct,
+            maxMarkerPct: maxMarkerPct,
+            showBoundMarkers: spread
         };
     }
 
@@ -178,10 +200,23 @@
             return;
         }
         var formatted = formatInputPrice(price);
-        if (input.value !== formatted) {
-            input.value = formatted;
-            input.dispatchEvent(new CustomEvent("ryden-listing-price-input", { bubbles: true }));
+        if (input.value === formatted) {
+            return;
         }
+        // React controlled inputs override the value setter; writing via the
+        // native prototype + dispatching `input` is what makes onChange fire.
+        var nativeSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            "value"
+        );
+        if (nativeSetter && typeof nativeSetter.set === "function") {
+            nativeSetter.set.call(input, formatted);
+        } else {
+            input.value = formatted;
+        }
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        input.dispatchEvent(new CustomEvent("ryden-listing-price-input", { bubbles: true }));
     }
 
     function updateBarGradient(card, min, max, avg) {
@@ -219,9 +254,11 @@
 
         if (layout && minMarker) {
             minMarker.style.left = layout.minMarkerPct + "%";
+            minMarker.classList.toggle("d-none", layout.showBoundMarkers === false);
         }
         if (layout && maxMarker) {
             maxMarker.style.left = layout.maxMarkerPct + "%";
+            maxMarker.classList.toggle("d-none", layout.showBoundMarkers === false);
         }
         if (layout && avgMarker) {
             avgMarker.style.left = layout.avgPct + "%";
@@ -296,32 +333,39 @@
         }
         card.setAttribute("data-ryden-bounds-bound", "1");
 
-        var minMarker = card.querySelector(".ryden-price-insight__marker--min");
-        var maxMarker = card.querySelector(".ryden-price-insight__marker--max");
-        if (minMarker) {
-            minMarker.addEventListener("click", function (e) {
-                e.stopPropagation();
-                applyPriceFromMarketBound(card, getMarketBounds(card).min);
-            });
-            minMarker.addEventListener("keydown", function (e) {
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    applyPriceFromMarketBound(card, getMarketBounds(card).min);
-                }
-            });
-        }
-        if (maxMarker) {
-            maxMarker.addEventListener("click", function (e) {
-                e.stopPropagation();
-                applyPriceFromMarketBound(card, getMarketBounds(card).max);
-            });
-            maxMarker.addEventListener("keydown", function (e) {
-                if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    applyPriceFromMarketBound(card, getMarketBounds(card).max);
-                }
-            });
-        }
+        card.addEventListener("click", function (e) {
+            var bound = e.target.closest
+                ? e.target.closest(".ryden-price-insight__marker--bound")
+                : null;
+            if (!bound || !card.contains(bound) || bound.classList.contains("d-none")) {
+                return;
+            }
+            e.stopPropagation();
+            var bounds = getMarketBounds(card);
+            if (bound.classList.contains("ryden-price-insight__marker--min")) {
+                applyPriceFromMarketBound(card, bounds.min);
+            } else if (bound.classList.contains("ryden-price-insight__marker--max")) {
+                applyPriceFromMarketBound(card, bounds.max);
+            }
+        });
+        card.addEventListener("keydown", function (e) {
+            if (e.key !== "Enter" && e.key !== " ") {
+                return;
+            }
+            var bound = e.target.closest
+                ? e.target.closest(".ryden-price-insight__marker--bound")
+                : null;
+            if (!bound || !card.contains(bound) || bound.classList.contains("d-none")) {
+                return;
+            }
+            e.preventDefault();
+            var bounds = getMarketBounds(card);
+            if (bound.classList.contains("ryden-price-insight__marker--min")) {
+                applyPriceFromMarketBound(card, bounds.min);
+            } else if (bound.classList.contains("ryden-price-insight__marker--max")) {
+                applyPriceFromMarketBound(card, bounds.max);
+            }
+        });
     }
 
     function bindSlider(card) {
@@ -330,25 +374,54 @@
         }
         card.setAttribute("data-ryden-slider-bound", "1");
 
-        var track = getTrack(card);
-        var userMarker = card.querySelector(".ryden-price-insight__marker--user");
-        var hit = card.querySelector(".ryden-price-insight__bar-hit");
-        if (!track || !userMarker) {
-            return;
-        }
+        // Delegación en la card: sobrevive a re-renders de React que reemplazan
+        // el track / la bolita sin recrear el contenedor.
+        card.addEventListener("pointerdown", function onPointerDown(e) {
+            if (e.button !== undefined && e.button !== 0) {
+                return;
+            }
+            var track = getTrack(card);
+            if (!track || !track.contains(e.target)) {
+                return;
+            }
+            // Clicks en min/max van a bindMinMaxMarkers (saltar al bound).
+            if (e.target.closest && e.target.closest(".ryden-price-insight__marker--bound")) {
+                return;
+            }
+            var onSlider =
+                (e.target.closest && e.target.closest(".ryden-price-insight__marker--user"))
+                || (e.target.closest && e.target.closest(".ryden-price-insight__bar-hit"))
+                || e.target.classList.contains("ryden-price-insight__bar-gradient")
+                || e.target.classList.contains("ryden-price-insight__bar-track");
+            if (!onSlider) {
+                return;
+            }
 
-        function startDrag(clientX, target) {
+            var userMarker = card.querySelector(".ryden-price-insight__marker--user");
+            card._rydenActivePointerId = e.pointerId;
             card._rydenSliderDragging = true;
-            userMarker.classList.add("ryden-price-insight__marker--dragging");
+            if (userMarker) {
+                userMarker.classList.add("ryden-price-insight__marker--dragging");
+            }
             document.body.classList.add("ryden-price-insight--drag-active");
-            applyPriceFromSlider(card, clientX, true);
 
-            function onMove(e) {
+            var captureTarget = track;
+            if (typeof captureTarget.setPointerCapture === "function") {
+                try {
+                    captureTarget.setPointerCapture(e.pointerId);
+                } catch (ignore) {
+                    /* ignore */
+                }
+            }
+            e.preventDefault();
+            applyPriceFromSlider(card, e.clientX, true);
+
+            function onMove(ev) {
                 if (!card._rydenSliderDragging) {
                     return;
                 }
-                e.preventDefault();
-                applyPriceFromSlider(card, e.clientX, true);
+                ev.preventDefault();
+                applyPriceFromSlider(card, ev.clientX, true);
             }
 
             function onEnd() {
@@ -356,9 +429,9 @@
                 window.removeEventListener("pointermove", onMove);
                 window.removeEventListener("pointerup", onEnd);
                 window.removeEventListener("pointercancel", onEnd);
-                if (target && typeof target.releasePointerCapture === "function") {
+                if (typeof captureTarget.releasePointerCapture === "function") {
                     try {
-                        target.releasePointerCapture(card._rydenActivePointerId);
+                        captureTarget.releasePointerCapture(card._rydenActivePointerId);
                     } catch (ignore) {
                         /* already released */
                     }
@@ -368,28 +441,7 @@
             window.addEventListener("pointermove", onMove);
             window.addEventListener("pointerup", onEnd);
             window.addEventListener("pointercancel", onEnd);
-        }
-
-        function onPointerDown(e) {
-            if (e.button !== undefined && e.button !== 0) {
-                return;
-            }
-            card._rydenActivePointerId = e.pointerId;
-            if (typeof e.target.setPointerCapture === "function") {
-                try {
-                    e.target.setPointerCapture(e.pointerId);
-                } catch (ignore) {
-                    /* ignore */
-                }
-            }
-            e.preventDefault();
-            startDrag(e.clientX, e.target);
-        }
-
-        userMarker.addEventListener("pointerdown", onPointerDown);
-        if (hit) {
-            hit.addEventListener("pointerdown", onPointerDown);
-        }
+        });
     }
 
     function scheduleUpdate(card, animate) {
@@ -403,6 +455,8 @@
             nextCardId += 1;
             card.setAttribute("data-insight-id", "ryden-pi-" + nextCardId);
         }
+        // El input de React puede recrearse; no cachear un nodo desmontado.
+        card._rydenPriceInput = null;
         bindSlider(card);
         bindMinMaxMarkers(card);
         var input = resolvePriceInput(card);

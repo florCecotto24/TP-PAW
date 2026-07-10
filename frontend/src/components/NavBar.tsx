@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
@@ -10,8 +10,9 @@ import {
   isOwnerReservationsNavActive,
   isRiderReservationsNavActive,
 } from '../routes/navActive';
-import { apiAssetUrl } from '../api/uri';
+import { resolveProfilePictureAssetUrl } from '../api/uri';
 import { LogoutConfirmModal } from './ryden';
+import { useNavActivePill } from './useNavActivePill';
 import logoUrl from '../assets/images/Ryden_logo.ico';
 
 export default function NavBar() {
@@ -20,8 +21,11 @@ export default function NavBar() {
   const location = useLocation();
   const status = useSessionStore((s) => s.status);
   const currentUser = useSessionStore((s) => s.currentUser);
+  const currentUserUri = useSessionStore((s) => s.currentUserUri);
   const logout = useSessionStore((s) => s.logout);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
 
   const isAuthenticated = status === 'authenticated';
   const isAdmin = currentUser?.role === 'admin';
@@ -38,21 +42,31 @@ export default function NavBar() {
   }
 
   const initials =
-    `${currentUser?.forename?.[0] ?? ''}${currentUser?.surname?.[0] ?? ''}`.toUpperCase() || '?';
-  const avatarUrl = currentUser?.links.profilePicture
-    ? apiAssetUrl(currentUser.links.profilePicture)
-    : null;
+    `${currentUser?.forename?.[0] ?? ''}${currentUser?.surname?.[0] ?? ''}`.toUpperCase();
+  const avatarUrl = avatarFailed
+    ? null
+    : resolveProfilePictureAssetUrl(currentUser?.links, currentUserUri);
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [currentUser?.links?.profilePicture, currentUserUri]);
 
   const riderReservationsActive = isRiderReservationsNavActive(location.pathname, location.search);
   const myCarsActive = isMyCarsNavActive(location.pathname, location.search);
   const ownerReservationsActive = isOwnerReservationsNavActive(location.pathname, location.search);
+
+  useNavActivePill(navRef, [
+    location.pathname,
+    location.search,
+    isAuthenticated,
+    riderReservationsActive,
+  ]);
 
   return (
     <>
       <Navbar
         expand
         className="shadow-sm fixed-top mb-0 bg-body"
-        style={{ minHeight: 'var(--ryden-navbar-h)' }}
       >
         <Container fluid>
           <Navbar.Brand as={Link} to={paths.home} className="ms-3 fw-semibold">
@@ -67,7 +81,7 @@ export default function NavBar() {
           </Navbar.Brand>
 
           <div className="d-flex flex-row justify-content-end align-items-center">
-            <Nav className="nav-pills align-items-center mb-0">
+            <Nav ref={navRef} className="nav-pills align-items-center mb-0">
               <Nav.Link as={NavLink} to={paths.home} end className="my-nav-item">
                 {t('nav.home')}
               </Nav.Link>
@@ -122,9 +136,12 @@ export default function NavBar() {
                           width={40}
                           height={40}
                           className="navbar-user-menu-toggle__img"
+                          onError={() => setAvatarFailed(true)}
                         />
-                      ) : (
+                      ) : initials ? (
                         <span className="fw-semibold text-primary small user-select-none">{initials}</span>
+                      ) : (
+                        <i className="bi bi-person-fill text-primary" aria-hidden="true" />
                       )}
                     </span>
                   }
@@ -142,15 +159,11 @@ export default function NavBar() {
                     {t('nav.profile')}
                   </NavDropdown.Item>
                   <NavDropdown.Divider />
-                  <NavDropdown.Item
-                    as={NavLink}
-                    to={paths.myCars}
-                    active={myCarsActive}
-                  >
+                  <NavDropdown.Item as={Link} to={paths.myCars} active={myCarsActive}>
                     {t('nav.myCars')}
                   </NavDropdown.Item>
                   <NavDropdown.Item
-                    as={NavLink}
+                    as={Link}
                     to={paths.ownerReservations}
                     active={ownerReservationsActive}
                   >

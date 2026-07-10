@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.Page;
 
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
@@ -23,6 +24,15 @@ public interface CarPictureService {
 
     /** All pictures for a car ordered for display (typically ascending {@code display_order}). */
     List<CarPicture> getCarPicturesByCarId(final long carId);
+
+    /** Gallery rows for one SQL page (ascending {@code display_order}). */
+    Page<CarPicture> findByCarPaginated(long carId, int zeroBasedPage, int pageSize);
+
+    /** First gallery item by display order (cover / primary thumbnail). */
+    Optional<CarPicture> findPrimaryPictureByCarId(final long carId);
+
+    /** Highest {@code displayOrder} in the gallery, or {@code 0} when empty. */
+    int findMaxDisplayOrderByCarId(long carId);
 
     /** Whether the stored file is linked to a public car gallery video. */
     boolean isStoredFileInCarGallery(final long storedFileId);

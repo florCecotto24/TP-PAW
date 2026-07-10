@@ -69,17 +69,13 @@ public class StoredFile {
         this.createdAt = createdAt;
     }
 
-    public StoredFile(
+    public static StoredFile forUpload(
             final User uploader,
             final String fileName,
             final String contentType,
             final byte[] data,
             final OffsetDateTime createdAt) {
-        this.uploader = uploader;
-        this.fileName = fileName;
-        this.contentType = contentType;
-        this.data = data;
-        this.createdAt = createdAt;
+        return new StoredFile(0L, uploader, fileName, contentType, data, createdAt);
     }
 
     public long getId() {

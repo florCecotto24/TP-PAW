@@ -56,6 +56,21 @@ public class CarPictureJpaDao implements CarPictureDao {
 
     @Override
     public List<CarPicture> getCarPicturesByCarId(final long carId) {
+        return findByCarIdOrderByDisplayOrderAsc(carId, 0, Integer.MAX_VALUE);
+    }
+
+    @Override
+    public long countByCarId(final long carId) {
+        final Long count = em.createQuery(
+                        "SELECT COUNT(cp) FROM CarPicture cp WHERE cp.car.id = :carId", Long.class)
+                .setParameter("carId", carId)
+                .getSingleResult();
+        return count != null ? count : 0L;
+    }
+
+    @Override
+    public List<CarPicture> findByCarIdOrderByDisplayOrderAsc(
+            final long carId, final int offset, final int limit) {
         return em.createQuery(
                         "FROM CarPicture cp "
                                 + "LEFT JOIN FETCH cp.image "
@@ -63,7 +78,33 @@ public class CarPictureJpaDao implements CarPictureDao {
                                 + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
                         CarPicture.class)
                 .setParameter("carId", carId)
+                .setFirstResult(Math.max(0, offset))
+                .setMaxResults(Math.max(1, limit))
                 .getResultList();
+    }
+
+    @Override
+    public Optional<CarPicture> findFirstByCarIdOrderByDisplayOrderAsc(final long carId) {
+        final List<CarPicture> rows = em.createQuery(
+                        "FROM CarPicture cp "
+                                + "LEFT JOIN FETCH cp.image "
+                                + "LEFT JOIN FETCH cp.storedFile "
+                                + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
+                        CarPicture.class)
+                .setParameter("carId", carId)
+                .setMaxResults(1)
+                .getResultList();
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    @Override
+    public Optional<Integer> findMaxDisplayOrderByCarId(final long carId) {
+        final Integer max = em.createQuery(
+                        "SELECT MAX(cp.displayOrder) FROM CarPicture cp WHERE cp.car.id = :carId",
+                        Integer.class)
+                .setParameter("carId", carId)
+                .getSingleResult();
+        return Optional.ofNullable(max);
     }
 
     @Override

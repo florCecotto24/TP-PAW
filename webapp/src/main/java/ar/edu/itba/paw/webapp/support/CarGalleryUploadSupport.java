@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.support;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
@@ -16,7 +17,7 @@ import ar.edu.itba.paw.services.file.StoredFileService;
 
 /** Persists gallery uploads for REST car publish / picture POST flows. */
 @Component
-public final class CarGalleryUploadSupport {
+public class CarGalleryUploadSupport {
 
     private final ImageService imageService;
     private final StoredFileService storedFileService;
@@ -31,6 +32,7 @@ public final class CarGalleryUploadSupport {
         this.carPictureService = carPictureService;
     }
 
+    @Transactional
     public void attachGalleryMedia(
             final long ownerId,
             final long carId,
@@ -63,9 +65,6 @@ public final class CarGalleryUploadSupport {
     }
 
     public int nextDisplayOrder(final long carId) {
-        return carPictureService.getCarPicturesByCarId(carId).stream()
-                .mapToInt(p -> p.getDisplayOrder())
-                .max()
-                .orElse(0) + 1;
+        return carPictureService.findMaxDisplayOrderByCarId(carId) + 1;
     }
 }

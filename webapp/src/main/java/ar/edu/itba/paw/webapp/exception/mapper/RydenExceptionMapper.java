@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.RydenException;
-import ar.edu.itba.paw.webapp.dto.rest.ErrorDto;
 import ar.edu.itba.paw.webapp.support.RydenExceptionHttpStatus;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
@@ -30,14 +29,10 @@ public final class RydenExceptionMapper implements ExceptionMapper<RydenExceptio
     @Override
     public Response toResponse(final RydenException exception) {
         final Response.Status status = RydenExceptionHttpStatus.statusFor(exception);
-        LOGGER.debug("RydenException key={} status={}", exception.getMessageCode(), status.getStatusCode());
-        final ErrorDto body = new ErrorDto(
-                status.getStatusCode(),
-                exception.getMessageCode(),
-                localeMessages.msg(exception));
-        return Response.status(status)
-                .type(ErrorDto.mediaType())
-                .entity(body)
-                .build();
+        LOGGER.atDebug()
+                .addArgument(exception.getMessageCode())
+                .addArgument(status.getStatusCode())
+                .log("RydenException key={} status={}");
+        return RydenExceptionResponseSupport.toResponse(exception, status, localeMessages);
     }
 }

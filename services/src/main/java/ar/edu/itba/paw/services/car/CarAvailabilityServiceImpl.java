@@ -177,27 +177,40 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
             final long carId, final YearMonth month, final int page, final int pageSize) {
         final LocalDate monthStart = month.atDay(1);
         final LocalDate monthEnd = month.atEndOfMonth();
-        final int safePage = Math.max(0, page);
-        final int safePageSize = Math.max(1, pageSize);
-
-        // Intentional exception to the SQL LIMIT/OFFSET pagination rule: the paginated items are
-        // *effective* offered segments, which do not exist as rows, each one is derived by
-        // subtracting the overlapping blocking/reserved periods from the stored OFFERED rows
-        // (computeEffectiveOffered), so neither LIMIT/OFFSET nor a SQL COUNT can address them.
-        // The input is bounded to one car × one month of availability rows, so the full fetch is
-        // a handful of rows, not an unbounded set.
         final List<CarAvailability> allMonthRows =
                 carAvailabilityDao.findOverlappingRangeByCar(carId, monthStart, monthEnd);
         final List<CarAvailability> effectiveRows =
                 CarAvailabilityCalendarServiceImpl.computeEffectiveOffered(allMonthRows);
-        final int total = effectiveRows.size();
+        return slicePage(effectiveRows, page, pageSize);
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CarAvailability> findEffectiveOfferedByCarPaginated(
+            final long carId, final int page, final int pageSize) {
+        return slicePage(effectiveOfferedAvailabilityFor(carId), page, pageSize);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRangePaginated(
+            final long carId,
+            final LocalDate from,
+            final LocalDate to,
+            final int page,
+            final int pageSize) {
+        final List<BookableSegmentProjection> segments =
+                carAvailabilityCalendarService.getEffectiveSegmentsForOwnerCalendarInRange(carId, from, to);
+        return slicePage(segments, page, pageSize);
+    }
+
+    private static <T> Page<T> slicePage(final List<T> all, final int page, final int pageSize) {
+        final int safePage = Math.max(0, page);
+        final int safePageSize = Math.max(1, pageSize);
+        final int total = all.size();
         final int fromIndex = Math.min(safePage * safePageSize, total);
         final int toIndex = Math.min(fromIndex + safePageSize, total);
-        final List<CarAvailability> content = fromIndex < toIndex
-                ? effectiveRows.subList(fromIndex, toIndex)
-                : List.of();
-
+        final List<T> content = fromIndex < toIndex ? all.subList(fromIndex, toIndex) : List.of();
         return new Page<>(content, safePage, safePageSize, total);
     }
 

@@ -26,8 +26,8 @@ public final class BinaryContent {
         this.fileName = fileName;
     }
 
-    public BinaryContent(final byte[] bytes, final String contentType) {
-        this(bytes, contentType, null);
+    public static BinaryContent withoutFileName(final byte[] bytes, final String contentType) {
+        return new BinaryContent(bytes, contentType, null);
     }
 
     public byte[] getBytes() {

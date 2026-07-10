@@ -9,8 +9,10 @@ import java.util.Locale;
 public interface PasswordResetService {
 
     /**
-     * Starts password recovery for the given address. The service enforces its own policy; delivery details stay inside the service layer.
-     * @return {@code true} if a matching account exists, {@code false} otherwise (caller may not distinguish for security)
+     * Starts password recovery for the given address. Anti-enumeration: never throws to reveal account
+     * state; unknown address and already-active code are silent no-ops. The caller always responds 200.
+     *
+     * @return {@code true} when a new code was issued, {@code false} otherwise (caller must not branch on this)
      */
     boolean initiatePasswordReset(String email, Locale locale);
 

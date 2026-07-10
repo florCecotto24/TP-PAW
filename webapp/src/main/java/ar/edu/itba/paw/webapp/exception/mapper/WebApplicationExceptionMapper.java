@@ -49,7 +49,24 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
         if (status == null) {
             status = Response.Status.INTERNAL_SERVER_ERROR;
         }
-        LOGGER.debug("{} status={}", exception.getClass().getSimpleName(), status.getStatusCode());
+        // Jersey often wraps multipart/parse failures as a bare BadRequestException
+        // ("HTTP 400 Bad Request"); log the cause so local debugging can see why.
+        if (exception.getCause() != null) {
+            LOGGER.atDebug()
+                    .setMessage("{} status={} message={} cause={}")
+                    .addArgument(exception.getClass().getSimpleName())
+                    .addArgument(status.getStatusCode())
+                    .addArgument(exception.getMessage())
+                    .addArgument(exception.getCause().toString())
+                    .log();
+        } else {
+            LOGGER.atDebug()
+                    .setMessage("{} status={} message={}")
+                    .addArgument(exception.getClass().getSimpleName())
+                    .addArgument(status.getStatusCode())
+                    .addArgument(exception.getMessage())
+                    .log();
+        }
 
         String code = statusSlug(status);
         String message = exception.getMessage();
@@ -62,7 +79,7 @@ public final class WebApplicationExceptionMapper implements ExceptionMapper<WebA
 
         final Response.ResponseBuilder builder = Response.status(status)
                 .type(ErrorDto.mediaType())
-                .entity(new ErrorDto(status.getStatusCode(), code, message));
+                .entity(ErrorDto.of(status.getStatusCode(), code, message));
         copyChallengeHeaders(original.getHeaders(), builder);
         return builder.build();
     }

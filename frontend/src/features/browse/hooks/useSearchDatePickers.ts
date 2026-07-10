@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import flatpickr from 'flatpickr';
 import type { Instance } from 'flatpickr/dist/types/instance';
 import { flatpickrLocalizedInputOptions } from '../../../i18n/dateFormat';
+import { dayStartFromYmd } from '../../../components/FlatpickrCalendar';
 
 function formatYmd(d: Date): string {
   const y = d.getFullYear();
@@ -25,6 +26,10 @@ export function useSearchDatePickers(
   const { i18n } = useTranslation();
   const fromFp = useRef<Instance | null>(null);
   const untilFp = useRef<Instance | null>(null);
+  const onFromChangeRef = useRef(onFromChange);
+  const onUntilChangeRef = useRef(onUntilChange);
+  onFromChangeRef.current = onFromChange;
+  onUntilChangeRef.current = onUntilChange;
 
   const clearPickers = useCallback(() => {
     fromFp.current?.clear();
@@ -32,9 +37,9 @@ export function useSearchDatePickers(
     if (untilFp.current) {
       untilFp.current.set('minDate', 'today');
     }
-    onFromChange('');
-    onUntilChange('');
-  }, [onFromChange, onUntilChange]);
+    onFromChangeRef.current('');
+    onUntilChangeRef.current('');
+  }, []);
 
   useEffect(() => {
     const fpLocale = flatpickrLocalizedInputOptions(i18n.language);
@@ -49,9 +54,8 @@ export function useSearchDatePickers(
       ...fpLocale,
       disableMobile: true,
       minDate: 'today',
-      defaultDate: from || undefined,
       onChange: (dates) => {
-        onFromChange(dates[0] ? formatYmd(dates[0]) : '');
+        onFromChangeRef.current(dates[0] ? formatYmd(dates[0]) : '');
         if (dates[0] && untilFp.current) {
           untilFp.current.set('minDate', dates[0]);
         }
@@ -61,9 +65,8 @@ export function useSearchDatePickers(
     untilFp.current = flatpickr(untilPicker, {
       ...fpLocale,
       disableMobile: true,
-      minDate: from || 'today',
-      defaultDate: until || undefined,
-      onChange: (dates) => onUntilChange(dates[0] ? formatYmd(dates[0]) : ''),
+      minDate: 'today',
+      onChange: (dates) => onUntilChangeRef.current(dates[0] ? formatYmd(dates[0]) : ''),
     });
 
     return () => {
@@ -72,7 +75,26 @@ export function useSearchDatePickers(
       fromFp.current = null;
       untilFp.current = null;
     };
-  }, [formId, i18n.language, from, until, onFromChange, onUntilChange]);
+  }, [formId, i18n.language]);
+
+  useEffect(() => {
+    const fp = fromFp.current;
+    if (!fp) return;
+    const date = from ? dayStartFromYmd(from) : null;
+    fp.setDate(date ?? [], false);
+    if (date && untilFp.current) {
+      untilFp.current.set('minDate', date);
+    } else if (!from && untilFp.current) {
+      untilFp.current.set('minDate', 'today');
+    }
+  }, [from]);
+
+  useEffect(() => {
+    const fp = untilFp.current;
+    if (!fp) return;
+    const date = until ? dayStartFromYmd(until) : null;
+    fp.setDate(date ?? [], false);
+  }, [until]);
 
   return { clearPickers };
 }

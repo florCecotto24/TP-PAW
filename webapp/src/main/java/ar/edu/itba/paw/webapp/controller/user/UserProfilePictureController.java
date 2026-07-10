@@ -90,7 +90,7 @@ public class UserProfilePictureController {
         final InputStream source = multipartBody != null ? multipartBody : body;
         final byte[] bytes = binaryPayloadSupport.readValidatedBody(source);
         final String contentType = resolveContentType(headers, fileMeta);
-        final ProfilePictureRestForm form = new ProfilePictureRestForm(bytes, contentType);
+        final ProfilePictureRestForm form = ProfilePictureRestForm.of(bytes, contentType);
         formValidationSupport.validate(form);
 
         userService.updateProfilePicture(id, "profile-picture", contentType, bytes);

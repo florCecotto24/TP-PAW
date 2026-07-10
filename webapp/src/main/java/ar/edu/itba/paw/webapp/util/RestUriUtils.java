@@ -58,8 +58,8 @@ public final class RestUriUtils {
 
     public static URI userReviewsUri(final UriInfo uriInfo, final long userId) {
         return uriInfo.getBaseUriBuilder()
-                .path("users").path(String.valueOf(userId))
                 .path("reviews")
+                .queryParam("recipientUserId", userId)
                 .build();
     }
 
@@ -92,8 +92,19 @@ public final class RestUriUtils {
                 .build();
     }
 
-    public static URI modelUri(final UriInfo uriInfo, final long modelId) {
-        return uriInfo.getBaseUriBuilder().path("models").path(String.valueOf(modelId)).build();
+    public static URI modelUri(final UriInfo uriInfo, final long brandId, final long modelId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("brands").path(String.valueOf(brandId))
+                .path("models").path(String.valueOf(modelId))
+                .build();
+    }
+
+    public static URI modelPriceInsightUri(final UriInfo uriInfo, final long brandId, final long modelId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("brands").path(String.valueOf(brandId))
+                .path("models").path(String.valueOf(modelId))
+                .path("price-insight")
+                .build();
     }
 
     public static URI neighborhoodUri(final UriInfo uriInfo, final long neighborhoodId) {
@@ -107,6 +118,13 @@ public final class RestUriUtils {
         return uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
                 .path("pictures")
+                .build();
+    }
+
+    public static URI carPrimaryPictureUri(final UriInfo uriInfo, final long carId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("cars").path(String.valueOf(carId))
+                .path("pictures").path("primary")
                 .build();
     }
 
@@ -160,24 +178,33 @@ public final class RestUriUtils {
 
     public static URI carReviewsUri(final UriInfo uriInfo, final long carId) {
         return uriInfo.getBaseUriBuilder()
-                .path("cars").path(String.valueOf(carId))
                 .path("reviews")
+                .queryParam("carId", carId)
                 .build();
     }
 
+    /**
+     * Canonical collection URI for reviews of a reservation ({@code /reviews?reservationId=…}).
+     * Same URI for {@code GET} (list) and {@code POST} (create).
+     */
     public static URI reservationReviewsUri(final UriInfo uriInfo, final long reservationId) {
         return uriInfo.getBaseUriBuilder()
-                .path("reservations").path(String.valueOf(reservationId))
                 .path("reviews")
+                .queryParam("reservationId", reservationId)
                 .build();
     }
 
-    /** Canonical URN for a single review — unique per row, unlike {@link #reservationReviewsUri}. */
+    /** Canonical URN for a single review ({@code GET /reviews/{id}}). */
+    public static URI reviewUri(final UriInfo uriInfo, final long reviewId) {
+        return uriInfo.getBaseUriBuilder().path("reviews").path(String.valueOf(reviewId)).build();
+    }
+
+    /**
+     * @deprecated Prefer {@link #reviewUri(UriInfo, long)} for {@code links.self}.
+     */
+    @Deprecated
     public static URI reservationReviewUri(final UriInfo uriInfo, final long reservationId, final long reviewId) {
-        return uriInfo.getBaseUriBuilder()
-                .path("reservations").path(String.valueOf(reservationId))
-                .path("reviews").path(String.valueOf(reviewId))
-                .build();
+        return reviewUri(uriInfo, reviewId);
     }
 
     public static URI reservationUri(final UriInfo uriInfo, final long reservationId) {

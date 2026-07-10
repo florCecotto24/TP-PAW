@@ -96,7 +96,38 @@ function ChatMessageBubble({
   );
 }
 
-export default function ReservationChatPanel({ reservation }: { reservation: ReservationDto }) {
+export interface CounterpartyChatInfo {
+  name: string;
+  avatarUrl?: string | null;
+}
+
+export interface ReservationChatPanelProps {
+  reservation: ReservationDto;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  counterparty?: CounterpartyChatInfo;
+}
+
+function ChatAvatar({ avatarUrl, className }: { avatarUrl?: string | null; className: string }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt="" className={className} />;
+  }
+  return (
+    <div
+      className={`${className} reservation-chat-header__avatar--placeholder d-flex align-items-center justify-content-center`}
+      aria-hidden="true"
+    >
+      <i className="bi bi-person-fill" />
+    </div>
+  );
+}
+
+export default function ReservationChatPanel({
+  reservation,
+  expanded,
+  onExpandedChange,
+  counterparty,
+}: ReservationChatPanelProps) {
   const { t, i18n } = useTranslation();
   const { id: myId } = useCurrentUser();
   const messagesUri = reservation.links.messages;
@@ -179,6 +210,14 @@ export default function ReservationChatPanel({ reservation }: { reservation: Res
       syncStickyToLastDay();
     }
   }, [messages.length, onLastPage, syncStickyToLastDay]);
+
+  useEffect(() => {
+    if (!expanded || !messagesRef.current) return;
+    const el = messagesRef.current;
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [expanded, messages.length]);
 
   const clearPendingFile = () => {
     setFile(null);
@@ -316,27 +355,24 @@ export default function ReservationChatPanel({ reservation }: { reservation: Res
   const dayGroups = groupMessagesByDay(messages);
   const composerDisabled = sending || uploading;
   const showEmptyState = !loading && messages.length === 0;
+  const displayName = counterparty?.name?.trim() || t('res.chat.title');
 
-  return (
-    <section className="card border-0 shadow-sm rounded-4 reservation-chat-card reservation-chat-card--embedded mt-4 bg-white">
-      <div className="card-body p-0 reservation-chat-card__body">
-        <div
-          className="reservation-chat reservation-chat-page reservation-chat-shell p-3 reservation-chat__drop-zone"
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <div
-            className={`reservation-chat__drop-overlay${dropOverlayVisible ? '' : ' d-none'}`}
-            aria-hidden={!dropOverlayVisible}
-          >
-            <span className="reservation-chat__drop-overlay-text">{t('res.chat.dropHint')}</span>
-          </div>
+  const chatShell = (
+    <div
+      className="reservation-chat reservation-chat-page reservation-chat-shell p-3 reservation-chat__drop-zone"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      <div
+        className={`reservation-chat__drop-overlay${dropOverlayVisible ? '' : ' d-none'}`}
+        aria-hidden={!dropOverlayVisible}
+      >
+        <span className="reservation-chat__drop-overlay-text">{t('res.chat.dropHint')}</span>
+      </div>
 
-          <h2 className="h5 fw-semibold mb-3 px-1">{t('res.chat.title')}</h2>
-
-          {loadError ? (
+      {loadError ? (
             <div className="reservation-chat-page__error text-danger small mb-2" role="alert">
               {loadError}
             </div>
@@ -501,13 +537,57 @@ export default function ReservationChatPanel({ reservation }: { reservation: Res
             </button>
           </form>
 
-          {sendError ? (
-            <div className="reservation-chat-page__error text-danger small mt-2" role="alert">
-              {sendError}
-            </div>
-          ) : null}
+      {sendError ? (
+        <div className="reservation-chat-page__error text-danger small mt-2" role="alert">
+          {sendError}
         </div>
-      </div>
-    </section>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div
+      className="reservation-chat-widget"
+      role="complementary"
+      aria-label={t('res.chat.title')}
+      aria-expanded={expanded}
+    >
+      {!expanded ? (
+        <button
+          type="button"
+          className="reservation-chat-widget__launcher"
+          onClick={() => onExpandedChange(true)}
+          aria-expanded="false"
+        >
+          <ChatAvatar
+            avatarUrl={counterparty?.avatarUrl}
+            className="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
+          />
+          <span className="reservation-chat-widget__launcher-name text-truncate">{displayName}</span>
+          <i className="bi bi-chevron-up reservation-chat-widget__launcher-icon" aria-hidden="true" />
+        </button>
+      ) : (
+        <div className="reservation-chat-widget__window">
+          <header className="reservation-chat-widget__header">
+            <ChatAvatar
+              avatarUrl={counterparty?.avatarUrl}
+              className="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
+            />
+            <span className="reservation-chat-widget__header-name text-truncate">{displayName}</span>
+            <button
+              type="button"
+              className="reservation-chat-widget__minimize"
+              onClick={() => onExpandedChange(false)}
+              aria-label={t('res.chat.minimize')}
+            >
+              <i className="bi bi-dash-lg" aria-hidden="true" />
+            </button>
+          </header>
+          <section className="reservation-chat-card reservation-chat-card--floating bg-white">
+            <div className="reservation-chat-card__body">{chatShell}</div>
+          </section>
+        </div>
+      )}
+    </div>
   );
 }

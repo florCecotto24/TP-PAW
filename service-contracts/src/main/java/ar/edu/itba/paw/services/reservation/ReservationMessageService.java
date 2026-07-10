@@ -67,4 +67,11 @@ public interface ReservationMessageService {
 
     /** Total number of chat messages for a reservation. */
     long countMessages(long reservationId);
+
+    /** Participant-scoped message fetch for {@code GET .../messages/{messageId}}. */
+    Optional<ReservationMessageDto> getMessageForParticipant(
+            long viewerUserId, long reservationId, long messageId);
+
+    /** Admin-scoped message fetch (no participant gate). */
+    Optional<ReservationMessage> findMessageForAdmin(long reservationId, long messageId);
 }

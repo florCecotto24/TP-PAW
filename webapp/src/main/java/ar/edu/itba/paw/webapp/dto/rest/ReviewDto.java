@@ -33,8 +33,7 @@ public final class ReviewDto {
         final User author = dto.madeByRider
                 ? review.getReservation().getRider()
                 : review.getReservation().getCar().getOwner();
-        dto.links = LinksDto.ofSelf(
-                        RestUriUtils.reservationReviewUri(uriInfo, reservationId, review.getId()).toString())
+        dto.links = LinksDto.ofSelf(RestUriUtils.reviewUri(uriInfo, review.getId()).toString())
                 .withRelated("reservation", RestUriUtils.reservationUri(uriInfo, reservationId).toString())
                 .withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString())
                 .withRelated("author", RestUriUtils.userUri(uriInfo, author.getId()).toString());

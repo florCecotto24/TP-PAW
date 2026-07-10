@@ -6,7 +6,7 @@ import {
   RIDER_RESERVATIONS_PAGE_SIZE,
   type RiderReservationFilters,
 } from '../riderReservationFilters';
-import type { ReservationDto } from '../types';
+import type { ReservationSummaryDto } from '../types';
 
 function filtersToApiQuery(
   riderId: string | number,
@@ -40,7 +40,7 @@ export function useRiderReservationsPage(
     queryFn: async () => {
       const res = await listReservations(filtersToApiQuery(riderId as string | number, filters, pageIndex));
       return {
-        items: (res.data ?? []) as ReservationDto[],
+        items: (res.data ?? []) as ReservationSummaryDto[],
         total: res.page.total,
       };
     },

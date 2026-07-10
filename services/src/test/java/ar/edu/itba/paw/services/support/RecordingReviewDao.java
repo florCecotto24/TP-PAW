@@ -105,6 +105,11 @@ public class RecordingReviewDao implements ReviewDao {
     }
 
     @Override
+    public Page<Review> findReviewsReceivedByUser(final long userId, final int page, final int pageSize) {
+        return new Page<>(List.of(), page, pageSize, 0L);
+    }
+
+    @Override
     public Page<ReviewItemDto> findReviewsForUserPage(final long userId, final int page, final int pageSize) {
         return new Page<>(List.of(), page, pageSize, 0L);
     }

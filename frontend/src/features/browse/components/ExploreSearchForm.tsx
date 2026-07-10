@@ -7,6 +7,7 @@ import { paths } from '../../../routes/paths';
 import {
   categoryFilterOptions,
   powertrainFilterOptions,
+  priceMarketFilterOptions,
   ratingFilterOptions,
   transmissionFilterOptions,
 } from '../exploreSearch';
@@ -36,6 +37,7 @@ function toMulti(filters: SearchFilters): MultiFilters {
   if (filters.transmission) out.transmission = [filters.transmission];
   if (filters.powertrain) out.powertrain = [filters.powertrain];
   if (filters.rating != null) out.rating = [String(filters.rating)];
+  if (filters.priceMarket) out.priceMarket = [filters.priceMarket];
   return out;
 }
 
@@ -50,6 +52,11 @@ function fromMulti(
     transmission: multi.transmission?.[0] as Transmission | undefined,
     powertrain: multi.powertrain?.[0] as Powertrain | undefined,
     rating: multi.rating?.[0] ? Number(multi.rating[0]) : undefined,
+    priceMarket: (['below_market', 'at_market', 'above_market'] as const).includes(
+      multi.priceMarket?.[0] as 'below_market' | 'at_market' | 'above_market',
+    )
+      ? (multi.priceMarket![0] as SearchFilters['priceMarket'])
+      : undefined,
     neighborhoodId: neighborhoodIds[0] != null ? Number(neighborhoodIds[0]) : undefined,
   };
 }
@@ -207,6 +214,7 @@ export default function ExploreSearchForm({
       transmissionFilterOptions={transmissionFilterOptions(t)}
       powertrainFilterOptions={powertrainFilterOptions(t)}
       ratingFilterOptions={ratingFilterOptions()}
+      priceMarketFilterOptions={priceMarketFilterOptions(t)}
       neighborhoodList={neighborhoodList}
       query={query}
       from={from}

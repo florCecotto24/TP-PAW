@@ -12,9 +12,11 @@ public final class ProfilePictureRestForm {
     public ProfilePictureRestForm() {
     }
 
-    public ProfilePictureRestForm(final byte[] bytes, final String contentType) {
-        this.bytes = bytes;
-        this.contentType = contentType;
+    public static ProfilePictureRestForm of(final byte[] bytes, final String contentType) {
+        final ProfilePictureRestForm form = new ProfilePictureRestForm();
+        form.bytes = bytes;
+        form.contentType = contentType;
+        return form;
     }
 
     public byte[] getBytes() {

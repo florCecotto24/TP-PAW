@@ -46,6 +46,7 @@ export default function ReviewCarousel({
                       rating={review.rating}
                       comment={review.comment}
                       imageUrl={imageUrl}
+                      avatarUrl={review.avatarUrl}
                     />
                   </div>
                 );

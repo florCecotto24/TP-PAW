@@ -14,10 +14,12 @@ public final class ErrorDto {
     public ErrorDto() {
     }
 
-    public ErrorDto(final int status, final String code, final String message) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
+    public static ErrorDto of(final int status, final String code, final String message) {
+        final ErrorDto dto = new ErrorDto();
+        dto.status = status;
+        dto.code = code;
+        dto.message = message;
+        return dto;
     }
 
     public static String mediaType() {

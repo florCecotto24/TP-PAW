@@ -63,14 +63,6 @@ public class ReservationMessage {
             final Reservation reservation,
             final User sender,
             final String body,
-            final OffsetDateTime createdAt) {
-        this(reservation, sender, body, null, createdAt);
-    }
-
-    public ReservationMessage(
-            final Reservation reservation,
-            final User sender,
-            final String body,
             final StoredFile attachment,
             final OffsetDateTime createdAt) {
         this.reservation = reservation;

@@ -4,14 +4,14 @@ import { ConsumerCarCard } from '../../components/ryden';
 import CarCardImage from '../../components/CarCardImage';
 import { useBrowseCarFavorite } from '../browse/hooks';
 import { carDetailHref, carDtoToConsumerCard } from '../browse/carCardAdapter';
-import type { CarDto } from './types';
+import type { CarSummaryDto } from '../browse/types';
 
 /** Tarjeta de auto en favoritos/perfil público — delega en tag {@code carCard}. */
 export default function CarCard({
   car,
   action,
 }: {
-  car: CarDto;
+  car: CarSummaryDto;
   action?: ReactNode;
 }) {
   const { t } = useTranslation();

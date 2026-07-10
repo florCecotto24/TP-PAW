@@ -120,6 +120,9 @@ public class CarServiceImpl implements CarService {
         if (carDao.existsByOwnerAndPlate(ownerId, plate)) {
             throw new DuplicatePlateException(plate);
         }
+        if (countNonEmptyGalleryUploads(galleryMedia) < 1) {
+            throw new CarValidationException(MessageKeys.CAR_GALLERY_PICTURES_REQUIRED);
+        }
         final Car car = carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
         if (description != null && !description.isBlank()) {
             car.setDescription(description.strip());
@@ -159,6 +162,19 @@ public class CarServiceImpl implements CarService {
             carDao.setCarStatus(car.getId(), Car.Status.LACK_DOC);
         }
         return car;
+    }
+
+    private static int countNonEmptyGalleryUploads(final List<GalleryMediaUpload> galleryMedia) {
+        if (galleryMedia == null || galleryMedia.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (final GalleryMediaUpload media : galleryMedia) {
+            if (media.getData() != null && media.getData().length > 0) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
@@ -301,6 +317,7 @@ public class CarServiceImpl implements CarService {
                         criteria.getAvailabilityRangeEndExclusive())
                 .flexibleMonth(criteria.getFlexibleMonth())
                 .flexibleDays(criteria.getFlexibleDays())
+                .priceMarketPosition(criteria.getPriceMarketPosition())
                 .build();
     }
 

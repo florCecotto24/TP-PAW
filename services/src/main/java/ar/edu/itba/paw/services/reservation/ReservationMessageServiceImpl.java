@@ -232,6 +232,25 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<ReservationMessageDto> getMessageForParticipant(
+            final long viewerUserId, final long reservationId, final long messageId) {
+        final Reservation reservation = findParticipantReservation(viewerUserId, reservationId)
+                .orElseThrow(() -> new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_PARTICIPANT));
+        if (!isChatAvailable(reservation)) {
+            throw new ReservationMessageException(MessageKeys.RESERVATION_CHAT_NOT_AVAILABLE);
+        }
+        return reservationMessageDao.findByIdAndReservationId(messageId, reservationId).map(this::toDto);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ReservationMessage> findMessageForAdmin(
+            final long reservationId, final long messageId) {
+        return reservationMessageDao.findByIdAndReservationId(messageId, reservationId);
+    }
+
+    @Override
     @Transactional
     public void dispatchChatDigestEmails() {
         final List<ReservationMessage> pending = reservationMessageDao.findPendingEmailNotification();

@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Form } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BreadcrumbTrail } from '../../components/ryden';
+import { BreadcrumbTrail, LoadingBlock, FieldView } from '../../components/ryden';
+import ReceiptUploadPicker from '../reservations/components/ReceiptUploadPicker';
+import { profilePictureAssetUrl } from '../../api/uri';
+import { useSessionStore } from '../../session/sessionStore';
 import { useMyUserUri } from './hooks';
 import {
   deleteDocument,
@@ -56,6 +59,8 @@ function initials(u: UserDto): string {
 export default function MyProfilePage() {
   const { t } = useTranslation();
   const myUri = useMyUserUri();
+  const sessionStatus = useSessionStore((s) => s.status);
+  const sessionUser = useSessionStore((s) => s.currentUser);
   const queryClient = useQueryClient();
 
   const userQuery = useQuery({
@@ -63,8 +68,16 @@ export default function MyProfilePage() {
     // Perfil propio: vista privada (email, cbu, etc.).
     queryFn: () => fetchUser(myUri as string, { private: true }),
     enabled: !!myUri,
+    initialData: sessionUser ?? undefined,
   });
 
+  if (sessionStatus === 'authenticated' && !myUri) {
+    return (
+      <div className="container profile-container">
+        <LoadingBlock variant="page" className="py-4" />
+      </div>
+    );
+  }
   if (!myUri) {
     return (
       <div className="container profile-container">
@@ -80,9 +93,7 @@ export default function MyProfilePage() {
   if (userQuery.isLoading) {
     return (
       <div className="container profile-container">
-        <p role="status" className="text-secondary">
-          {t('profile.common.loading')}
-        </p>
+        <LoadingBlock variant="page" className="py-4" />
       </div>
     );
   }
@@ -122,13 +133,13 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
   // ausente, mostramos el placeholder de iniciales. El onError queda como red de
   // seguridad ante un GET que falle igual (replica el gating por imageId del JSP).
   const [imgFailed, setImgFailed] = useState(false);
-  const pictureLink = imgFailed ? undefined : user.links.profilePicture;
+  const pictureLink = imgFailed ? undefined : profilePictureAssetUrl(user.links) ?? undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [banner, setBanner] = useState<'saved' | 'removed' | null>(null);
 
   // Si cambia la foto (tras subir/borrar), reseteamos el estado de error.
-  useEffect(() => setImgFailed(false), [user.links.profilePicture]);
+  useEffect(() => setImgFailed(false), [user.links?.profilePicture]);
 
   // Cierra el menú al clickear fuera (espejo del comportamiento del JSP).
   useEffect(() => {
@@ -435,29 +446,6 @@ function ProfileDataCard({
   );
 }
 
-function FieldView({
-  label,
-  value,
-  multiline,
-}: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div className="profile-field-view">
-      <span className="profile-section-label">{label}</span>
-      <span
-        className={`profile-field-value ryden-text-break${
-          multiline ? ' ryden-multiline-plaintext d-inline-block w-100' : ''
-        }`}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
 // --- Documentos -------------------------------------------------------------
 function DocumentsCard({ user, onChanged }: { user: UserDto; onChanged: () => void }) {
   const { t } = useTranslation();
@@ -510,6 +498,26 @@ function DocumentRow({
     onSuccess: (ok) => setViewError(!ok),
   });
 
+  const docPickerLabels = {
+    chooseFile: t('profile.docs.chooseFile'),
+    confirmUpload: t('profile.docs.confirmUpload'),
+    confirming: t('profile.docs.confirming'),
+    uploadAria: uploaded ? t('profile.docs.replace') : t('profile.docs.upload'),
+    replaceFile: t('profile.docs.replaceFile'),
+    removeFile: t('profile.docs.removeFile'),
+    invalidFile: t('profile.docs.invalidFile'),
+    fileTooLarge: t('profile.docs.fileTooLarge', { maxMb: 5 }),
+    uploadError: t('profile.docs.uploadError'),
+  };
+
+  const onConfirmUpload = async (file: File) => {
+    try {
+      await upload.mutateAsync(file);
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return (
     <div className="mb-3">
       {uploaded ? (
@@ -560,35 +568,23 @@ function DocumentRow({
             <label className="form-label small mb-1" htmlFor={`docReplace-${type}`}>
               {t('profile.docs.replace')}
             </label>
-            <Form.Control
+            <ReceiptUploadPicker
               id={`docReplace-${type}`}
-              size="sm"
-              type="file"
-              accept="image/*,application/pdf"
-              className="form-control-sm mb-0"
-              onChange={(e) => {
-                const target = e.target as HTMLInputElement;
-                const file = target.files?.[0];
-                if (file) upload.mutate(file);
-                target.value = '';
-              }}
+              disabled={upload.isPending || remove.isPending}
+              busy={upload.isPending}
+              onConfirm={onConfirmUpload}
+              labels={docPickerLabels}
             />
           </div>
         </>
       )}
       {!uploaded && (
-        <Form.Control
+        <ReceiptUploadPicker
           id={`docFile-${type}`}
-          size="sm"
-          type="file"
-          accept="image/*,application/pdf"
-          className="form-control-sm"
-          onChange={(e) => {
-            const target = e.target as HTMLInputElement;
-            const file = target.files?.[0];
-            if (file) upload.mutate(file);
-            target.value = '';
-          }}
+          disabled={upload.isPending}
+          busy={upload.isPending}
+          onConfirm={onConfirmUpload}
+          labels={docPickerLabels}
         />
       )}
       {banner && !upload.isError && !remove.isError && (

@@ -14,7 +14,7 @@ function basicAuthHeader(email: string, secret: string): string {
 }
 
 // /forgot-password — sin verbos en la URL, dos pasos en una sola página:
-//   1) POST /credentials { email } (202 uniforme, anti-enumeración).
+//   1) POST /credentials { email } (200 uniforme, anti-enumeración).
 //   2) La URN /users/{id} a completar no viaja por el mail (revelaría la cuenta);
 //      se resuelve con el mismo "auth probe" que login/verify-email: Basic email:otp
 //      a GET / trae el Link rel="authenticated-user" (no consume el código). Con esa

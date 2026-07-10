@@ -118,4 +118,59 @@ final class OpenApiContractSupport {
                         .collect(Collectors.toCollection(LinkedHashSet::new))
                 : Set.of();
     }
+
+    /**
+     * Status codes declared under {@code responses:} for a path operation (e.g. {@code post} on {@code /credentials}).
+     */
+    static Set<String> operationResponseStatusCodes(
+            final String yaml, final String path, final String httpMethod) {
+        final Pattern pathBlock = Pattern.compile(
+                "^  " + Pattern.quote(path) + ":\\s*\\R([\\s\\S]*?)(?=^  /|^  #|^components:|\\Z)",
+                Pattern.MULTILINE);
+        final Matcher pathMatcher = pathBlock.matcher(yaml);
+        if (!pathMatcher.find()) {
+            throw new IllegalArgumentException("Path not found in openapi.yaml: " + path);
+        }
+        final String block = pathMatcher.group(1);
+        final Pattern operation = Pattern.compile(
+                "^    " + Pattern.quote(httpMethod) + ":\\s*\\R([\\s\\S]*?)(?=^    [a-z]+:|^  /|^  #|^components:|\\Z)",
+                Pattern.MULTILINE);
+        final Matcher operationMatcher = operation.matcher(block);
+        if (!operationMatcher.find()) {
+            throw new IllegalArgumentException("Operation not found in openapi.yaml: " + httpMethod + " " + path);
+        }
+        final String operationBlock = operationMatcher.group(1);
+        final int responsesIdx = operationBlock.indexOf("responses:");
+        if (responsesIdx < 0) {
+            throw new IllegalArgumentException("responses not found for " + httpMethod + " " + path);
+        }
+        final String responsesTail = operationBlock.substring(responsesIdx);
+        final Pattern statusLine = Pattern.compile("^        \"(\\d{3})\":", Pattern.MULTILINE);
+        final Matcher statusMatcher = statusLine.matcher(responsesTail);
+        final Set<String> codes = new LinkedHashSet<>();
+        while (statusMatcher.find()) {
+            codes.add(statusMatcher.group(1));
+        }
+        if (codes.isEmpty()) {
+            throw new IllegalArgumentException("No response status codes for " + httpMethod + " " + path);
+        }
+        return codes;
+    }
+
+    static int parameterSchemaInt(final String yaml, final String parameterComponentName, final String field) {
+        final Pattern block = Pattern.compile(
+                "^    " + Pattern.quote(parameterComponentName) + ":[\\s\\S]*?(?=^    [a-zA-Z]+:|^  [a-z#]|\\Z)",
+                Pattern.MULTILINE);
+        final Matcher blockMatcher = block.matcher(yaml);
+        if (!blockMatcher.find()) {
+            throw new IllegalArgumentException("Parameter not found in openapi.yaml: " + parameterComponentName);
+        }
+        final Pattern fieldPattern = Pattern.compile("\\b" + Pattern.quote(field) + ": (\\d+)");
+        final Matcher fieldMatcher = fieldPattern.matcher(blockMatcher.group());
+        if (!fieldMatcher.find()) {
+            throw new IllegalArgumentException(
+                    "Parameter schema field not found in openapi.yaml: " + parameterComponentName + "." + field);
+        }
+        return Integer.parseInt(fieldMatcher.group(1));
+    }
 }

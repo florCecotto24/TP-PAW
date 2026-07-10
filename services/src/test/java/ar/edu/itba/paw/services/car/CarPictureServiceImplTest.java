@@ -21,6 +21,7 @@ import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
 import ar.edu.itba.paw.models.domain.user.User;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.car.CarPictureDao;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
@@ -202,5 +203,57 @@ public class CarPictureServiceImplTest {
 
         // 3. Assert
         Assertions.assertTrue(result.isEmpty());
+    }
+
+    @Test
+    public void testFindPrimaryPictureByCarIdReturnsFirstInDisplayOrder() {
+        // 1.Arrange
+        final long carId = 9L;
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
+        final CarPicture first = new CarPicture(
+                1L, Mockito.mock(Car.class), new Image(11L, "a.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
+        Mockito.when(carPictureDao.findFirstByCarIdOrderByDisplayOrderAsc(carId)).thenReturn(Optional.of(first));
+
+        // 2. Execute
+        final Optional<CarPicture> primary = carPictureService.findPrimaryPictureByCarId(carId);
+
+        // 3. Assert
+        Assertions.assertTrue(primary.isPresent());
+        Assertions.assertEquals(1L, primary.get().getId());
+    }
+
+    @Test
+    public void testFindPrimaryPictureByCarIdWhenGalleryEmpty() {
+        // 1.Arrange
+        final long carId = 10L;
+        Mockito.when(carPictureDao.findFirstByCarIdOrderByDisplayOrderAsc(carId)).thenReturn(Optional.empty());
+
+        // 2. Execute
+        final Optional<CarPicture> primary = carPictureService.findPrimaryPictureByCarId(carId);
+
+        // 3. Assert
+        Assertions.assertTrue(primary.isEmpty());
+    }
+
+    @Test
+    public void testFindByCarPaginatedReturnsSqlPage() {
+        // 1.Arrange
+        final long carId = 11L;
+        final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
+        final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
+        final CarPicture first = new CarPicture(
+                1L, Mockito.mock(Car.class), new Image(11L, "a.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
+        Mockito.when(carPictureDao.countByCarId(carId)).thenReturn(3L);
+        Mockito.when(carPictureDao.findByCarIdOrderByDisplayOrderAsc(carId, 0, 2)).thenReturn(List.of(first));
+
+        // 2. Execute
+        final Page<CarPicture> page =
+                carPictureService.findByCarPaginated(carId, 0, 2);
+
+        // 3. Assert
+        Assertions.assertEquals(1, page.getContent().size());
+        Assertions.assertEquals(3L, page.getTotalItems());
+        Assertions.assertEquals(2, page.getPageSize());
     }
 }

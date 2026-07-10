@@ -77,7 +77,7 @@ public final class MailDispatchSupport {
         } catch (final EmailMessagingException e) {
             throw e;
         } catch (final RuntimeException e) {
-            throw new EmailMessagingException(e);
+            throw EmailMessagingException.wrapping(e);
         }
     }
 
@@ -106,7 +106,7 @@ public final class MailDispatchSupport {
             mailSender.send(message);
         } catch (final MessagingException e) {
             LOGGER.atError().setCause(e).addArgument(to).log("Error sending email to {}");
-            throw new EmailMessagingException(e);
+            throw EmailMessagingException.wrapping(e);
         }
     }
 

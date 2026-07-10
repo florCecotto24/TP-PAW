@@ -38,6 +38,7 @@ import ar.edu.itba.paw.models.dto.car.BookableSegmentProjection;
 import ar.edu.itba.paw.models.util.time.BookableWallRangesJson;
 import ar.edu.itba.paw.models.util.time.WallDateTimeParsing;
 import ar.edu.itba.paw.policy.PaymentReceiptUploadPolicy;
+import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.util.CarAvailabilityAddressFormatter;
 import ar.edu.itba.paw.util.format.MoneyFormat;
 
@@ -65,6 +66,7 @@ public class ReservationViewServiceImpl implements ReservationViewService {
     private final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy;
     private final ReviewService reviewService;
     private final ReservationMessageService reservationMessageService;
+    private final ReservationTimingPolicy reservationTimingPolicy;
     private final MoneyFormat moneyFormat;
 
     @Autowired
@@ -80,6 +82,7 @@ public class ReservationViewServiceImpl implements ReservationViewService {
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             @Lazy final ReviewService reviewService,
             final ReservationMessageService reservationMessageService,
+            final ReservationTimingPolicy reservationTimingPolicy,
             final MoneyFormat moneyFormat) {
         this.reservationService = reservationService;
         this.carService = carService;
@@ -92,6 +95,7 @@ public class ReservationViewServiceImpl implements ReservationViewService {
         this.paymentReceiptUploadPolicy = paymentReceiptUploadPolicy;
         this.reviewService = reviewService;
         this.reservationMessageService = reservationMessageService;
+        this.reservationTimingPolicy = reservationTimingPolicy;
         this.moneyFormat = moneyFormat;
     }
 
@@ -144,6 +148,8 @@ public class ReservationViewServiceImpl implements ReservationViewService {
         final boolean periodEnded = nowUtc.isAfter(reservation.getEndDate());
         final boolean hasOwnerReview = reviewService.hasOwnerReview(reservation.getId());
         final boolean hasRiderReview = reviewService.hasRiderReview(reservation.getId());
+        final boolean riderReviewWindowOpen = isRiderReviewWindowOpen(reservation, nowUtc);
+        final boolean ownerReviewWindowOpen = isOwnerReviewWindowOpen(reservation, nowUtc);
         final Optional<String> paymentProofDeadlineDisplay = reservation.getPaymentProofDeadlineAt()
                 .map(deadline -> WallDateTimeDisplayFormat.formatUtcAsWallLocalNoSeconds(deadline, locale));
         final boolean pickupNotYetStarted = nowUtc.isBefore(reservation.getStartDate());
@@ -176,14 +182,31 @@ public class ReservationViewServiceImpl implements ReservationViewService {
                 reviewService.getReviewCommentMaxLength(),
                 periodEnded,
                 viewerIsOwner && periodEnded && !reservation.isCarReturned(),
-                viewerIsOwner && reservation.isCarReturned() && !hasOwnerReview,
-                !viewerIsOwner && periodEnded && !hasRiderReview,
+                viewerIsOwner && reservation.isCarReturned() && !hasOwnerReview && ownerReviewWindowOpen,
+                !viewerIsOwner && periodEnded && !hasRiderReview && riderReviewWindowOpen,
                 paymentProofDeadlineDisplay,
                 reservation.getPaymentReceiptFileId().isPresent(),
                 canCancelReservation,
                 hasRefundReceipt,
                 refundProofDeadlineDisplay,
                 reservationMessageService.isChatAvailable(reservation)));
+    }
+
+    private boolean isRiderReviewWindowOpen(final Reservation reservation, final OffsetDateTime nowUtc) {
+        final int days = reservationTimingPolicy.getReviewAutoSkipDays();
+        if (days < 1) {
+            return true;
+        }
+        return nowUtc.isBefore(reservation.getEndDate().plusDays(days));
+    }
+
+    private boolean isOwnerReviewWindowOpen(final Reservation reservation, final OffsetDateTime nowUtc) {
+        final int days = reservationTimingPolicy.getReviewAutoSkipDays();
+        if (days < 1) {
+            return true;
+        }
+        final OffsetDateTime windowStart = reservation.getCarReturnedAt().orElse(reservation.getEndDate());
+        return nowUtc.isBefore(windowStart.plusDays(days));
     }
 
     @Override

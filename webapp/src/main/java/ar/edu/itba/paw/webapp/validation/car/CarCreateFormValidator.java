@@ -1,6 +1,5 @@
 package ar.edu.itba.paw.webapp.validation.car;
 
-import java.net.URI;
 import java.time.Year;
 
 import org.springframework.stereotype.Component;
@@ -10,6 +9,7 @@ import org.springframework.validation.Validator;
 import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
+import ar.edu.itba.paw.webapp.util.ModelUriSupport;
 
 /**
  * Cross-field validator for REST {@link CarCreateForm}: catalog fields when {@code modelUri} is absent,
@@ -82,29 +82,10 @@ public final class CarCreateFormValidator implements Validator {
 
     private static boolean isValidModelUri(final String modelUri) {
         try {
-            parseModelId(modelUri);
+            ModelUriSupport.parseModelId(modelUri);
             return true;
         } catch (final RuntimeException ex) {
             return false;
         }
-    }
-
-    private static long parseModelId(final String modelUri) {
-        final URI uri = URI.create(modelUri.trim());
-        final String path = uri.getPath();
-        if (path == null || path.isBlank()) {
-            throw new IllegalArgumentException("empty path");
-        }
-        final String[] segments = path.split("/");
-        for (int i = segments.length - 1; i >= 0; i--) {
-            if (!segments[i].isBlank()) {
-                final long id = Long.parseLong(segments[i]);
-                if (id <= 0) {
-                    throw new IllegalArgumentException("non-positive");
-                }
-                return id;
-            }
-        }
-        throw new IllegalArgumentException("no id segment");
     }
 }

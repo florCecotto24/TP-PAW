@@ -58,6 +58,16 @@ export interface CarDto {
   links: Links;
 }
 
+export interface ReservationSummaryDto {
+  startDate: string;
+  endDate: string;
+  status: ReservationStatus;
+  totalPrice: number;
+  brandName: string;
+  modelName: string;
+  links: Links;
+}
+
 export interface ReservationDto {
   startDate: string;
   endDate: string;

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ReviewCard } from '../../../components/ryden';
-import { apiAssetUrl } from '../../../api/uri';
+import { apiAssetUrl, profilePictureAssetUrl } from '../../../api/uri';
 import { formatDateLong } from '../../../i18n/dateFormat';
 import { useUserBrief } from '../../browse/hooks';
 import type { ReviewDto } from '../types';
@@ -12,6 +12,7 @@ export default function ReservationReviewItem({ review }: { review: ReviewDto })
   const forename = authorQuery.data?.forename ?? '';
   const surname = authorQuery.data?.surname ?? '';
   const imageUrl = review.links.image ? apiAssetUrl(review.links.image) : null;
+  const avatarUrl = profilePictureAssetUrl(authorQuery.data?.links);
 
   return (
     <ReviewCard
@@ -21,6 +22,7 @@ export default function ReservationReviewItem({ review }: { review: ReviewDto })
       rating={review.rating ?? 0}
       comment={review.comment}
       imageUrl={imageUrl}
+      avatarUrl={avatarUrl}
     />
   );
 }

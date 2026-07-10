@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiAssetUrl } from '../../api/uri';
-import { Pagination, SortBar } from '../../components/ryden';
+import { Pagination, SortBar, LoadingBlock } from '../../components/ryden';
 import { paths, myCarDetail } from '../../routes/paths';
 import { idFromUri } from './api';
 import MyCarsFilterForm from './components/MyCarsFilterForm';
@@ -16,6 +16,26 @@ import {
   type MyCarsFilters,
 } from './myCarsFilters';
 import { STATUS_BADGE } from './types';
+
+function OwnerCarCardMedia({ coverUri, alt }: { coverUri?: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = coverUri ? apiAssetUrl(coverUri) : null;
+  if (!src || failed) {
+    return (
+      <div className="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
+        <i className="bi bi-car-front fs-1" aria-hidden="true" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="reservation-card__media"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function MyCarsPage() {
   const { t } = useTranslation();
@@ -81,7 +101,7 @@ export default function MyCarsPage() {
       </section>
 
       {list.isError ? <div className="alert alert-danger" role="alert">{errorMessage(list.error)}</div> : null}
-      {list.isLoading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+      {list.isLoading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {showFilters ? (
         <>
@@ -138,7 +158,6 @@ export default function MyCarsPage() {
             {items.map((car) => {
               const id = idFromUri(car.links.self);
               if (!id) return null;
-              const coverUrl = car.links.cover ? apiAssetUrl(car.links.cover) : null;
               return (
                 <Link
                   key={car.links.self}
@@ -151,26 +170,17 @@ export default function MyCarsPage() {
                     </span>
                     <div className="row g-0 align-items-stretch">
                       <div className="col-12 col-md-3 reservation-card__media-wrap">
-                        {coverUrl ? (
-                          <img
-                            src={coverUrl}
-                            alt={`${car.brandName} ${car.modelName}`}
-                            className="reservation-card__media"
-                          />
-                        ) : (
-                          <div className="reservation-card__media reservation-card__media--placeholder d-flex align-items-center justify-content-center text-secondary">
-                            <i className="bi bi-car-front fs-1" aria-hidden="true" />
-                          </div>
-                        )}
+                        <OwnerCarCardMedia
+                          coverUri={car.links.cover}
+                          alt={`${car.brandName} ${car.modelName}`}
+                        />
                       </div>
                       <div className="col-12 col-md-9 min-w-0">
                         <div className="card-body p-3 p-md-4 h-100 d-flex flex-column justify-content-between gap-2">
                           <div className="min-w-0" style={{ paddingRight: '8rem' }}>
                             <h3 className="h5 fw-semibold mb-1 ryden-text-clamp-2">
                               {car.brandName} {car.modelName}
-                              {car.year ? <span className="text-secondary fw-normal"> ({car.year})</span> : null}
                             </h3>
-                            <p className="small text-secondary mb-0">{car.plate}</p>
                           </div>
                           {!car.modelValidated && (
                             <span className="small text-info-emphasis">

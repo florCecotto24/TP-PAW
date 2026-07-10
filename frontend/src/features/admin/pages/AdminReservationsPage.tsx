@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
-import { idFromSelf, type ReservationDto } from '../types';
+import { idFromSelf, type ReservationSummaryDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { useAdminGuard } from '../useAdminGuard';
 import { usePagedList } from '../usePagedList';
@@ -14,9 +15,11 @@ export default function AdminReservationsPage() {
   const { t, i18n } = useTranslation();
   const errorMessage = useAdminErrorMessage();
   const { isAdmin, loading: guardLoading } = useAdminGuard();
-  const list = usePagedList<ReservationDto>(
+  const list = usePagedList<ReservationSummaryDto>(
     guardLoading || !isAdmin ? '' : '/reservations?page=1',
-    MediaTypes.reservation,
+    MediaTypes.reservationLinks,
+    [],
+    MediaTypes.reservationSummary,
   );
 
   const displayError = list.error ? errorMessage(list.error) : null;
@@ -29,23 +32,23 @@ export default function AdminReservationsPage() {
       />
 
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {guardLoading || list.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+      {guardLoading || list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {!list.loading && list.items.length === 0 ? (
-        <p className="text-secondary">{t('admin.reservations.empty')}</p>
+        <EmptyState icon="calendar-check" title={t('admin.reservations.empty')} inCard />
       ) : null}
 
       {!list.loading && list.items.length > 0 ? (
         <div className="card border-0 shadow-sm bg-white overflow-hidden">
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
+            <table className="table table-hover align-middle mb-0 admin-table admin-table--reservations">
               <thead className="table-light">
                 <tr>
                   <th scope="col">{t('admin.reservations.col.start')}</th>
                   <th scope="col">{t('admin.reservations.col.end')}</th>
                   <th scope="col">{t('admin.reservations.col.status')}</th>
                   <th scope="col">{t('admin.reservations.col.total')}</th>
-                  <th scope="col" className="text-end">{t('admin.reservations.col.actions')}</th>
+                  <th scope="col" className="text-end admin-table__cell--wrap">{t('admin.reservations.col.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -57,7 +60,7 @@ export default function AdminReservationsPage() {
                       <td>{formatDateTime(reservation.endDate, i18n.language)}</td>
                       <td>{t(`admin.reservations.statuses.${reservation.status}`)}</td>
                       <td>{reservation.totalPrice}</td>
-                      <td className="text-end">
+                      <td className="text-end admin-table__cell--wrap">
                         <Link
                           to={adminReservationChat(reservationId)}
                           className="btn btn-outline-primary btn-sm"

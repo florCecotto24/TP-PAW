@@ -18,7 +18,6 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.persistence.user.PasswordResetCodeDao;
@@ -66,16 +65,15 @@ class PasswordResetServiceImplTest {
     }
 
     @Test
-    void testInitiatePasswordResetThrowsWhenActiveCodeAlreadyExists() {
+    void testInitiatePasswordResetNoOpsWhenActiveCodeAlreadyExists() {
         final User user = User.identities(USER_ID, EMAIL, "Ada", "Lovelace");
         Mockito.when(userService.findByEmail(EMAIL)).thenReturn(Optional.of(user));
         Mockito.when(dao.hasActiveCode(Mockito.eq(USER_ID), Mockito.any(Instant.class))).thenReturn(true);
 
-        final VerificationCodeAlreadyActiveException ex = Assertions.assertThrows(
-                VerificationCodeAlreadyActiveException.class,
-                () -> service.initiatePasswordReset(EMAIL, Locale.ENGLISH));
+        final boolean result = service.initiatePasswordReset(EMAIL, Locale.ENGLISH);
 
-        Assertions.assertEquals(MessageKeys.USER_PASSWORD_RESET_CODE_ALREADY_ACTIVE, ex.getMessageCode());
+        Assertions.assertFalse(result);
+        Assertions.assertTrue(emailService.passwordResetCodes().isEmpty());
     }
 
     @Test

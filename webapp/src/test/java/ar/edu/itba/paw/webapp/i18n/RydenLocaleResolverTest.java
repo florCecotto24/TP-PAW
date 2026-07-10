@@ -47,7 +47,7 @@ class RydenLocaleResolverTest {
     }
 
     @Test
-    void resolveLocaleReturnsSpanishByDefaultForAnonymousUserWithoutCookie() {
+    void testResolveLocaleReturnsSpanishByDefaultForAnonymousUserWithoutCookie() {
         // 1.Arrange
         SecurityContextHolder.getContext().setAuthentication(
                 new AnonymousAuthenticationToken(
@@ -64,7 +64,7 @@ class RydenLocaleResolverTest {
     }
 
     @Test
-    void resolveLocaleIgnoresAcceptLanguageHeaderForAnonymousUser() {
+    void testResolveLocaleIgnoresAcceptLanguageHeaderForAnonymousUser() {
         // 1.Arrange
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
@@ -79,7 +79,7 @@ class RydenLocaleResolverTest {
     }
 
     @Test
-    void resolveLocaleReadsCookieWhenSetByLanguageToggleForAnonymousUser() {
+    void testResolveLocaleReadsCookieWhenSetByLanguageToggleForAnonymousUser() {
         // 1.Arrange
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
@@ -93,7 +93,7 @@ class RydenLocaleResolverTest {
     }
 
     @Test
-    void resolveLocaleFallsBackToDefaultWhenCookieValueUnsupported() {
+    void testResolveLocaleFallsBackToDefaultWhenCookieValueUnsupported() {
         // 1.Arrange
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
@@ -108,7 +108,7 @@ class RydenLocaleResolverTest {
     }
 
     @Test
-    void resolveLocaleHonoursAuthenticatedUserPreferenceOverCookie() {
+    void testResolveLocaleHonoursAuthenticatedUserPreferenceOverCookie() {
         // 1.Arrange
         authenticateAs(USER_ID);
         when(userService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.of(SupportedLocales.ENGLISH));
@@ -124,7 +124,7 @@ class RydenLocaleResolverTest {
     }
 
     @Test
-    void resolveLocaleFallsThroughToCookieWhenAuthenticatedUserHasNoStoredPreference() {
+    void testResolveLocaleFallsThroughToCookieWhenAuthenticatedUserHasNoStoredPreference() {
         // 1.Arrange
         authenticateAs(USER_ID);
         when(userService.findUserPreferredLocale(USER_ID)).thenReturn(Optional.empty());

@@ -14,6 +14,7 @@
     "forgot": "Reset password",
     "publish": "Publish a car",
     "myCars": "My cars",
+    "ownerReservations": "Reservations for my cars",
     "newReservation": "New reservation",
     "myReservations": "My reservations",
     "reservationDetail": "Reservation details",
@@ -99,6 +100,7 @@
     "validation": "Please review the entered data.",
     "internal": "Internal server error.",
     "byCode": {
+      "bad_request": "The form could not be sent. Check the photos (size/format) and try again.",
       "user.email.alreadyExists": "That email is already registered.",
       "user.account.notFound": "User not found.",
       "user.verification.codeInvalid": "The verification code is invalid or expired.",
@@ -113,6 +115,7 @@
       "user.profile.cbuInvalid": "The CBU is not valid.",
       "car.plate.alreadyExists": "A car with that plate already exists.",
       "car.gallery.media.invalidType": "Only images or videos (mp4, webm, mov) are allowed.",
+      "car.gallery.pictures.required": "Upload at least one photo or video for the car gallery.",
       "publish.prerequisites.missing": "Add your CBU and identity document before publishing a car.",
       "car.notFound": "Car not found.",
       "car.invalidStatusTransition": "The car cannot move to that status.",
@@ -137,7 +140,7 @@
       "admin.block.cannotBlockSelf": "You can't block yourself.",
       "admin.block.cannotBlockGrantor": "You can't block the user who granted you permissions.",
       "admin.promote.alreadyAdmin": "The user is already an admin.",
-      "admin.pause.cannotPauseAdminCar": "Can't pause a car already paused by an admin.",
+      "admin.pause.cannotPauseAdminCar": "You can't admin-pause a car owned by another administrator.",
       "catalog.brand.notFound": "Brand not found.",
       "catalog.model.notFound": "Model not found."
     }

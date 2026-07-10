@@ -22,19 +22,18 @@ public final class CarLinks {
         return car(car.getId(), car.getOwnerId(), uriInfo)
                 .modelId(modelId)
                 .brandId(brandId)
+                .includeCoverLink()
                 .build();
     }
 
-    /** Browse/favorites card projection: optional {@code cover} when the listing has a gallery image. */
+    /** Browse/favorites card projection: always exposes {@code links.cover} (primary gallery bytes). */
     public static LinksDto forCarCard(final CarCard card, final UriInfo uriInfo) {
-        final CarBuilder builder = car(
+        return car(
                 card.getCarId(),
                 card.getOwnerId() != null ? card.getOwnerId() : 0L,
-                uriInfo);
-        if (card.getImageId() > 0) {
-            builder.coverImageId(card.getImageId());
-        }
-        return builder.build();
+                uriInfo)
+                .includeCoverLink()
+                .build();
     }
 
     public static final class CarBuilder {
@@ -45,6 +44,7 @@ public final class CarLinks {
         private Long modelId;
         private Long brandId;
         private Long coverImageId;
+        private boolean includeCoverLink;
 
         private CarBuilder(final long carId, final long ownerId, final UriInfo uriInfo) {
             this.carId = carId;
@@ -67,19 +67,30 @@ public final class CarLinks {
             return this;
         }
 
+        /** Exposes {@code links.cover} → {@code GET /cars/{id}/pictures/primary} (bytes). */
+        public CarBuilder includeCoverLink() {
+            this.includeCoverLink = true;
+            return this;
+        }
+
         public LinksDto build() {
             LinksDto links = LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, carId).toString())
                     .withRelated("owner", RestUriUtils.userUri(uriInfo, ownerId).toString())
-                    .withRelated("model", modelId != null ? RestUriUtils.modelUri(uriInfo, modelId).toString() : null)
+                    .withRelated(
+                            "model",
+                            modelId != null && brandId != null
+                                    ? RestUriUtils.modelUri(uriInfo, brandId, modelId).toString()
+                                    : null)
                     .withRelated("brand", brandId != null ? RestUriUtils.brandUri(uriInfo, brandId).toString() : null)
                     .withRelated("pictures", RestUriUtils.carPicturesUri(uriInfo, carId).toString())
                     .withRelated("availabilities", RestUriUtils.carAvailabilitiesUri(uriInfo, carId).toString())
                     .withRelated("insurance", RestUriUtils.carInsuranceUri(uriInfo, carId).toString())
-                    .withRelated("reviews", RestUriUtils.carReviewsUri(uriInfo, carId).toString());
-            if (coverImageId != null && coverImageId > 0) {
+                    .withRelated("reviews", RestUriUtils.carReviewsUri(uriInfo, carId).toString())
+                    .withRelated("similar", RestUriUtils.carSimilarUri(uriInfo, carId).toString());
+            if (includeCoverLink || (coverImageId != null && coverImageId > 0)) {
                 links = links.withRelated(
                         "cover",
-                        RestUriUtils.imageUri(uriInfo, coverImageId).toString());
+                        RestUriUtils.carPrimaryPictureUri(uriInfo, carId).toString());
             }
             return links;
         }

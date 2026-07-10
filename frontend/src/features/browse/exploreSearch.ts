@@ -63,6 +63,23 @@ export function ratingFilterOptions(): ExploreFilterOption[] {
   return ['5', '4', '3'].map((key) => ({ key, label: `${key}+` }));
 }
 
+export function priceMarketFilterOptions(t: (key: string) => string): ExploreFilterOption[] {
+  return [
+    {
+      key: 'below_market',
+      label: t('search.filter.priceMarket.below'),
+    },
+    {
+      key: 'at_market',
+      label: t('search.filter.priceMarket.at'),
+    },
+    {
+      key: 'above_market',
+      label: t('search.filter.priceMarket.above'),
+    },
+  ];
+}
+
 export function hasActiveSearchFilters(params: URLSearchParams): boolean {
   const keys = [
     'query',
@@ -75,6 +92,7 @@ export function hasActiveSearchFilters(params: URLSearchParams): boolean {
     'powertrain',
     'priceMin',
     'priceMax',
+    'priceMarket',
     'rating',
     'flexible',
     'flexMonth',

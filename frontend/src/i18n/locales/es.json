@@ -14,6 +14,7 @@
     "forgot": "Recuperar contraseña",
     "publish": "Publicar auto",
     "myCars": "Mis autos",
+    "ownerReservations": "Reservas de mis autos",
     "newReservation": "Nueva reserva",
     "myReservations": "Mis reservas",
     "reservationDetail": "Detalle de la reserva",
@@ -99,6 +100,7 @@
     "validation": "Revisá los datos ingresados.",
     "internal": "Error interno del servidor.",
     "byCode": {
+      "bad_request": "No se pudo enviar el formulario. Revisá las fotos (tamaño/formato) e intentá de nuevo.",
       "user.email.alreadyExists": "Ese email ya está registrado.",
       "user.account.notFound": "No se encontró el usuario.",
       "user.verification.codeInvalid": "El código de verificación es inválido o expiró.",
@@ -113,6 +115,7 @@
       "user.profile.cbuInvalid": "El CBU no es válido.",
       "car.plate.alreadyExists": "Ya existe un auto con esa patente.",
       "car.gallery.media.invalidType": "Solo se permiten imágenes o videos (mp4, webm, mov).",
+      "car.gallery.pictures.required": "Subí al menos una foto o video para la galería del auto.",
       "publish.prerequisites.missing": "Agregá tu CBU y tu documento de identidad antes de publicar un auto.",
       "car.notFound": "No se encontró el auto.",
       "car.invalidStatusTransition": "No se puede cambiar el auto a ese estado.",
@@ -137,7 +140,7 @@
       "admin.block.cannotBlockSelf": "No podés bloquearte a vos mismo.",
       "admin.block.cannotBlockGrantor": "No podés bloquear a quien te otorgó permisos.",
       "admin.promote.alreadyAdmin": "El usuario ya es administrador.",
-      "admin.pause.cannotPauseAdminCar": "No se puede pausar un auto ya pausado por un admin.",
+      "admin.pause.cannotPauseAdminCar": "No podés pausar como admin un auto cuyo dueño es otro administrador.",
       "catalog.brand.notFound": "No se encontró la marca.",
       "catalog.model.notFound": "No se encontró el modelo."
     }

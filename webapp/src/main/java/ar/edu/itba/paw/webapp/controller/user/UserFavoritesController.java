@@ -1,7 +1,7 @@
 package ar.edu.itba.paw.webapp.controller.user;
 
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -12,6 +12,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
@@ -20,18 +21,19 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
-import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.car.FavCarService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
-import ar.edu.itba.paw.webapp.dto.rest.CarDto;
+import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Favorite cars ({@code /users/{id}/favorites}).
@@ -46,8 +48,7 @@ public class UserFavoritesController {
 
     private final UserService userService;
     private final FavCarService favCarService;
-    private final CarService carService;
-    private final AppPaginationProperties paginationProperties;
+    private final PaginationSupport paginationSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -56,16 +57,18 @@ public class UserFavoritesController {
     public UserFavoritesController(
             final UserService userService,
             final FavCarService favCarService,
-            final CarService carService,
-            final AppPaginationProperties paginationProperties) {
+            final PaginationSupport paginationSupport) {
         this.userService = userService;
         this.favCarService = favCarService;
-        this.carService = carService;
-        this.paginationProperties = paginationProperties;
+        this.paginationSupport = paginationSupport;
     }
 
+    /**
+     * Link-only favorite cars ({@code user.favorites.v1+json}). Clients follow each {@code self}
+     * with {@code car.summary} — intentional HTTP N+1 (see {@code AGENTS.md}).
+     */
     @GET
-    @Produces(VndMediaType.CAR_V1_JSON)
+    @Produces(VndMediaType.USER_FAVORITES_V1_JSON)
     @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response listFavorites(
             @P("id") @PathParam("id") final long id,
@@ -74,22 +77,33 @@ public class UserFavoritesController {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
 
-        final int safePage = Math.max(1, page);
-        final int pageSize = pageSizeParam != null && pageSizeParam > 0
-                ? pageSizeParam
-                : paginationProperties.getDefaultPageSize();
-        final Page<CarCard> favorites = favCarService.findMyFavorites(id, safePage - 1, pageSize);
+        final PaginationParams paging = paginationSupport.forDefaultCollection(page, pageSizeParam);
+        final Page<CarCard> favorites =
+                favCarService.findMyFavorites(id, paging.getZeroBasedPage(), paging.getPageSize());
         if (favorites.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
-        final List<CarCard> cards = favorites.getContent();
-        final Map<Long, ConsumerCarCardMarketContext> marketContexts =
-                carService.resolveConsumerPriceMarketContexts(cards);
-        final List<CarDto> dtos = CarDto.fromConsumerBrowseCarCards(cards, uriInfo, marketContexts);
-        final Response.ResponseBuilder builder = Response.ok(dtos)
+        final List<LinksDto> links = favorites.getContent().stream()
+                .map(card -> LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, card.getCarId()).toString()))
+                .collect(Collectors.toList());
+        final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<LinksDto>>(links) {})
                 .header("X-Total-Count", favorites.getTotalItems());
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, (int) favorites.getTotalItems());
+        PaginationLinks.add(
+                builder, uriInfo, paging.getPage(), paging.getPageSize(), (int) favorites.getTotalItems());
         return builder.build();
+    }
+
+    @GET
+    @Path("/{carId}")
+    @PreAuthorize("@userResourceAccess.isSelf(#id, @currentUserResolver.currentPrincipalOrNull())")
+    public Response checkFavorite(
+            @P("id") @PathParam("id") final long id, @PathParam("carId") final long carId) {
+        userService.getUserById(id)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (!favCarService.isFavorited(carId, id)) {
+            throw new CarNotFoundException(carId);
+        }
+        return Response.noContent().build();
     }
 
     @PUT

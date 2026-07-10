@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.image.ImageValidationException;
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.persistence.car.CarPictureDao;
 
 import ar.edu.itba.paw.services.file.ImageService;
@@ -61,6 +62,33 @@ public class CarPictureServiceImpl implements CarPictureService {
     @Transactional(readOnly = true)
     public List<CarPicture> getCarPicturesByCarId(final long carId) {
         return carPictureDao.getCarPicturesByCarId(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CarPicture> findByCarPaginated(
+            final long carId, final int zeroBasedPage, final int pageSize) {
+        final int safePage = Math.max(0, zeroBasedPage);
+        final int safePageSize = Math.max(1, pageSize);
+        final long total = carPictureDao.countByCarId(carId);
+        if (total == 0L) {
+            return new Page<>(List.of(), safePage, safePageSize, 0L);
+        }
+        final List<CarPicture> content = carPictureDao.findByCarIdOrderByDisplayOrderAsc(
+                carId, safePage * safePageSize, safePageSize);
+        return new Page<>(content, safePage, safePageSize, total);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CarPicture> findPrimaryPictureByCarId(final long carId) {
+        return carPictureDao.findFirstByCarIdOrderByDisplayOrderAsc(carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int findMaxDisplayOrderByCarId(final long carId) {
+        return carPictureDao.findMaxDisplayOrderByCarId(carId).orElse(0);
     }
 
     @Override

@@ -19,7 +19,7 @@ public final class BinaryPayloadSupport {
 
     public byte[] readValidatedBody(final InputStream body) throws IOException {
         final byte[] bytes = body == null ? new byte[0] : body.readAllBytes();
-        formValidationSupport.validate(new OctetStreamBodyForm(bytes));
+        formValidationSupport.validate(OctetStreamBodyForm.of(bytes));
         return bytes;
     }
 }

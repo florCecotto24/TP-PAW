@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { addPicture, deletePicture, fetchPictures } from './api';
+import { apiAssetUrl } from '../../api/uri';
 import { useApiErrorMessage } from './hooks';
 import type { CarDto, PictureDto } from './types';
 
@@ -72,7 +73,7 @@ export default function GalleryManager({ car }: { car: CarDto }) {
               <div className="col-6 col-md-4" key={p.links.self}>
                 <div className="publish-gallery-item border rounded p-2 position-relative">
                   {p.kind === 'image' ? (
-                    <img className="img-fluid rounded publish-gallery-media w-100" src={p.links.self} alt="" />
+                    <img className="img-fluid rounded publish-gallery-media w-100" src={apiAssetUrl(p.links.self)} alt="" />
                   ) : (
                     <div className="publish-gallery-media w-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary rounded">
                       <i className="bi bi-play-circle fs-2" aria-hidden="true" />

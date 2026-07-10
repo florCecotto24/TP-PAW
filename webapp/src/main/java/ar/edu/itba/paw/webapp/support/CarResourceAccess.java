@@ -4,6 +4,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
@@ -43,6 +44,42 @@ public final class CarResourceAccess {
             return true;
         }
         return isAdmin();
+    }
+
+    /** Only {@link Car.Status#ACTIVE} cars are readable without owner/admin context (public browse). */
+    public boolean isPubliclyReadable(final Car car) {
+        return car.getStatus() == Car.Status.ACTIVE;
+    }
+
+    /**
+     * Read access to a car item and its public sub-resources ({@code GET /cars/{id}},
+     * gallery bytes, availabilities). Non-active cars are visible only to the owner or admin.
+     */
+    public boolean canViewCar(final Car car, final RydenUserDetails viewer) {
+        return isPubliclyReadable(car) || isOwnerOrAdmin(car, viewer);
+    }
+
+    public boolean canViewCarById(final long carId, final RydenUserDetails viewer) {
+        return carService.getCarById(carId).map(car -> canViewCar(car, viewer)).orElse(true);
+    }
+
+    /**
+     * Loads a car for public read sub-resources ({@code GET /cars/{id}/…}). Missing cars and cars the
+     * viewer cannot read both raise {@link CarNotFoundException} so "not found" masks "forbidden".
+     */
+    public Car requireViewableCar(final long carId, final RydenUserDetails viewer) {
+        final Car car = carService.getCarById(carId)
+                .orElseThrow(() -> new CarNotFoundException(carId));
+        if (!canViewCar(car, viewer)) {
+            throw new CarNotFoundException(carId);
+        }
+        return car;
+    }
+
+    public void requireCanViewCar(final Car car, final RydenUserDetails viewer) {
+        if (!canViewCar(car, viewer)) {
+            throw new AccessDeniedException(ACCESS_DENIED_MESSAGE);
+        }
     }
 
     public boolean isOwner(final Car car, final RydenUserDetails viewer) {

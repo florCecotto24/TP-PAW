@@ -17,7 +17,9 @@ public final class ConstraintViolationExceptionMapper implements ExceptionMapper
 
     @Override
     public Response toResponse(final ConstraintViolationException exception) {
-        LOGGER.debug("ConstraintViolationException: {}", exception.getConstraintViolations());
+        LOGGER.atDebug()
+                .addArgument(exception.getConstraintViolations())
+                .log("ConstraintViolationException: {}");
         final ValidationErrorDto body = ValidationErrorDto.fromConstraintViolations(exception.getConstraintViolations());
         return Response.status(Response.Status.BAD_REQUEST)
                 .type(ValidationErrorDto.mediaType())

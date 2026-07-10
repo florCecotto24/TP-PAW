@@ -290,6 +290,9 @@ public interface ReservationService {
     /** Admin-only: paginated list of every reservation in the system as display cards. */
     Page<ReservationCard> findAllReservationCards(int page, int pageSize);
 
+    /** Teaser projection for a single reservation (summary MIME on item GET). */
+    Optional<ReservationCard> findReservationCardById(long reservationId);
+
     /**
      * Identifiers of reservations whose refund-proof deadline has lapsed for {@code ownerUserId} (no receipt yet).
      * Used by the navbar blocked-account banner to deep-link the CTA at the single reservation when only one

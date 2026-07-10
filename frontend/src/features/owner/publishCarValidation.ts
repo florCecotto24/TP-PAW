@@ -25,6 +25,21 @@ export function normalizeYearDigits(raw: string): string {
   return raw.replace(/\D/g, '').slice(0, 4);
 }
 
+/**
+ * Validación del año de fabricación (opcional), alineada con
+ * {@code CarCreateFormValidator} / mensajes {@code validation.year.min|max}.
+ * Vacío = OK. Devuelve clave i18n o null.
+ */
+export function validatePublishCarYear(year: string): string | null {
+  const yearRaw = year.trim();
+  if (!yearRaw) return null;
+  if (!/^\d{1,4}$/.test(yearRaw)) return 'owner.publish.errors.yearInvalid';
+  const yearNum = Number(yearRaw);
+  if (yearNum < CAR_VALIDATION.yearMin) return 'owner.publish.errors.yearMin';
+  if (yearNum > currentCarYearMax()) return 'owner.publish.errors.yearMax';
+  return null;
+}
+
 function isAllowedGalleryMedia(file: File): boolean {
   const type = (file.type || '').toLowerCase();
   return (
@@ -84,13 +99,8 @@ export function firstPublishCarValidationError(input: PublishCarValidationInput)
     return 'owner.publish.errors.plateSize';
   }
 
-  const yearRaw = input.year.trim();
-  if (yearRaw) {
-    if (!/^\d{1,4}$/.test(yearRaw)) return 'owner.publish.errors.yearInvalid';
-    const yearNum = Number(yearRaw);
-    if (yearNum < CAR_VALIDATION.yearMin) return 'owner.publish.errors.yearMin';
-    if (yearNum > currentCarYearMax()) return 'owner.publish.errors.yearMax';
-  }
+  // El año se valida aparte ({@link validatePublishCarYear}) y se muestra bajo el
+  // campo, como `form:errors path="year"` en publishCarForm.jsp.
 
   if (input.description.trim().length > CAR_VALIDATION.descriptionMaxLength) {
     return 'owner.publish.errors.descriptionSize';

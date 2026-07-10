@@ -1,18 +1,23 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Button, Modal } from 'react-bootstrap';
+import { ApiError } from '../../api/client';
 import { apiAssetUrl } from '../../api/uri';
 import { useSessionStore } from '../../session/sessionStore';
 import {
   deactivateCar,
   fetchCar,
   fetchPictures,
+  idFromUri,
   openInsurance,
   patchCar,
   uploadInsurance,
 } from './api';
-import { hasCbu, useApiErrorMessage } from './hooks';
+import { hasCbu, useApiErrorMessage, useCarReservationPreview, useCurrentUserId } from './hooks';
+import { LoadingBlock, FieldView } from '../../components/ryden';
+import ReceiptUploadPicker from '../reservations/components/ReceiptUploadPicker';
+import ReservationListCard from '../reservations/components/ReservationListCard';
 import AvailabilityManager from './AvailabilityManager';
 import GalleryManager from './GalleryManager';
 import { STATUS_BADGE, type CarDto, type PictureDto } from './types';
@@ -24,6 +29,7 @@ export default function OwnerCarDetailPage() {
   const { id } = useParams<{ id: string }>();
   const errorMessage = useApiErrorMessage();
   const currentUser = useSessionStore((s) => s.currentUser);
+  const ownerId = useCurrentUserId();
 
   const [car, setCar] = useState<CarDto | null>(null);
   const [coverImage, setCoverImage] = useState<PictureDto | null>(null);
@@ -35,30 +41,53 @@ export default function OwnerCarDetailPage() {
   const [insuranceViewError, setInsuranceViewError] = useState(false);
   const [insuranceViewBusy, setInsuranceViewBusy] = useState(false);
 
-  // Edición de atributos.
+  const reservationsPreview = useCarReservationPreview(ownerId, id);
+
+  // Edición de atributos (mismo patrón que perfil: vista → Editar → Cancelar/Guardar).
+  const [editingAttributes, setEditingAttributes] = useState(false);
+  const [attributesSaved, setAttributesSaved] = useState(false);
   const [description, setDescription] = useState('');
   const [minDays, setMinDays] = useState('1');
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !ownerId) return;
     let active = true;
+    setCar(null);
+    setCoverImage(null);
     setError(null);
+    setEditingAttributes(false);
+    setAttributesSaved(false);
     fetchCar(id)
       .then((res) => {
         if (!active) return;
+        const carOwnerId = idFromUri(res.data.links.owner);
+        if (carOwnerId !== ownerId && currentUser?.role !== 'admin') {
+          navigate(paths.myCars, { replace: true });
+          return;
+        }
         setCar(res.data);
         setDescription(res.data.description ?? '');
         setMinDays(String(res.data.minimumRentalDays ?? 1));
       })
-      .catch((err) => { if (active) setError(errorMessage(err, 'owner.detail.errors.loadFailed')); });
+      .catch((err) => {
+        if (!active) return;
+        if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
+          navigate(paths.myCars, { replace: true });
+          return;
+        }
+        setError(errorMessage(err, 'owner.detail.errors.loadFailed'));
+      });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, ownerId]);
 
   // Imagen de portada de la cabecera (reservation-detail-car-media del JSP):
   // la primera imagen de la galería, si hay alguna.
   useEffect(() => {
-    if (!car) return;
+    if (!car) {
+      setCoverImage(null);
+      return;
+    }
     let active = true;
     fetchPictures(car)
       .then((res) => {
@@ -68,7 +97,24 @@ export default function OwnerCarDetailPage() {
       .catch(() => { /* la cabecera cae al ícono placeholder si falla */ });
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [car?.links.self]);
+  }, [car?.links.self, ownerId]);
+
+  function syncAttributesFromCar(next: CarDto) {
+    setDescription(next.description ?? '');
+    setMinDays(String(next.minimumRentalDays ?? 1));
+  }
+
+  function beginEditAttributes() {
+    if (!car) return;
+    syncAttributesFromCar(car);
+    setAttributesSaved(false);
+    setEditingAttributes(true);
+  }
+
+  function cancelEditAttributes() {
+    if (car) syncAttributesFromCar(car);
+    setEditingAttributes(false);
+  }
 
   async function applyPatch(patch: Parameters<typeof patchCar>[1], failKey?: string) {
     if (!id) return;
@@ -77,8 +123,11 @@ export default function OwnerCarDetailPage() {
     try {
       const res = await patchCar(id, patch);
       setCar(res.data);
+      syncAttributesFromCar(res.data);
+      return res.data;
     } catch (err) {
       setError(errorMessage(err, failKey));
+      return null;
     } finally {
       setBusy(false);
     }
@@ -100,12 +149,16 @@ export default function OwnerCarDetailPage() {
     void applyPatch({ status: 'paused' }, 'owner.detail.errors.statusFailed');
   }
 
-  function onSaveAttributes(e: FormEvent) {
+  async function onSaveAttributes(e: FormEvent) {
     e.preventDefault();
-    void applyPatch(
+    const saved = await applyPatch(
       { description: description.trim(), minimumRentalDays: Number(minDays) || 1 },
       'owner.detail.errors.saveFailed',
     );
+    if (saved) {
+      setEditingAttributes(false);
+      setAttributesSaved(true);
+    }
   }
 
   async function onDeactivate() {
@@ -123,9 +176,8 @@ export default function OwnerCarDetailPage() {
     }
   }
 
-  async function onInsurance(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !car || !id) return;
+  async function onInsuranceConfirm(file: File) {
+    if (!car || !id) return;
     setBusy(true);
     setError(null);
     setInsuranceSuccess(false);
@@ -136,9 +188,9 @@ export default function OwnerCarDetailPage() {
       setInsuranceSuccess(true);
     } catch (err) {
       setError(errorMessage(err, 'owner.detail.errors.insuranceFailed'));
+      throw err;
     } finally {
       setBusy(false);
-      e.target.value = '';
     }
   }
 
@@ -171,7 +223,7 @@ export default function OwnerCarDetailPage() {
         <section className="reservation-management-header mb-4">
           <h1 className="h3 fw-bold mb-2">{t('owner.detail.title')}</h1>
         </section>
-        <p className="text-secondary" role="status">{t('app.loading')}</p>
+        <LoadingBlock variant="page" className="py-4" />
       </main>
     );
   }
@@ -226,15 +278,10 @@ export default function OwnerCarDetailPage() {
                   )}
                 </div>
                 <div className="flex-grow-1 min-w-0">
-                  <div className="d-flex align-items-start gap-3 mb-2 flex-wrap">
-                    <h2 className="h5 fw-semibold mb-0 flex-grow-1 min-w-0">
-                      {car.brandName} {car.modelName}
-                      {car.year ? <span className="text-secondary fw-normal"> ({car.year})</span> : null}
-                    </h2>
-                    <span className={`badge ${STATUS_BADGE[car.status]}`}>
-                      {t(`owner.enums.status.${car.status}`)}
-                    </span>
-                  </div>
+                  <h2 className="h5 fw-semibold mb-2">
+                    {car.brandName} {car.modelName}
+                    {car.year ? <span className="text-secondary fw-normal"> ({car.year})</span> : null}
+                  </h2>
                   <div className="d-flex flex-wrap gap-2 mb-3">
                     <span className="badge text-bg-light border">{t(`owner.enums.type.${car.type}`)}</span>
                     <span className="badge text-bg-light border">{t(`owner.enums.transmission.${car.transmission}`)}</span>
@@ -269,40 +316,85 @@ export default function OwnerCarDetailPage() {
             </article>
           ) : (
           <>
-          {/* Editar datos */}
+          {/* Datos del auto: vista → Editar → Cancelar/Guardar (como perfil). */}
           <article className="card border-0 shadow-sm rounded-4 mb-4 bg-white">
             <div className="card-body p-4">
-              <h2 className="h5 fw-semibold mb-3">{t('owner.detail.editSection')}</h2>
-              <form onSubmit={onSaveAttributes}>
-                <div className="mb-3">
-                  <label className="form-label" htmlFor="detailDescription">{t('owner.detail.description')}</label>
-                  <textarea
-                    id="detailDescription"
-                    className="form-control"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="form-label" htmlFor="detailMinDays">{t('owner.detail.minimumRentalDays')}</label>
-                  <input
-                    id="detailMinDays"
-                    type="number"
-                    min={1}
-                    className="form-control"
-                    style={{ maxWidth: '10rem' }}
-                    value={minDays}
-                    onChange={(e) => setMinDays(e.target.value)}
-                  />
-                </div>
-                <div className="d-flex justify-content-end">
-                  <Button type="submit" variant="primary" disabled={busy}>
-                    <i className="bi bi-check-lg me-1" aria-hidden="true" />
-                    {t('owner.detail.save')}
+              <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                <h2 className="h5 fw-semibold mb-0">{t('owner.detail.dataSection')}</h2>
+                {!editingAttributes ? (
+                  <Button
+                    type="button"
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={beginEditAttributes}
+                    disabled={busy}
+                  >
+                    <i className="bi bi-pencil me-1" aria-hidden="true" />
+                    {t('owner.detail.edit')}
                   </Button>
+                ) : null}
+              </div>
+              {attributesSaved && !editingAttributes ? (
+                <div className="alert alert-success py-2 small" role="alert">
+                  {t('owner.detail.saved')}
                 </div>
-              </form>
+              ) : null}
+              {!editingAttributes ? (
+                <div className="d-flex flex-column gap-3">
+                  <FieldView
+                    label={t('owner.detail.description')}
+                    value={
+                      description.trim()
+                        ? description
+                        : t('owner.detail.notSpecified')
+                    }
+                    multiline
+                  />
+                  <FieldView
+                    label={t('owner.detail.minimumRentalDays')}
+                    value={String(Number(minDays) || 1)}
+                  />
+                </div>
+              ) : (
+                <form onSubmit={(e) => { void onSaveAttributes(e); }}>
+                  <div className="mb-3">
+                    <label className="form-label" htmlFor="detailDescription">{t('owner.detail.description')}</label>
+                    <textarea
+                      id="detailDescription"
+                      className="form-control"
+                      rows={3}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label" htmlFor="detailMinDays">{t('owner.detail.minimumRentalDays')}</label>
+                    <input
+                      id="detailMinDays"
+                      type="number"
+                      min={1}
+                      className="form-control"
+                      style={{ maxWidth: '10rem' }}
+                      value={minDays}
+                      onChange={(e) => setMinDays(e.target.value)}
+                    />
+                  </div>
+                  <div className="d-flex justify-content-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
+                      onClick={cancelEditAttributes}
+                      disabled={busy}
+                    >
+                      {t('owner.detail.cancel')}
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={busy}>
+                      <i className="bi bi-check-lg me-1" aria-hidden="true" />
+                      {t('owner.detail.save')}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
           </article>
 
@@ -310,6 +402,34 @@ export default function OwnerCarDetailPage() {
           <AvailabilityManager car={car} />
           </>
           )}
+
+          <article className="card border-0 shadow-sm rounded-4 bg-white">
+            <div className="card-body p-4">
+              <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <h2 className="h5 fw-semibold mb-0">{t('owner.detail.upcomingReservations.title')}</h2>
+                {(reservationsPreview.data?.total ?? 0) > 0 && id ? (
+                  <Link to={ownerReservationsCar(id)} className="btn btn-outline-primary btn-sm">
+                    {t('owner.detail.upcomingReservations.seeAll')}
+                  </Link>
+                ) : null}
+              </div>
+              {reservationsPreview.isLoading ? (
+                <LoadingBlock variant="inline" />
+              ) : reservationsPreview.data?.preview.length ? (
+                <div className="d-flex flex-column gap-3">
+                  {reservationsPreview.data.preview.map((reservation) => (
+                    <ReservationListCard
+                      key={reservation.links.self}
+                      reservation={reservation}
+                      role="owner"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-secondary small mb-0">{t('owner.detail.upcomingReservations.empty')}</p>
+              )}
+            </div>
+          </article>
         </div>
 
         {/* Barra lateral: estado, acciones, seguro */}
@@ -424,13 +544,24 @@ export default function OwnerCarDetailPage() {
                 <label className="form-label small mb-1" htmlFor="detailInsurance">
                   {car.hasInsurance ? t('owner.detail.insurance.replace') : t('owner.detail.insurance.upload')}
                 </label>
-                <input
+                <ReceiptUploadPicker
                   id="detailInsurance"
-                  type="file"
-                  className="form-control form-control-sm"
-                  accept="image/*,application/pdf"
                   disabled={busy}
-                  onChange={onInsurance}
+                  busy={busy}
+                  onConfirm={onInsuranceConfirm}
+                  labels={{
+                    chooseFile: t('owner.detail.insurance.chooseFile'),
+                    confirmUpload: t('owner.detail.insurance.confirmUpload'),
+                    confirming: t('owner.detail.insurance.confirming'),
+                    uploadAria: car.hasInsurance
+                      ? t('owner.detail.insurance.replace')
+                      : t('owner.detail.insurance.upload'),
+                    replaceFile: t('owner.detail.insurance.replaceFile'),
+                    removeFile: t('owner.detail.insurance.removeFile'),
+                    invalidFile: t('owner.detail.insurance.invalidFile'),
+                    fileTooLarge: t('owner.detail.insurance.fileTooLarge', { maxMb: 5 }),
+                    uploadError: t('owner.detail.errors.insuranceFailed'),
+                  }}
                 />
                 {insuranceSuccess ? (
                   <div className="alert alert-success mt-2 mb-0 py-2 small" role="alert">

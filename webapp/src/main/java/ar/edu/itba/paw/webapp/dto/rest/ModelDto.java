@@ -25,7 +25,8 @@ public final class ModelDto {
         dto.type = model.getType().name().toLowerCase(Locale.ROOT);
         dto.brandName = model.getBrand().getName();
         dto.validated = model.isValidated();
-        dto.links = LinksDto.ofSelf(RestUriUtils.modelUri(uriInfo, model.getId()).toString())
+        dto.links = LinksDto.ofSelf(
+                        RestUriUtils.modelUri(uriInfo, model.getBrandId(), model.getId()).toString())
                 .withRelated("brand", RestUriUtils.brandUri(uriInfo, model.getBrandId()).toString());
         return dto;
     }

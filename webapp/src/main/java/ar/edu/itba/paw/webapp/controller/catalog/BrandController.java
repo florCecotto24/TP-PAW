@@ -36,10 +36,13 @@ import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.BrandDto;
 import ar.edu.itba.paw.webapp.dto.rest.ModelDto;
 import ar.edu.itba.paw.webapp.form.catalog.BrandCreateForm;
-import ar.edu.itba.paw.webapp.form.catalog.CatalogApprovalForm;
+import ar.edu.itba.paw.webapp.dto.rest.CatalogApprovalDto;
 import ar.edu.itba.paw.webapp.form.catalog.ModelCreateForm;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Catalog brands ({@code /brands}, {@code /brands/{id}}, {@code /brands/{id}/models}).
@@ -53,6 +56,7 @@ public final class BrandController {
     private final CarModelService carModelService;
     private final AdminService adminService;
     private final CurrentUserResolver currentUserResolver;
+    private final PaginationSupport paginationSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -62,11 +66,13 @@ public final class BrandController {
             final CarBrandService carBrandService,
             final CarModelService carModelService,
             final AdminService adminService,
-            final CurrentUserResolver currentUserResolver) {
+            final CurrentUserResolver currentUserResolver,
+            final PaginationSupport paginationSupport) {
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
         this.adminService = adminService;
         this.currentUserResolver = currentUserResolver;
+        this.paginationSupport = paginationSupport;
     }
 
     @GET
@@ -74,10 +80,10 @@ public final class BrandController {
     public Response listBrands(
             @QueryParam("validated") final Boolean validated,
             @QueryParam("page") @javax.ws.rs.DefaultValue("1") final int page,
-            @QueryParam("pageSize") @javax.ws.rs.DefaultValue("12") final int pageSize) {
-        final int safePage = Math.max(1, page);
-        final int safeSize = Math.max(1, pageSize);
-        final Page<CarBrand> brandPage = carBrandService.findPage(validated, safePage - 1, safeSize);
+            @QueryParam("pageSize") final Integer pageSizeParam) {
+        final PaginationParams paging = paginationSupport.forDefaultCollection(page, pageSizeParam);
+        final Page<CarBrand> brandPage =
+                carBrandService.findPage(validated, paging.getZeroBasedPage(), paging.getPageSize());
         final List<BrandDto> dtos = brandPage.getContent().stream()
                 .map(brand -> BrandDto.from(brand, uriInfo))
                 .collect(Collectors.toList());
@@ -88,7 +94,8 @@ public final class BrandController {
 
         final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<BrandDto>>(dtos) {})
                 .header("X-Total-Count", brandPage.getTotalItems());
-        PaginationLinks.add(builder, uriInfo, safePage, safeSize, (int) brandPage.getTotalItems());
+        PaginationLinks.add(
+                builder, uriInfo, paging.getPage(), paging.getPageSize(), (int) brandPage.getTotalItems());
         return builder.build();
     }
 
@@ -121,7 +128,7 @@ public final class BrandController {
     @RolesAllowed("ROLE_ADMIN")
     @Consumes(VndMediaType.BRAND_V1_JSON)
     @Produces(VndMediaType.BRAND_V1_JSON)
-    public Response approveBrand(@PathParam("id") final long id, @Valid final CatalogApprovalForm patch) {
+    public Response approveBrand(@PathParam("id") final long id, @Valid final CatalogApprovalDto patch) {
         carBrandService.findById(id)
                 .orElseThrow(() -> new CarBrandNotFoundException(id));
 
@@ -181,10 +188,7 @@ public final class BrandController {
         final CarModel model = carModelService.findOrCreateUnvalidated(id, form.getName(), type)
                 .orElseThrow(IllegalStateException::new);
 
-        final URI location = uriInfo.getBaseUriBuilder()
-                .path("models")
-                .path(String.valueOf(model.getId()))
-                .build();
+        final URI location = RestUriUtils.modelUri(uriInfo, id, model.getId());
         return Response.created(location).entity(ModelDto.from(model, uriInfo)).build();
     }
 }

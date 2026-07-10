@@ -114,4 +114,14 @@ void i18n.use(initReactI18next).init({
   returnNull: false,
 });
 
+function syncDocumentLang(lng: string): void {
+  const base = lng.split('-')[0];
+  if (base) {
+    document.documentElement.lang = base;
+  }
+}
+
+syncDocumentLang(i18n.language);
+i18n.on('languageChanged', syncDocumentLang);
+
 export default i18n;

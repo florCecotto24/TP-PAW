@@ -35,6 +35,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
+import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
@@ -218,7 +219,7 @@ public class CarJpaDao implements CarDao {
         // Step 3: load entities and assemble cards
         final List<CarCard> content = orderedCarIds.isEmpty()
                 ? List.of()
-                : assembleCarCards(orderedCarIds, priceById);
+                : assembleCarCards(orderedCarIds, priceById, criteria.getOwnerId());
         return new Page<>(content, page, pageSize, total);
     }
 
@@ -459,7 +460,7 @@ public class CarJpaDao implements CarDao {
     @Override
     public List<Car> findCarsByModelId(final long modelId) {
         return em.createQuery(
-                        "FROM Car c WHERE c.carModel.id = :modelId", Car.class)
+                        "FROM Car c JOIN FETCH c.owner WHERE c.carModel.id = :modelId", Car.class)
                 .setParameter("modelId", modelId)
                 .getResultList();
     }
@@ -535,8 +536,6 @@ public class CarJpaDao implements CarDao {
         final Car.Type refType = ref.getType();
         final Map<String, Object> params = new HashMap<>();
         params.put("carId", carId);
-        params.put("refPowertrain", ref.getPowertrain().name());
-        params.put("refTransmission", ref.getTransmission().name());
 
         final StringBuilder idSql = new StringBuilder(
                 "SELECT c.id FROM cars c "
@@ -544,9 +543,7 @@ public class CarJpaDao implements CarDao {
                 + "JOIN car_availability la ON la.car_id = c.id "
                 + "JOIN car_models cm ON cm.id = c.model_id "
                 + "WHERE c.status = '" + STATUS_ACTIVE + "' "
-                + "AND c.id <> :carId "
-                + "AND UPPER(c.powertrain) = :refPowertrain "
-                + "AND UPPER(c.transmission) = :refTransmission ");
+                + "AND c.id <> :carId ");
         if (refType != null) {
             idSql.append("AND UPPER(cm.type) = :refType ");
             params.put("refType", refType.name());
@@ -562,8 +559,8 @@ public class CarJpaDao implements CarDao {
         idSql.append("GROUP BY c.id ORDER BY c.rating_avg DESC NULLS LAST, c.id ASC");
 
         // The id-only query already encodes every WHERE clause that gates a similar listing
-        // (active status, owner not blocked, availability window, type/transmission/powertrain
-        // match, optional browseWallDate, optional excludeOwnerUserId). The downstream filter is
+        // (active status, owner not blocked, availability window, same body type / category,
+        // optional browseWallDate, optional excludeOwnerUserId). The downstream filter is
         // only {@code filter(Objects::nonNull)}, which can drop a row solely if the car was hard-
         // deleted between the id query and the entity-fetch JPQL — practically impossible inside
         // the same transaction. Pulling 4× the requested limit was loading three quarters of the
@@ -854,8 +851,18 @@ public class CarJpaDao implements CarDao {
 
     private List<CarCard> assembleCarCards(
             final List<Long> orderedCarIds, final Map<Long, BigDecimal> priceById) {
+        return assembleCarCards(orderedCarIds, priceById, null);
+    }
+
+    private List<CarCard> assembleCarCards(
+            final List<Long> orderedCarIds,
+            final Map<Long, BigDecimal> priceById,
+            final Long knownOwnerId) {
+        final String ownerFetch = knownOwnerId == null ? " JOIN FETCH c.owner" : "";
         final List<Car> cars = bindParams(em.createQuery(
-                "FROM Car c LEFT JOIN FETCH c.carModel m LEFT JOIN FETCH m.brand WHERE c.id IN :ids",
+                "FROM Car c LEFT JOIN FETCH c.carModel m LEFT JOIN FETCH m.brand"
+                        + ownerFetch
+                        + " WHERE c.id IN :ids",
                 Car.class), Map.of("ids", orderedCarIds)).getResultList();
         final Map<Long, Car> byId = cars.stream()
                 .collect(Collectors.toMap(Car::getId, Function.identity(), (a, b) -> a));
@@ -873,7 +880,7 @@ public class CarJpaDao implements CarDao {
                         .ratingAvg(c.getRatingAvg().orElse(null))
                         .modelPendingValidation(c.isModelPendingValidation())
                         .minimumRentalDays(c.getMinimumRentalDays())
-                        .ownerId(c.getOwner() == null ? null : c.getOwner().getId())
+                        .ownerId(knownOwnerId != null ? knownOwnerId : c.getOwnerId())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -926,6 +933,9 @@ public class CarJpaDao implements CarDao {
         if (criteria.getMaxPrice() != null) {
             sql.append("AND la.day_price <= :maxPrice ");
             params.put("maxPrice", criteria.getMaxPrice());
+        }
+        if (criteria.getPriceMarketPosition() != null) {
+            appendPriceMarketPositionFilter(sql, params, criteria.getPriceMarketPosition());
         }
         appendCarSearchRatingBandFilter(sql, criteria.getRatingBands());
         if (criteria.isFlexibleSearch()) {
@@ -998,6 +1008,56 @@ public class CarJpaDao implements CarDao {
             params.put("flexMonthEnd", java.sql.Date.valueOf(monthEnd));
             params.put("flexibleDays", flexDays);
             params.put("wallZone", AppTimezone.ID);
+        }
+    }
+
+    /**
+     * Keeps cars whose minimum offered day price falls in {@code position} vs the peer
+     * brand/model average (same thresholds as {@link CarPriceMarketInsight#classifyDayPrice}),
+     * with at least two other active comparable cars.
+     */
+    private static void appendPriceMarketPositionFilter(
+            final StringBuilder sql,
+            final Map<String, Object> params,
+            final PriceMarketPosition position) {
+        sql.append("AND EXISTS (")
+                .append("SELECT 1 FROM (")
+                .append("  SELECT AVG(peer.min_price) AS avg_price, COUNT(*) AS sample_count ")
+                .append("  FROM (")
+                .append("    SELECT MIN(la_peer.day_price) AS min_price ")
+                .append("    FROM car_availability la_peer ")
+                .append("    JOIN cars c_peer ON c_peer.id = la_peer.car_id ")
+                .append("    JOIN users u_peer ON u_peer.id = c_peer.owner_id ")
+                .append("    JOIN car_models cm_peer ON cm_peer.id = c_peer.model_id AND cm_peer.validated = TRUE ")
+                .append("    JOIN car_brands cb_peer ON cb_peer.id = cm_peer.brand_id AND cb_peer.validated = TRUE ")
+                .append("    WHERE u_peer.blocked = FALSE ")
+                .append("    AND la_peer.kind = '").append(KIND_OFFERED).append("' ")
+                .append("    AND c_peer.status = '").append(STATUS_ACTIVE).append("' ")
+                .append("    AND c_peer.id <> c.id ")
+                .append("    AND c_peer.model_id = c.model_id ")
+                .append("    GROUP BY c_peer.id")
+                .append("  ) peer")
+                .append(") market ")
+                .append("CROSS JOIN (")
+                .append("  SELECT MIN(la_self.day_price) AS self_price FROM car_availability la_self ")
+                .append("  WHERE la_self.car_id = c.id AND la_self.kind = '").append(KIND_OFFERED).append("'")
+                .append(") self ")
+                .append("WHERE market.sample_count >= 2 ");
+        switch (position) {
+            case BELOW_MARKET -> {
+                sql.append("AND self.self_price <= market.avg_price * :belowMarketThreshold) ");
+                params.put("belowMarketThreshold", CarPriceMarketInsight.BELOW_MARKET_THRESHOLD);
+            }
+            case AT_MARKET -> {
+                sql.append("AND self.self_price > market.avg_price * :belowMarketThreshold ")
+                        .append("AND self.self_price <= market.avg_price * :aboveMarketThreshold) ");
+                params.put("belowMarketThreshold", CarPriceMarketInsight.BELOW_MARKET_THRESHOLD);
+                params.put("aboveMarketThreshold", CarPriceMarketInsight.ABOVE_MARKET_THRESHOLD);
+            }
+            case ABOVE_MARKET -> {
+                sql.append("AND self.self_price > market.avg_price * :aboveMarketThreshold) ");
+                params.put("aboveMarketThreshold", CarPriceMarketInsight.ABOVE_MARKET_THRESHOLD);
+            }
         }
     }
 

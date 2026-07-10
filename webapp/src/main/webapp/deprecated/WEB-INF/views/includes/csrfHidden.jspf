@@ -1,2 +1,0 @@
-<%-- Include from a JSP that already declares taglib prefix="c". Token and parameters's name escaped for HTML atributes --%>
-<input type="hidden" name="<c:out value='${_csrf.parameterName}'/>" value="<c:out value='${_csrf.token}'/>"/>

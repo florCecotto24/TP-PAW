@@ -14,8 +14,10 @@ public final class OctetStreamBodyForm {
     public OctetStreamBodyForm() {
     }
 
-    public OctetStreamBodyForm(final byte[] bytes) {
-        this.bytes = bytes;
+    public static OctetStreamBodyForm of(final byte[] bytes) {
+        final OctetStreamBodyForm form = new OctetStreamBodyForm();
+        form.bytes = bytes;
+        return form;
     }
 
     public byte[] getBytes() {

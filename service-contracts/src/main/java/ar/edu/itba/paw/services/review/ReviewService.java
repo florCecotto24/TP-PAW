@@ -25,13 +25,19 @@ public interface ReviewService {
     /** Public car page: paginated reviews with reviewer display fields. */
     Page<CarPublicReview> getCarPublicReviews(long carId, int page, int pageSize);
 
-    /** Hydrated review entities for REST {@code GET /cars/{id}/reviews}. */
+    /** Hydrated review entities for REST {@code GET /reviews?carId=…}. */
     Page<Review> getCarPublicReviewEntities(long carId, int page, int pageSize);
+
+    /**
+     * SQL-paginated reviews received by {@code userId} (owner and rider directions merged),
+     * as hydrated entities for REST {@code GET /reviews?recipientUserId=}.
+     */
+    Page<Review> getReviewsReceivedByUserEntities(long userId, int page, int pageSize);
 
     /** Reviews attached to a single reservation (participants/admin). */
     List<Review> getReviewsForReservation(long reservationId);
 
-    /** Single review by its own surrogate id, backing {@code GET /reservations/{id}/reviews/{reviewId}}. */
+    /** Single review by its own surrogate id, backing {@code GET /reviews/{id}}. */
     Optional<Review> getReviewById(long reviewId);
 
     /** Total public reviews stored for the car. */
@@ -75,6 +81,21 @@ public interface ReviewService {
     void submitRiderReviewOfOwner(long riderUserId, long reservationId, Integer rating, String comment,
                                    String imageName, String imageContentType, byte[] imageBytes);
 
+    /**
+     * Submits the caller's review for a reservation (owner→rider or rider→owner) and returns the
+     * persisted row for the participant's side.
+     *
+     * @throws ar.edu.itba.paw.exception.RydenException when the caller is not a participant or rules fail
+     */
+    Review submitParticipantReview(
+            long actorUserId,
+            long reservationId,
+            Integer rating,
+            String comment,
+            String imageName,
+            String imageContentType,
+            byte[] imageBytes);
+
     /** Whether the owner already left a review for this reservation. */
     boolean hasOwnerReview(long reservationId);
 
@@ -99,7 +120,7 @@ public interface ReviewService {
 
     /**
      * SQL-paginated feed of every rated review left to {@code userId} (both as owner and as
-     * rider), ordered by date desc. Backs {@code GET /users/{id}/reviews}.
+     * rider), ordered by date desc. Backs {@code GET /reviews?recipientUserId=…}.
      */
     Page<ReviewItemDto> getReviewsForUser(long userId, int page, int pageSize);
 }

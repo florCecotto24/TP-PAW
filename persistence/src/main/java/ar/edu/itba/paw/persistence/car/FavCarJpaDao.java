@@ -152,6 +152,7 @@ public class FavCarJpaDao implements FavCarDao {
 
         final List<Car> cars = em.createQuery(
                         "FROM Car c "
+                                + "JOIN FETCH c.owner "
                                 + "JOIN FETCH c.carModel cm "
                                 + "JOIN FETCH cm.brand "
                                 + "WHERE c.id IN :ids",
@@ -186,7 +187,7 @@ public class FavCarJpaDao implements FavCarDao {
                     .ratingAvg(c.getRatingAvg().orElse(null))
                     .modelPendingValidation(!modelValidated)
                     .minimumRentalDays(c.getMinimumRentalDays())
-                    .ownerId(c.getOwner() == null ? null : c.getOwner().getId())
+                    .ownerId(c.getOwnerId())
                     .build());
         }
         return result;

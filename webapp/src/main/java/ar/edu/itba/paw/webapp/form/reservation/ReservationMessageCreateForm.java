@@ -14,9 +14,11 @@ public final class ReservationMessageCreateForm {
     public ReservationMessageCreateForm() {
     }
 
-    public ReservationMessageCreateForm(final String body, final boolean hasAttachment) {
-        this.body = body;
-        this.hasAttachment = hasAttachment;
+    public static ReservationMessageCreateForm of(final String body, final boolean hasAttachment) {
+        final ReservationMessageCreateForm form = new ReservationMessageCreateForm();
+        form.body = body;
+        form.hasAttachment = hasAttachment;
+        return form;
     }
 
     public String getBody() {

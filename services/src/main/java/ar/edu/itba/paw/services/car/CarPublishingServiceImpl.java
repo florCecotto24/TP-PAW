@@ -86,6 +86,11 @@ public class CarPublishingServiceImpl implements CarPublishingService {
                 request.getInsuranceContentType().orElse(null),
                 request.getInsuranceBytes());
 
+        final Integer minimumRentalDays = request.getMinimumRentalDays();
+        if (minimumRentalDays != null && minimumRentalDays > 0) {
+            carService.updateMinimumRentalDays(car.getId(), minimumRentalDays);
+        }
+
         // Non-admins introducing a new catalog entry get the pending-validation outcome so
         // the controller can redirect to a different view explaining the wait.
         if (newCatalogEntry && !owner.isAdmin()) {

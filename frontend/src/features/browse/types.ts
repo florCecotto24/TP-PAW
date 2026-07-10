@@ -56,7 +56,7 @@ export const CAR_SORTS: readonly CarSort[] = [
 /**
  * Links de un CarDto. `self` siempre presente (heredado de Links); el resto
  * según openapi: self, owner, model, brand, pictures, availabilities, insurance,
- * reviews. Se tipan como opcionales porque no toda vista trae todos.
+ * reviews, similar. Se tipan como opcionales porque no toda vista trae todos.
  */
 export interface CarLinks {
   self: string;
@@ -68,10 +68,26 @@ export interface CarLinks {
   availabilities?: string;
   insurance?: string;
   reviews?: string;
+  similar?: string;
   [rel: string]: string | undefined;
 }
 
-/** DTO de auto (lectura). No expone id propio; la identidad vive en links.self. */
+/** Teaser de auto para colecciones (browse, favoritos, mis autos). */
+export interface CarSummaryDto {
+  brandName: string;
+  modelName: string;
+  status: CarStatus;
+  minimumRentalDays: number;
+  ratingAvg?: number | null;
+  dayPrice?: number | null;
+  modelValidated: boolean;
+  priceMarketPositionModifier?: PriceMarketPosition | null;
+  marketAveragePrice?: number | null;
+  marketSampleCount?: number | null;
+  links: CarLinks;
+}
+
+/** DTO de auto (lectura completa). No expone id propio; la identidad vive en links.self. */
 export interface CarDto {
   plate: string;
   year?: number | null;

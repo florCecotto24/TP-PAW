@@ -21,27 +21,6 @@ public final class ReservationMessageDto {
             final long senderUserId,
             final String senderDisplayName,
             final String body,
-            final OffsetDateTime createdAt) {
-        this(id, reservationId, senderUserId, senderDisplayName, body, createdAt, null, false);
-    }
-
-    public ReservationMessageDto(
-            final long id,
-            final long reservationId,
-            final long senderUserId,
-            final String senderDisplayName,
-            final String body,
-            final OffsetDateTime createdAt,
-            final ReservationMessageAttachmentDto attachment) {
-        this(id, reservationId, senderUserId, senderDisplayName, body, createdAt, attachment, false);
-    }
-
-    public ReservationMessageDto(
-            final long id,
-            final long reservationId,
-            final long senderUserId,
-            final String senderDisplayName,
-            final String body,
             final OffsetDateTime createdAt,
             final ReservationMessageAttachmentDto attachment,
             final boolean seen) {

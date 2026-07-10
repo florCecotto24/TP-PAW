@@ -53,6 +53,13 @@ public class ReservationJpaDao implements ReservationDao {
             Reservation.Status.ACCEPTED, Reservation.Status.STARTED, Reservation.Status.FINISHED);
 
     /**
+     * Preloads car, owner and catalog labels for batch mail/scheduler jobs that call
+     * {@code resolveOwnerFromReservation} / {@code resolveVehicleLabelFromReservation} per row.
+     */
+    private static final String FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL =
+            "JOIN FETCH r.car c JOIN FETCH c.owner LEFT JOIN FETCH c.carModel cm LEFT JOIN FETCH cm.brand ";
+
+    /**
      * Cross-aggregate DAO intentionally injected to keep {@link #loadReservationCardsByIdNativeQuery}
      * down to three queries per page (id-pagination native SQL, JPQL {@code JOIN FETCH} for the
      * reservation + car catalog, and a batched cover-image lookup). Composing this at the service
@@ -203,7 +210,9 @@ public class ReservationJpaDao implements ReservationDao {
     @Override
     public List<Reservation> findPendingPaymentPastDeadline(final OffsetDateTime now) {
         return em.createQuery(
-                        "FROM Reservation r WHERE r.status = :status "
+                        "FROM Reservation r "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
+                                + "WHERE r.status = :status "
                                 + "AND r.paymentProofDeadlineAt IS NOT NULL AND r.paymentProofDeadlineAt < :now "
                                 + "ORDER BY r.id ASC",
                         Reservation.class)
@@ -531,6 +540,7 @@ public class ReservationJpaDao implements ReservationDao {
         final OffsetDateTime windowEnd = now.plusHours(hoursBeforeCheckout);
         return em.createQuery(
                         "FROM Reservation r "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
                                 + "WHERE r.status IN :statuses "
                                 + "AND r.returnReminderEmailSent = FALSE "
                                 + "AND r.endDate > :now "
@@ -546,6 +556,7 @@ public class ReservationJpaDao implements ReservationDao {
     public List<Reservation> findReservationsForReturnCheckoutEmail(final OffsetDateTime now) {
         return em.createQuery(
                         "FROM Reservation r "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
                                 + "WHERE r.status IN :statuses "
                                 + "AND r.returnCheckoutEmailSent = FALSE "
                                 + "AND r.carReturned = FALSE "
@@ -602,6 +613,7 @@ public class ReservationJpaDao implements ReservationDao {
         return em.createQuery(
                         "FROM Reservation r "
                                 + "JOIN FETCH r.car c "
+                                + "JOIN FETCH c.owner "
                                 + "WHERE r.status IN :statuses "
                                 + "AND r.carReturned = TRUE "
                                 + "AND r.carReturnedAt IS NOT NULL "
@@ -657,6 +669,7 @@ public class ReservationJpaDao implements ReservationDao {
         final OffsetDateTime windowEnd = now.plusHours(leadHours);
         return em.createQuery(
                         "FROM Reservation r "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
                                 + "WHERE r.paymentProofDeadlineAt IS NOT NULL "
                                 + "AND r.paymentProofDeadlineAt <= :windowEnd "
                                 + "AND r.paymentReceiptFile IS NULL "
@@ -724,6 +737,7 @@ public class ReservationJpaDao implements ReservationDao {
         final OffsetDateTime windowEnd = now.plusHours(leadHours);
         return em.createQuery(
                         "FROM Reservation r "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
                                 + "WHERE r.paymentRefundRequired = TRUE "
                                 + "AND r.paymentRefundReceiptFile IS NULL "
                                 + "AND r.refundProofDeadlineAt IS NOT NULL "
@@ -753,8 +767,7 @@ public class ReservationJpaDao implements ReservationDao {
         // JOIN FETCH car + owner so callers can group by owner and read profile fields without N+1.
         return em.createQuery(
                         "FROM Reservation r "
-                                + "JOIN FETCH r.car c "
-                                + "JOIN FETCH c.owner "
+                                + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
                                 + "WHERE r.paymentRefundRequired = TRUE "
                                 + "AND r.paymentRefundReceiptFile IS NULL "
                                 + "AND r.refundProofDeadlineAt IS NOT NULL "
@@ -969,5 +982,13 @@ public class ReservationJpaDao implements ReservationDao {
                     r.getStartDate(), r.getEndDate(), r.getStatus()));
         }
         return cards;
+    }
+
+    @Override
+    public Optional<ReservationCard> findReservationCardById(final long reservationId) {
+        final List<ReservationCard> cards = loadReservationCardsByIdNativeQuery(
+                "SELECT r.id FROM reservations r WHERE r.id = :reservationId",
+                Map.of("reservationId", reservationId));
+        return cards.isEmpty() ? Optional.empty() : Optional.of(cards.get(0));
     }
 }

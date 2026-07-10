@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ApiError, HypermediaClient, type TokenAccessors } from '../api/client';
+import { canonicalApiUserPath } from '../api/uri';
 import { MediaTypes } from '../api/mediaTypes';
 import type { UserDto } from '../api/types';
 
@@ -62,6 +63,42 @@ function readStorage(): PersistedSession | null {
   }
 }
 
+/** Invalidates in-flight {@link fetchCurrentUser} calls (login/logout must win over boot rehydration). */
+let userFetchSeq = 0;
+
+function fetchCurrentUser(
+  uri: string,
+  get: () => SessionState,
+  set: (partial: Partial<SessionState>) => void,
+): void {
+  const seq = ++userFetchSeq;
+  const loadUser = (attempt: number): void => {
+    if (seq !== userFetchSeq) return;
+    sessionClient
+      .follow<UserDto>(uri, { accept: MediaTypes.userPrivate })
+      .then((res) => {
+        if (seq !== userFetchSeq) return;
+        set({ currentUser: res.data });
+      })
+      .catch((err) => {
+        if (seq !== userFetchSeq) return;
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          get().logout();
+        } else if (attempt < 3) {
+          setTimeout(() => loadUser(attempt + 1), 250 * (attempt + 1));
+        }
+      });
+  };
+  loadUser(0);
+}
+
+function bootstrapCurrentUserFromSession(): void {
+  const state = useSessionStore.getState();
+  if (state.accessToken && state.refreshToken && state.currentUserUri) {
+    fetchCurrentUser(state.currentUserUri, useSessionStore.getState, useSessionStore.setState);
+  }
+}
+
 export const useSessionStore = create<SessionState>((set, get) => {
   // Hidratación SÍNCRONA al crear el store: si hay tokens persistidos arrancamos
   // ya como 'authenticated' para que RequireAuth no rebote un deep-link protegido
@@ -69,10 +106,14 @@ export const useSessionStore = create<SessionState>((set, get) => {
   // el useEffect de App (race de hidratación).
   const persisted = readStorage();
   const hasTokens = !!persisted?.accessToken && !!persisted?.refreshToken;
+  const persistedUserUri = hasTokens && persisted?.currentUserUri
+    ? canonicalApiUserPath(persisted.currentUserUri)
+    : null;
+
   return {
   accessToken: hasTokens ? persisted!.accessToken : null,
   refreshToken: hasTokens ? persisted!.refreshToken : null,
-  currentUserUri: hasTokens ? persisted!.currentUserUri : null,
+  currentUserUri: persistedUserUri,
   currentUser: null,
   status: hasTokens ? 'authenticated' : 'anonymous',
   error: null,
@@ -87,6 +128,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
   },
 
   login: async (email, password) => {
+    userFetchSeq++;
     set({ status: 'authenticating', error: null });
     try {
       // 1) Basic -> tokens en headers + Link rel="authenticated-user".
@@ -112,6 +154,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
   },
 
   logout: () => {
+    userFetchSeq++;
     set({
       accessToken: null,
       refreshToken: null,
@@ -128,34 +171,17 @@ export const useSessionStore = create<SessionState>((set, get) => {
     if (!persisted?.accessToken || !persisted.refreshToken) {
       return;
     }
+    const persistedUserUri = persisted.currentUserUri
+      ? canonicalApiUserPath(persisted.currentUserUri)
+      : null;
     set({
       accessToken: persisted.accessToken,
       refreshToken: persisted.refreshToken,
-      currentUserUri: persisted.currentUserUri,
+      currentUserUri: persistedUserUri,
       status: 'authenticated',
     });
-    // Rehidratar el UserDto desde la URN guardada (el navbar/guards/admin lo
-    // necesitan tras un refresh). El cliente ya reintenta el access token vencido
-    // con el refresh. SOLO cerramos sesión si el server rechaza definitivamente
-    // las credenciales (401/403): un error transitorio (red, o el clásico
-    // net::ERR_ABORTED del fetch disparado durante el boot/deep-link) NO debe
-    // destruir una sesión válida y rebotar al login — en ese caso reintentamos.
-    const uri = persisted.currentUserUri;
-    if (uri) {
-      const loadUser = (attempt: number): void => {
-        sessionClient
-          .follow<UserDto>(uri, { accept: MediaTypes.userPrivate })
-          .then((res) => set({ currentUser: res.data }))
-          .catch((err) => {
-            if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-              get().logout();
-            } else if (attempt < 3) {
-              setTimeout(() => loadUser(attempt + 1), 250 * (attempt + 1));
-            }
-          });
-      };
-      loadUser(0);
-    }
+    // User DTO rehydration runs once from {@link bootstrapCurrentUserFromSession} after
+    // {@link sessionClient} exists; avoid a second parallel fetch here (it could race login).
   },
   };
 });
@@ -167,14 +193,19 @@ const tokenAccessors: TokenAccessors = {
   getRefreshToken: () => useSessionStore.getState().refreshToken,
   onTokens: (access, refresh) => useSessionStore.getState().applyTokens(access, refresh),
   onAuthenticatedUser: (userUri) => {
-    useSessionStore.setState({ currentUserUri: userUri });
+    const canonicalUserUri = canonicalApiUserPath(userUri);
+    useSessionStore.setState({ currentUserUri: canonicalUserUri });
     const s = useSessionStore.getState();
     writeStorage({
       accessToken: s.accessToken,
       refreshToken: s.refreshToken,
-      currentUserUri: userUri,
+      currentUserUri: canonicalUserUri,
     });
   },
 };
 
 export const sessionClient = new HypermediaClient(tokenAccessors);
+
+if (typeof window !== 'undefined') {
+  queueMicrotask(bootstrapCurrentUserFromSession);
+}

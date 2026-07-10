@@ -163,7 +163,7 @@ export default function DetailReservationPanel({
             >
               {t('detailReservationPanel.startReservation')}
             </button>
-            <p className="text-center text-secondary small mb-0 text-uppercase detail-reservation-disclaimer">
+            <p className="text-center text-secondary small mb-0 detail-reservation-disclaimer">
               {t('detailReservationPanel.disclaimer')}
             </p>
           </>

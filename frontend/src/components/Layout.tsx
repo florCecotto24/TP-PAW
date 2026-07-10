@@ -14,17 +14,18 @@ export default function Layout() {
 
   const currentUser = useSessionStore((s) => s.currentUser);
   const showBlockedBanner = currentUser?.blocked === true;
-  const isHome = location.pathname === paths.home || location.pathname === '/';
-
   useEffect(() => {
+    const isHomeRoute = location.pathname === paths.home || location.pathname === '/';
     document.body.classList.add('bg-light');
-    if (!isHome) {
+    if (isHomeRoute) {
+      document.body.classList.remove('has-fixed-navbar');
+    } else {
       document.body.classList.add('has-fixed-navbar');
     }
     return () => {
       document.body.classList.remove('has-fixed-navbar', 'bg-light');
     };
-  }, [isHome]);
+  }, [location.pathname]);
 
   return (
     <div className="bg-cream min-vh-100">

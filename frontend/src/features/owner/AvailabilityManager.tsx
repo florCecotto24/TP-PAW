@@ -105,14 +105,6 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   }, [car]);
 
   useEffect(() => {
-    if (priceInsight) {
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('ryden-price-insight-refresh'));
-      });
-    }
-  }, [priceInsight, form.dayPrice, editing]);
-
-  useEffect(() => {
     const node = rangePickerRef.current;
     if (!node) return undefined;
     rangeFpRef.current?.destroy();
@@ -411,7 +403,8 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
               <PriceMarketInsightCard
                 insight={priceInsight}
                 priceInputId="availPrice"
-                initialUserPrice={form.dayPrice > 0 ? form.dayPrice : null}
+                value={form.dayPrice > 0 ? form.dayPrice : null}
+                onPriceChange={(price) => update('dayPrice', price)}
               >
                 <input
                   id="availPrice"

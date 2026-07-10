@@ -20,3 +20,6 @@ mail.server.password=local-mail-not-configured
 hibernate.show_sql=true
 hibernate.format_sql=true
 hibernate.use_sql_comments=true
+
+# CORS: enabled only with spring.profiles.active=local (see LocalCorsConfig). Vite/Postman against Jetty.
+# Deployed WAR (SPA + /api same-origin) disables CORS — no property needed here beyond the profile.

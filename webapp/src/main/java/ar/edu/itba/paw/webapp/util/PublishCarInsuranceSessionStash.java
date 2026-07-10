@@ -63,8 +63,11 @@ public final class PublishCarInsuranceSessionStash {
                 }
             }
         } catch (final IOException e) {
-            LOG.warn("Could not walk or delete insurance stash directory for session {}: {}",
-                    sessionId, e.toString(), e);
+            LOG.atWarn()
+                    .addArgument(sessionId)
+                    .addArgument(e.toString())
+                    .setCause(e)
+                    .log("Could not walk or delete insurance stash directory for session {}: {}");
         }
     }
 

@@ -8,12 +8,15 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
@@ -29,21 +32,29 @@ import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.car.CarPictureService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
+import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.PictureDto;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
 import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.CarGalleryUploadSupport;
+import ar.edu.itba.paw.webapp.support.CarResourceAccess;
+import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
 
 /**
  * Car gallery sub-resource ({@code /cars/{id}/pictures}).
  *
- * <p>The owner gate is declarative ({@code @PreAuthorize}, backed by the {@code carResourceAccess}
- * bean referenced by name), so it isn't injected as a field.
+ * Gallery metadata ({@code list}) is gated by {@link CarResourceAccess#canViewCar}; raw
+ * picture bytes ({@code /primary}, {@code /{pictureId}}) stay anonymously readable so
+ * {@code <img src>} thumbnails work without an {@code Authorization} header (browse +
+ * owner cards). Car JSON detail remains protected separately on {@code GET /cars/{id}}.
  */
 @Path("/cars/{id}/pictures")
 @Component
@@ -55,6 +66,9 @@ public class CarPictureController {
     private final StoredFileService storedFileService;
     private final CarGalleryUploadSupport carGalleryUploadSupport;
     private final BinaryPayloadSupport binaryPayloadSupport;
+    private final PaginationSupport paginationSupport;
+    private final CurrentUserResolver currentUserResolver;
+    private final CarResourceAccess carResourceAccess;
 
     @Context
     private UriInfo uriInfo;
@@ -69,26 +83,43 @@ public class CarPictureController {
             final ImageService imageService,
             final StoredFileService storedFileService,
             final CarGalleryUploadSupport carGalleryUploadSupport,
-            final BinaryPayloadSupport binaryPayloadSupport) {
+            final BinaryPayloadSupport binaryPayloadSupport,
+            final PaginationSupport paginationSupport,
+            final CurrentUserResolver currentUserResolver,
+            final CarResourceAccess carResourceAccess) {
         this.carService = carService;
         this.carPictureService = carPictureService;
         this.imageService = imageService;
         this.storedFileService = storedFileService;
         this.carGalleryUploadSupport = carGalleryUploadSupport;
         this.binaryPayloadSupport = binaryPayloadSupport;
+        this.paginationSupport = paginationSupport;
+        this.currentUserResolver = currentUserResolver;
+        this.carResourceAccess = carResourceAccess;
     }
 
     @GET
     @Produces(VndMediaType.PICTURE_V1_JSON)
-    public Response listPictures(@PathParam("id") final long carId) {
-        requireCarExists(carId);
-        final List<PictureDto> dtos = carPictureService.getCarPicturesByCarId(carId).stream()
+    public Response listPictures(
+            @PathParam("id") final long carId,
+            @QueryParam("page") @DefaultValue("1") final int page,
+            @QueryParam("pageSize") final Integer pageSizeParam) {
+        carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
+        final PaginationParams paging = paginationSupport.forCarGallery(page, pageSizeParam);
+        final Page<CarPicture> picturePage = carPictureService.findByCarPaginated(
+                carId, paging.getZeroBasedPage(), paging.getPageSize());
+        final List<PictureDto> dtos = picturePage.getContent().stream()
                 .map(picture -> PictureDto.from(picture, uriInfo))
                 .collect(Collectors.toList());
-        if (dtos.isEmpty()) {
+        final int totalItems = (int) picturePage.getTotalItems();
+        if (totalItems == 0L || dtos.isEmpty()) {
             return Response.noContent().build();
         }
-        return Response.ok(dtos).header("X-Total-Count", dtos.size()).build();
+        final Response.ResponseBuilder builder =
+                Response.ok(new GenericEntity<List<PictureDto>>(dtos) {})
+                        .header("X-Total-Count", totalItems);
+        PaginationLinks.add(builder, uriInfo, paging.getPage(), paging.getPageSize(), totalItems);
+        return builder.build();
     }
 
     @POST
@@ -124,6 +155,15 @@ public class CarPictureController {
     }
 
     @GET
+    @Path("/primary")
+    public Response getPrimaryPictureBytes(@PathParam("id") final long carId) {
+        requireCarExists(carId);
+        final CarPicture picture = carPictureService.findPrimaryPictureByCarId(carId)
+                .orElseThrow(() -> new CarNotFoundException(carId));
+        return pictureBytesResponse(carId, picture);
+    }
+
+    @GET
     @Path("/{pictureId}")
     public Response getPictureBytes(
             @PathParam("id") final long carId,
@@ -132,6 +172,10 @@ public class CarPictureController {
         final CarPicture picture = carPictureService.getCarPictureById(pictureId)
                 .filter(p -> p.getCarId() == carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
+        return pictureBytesResponse(carId, picture);
+    }
+
+    private Response pictureBytesResponse(final long carId, final CarPicture picture) {
         if (picture.isVideo()) {
             final Long storedFileId = picture.getStoredFileId();
             if (storedFileId == null) {

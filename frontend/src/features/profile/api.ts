@@ -1,7 +1,9 @@
 import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
+import { getLinkCollectionPage } from '../../api/client';
 import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
-import type { CarDto, DocumentType, UserDto, UserPatchDto, UserReviewDto } from './types';
+import type { CarSummaryDto, DocumentType, UserDto, UserPatchDto } from './types';
+import type { ReviewDto } from '../browse/types';
 
 // =============================================================================
 // Capa de acceso a la API para el área PROFILE.
@@ -41,7 +43,9 @@ export async function patchUser(userUri: string, patch: UserPatchDto): Promise<U
 
 /** PUT /users/{id}/profile-picture (raw image/* body). */
 export async function uploadProfilePicture(user: UserDto, file: File): Promise<void> {
-  const path = user.links.profilePicture ?? subResource(user.links.self, 'profile-picture');
+  const self = user.links?.self;
+  const path = user.links?.profilePicture ?? (self ? subResource(self, 'profile-picture') : null);
+  if (!path) throw new Error('profile.picture.missingLink');
   await sessionClient.request(path, {
     method: 'PUT',
     body: file,
@@ -51,13 +55,17 @@ export async function uploadProfilePicture(user: UserDto, file: File): Promise<v
 
 /** DELETE /users/{id}/profile-picture. */
 export async function deleteProfilePicture(user: UserDto): Promise<void> {
-  const path = user.links.profilePicture ?? subResource(user.links.self, 'profile-picture');
+  const self = user.links?.self;
+  const path = user.links?.profilePicture ?? (self ? subResource(self, 'profile-picture') : null);
+  if (!path) throw new Error('profile.picture.missingLink');
   await sessionClient.del(path);
 }
 
 /** Path de un documento (license/identity) — para subir, borrar y descargar. */
 export function documentPath(user: UserDto, type: DocumentType): string {
-  const base = user.links.documents ?? subResource(user.links.self, 'documents');
+  const self = user.links?.self;
+  const base = user.links?.documents ?? (self ? subResource(self, 'documents') : '');
+  if (!base) throw new Error('profile.documents.missingLink');
   const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
   return `${normalized}/${type}`;
 }
@@ -97,7 +105,10 @@ export async function openDocument(user: UserDto, type: DocumentType): Promise<b
 
 /** Path de la colección de favoritos del usuario. */
 export function favoritesPath(user: UserDto): string {
-  return user.links.favorites ?? subResource(user.links.self, 'favorites');
+  const self = user.links?.self;
+  const path = user.links?.favorites ?? (self ? subResource(self, 'favorites') : null);
+  if (!path) throw new Error('profile.favorites.missingLink');
+  return path;
 }
 
 /**
@@ -105,15 +116,18 @@ export function favoritesPath(user: UserDto): string {
  * paginación (next/prev) que ya trae los query params.
  */
 export async function fetchFavorites(pathOrLink: string) {
-  const res = await sessionClient.get<CarDto[]>(pathOrLink, { accept: MediaTypes.car });
-  // 204 (sin favoritos) → data undefined; normalizamos a [].
+  const res = await getLinkCollectionPage<CarSummaryDto>(sessionClient, pathOrLink, {
+    collectionAccept: MediaTypes.userFavorites,
+    itemAccept: MediaTypes.carSummary,
+  });
   return { data: res.data ?? [], page: res.page, status: res.status };
 }
 
 /** GET favoritos por índice de página (0-based URL, API 1-based). */
 export async function fetchFavoritesPage(user: UserDto, pageIndex: number, pageSize?: number) {
-  const res = await sessionClient.get<CarDto[]>(favoritesPath(user), {
-    accept: MediaTypes.car,
+  const res = await getLinkCollectionPage<CarSummaryDto>(sessionClient, favoritesPath(user), {
+    collectionAccept: MediaTypes.userFavorites,
+    itemAccept: MediaTypes.carSummary,
     query: { page: pageIndex + 1, pageSize },
   });
   return { data: res.data ?? [], page: res.page, status: res.status };
@@ -130,30 +144,30 @@ export async function removeFavorite(user: UserDto, carSelfLink: string): Promis
 
 /** Path para listar los autos de un usuario (perfil público): GET /cars?ownerId=. */
 export function userCarsLink(user: UserDto): string | null {
-  return user.links.cars ?? null;
+  return user.links?.cars ?? null;
 }
 
 /** GET autos activos de un usuario navegando user.links.cars. */
 export async function fetchUserCars(carsLink: string) {
-  const res = await sessionClient.get<CarDto[]>(carsLink, { accept: MediaTypes.car });
+  const res = await sessionClient.get<CarSummaryDto[]>(carsLink, { accept: MediaTypes.carSummary });
   return { data: res.data ?? [], page: res.page, status: res.status };
 }
 
-/** Link a las reseñas recibidas por el usuario (GET /users/{id}/reviews). */
+/** Link a las reseñas recibidas por el usuario (GET /reviews?recipientUserId=). */
 export function userReviewsLink(user: UserDto): string | null {
-  return user.links.reviews ?? null;
+  return user.links?.reviews ?? null;
 }
 
 /**
- * GET reseñas recibidas por un usuario navegando user.links.reviews.
- * Combina (en el server) las recibidas como dueño y como conductor, más
- * recientes primero. 204 (sin reseñas) → data []. `total` viene de
- * X-Total-Count y puede superar `data.length` (la respuesta está paginada).
+ * GET reseñas recibidas navegando user.links.reviews (colección canónica).
  */
 export async function getUserReviews(
   reviewsLink: string,
-): Promise<{ data: UserReviewDto[]; total: number }> {
-  const res = await sessionClient.get<UserReviewDto[]>(reviewsLink, { accept: MediaTypes.review });
+): Promise<{ data: ReviewDto[]; total: number }> {
+  const res = await getLinkCollectionPage<ReviewDto>(sessionClient, reviewsLink, {
+    collectionAccept: MediaTypes.reviewLinks,
+    itemAccept: MediaTypes.review,
+  });
   const data = res.data ?? [];
   return { data, total: res.page.total ?? data.length };
 }

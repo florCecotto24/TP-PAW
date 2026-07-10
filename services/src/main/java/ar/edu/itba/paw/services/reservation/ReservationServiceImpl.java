@@ -212,6 +212,12 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<ReservationCard> findReservationCardById(final long reservationId) {
+        return reservationDao.findReservationCardById(reservationId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Long> findOverdueRefundProofReservationIdsForOwner(final long ownerUserId) {
         return reservationDao.findOverdueRefundProofReservationsForOwner(
                         ownerUserId, OffsetDateTime.now(ZoneOffset.UTC))

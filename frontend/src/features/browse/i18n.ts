@@ -15,9 +15,9 @@ export const browseI18n = {
         empty: 'No hay autos para mostrar.',
         loadError: 'No se pudieron cargar los autos.',
         hero: {
-          title: 'Alquilá el auto perfecto para tu viaje',
-          subtitle: 'Miles de autos de particulares cerca tuyo, listos para reservar.',
-          note: 'Reservas disponibles en toda Argentina.',
+          title: 'Evitá la fila del mostrador',
+          subtitle: 'Alquilá casi cualquier auto, casi en cualquier lugar',
+          note: 'Disponible en Ciudad Autónoma de Buenos Aires (CABA), Argentina',
         },
         howItWorks: {
           title: 'Cómo funciona',
@@ -135,9 +135,9 @@ export const browseI18n = {
         empty: 'No cars to show.',
         loadError: 'Could not load cars.',
         hero: {
-          title: 'Rent the perfect car for your trip',
-          subtitle: 'Thousands of cars from people near you, ready to book.',
-          note: 'Reservations available all across Argentina.',
+          title: 'Skip the rental car counter',
+          subtitle: 'Rent just about any car, just about anywhere',
+          note: 'Available in Ciudad Autónoma de Buenos Aires (CABA), Argentina',
         },
         howItWorks: {
           title: 'How it works',

@@ -1,14 +1,14 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
+import { LoadingBlock } from '../../../components/ryden';
 import { getCar, getReservation, idFromUri, uploadReceipt } from '../api';
+import ReceiptUploadPicker from '../components/ReceiptUploadPicker';
 import { formatDateTime, formatPrice } from '../format';
 import { paths, carDetail, myReservationDetail } from '../../../routes/paths';
 import { useSessionStore } from '../../../session/sessionStore';
-
-const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 
 /** Espejo de reservationConfirmation.jsp: agradecimiento + subida de comprobante de pago. */
 export default function ReservationConfirmationPage() {
@@ -16,7 +16,6 @@ export default function ReservationConfirmationPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const currentUser = useSessionStore((s) => s.currentUser);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reservationUri = id ? `/reservations/${id}` : null;
   const reservationQuery = useQuery({
@@ -34,8 +33,6 @@ export default function ReservationConfirmationPage() {
   const car = carQuery.data;
   const carName = car ? `${car.brandName} ${car.modelName}` : '';
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadDone, setUploadDone] = useState(false);
 
@@ -47,45 +44,21 @@ export default function ReservationConfirmationPage() {
     );
   }
 
-  const validateFile = (file: File): string | null => {
-    const type = (file.type || '').toLowerCase();
-    const okType = type.startsWith('image/') || type === 'application/pdf';
-    if (!okType) return t('res.confirmation.invalidFile');
-    if (file.size > MAX_RECEIPT_BYTES) return t('res.confirmation.invalidFile');
-    return null;
-  };
-
-  const onFileChange = (file: File | null) => {
-    setUploadDone(false);
-    if (!file) {
-      setSelectedFile(null);
-      setFileError(null);
-      return;
-    }
-    const err = validateFile(file);
-    setFileError(err);
-    setSelectedFile(err ? null : file);
-  };
-
-  const onUpload = async () => {
-    if (!selectedFile || !reservation) return;
-    const uri = reservation.links.self.replace(/\/$/, '') + '/payment-receipt';
+  const onConfirmUpload = async (file: File) => {
+    if (!reservation) throw new Error('missing reservation');
+    const uri = `${reservation.links.self.replace(/\/$/, '')}/payment-receipt`;
     setUploading(true);
-    setFileError(null);
     try {
-      await uploadReceipt(uri, selectedFile);
+      await uploadReceipt(uri, file);
       setUploadDone(true);
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
       await queryClient.invalidateQueries({ queryKey: ['reservations', 'confirmation', id] });
-    } catch {
-      setFileError(t('res.confirmation.uploadError'));
     } finally {
       setUploading(false);
     }
   };
 
   const heading = t('res.confirmation.title');
+  const receiptLocked = Boolean(reservation?.hasPaymentReceipt || uploadDone);
 
   return (
     <main className="container py-5 reservation-confirmation">
@@ -99,7 +72,7 @@ export default function ReservationConfirmationPage() {
           <div className="card border-0 shadow-sm rounded-4 bg-white">
             <div className="card-body p-4 p-md-5">
               {reservationQuery.isLoading ? (
-                <p className="text-secondary">{t('res.detail.loading')}</p>
+                <LoadingBlock variant="page" className="py-3" />
               ) : null}
               {reservationQuery.isError || !reservation ? (
                 <div className="alert alert-danger">{t('res.detail.error')}</div>
@@ -147,43 +120,16 @@ export default function ReservationConfirmationPage() {
                       </div>
                     </article>
 
-                    {reservation.hasPaymentReceipt || uploadDone ? (
+                    {receiptLocked ? (
                       <p className="text-success small mb-0 text-center">
                         <i className="bi bi-check-circle-fill me-1" aria-hidden="true"></i>
                         {t('res.confirmation.uploadSuccess')}
                       </p>
                     ) : (
-                      <>
-                        <div className="d-flex align-items-stretch gap-2">
-                          <label className="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative">
-                            <span className="text-truncate text-muted pe-1 flex-grow-1 min-w-0">
-                              {selectedFile ? selectedFile.name : t('res.confirmation.chooseFile')}
-                            </span>
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              className="position-absolute top-0 start-0 w-100 h-100 opacity-0"
-                              accept="image/*,application/pdf"
-                              aria-label={t('res.confirmation.uploadAria')}
-                              onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-primary flex-shrink-0 d-inline-flex align-items-center justify-content-center gap-1 px-2"
-                            disabled={!selectedFile || uploading}
-                            onClick={() => void onUpload()}
-                          >
-                            <i className="bi bi-cloud-arrow-up" aria-hidden="true"></i>
-                            {t('res.confirmation.uploadReceipt')}
-                          </button>
-                        </div>
-                        {fileError ? (
-                          <div className="text-danger small mt-2" role="alert">
-                            {fileError}
-                          </div>
-                        ) : null}
-                      </>
+                      <ReceiptUploadPicker
+                        busy={uploading}
+                        onConfirm={onConfirmUpload}
+                      />
                     )}
                   </section>
 

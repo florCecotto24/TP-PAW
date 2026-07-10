@@ -1,7 +1,7 @@
 // Hooks de fetching de BROWSE (react-query sobre el sessionClient hypermedia).
 //
 // Convenciones del cliente (ver ../../api/client):
-//   - GET de colección: accept MediaTypes.car -> res.data es el ARRAY; la
+//   - GET de colección: accept MediaTypes.carSummary -> res.data es el ARRAY; la
 //     paginación vive en res.page (NO en el body).
 //   - próxima página = navegar res.page.next (otra request a esa URL absoluta).
 //   - hipervínculos: se navega car.links.* (follow), no se arman URLs.
@@ -15,20 +15,25 @@ import {
 } from '@tanstack/react-query';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
-import type { ApiResponse } from '../../api/client';
-import type { UserDto } from '../../api/types';
-import { lastPathSegment, idFromUri } from '../../api/uri';
+import { ApiError, followAllPages, followLinkCollection, getLinkCollectionPage, type ApiResponse } from '../../api/client';
+import type { UserDto, Links } from '../../api/types';
+import { lastPathSegment } from '../../api/uri';
 import { filtersToApiParams, type SearchFilters } from './searchFilters';
 import { isCarFavoritable } from './carCardAdapter';
 import type {
   AvailabilityDto,
   CarDto,
+  CarSummaryDto,
   NeighborhoodDto,
   PictureDto,
   ReviewDto,
 } from './types';
 
 const CARS_PATH = '/cars';
+
+function stripTrailingSlash(s: string): string {
+  return s.endsWith('/') ? s.slice(0, -1) : s;
+}
 
 export const HOME_CAROUSEL_PAGE_SIZE = 8;
 
@@ -37,8 +42,8 @@ function useCarCarousel(sort: string, pageIndex: number) {
   return useQuery({
     queryKey: ['browse', 'cars', 'carousel', sort, pageIndex],
     queryFn: async () => {
-      const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
-        accept: MediaTypes.car,
+      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH, {
+        accept: MediaTypes.carSummary,
         query: { sort, page: pageIndex + 1, pageSize: HOME_CAROUSEL_PAGE_SIZE },
       });
       return {
@@ -66,11 +71,11 @@ export function useSearchCars(filters: SearchFilters, pageSize = 12) {
     queryFn: async ({ pageParam }) => {
       if (pageParam) {
         // Página subsiguiente: navego el link tal cual lo dio la API.
-        const res = await sessionClient.follow<CarDto[]>(pageParam, { accept: MediaTypes.car });
+        const res = await sessionClient.follow<CarSummaryDto[]>(pageParam, { accept: MediaTypes.carSummary });
         return { items: res.data ?? [], page: res.page };
       }
-      const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
-        accept: MediaTypes.car,
+      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH, {
+        accept: MediaTypes.carSummary,
         query: { ...filtersToApiParams(filters), pageSize },
       });
       return { items: res.data ?? [], page: res.page };
@@ -82,8 +87,8 @@ export function useSearchCars(filters: SearchFilters, pageSize = 12) {
 
 /** Aplana las páginas de useSearchCars en una sola lista de autos. */
 export function flattenCars(
-  data: InfiniteData<{ items: CarDto[] }> | undefined,
-): CarDto[] {
+  data: InfiniteData<{ items: CarSummaryDto[] }> | undefined,
+): CarSummaryDto[] {
   return data?.pages.flatMap((p) => p.items) ?? [];
 }
 
@@ -101,8 +106,8 @@ export function useSearchCarsPage(filters: SearchFilters, page: number, pageSize
   return useQuery({
     queryKey: ['browse', 'cars', 'search-page', filtersToApiParams(filters), page, pageSize],
     queryFn: async () => {
-      const res = await sessionClient.get<CarDto[]>(CARS_PATH, {
-        accept: MediaTypes.car,
+      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH, {
+        accept: MediaTypes.carSummary,
         query: { ...filtersToApiParams(filters), page, pageSize },
       });
       return { items: res.data ?? [], page: res.page };
@@ -129,13 +134,13 @@ export function useCar(id: string | undefined) {
   });
 }
 
-/** Galería: navega car.links.pictures. Los bytes están en cada pic.links.self. */
+/** Galería: navega car.links.pictures y sigue res.page.next si hay más de una página. */
 export function useCarPictures(picturesLink: string | undefined) {
   return useQuery({
     queryKey: ['browse', 'pictures', picturesLink],
     enabled: !!picturesLink,
     queryFn: async () => {
-      const res = await sessionClient.follow<PictureDto[]>(picturesLink as string, {
+      const res = await followAllPages<PictureDto>(sessionClient, picturesLink as string, {
         accept: MediaTypes.picture,
       });
       return (res.data ?? []).sort((a, b) => a.displayOrder - b.displayOrder);
@@ -143,15 +148,18 @@ export function useCarPictures(picturesLink: string | undefined) {
   });
 }
 
-/** Dueño del auto: navega car.links.owner para el bloque de contacto/perfil. */
-export function useCarOwner(ownerLink: string | undefined) {
+/**
+ * Dueño del auto: navega car.links.owner.
+ * Con {@code privateView} (solo admin) pide UserPrivateDto para leer rol/blocked
+ * y poder ocultar acciones de moderación sobre autos de otros admins.
+ */
+export function useCarOwner(ownerLink: string | undefined, privateView = false) {
+  const accept = privateView ? MediaTypes.userPrivate : MediaTypes.user;
   return useQuery({
-    queryKey: ['browse', 'owner', ownerLink],
+    queryKey: ['browse', 'owner', ownerLink, privateView ? 'private' : 'public'],
     enabled: !!ownerLink,
     queryFn: async () => {
-      const res = await sessionClient.follow<UserDto>(ownerLink as string, {
-        accept: MediaTypes.user,
-      });
+      const res = await sessionClient.follow<UserDto>(ownerLink as string, { accept });
       return res.data;
     },
   });
@@ -178,10 +186,11 @@ export function useCarReviews(reviewsLink: string | undefined) {
     enabled: !!reviewsLink,
     initialPageParam: reviewsLink ?? null,
     queryFn: async ({ pageParam }) => {
-      const res = await sessionClient.follow<ReviewDto[]>(pageParam as string, {
-        accept: MediaTypes.review,
+      const collectionRes = await sessionClient.follow<Links[]>(pageParam as string, {
+        accept: MediaTypes.reviewLinks,
       });
-      return { items: res.data ?? [], page: res.page };
+      const items = await followLinkCollection<ReviewDto>(sessionClient, collectionRes, MediaTypes.review);
+      return { items, page: collectionRes.page };
     },
     getNextPageParam: (last) => last.page.next ?? undefined,
   });
@@ -217,11 +226,11 @@ async function loadFavoritedCarIds(favoritesLink: string): Promise<Set<string>> 
   const ids = new Set<string>();
   let pageLink: string | undefined = favoritesLink;
   while (pageLink) {
-    const res: ApiResponse<CarDto[]> = await sessionClient.follow<CarDto[]>(pageLink, {
-      accept: MediaTypes.car,
+    const res: ApiResponse<Links[]> = await sessionClient.follow<Links[]>(pageLink, {
+      accept: MediaTypes.userFavorites,
     });
-    for (const c of res.data ?? []) {
-      const id = lastPathSegment(c.links.self);
+    for (const link of res.data ?? []) {
+      const id = lastPathSegment(link.self);
       if (id) ids.add(id);
     }
     pageLink = res.page.next ?? undefined;
@@ -231,40 +240,56 @@ async function loadFavoritedCarIds(favoritesLink: string): Promise<Set<string>> 
 
 /** IDs de autos favoritos del usuario logueado (para grids de browse). */
 export function useFavoritedCarIds() {
-  const favoritesLink = useSessionStore((s) => s.currentUser?.links.favorites);
+  const favoritesLink = useSessionStore((s) => s.currentUser?.links?.favorites);
   return useQuery({
     queryKey: ['browse', 'favorites', 'ids'],
     enabled: !!favoritesLink,
-    queryFn: () => loadFavoritedCarIds(favoritesLink as string),
+    queryFn: async () => {
+      try {
+        return await loadFavoritedCarIds(favoritesLink as string);
+      } catch (err) {
+        // Sesión vencida sin refresh válido: no romper la grilla ni spamear la consola.
+        if (err instanceof ApiError && err.status === 401) {
+          return new Set<string>();
+        }
+        throw err;
+      }
+    },
   });
 }
 
 /**
- * ¿Está este auto en los favoritos del usuario logueado? El back no expone un
- * GET de membresía individual (`/favorites/{carId}` solo soporta PUT/DELETE),
- * así que navegamos la colección paginada currentUser.links.favorites (siguiendo
- * los links `next` del header) y buscamos el self del auto. La query se registra
- * bajo ['browse','favorites', carSelf] para que useToggleFavorite la invalide.
+ * ¿Está este auto en favoritos? Usa {@code GET …/favorites/{carId}} (204 / 404).
+ * No se puede inferir solo de la colección listada: el listado oculta estados
+ * fuera de active/paused (p.ej. admin_paused), así el corazón del detalle
+ * fallaba al favoritar autos abiertos desde el panel admin.
  */
 export function useIsFavorite(carSelf: string | undefined) {
-  const favoritesLink = useSessionStore((s) => s.currentUser?.links.favorites);
+  const favoritesLink = useSessionStore((s) => s.currentUser?.links?.favorites);
   return useQuery({
     queryKey: ['browse', 'favorites', carSelf],
     enabled: !!carSelf && !!favoritesLink,
     queryFn: async () => {
-      const targetId = lastPathSegment(carSelf as string);
-      const ids = await loadFavoritedCarIds(favoritesLink as string);
-      return ids.has(targetId);
+      const carId = lastPathSegment(carSelf as string);
+      if (!carId) return false;
+      const target = `${stripTrailingSlash(favoritesLink as string)}/${carId}`;
+      try {
+        await sessionClient.get(target);
+        return true;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) return false;
+        throw err;
+      }
     },
   });
 }
 
 /** Estado del corazón en tarjetas de browse (home, búsqueda, similares, perfil público). */
-export function useBrowseCarFavorite(car: CarDto) {
+export function useBrowseCarFavorite(car: CarSummaryDto) {
   const isLoggedIn = useSessionStore((s) => s.status === 'authenticated');
-  const userSelf = useSessionStore((s) => s.currentUser?.links.self);
+  const userSelf = useSessionStore((s) => s.currentUser?.links?.self);
   const favoritable = isCarFavoritable(car, isLoggedIn, userSelf);
-  const carId = lastPathSegment(car.links.self);
+  const carId = lastPathSegment(car.links?.self ?? '');
   const favIdsQuery = useFavoritedCarIds();
   const favorited =
     favoritable && carId !== '' && (favIdsQuery.data?.has(carId) ?? false);
@@ -283,10 +308,10 @@ export function useBrowseCarFavorite(car: CarDto) {
 export function useToggleFavorite() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ car, makeFavorite }: { car: CarDto; makeFavorite: boolean }) => {
-      const favoritesLink = useSessionStore.getState().currentUser?.links.favorites;
+    mutationFn: async ({ car, makeFavorite }: { car: CarSummaryDto; makeFavorite: boolean }) => {
+      const favoritesLink = useSessionStore.getState().currentUser?.links?.favorites;
       if (!favoritesLink) throw new Error('browse.favorite.noSession');
-      const carId = lastPathSegment(car.links.self);
+      const carId = lastPathSegment(car.links?.self ?? '');
       const target = `${stripTrailingSlash(favoritesLink)}/${carId}`;
       const res: ApiResponse<unknown> = makeFavorite
         ? await sessionClient.put(target)
@@ -299,20 +324,25 @@ export function useToggleFavorite() {
   });
 }
 
-function stripTrailingSlash(s: string): string {
-  return s.endsWith('/') ? s.slice(0, -1) : s;
-}
-
 /** Public reviews for car detail (one page, 1-based API page param). */
 export const CAR_REVIEWS_PAGE_SIZE = 6;
 
-export function useCarReviewsPage(carId: string | undefined, page: number, pageSize = CAR_REVIEWS_PAGE_SIZE) {
+/**
+ * Página de reseñas del auto siguiendo {@code car.links.reviews} (canónico
+ * {@code /reviews?carId=…}), no una URI armada a mano.
+ */
+export function useCarReviewsPage(
+  reviewsLink: string | undefined,
+  page: number,
+  pageSize = CAR_REVIEWS_PAGE_SIZE,
+) {
   return useQuery({
-    queryKey: ['browse', 'reviews-page', carId, page, pageSize],
-    enabled: !!carId,
+    queryKey: ['browse', 'reviews-page', reviewsLink, page, pageSize],
+    enabled: !!reviewsLink,
     queryFn: async () => {
-      const res = await sessionClient.get<ReviewDto[]>(`/cars/${carId}/reviews`, {
-        accept: MediaTypes.review,
+      const res = await getLinkCollectionPage<ReviewDto>(sessionClient, reviewsLink as string, {
+        collectionAccept: MediaTypes.reviewLinks,
+        itemAccept: MediaTypes.review,
         query: { page: page + 1, pageSize },
       });
       return { items: res.data ?? [], page: res.page };
@@ -320,15 +350,17 @@ export function useCarReviewsPage(carId: string | undefined, page: number, pageS
   });
 }
 
-/** Active bookable cars of the same category (server-side filter), excluding the current listing. */
-export function useSimilarCars(car: CarDto | undefined, limit = 4) {
-  const carId = car ? idFromUri(car.links.self) : null;
+/** Active bookable cars of the same category (server-side filter), excluding the current listing.
+ *  Collection is link-only ({@code car.similar}); this hook follows each {@code self} — intentional HTTP N+1. */
+export function useSimilarCars(car: CarDto | CarSummaryDto | undefined, limit = 4) {
+  const similarLink = car?.links?.similar;
   return useQuery({
-    queryKey: ['browse', 'similar', carId],
-    enabled: !!carId,
+    queryKey: ['browse', 'similar', similarLink, limit],
+    enabled: !!similarLink,
     queryFn: async () => {
-      const res = await sessionClient.get<CarDto[]>(`/cars/${carId}/similar`, {
-        accept: MediaTypes.car,
+      const res = await getLinkCollectionPage<CarSummaryDto>(sessionClient, similarLink as string, {
+        collectionAccept: MediaTypes.carSimilar,
+        itemAccept: MediaTypes.carSummary,
         query: { limit },
       });
       return res.data ?? [];

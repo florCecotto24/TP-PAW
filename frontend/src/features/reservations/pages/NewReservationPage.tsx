@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
+import { LoadingBlock } from '../../../components/ryden';
 import DocumentPromptModal from '../../../components/ryden/primitives/DocumentPromptModal';
 import {
   createReservation,
@@ -219,7 +220,7 @@ export default function NewReservationPage() {
         <div className="col-md-8 col-lg-6">
           <div className="card border-0 shadow-sm rounded-4 bg-white">
             <div className="card-body p-4 p-md-5">
-              {loading ? <p className="text-secondary">{t('res.detail.loading')}</p> : null}
+              {loading ? <LoadingBlock variant="page" className="py-3" /> : null}
               {carQuery.isError || availQuery.isError ? (
                 <div className="alert alert-danger">{t('res.detail.error')}</div>
               ) : null}
@@ -273,7 +274,7 @@ export default function NewReservationPage() {
 
                       <div className="d-flex gap-2 mt-2">
                         <Link to={carDetail(carId)} className="btn btn-outline-secondary w-50">
-                          {t('common.back')}
+                          {t('res.new.back')}
                         </Link>
                         <button
                           type="button"

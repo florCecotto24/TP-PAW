@@ -47,37 +47,24 @@ export default defineConfig(({ mode }) => ({
     },
   },
   server: {
-    // Dev server: proxy de los recursos de la API al backend (mismo origen en prod).
-    // Se listan los prefijos de recursos REST (la API NO tiene prefijo /api).
+    // Dev server: proxy unified API mount (/api) to the backend (Jetty context /).
     proxy: {
-      // Auth probe (Basic → JWT): GET / with Accept application/vnd.paw.* (npm run dev, base /).
-      '/': {
+      '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        bypass(req) {
-          const accept = req.headers.accept ?? '';
-          if (accept.includes('application/vnd.paw')) {
-            return undefined;
-          }
-          return req.url;
-        },
       },
-      // Local Jetty (context /): API lives at /cars, not /webapp/cars — strip prefix on proxy.
-      // Use `npm run dev` (--base=/). For Tomcat at /webapp use `npm run dev:war` without rewrite.
+      // dev:war (base /webapp/): strip WAR context when Jetty runs with server.servlet.context-path=/.
+      '/webapp/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/webapp(?=\/|$)/, '') || '/',
+      },
       '/webapp': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/webapp(?=\/|$)/, '') || '/',
         bypass: bypassWebappDevProxy,
       },
-      '/users': 'http://localhost:8080',
-      '/cars': 'http://localhost:8080',
-      '/reservations': 'http://localhost:8080',
-      '/brands': 'http://localhost:8080',
-      '/models': 'http://localhost:8080',
-      '/neighborhoods': 'http://localhost:8080',
-      '/credentials': 'http://localhost:8080',
-      '/image': 'http://localhost:8080',
     },
   },
   test: {

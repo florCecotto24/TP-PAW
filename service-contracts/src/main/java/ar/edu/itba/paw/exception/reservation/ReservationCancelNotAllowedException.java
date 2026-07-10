@@ -14,11 +14,15 @@ import ar.edu.itba.paw.exception.MessageKeys;
  */
 public final class ReservationCancelNotAllowedException extends ReservationException {
 
-    public ReservationCancelNotAllowedException() {
-        super(MessageKeys.RESERVATION_CANCEL_NOT_ALLOWED);
+    private ReservationCancelNotAllowedException(final String messageCode, final Object... args) {
+        super(messageCode, args);
     }
 
-    public ReservationCancelNotAllowedException(final String messageCode, final Object... args) {
-        super(messageCode, args);
+    public static ReservationCancelNotAllowedException notAllowed() {
+        return new ReservationCancelNotAllowedException(MessageKeys.RESERVATION_CANCEL_NOT_ALLOWED);
+    }
+
+    public static ReservationCancelNotAllowedException withCode(final String messageCode, final Object... args) {
+        return new ReservationCancelNotAllowedException(messageCode, args);
     }
 }

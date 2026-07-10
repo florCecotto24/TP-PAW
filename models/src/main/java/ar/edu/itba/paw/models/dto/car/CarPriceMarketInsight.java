@@ -8,8 +8,10 @@ import java.util.Optional;
 /** Min / max / average day prices for active cars with the same brand and model. */
 public final class CarPriceMarketInsight {
 
-    private static final BigDecimal BELOW_MARKET_THRESHOLD = new BigDecimal("0.90");
-    private static final BigDecimal ABOVE_MARKET_THRESHOLD = new BigDecimal("1.10");
+    /** Day price ≤ this fraction of peer average → {@link PriceMarketPosition#BELOW_MARKET}. */
+    public static final BigDecimal BELOW_MARKET_THRESHOLD = new BigDecimal("0.90");
+    /** Day price above this fraction of peer average → {@link PriceMarketPosition#ABOVE_MARKET}. */
+    public static final BigDecimal ABOVE_MARKET_THRESHOLD = new BigDecimal("1.10");
 
     private final BigDecimal minPrice;
     private final BigDecimal maxPrice;

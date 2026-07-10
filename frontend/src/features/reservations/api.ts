@@ -1,6 +1,7 @@
 // Capa de acceso a la API para el área RESERVATIONS.
 // Thin wrapper sobre sessionClient: una llamada por operación, sin lógica de UI.
-import { type ApiResponse } from '../../api/client';
+import { type ApiResponse, getLinkCollectionPage } from '../../api/client';
+import { encodeMultipart } from '../../api/multipart';
 import { sessionClient } from '../../session/sessionStore';
 import { CHAT_HISTORY_PAGE_SIZE } from './chatAttachment';
 import { MediaTypes } from '../../api/mediaTypes';
@@ -10,9 +11,11 @@ import type {
   MessageDto,
   ReservationCreateDto,
   ReservationDto,
+  ReservationSummaryDto,
   ReservationPatchDto,
   ReviewDto,
 } from './types';
+import type { MultipartPart } from '../../api/multipart';
 
 // Las URN canónicas viven en `links`; el carId de la ruta /reservar/:carId se
 // recibe del front, por eso se arma carUri a alto nivel. El resto se navega.
@@ -46,11 +49,12 @@ function toQueryArray(value?: string | string[]): string[] | undefined {
   return out.length > 0 ? out : undefined;
 }
 
-export function listReservations(
+export async function listReservations(
   q: ReservationListQuery,
-): Promise<ApiResponse<ReservationDto[]>> {
-  return sessionClient.get<ReservationDto[]>('/reservations', {
-    accept: MediaTypes.reservation,
+): Promise<ApiResponse<ReservationSummaryDto[]>> {
+  const collectionRes = await getLinkCollectionPage<ReservationSummaryDto>(sessionClient, '/reservations', {
+    collectionAccept: MediaTypes.reservationLinks,
+    itemAccept: MediaTypes.reservationSummary,
     query: {
       riderId: q.riderId,
       ownerId: q.ownerId,
@@ -69,6 +73,7 @@ export function listReservations(
       pageSize: q.pageSize,
     },
   });
+  return collectionRes;
 }
 
 export function getReservation(uri: string): Promise<ApiResponse<ReservationDto>> {
@@ -114,7 +119,7 @@ export function getUser(userUri: string): Promise<ApiResponse<RiderUserView>> {
 }
 
 export function getCarSummary(carUri: string): Promise<ApiResponse<CarSummaryView>> {
-  return sessionClient.follow<CarSummaryView>(carUri, { accept: MediaTypes.car });
+  return sessionClient.follow<CarSummaryView>(carUri, { accept: MediaTypes.carSummary });
 }
 
 /** Vista del auto de la reserva (marca/modelo, transmisión, combustible, dueño). */
@@ -196,11 +201,26 @@ export function patchReservation(
   });
 }
 
-/** Sube un comprobante (pago o reintegro) como octet-stream al sub-recurso. */
+/** Sube un comprobante (pago o reintegro). El Content-Type real del archivo
+ *  (image/* o application/pdf) es lo que valida el server; no usar octet-stream. */
 export function uploadReceipt(receiptUri: string, file: File): Promise<ApiResponse<unknown>> {
   return sessionClient.put<unknown>(receiptUri, file, {
-    contentType: 'application/octet-stream',
+    contentType: receiptContentType(file),
   });
+}
+
+function receiptContentType(file: File): string {
+  const declared = (file.type || '').trim().toLowerCase();
+  if (declared.startsWith('image/') || declared === 'application/pdf') {
+    return declared;
+  }
+  const name = (file.name || '').toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (/\.(jpe?g)$/.test(name)) return 'image/jpeg';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.gif')) return 'image/gif';
+  if (name.endsWith('.webp')) return 'image/webp';
+  return declared || 'application/octet-stream';
 }
 
 export interface ReviewInput {
@@ -209,22 +229,37 @@ export interface ReviewInput {
   image?: File | null;
 }
 
-/** POST review (multipart). El lado (madeByRider) lo deriva el server por rol. */
-export function postReview(
+/** POST review (multipart) a la colección canónica `/reviews?reservationId=…`. */
+export async function postReview(
   reviewsUri: string,
   input: ReviewInput,
 ): Promise<ApiResponse<ReviewDto>> {
-  const fd = new FormData();
-  fd.append('rating', String(input.rating));
-  fd.append('comment', input.comment);
-  if (input.image) fd.append('image', input.image);
-  return sessionClient.post<ReviewDto>(reviewsUri, fd, {
+  // encodeMultipart: mismo fix que publishCar — FormData nativo a veces llega
+  // a Jersey sin boundary → 400 "Missing start boundary".
+  const parts: MultipartPart[] = [
+    { name: 'rating', value: String(input.rating) },
+    { name: 'comment', value: input.comment ?? '' },
+  ];
+  if (input.image) {
+    parts.push({
+      name: 'image',
+      value: input.image,
+      filename: input.image.name || 'review-image',
+      contentType: input.image.type || 'application/octet-stream',
+    });
+  }
+  const { body, contentType } = await encodeMultipart(parts);
+  return sessionClient.post<ReviewDto>(reviewsUri, body, {
     accept: MediaTypes.review,
+    contentType,
   });
 }
 
-export function listReviews(reviewsUri: string): Promise<ApiResponse<ReviewDto[]>> {
-  return sessionClient.get<ReviewDto[]>(reviewsUri, { accept: MediaTypes.review });
+export async function listReviews(reviewsUri: string): Promise<ApiResponse<ReviewDto[]>> {
+  return getLinkCollectionPage<ReviewDto>(sessionClient, reviewsUri, {
+    collectionAccept: MediaTypes.reviewLinks,
+    itemAccept: MediaTypes.review,
+  });
 }
 
 export function listMessages(

@@ -5,9 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { useSessionStore } from '../../session/sessionStore';
 import { resolveApiErrorMessage } from '../../api/apiErrorMessage';
 import { pageCount } from '../browse/hooks';
+import { listReservations } from '../reservations/api';
+import type { ReservationSummaryDto } from '../reservations/types';
 import { fetchOwnerCars, idFromUri } from './api';
+import { pickCarReservationPreview } from './carReservationPreview';
 import { jspSortToApiSort, MY_CARS_PAGE_SIZE, type MyCarsFilters } from './myCarsFilters';
-import type { CarDto } from './types';
+import type { CarSummaryDto } from './types';
 import type { UserDto } from '../../api/types';
 
 /** id numérico del usuario logueado, derivado de su URN (currentUserUri). */
@@ -57,7 +60,7 @@ export function useMyCarsPage(
         sort: jspSortToApiSort(filters.sort ?? 'date,desc'),
       });
       return {
-        items: (res.data ?? []) as CarDto[],
+        items: (res.data ?? []) as CarSummaryDto[],
         total: res.page.total,
       };
     },
@@ -66,4 +69,29 @@ export function useMyCarsPage(
 
 export function myCarsPageCount(total: number | undefined): number {
   return pageCount(total, MY_CARS_PAGE_SIZE);
+}
+
+/** Vista previa de reservas activas del auto (en curso o próximas) para el detalle owner. */
+export function useCarReservationPreview(
+  ownerId: string | null | undefined,
+  carId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey: ['owner', 'car-reservations-preview', ownerId, carId],
+    enabled: ownerId != null && carId != null,
+    queryFn: async () => {
+      const res = await listReservations({
+        ownerId: ownerId as string,
+        carId: carId as string,
+        status: ['pending', 'accepted', 'started'],
+        page: 1,
+        pageSize: 20,
+      });
+      const items = (res.data ?? []) as ReservationSummaryDto[];
+      return {
+        preview: pickCarReservationPreview(items),
+        total: res.page.total,
+      };
+    },
+  });
 }

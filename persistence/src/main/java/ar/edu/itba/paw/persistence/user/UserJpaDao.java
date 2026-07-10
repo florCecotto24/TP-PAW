@@ -285,7 +285,11 @@ public class UserJpaDao implements UserDao {
             where.append("AND u.user_role = :role ");
         }
         if (query != null && !query.isBlank()) {
-            where.append("AND (LOWER(u.email) LIKE :q OR LOWER(u.forename || ' ' || u.surname) LIKE :q) ");
+            // Match email, given name, family name, or full "forename surname" (admin quick find).
+            where.append("AND (LOWER(u.email) LIKE :q "
+                    + "OR LOWER(u.forename) LIKE :q "
+                    + "OR LOWER(u.surname) LIKE :q "
+                    + "OR LOWER(u.forename || ' ' || u.surname) LIKE :q) ");
         }
         final String whereClause = where.toString();
 

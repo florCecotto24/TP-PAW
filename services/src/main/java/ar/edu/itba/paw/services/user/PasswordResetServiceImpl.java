@@ -17,7 +17,6 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
-import ar.edu.itba.paw.exception.user.VerificationCodeAlreadyActiveException;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
@@ -60,12 +59,15 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         final String normalized = EmailNormalizer.normalize(email);
         final Optional<User> userOpt = userService.findByEmail(normalized);
         if (userOpt.isEmpty()) {
+            LOGGER.atDebug().log("Password reset requested for unknown address; responding uniformly (no-op).");
             return false;
         }
         final User user = userOpt.get();
         final Instant now = Instant.now();
         if (passwordResetCodeDao.hasActiveCode(user.getId(), now)) {
-            throw new VerificationCodeAlreadyActiveException(MessageKeys.USER_PASSWORD_RESET_CODE_ALREADY_ACTIVE);
+            LOGGER.atDebug().addArgument(user.getId())
+                    .log("Active password reset code already present for user id={}; skipping re-issue (no-op).");
+            return false;
         }
         passwordResetCodeDao.deleteForUser(user.getId());
         final String code = String.format("%06d", RANDOM.nextInt(1_000_000));

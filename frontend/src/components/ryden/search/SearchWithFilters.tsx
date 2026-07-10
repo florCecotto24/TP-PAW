@@ -1,7 +1,8 @@
-import type { FormEvent, ReactNode } from 'react';
+import { useRef, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import ExploreFilterDropdown, { type ExploreFilterOption } from './ExploreFilterDropdown';
 import NeighborhoodPicker, { type NeighborhoodOption } from './NeighborhoodPicker';
+import { useAnimatedSearchPlaceholder } from './useAnimatedSearchPlaceholder';
 import { paths } from '../../../routes/paths';
 
 export interface SearchWithFiltersProps {
@@ -13,6 +14,7 @@ export interface SearchWithFiltersProps {
   transmissionFilterOptions: ExploreFilterOption[];
   powertrainFilterOptions: ExploreFilterOption[];
   ratingFilterOptions?: ExploreFilterOption[];
+  priceMarketFilterOptions?: ExploreFilterOption[];
   neighborhoodList?: NeighborhoodOption[];
   query?: string;
   from?: string;
@@ -52,6 +54,7 @@ export default function SearchWithFilters({
   transmissionFilterOptions,
   powertrainFilterOptions,
   ratingFilterOptions = [],
+  priceMarketFilterOptions = [],
   neighborhoodList = [],
   query = '',
   from = '',
@@ -77,23 +80,30 @@ export default function SearchWithFilters({
 }: SearchWithFiltersProps) {
   const { t } = useTranslation();
   const hasActivePrice = Boolean(priceMin || priceMax);
+  const queryRef = useRef<HTMLInputElement>(null);
+  const { placeholder, animating } = useAnimatedSearchPlaceholder(queryRef, query);
 
   return (
     <form id={formId} className={formClass} method="get" action={actionPath} onSubmit={onSubmit}>
       <div className="container">
         <div className="bg-white rounded-4 px-3 py-2 shadow-sm">
           <div className="d-flex align-items-stretch gap-2 flex-wrap">
-            <div className="flex-grow-1" style={{ minWidth: '12rem' }}>
+            <div
+              className={`flex-grow-1${animating ? ' placeholder-anim' : ''}`}
+              style={{ minWidth: '12rem' }}
+            >
               <label className="form-label small text-secondary text-uppercase mb-1" htmlFor={`search_query_${formId}`}>
                 {t('searchBar.query.label')}
               </label>
               <input
+                ref={queryRef}
                 type="text"
                 className="form-control form-control-sm border-0 shadow-none"
                 aria-label={t('searchBar.query.ariaLabel')}
                 id={`search_query_${formId}`}
                 name="query"
                 value={query}
+                placeholder={placeholder}
                 onChange={(e) => onQueryChange?.(e.target.value)}
               />
             </div>
@@ -157,15 +167,23 @@ export default function SearchWithFilters({
 
             <div className="vr flex-shrink-0 d-none d-md-block" />
 
-            <div className="d-flex gap-2 flex-shrink-0 align-self-center">
+            <div className="ryden-search-submit ms-md-auto flex-shrink-0 align-self-center">
               <button
                 type="submit"
-                className="btn btn-primary rounded-3 ms-md-3 p-2 flex-shrink-0"
+                className="btn btn-primary rounded-3 p-2"
                 aria-label={t('searchBar.submit.ariaLabel')}
               >
                 <i className="bi bi-search fs-5 search-btn" aria-hidden="true"></i>
               </button>
+            </div>
+          </div>
 
+          {showFilters ? (
+            <div
+              className="border-top mt-2 pt-2 d-flex flex-wrap align-items-center gap-2"
+              role="navigation"
+              aria-label={t('search.filters.ariaLabel')}
+            >
               {showClearFilters && (onClearFilters || clearFiltersHref) ? (
                 onClearFilters ? (
                   <button
@@ -173,26 +191,18 @@ export default function SearchWithFilters({
                     className="btn btn-outline-primary btn-action btn-action-md flex-shrink-0"
                     onClick={onClearFilters}
                   >
-                    {t('search.empty.reset')}
+                    {t('search.filters.clear')}
                   </button>
                 ) : (
                   <a
                     href={clearFiltersHref}
                     className="btn btn-outline-primary btn-action btn-action-md flex-shrink-0"
                   >
-                    {t('search.empty.reset')}
+                    {t('search.filters.clear')}
                   </a>
                 )
               ) : null}
-            </div>
-          </div>
-
-          {showFilters ? (
-            <div
-              className="border-top mt-2 pt-2 d-flex flex-wrap align-items-center justify-content-center gap-1"
-              role="navigation"
-              aria-label={t('search.filters.ariaLabel')}
-            >
+              <div className="d-flex flex-wrap align-items-center justify-content-center gap-1 flex-grow-1">
               <ExploreFilterDropdown
                 filterLabel={t('search.filter.category.label')}
                 helperText={t('search.filter.category.helper')}
@@ -263,6 +273,17 @@ export default function SearchWithFilters({
                   </div>
                 </div>
               </div>
+              {priceMarketFilterOptions.length > 0 ? (
+                <ExploreFilterDropdown
+                  filterLabel={t('search.filter.priceMarket.label')}
+                  helperText={t('search.filter.priceMarket.helper')}
+                  paramName="priceMarket"
+                  ariaGroup="priceMarket"
+                  options={priceMarketFilterOptions}
+                  selectedKeys={selectedFilters.priceMarket ?? []}
+                  onChange={onFilterChange}
+                />
+              ) : null}
               {ratingFilterOptions.length > 0 ? (
                 <ExploreFilterDropdown
                   filterLabel={t('search.filter.rating')}
@@ -273,6 +294,7 @@ export default function SearchWithFilters({
                   onChange={onFilterChange}
                 />
               ) : null}
+              </div>
             </div>
           ) : null}
         </div>

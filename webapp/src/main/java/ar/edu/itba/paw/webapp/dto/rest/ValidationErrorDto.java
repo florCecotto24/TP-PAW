@@ -21,7 +21,7 @@ public final class ValidationErrorDto {
     }
 
     public static String mediaType() {
-        return VndMediaType.ERROR_V1_JSON;
+        return VndMediaType.VALIDATION_ERROR_V1_JSON;
     }
 
     public static ValidationErrorDto fromConstraintViolations(

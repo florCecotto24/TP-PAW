@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { approveBrand, approveModel, fetchPendingModels, rejectBrand, rejectModel } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
@@ -73,9 +74,9 @@ export default function AdminCatalogPage() {
 
       <section className="mb-5">
         <h2 className="h5 fw-semibold mb-3">{t('admin.catalog.pendingBrandsTitle')}</h2>
-        {brands.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+        {brands.loading ? <LoadingBlock variant="inline" className="mb-3" /> : null}
         {!brands.loading && brands.items.length === 0 ? (
-          <p className="text-secondary">{t('admin.catalog.empty')}</p>
+          <EmptyState icon="tags" title={t('admin.catalog.empty')} inCard />
         ) : null}
         {!brands.loading && brands.items.length > 0 ? (
           <div className="card border-0 shadow-sm bg-white">
@@ -117,20 +118,20 @@ export default function AdminCatalogPage() {
 
       <section>
         <h2 className="h5 fw-semibold mb-3">{t('admin.catalog.pendingModelsTitle')}</h2>
-        {modelsLoading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+        {modelsLoading ? <LoadingBlock variant="inline" className="mb-3" /> : null}
         {!modelsLoading && models.length === 0 ? (
-          <p className="text-secondary">{t('admin.catalog.emptyModels')}</p>
+          <EmptyState icon="list-ul" title={t('admin.catalog.emptyModels')} inCard />
         ) : null}
         {!modelsLoading && models.length > 0 ? (
           <div className="card border-0 shadow-sm bg-white overflow-hidden">
             <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
+              <table className="table table-hover align-middle mb-0 admin-table admin-table--catalog">
                 <thead className="table-light">
                   <tr>
                     <th scope="col">{t('admin.catalog.brand')}</th>
                     <th scope="col">{t('admin.catalog.col.model')}</th>
                     <th scope="col">{t('admin.catalog.col.type')}</th>
-                    <th scope="col" className="text-end">{t('admin.users.col.actions')}</th>
+                    <th scope="col" className="text-end admin-table__cell--wrap">{t('admin.users.col.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,7 +143,7 @@ export default function AdminCatalogPage() {
                         <td>{model.brandName ?? '—'}</td>
                         <td>{model.name}</td>
                         <td>{typeLabel}</td>
-                        <td className="text-end">
+                        <td className="text-end admin-table__cell--wrap">
                           <div className="d-flex flex-wrap gap-1 justify-content-end">
                             <button
                               type="button"

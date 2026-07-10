@@ -75,6 +75,18 @@ public interface CarAvailabilityService {
     Page<CarAvailability> findEffectiveOfferedByCarAndMonth(long carId, YearMonth month, int page, int pageSize);
 
     /**
+     * Paginated effective OFFERED rows for the whole car (no month filter).
+     * Effectiveness is resolved in memory on the car's availability rows (bounded per car).
+     */
+    Page<CarAvailability> findEffectiveOfferedByCarPaginated(long carId, int page, int pageSize);
+
+    /**
+     * Paginated owner-calendar segments overlapping {@code [from, to]} (e.g. one calendar month).
+     */
+    Page<BookableSegmentProjection> getEffectiveSegmentsForOwnerCalendarInRangePaginated(
+            long carId, LocalDate from, LocalDate to, int page, int pageSize);
+
+    /**
      * Like {@link #getAllEffectiveSegmentsForOwnerCalendar(long)} but scoped to rows overlapping
      * {@code [from, to]}. Used for the owner calendar to load a ±1 month window.
      */

@@ -6,15 +6,18 @@ import {
   CarDetailGalleryGrid,
   CarDetailGalleryModal,
   DetailListingMeta,
+  LoadingBlock,
   ReviewCard,
   SimilarVehiclesHeader,
   SpecCard,
   chunk,
   type GalleryMediaItem,
 } from '../../../components/ryden';
-import { apiAssetUrl, idFromUri } from '../../../api/uri';
+import { apiAssetUrl, idFromUri, profilePictureAssetUrl } from '../../../api/uri';
+import { ApiError } from '../../../api/client';
 import { formatDateLong } from '../../../i18n/dateFormat';
 import { useSessionStore } from '../../../session/sessionStore';
+import { apiErrorMessage } from '../../auth/errorMessage';
 import { carDetail, paths, publicProfile } from '../../../routes/paths';
 import DetailReservationForm from '../components/DetailReservationForm';
 import BrowseCarCard from '../components/BrowseCarCard';
@@ -66,6 +69,7 @@ function ReviewCardWithAuthor({ review }: { review: ReviewDto }) {
   const forename = authorQuery.data?.forename ?? '';
   const surname = authorQuery.data?.surname ?? '';
   const imageUrl = review.links.image ? apiAssetUrl(review.links.image) : null;
+  const avatarUrl = profilePictureAssetUrl(authorQuery.data?.links);
 
   return (
     <ReviewCard
@@ -75,6 +79,7 @@ function ReviewCardWithAuthor({ review }: { review: ReviewDto }) {
       rating={review.rating ?? 0}
       comment={review.comment}
       imageUrl={imageUrl}
+      avatarUrl={avatarUrl}
     />
   );
 }
@@ -85,16 +90,18 @@ export default function CarDetailPage() {
   const { id: resolvedId } = useParams<{ id: string }>();
   const carQuery = useCar(resolvedId);
   const car = carQuery.data;
-  const picturesQuery = useCarPictures(car?.links.pictures);
-  const ownerQuery = useCarOwner(car?.links.owner);
-  const availQuery = useCarAvailabilities(car?.links.availabilities);
-  const similarQuery = useSimilarCars(car);
+  const picturesQuery = useCarPictures(car?.links?.pictures);
   const isLoggedIn = useSessionStore((s) => s.status === 'authenticated');
   const currentUser = useSessionStore((s) => s.currentUser);
   const isAdmin = currentUser?.role === 'admin';
-  const favoriteQuery = useIsFavorite(car?.links.self);
+  // Admin pide vista privada del dueño para saber el rol (el DTO público no lo expone).
+  const ownerQuery = useCarOwner(car?.links?.owner, isAdmin);
+  const availQuery = useCarAvailabilities(car?.links?.availabilities);
+  const similarQuery = useSimilarCars(car);
+  const favoriteQuery = useIsFavorite(car?.links?.self);
   const toggleFavorite = useToggleFavorite();
   const adminSetCarStatus = useAdminSetCarStatus();
+  const ownerIsAdmin = ownerQuery.data?.role === 'admin';
 
   const src = searchParams.get('src');
   const fromParam = searchParams.get('from') ?? undefined;
@@ -103,7 +110,7 @@ export default function CarDetailPage() {
   const reviewPage = Math.max(0, Number(searchParams.get('reviewPage') ?? '0') || 0);
   const reviewsIsListView = reviewsView === 'list';
 
-  const reviewsQuery = useCarReviewsPage(resolvedId, reviewPage, CAR_REVIEWS_PAGE_SIZE);
+  const reviewsQuery = useCarReviewsPage(car?.links?.reviews, reviewPage, CAR_REVIEWS_PAGE_SIZE);
   const reviewItems = reviewsQuery.data?.items ?? [];
   const reviewTotal = reviewsQuery.data?.page.total;
   const reviewPageCount =
@@ -121,8 +128,12 @@ export default function CarDetailPage() {
     [picturesQuery.data],
   );
 
-  const ownerId = ownerQuery.data ? idFromUri(ownerQuery.data.links.self) : null;
-  const currentUserId = currentUser ? idFromUri(currentUser.links.self) : null;
+  // Preferir car.links.owner (siempre en el DTO) frente a esperar el GET del dueño;
+  // el fetch privado del admin no debe condicionar si se puede favoritar.
+  const ownerId =
+    idFromUri(car?.links?.owner)
+    ?? (ownerQuery.data?.links?.self ? idFromUri(ownerQuery.data.links.self) : null);
+  const currentUserId = currentUser?.links?.self ? idFromUri(currentUser.links.self) : null;
   const isOwnerRequesting = !!ownerId && ownerId === currentUserId;
   const carIsFavoritable = isLoggedIn && !isOwnerRequesting;
 
@@ -146,9 +157,7 @@ export default function CarDetailPage() {
   if (carQuery.isLoading) {
     return (
       <main className="car-detail-page container pb-4">
-        <p className="text-secondary py-4" role="status">
-          {t('app.loading')}
-        </p>
+        <LoadingBlock variant="page" className="py-4" />
       </main>
     );
   }
@@ -175,9 +184,7 @@ export default function CarDetailPage() {
   const similarSearchHref = `${paths.search}?category=${car.type}`;
   const ownerProfileHref =
     ownerId != null ? `${publicProfile(ownerId)}?carId=${resolvedId}` : undefined;
-  const ownerProfileImageUrl = ownerQuery.data?.links.profilePicture
-    ? apiAssetUrl(ownerQuery.data.links.profilePicture)
-    : null;
+  const ownerProfileImageUrl = profilePictureAssetUrl(ownerQuery.data?.links);
 
   const reviewsToggleView = reviewsIsListView ? 'carousel' : 'list';
   const reviewsToggleHref = detailHref({
@@ -228,7 +235,7 @@ export default function CarDetailPage() {
       <div className="row g-4 align-items-start">
         <div className="col-lg-8 order-1 d-flex flex-column gap-4">
           {picturesQuery.isLoading ? (
-            <p className="text-secondary small">{t('app.loading')}</p>
+            <LoadingBlock variant="inline" />
           ) : (
             <CarDetailGalleryGrid
               modalId={GALLERY_MODAL_ID}
@@ -270,13 +277,13 @@ export default function CarDetailPage() {
           ) : null}
 
           {car.description ? (
-            <section>
+            <section className="card bg-white rounded-4 shadow-sm border-0 p-4">
               <h2 className="h5 fw-bold mb-3">{t('carDetail.description')}</h2>
               <p className="mb-0 ryden-multiline-plaintext">{car.description}</p>
             </section>
           ) : null}
 
-          <section>
+          <section className="card bg-white rounded-4 shadow-sm border-0 p-4">
             <h2 className="h5 fw-bold mb-3">{t('carDetail.specification')}</h2>
             <div className="row row-cols-2 row-cols-md-3 g-3">
               <div className="col">
@@ -294,7 +301,7 @@ export default function CarDetailPage() {
             </div>
           </section>
 
-          <section className="mt-4 pt-4 border-top border-secondary-subtle" id="listing-reviews">
+          <section className="card bg-white rounded-4 shadow-sm border-0 p-4 mt-4" id="listing-reviews">
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
               <h2 className="h5 fw-bold mb-0">{t('carDetail.reviews.title')}</h2>
               <div className="d-flex align-items-center gap-2">
@@ -330,9 +337,7 @@ export default function CarDetailPage() {
               </div>
             </div>
 
-            {reviewsQuery.isLoading ? (
-              <p className="text-secondary small">{t('app.loading')}</p>
-            ) : null}
+            {reviewsQuery.isLoading ? <LoadingBlock variant="inline" /> : null}
 
             {reviewItems.length === 0 && !reviewsQuery.isLoading ? (
               <p className="text-secondary mb-0">{t('carDetail.reviews.empty')}</p>
@@ -410,43 +415,54 @@ export default function CarDetailPage() {
         </div>
 
         <div className="col-lg-4 order-2">
-          {isAdmin && ownerQuery.data && ownerQuery.data.role !== 'admin' ? (
+          {isAdmin && car ? (
             <div className="card bg-white border-0 shadow-sm rounded-4 mb-3 p-3">
               <h6 className="fw-semibold mb-2">{t('carDetail.admin.sectionTitle')}</h6>
-              {adminSetCarStatus.isSuccess ? (
-                <div className="alert alert-success py-2 small mb-2">
-                  {adminSetCarStatus.variables?.status === 'active'
-                    ? t('carDetail.admin.resumedSuccess')
-                    : t('carDetail.admin.pausedSuccess')}
-                </div>
-              ) : null}
-              {adminSetCarStatus.isError ? (
-                <div className="alert alert-danger py-2 small mb-2">{t('carDetail.admin.error')}</div>
-              ) : null}
-              {car.status === 'active' ? (
-                <button
-                  type="button"
-                  className="btn btn-warning btn-sm rounded-3 w-100"
-                  disabled={adminSetCarStatus.isPending}
-                  onClick={() =>
-                    adminSetCarStatus.mutate({ carSelfLink: car.links.self, status: 'admin_paused' })
-                  }
-                >
-                  {t('carDetail.admin.pause')}
-                </button>
-              ) : null}
-              {car.status === 'admin_paused' ? (
-                <button
-                  type="button"
-                  className="btn btn-success btn-sm rounded-3 w-100"
-                  disabled={adminSetCarStatus.isPending}
-                  onClick={() =>
-                    adminSetCarStatus.mutate({ carSelfLink: car.links.self, status: 'active' })
-                  }
-                >
-                  {t('carDetail.admin.resume')}
-                </button>
-              ) : null}
+              {ownerIsAdmin ? (
+                <p className="small text-secondary mb-0">{t('carDetail.admin.ownerIsAdmin')}</p>
+              ) : (
+                <>
+                  {adminSetCarStatus.isSuccess ? (
+                    <div className="alert alert-success py-2 small mb-2">
+                      {adminSetCarStatus.variables?.status === 'active'
+                        ? t('carDetail.admin.resumedSuccess')
+                        : t('carDetail.admin.pausedSuccess')}
+                    </div>
+                  ) : null}
+                  {adminSetCarStatus.isError ? (
+                    <div className="alert alert-danger py-2 small mb-2">
+                      {adminSetCarStatus.error instanceof ApiError
+                        || adminSetCarStatus.error instanceof Error
+                        ? apiErrorMessage(t, adminSetCarStatus.error)
+                        : t('carDetail.admin.error')}
+                    </div>
+                  ) : null}
+                  {car.status === 'active' || car.status === 'paused' ? (
+                    <button
+                      type="button"
+                      className="btn btn-warning btn-sm rounded-3 w-100"
+                      disabled={adminSetCarStatus.isPending || !ownerQuery.data}
+                      onClick={() =>
+                        adminSetCarStatus.mutate({ carSelfLink: car.links.self, status: 'admin_paused' })
+                      }
+                    >
+                      {t('carDetail.admin.pause')}
+                    </button>
+                  ) : null}
+                  {car.status === 'admin_paused' ? (
+                    <button
+                      type="button"
+                      className="btn btn-success btn-sm rounded-3 w-100"
+                      disabled={adminSetCarStatus.isPending}
+                      onClick={() =>
+                        adminSetCarStatus.mutate({ carSelfLink: car.links.self, status: 'active' })
+                      }
+                    >
+                      {t('carDetail.admin.resume')}
+                    </button>
+                  ) : null}
+                </>
+              )}
             </div>
           ) : null}
           <div className="detail-reservation-sticky">
@@ -469,9 +485,7 @@ export default function CarDetailPage() {
         id="similarVehiclesSection"
       >
         <SimilarVehiclesHeader seeAllHref={similarSearchHref} />
-        {similarQuery.isLoading ? (
-          <p className="text-secondary small text-center">{t('app.loading')}</p>
-        ) : null}
+        {similarQuery.isLoading ? <LoadingBlock variant="grid" /> : null}
         {(similarQuery.data ?? []).length === 0 && !similarQuery.isLoading ? (
           <p className="text-secondary text-center mb-0">{t('carDetail.similarCarsWhenAvailable')}</p>
         ) : (

@@ -41,7 +41,19 @@ export const STATUS_BADGE: Record<CarStatus, string> = {
   deactivated: 'text-bg-secondary',
 };
 
-/** DTO de auto (lectura). `links`: self, owner, model, brand, pictures, availabilities, insurance, reviews. */
+/** Teaser de auto para colecciones (mis autos, favoritos). */
+export interface CarSummaryDto {
+  brandName: string;
+  modelName: string;
+  status: CarStatus;
+  minimumRentalDays: number;
+  ratingAvg?: number | null;
+  dayPrice?: number | null;
+  modelValidated: boolean;
+  links: Links;
+}
+
+/** DTO de auto (lectura completa). `links`: self, owner, model, brand, pictures, availabilities, insurance, reviews. */
 export interface CarDto {
   plate: string;
   year?: number | null;
@@ -97,7 +109,7 @@ export interface AvailabilityDto {
   links: Links;
 }
 
-/** Cuerpo del POST/PUT availabilities. */
+/** Cuerpo del POST/PATCH availabilities. */
 export interface AvailabilityCreateDto {
   startDate: string;
   endDate: string;

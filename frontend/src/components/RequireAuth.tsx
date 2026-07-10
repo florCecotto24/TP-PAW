@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { LoadingBlock } from './ryden';
 import { useSessionStore } from '../session/sessionStore';
 import { paths } from '../routes/paths';
 
@@ -11,7 +11,6 @@ import { paths } from '../routes/paths';
  * loguearse.
  */
 export default function RequireAuth({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
-  const { t } = useTranslation();
   const status = useSessionStore((s) => s.status);
   const currentUser = useSessionStore((s) => s.currentUser);
   const location = useLocation();
@@ -24,7 +23,7 @@ export default function RequireAuth({ children, admin = false }: { children: Rea
     // Tras un refresh el UserDto se rehidrata async: esperamos a tenerlo antes de
     // decidir, para no expulsar a un admin válido mientras carga.
     if (!currentUser) {
-      return <p className="container py-5 text-secondary" role="status">{t('app.loading')}</p>;
+      return <LoadingBlock variant="page" className="container py-5" />;
     }
     if (currentUser.role !== 'admin') {
       return <Navigate to={paths.home} replace />;

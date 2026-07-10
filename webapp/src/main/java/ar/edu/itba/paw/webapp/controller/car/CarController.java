@@ -27,6 +27,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.GenericEntity;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -51,24 +52,29 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
+import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.services.car.CarPublishingService;
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.rest.CarDto;
+import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
+import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
 import ar.edu.itba.paw.webapp.form.car.CarPatchForm;
 import ar.edu.itba.paw.webapp.form.car.CarReplaceForm;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
 import ar.edu.itba.paw.webapp.support.CarCreateRequestSupport;
+import ar.edu.itba.paw.webapp.support.CarRepresentationSupport;
 import ar.edu.itba.paw.webapp.support.CarResourceAccess;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.support.RestCarSortMapper;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarPowertrainList;
@@ -76,6 +82,7 @@ import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarStatusList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTransmissionList;
 import ar.edu.itba.paw.webapp.validation.constraint.car.ValidCarTypeList;
 import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Cars resource ({@code /cars}, {@code /cars/{id}}).
@@ -91,12 +98,16 @@ public class CarController {
     private final CurrentUserResolver currentUserResolver;
     private final CarResourceAccess carResourceAccess;
     private final CarCreateRequestSupport carCreateRequestSupport;
-    private final AppPaginationProperties paginationProperties;
+    private final PaginationSupport paginationSupport;
+    private final CarRepresentationSupport carRepresentationSupport;
     private final ObjectMapper objectMapper;
     private final BinaryPayloadSupport binaryPayloadSupport;
 
     @Context
     private UriInfo uriInfo;
+
+    @Context
+    private HttpHeaders httpHeaders;
 
     @Autowired
     public CarController(
@@ -107,7 +118,8 @@ public class CarController {
             final CurrentUserResolver currentUserResolver,
             final CarResourceAccess carResourceAccess,
             final CarCreateRequestSupport carCreateRequestSupport,
-            final AppPaginationProperties paginationProperties,
+            final PaginationSupport paginationSupport,
+            final CarRepresentationSupport carRepresentationSupport,
             final ObjectMapper objectMapper,
             final BinaryPayloadSupport binaryPayloadSupport) {
         this.carService = carService;
@@ -117,19 +129,20 @@ public class CarController {
         this.currentUserResolver = currentUserResolver;
         this.carResourceAccess = carResourceAccess;
         this.carCreateRequestSupport = carCreateRequestSupport;
-        this.paginationProperties = paginationProperties;
+        this.paginationSupport = paginationSupport;
+        this.carRepresentationSupport = carRepresentationSupport;
         this.objectMapper = objectMapper;
         this.binaryPayloadSupport = binaryPayloadSupport;
     }
 
     // A14 (audit): documented decision — a single collection whose visibility is a query-param
     // filter, not a different operation per role (see openapi.yaml for the full per-branch
-    // breakdown): scope=admin (admin-only, whole catalog) / ownerId (self-or-admin sees every
-    // status, anyone else sees active-only and can't pass status) / neither (public browse,
-    // active-only). Not a @PreAuthorize candidate: each branch's rule is chosen by which query
-    // params the caller sent, not a precondition on path/query alone.
+    // breakdown): admin catalog (Accept car.v1 + admin, whole catalog) / ownerId
+    // (self-or-admin sees every status, anyone else sees active-only and can't pass status) /
+    // neither (public browse, active-only). Not a @PreAuthorize candidate: each branch's rule
+    // is chosen by which query params the caller sent, not a precondition on path/query alone.
     @GET
-    @Produces({VndMediaType.CAR_V1_JSON, VndMediaType.CAR_V1_XML})
+    @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
     public Response listCars(
             @QueryParam("page") @DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam,
@@ -140,6 +153,7 @@ public class CarController {
             @QueryParam("powertrain") @ValidCarPowertrainList final List<String> powertrain,
             @QueryParam("priceMin") final BigDecimal priceMin,
             @QueryParam("priceMax") final BigDecimal priceMax,
+            @QueryParam("priceMarket") final String priceMarket,
             @QueryParam("rating") final List<String> rating,
             @QueryParam("neighborhoodId") final Long neighborhoodId,
             @QueryParam("from") final String from,
@@ -148,23 +162,18 @@ public class CarController {
             @QueryParam("flexMonth") @ValidYearMonth final String flexMonth,
             @QueryParam("flexDays") final Integer flexDays,
             @QueryParam("status") @ValidCarStatusList final List<String> status,
-            @QueryParam("scope") final String scope,
             @QueryParam("sort") final String sort) {
-        final int safePage = Math.max(1, page);
-        final int pageSize = pageSizeParam != null && pageSizeParam > 0
-                ? pageSizeParam
-                : paginationProperties.getDefaultPageSize();
-        final int zeroBasedPage = safePage - 1;
+        final PaginationParams paging = paginationSupport.forBrowseCars(page, pageSizeParam);
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
         final List<Car.Type> categories = toCarTypes(category);
         final List<Car.Transmission> transmissions = toTransmissions(transmission);
         final List<Car.Powertrain> powertrains = toPowertrains(powertrain);
         final List<String> ratingBands = rating == null ? List.of() : rating;
 
-        if ("admin".equalsIgnoreCase(scope)) {
+        if (ownerId == null && carRepresentationSupport.acceptsFullCar(httpHeaders)) {
             carResourceAccess.requireAdmin();
-            final Page<Car> adminPage = adminService.listCars(zeroBasedPage, pageSize);
-            return pagedCarsFromEntities(adminPage, safePage, pageSize);
+            final Page<Car> adminPage = adminService.listCars(paging.getZeroBasedPage(), paging.getPageSize());
+            return pagedCarsFromEntities(adminPage, paging);
         }
 
         if (ownerId != null) {
@@ -186,19 +195,25 @@ public class CarController {
                     statuses,
                     ratingBands.isEmpty() ? null : ratingBands,
                     query,
-                    zeroBasedPage,
-                    pageSize,
+                    paging.getZeroBasedPage(),
+                    paging.getPageSize(),
                     internalSort);
             final Page<CarCard> ownerPage = carService.getOwnerCarCards(criteria);
-            return pagedCarsFromCards(ownerPage, safePage, pageSize, false);
+            // Public profile / counterparty grids use ownerId without self-or-admin access and
+            // should show competitive-price badges like browse/favorites. Owner "Mis autos"
+            // (self) and admin fleet views keep plain summaries without market enrichment.
+            return pagedCarSummariesFromCards(ownerPage, paging, !selfOrAdmin);
         }
 
+        final PriceMarketPosition priceMarketPosition = parsePriceMarketPosition(priceMarket);
+
         if (RestCarSortMapper.isBrowseShortcut(sort) && isPublicBrowseShortcut(query, category, transmission,
-                powertrain, priceMin, priceMax, rating, neighborhoodId, from, until, status, flexible)) {
+                powertrain, priceMin, priceMax, rating, neighborhoodId, from, until, status, flexible)
+                && priceMarketPosition == null) {
             final Page<CarCard> shortcutPage = "price_asc".equalsIgnoreCase(sort.trim())
-                    ? carService.getCheapestCarCards(zeroBasedPage, pageSize)
-                    : carService.getMostRecentCarCards(zeroBasedPage, pageSize);
-            return pagedCarsFromCards(shortcutPage, safePage, pageSize, true);
+                    ? carService.getCheapestCarCards(paging.getZeroBasedPage(), paging.getPageSize())
+                    : carService.getMostRecentCarCards(paging.getZeroBasedPage(), paging.getPageSize());
+            return pagedCarSummariesFromCards(shortcutPage, paging, true);
         }
 
         final CarSearchRequest searchRequest = CarSearchRequest.builder()
@@ -211,16 +226,17 @@ public class CarController {
                 .ratingBands(ratingBands.isEmpty() ? null : ratingBands)
                 .from(from)
                 .until(until)
-                .page(zeroBasedPage)
-                .uiPageSize(pageSize)
+                .page(paging.getZeroBasedPage())
+                .uiPageSize(paging.getPageSize())
                 .sort(RestCarSortMapper.toInternalSort(sort))
                 .neighborhoodIds(neighborhoodId == null ? Collections.emptyList() : List.of(neighborhoodId))
                 .flexible(flexible)
                 .flexMonth(flexMonth)
                 .flexDays(flexDays)
+                .priceMarketPosition(priceMarketPosition)
                 .build();
         final Page<CarCard> searchPage = carService.searchCarCards(carService.buildSearchCriteria(searchRequest));
-        return pagedCarsFromCards(searchPage, safePage, pageSize, true);
+        return pagedCarSummariesFromCards(searchPage, paging, true);
     }
 
     @POST
@@ -282,6 +298,7 @@ public class CarController {
                 .powertrain(request.getPowertrain())
                 .transmission(request.getTransmission())
                 .description(request.getDescription())
+                .minimumRentalDays(request.getMinimumRentalDays())
                 .galleryUploads(galleryUploads)
                 .insurance(insuranceName, insuranceType, insuranceBytes)
                 .build();
@@ -289,9 +306,6 @@ public class CarController {
         final Locale locale = LocaleContextHolder.getLocale();
         final PublishCarOutcome outcome = carPublishingService.publishCar(ownerId, fullRequest, locale);
         final Car car = outcome.getCar();
-        if (form.getMinimumRentalDays() != null && form.getMinimumRentalDays() > 0) {
-            carService.updateMinimumRentalDays(car.getId(), form.getMinimumRentalDays());
-        }
 
         final URI location = uriInfo.getBaseUriBuilder()
                 .path("cars")
@@ -303,28 +317,41 @@ public class CarController {
 
     @GET
     @Path("/{id}")
-    @Produces({VndMediaType.CAR_V1_JSON, VndMediaType.CAR_V1_XML})
+    @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
     public Response getCar(@PathParam("id") final long id) {
-        final Car car = carService.getCarById(id)
-                .orElseThrow(() -> new CarNotFoundException(id));
-        return Response.ok(CarDto.from(car, uriInfo)).build();
+        final Car car = carResourceAccess.requireViewableCar(
+                id, currentUserResolver.currentPrincipalOrNull());
+        if (carRepresentationSupport.acceptsCarSummary(httpHeaders)) {
+            return Response.ok(CarSummaryDto.from(car, uriInfo))
+                    .type(VndMediaType.CAR_SUMMARY_V1_JSON)
+                    .build();
+        }
+        return Response.ok(CarDto.from(car, uriInfo))
+                .type(VndMediaType.CAR_V1_JSON)
+                .build();
     }
 
+    /**
+     * Related cars as link-only collection ({@code car.similar.v1+json}). Clients follow each
+     * {@code self} for the teaser — intentional HTTP N+1 to keep one canonical URI per car.
+     */
     @GET
     @Path("/{id}/similar")
-    @Produces(VndMediaType.CAR_V1_JSON)
+    @Produces(VndMediaType.CAR_SIMILAR_V1_JSON)
     public Response similarCars(
             @PathParam("id") final long id,
             @QueryParam("limit") @DefaultValue("4") final int limit) {
-        carService.getCarById(id).orElseThrow(() -> new CarNotFoundException(id));
+        carResourceAccess.requireViewableCar(id, currentUserResolver.currentPrincipalOrNull());
         final int safeLimit = Math.max(1, Math.min(limit, 20));
         final List<CarCard> cards = carService.findSimilarCarCards(id, safeLimit, null);
         if (cards.isEmpty()) {
             return Response.noContent().build();
         }
-        final List<CarDto> dtos = toConsumerBrowseCarDtos(cards);
-        return Response.ok(new GenericEntity<List<CarDto>>(dtos) {})
-                .header("X-Total-Count", dtos.size())
+        final List<LinksDto> links = cards.stream()
+                .map(card -> LinksDto.ofSelf(RestUriUtils.carUri(uriInfo, card.getCarId()).toString()))
+                .collect(Collectors.toList());
+        return Response.ok(new GenericEntity<List<LinksDto>>(links) {})
+                .header("X-Total-Count", links.size())
                 .build();
     }
 
@@ -422,41 +449,52 @@ public class CarController {
         }
     }
 
-    private Response pagedCarsFromCards(
-            final Page<CarCard> page, final int safePage, final int pageSize, final boolean consumerBrowse) {
+    private Response pagedCarSummariesFromCards(
+            final Page<CarCard> page, final PaginationParams paging, final boolean consumerBrowse) {
         if (page.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
-        final List<CarDto> dtos = consumerBrowse
-                ? toConsumerBrowseCarDtos(page.getContent())
+        final List<CarSummaryDto> dtos = consumerBrowse
+                ? toConsumerBrowseCarSummaries(page.getContent())
                 : page.getContent().stream()
-                        .map(card -> CarDto.fromCarCard(card, uriInfo))
+                        .map(card -> CarSummaryDto.fromCarCard(card, uriInfo, null))
                         .collect(Collectors.toList());
-        return pagedOk(dtos, safePage, pageSize, (int) page.getTotalItems());
+        return pagedSummariesOk(dtos, paging, (int) page.getTotalItems());
     }
 
-    private List<CarDto> toConsumerBrowseCarDtos(final List<CarCard> cards) {
+    private List<CarSummaryDto> toConsumerBrowseCarSummaries(final List<CarCard> cards) {
         final Map<Long, ConsumerCarCardMarketContext> marketContexts =
                 carService.resolveConsumerPriceMarketContexts(cards);
-        return CarDto.fromConsumerBrowseCarCards(cards, uriInfo, marketContexts);
+        return CarSummaryDto.fromConsumerBrowseCarCards(cards, uriInfo, marketContexts);
     }
 
-    private Response pagedCarsFromEntities(final Page<Car> page, final int safePage, final int pageSize) {
+    private Response pagedCarsFromEntities(final Page<Car> page, final PaginationParams paging) {
         if (page.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
         final List<CarDto> dtos = page.getContent().stream()
                 .map(car -> CarDto.from(car, uriInfo))
                 .collect(Collectors.toList());
-        return pagedOk(dtos, safePage, pageSize, (int) page.getTotalItems());
+        return pagedFullCarsOk(dtos, paging, (int) page.getTotalItems());
     }
 
-    private Response pagedOk(
-            final List<CarDto> dtos, final int safePage, final int pageSize, final int totalItems) {
+    private Response pagedSummariesOk(
+            final List<CarSummaryDto> dtos, final PaginationParams paging, final int totalItems) {
+        final Response.ResponseBuilder builder =
+                Response.ok(new GenericEntity<List<CarSummaryDto>>(dtos) {})
+                        .type(VndMediaType.CAR_SUMMARY_V1_JSON)
+                        .header("X-Total-Count", totalItems);
+        PaginationLinks.add(builder, uriInfo, paging.getPage(), paging.getPageSize(), totalItems);
+        return builder.build();
+    }
+
+    private Response pagedFullCarsOk(
+            final List<CarDto> dtos, final PaginationParams paging, final int totalItems) {
         final Response.ResponseBuilder builder =
                 Response.ok(new GenericEntity<List<CarDto>>(dtos) {})
+                        .type(VndMediaType.CAR_V1_JSON)
                         .header("X-Total-Count", totalItems);
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, totalItems);
+        PaginationLinks.add(builder, uriInfo, paging.getPage(), paging.getPageSize(), totalItems);
         return builder.build();
     }
 
@@ -485,6 +523,19 @@ public class CarController {
                 && (until == null || until.isBlank())
                 && (status == null || status.isEmpty())
                 && !flexible;
+    }
+
+    /** REST {@code priceMarket} → market-band browse filter; unknown values ignored. */
+    private static PriceMarketPosition parsePriceMarketPosition(final String priceMarket) {
+        if (priceMarket == null || priceMarket.isBlank()) {
+            return null;
+        }
+        return switch (priceMarket.trim().toLowerCase(Locale.ROOT)) {
+            case "below_market" -> PriceMarketPosition.BELOW_MARKET;
+            case "at_market" -> PriceMarketPosition.AT_MARKET;
+            case "above_market" -> PriceMarketPosition.ABOVE_MARKET;
+            default -> null;
+        };
     }
 
     private static List<Car.Type> toCarTypes(final List<String> raw) {

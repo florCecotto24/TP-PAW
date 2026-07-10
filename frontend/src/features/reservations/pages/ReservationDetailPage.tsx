@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BreadcrumbTrail, ConfirmModal, ReviewImageInput, StarRatingInput } from '../../../components/ryden';
-import { apiAssetUrl } from '../../../api/uri';
+import { BreadcrumbTrail, ConfirmModal, LoadingBlock, ReviewImageInput, StarRatingInput } from '../../../components/ryden';
+import { carCoverAssetUrl, profilePictureAssetUrl } from '../../../api/uri';
 import {
   getCar,
   getCounterparty,
@@ -17,6 +17,7 @@ import {
 } from '../api';
 import ReservationChatPanel from '../components/ReservationChatPanel';
 import ReservationReviewItem from '../components/ReservationReviewItem';
+import ReceiptUploadPicker from '../components/ReceiptUploadPicker';
 import { formatDateTime, formatPrice, statusLabelKey } from '../format';
 import { isChatAvailable } from '../reservationChat';
 import { paths, carDetail, publicProfile, ownerReservationsCar } from '../../../routes/paths';
@@ -79,12 +80,12 @@ export default function ReservationDetailPage() {
   }, [reservation, side, t]);
 
   const carQuery = useQuery({
-    queryKey: ['reservations', 'detail', 'car', reservation?.links.car],
+    queryKey: ['reservations', 'detail', 'car', reservation?.links?.car],
     queryFn: () => getCar(reservation!.links.car).then((r) => r.data),
-    enabled: Boolean(reservation?.links.car),
+    enabled: Boolean(reservation?.links?.car),
   });
 
-  const counterpartyUri = reservation?.links.counterparty ?? null;
+  const counterpartyUri = reservation?.links?.counterparty ?? null;
 
   const counterpartyQuery = useQuery({
     queryKey: ['reservations', 'detail', 'counterparty', counterpartyUri],
@@ -92,7 +93,7 @@ export default function ReservationDetailPage() {
     enabled: Boolean(counterpartyUri),
   });
 
-  const reviewsUri = reservation?.links.reviews;
+  const reviewsUri = reservation?.links?.reviews;
   const reviewsQuery = useQuery({
     queryKey: ['reservations', 'detail', 'reviews', reviewsUri],
     queryFn: () => listReviews(reviewsUri as string).then((r) => r.data ?? []),
@@ -115,13 +116,24 @@ export default function ReservationDetailPage() {
   const [reviewImage, setReviewImage] = useState<File | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [carImageFailed, setCarImageFailed] = useState(false);
 
-  const carId = reservation ? idFromUri(reservation.links.car) : null;
-  const counterpartyId = counterpartyQuery.data?.links.self
+  const carId = reservation ? idFromUri(reservation.links?.car) : null;
+  const carCoverUrl = useMemo(
+    () => carCoverAssetUrl(reservation?.links?.car, carQuery.data?.links?.cover),
+    [reservation?.links?.car, carQuery.data?.links?.cover],
+  );
+
+  useEffect(() => {
+    setCarImageFailed(false);
+  }, [carCoverUrl]);
+  const counterpartyAvatarUrl = profilePictureAssetUrl(counterpartyQuery.data?.links);
+  const counterpartyId = counterpartyQuery.data?.links?.self
     ? idFromUri(counterpartyQuery.data.links.self)
     : null;
 
-  const reservationSelf = reservation?.links.self.replace(/\/$/, '') ?? '';
+  const reservationSelf = reservation?.links?.self?.replace(/\/$/, '') ?? '';
   const paymentReceiptDownloadLink =
     reservation?.hasPaymentReceipt && reservation.links['payment-receipt']
       ? reservation.links['payment-receipt']
@@ -147,6 +159,7 @@ export default function ReservationDetailPage() {
       if (successMsg) setNotice(successMsg);
     } catch (err) {
       setActionError(reservationActionError(t, err, 'detail'));
+      throw err;
     } finally {
       setBusy(false);
     }
@@ -181,13 +194,13 @@ export default function ReservationDetailPage() {
     });
   };
 
-  const onUploadReceipt = (kind: 'payment' | 'refund', file: File) => {
-    if (!reservation) return;
+  const onUploadReceipt = async (kind: 'payment' | 'refund', file: File) => {
+    if (!reservation) throw new Error('missing reservation');
     const uri =
       kind === 'payment'
         ? `${reservationSelf}/payment-receipt`
         : `${reservationSelf}/refund-receipt`;
-    void runAction(
+    await runAction(
       () => uploadReceipt(uri, file).then(() => undefined),
       t('res.confirmation.uploadSuccess'),
     );
@@ -241,7 +254,7 @@ export default function ReservationDetailPage() {
   if (reservationQuery.isLoading) {
     return (
       <main className="container py-4">
-        <p className="text-secondary">{t('res.detail.loading')}</p>
+        <LoadingBlock variant="page" className="py-4" />
       </main>
     );
   }
@@ -269,12 +282,10 @@ export default function ReservationDetailPage() {
     <main className="container pt-5 pb-4">
       {fromCarId ? (
         <BreadcrumbTrail
-          homeLabel={t('nav.myCars')}
-          homeHref={paths.myCars}
-          midLabel={t('res.list.ownerTitle')}
-          midHref={paths.ownerReservations}
-          mid2Label={carLabel}
-          mid2Href={ownerReservationsCar(fromCarId)}
+          homeLabel={t('res.list.ownerTitle')}
+          homeHref={paths.ownerReservations}
+          midLabel={carLabel}
+          midHref={ownerReservationsCar(fromCarId)}
           currentLabel={t('res.detail.title')}
         />
       ) : (
@@ -317,24 +328,11 @@ export default function ReservationDetailPage() {
                 <label className="form-label small mb-1" htmlFor="paymentFile">
                   {t('res.detail.uploadPayment')}
                 </label>
-                <div className="d-flex align-items-stretch gap-2 ryden-payment-receipt__form">
-                  <label className="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
-                    <span className="text-truncate text-muted pe-1 flex-grow-1 min-w-0">
-                      {t('res.confirmation.chooseFile')}
-                    </span>
-                    <input
-                      id="paymentFile"
-                      type="file"
-                      className="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
-                      accept="image/*,application/pdf"
-                      disabled={busy}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) onUploadReceipt('payment', f);
-                      }}
-                    />
-                  </label>
-                </div>
+                <ReceiptUploadPicker
+                  id="paymentFile"
+                  busy={busy}
+                  onConfirm={(file) => onUploadReceipt('payment', file)}
+                />
               </div>
             </section>
           ) : null}
@@ -391,24 +389,11 @@ export default function ReservationDetailPage() {
                 <label className="form-label small mb-1" htmlFor="refundFile">
                   {t('res.detail.uploadRefund')}
                 </label>
-                <div className="d-flex align-items-stretch gap-2 ryden-payment-receipt__form">
-                  <label className="form-control d-flex align-items-center mb-0 flex-grow-1 min-w-0 position-relative ryden-payment-receipt__file-label">
-                    <span className="text-truncate text-muted pe-1 flex-grow-1 min-w-0">
-                      {t('res.confirmation.chooseFile')}
-                    </span>
-                    <input
-                      id="refundFile"
-                      type="file"
-                      className="position-absolute top-0 start-0 w-100 h-100 opacity-0 ryden-payment-receipt__file-input"
-                      accept="image/*,application/pdf"
-                      disabled={busy}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) onUploadReceipt('refund', f);
-                      }}
-                    />
-                  </label>
-                </div>
+                <ReceiptUploadPicker
+                  id="refundFile"
+                  busy={busy}
+                  onConfirm={(file) => onUploadReceipt('refund', file)}
+                />
               </div>
             </section>
           ) : null}
@@ -446,42 +431,45 @@ export default function ReservationDetailPage() {
 
           <section className="bg-white rounded-4 shadow-sm p-4 mb-4">
             <h2 className="h5 fw-semibold mb-3">{t('res.detail.carSummaryTitle')}</h2>
-            {carQuery.data ? (
-              <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
-                <div className="reservation-detail-car-media rounded-3 overflow-hidden border">
-                  {carQuery.data.links.cover ? (
-                    <img
-                      src={apiAssetUrl(carQuery.data.links.cover)}
-                      alt={`${carQuery.data.brandName} ${carQuery.data.modelName}`}
-                      className="w-100 h-100"
-                      style={{ objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
-                      <i className="bi bi-car-front fs-1" aria-hidden="true"></i>
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="fw-semibold mb-1">
-                    {carQuery.data.brandName} {carQuery.data.modelName}
-                  </p>
-                  {(transmissionLabel || powertrainLabel) ? (
-                    <div className="d-flex flex-wrap gap-2 mb-2">
-                      {transmissionLabel ? <span className="badge text-bg-light border">{transmissionLabel}</span> : null}
-                      {powertrainLabel ? <span className="badge text-bg-light border">{powertrainLabel}</span> : null}
-                    </div>
-                  ) : null}
-                  {carId ? (
-                    <Link to={carDetail(carId)} className="btn btn-outline-primary btn-sm">
-                      {t('res.detail.viewCar')}
-                    </Link>
-                  ) : null}
-                </div>
+            <div className="d-flex flex-column flex-md-row gap-3 align-items-start">
+              <div className="reservation-detail-car-media rounded-3 overflow-hidden border">
+                {carCoverUrl && !carImageFailed ? (
+                  <img
+                    src={carCoverUrl}
+                    alt={carLabel || t('res.detail.carSummaryTitle')}
+                    className="w-100 h-100"
+                    style={{ objectFit: 'cover' }}
+                    onError={() => setCarImageFailed(true)}
+                  />
+                ) : (
+                  <div className="w-100 h-100 d-flex align-items-center justify-content-center text-secondary bg-body-tertiary">
+                    <i className="bi bi-car-front fs-1" aria-hidden="true"></i>
+                  </div>
+                )}
               </div>
-            ) : (
-              <p className="text-secondary small mb-0">{t('res.detail.loading')}</p>
-            )}
+              <div className="min-w-0">
+                {carQuery.data ? (
+                  <>
+                    <p className="fw-semibold mb-1">
+                      {carQuery.data.brandName} {carQuery.data.modelName}
+                    </p>
+                    {(transmissionLabel || powertrainLabel) ? (
+                      <div className="d-flex flex-wrap gap-2 mb-2">
+                        {transmissionLabel ? <span className="badge text-bg-light border">{transmissionLabel}</span> : null}
+                        {powertrainLabel ? <span className="badge text-bg-light border">{powertrainLabel}</span> : null}
+                      </div>
+                    ) : null}
+                    {carId ? (
+                      <Link to={carDetail(carId)} className="btn btn-outline-primary btn-sm">
+                        {t('res.detail.viewCar')}
+                      </Link>
+                    ) : null}
+                  </>
+                ) : (
+                  <LoadingBlock variant="inline" />
+                )}
+              </div>
+            </div>
           </section>
 
           <section className="bg-white rounded-4 shadow-sm p-4 mb-4">
@@ -536,12 +524,6 @@ export default function ReservationDetailPage() {
             </dl>
           </section>
 
-          {chatAvailable ? (
-            <div id="reservation-chat">
-              <ReservationChatPanel reservation={reservation} />
-            </div>
-          ) : null}
-
           {reviews.length > 0 ? (
             <section className="bg-white rounded-4 shadow-sm p-4 mt-4">
               <h2 className="h5 fw-semibold mb-3">{t('res.review.existing')}</h2>
@@ -555,7 +537,15 @@ export default function ReservationDetailPage() {
 
           {showReviewForm ? (
             <section className="bg-white rounded-4 shadow-sm p-4 mt-4">
-              <h2 className="h5 fw-semibold mb-3">{t('res.review.title')}</h2>
+              <h2 className="h5 fw-semibold mb-2">
+                {t(side === 'owner' ? 'res.review.titleOwner' : 'res.review.titleRider')}
+              </h2>
+              <p className="text-secondary small mb-2">
+                {t(side === 'owner' ? 'res.review.introOwner' : 'res.review.introRider')}
+              </p>
+              <p className="text-secondary small mb-3">
+                {t(side === 'owner' ? 'res.review.autoSkipNoticeOwner' : 'res.review.autoSkipNoticeRider')}
+              </p>
               <div className="mb-3">
                 <label className="form-label small">{t('res.review.rating')}</label>
                 <StarRatingInput id="reviewRating" value={reviewRating} onChange={setReviewRating} />
@@ -599,9 +589,13 @@ export default function ReservationDetailPage() {
               </div>
 
               {chatAvailable ? (
-                <a href="#reservation-chat" className="btn btn-primary w-100 mb-3">
+                <button
+                  type="button"
+                  className="btn btn-primary w-100 mb-3"
+                  onClick={() => setChatExpanded(true)}
+                >
                   {t('res.detail.openChat')}
-                </a>
+                </button>
               ) : null}
 
               {counterpartyQuery.data ? (
@@ -615,9 +609,9 @@ export default function ReservationDetailPage() {
                     <div className="counterparty-summary-card__identity d-flex align-items-center gap-2 mb-3">
                       {counterpartyId ? (
                         <Link to={publicProfile(counterpartyId)} className="text-decoration-none">
-                          {counterpartyQuery.data.links.profilePicture ? (
+                          {counterpartyAvatarUrl ? (
                             <img
-                              src={apiAssetUrl(counterpartyQuery.data.links.profilePicture)}
+                              src={counterpartyAvatarUrl}
                               alt=""
                               className="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"
                             />
@@ -783,6 +777,22 @@ export default function ReservationDetailPage() {
           onMarkReturned();
         }}
       />
+
+      {chatAvailable && reservation ? (
+        <ReservationChatPanel
+          reservation={reservation}
+          expanded={chatExpanded}
+          onExpandedChange={setChatExpanded}
+          counterparty={
+            counterpartyQuery.data
+              ? {
+                  name: `${counterpartyQuery.data.forename} ${counterpartyQuery.data.surname}`.trim(),
+                  avatarUrl: counterpartyAvatarUrl,
+                }
+              : undefined
+          }
+        />
+      ) : null}
     </main>
   );
 }

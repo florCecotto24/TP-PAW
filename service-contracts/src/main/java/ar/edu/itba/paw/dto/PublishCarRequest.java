@@ -25,6 +25,7 @@ public final class PublishCarRequest {
     private final Car.Powertrain powertrain;
     private final Car.Transmission transmission;
     private final String description;
+    private final Integer minimumRentalDays;
     private final List<GalleryMediaUpload> galleryUploads;
     private final String insuranceFilename;
     private final String insuranceContentType;
@@ -39,6 +40,7 @@ public final class PublishCarRequest {
         this.powertrain = b.powertrain;
         this.transmission = b.transmission;
         this.description = b.description;
+        this.minimumRentalDays = b.minimumRentalDays;
         this.galleryUploads = List.copyOf(b.galleryUploads);
         this.insuranceFilename = b.insuranceFilename;
         this.insuranceContentType = b.insuranceContentType;
@@ -53,6 +55,7 @@ public final class PublishCarRequest {
     public Car.Powertrain getPowertrain() { return powertrain; }
     public Car.Transmission getTransmission() { return transmission; }
     public String getDescription() { return description; }
+    public Integer getMinimumRentalDays() { return minimumRentalDays; }
     public List<GalleryMediaUpload> getGalleryUploads() { return galleryUploads; }
     public Optional<String> getInsuranceFilename() { return Optional.ofNullable(insuranceFilename); }
     public Optional<String> getInsuranceContentType() { return Optional.ofNullable(insuranceContentType); }
@@ -71,6 +74,7 @@ public final class PublishCarRequest {
         private Car.Powertrain powertrain;
         private Car.Transmission transmission;
         private String description;
+        private Integer minimumRentalDays;
         private List<GalleryMediaUpload> galleryUploads = List.of();
         private String insuranceFilename;
         private String insuranceContentType;
@@ -84,6 +88,7 @@ public final class PublishCarRequest {
         public Builder powertrain(final Car.Powertrain v) { this.powertrain = v; return this; }
         public Builder transmission(final Car.Transmission v) { this.transmission = v; return this; }
         public Builder description(final String v) { this.description = v; return this; }
+        public Builder minimumRentalDays(final Integer v) { this.minimumRentalDays = v; return this; }
         public Builder galleryUploads(final List<GalleryMediaUpload> v) { this.galleryUploads = v; return this; }
         public Builder insurance(final String filename, final String contentType, final byte[] bytes) {
             this.insuranceFilename = filename;

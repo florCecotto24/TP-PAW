@@ -9,7 +9,7 @@ import { paths } from '../../routes/paths';
 // /verificar-email — tras POST /users el servidor envía un OTP por mail.
 // Verificar = Basic auth email:otp (el OTP actúa como password); el backend
 // consume el código, marca emailVerified y devuelve JWT en headers.
-// Reenviar OTP: POST <userUri>/credentials (202, sin verbos en la URL).
+// Reenviar OTP: POST <userUri>/credentials (200 uniforme, sin verbos en la URL).
 export default function VerifyEmailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();

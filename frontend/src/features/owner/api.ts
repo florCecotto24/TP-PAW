@@ -6,6 +6,8 @@ import { sessionClient } from '../../session/sessionStore';
 import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
 import { MediaTypes } from '../../api/mediaTypes';
 import type { ApiResponse } from '../../api/client';
+import { followAllPages } from '../../api/client';
+import { encodeMultipart } from '../../api/multipart';
 import type { UserDto } from '../../api/types';
 import { idFromUri } from '../../api/uri';
 import type {
@@ -14,6 +16,7 @@ import type {
   BrandDto,
   CarCreateDto,
   CarDto,
+  CarSummaryDto,
   CarPatchDto,
   CarStatus,
   ModelDto,
@@ -74,11 +77,25 @@ export function uploadIdentityDocument(
 }
 
 // ---- Catálogo ----
-export function fetchBrands(): Promise<ApiResponse<BrandDto[]>> {
-  return sessionClient.get<BrandDto[]>('/brands', {
+/**
+ * Todas las marcas del catálogo. {@code GET /brands} pagina (máx. 100); hay ~190+
+ * en la DB local, así que se siguen los {@code Link: next} hasta completar.
+ */
+export async function fetchBrands(): Promise<ApiResponse<BrandDto[]>> {
+  const first = await sessionClient.get<BrandDto[]>('/brands', {
     accept: MediaTypes.brand,
-    query: { pageSize: 100 },
+    query: { page: 1, pageSize: 100 },
   });
+  if (!first.page.next) {
+    return { ...first, data: first.data ?? [] };
+  }
+  const rest = await followAllPages<BrandDto>(sessionClient, first.page.next, {
+    accept: MediaTypes.brand,
+  });
+  return {
+    ...rest,
+    data: [...(first.data ?? []), ...(rest.data ?? [])],
+  };
 }
 
 /** Modelos de una marca: se navega su link `models` (hipervínculo, no URL armada). */
@@ -126,9 +143,9 @@ export interface OwnerCarsQuery {
 export function fetchOwnerCars(
   ownerId: string,
   opts: OwnerCarsQuery = {},
-): Promise<ApiResponse<CarDto[]>> {
-  return sessionClient.get<CarDto[]>('/cars', {
-    accept: MediaTypes.car,
+): Promise<ApiResponse<CarSummaryDto[]>> {
+  return sessionClient.get<CarSummaryDto[]>('/cars', {
+    accept: MediaTypes.carSummary,
     query: {
       ownerId,
       page: opts.page ?? 1,
@@ -151,32 +168,43 @@ export function fetchCar(id: string): Promise<ApiResponse<CarDto>> {
 }
 
 /**
- * POST /cars como multipart/form-data: parte `car` con el JSON del CarCreateDto
- * (Blob con el vendor MIME), `pictures` (N partes binarias) e `insurance`
- * (1 parte binaria, opcional). El browser arma el boundary => NO seteamos
- * Content-Type. Ver SUPUESTO S1.
+ * POST /cars como multipart/form-data: parte `car` (JSON, sin filename),
+ * `pictures` e `insurance` opcional. El body se arma a mano con boundary
+ * explícito: si el browser manda `multipart/form-data` sin boundary, Jersey
+ * responde 400 genérico ({@code BadRequestException} / ~68 bytes).
  */
-export function publishCar(
+export async function publishCar(
   car: CarCreateDto,
   pictures: File[],
   insurance: File | null,
 ): Promise<ApiResponse<CarDto>> {
-  if (pictures.length === 0 && !insurance) {
-    return sessionClient.post<CarDto>('/cars', car, {
-      accept: MediaTypes.car,
+  const parts = [
+    {
+      name: 'car',
+      value: JSON.stringify(car),
       contentType: MediaTypes.car,
+    },
+    ...pictures.map((pic) => ({
+      name: 'pictures',
+      value: pic,
+      filename: pic.name || 'picture',
+      contentType: pic.type || 'application/octet-stream',
+    })),
+  ];
+  if (insurance) {
+    parts.push({
+      name: 'insurance',
+      value: insurance,
+      filename: insurance.name || 'insurance',
+      contentType: insurance.type || 'application/octet-stream',
     });
   }
-  const fd = new FormData();
-  fd.append(
-    'car',
-    new Blob([JSON.stringify(car)], { type: MediaTypes.car }),
-    'car.json',
-  );
-  for (const pic of pictures) fd.append('pictures', pic);
-  if (insurance) fd.append('insurance', insurance);
 
-  return sessionClient.post<CarDto>('/cars', fd, { accept: MediaTypes.car });
+  const { body, contentType } = await encodeMultipart(parts);
+  return sessionClient.post<CarDto>('/cars', body, {
+    accept: MediaTypes.car,
+    contentType,
+  });
 }
 
 export function fetchPriceMarketInsight(
@@ -234,7 +262,7 @@ export async function updateAvailability(
     await deleteAvailability(availability);
     return createAvailability(car, body);
   }
-  return sessionClient.put<AvailabilityDto>(self, body, {
+  return sessionClient.patch<AvailabilityDto>(self, body, {
     accept: MediaTypes.availability,
     contentType: MediaTypes.availability,
   });
@@ -245,10 +273,14 @@ export function deleteAvailability(availability: AvailabilityDto): Promise<ApiRe
 }
 
 // ---- Gallery (sub-recurso débil) ----
-export function fetchPictures(car: CarDto): Promise<ApiResponse<PictureDto[]>> {
-  return sessionClient.follow<PictureDto[]>(car.links.pictures, {
+export async function fetchPictures(car: CarDto): Promise<ApiResponse<PictureDto[]>> {
+  const res = await followAllPages<PictureDto>(sessionClient, car.links.pictures, {
     accept: MediaTypes.picture,
   });
+  return {
+    ...res,
+    data: (res.data ?? []).sort((a, b) => a.displayOrder - b.displayOrder),
+  };
 }
 
 export function addPicture(

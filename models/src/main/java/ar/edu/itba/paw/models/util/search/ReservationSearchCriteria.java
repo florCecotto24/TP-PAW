@@ -32,25 +32,6 @@ public final class ReservationSearchCriteria {
     public ReservationSearchCriteria(
             final Long ownerId,
             final Long riderId,
-            final int page,
-            final int pageSize,
-            final List<String> statusFilters,
-            final List<String> carTypes,
-            final List<String> transmissions,
-            final List<String> powertrains,
-            final BigDecimal minPrice,
-            final BigDecimal maxPrice,
-            final List<String> ratingBands,
-            final String sortBy,
-            final String sortDirection,
-            final String textQuery) {
-        this(ownerId, riderId, null, page, pageSize, statusFilters, carTypes, transmissions,
-                powertrains, minPrice, maxPrice, ratingBands, sortBy, sortDirection, textQuery);
-    }
-
-    public ReservationSearchCriteria(
-            final Long ownerId,
-            final Long riderId,
             final Long carId,
             final int page,
             final int pageSize,

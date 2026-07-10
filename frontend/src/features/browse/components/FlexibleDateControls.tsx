@@ -127,7 +127,7 @@ export default function FlexibleDateControls({
             type="button"
             className={`btn rounded-circle border border-primary text-primary bg-transparent flex-shrink-0 d-flex align-items-center justify-content-center js-flexdays-dec${hasDaysValue ? '' : ' d-none'}`}
             style={{ width: '1.75rem', height: '1.75rem', padding: 0 }}
-            aria-label="-"
+            aria-label={t('search.flexible.decrementAria')}
             onClick={decDays}
           >
             <i className="bi bi-dash" style={{ fontSize: '1rem', lineHeight: 1 }} aria-hidden="true"></i>
@@ -149,7 +149,7 @@ export default function FlexibleDateControls({
             type="button"
             className={`btn rounded-circle border border-primary text-primary bg-transparent flex-shrink-0 d-flex align-items-center justify-content-center js-flexdays-inc${hasDaysValue ? '' : ' d-none'}`}
             style={{ width: '1.75rem', height: '1.75rem', padding: 0 }}
-            aria-label="+"
+            aria-label={t('search.flexible.incrementAria')}
             onClick={incDays}
           >
             <i className="bi bi-plus" style={{ fontSize: '1rem', lineHeight: 1 }} aria-hidden="true"></i>

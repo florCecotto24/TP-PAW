@@ -26,7 +26,7 @@ export default function CarouselHeader({
   return (
     <div className="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 carouselHeader">
       <div>
-        <h4 className="font-semibold mb-1">{resolvedTitle}</h4>
+        <h4 className="fw-semibold mb-1">{resolvedTitle}</h4>
         <p className="text-secondary small mb-0">{resolvedSubtitle}</p>
       </div>
       {showSlideControls ? (

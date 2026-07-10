@@ -1,11 +1,13 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Alert, Button } from 'react-bootstrap';
+import { ApiError } from '../../api/client';
 import { useSessionStore } from '../../session/sessionStore';
 import type { UserDto } from '../../api/types';
 import { paths, myCarDetail } from '../../routes/paths';
-import { BreadcrumbTrail } from '../../components/ryden';
+import { BreadcrumbTrail, LoadingBlock } from '../../components/ryden';
+import ReceiptUploadPicker from '../reservations/components/ReceiptUploadPicker';
 import {
   createBrand,
   createModel,
@@ -28,6 +30,7 @@ import {
   normalizePlate,
   normalizeYearDigits,
   publishValidationI18nParams,
+  validatePublishCarYear,
 } from './publishCarValidation';
 import type {
   BrandDto,
@@ -38,6 +41,16 @@ import type {
   Powertrain,
   Transmission,
 } from './types';
+
+const VALIDATION_KEY_TO_I18N: Record<string, string> = {
+  'validation.year.min': 'owner.publish.errors.yearMin',
+  'validation.year.max': 'owner.publish.errors.yearMax',
+};
+
+function normalizeValidationKey(raw: string | undefined): string {
+  if (!raw) return '';
+  return raw.replace(/^\{|\}$/g, '');
+}
 
 const CAR_TYPES: CarType[] = [
   'sedan', 'hatchback', 'suv', 'coupe', 'convertible', 'wagon', 'van', 'pickup',
@@ -93,7 +106,7 @@ export default function PublishCarPage() {
   if (loading) {
     return (
       <main className="container py-5">
-        <p className="text-secondary" role="status">{t('app.loading')}</p>
+        <LoadingBlock variant="page" className="py-4" />
       </main>
     );
   }
@@ -176,11 +189,8 @@ function PublishPrerequisites({
     }
   }
 
-  async function onUploadIdentity(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
+  async function onUploadIdentity(file: File) {
     setIdentityError(null);
-    if (!file) { setIdentityError(t('owner.prereq.errors.identityRequired')); return; }
     if (!user) return;
     setIdentityBusy(true);
     try {
@@ -188,6 +198,7 @@ function PublishPrerequisites({
       onIdentityUploaded();
     } catch (err) {
       setIdentityError(errorMessage(err, 'owner.prereq.errors.identitySaveFailed'));
+      throw err;
     } finally {
       setIdentityBusy(false);
     }
@@ -250,13 +261,22 @@ function PublishPrerequisites({
                     {t('owner.prereq.identityLabel')}
                   </label>
                   {identityError && <div className="alert alert-danger py-2 small" role="alert">{identityError}</div>}
-                  <input
+                  <ReceiptUploadPicker
                     id="prereqIdentity"
-                    type="file"
-                    className="form-control"
-                    accept="application/pdf,image/*"
                     disabled={identityBusy}
-                    onChange={onUploadIdentity}
+                    busy={identityBusy}
+                    onConfirm={onUploadIdentity}
+                    labels={{
+                      chooseFile: t('owner.prereq.identityChooseFile'),
+                      confirmUpload: t('owner.prereq.identityConfirmUpload'),
+                      confirming: t('owner.prereq.identityConfirming'),
+                      uploadAria: t('owner.prereq.identitySave'),
+                      replaceFile: t('owner.prereq.identityReplaceFile'),
+                      removeFile: t('owner.prereq.identityRemoveFile'),
+                      invalidFile: t('owner.prereq.identityInvalidFile'),
+                      fileTooLarge: t('owner.prereq.identityFileTooLarge', { maxMb: 5 }),
+                      uploadError: t('owner.prereq.errors.identitySaveFailed'),
+                    }}
                   />
                   <small className="text-muted d-block mt-2">{t('owner.prereq.identityHint')}</small>
                 </div>
@@ -357,7 +377,13 @@ function PublishResult({
               <p className="mb-1">
                 {t('owner.confirmation.message', { brand: car.brandName, model: car.modelName })}
               </p>
-              <p className="text-secondary mb-4">{t('owner.confirmation.subtitle')}</p>
+              <p className="text-secondary mb-4">
+                {t(
+                  lackDoc
+                    ? 'owner.confirmation.subtitleLackDoc'
+                    : 'owner.confirmation.subtitle',
+                )}
+              </p>
 
               <div className="card mb-4 border-0 text-start bg-body-tertiary">
                 <div className="card-body">
@@ -392,8 +418,15 @@ function PublishResult({
               <div className="d-grid gap-2 d-sm-flex justify-content-sm-center">
                 {carId && (
                   <Link to={myCarDetail(carId)} className="btn btn-primary">
-                    <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-                    {t('owner.confirmation.addAvailabilityCta')}
+                    <i
+                      className={`bi ${lackDoc ? 'bi-eye' : 'bi-plus-lg'} me-1`}
+                      aria-hidden="true"
+                    />
+                    {t(
+                      lackDoc
+                        ? 'owner.confirmation.viewDetailCta'
+                        : 'owner.confirmation.addAvailabilityCta',
+                    )}
                   </Link>
                 )}
                 <Link to={paths.myCars} className="btn btn-outline-primary">
@@ -440,10 +473,23 @@ function PublishCarForm({
   const [insurance, setInsurance] = useState<File | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  /** Error de año bajo el campo (paridad con `form:errors path="year"` + guard JS del JSP). */
+  const [yearError, setYearError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   /** Categoría solo al crear un modelo nuevo ("Otro…"); si el modelo ya existe en catálogo, viene de la BD. */
   const showCategory = modelSel === OTHER;
+
+  function yearErrorMessage(key: string | null): string | null {
+    if (!key) return null;
+    return t(key, publishValidationI18nParams());
+  }
+
+  function applyYearValidation(raw: string): boolean {
+    const key = validatePublishCarYear(raw);
+    setYearError(yearErrorMessage(key));
+    return key == null;
+  }
 
   useEffect(() => {
     let active = true;
@@ -488,20 +534,25 @@ function PublishCarForm({
       const name = newModelName.trim();
       if (!name) throw new Error('owner.publish.errors.modelRequired');
       const model = (await createModel(brand, name, type)).data;
+      if (!model?.links?.self) throw new Error('owner.publish.errors.failed');
       return { dto: { modelUri: model.links.self }, newCatalogEntry: true };
     }
     if (modelSel) {
       const existing = models.find((m) => m.links.self === modelSel);
-      if (existing) return { dto: { modelUri: existing.links.self }, newCatalogEntry: createdEntry };
+      if (existing?.links?.self) {
+        return { dto: { modelUri: existing.links.self }, newCatalogEntry: createdEntry };
+      }
+      // modelSel quedó stale (p.ej. cambió la marca): no mandar brandName solo.
+      throw new Error('owner.publish.errors.modelSelectRequired');
     }
-    // Sin modelo elegido: mandamos por nombre (el server resuelve/crea).
-    return { dto: { brandName: brand.name }, newCatalogEntry: createdEntry };
+    throw new Error('owner.publish.errors.modelSelectRequired');
   }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
+    const yearOk = applyYearValidation(year);
     const validationKey = firstPublishCarValidationError({
       brandSel,
       modelSel,
@@ -513,6 +564,10 @@ function PublishCarForm({
       pictures,
       insurance,
     });
+    if (!yearOk) {
+      document.getElementById('publishYear')?.focus();
+      return;
+    }
     if (validationKey) {
       setError(t(validationKey, publishValidationI18nParams()));
       return;
@@ -553,6 +608,21 @@ function PublishCarForm({
         onPublished(car, newCatalogEntry);
       }
     } catch (err) {
+      if (err instanceof ApiError && err.body?.errors?.length) {
+        const yearField = err.body.errors.find((fe) => fe.field === 'year');
+        if (yearField) {
+          const key = normalizeValidationKey(yearField.message);
+          const i18nKey = VALIDATION_KEY_TO_I18N[key];
+          setYearError(
+            i18nKey
+              ? t(i18nKey, publishValidationI18nParams())
+              : (yearField.message || t('owner.publish.errors.yearInvalid')),
+          );
+          document.getElementById('publishYear')?.focus();
+          const onlyYear = err.body.errors.every((fe) => fe.field === 'year');
+          if (onlyYear) return;
+        }
+      }
       if (err instanceof Error && err.message.startsWith('owner.')) {
         setError(t(err.message));
       } else {
@@ -667,15 +737,28 @@ function PublishCarForm({
                     id="publishYear"
                     type="text"
                     inputMode="numeric"
-                    className="form-control"
+                    className={`form-control${yearError ? ' is-invalid' : ''}`}
                     value={year}
                     maxLength={4}
                     placeholder={String(currentCarYearMax())}
-                    onChange={(e) => setYear(normalizeYearDigits(e.target.value))}
+                    aria-invalid={yearError ? true : undefined}
+                    aria-describedby={yearError ? 'publishYearError' : undefined}
+                    onChange={(e) => {
+                      const next = normalizeYearDigits(e.target.value);
+                      setYear(next);
+                      applyYearValidation(next);
+                    }}
+                    onBlur={() => applyYearValidation(year)}
                   />
-                  <small className="text-muted">
-                    {t('owner.publish.yearHint', publishValidationI18nParams())}
-                  </small>
+                  {yearError ? (
+                    <div id="publishYearError" className="text-danger d-block small mt-1" role="alert">
+                      {yearError}
+                    </div>
+                  ) : (
+                    <small className="text-muted">
+                      {t('owner.publish.yearHint', publishValidationI18nParams())}
+                    </small>
+                  )}
                 </div>
 
                 <div className="row g-3 mb-3">

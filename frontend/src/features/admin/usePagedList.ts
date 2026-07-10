@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { sessionClient } from '../../session/sessionStore';
-import { ApiError } from '../../api/client';
+import { ApiError, getLinkCollectionPage } from '../../api/client';
 import type { PageLinks } from '../../api/types';
 
 interface PagedState<T> {
@@ -29,6 +29,7 @@ export function usePagedList<T>(
   initialPath: string,
   accept: string,
   deps: unknown[] = [],
+  itemAccept?: string,
 ): PagedList<T> {
   const [state, setState] = useState<PagedState<T>>({
     items: [],
@@ -41,7 +42,9 @@ export function usePagedList<T>(
     async (path: string) => {
       setState((s) => ({ ...s, loading: true, error: null }));
       try {
-        const res = await sessionClient.get<T[] | undefined>(path, { accept });
+        const res = itemAccept
+          ? await getLinkCollectionPage<T>(sessionClient, path, { collectionAccept: accept, itemAccept })
+          : await sessionClient.get<T[] | undefined>(path, { accept });
         setState({
           items: Array.isArray(res.data) ? res.data : [],
           page: res.page,
@@ -56,7 +59,7 @@ export function usePagedList<T>(
         }));
       }
     },
-    [accept],
+    [accept, itemAccept],
   );
 
   useEffect(() => {
@@ -66,7 +69,7 @@ export function usePagedList<T>(
     }
     void fetchPath(initialPath);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPath, accept, ...deps]);
+  }, [initialPath, accept, itemAccept, ...deps]);
 
   const reload = useCallback(() => {
     void fetchPath(initialPath);

@@ -72,6 +72,37 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         insertAndSend(userId, email, locale);
     }
 
+    @Override
+    @Transactional
+    public void issuePublicVerificationCode(final long userId, final Locale locale) {
+        final User user = userService.getUserById(userId).orElse(null);
+        if (user == null) {
+            LOGGER.atDebug().addArgument(userId)
+                    .log("Public verification-code request for unknown user id={} (silent no-op)");
+            return;
+        }
+        if (Boolean.TRUE.equals(user.getEmailValidated().orElse(false))) {
+            LOGGER.atDebug().addArgument(userId)
+                    .log("Public verification-code request for already verified user id={} (silent no-op)");
+            return;
+        }
+        final Instant now = Instant.now();
+        if (emailVerificationCodeDao.hasActiveCode(userId, now)) {
+            LOGGER.atDebug().addArgument(userId)
+                    .log("Public verification-code request for user id={} with an active code (no-op)");
+            return;
+        }
+        emailVerificationCodeDao.deleteForUser(userId);
+        try {
+            insertAndSend(userId, user.getEmail(), locale);
+        } catch (final RuntimeException e) {
+            LOGGER.atWarn()
+                    .addArgument(userId)
+                    .setCause(e)
+                    .log("Failed to dispatch public verification code for user id={}; responding success anyway");
+        }
+    }
+
     private void insertAndSend(final long userId, final String email, final Locale locale) {
         final String code = String.format("%06d", RANDOM.nextInt(1_000_000));
         final Instant now = Instant.now();

@@ -1,9 +1,6 @@
 import { useEffect } from 'react';
 
-/**
- * Mirrors deprecated {@code home-animations.js}: scroll-reveal, navbar glass, hero parallax.
- * Without {@code is-visible}, {@code .animate-on-scroll} stays at opacity 0.
- */
+
 export function useHomePageAnimations(contentRevision = 0): void {
   useEffect(() => {
     const navbar = document.querySelector('.navbar');

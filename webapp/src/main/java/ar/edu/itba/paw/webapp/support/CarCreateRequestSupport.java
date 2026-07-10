@@ -1,7 +1,5 @@
 package ar.edu.itba.paw.webapp.support;
 
-import java.net.URI;
-
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.dto.PublishCarRequest;
@@ -10,6 +8,7 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.services.car.CarModelService;
 import ar.edu.itba.paw.webapp.form.car.CarCreateForm;
+import ar.edu.itba.paw.webapp.util.ModelUriSupport;
 
 /** Maps validated REST {@link CarCreateForm} payloads to {@link PublishCarRequest}. */
 @Component
@@ -32,12 +31,13 @@ public final class CarCreateRequestSupport {
                 .powertrain(CarRestEnums.parsePowertrain(form.getPowertrain()))
                 .transmission(CarRestEnums.parseTransmission(form.getTransmission()))
                 .description(form.getDescription())
+                .minimumRentalDays(form.getMinimumRentalDays())
                 .build();
     }
 
     private ResolvedCatalog resolveCatalog(final CarCreateForm form) {
         if (form.getModelUri() != null && !form.getModelUri().isBlank()) {
-            final long modelId = parseModelId(form.getModelUri());
+            final long modelId = ModelUriSupport.parseModelId(form.getModelUri());
             final CarModel model = carModelService.findById(modelId)
                     .orElseThrow(() -> new CarModelNotFoundException(modelId));
             return new ResolvedCatalog(
@@ -49,21 +49,6 @@ public final class CarCreateRequestSupport {
                 form.getBrandName(),
                 form.getModelName(),
                 CarRestEnums.parseType(form.getType()));
-    }
-
-    private static long parseModelId(final String modelUri) {
-        final URI uri = URI.create(modelUri.trim());
-        final String path = uri.getPath();
-        if (path == null || path.isBlank()) {
-            throw new IllegalStateException("modelUri path is empty");
-        }
-        final String[] segments = path.split("/");
-        for (int i = segments.length - 1; i >= 0; i--) {
-            if (!segments[i].isBlank()) {
-                return Long.parseLong(segments[i]);
-            }
-        }
-        throw new IllegalStateException("modelUri has no id segment");
     }
 
     private record ResolvedCatalog(String brand, String model, Car.Type type) {

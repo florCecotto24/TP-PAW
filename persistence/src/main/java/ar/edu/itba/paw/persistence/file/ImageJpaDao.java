@@ -21,7 +21,7 @@ public class ImageJpaDao implements ImageDao {
     @Override
     @Transactional
     public Image createImage(final String name, final String contentType, final byte[] data) {
-        final Image image = new Image(name, contentType, data);
+        final Image image = Image.forUpload(name, contentType, data);
         em.persist(image);
         return image;
     }

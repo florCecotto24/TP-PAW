@@ -30,7 +30,7 @@
     <listener-class>ar.edu.itba.paw.webapp.listener.JdbcDriverDeregistrationListener</listener-class>
   </listener>
 
-  <!-- 1. La API REST la atiende el filtro Jersey (recursos en /users, /cars, …; sin prefijo /api/). -->
+  <!-- 1. La API REST la atiende el filtro Jersey bajo /api/* (recursos JAX-RS en /users, /cars, …). -->
 
   <filter>
     <filter-name>spaFallbackFilter</filter-name>
@@ -98,12 +98,12 @@
     </init-param>
     <init-param>
       <param-name>jersey.config.servlet.filter.forwardOn404</param-name>
-      <param-value>true</param-value>
+      <param-value>false</param-value>
     </init-param>
   </filter>
   <filter-mapping>
     <filter-name>jersey</filter-name>
-    <url-pattern>/*</url-pattern>
+    <url-pattern>/api/*</url-pattern>
   </filter-mapping>
 
   <!-- 2. Archivos estáticos -> servlet por defecto -->

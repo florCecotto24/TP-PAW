@@ -93,7 +93,8 @@ public class CarSearchServiceImpl implements CarSearchService {
                 .sortDirection(sortDir)
                 .browseWallDate(browseWallDate)
                 .excludeOwnerUserId(null)
-                .neighborhoodIds(mergedNeighborhoodIds);
+                .neighborhoodIds(mergedNeighborhoodIds)
+                .priceMarketPosition(request.getPriceMarketPosition());
         if (flexible && flexMonth != null && !flexMonth.isBlank()) {
             java.time.YearMonth parsedMonth = null;
             try {

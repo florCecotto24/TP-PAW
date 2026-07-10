@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BreadcrumbTrail, Pagination, SortBar } from '../../../components/ryden';
+import { BreadcrumbTrail, EmptyState, LoadingBlock, Pagination, SortBar } from '../../../components/ryden';
 import { appBasePath } from '../../../appBasePath';
 import { useCar } from '../../browse/hooks';
 
@@ -48,11 +48,6 @@ type MyReservationsPageProps = {
 export default function MyReservationsPage({ scope = 'rider' }: MyReservationsPageProps) {
   const { t } = useTranslation();
   const { id, isAuthenticated } = useCurrentUser();
-
-  useEffect(() => {
-    document.body.classList.add('has-fixed-navbar', 'bg-light');
-    return () => document.body.classList.remove('has-fixed-navbar', 'bg-light');
-  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -116,7 +111,7 @@ function RiderReservationsView({ riderId }: { riderId: string | null }) {
       </section>
 
       {list.isError ? <div className="alert alert-danger">{t('res.list.error')}</div> : null}
-      {list.isLoading ? <p className="text-secondary">{t('res.list.loading')}</p> : null}
+      {list.isLoading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {showFilters ? (
         <>
@@ -145,37 +140,36 @@ function RiderReservationsView({ riderId }: { riderId: string | null }) {
       ) : null}
 
       {!list.isLoading && items.length === 0 ? (
-        <div className="search-empty-state text-center">
-          {activeFilters ? (
-            <>
-              <h2 className="h4 fw-semibold mb-2">{t('myReservations.noResults.title')}</h2>
-              <div className="search-empty-state__actions mt-4">
-                <Link to={paths.myReservations} className="btn btn-outline-secondary">
-                  {t('search.filters.clear')}
-                </Link>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="h4 fw-semibold mb-2">{t('myReservations.empty.title')}</h2>
-              <p className="text-secondary mb-0 search-empty-state__text">
-                {t('myReservations.empty.description')}
-              </p>
-              <div className="search-empty-state__actions mt-4">
-                <Link to={paths.search} className="btn btn-primary btn-action btn-action-md">
-                  {t('myReservations.empty.reserve')}
-                </Link>
-              </div>
-            </>
-          )}
-        </div>
+        <EmptyState
+          icon={activeFilters ? 'search' : 'calendar-event'}
+          title={
+            activeFilters
+              ? t('myReservations.noResults.title')
+              : t('myReservations.empty.title')
+          }
+          description={activeFilters ? undefined : t('myReservations.empty.description')}
+          actions={
+            activeFilters ? (
+              <Link to={paths.myReservations} className="btn btn-outline-secondary">
+                {t('search.filters.clear')}
+              </Link>
+            ) : (
+              <Link to={paths.search} className="btn btn-primary btn-action btn-action-md">
+                {t('myReservations.empty.reserve')}
+              </Link>
+            )
+          }
+        />
       ) : null}
 
       {items.length > 0 ? (
         <>
           <div className="d-flex flex-column gap-3 mb-4">
-            {items.map((reservation) => (
-              <ReservationListCard key={reservation.links.self} reservation={reservation} />
+            {items.map((reservation, index) => (
+              <ReservationListCard
+                key={reservation.links?.self ?? `reservation-${index}`}
+                reservation={reservation}
+              />
             ))}
           </div>
           {totalPages > 1 ? (
@@ -242,18 +236,12 @@ function OwnerReservationsView({ ownerId }: { ownerId: string | null }) {
     <main className="container pt-5 pb-4">
       {scopedToCar && carTitle ? (
         <BreadcrumbTrail
-          homeLabel={t('nav.myCars')}
-          homeHref={paths.myCars}
-          midLabel={heading}
-          midHref={paths.ownerReservations}
+          homeLabel={heading}
+          homeHref={paths.ownerReservations}
           currentLabel={carTitle}
         />
       ) : (
-        <BreadcrumbTrail
-          homeLabel={t('nav.myCars')}
-          homeHref={paths.myCars}
-          currentLabel={heading}
-        />
+        <BreadcrumbTrail currentLabel={heading} />
       )}
 
       <section className="reservation-management-header mt-4 pt-5 mb-4">
@@ -262,7 +250,7 @@ function OwnerReservationsView({ ownerId }: { ownerId: string | null }) {
       </section>
 
       {list.isError ? <div className="alert alert-danger">{t('res.list.error')}</div> : null}
-      {list.isLoading ? <p className="text-secondary">{t('res.list.loading')}</p> : null}
+      {list.isLoading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {showFilters ? (
         <>
@@ -293,46 +281,44 @@ function OwnerReservationsView({ ownerId }: { ownerId: string | null }) {
       ) : null}
 
       {!list.isLoading && items.length === 0 ? (
-        <div className="search-empty-state text-center">
-          {activeFilters ? (
-            <>
-              <h2 className="h4 fw-semibold mb-2">{t('myReservations.noResults.title')}</h2>
-              <div className="search-empty-state__actions mt-4">
-                <Link to={clearHref} className="btn btn-outline-secondary">
-                  {t('search.filters.clear')}
-                </Link>
-              </div>
-            </>
-          ) : scopedToCar ? (
-            <>
-              <img
-                src={CAR_EMPTY_ILLUSTRATION_URL}
-                alt=""
-                className="mb-4 img-fluid"
-                style={{ maxWidth: 260 }}
-              />
-              <h2 className="h4 fw-semibold mb-2">{t('res.list.ownerCarEmpty.title')}</h2>
-              <p className="text-secondary mb-0 search-empty-state__text">
-                {t('res.list.ownerCarEmpty.description')}
-              </p>
-            </>
-          ) : (
-            <>
-              <h2 className="h4 fw-semibold mb-2">{t('res.list.ownerEmpty.title')}</h2>
-              <p className="text-secondary mb-0 search-empty-state__text">
-                {t('res.list.ownerEmpty.description')}
-              </p>
-            </>
-          )}
-        </div>
+        activeFilters ? (
+          <EmptyState
+            icon="search"
+            title={t('myReservations.noResults.title')}
+            actions={(
+              <Link to={clearHref} className="btn btn-outline-secondary">
+                {t('search.filters.clear')}
+              </Link>
+            )}
+          />
+        ) : scopedToCar ? (
+          <div className="search-empty-state text-center">
+            <img
+              src={CAR_EMPTY_ILLUSTRATION_URL}
+              alt=""
+              className="mb-4 img-fluid"
+              style={{ maxWidth: 260 }}
+            />
+            <h2 className="h5 fw-semibold mb-2">{t('res.list.ownerCarEmpty.title')}</h2>
+            <p className="text-secondary mb-0 search-empty-state__text">
+              {t('res.list.ownerCarEmpty.description')}
+            </p>
+          </div>
+        ) : (
+          <EmptyState
+            icon="calendar-event"
+            title={t('res.list.ownerEmpty.title')}
+            description={t('res.list.ownerEmpty.description')}
+          />
+        )
       ) : null}
 
       {items.length > 0 ? (
         <>
           <div className="d-flex flex-column gap-3 mb-4">
-            {items.map((reservation) => (
+            {items.map((reservation, index) => (
               <ReservationListCard
-                key={reservation.links.self}
+                key={reservation.links?.self ?? `owner-reservation-${index}`}
                 reservation={reservation}
                 role="owner"
               />

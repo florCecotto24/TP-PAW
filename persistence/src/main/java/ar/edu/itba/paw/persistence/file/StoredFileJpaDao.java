@@ -25,7 +25,7 @@ public class StoredFileJpaDao implements StoredFileDao {
     public StoredFile create(final long uploaderUserId, final String fileName,
                              final String contentType, final byte[] data) {
         final User uploaderRef = em.getReference(User.class, uploaderUserId);
-        final StoredFile file = new StoredFile(uploaderRef, fileName, contentType, data, OffsetDateTime.now());
+        final StoredFile file = StoredFile.forUpload(uploaderRef, fileName, contentType, data, OffsetDateTime.now());
         em.persist(file);
         return file;
     }

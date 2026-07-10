@@ -25,10 +25,10 @@ public final class AccessDeniedExceptionMapper implements ExceptionMapper<Access
                 || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken;
         final Response.Status status = anonymous ? Response.Status.UNAUTHORIZED : Response.Status.FORBIDDEN;
-        LOGGER.debug("AccessDeniedException status={}", status.getStatusCode());
+        LOGGER.atDebug().addArgument(status.getStatusCode()).log("AccessDeniedException status={}");
         final Response.ResponseBuilder builder = Response.status(status)
                 .type(ErrorDto.mediaType())
-                .entity(new ErrorDto(
+                .entity(ErrorDto.of(
                         status.getStatusCode(),
                         anonymous ? "unauthorized" : "forbidden",
                         exception.getMessage()));

@@ -3,9 +3,15 @@ import AdminNav from './AdminNav';
 
 export default function AdminLayout() {
   return (
-    <div className="container py-4">
-      <AdminNav />
-      <Outlet />
-    </div>
+    <>
+      <div className="admin-layout-band">
+        <div className="container">
+          <AdminNav />
+        </div>
+      </div>
+      <div className="container pb-4">
+        <Outlet />
+      </div>
+    </>
   );
 }

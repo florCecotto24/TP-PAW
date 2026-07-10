@@ -8,7 +8,7 @@ class EmailMessagingExceptionTest {
     @Test
     void testIsCheckedExceptionAndNotARuntimeException() {
         // 1.Arrange / 2.Act
-        final Object ex = new EmailMessagingException("boom");
+        final Object ex = EmailMessagingException.withMessage("boom");
 
         // 3.Assert
         Assertions.assertTrue(ex instanceof Exception);
@@ -16,9 +16,9 @@ class EmailMessagingExceptionTest {
     }
 
     @Test
-    void testMessageOnlyConstructorPropagatesMessageAndLeavesCauseNull() {
+    void testWithMessagePropagatesMessageAndLeavesCauseNull() {
         // 1.Arrange / 2.Act
-        final EmailMessagingException ex = new EmailMessagingException("template render failed");
+        final EmailMessagingException ex = EmailMessagingException.withMessage("template render failed");
 
         // 3.Assert
         Assertions.assertEquals("template render failed", ex.getMessage());
@@ -26,12 +26,12 @@ class EmailMessagingExceptionTest {
     }
 
     @Test
-    void testMessageAndCauseConstructorPropagatesBoth() {
+    void testWithMessageAndCausePropagatesBoth() {
         // 1.Arrange
         final IllegalStateException cause = new IllegalStateException("smtp dead");
 
         // 2.Act
-        final EmailMessagingException ex = new EmailMessagingException("send failed", cause);
+        final EmailMessagingException ex = EmailMessagingException.withMessageAndCause("send failed", cause);
 
         // 3.Assert
         Assertions.assertEquals("send failed", ex.getMessage());
@@ -39,12 +39,12 @@ class EmailMessagingExceptionTest {
     }
 
     @Test
-    void testCauseOnlyConstructorPropagatesCauseAndDerivesMessage() {
+    void testWrappingPropagatesCauseAndDerivesMessage() {
         // 1.Arrange
         final IllegalStateException cause = new IllegalStateException("smtp dead");
 
         // 2.Act
-        final EmailMessagingException ex = new EmailMessagingException(cause);
+        final EmailMessagingException ex = EmailMessagingException.wrapping(cause);
 
         // 3.Assert
         Assertions.assertSame(cause, ex.getCause());

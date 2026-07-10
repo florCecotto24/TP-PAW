@@ -13,7 +13,6 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -37,23 +36,22 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.api.common.PaginationLinks;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
-import ar.edu.itba.paw.webapp.config.properties.AppPaginationProperties;
 import ar.edu.itba.paw.webapp.dto.rest.UserPrivateDto;
 import ar.edu.itba.paw.webapp.form.admin.CreateAdminUserForm;
 import ar.edu.itba.paw.webapp.form.user.ProfilePasswordChangeForm;
 import ar.edu.itba.paw.webapp.form.user.RegistrationAccountForm;
 import ar.edu.itba.paw.webapp.form.user.UserPatchForm;
-import ar.edu.itba.paw.webapp.form.user.UserReplaceForm;
 import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
+import ar.edu.itba.paw.webapp.support.PaginationParams;
+import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.support.UserRepresentationSupport;
 import ar.edu.itba.paw.webapp.support.UserResourceAccess;
 import ar.edu.itba.paw.webapp.support.UserSessionService;
@@ -78,7 +76,7 @@ public class UserController {
     private final UserRepresentationSupport userRepresentationSupport;
     private final UserResourceAccess userResourceAccess;
     private final UserSessionService userSessionService;
-    private final AppPaginationProperties paginationProperties;
+    private final PaginationSupport paginationSupport;
 
     @Context
     private UriInfo uriInfo;
@@ -96,7 +94,7 @@ public class UserController {
             final UserRepresentationSupport userRepresentationSupport,
             final UserResourceAccess userResourceAccess,
             final UserSessionService userSessionService,
-            final AppPaginationProperties paginationProperties) {
+            final PaginationSupport paginationSupport) {
         this.userService = userService;
         this.adminService = adminService;
         this.passwordResetService = passwordResetService;
@@ -105,7 +103,7 @@ public class UserController {
         this.userRepresentationSupport = userRepresentationSupport;
         this.userResourceAccess = userResourceAccess;
         this.userSessionService = userSessionService;
-        this.paginationProperties = paginationProperties;
+        this.paginationSupport = paginationSupport;
     }
 
     @GET
@@ -117,11 +115,9 @@ public class UserController {
             @QueryParam("blocked") final Boolean blocked,
             @QueryParam("role") @ValidUserRole final String role,
             @QueryParam("q") final String query) {
-        final int safePage = Math.max(1, page);
-        final int pageSize = pageSizeParam != null && pageSizeParam > 0
-                ? pageSizeParam
-                : paginationProperties.getDefaultPageSize();
-        final Page<User> usersPage = adminService.listUsers(safePage - 1, pageSize, blocked, role, query);
+        final PaginationParams paging = paginationSupport.forDefaultCollection(page, pageSizeParam);
+        final Page<User> usersPage = adminService.listUsers(
+                paging.getZeroBasedPage(), paging.getPageSize(), blocked, role, query);
         if (usersPage.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
@@ -131,7 +127,8 @@ public class UserController {
         final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<UserPrivateDto>>(dtos) {})
                 .type(VndMediaType.USER_PRIVATE_V1_JSON)
                 .header("X-Total-Count", usersPage.getTotalItems());
-        PaginationLinks.add(builder, uriInfo, safePage, pageSize, (int) usersPage.getTotalItems());
+        PaginationLinks.add(
+                builder, uriInfo, paging.getPage(), paging.getPageSize(), (int) usersPage.getTotalItems());
         return builder.build();
     }
 
@@ -193,37 +190,12 @@ public class UserController {
 
     @GET
     @Path("/{id}")
-    @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON, VndMediaType.USER_V1_XML})
+    @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON})
     public Response getUser(@PathParam("id") final long id) {
         final User user = userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
         return userRepresentationSupport.buildUserResponse(
                 user, uriInfo, currentUserResolver.currentPrincipalOrNull(), httpHeaders);
-    }
-
-    @PUT
-    @Path("/{id}")
-    @Consumes(VndMediaType.USER_V1_JSON)
-    @Produces({VndMediaType.USER_V1_JSON, VndMediaType.USER_PRIVATE_V1_JSON})
-    @PreAuthorize("@userResourceAccess.isSelfOrAdmin(#id, @currentUserResolver.currentPrincipalOrNull())")
-    public Response replaceUser(@P("id") @PathParam("id") final long id, @Valid final UserReplaceForm form) {
-        userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
-
-        final LocalDate birthDate = toBirthDate(form.getBirthDate());
-        userService.updateProfile(id, ProfileUpdateRequest.builder()
-                .forename(form.getForename())
-                .surname(form.getSurname())
-                .phoneNumberRaw(form.getPhoneNumber())
-                .birthDate(birthDate)
-                .aboutRaw(form.getAbout())
-                .cbuRaw(form.getCbu())
-                .build());
-
-        final User updated = userService.getUserById(id)
-                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
     }
 
     @DELETE

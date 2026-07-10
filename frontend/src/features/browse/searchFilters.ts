@@ -1,6 +1,4 @@
 // Bidirectional mapping between URL search params and SearchFilters for /search.
-// Es la única lógica no trivial de la feature, por eso vive aislada y testeada
-// (browse.search.* sincroniza con la URL via useSearchParams en SearchPage).
 
 import {
   CAR_SORTS,
@@ -22,6 +20,8 @@ export interface SearchFilters {
   powertrain?: Powertrain;
   priceMin?: number;
   priceMax?: number;
+  /** Posición vs mercado del mismo modelo (mismas bandas que el badge de la card). */
+  priceMarket?: 'below_market' | 'at_market' | 'above_market';
   rating?: number;
   neighborhoodId?: number;
   from?: string; // YYYY-MM-DD
@@ -72,6 +72,16 @@ function toIsoDate(value: string | null): string | undefined {
   return value != null && ISO_DATE.test(value) ? value : undefined;
 }
 
+const PRICE_MARKET_VALUES = ['below_market', 'at_market', 'above_market'] as const;
+
+function toPriceMarket(
+  value: string | null,
+): SearchFilters['priceMarket'] | undefined {
+  return value != null && (PRICE_MARKET_VALUES as readonly string[]).includes(value)
+    ? (value as SearchFilters['priceMarket'])
+    : undefined;
+}
+
 /**
  * Lee filtros desde los search params de la URL. Tolerante: valores inválidos o
  * fuera de rango se descartan (no rompen la pantalla). Strings vacíos se omiten.
@@ -101,6 +111,7 @@ export function parseFilters(params: URLSearchParams): SearchFilters {
     powertrain: inEnum(params.get('powertrain'), POWERTRAINS),
     priceMin: toNonNegativeNumber(params.get('priceMin')),
     priceMax: toNonNegativeNumber(params.get('priceMax')),
+    priceMarket: toPriceMarket(params.get('priceMarket')),
     rating: toRating(params.get('rating')),
     neighborhoodId: toPositiveInt(params.get('neighborhoodId')),
     flexible: flexible || undefined,
@@ -162,6 +173,7 @@ export function filtersToSearchParams(filters: SearchFilters): URLSearchParams {
   if (filters.powertrain) params.set('powertrain', filters.powertrain);
   if (filters.priceMin !== undefined) params.set('priceMin', String(filters.priceMin));
   if (filters.priceMax !== undefined) params.set('priceMax', String(filters.priceMax));
+  if (filters.priceMarket) params.set('priceMarket', filters.priceMarket);
   if (filters.rating !== undefined) params.set('rating', String(filters.rating));
   if (filters.neighborhoodId !== undefined) params.set('neighborhoodId', String(filters.neighborhoodId));
   if (filters.flexible && filters.flexMonth) {

@@ -1,17 +1,11 @@
 package ar.edu.itba.paw.webapp.controller.catalog;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.annotation.security.RolesAllowed;
-import javax.validation.Valid;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.PATCH;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
@@ -20,41 +14,25 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
-import ar.edu.itba.paw.exception.car.CarNotFoundException;
-import ar.edu.itba.paw.models.domain.car.Car;
-import ar.edu.itba.paw.models.domain.car.CarModel;
 import ar.edu.itba.paw.services.car.CarModelService;
-import ar.edu.itba.paw.services.car.CarService;
-import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.ModelDto;
-import ar.edu.itba.paw.webapp.dto.rest.PriceMarketInsightDto;
-import ar.edu.itba.paw.webapp.form.catalog.CatalogApprovalForm;
 
-/** Catalog models ({@code /models}, {@code /models/{id}}). */
+/** Admin pending-model collection only ({@code GET /models?validated=false}). */
 @Path("/models")
 @Component
 public final class ModelController {
 
     private final CarModelService carModelService;
-    private final CarService carService;
-    private final AdminService adminService;
 
     @Context
     private UriInfo uriInfo;
 
     @Autowired
-    public ModelController(
-            final CarModelService carModelService,
-            final CarService carService,
-            final AdminService adminService) {
+    public ModelController(final CarModelService carModelService) {
         this.carModelService = carModelService;
-        this.carService = carService;
-        this.adminService = adminService;
     }
 
     @GET
@@ -71,58 +49,5 @@ public final class ModelController {
             return Response.noContent().build();
         }
         return Response.ok(new GenericEntity<List<ModelDto>>(dtos) {}).build();
-    }
-
-    @GET
-    @Path("/{id}")
-    @Produces(VndMediaType.MODEL_V1_JSON)
-    public Response getModel(@PathParam("id") final long id) {
-        final CarModel model = carModelService.findById(id)
-                .orElseThrow(() -> new CarModelNotFoundException(id));
-        return Response.ok(ModelDto.from(model, uriInfo)).build();
-    }
-
-    @GET
-    @Path("/{id}/price-insight")
-    @Produces(VndMediaType.PRICE_MARKET_INSIGHT_V1_JSON)
-    public Response priceInsight(
-            @PathParam("id") final long id,
-            @QueryParam("excludeCarId") final Long excludeCarId) {
-        carModelService.findById(id)
-                .orElseThrow(() -> new CarModelNotFoundException(id));
-        if (excludeCarId == null) {
-            return Response.noContent().build();
-        }
-        final Car car = carService.getCarById(excludeCarId)
-                .orElseThrow(() -> new CarNotFoundException(excludeCarId));
-        return carService.getPriceMarketInsightForCar(car, excludeCarId)
-                .map(insight -> Response.ok(PriceMarketInsightDto.from(insight)).build())
-                .orElse(Response.noContent().build());
-    }
-
-    @PATCH
-    @Path("/{id}")
-    @RolesAllowed("ROLE_ADMIN")
-    @Consumes(VndMediaType.MODEL_V1_JSON)
-    @Produces(VndMediaType.MODEL_V1_JSON)
-    public Response approveModel(@PathParam("id") final long id, @Valid final CatalogApprovalForm patch) {
-        carModelService.findById(id)
-                .orElseThrow(() -> new CarModelNotFoundException(id));
-
-        final Locale locale = LocaleContextHolder.getLocale();
-        adminService.validateCatalogEntry(id, locale);
-
-        final CarModel updated = carModelService.findById(id)
-                .orElseThrow(() -> new CarModelNotFoundException(id));
-        return Response.ok(ModelDto.from(updated, uriInfo)).build();
-    }
-
-    @DELETE
-    @Path("/{id}")
-    @RolesAllowed("ROLE_ADMIN")
-    public Response rejectModel(@PathParam("id") final long id) {
-        final Locale locale = LocaleContextHolder.getLocale();
-        adminService.rejectCatalogEntry(id, locale);
-        return Response.noContent().build();
     }
 }

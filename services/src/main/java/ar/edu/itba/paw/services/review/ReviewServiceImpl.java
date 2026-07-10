@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.review.Review;
 import ar.edu.itba.paw.models.dto.car.CarPublicReview;
 import ar.edu.itba.paw.models.dto.Page;
@@ -19,6 +21,7 @@ import ar.edu.itba.paw.models.dto.profile.ReviewItemDto;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
+import ar.edu.itba.paw.policy.ReservationTimingPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.persistence.review.ReviewDao;
 
@@ -40,6 +43,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserService userService;
     private final ImageService imageService;
     private final ReviewValidationPolicy reviewValidationPolicy;
+    private final ReservationTimingPolicy reservationTimingPolicy;
 
     @Autowired
     public ReviewServiceImpl(
@@ -48,13 +52,15 @@ public class ReviewServiceImpl implements ReviewService {
             final CarService carService,
             final UserService userService,
             final ImageService imageService,
-            final ReviewValidationPolicy reviewValidationPolicy) {
+            final ReviewValidationPolicy reviewValidationPolicy,
+            final ReservationTimingPolicy reservationTimingPolicy) {
         this.reviewDao = reviewDao;
         this.reservationService = reservationService;
         this.carService = carService;
         this.userService = userService;
         this.imageService = imageService;
         this.reviewValidationPolicy = reviewValidationPolicy;
+        this.reservationTimingPolicy = reservationTimingPolicy;
     }
 
     @Override
@@ -72,6 +78,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public Page<Review> getCarPublicReviewEntities(final long carId, final int page, final int pageSize) {
+        carService.getCarById(carId).orElseThrow(() -> new CarNotFoundException(carId));
         return reviewDao.findPublicReviewsForCar(carId, page, pageSize);
     }
 
@@ -133,6 +140,45 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<Review> getReviewsReceivedByUserEntities(
+            final long userId, final int page, final int pageSize) {
+        userService.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        return reviewDao.findReviewsReceivedByUser(userId, page, pageSize);
+    }
+
+    @Override
+    @Transactional
+    public Review submitParticipantReview(
+            final long actorUserId,
+            final long reservationId,
+            final Integer rating,
+            final String comment,
+            final String imageName,
+            final String imageContentType,
+            final byte[] imageBytes) {
+        if (reservationService.getOwnerReservationById(actorUserId, reservationId).isPresent()) {
+            submitOwnerReviewOfRider(
+                    actorUserId, reservationId, rating, comment, imageName, imageContentType, imageBytes);
+            return requireParticipantReview(reservationId, false);
+        }
+        if (reservationService.getRiderReservationById(actorUserId, reservationId).isPresent()) {
+            submitRiderReviewOfOwner(
+                    actorUserId, reservationId, rating, comment, imageName, imageContentType, imageBytes);
+            return requireParticipantReview(reservationId, true);
+        }
+        throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+    }
+
+    private Review requireParticipantReview(final long reservationId, final boolean madeByRider) {
+        return getReviewsForReservation(reservationId).stream()
+                .filter(review -> review.isMadeByRider() == madeByRider)
+                .findFirst()
+                .orElseThrow(() -> new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED));
+    }
+
+    @Override
     @Transactional
     public void submitOwnerReviewOfRider(
             final long ownerUserId,
@@ -173,6 +219,9 @@ public class ReviewServiceImpl implements ReviewService {
         if (!r.isCarReturned()) {
             throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
         }
+        // Rated reviews must arrive inside the grace window; null-rating omit/skip may run after
+        // the window (scheduler). Same rule as the SPA form gate.
+        requireOwnerReviewWindowOpen(r);
         if (reviewDao.existsReview(reservationId, false)) {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
@@ -222,12 +271,41 @@ public class ReviewServiceImpl implements ReviewService {
         if (!OffsetDateTime.now(ZoneOffset.UTC).isAfter(r.getEndDate())) {
             throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
         }
+        requireRiderReviewWindowOpen(r);
         if (reviewDao.existsReview(reservationId, true)) {
             throw new RiderReservationException(MessageKeys.REVIEW_ALREADY_SUBMITTED);
         }
         final Long imageId = persistOptionalReviewImage(imageName, imageContentType, imageBytes);
         reviewDao.insertReview(reservationId, true, rating, storedComment, imageId);
         refreshAggregatesAfterRiderReview(r);
+    }
+
+    /**
+     * Rejects a rated owner review after {@code review-auto-skip-days} from {@code carReturnedAt}
+     * (falls back to {@code endDate} when the timestamp is missing on legacy rows).
+     */
+    private void requireOwnerReviewWindowOpen(final Reservation r) {
+        final int days = reservationTimingPolicy.getReviewAutoSkipDays();
+        if (days < 1) {
+            return;
+        }
+        final OffsetDateTime windowStart = r.getCarReturnedAt().orElse(r.getEndDate());
+        if (!OffsetDateTime.now(ZoneOffset.UTC).isBefore(windowStart.plusDays(days))) {
+            throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+        }
+    }
+
+    /**
+     * Rejects a rated rider review after {@code review-auto-skip-days} from {@code endDate}.
+     */
+    private void requireRiderReviewWindowOpen(final Reservation r) {
+        final int days = reservationTimingPolicy.getReviewAutoSkipDays();
+        if (days < 1) {
+            return;
+        }
+        if (!OffsetDateTime.now(ZoneOffset.UTC).isBefore(r.getEndDate().plusDays(days))) {
+            throw new RiderReservationException(MessageKeys.REVIEW_NOT_ALLOWED);
+        }
     }
 
     /**

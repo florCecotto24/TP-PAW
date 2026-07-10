@@ -8,9 +8,8 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.cors.CorsConfiguration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.context.annotation.Bean;
@@ -127,7 +126,7 @@ public class WebAuthConfig {
             final HttpSecurity http,
             final AuthenticationManager authenticationManager,
             final JwtAuthenticationFilter jwtFilter,
-            final CorsConfigurationSource corsConfigurationSource,
+            final ObjectProvider<CorsConfigurationSource> corsConfigurationSource,
             final SecurityContextRepository securityContextRepository) throws Exception {
 
         http
@@ -151,28 +150,29 @@ public class WebAuthConfig {
                         .permitAll()
                         // CORS preflight (harmless when same-origin).
                         .requestMatchers(ant(HttpMethod.OPTIONS, "/**")).permitAll()
-                        // Public reads: catalog + public car/profile data.
+                        // Public reads: catalog + public car/profile data (Jersey under /api/*).
                         .requestMatchers(
-                                ant(HttpMethod.GET, "/"),
-                                ant(HttpMethod.GET, "/cars"),
-                                ant(HttpMethod.GET, "/cars/**"),
-                                ant(HttpMethod.GET, "/brands"),
-                                ant(HttpMethod.GET, "/brands/**"),
-                                ant(HttpMethod.GET, "/models"),
-                                ant(HttpMethod.GET, "/models/**"),
-                                ant(HttpMethod.GET, "/neighborhoods"),
-                                ant(HttpMethod.GET, "/neighborhoods/**"),
-                                ant(HttpMethod.GET, "/users/*"),
-                                ant(HttpMethod.GET, "/users/*/profile-picture"),
-                                ant(HttpMethod.GET, "/users/*/reviews"),
-                                ant(HttpMethod.GET, "/image/*"))
+                                ant(HttpMethod.GET, "/api"),
+                                ant(HttpMethod.GET, "/api/"),
+                                ant(HttpMethod.GET, "/api/cars"),
+                                ant(HttpMethod.GET, "/api/cars/**"),
+                                ant(HttpMethod.GET, "/api/brands"),
+                                ant(HttpMethod.GET, "/api/brands/**"),
+                                ant(HttpMethod.GET, "/api/models"),
+                                ant(HttpMethod.GET, "/api/neighborhoods"),
+                                ant(HttpMethod.GET, "/api/neighborhoods/**"),
+                                ant(HttpMethod.GET, "/api/users/*"),
+                                ant(HttpMethod.GET, "/api/users/*/profile-picture"),
+                                ant(HttpMethod.GET, "/api/reviews"),
+                                ant(HttpMethod.GET, "/api/reviews/*"),
+                                ant(HttpMethod.GET, "/api/image/*"))
                         .permitAll()
                         // Account bootstrap: registration + OTP credential issuance (no verb URLs).
-                        .requestMatchers(ant(HttpMethod.POST, "/users")).permitAll()
-                        .requestMatchers(ant(HttpMethod.POST, "/credentials")).permitAll()
-                        .requestMatchers(ant(HttpMethod.POST, "/users/*/credentials")).permitAll()
+                        .requestMatchers(ant(HttpMethod.POST, "/api/users")).permitAll()
+                        .requestMatchers(ant(HttpMethod.POST, "/api/credentials")).permitAll()
+                        .requestMatchers(ant(HttpMethod.POST, "/api/users/*/credentials")).permitAll()
                         // PATCH /users/{id}: password reset via Basic OTP, or self/admin profile updates.
-                        .requestMatchers(ant(HttpMethod.PATCH, "/users/*")).permitAll()
+                        .requestMatchers(ant(HttpMethod.PATCH, "/api/users/*")).permitAll()
                         // Everything else needs authentication; owner/admin/participant scoping is per-resource.
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
@@ -180,29 +180,16 @@ public class WebAuthConfig {
                         .accessDeniedHandler(restAccessDeniedHandler()))
                 // Runs before anonymous + authorization so a valid token populates the context first.
                 .addFilterBefore(jwtFilter, AnonymousAuthenticationFilter.class)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource));
+                .cors(cors -> {
+                    final CorsConfigurationSource source = corsConfigurationSource.getIfAvailable();
+                    if (source != null) {
+                        cors.configurationSource(source);
+                    } else {
+                        cors.disable();
+                    }
+                });
 
         return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        final CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of(
-                "Link",
-                "X-Total-Count",
-                "X-Access-Token",
-                "X-Refresh-Token",
-                "Location",
-                "WWW-Authenticate",
-                "Content-Type"));
-
-        final UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     private static AntPathRequestMatcher ant(final String pattern) {

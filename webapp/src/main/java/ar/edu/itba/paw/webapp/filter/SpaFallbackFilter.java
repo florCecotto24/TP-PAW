@@ -29,15 +29,8 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
                                     final HttpServletResponse response,
                                     final FilterChain filterChain) throws ServletException, IOException {
         if (isStaticAsset(request)) {
-            // Bypass Jersey entirely: the jersey filter is mapped to "/*" (its @Path resources
-            // assume the request path is matched from the context root), so it can't be scoped to
-            // exclude these prefixes without shifting how it resolves every other @Path. Since none
-            // of the filters declared below (jersey included) request FORWARD dispatch in web.xml,
-            // this forward skips straight to the "default" servlet mapping for /public|/assets|etc.
-            // Without this, an unmatched path here becomes Jersey's own internal NotFoundException,
-            // which WebApplicationExceptionMapper (a catch-all with no way to tell "no route matched"
-            // apart from an application-thrown 404) turns into a real JSON 404 response — defeating
-            // jersey.config.servlet.filter.forwardOn404 and breaking every static asset (see B4).
+            // Bypass Jersey: mapped to /api/* only, but static assets must still reach the default
+            // servlet before any API filter runs on overlapping paths (lesson B4).
             request.getRequestDispatcher(staticAssetPath(request)).forward(request, response);
             return;
         }
@@ -58,6 +51,10 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
     }
 
     private static boolean isApiRequest(final HttpServletRequest request) {
+        final String path = staticAssetPath(request);
+        if (path.equals("/api") || path.startsWith("/api/")) {
+            return true;
+        }
         final String accept = request.getHeader(HttpHeaders.ACCEPT);
         return accept != null && accept.contains(VND_PAW_ACCEPT_PREFIX);
     }

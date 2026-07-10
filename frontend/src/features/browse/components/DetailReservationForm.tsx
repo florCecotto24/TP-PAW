@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { DetailReservationPanel } from '../../../components/ryden';
+import { DetailReservationPanel, LoadingBlock } from '../../../components/ryden';
 import { newReservation } from '../../../routes/paths';
 import {
   applyRangeProjection,
@@ -154,7 +154,7 @@ export default function DetailReservationForm({
       minimumRentalDays={minimumRentalDays}
       calendarSlot={
         segmentsQuery.isLoading ? (
-          <p className="text-secondary small">{t('app.loading')}</p>
+          <LoadingBlock variant="inline" />
         ) : (
           <DetailReservationInlineCalendar
             segments={segments}

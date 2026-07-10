@@ -353,7 +353,31 @@ public class ReviewJpaDao implements ReviewDao {
 
     @Override
     @SuppressWarnings("unchecked")
+    public Page<Review> findReviewsReceivedByUser(final long userId, final int page, final int pageSize) {
+        final long total = countReviewsReceivedByUser(userId);
+        if (total == 0L) {
+            return new Page<>(Collections.emptyList(), page, pageSize, 0L);
+        }
+
+        final List<Long> ids = findReviewsReceivedByUserIds(userId, page, pageSize);
+        if (ids.isEmpty()) {
+            return new Page<>(Collections.emptyList(), page, pageSize, total);
+        }
+        final List<Review> content = hydrateReviewsReceivedByUserIds(ids);
+        return new Page<>(content, page, pageSize, total);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
     public Page<ReviewItemDto> findReviewsForUserPage(final long userId, final int page, final int pageSize) {
+        final Page<Review> entityPage = findReviewsReceivedByUser(userId, page, pageSize);
+        final List<ReviewItemDto> content = entityPage.getContent().stream()
+                .map(ReviewJpaDao::toReviewItemDto)
+                .collect(Collectors.toList());
+        return new Page<>(content, page, pageSize, entityPage.getTotalItems());
+    }
+
+    private long countReviewsReceivedByUser(final long userId) {
         final Long total = em.createQuery(
                         "SELECT COUNT(r) FROM Review r "
                                 + "WHERE r.rating IS NOT NULL AND ("
@@ -363,14 +387,12 @@ public class ReviewJpaDao implements ReviewDao {
                         Long.class)
                 .setParameter("userId", userId)
                 .getSingleResult();
-        if (total == null || total == 0L) {
-            return new Page<>(Collections.emptyList(), page, pageSize, 0L);
-        }
+        return total != null ? total : 0L;
+    }
 
-        // 1+1 query pattern (project rule: no LIMIT/OFFSET on JPQL): filter/order/page the two
-        // review directions in one native query keyed by the surrogate id, then hydrate via
-        // JOIN FETCH — same shape as findRecentReviewsForCounterparty, but with a single merged
-        // ORDER BY/LIMIT/OFFSET instead of one unpaginated LIMIT per direction.
+    @SuppressWarnings("unchecked")
+    private List<Long> findReviewsReceivedByUserIds(
+            final long userId, final int page, final int pageSize) {
         final List<Number> idRows = em.createNativeQuery(
                         "SELECT r.id "
                                 + "FROM reviews r "
@@ -386,42 +408,45 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("limit", pageSize)
                 .setParameter("offset", page * pageSize)
                 .getResultList();
-        if (idRows.isEmpty()) {
-            return new Page<>(Collections.emptyList(), page, pageSize, total);
-        }
+        return idRows.stream().map(Number::longValue).collect(Collectors.toList());
+    }
 
-        final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
+    @SuppressWarnings("unchecked")
+    private List<Review> hydrateReviewsReceivedByUserIds(final List<Long> ids) {
         final List<Review> hydrated = em.createQuery(
                         "FROM Review r "
                                 + "JOIN FETCH r.reservation res "
                                 + "JOIN FETCH res.rider rider "
                                 + "JOIN FETCH res.car c "
                                 + "JOIN FETCH c.owner owner "
+                                + "LEFT JOIN FETCH r.image "
                                 + "WHERE r.id IN :ids",
                         Review.class)
                 .setParameter("ids", ids)
                 .getResultList();
         final Map<Long, Review> byId = hydrated.stream()
                 .collect(Collectors.toMap(Review::getId, Function.identity()));
-
-        final List<ReviewItemDto> content = new ArrayList<>(ids.size());
+        final List<Review> ordered = new ArrayList<>(ids.size());
         for (final Long id : ids) {
-            final Review r = byId.get(id);
-            if (r == null) {
-                continue;
+            final Review review = byId.get(id);
+            if (review != null) {
+                ordered.add(review);
             }
-            final User reviewer = r.isMadeByRider()
-                    ? r.getReservation().getRider()
-                    : r.getReservation().getCar().getOwner();
-            content.add(new ReviewItemDto(
-                    r.getId(),
-                    r.getReservationId(),
-                    reviewer.getForename() + " " + reviewer.getSurname(),
-                    r.getRating().orElse(0),
-                    r.getCreatedAt().toLocalDate(),
-                    r.getComment().orElse(null)));
         }
-        return new Page<>(content, page, pageSize, total);
+        return ordered;
+    }
+
+    private static ReviewItemDto toReviewItemDto(final Review review) {
+        final User reviewer = review.isMadeByRider()
+                ? review.getReservation().getRider()
+                : review.getReservation().getCar().getOwner();
+        return new ReviewItemDto(
+                review.getId(),
+                review.getReservationId(),
+                reviewer.getForename() + " " + reviewer.getSurname(),
+                review.getRating().orElse(0),
+                review.getCreatedAt().toLocalDate(),
+                review.getComment().orElse(null));
     }
 
     private static BigDecimal round2(final Double avg) {

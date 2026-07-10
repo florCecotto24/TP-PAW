@@ -72,11 +72,11 @@ public final class JwtTokenService implements TokenService {
             final JwtTokenType type = JwtTokenType.fromClaim(String.valueOf(claims.get(CLAIM_TOKEN_TYPE)));
             return new ParsedJwt(type, toPrincipal(claims));
         } catch (ExpiredJwtException ex) {
-            LOGGER.debug("Expired JWT token");
+            LOGGER.atDebug().setCause(ex).log("Expired JWT token");
         } catch (SignatureException ex) {
-            LOGGER.debug("Invalid JWT signature");
+            LOGGER.atDebug().setCause(ex).log("Invalid JWT signature");
         } catch (MalformedJwtException | UnsupportedJwtException | IllegalArgumentException ex) {
-            LOGGER.debug("Invalid JWT token: {}", ex.getMessage());
+            LOGGER.atDebug().setCause(ex).log("Invalid JWT token");
         }
         return null;
     }
@@ -137,7 +137,7 @@ public final class JwtTokenService implements TokenService {
         }
         final byte[] random = new byte[64];
         new SecureRandom().nextBytes(random);
-        LOGGER.warn("app.security.jwt.secret is blank — using a random key (tokens reset on restart)");
+        LOGGER.atWarn().log("app.security.jwt.secret is blank — using a random key (tokens reset on restart)");
         return Keys.hmacShaKeyFor(Base64.getEncoder().encodeToString(random).getBytes(StandardCharsets.UTF_8));
     }
 }

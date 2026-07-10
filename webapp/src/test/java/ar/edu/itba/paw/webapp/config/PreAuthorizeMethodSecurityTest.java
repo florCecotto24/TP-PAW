@@ -32,23 +32,30 @@ class PreAuthorizeMethodSecurityTest {
 
     @Test
     void testPreAuthorizeDeniesOnConcreteComponentWithoutInterface() {
+        // 1.Arrange
         try (AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext(TestConfig.class)) {
             SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("user", "pass"));
             final GuardedComponent bean = context.getBean(GuardedComponent.class);
 
+            // 2.Act / 3.Assert
             assertThrows(AccessDeniedException.class, () -> bean.guarded(false));
         }
     }
 
     @Test
     void testPreAuthorizeAllowsOnConcreteComponentWithoutInterface() {
+        // 1.Arrange
         try (AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext(TestConfig.class)) {
             SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken("user", "pass"));
             final GuardedComponent bean = context.getBean(GuardedComponent.class);
 
-            assertEquals("ok", bean.guarded(true));
+            // 2.Act
+            final String result = bean.guarded(true);
+
+            // 3.Assert
+            assertEquals("ok", result);
         }
     }
 

@@ -13,37 +13,39 @@
 /* Custom Input Styles */
 .custom-label {
     font-weight: 500;
-    color: #374151;
+    color: var(--color-text);
     margin-bottom: 0.5rem;
 }
 
 .custom-input {
-    border: 1px solid #d1d5db;
-    border-radius: 0.375rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: var(--radius-btn, 10px);
     padding: 0.625rem 0.875rem;
     font-size: 1rem;
+    background-color: var(--color-surface);
+    color: var(--color-text);
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .custom-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
     outline: none;
 }
 
 .custom-input:disabled {
-    background-color: #f3f4f6;
-    color: #9ca3af;
+    background-color: var(--color-surface-elevated);
+    color: var(--color-text-tertiary);
     cursor: not-allowed;
 }
 
 .custom-input[readonly] {
-    background-color: #f9fafb;
-    color: #6b7280;
+    background-color: var(--color-surface-elevated);
+    color: var(--color-text-muted);
 }
 
 .custom-input::placeholder {
-    color: #9ca3af;
+    color: var(--color-text-tertiary);
 }
 
 .form-control.form-control-verify-email-locked {
@@ -87,9 +89,6 @@
     color: #dc3545;
 }
 /* Modal — colour tokens owned by ryden-theme.css; only layout-critical vars live here */
-:root {
-    --navbar-height: 65px;
-}
 
 * {
     box-sizing: border-box;
@@ -103,7 +102,7 @@ body {
 }
 
 body.has-fixed-navbar {
-    padding-top: var(--navbar-height);
+    padding-top: var(--ryden-navbar-h);
 }
 
 /* Global "your account is blocked" banner injected by navbar.tag.
@@ -116,7 +115,7 @@ body.has-fixed-navbar {
      paired padding-top: 0.1px on the body prevents that margin from collapsing into the body's
      own margin (which would leave the banner hidden behind the fixed navbar). */
 .ryden-blocked-banner {
-    margin-top: var(--navbar-height);
+    margin-top: var(--ryden-navbar-h);
 }
 body.has-fixed-navbar .ryden-blocked-banner {
     margin-top: 0;
@@ -131,7 +130,7 @@ body.auth-page {
 }
 
 .auth-page__shell {
-    height: calc(100dvh - var(--navbar-height));
+    height: calc(100dvh - var(--ryden-navbar-h));
     display: flex;
     flex-direction: column;
     padding: 0 1rem;
@@ -429,28 +428,6 @@ body.modal-open {
     overflow: hidden;
     box-shadow: var(--shadow-card, 0 2px 12px rgba(0, 0, 0, 0.055));
     background-color: var(--color-surface, #ffffff);
-    transition: transform 180ms ease, box-shadow 180ms ease;
-    will-change: transform;
-}
-
-.carcard:hover,
-.carcard:focus-within {
-    transform: translateY(-0.5px); /* slight movement up */
-    box-shadow: 0 10px 10px rgba(0, 0, 0, 0.07); /* optional depth */
-}
-
-
-
-/* Accessibility: respect system setting */
-@media (prefers-reduced-motion: reduce) {
-    .carcard {
-        transition: none;
-    }
-
-    .carcard:hover,
-    .carcard:focus-within {
-        transform: none;
-    }
 }
 
 .carcard-image {
@@ -739,8 +716,12 @@ body.modal-open {
     justify-content: center;
 }
 
+.ryden-search-submit {
+    flex-shrink: 0;
+}
+
 .search-menu {
-    top: 55px;
+    top: var(--ryden-navbar-h);
     z-index: 1000;
     padding-top: 1.5rem;
     /* The bottom breathing space below the search card lives in margin (not padding) so the
@@ -1011,13 +992,14 @@ body.modal-open {
 }
 
 .detail-reservation-disclaimer {
-    letter-spacing: 0.04em;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--color-text-muted);
 }
 
 .detail-reservation-sticky {
     position: sticky;
-    top: calc(var(--navbar-height) + 1rem);
+    top: calc(var(--ryden-navbar-h) + 1rem);
 }
 
 @media (max-width: 991.98px) {
@@ -1274,26 +1256,6 @@ select.form-select.ryden-car-spec-select option {
     letter-spacing: 0.04em;
 }
 
-.reservation-status-badge--accepted {
-    background: rgba(22, 163, 74, 0.14);
-    color: #166534;
-}
-
-.reservation-status-badge--started {
-    background: rgba(37, 99, 235, 0.14);
-    color: #1d4ed8;
-}
-
-.reservation-status-badge--cancelled {
-    background: rgba(220, 38, 38, 0.14);
-    color: #b91c1c;
-}
-
-.reservation-status-badge--finished {
-    background: rgba(71, 85, 105, 0.18);
-    color: #334155;
-}
-
 .reservation-detail-car-media {
     width: min(100%, 220px);
     aspect-ratio: 4 / 3;
@@ -1303,7 +1265,7 @@ select.form-select.ryden-car-spec-select option {
 
 .reservation-detail-sticky {
     position: sticky;
-    top: calc(var(--navbar-height) + 1rem);
+    top: calc(var(--ryden-navbar-h) + 1rem);
 }
 
 @media (max-width: 991.98px) {
@@ -1326,8 +1288,8 @@ body.reservation-chat-body.has-fixed-navbar {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0.5rem;
-    height: calc(100dvh - var(--navbar-height));
-    max-height: calc(100dvh - var(--navbar-height));
+    height: calc(100dvh - var(--ryden-navbar-h));
+    max-height: calc(100dvh - var(--ryden-navbar-h));
     overflow: hidden;
     width: 100%;
     max-width: 1140px;
@@ -1364,7 +1326,7 @@ body.reservation-chat-body.has-fixed-navbar {
     overflow: hidden;
 }
 
-/* Chat embebido en detalle de reserva (no ocupa viewport completo). */
+/* Chat embebido en detalle de reserva (legacy; sustituido por widget flotante). */
 .reservation-chat-card--embedded {
     height: auto;
     overflow: visible;
@@ -1390,6 +1352,151 @@ body.reservation-chat-body.has-fixed-navbar {
     height: 20rem;
     min-height: 20rem;
     max-height: 20rem;
+}
+
+/* Widget flotante estilo Messenger (desktop) */
+.reservation-chat-widget {
+    position: fixed;
+    bottom: 0;
+    right: 1.5rem;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+.reservation-chat-widget > * {
+    pointer-events: auto;
+}
+
+.reservation-chat-widget__launcher {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 24rem;
+    max-width: calc(100vw - 3rem);
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: #075e54;
+    color: #fff;
+    box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.18);
+    cursor: pointer;
+    transition: filter 0.15s ease;
+}
+
+.reservation-chat-widget__launcher:hover {
+    filter: brightness(1.05);
+}
+
+.reservation-chat-widget__launcher-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-align: left;
+}
+
+.reservation-chat-widget__launcher-icon {
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.reservation-chat-widget__window {
+    display: flex;
+    flex-direction: column;
+    width: 26rem;
+    max-width: calc(100vw - 3rem);
+    height: 32rem;
+    max-height: calc(100dvh - var(--ryden-navbar-h) - 1rem);
+    border-radius: 0.75rem 0.75rem 0 0;
+    overflow: hidden;
+    box-shadow: 0 -8px 40px rgba(15, 23, 42, 0.22);
+}
+
+.reservation-chat-widget__header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    background: #075e54;
+    color: #fff;
+}
+
+.reservation-chat-widget__header-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.9375rem;
+}
+
+.reservation-chat-widget__minimize {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.reservation-chat-widget__minimize:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.reservation-chat-widget__avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    object-fit: cover;
+}
+
+.reservation-chat-widget__avatar.reservation-chat-header__avatar--placeholder {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.reservation-chat-card--floating {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    overflow: hidden;
+}
+
+.reservation-chat-card--floating .reservation-chat-card__body,
+.reservation-chat-card--floating .reservation-chat-shell,
+.reservation-chat-card--floating .reservation-chat__drop-zone,
+.reservation-chat-card--floating .reservation-chat__history-nav,
+.reservation-chat-card--floating .reservation-chat__messages-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.reservation-chat-card--floating .reservation-chat-page__messages {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+}
+
+.reservation-chat-card--floating .reservation-chat-shell {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+
+.reservation-chat-card--floating .reservation-chat-page__composer {
+    margin-top: 0.75rem;
 }
 
 .reservation-chat-shell {
@@ -1454,7 +1561,7 @@ body.reservation-chat-body.has-fixed-navbar {
     padding: calc(0.75rem + var(--chat-top-inset)) 1rem 0.75rem;
     font-size: 1rem;
     line-height: 1.4;
-    background: var(--color-surface-elevated, #F5F4F0);
+    background: #efeae2;
 }
 
 .reservation-chat-page__messages--empty {
@@ -1579,8 +1686,8 @@ body.reservation-chat-body.has-fixed-navbar {
     flex-wrap: wrap;
     padding: 0.625rem 1rem;
     padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
-    background: var(--color-bg);
-    border-top: 1px solid var(--color-border);
+    background: #f0f2f5;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
     position: relative;
     z-index: 2;
 }
@@ -1594,7 +1701,7 @@ body.reservation-chat-body.has-fixed-navbar {
 .reservation-chat-page__error {
     flex-shrink: 0;
     padding: 0 1rem 0.5rem;
-    background: var(--color-bg);
+    background: #f0f2f5;
 }
 
 .reservation-chat__day-separator {
@@ -1744,8 +1851,8 @@ body.reservation-chat-body.has-fixed-navbar {
 }
 
 .reservation-chat__bubble--mine {
-    background: var(--color-primary-soft, rgba(110, 141, 184, 0.12));
-    border: 1px solid rgba(110, 141, 184, 0.15);
+    background: #d9fdd3;
+    border: 1px solid rgba(15, 23, 42, 0.04);
     box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
 }
 
@@ -1772,7 +1879,7 @@ body.reservation-chat-body.has-fixed-navbar {
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
-    background: rgba(245, 244, 240, 0.4);
+    background: rgba(239, 234, 226, 0.72);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     pointer-events: none;
@@ -1794,7 +1901,7 @@ body.reservation-chat-body.has-fixed-navbar {
     color: #334155;
     text-align: center;
     background: rgba(255, 255, 255, 0.92);
-    border: 2px dashed rgba(110, 141, 184, 0.55);
+    border: 2px dashed #25d366;
     border-radius: 0.75rem;
     box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
@@ -1806,8 +1913,8 @@ body.reservation-chat-body.has-fixed-navbar {
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
-    background: var(--color-surface-elevated, #f5f4f0);
-    border-top: 1px solid var(--color-border);
+    background: #f0f2f5;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .reservation-chat__pending-name {
@@ -1827,7 +1934,7 @@ body.reservation-chat-body.has-fixed-navbar {
 .reservation-chat__upload-progress-bar {
     height: 100%;
     width: 0%;
-    background: var(--color-primary, #6e8db8);
+    background: #25d366;
     transition: width 0.15s ease;
 }
 
@@ -2563,7 +2670,7 @@ body.reservation-chat-body.has-fixed-navbar {
     font-weight: 700;
     line-height: 1.1;
     white-space: nowrap;
-    color: #0d6efd;
+    color: var(--color-primary);
     background: rgba(255, 255, 255, 0.95);
     padding: 0.1rem 0.35rem;
     border-radius: 0.25rem;
@@ -2578,7 +2685,7 @@ body.reservation-chat-body.has-fixed-navbar {
 }
 
 .ryden-price-insight__marker--bound:focus-visible .ryden-price-insight__marker-dot {
-    outline: 2px solid #0d6efd;
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
@@ -2619,11 +2726,11 @@ body.reservation-chat-body.has-fixed-navbar {
 
 .ryden-price-insight__marker--user .ryden-price-insight__marker-dot {
     transform: translateY(-50%);
-    background-color: #0d6efd;
+    background-color: var(--color-primary);
     width: 1.15rem;
     height: 1.15rem;
     border-width: 3px;
-    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 0 0 2px var(--color-primary-glow), 0 2px 6px rgba(0, 0, 0, 0.25);
     cursor: inherit;
 }
 

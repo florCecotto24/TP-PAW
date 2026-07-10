@@ -16,3 +16,5 @@ app.security.remember-me.key=change-me-remember-me-key
 # Gmail / SMTP app password
 mail.server.password=change-me-smtp
 
+# CORS is disabled when the "local" profile is inactive (default on Pampero): SPA and API share the same
+# origin from this WAR. Do not re-enable wildcard CORS in production.

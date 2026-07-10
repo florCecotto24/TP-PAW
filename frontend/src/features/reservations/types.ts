@@ -14,7 +14,20 @@ export type ReservationStatus =
   | 'finished';
 
 /**
- * Reserva (lectura). `links` trae: self, car, rider, owner, messages, reviews,
+ * Teaser de reserva para colecciones (mis reservas, admin listado).
+ */
+export interface ReservationSummaryDto {
+  startDate: string;
+  endDate: string;
+  status: ReservationStatus;
+  totalPrice: number;
+  brandName: string;
+  modelName: string;
+  links: Links;
+}
+
+/**
+ * Reserva (lectura completa). `links` trae: self, car, rider, owner, messages, reviews,
  * payment-receipt, refund-receipt. Se navegan, no se arman a mano.
  */
 export interface ReservationDto {
@@ -23,6 +36,8 @@ export interface ReservationDto {
   status: ReservationStatus;
   totalPrice: number;
   carReturned: boolean;
+  /** Momento de devolución (UTC); inicio de la ventana de reseña del owner. */
+  carReturnedAt?: string | null;
   paymentProofDeadlineAt?: string | null;
   refundProofDeadlineAt?: string | null;
   paymentRefundRequired: boolean;

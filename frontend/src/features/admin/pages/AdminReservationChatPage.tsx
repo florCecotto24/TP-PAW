@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { fetchUserPublic, openAuthenticatedBinary } from '../api';
+import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { paths } from '../../../routes/paths';
 import AdminPagination from '../components/AdminPagination';
@@ -78,10 +79,10 @@ export default function AdminReservationChatPage() {
       />
 
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {list.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+      {list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {!list.loading && list.items.length === 0 ? (
-        <p className="text-secondary">{t('admin.reservationChat.noMessages')}</p>
+        <EmptyState icon="chat-dots" title={t('admin.reservationChat.noMessages')} inCard />
       ) : null}
 
       {!list.loading && list.items.length > 0 ? (

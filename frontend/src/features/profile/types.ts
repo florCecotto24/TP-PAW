@@ -94,7 +94,19 @@ export type CarStatus =
   | 'unavailable'
   | 'deactivated';
 
-/** CarDto (lectura). Usado en favoritos y en los autos activos del perfil. */
+/** Teaser de auto para colecciones (favoritos, autos activos en perfil). */
+export interface CarSummaryDto {
+  brandName: string;
+  modelName: string;
+  status: CarStatus;
+  minimumRentalDays: number;
+  ratingAvg?: number | null;
+  dayPrice?: number | null;
+  modelValidated: boolean;
+  links: Links & { owner?: string; pictures?: string; cover?: string };
+}
+
+/** CarDto completo (lectura). */
 export interface CarDto {
   plate: string;
   year?: number | null;
@@ -110,17 +122,4 @@ export interface CarDto {
   modelValidated: boolean;
   createdAt: string;
   links: Links & { owner?: string; pictures?: string; cover?: string };
-}
-
-/**
- * Reseña RECIBIDA por un usuario (perfil público). Mapea UserReviewDto del
- * backend: combina las recibidas como dueño y como conductor. `comment` puede
- * faltar (reseña sin texto). `createdAt` es fecha local (YYYY-MM-DD).
- */
-export interface UserReviewDto {
-  rating: number;
-  comment?: string | null;
-  authorName: string;
-  createdAt: string;
-  links: Links;
 }

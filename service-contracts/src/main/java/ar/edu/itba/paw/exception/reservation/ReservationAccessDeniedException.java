@@ -13,11 +13,15 @@ import ar.edu.itba.paw.exception.MessageKeys;
  */
 public final class ReservationAccessDeniedException extends ReservationException {
 
-    public ReservationAccessDeniedException() {
-        super(MessageKeys.RESERVATION_CANCEL_NOT_ALLOWED);
+    private ReservationAccessDeniedException(final String messageCode, final Object... args) {
+        super(messageCode, args);
     }
 
-    public ReservationAccessDeniedException(final String messageCode, final Object... args) {
-        super(messageCode, args);
+    public static ReservationAccessDeniedException denied() {
+        return new ReservationAccessDeniedException(MessageKeys.RESERVATION_CANCEL_NOT_ALLOWED);
+    }
+
+    public static ReservationAccessDeniedException withCode(final String messageCode, final Object... args) {
+        return new ReservationAccessDeniedException(messageCode, args);
     }
 }

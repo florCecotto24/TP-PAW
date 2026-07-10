@@ -15,7 +15,7 @@ openapi: 3.0.3
 # Convenciones transversales (aplican a TODAS las operaciones, no se repiten
 # en cada una para no inflar el spec):
 #   - Versionado y formato por MIME type propio (Accept / Content-Type):
-#       application/vnd.paw.<entidad>.v1+json   (y +xml)
+#       application/vnd.paw.<entidad>.v1+json
 #     NUNCA application/json genérico.
 #   - Autenticación stateless por header Authorization (Basic para "loguear",
 #     Bearer para el resto). NO hay /login, /register, /refresh. Ver
@@ -28,7 +28,16 @@ openapi: 3.0.3
 #     honrando los query params de filtro. El body es solo la lista de
 #     entidades, nunca {content,page,totalPages}.
 #   - Toda representación trae un bloque `links` con `self` + relacionados.
-#     Nada embebido. Los links se generan on-the-fly con UriInfo.
+#     Los links se generan on-the-fly con UriInfo; nunca se persisten.
+#   - Colecciones: dos patrones documentados (ver info.description y AGENTS.md
+#     § Hypermedia collections):
+#       (A) link-only — colección de otros recursos canónicos (similar,
+#           favoritos, reviews, reservations): body = array de Links; el
+#           cliente hace follow de cada self (N+1 HTTP intencional).
+#       (B) embedded — colección principal, sub-recurso o valor sin URN
+#           propia (GET /cars browse, pictures, availabilities, messages,
+#           bookable-segments, catálogo): body = DTOs con links.self en
+#           cada ítem hacia la URN canónica del miembro.
 ##############################################################################
 
 info:
@@ -40,13 +49,36 @@ info:
     estáticos desde Tomcat (sin SSR). Esta especificación es el contrato
     público (DTOs), independiente del modelo de dominio.
 
+    ## Colecciones: link-only vs embedded (decisión de diseño REST)
+
+    Alineado con lineamientos de la cátedra (ver AGENTS.md):
+    (no embeber *otros* recursos en el padre; navegar URNs, no IDs sueltos).
+
+    **Link-only (patrón A)** — la colección lista *referencias* a recursos que
+    ya tienen URN canónica en otro path. Body: `array` de `Links` (`self` only).
+    El cliente sigue cada `self` con el MIME del ítem. N+1 HTTP **previsto**.
+    Endpoints: `/cars/{id}/similar`, `/users/{id}/favorites`, `GET /reviews`,
+    `GET /reservations`.
+
+    **Embedded (patrón B)** — permitido cuando (1) la colección *es* la vista
+    principal de ese recurso o sub-recurso, (2) los ítems no son copias de
+    otro agregado sino miembros de *esta* colección, y (3) cada ítem incluye
+    `links.self` hacia su URN canónica. Endpoints: `GET /cars` (browse),
+    `/cars/{id}/pictures`, `/cars/{id}/availabilities`,
+    `/reservations/{id}/messages`, `/cars/{id}/bookable-segments` (valores
+    calculados sin URN), catálogo (`/brands`, `/neighborhoods`, …).
+
+    Detalle operativo: `AGENTS.md` § Hypermedia collections.
+
 servers:
-  - url: /webapp
+  - url: /webapp/api
     description: >
-      Context path en Tomcat local (WAR desplegado como webapp.war).
-      En Jetty dev (`mvn jetty:run`) el context path es `/` — ajustar el prefijo al probar.
-  - url: /
-    description: Raíz de la API en Jetty dev o despliegue sin context path
+      API bajo el context path del WAR en Tomcat local (webapp.war).
+      La SPA vive en /webapp/; los recursos REST en /webapp/api/.
+  - url: /api
+    description: >
+      API en Jetty dev (`mvn jetty:run`, context path `/`) o despliegue sin context path.
+      Ajustar el prefijo al probar según `server.servlet.context-path`.
 
 tags:
   - name: index
@@ -126,7 +158,9 @@ paths:
         - name: q
           in: query
           schema: { type: string }
-          description: Búsqueda por nombre/email.
+          description: >
+            Búsqueda parcial (case-insensitive) por email, nombre, apellido o
+            nombre completo. Solo admin.
       responses:
         "200":
           description: Lista de usuarios.
@@ -210,30 +244,6 @@ paths:
               schema: { $ref: "#/components/schemas/UserDto" }
             application/vnd.paw.user.private.v1+json:
               schema: { $ref: "#/components/schemas/UserPrivateDto" }
-            application/vnd.paw.user.v1+xml:
-              schema: { $ref: "#/components/schemas/UserDto" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-    put:
-      tags: [users]
-      summary: Reemplazar el perfil completo del usuario (self/admin)
-      description: >
-        PUT reemplaza la entidad completa (atributos null se interpretan como
-        borrado del dato). Para cambios parciales/transiciones usar PATCH.
-        Los `links` NO se persisten, así que enviarlos o no es indistinto.
-      requestBody:
-        required: true
-        content:
-          application/vnd.paw.user.v1+json:
-            schema: { $ref: "#/components/schemas/UserDto" }
-      responses:
-        "200":
-          description: Usuario reemplazado.
-          content:
-            application/vnd.paw.user.v1+json:
-              schema: { $ref: "#/components/schemas/UserDto" }
-        "400": { $ref: "#/components/responses/ValidationError" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
@@ -355,7 +365,12 @@ paths:
     get:
       tags: [users]
       summary: Autos favoritos del usuario (self) — colección paginada
-      description: Los miembros son autos; se hipervinculan, no se embeben.
+      description: >
+        Colección paginada de links a autos favoritos. Cada ítem expone solo `self`;
+        seguir con `Accept: application/vnd.paw.car.summary.v1+json` para el teaser.
+        **Patrón A (link-only):** los miembros son autos cuya URN canónica es
+        `GET /cars/{id}`; no se embeben teasers en la colección del usuario.
+        N+1 HTTP previsto (ver `GET /cars/{id}/similar` y `AGENTS.md`).
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/pageSize"
@@ -366,10 +381,10 @@ paths:
             Link: { $ref: "#/components/headers/Link-Pagination" }
             X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
-            application/vnd.paw.car.v1+json:
+            application/vnd.paw.user.favorites.v1+json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/CarDto" }
+                items: { $ref: "#/components/schemas/Links" }
         "204": { description: Sin favoritos. }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -380,6 +395,15 @@ paths:
         in: path
         required: true
         schema: { type: integer, format: int64 }
+    get:
+      tags: [users]
+      summary: Comprobar membresía en favoritos (self, sin mutación)
+      description: >
+        204 cuando el auto está en favoritos; 404 cuando no lo está o el auto no existe.
+      responses:
+        "204": { description: Es favorito. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [users]
       summary: Marcar un auto como favorito (idempotente)
@@ -398,30 +422,6 @@ paths:
         "204": { description: Quitado (o no estaba). }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /users/{id}/reviews:
-    parameters:
-      - $ref: "#/components/parameters/idPath"
-    get:
-      tags: [users, reviews]
-      summary: Reseñas recibidas por el usuario (perfil público)
-      description: >
-        Reseñas que el usuario RECIBIÓ, combinando las recibidas como dueño
-        (de conductores) y como conductor (de dueños) en una sola lista, más
-        recientes primero. Proyección de solo lectura: trae el nombre del autor,
-        rating, fecha y comentario (sin id ni datos sensibles). Pública.
-      security:
-        - {}
-      responses:
-        "200":
-          description: Lista de reseñas recibidas.
-          content:
-            application/vnd.paw.review.v1+json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/UserReviewDto" }
-        "204": { description: Sin reseñas. }
-        "404": { $ref: "#/components/responses/NotFound" }
-
   #############################################################################
   # CREDENCIALES (OTP temporales) — sub-recursos sin verbos en la URL
   #############################################################################
@@ -433,24 +433,23 @@ paths:
       summary: Reemitir OTP de verificación de email
       description: >
         Tras POST /users el servidor envía un OTP por mail. Este endpoint
-        reemite el código si el email aún no está verificado (202 Accepted).
+        reemite el código si aplica (200 OK con cuerpo vacío, siempre uniforme).
         La verificación en sí es Basic auth email:otp — el OTP actúa como
         password, se consume al autenticar y devuelve JWT en headers (D3).
+        Anti-enumeración: la respuesta es indistinguible si el usuario no existe,
+        ya está verificado o ya tiene un código activo.
       security:
         - {}
       responses:
-        "202":
-          description: OTP emitido y enviado por email (si el usuario aplica).
-        "404": { $ref: "#/components/responses/NotFound" }
-        "409":
-          description: El email ya está verificado o hay un código activo sin expirar.
+        "200":
+          description: Respuesta uniforme (OTP emitido solo cuando aplica).
 
   /credentials:
     post:
       tags: [credentials]
       summary: Solicitar OTP de reseteo de password
       description: >
-        Body con email. SIEMPRE responde 202 (anti-enumeración). El OTP se
+        Body con email. SIEMPRE responde 200 con cuerpo vacío (anti-enumeración). El OTP se
         envía por email y actúa como password en Basic auth para completar
         el reset vía PATCH /users/{id} con password + passwordConfirm (D4).
         No hay URLs con verbos (/forgot-password, /reset, /verify, etc.).
@@ -466,8 +465,105 @@ paths:
                 email: { type: string, format: email }
               required: [email]
       responses:
-        "202":
-          description: Si la cuenta existe, se envió un OTP. (Respuesta uniforme.)
+        "200":
+          description: Respuesta uniforme (OTP emitido solo si la cuenta existe y aplica).
+
+  # --- Reviews canónicas ---
+  /reviews:
+    get:
+      tags: [reviews]
+      summary: Listar reseñas (colección canónica)
+      description: >
+        Requiere exactamente un filtro de ámbito: `carId` (públicas del auto),
+        `recipientUserId` (recibidas por el usuario en su perfil) o
+        `reservationId` (reseñas de esa reserva; 0–2 ítems, sin paginación).
+        Visibilidad por ítem: las reseñas que el llamante no puede ver se omiten
+        de la colección (no se responde 403). Un GET a `/reviews/{id}` sí responde
+        403 si el ítem no es visible.
+
+        **Patrón A (link-only):** cada reseña vive en `GET /reviews/{reviewId}`.
+        La colección filtrada devuelve solo `Links`; follow con `review.v1+json`.
+      parameters:
+        - name: carId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: recipientUserId
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: reservationId
+          in: query
+          schema: { type: integer, format: int64 }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSizeReviews"
+      responses:
+        "200":
+          description: Links a reseñas visibles.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
+          content:
+            application/vnd.paw.review.links.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Links" }
+        "204": { description: Colección vacía (o sin ítems visibles para el llamante). }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [reviews, reservations]
+      summary: Dejar una reseña (rider→owner u owner→rider)
+      description: >
+        Misma URI de colección que el GET. Requiere `reservationId` en query.
+        El lado (made_by_rider) se deriva del rol del llamante en la reserva.
+        Solo si la reserva está FINISHED y no existe ya una reseña de ese lado
+        (UNIQUE(reservation_id, made_by_rider)).
+      parameters:
+        - name: reservationId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string }
+                image: { type: string, format: binary }
+            encoding:
+              image: { contentType: image/* }
+      responses:
+        "201":
+          description: Reseña creada.
+          headers:
+            Location: { $ref: "#/components/headers/Location" }
+          content:
+            application/vnd.paw.review.v1+json:
+              schema: { $ref: "#/components/schemas/ReviewDto" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: Ya existe reseña de ese lado, o la reserva no está FINISHED.
+
+  /reviews/{reviewId}:
+    parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [reviews]
+      summary: Reseña individual por id (URN canónica)
+      responses:
+        "200":
+          description: La reseña.
+          content:
+            application/vnd.paw.review.v1+json:
+              schema: { $ref: "#/components/schemas/ReviewDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   #############################################################################
   # CARS  (incluye lo que el MVC llamaba "publicación")
@@ -481,19 +577,32 @@ paths:
         distintas pantallas del MVC (home cheapest/recent, búsqueda pública,
         "mis autos", listado admin) colapsan acá variando query params +
         autorización. Paginación por header `Link`. Semántica según query
-        (decisión documentada, ver auditoría A14): (1) `scope=admin` → TODO
-        el catálogo sin filtro de estado, solo admin; (2) `ownerId` sin
-        `scope` → "autos de este usuario": si el llamante es ese usuario o
-        admin, ve cualquier estado (o el filtro `status` explícito que
+        (decisión documentada, ver auditoría A14): (1) admin con
+        `Accept: application/vnd.paw.car.v1+json` → TODO el catálogo sin filtro
+        de estado; (2) `ownerId` → "autos de este usuario": si el llamante es ese
+        usuario o admin, ve cualquier estado (o el filtro `status` explícito que
         mande); cualquier otro llamante ve solo `active` y no puede pasar
-        `status` (403); (3) sin `ownerId` ni `scope` → browse público,
-        siempre `active` únicamente.         Es un filtro de colección legítimo
-        (no una operación distinta por rol), pero al ser 3 ramas con
-        autorización propia se documenta acá en vez de separarlo en
-        3 endpoints distintos.
+        `status` (403); (3) browse público (`Accept: car.summary`) → siempre
+        `active` únicamente. Es un filtro de colección legítimo (no una operación
+        distinta por rol), pero al ser 3 ramas con autorización propia se documenta
+        acá en vez de separarlo en 3 endpoints distintos.
+
+        **Representación embebida (patrón B):** esta URI es la colección
+        *principal* de autos (browse, home, mis autos, admin). LINEAMIENTOS
+        §1.6: el body es la lista de autos (teasers `CarSummaryDto` o `CarDto`),
+        no links sueltos. Cada ítem trae `links.self` → `GET /cars/{id}`; no
+        duplica el recurso en otra URN. Distinto de favoritos/similares (patrón A).
       parameters:
         - $ref: "#/components/parameters/page"
-        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/pageSizeBrowse"
+        - name: Accept
+          in: header
+          schema:
+            type: string
+            example: application/vnd.paw.car.summary.v1+json
+          description: >
+            Colecciones usan `car.summary.v1+json` (teaser). Solo admin puede pedir
+            `car.v1+json` en el listado sin `ownerId` para ver el catálogo completo.
         - name: q
           in: query
           schema: { type: string }
@@ -526,6 +635,13 @@ paths:
         - name: priceMax
           in: query
           schema: { type: number }
+        - name: priceMarket
+          in: query
+          schema: { type: string, enum: [below_market, at_market, above_market] }
+          description: >
+            Filtra autos según su posición de precio respecto al promedio de mercado del mismo
+            marca/modelo (mismas bandas que los badges de las cards: ≤90% below, ≤110% at,
+            >110% above; requiere al menos 2 comparables).
         - name: rating
           in: query
           style: form
@@ -550,20 +666,13 @@ paths:
           description: >
             Repetible. Filtro por estado. Solo el dueño (vía ownerId propio) o un admin pueden
             filtrar por estados no públicos.
-        - name: scope
-          in: query
-          schema: { type: string, enum: [admin] }
-          description: >
-            scope=admin lista TODOS los autos del catálogo, cualquier estado, paginados
-            (reemplaza la vieja vista /admin/cars). Solo admin (403 en caso contrario).
-            Distinto del browse público, que solo expone autos publicados.
         - name: sort
           in: query
           schema: { type: string, enum: [price_asc, price_desc, rating_desc, recent, name] }
       responses:
         "403":
           description: >
-            scope=admin sin ser admin, o status explícito en ownerId de otro usuario sin ser admin.
+            `Accept: car.v1+json` sin ser admin, o status explícito en ownerId de otro usuario sin ser admin.
           content:
             application/vnd.paw.error.v1+json:
               schema: { $ref: "#/components/schemas/ErrorDto" }
@@ -573,11 +682,11 @@ paths:
             Link: { $ref: "#/components/headers/Link-Pagination" }
             X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
-            application/vnd.paw.car.v1+json:
+            application/vnd.paw.car.summary.v1+json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/CarDto" }
-            application/vnd.paw.car.v1+xml:
+                items: { $ref: "#/components/schemas/CarSummaryDto" }
+            application/vnd.paw.car.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/CarDto" }
@@ -623,15 +732,28 @@ paths:
       - $ref: "#/components/parameters/idPath"
     get:
       tags: [cars]
-      summary: Detalle de un auto
+      summary: Detalle o teaser de un auto (misma URI, MIME distinto)
+      description: >
+        `Accept: application/vnd.paw.car.v1+json` → representación completa (`CarDto`).
+        `Accept: application/vnd.paw.car.summary.v1+json` → teaser (`CarSummaryDto`),
+        la misma forma que en colecciones. Sin un Accept de summary explícito se
+        responde el detalle completo.
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+            example: application/vnd.paw.car.v1+json
+          description: >
+            `car.v1+json` (detalle) o `car.summary.v1+json` (teaser). Misma URN.
       responses:
         "200":
           description: Auto.
           content:
             application/vnd.paw.car.v1+json:
               schema: { $ref: "#/components/schemas/CarDto" }
-            application/vnd.paw.car.v1+xml:
-              schema: { $ref: "#/components/schemas/CarDto" }
+            application/vnd.paw.car.summary.v1+json:
+              schema: { $ref: "#/components/schemas/CarSummaryDto" }
         "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [cars]
@@ -687,6 +809,37 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /cars/{id}/similar:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars]
+      summary: Autos similares (misma categoría, activos)
+      description: >
+        Colección de links a autos relacionados. La URN canónica se emite en
+        `car.links.similar` (`/cars/{id}/similar`); no armar la URI a mano.
+        Cada ítem expone solo `self`; seguir ese link con
+        `Accept: application/vnd.paw.car.summary.v1+json` para el teaser.
+
+        **N+1 HTTP previsto:** el cliente hace 1 GET a esta colección y luego un
+        GET por cada `self`. Es un tradeoff deliberado para preservar REST puro
+        (un auto = una URI canónica; la colección no embebe representaciones).
+        No confundir con el anti-patrón de persistencia N+1 (ver `AGENTS.md`).
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 20, default: 4 }
+      responses:
+        "200":
+          description: Links a autos similares (`self` → `GET /cars/{id}`).
+          content:
+            application/vnd.paw.car.similar.v1+json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Links" }
+        "204": { description: Sin similares. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # --- Disponibilidad: sub-recurso fuerte con identidad propia ---
   /cars/{id}/availabilities:
     parameters:
@@ -697,12 +850,18 @@ paths:
       description: >
         Devuelve las filas OFFERED efectivas (las que "ganan" por createdAt).
         Para el calendario del rider. Admite ?month=YYYY-MM para la vista mensual.
+
+        **Representación embebida (patrón B):** sub-colección de
+        `/cars/{id}/availabilities`; la lista *es* la vista de calendario y
+        necesita fechas/precios en un round-trip. Cada ítem tiene
+        `links.self` → `GET /cars/{id}/availabilities/{availabilityId}`.
+        No es una colección de *otros* autos/recursos canónicos (cf. patrón A).
       parameters:
         - name: month
           in: query
           schema: { type: string, pattern: '^\d{4}-\d{2}$' }
         - $ref: "#/components/parameters/page"
-        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/pageSizeAvailabilities"
       responses:
         "200":
           description: Períodos de disponibilidad.
@@ -750,7 +909,7 @@ paths:
             application/vnd.paw.availability.v1+json:
               schema: { $ref: "#/components/schemas/AvailabilityDto" }
         "404": { $ref: "#/components/responses/NotFound" }
-    put:
+    patch:
       tags: [cars]
       summary: Editar un período (owner)
       description: >
@@ -791,6 +950,10 @@ paths:
         Colección acotada por diseño (los tramos de disponibilidad efectiva ya
         publicados del auto desde "ahora"): sin paginación por page/pageSize,
         solo X-Total-Count con el tamaño de la lista devuelta.
+        Los ítems son proyecciones calculadas (no recursos con URN propia); no
+        aplica el patrón link-only de `/cars/{id}/similar`. **Patrón B
+        (valor embebido):** segmentos derivados de disponibilidad efectiva;
+        no existen como `GET /bookable-segments/{id}`.
       responses:
         "200":
           description: Segmentos reservables.
@@ -810,14 +973,28 @@ paths:
     get:
       tags: [cars, files]
       summary: Galería del auto (lista de metadatos hipervinculados)
+      description: >
+        **Representación embebida (patrón B):** metadatos de la galería
+        (orden, `links.self`, bytes vía `links` relacionados). La colección
+        bajo `/cars/{id}/pictures` es la entrada natural del sub-recurso;
+        link-only obligaría N+1 solo para `displayOrder` en grids paginados.
+        Cada ítem: `links.self` → `GET /cars/{id}/pictures/{pictureId}`.
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSizePictures"
       responses:
         "200":
           description: Items de galería.
+          headers:
+            Link: { $ref: "#/components/headers/Link-Pagination" }
+            X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
             application/vnd.paw.picture.v1+json:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/PictureDto" }
+        "204":
+          description: Galería vacía.
     post:
       tags: [cars, files]
       summary: Agregar una imagen/video a la galería (owner)
@@ -836,6 +1013,19 @@ paths:
           headers:
             Location: { $ref: "#/components/headers/Location" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /cars/{id}/pictures/primary:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+    get:
+      tags: [cars, files]
+      summary: Imagen/video principal de la galería (menor displayOrder)
+      description: >
+        URN estable para la portada del auto. Devuelve los bytes del primer item de la galería
+        (misma semántica que `links.cover` en tarjetas cuando existe).
+      responses:
+        "200": { $ref: "#/components/responses/BinaryImage" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /cars/{id}/pictures/{pictureId}:
     parameters:
@@ -881,27 +1071,21 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # --- Reviews de un auto (lectura pública por auto) ---
-  /cars/{id}/reviews:
+  /image/{id}:
     parameters:
       - $ref: "#/components/parameters/idPath"
     get:
-      tags: [reviews, cars]
-      summary: Reseñas públicas del auto (paginadas)
-      parameters:
-        - $ref: "#/components/parameters/page"
-        - $ref: "#/components/parameters/pageSize"
+      tags: [files]
+      summary: Bytes públicos de una imagen por id
+      description: >
+        URI canónica para blobs anónimos referenciados por id (p.ej. foto adjunta
+        a una reseña vía `review.links.image`). No sirve documentos KYC, comprobantes
+        ni seguros. Covers de autos y fotos de perfil usan sub-recursos tipados
+        (`/cars/{id}/pictures/primary`, `/users/{id}/profile-picture`), no esta URI.
       responses:
         "200":
-          description: Reseñas.
-          headers:
-            Link: { $ref: "#/components/headers/Link-Pagination" }
-          content:
-            application/vnd.paw.review.v1+json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/ReviewDto" }
-        "204": { description: Sin reseñas. }
+          $ref: "#/components/responses/BinaryImage"
+        "404": { $ref: "#/components/responses/NotFound" }
 
   #############################################################################
   # RESERVATIONS
@@ -918,7 +1102,10 @@ paths:
         mismo chequeo self-o-admin; (3) sin `riderId` ni `ownerId` → TODAS las
         reservas, solo admin (403 en caso contrario). Como en `GET /cars`, es
         un filtro de colección legítimo, no una operación distinta por rol.
-        Paginación por header `Link`.
+        Paginación por header `Link`. La colección devuelve solo links (`self`);
+        seguir cada uno con `Accept: application/vnd.paw.reservation.summary.v1+json`.
+        **Patrón A (link-only):** URN canónica de cada ítem =
+        `GET /reservations/{id}` (teaser vía negociación `Accept` en el ítem).
       parameters:
         - $ref: "#/components/parameters/page"
         - $ref: "#/components/parameters/pageSize"
@@ -941,15 +1128,15 @@ paths:
           schema: { type: string, enum: [recent, start_date, price_asc, price_desc] }
       responses:
         "200":
-          description: Lista de reservas.
+          description: Links a reservas.
           headers:
             Link: { $ref: "#/components/headers/Link-Pagination" }
             X-Total-Count: { $ref: "#/components/headers/X-Total-Count" }
           content:
-            application/vnd.paw.reservation.v1+json:
+            application/vnd.paw.reservation.links.v1+json:
               schema:
                 type: array
-                items: { $ref: "#/components/schemas/ReservationDto" }
+                items: { $ref: "#/components/schemas/Links" }
         "204": { description: Sin reservas. }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403":
@@ -984,13 +1171,25 @@ paths:
       - $ref: "#/components/parameters/idPath"
     get:
       tags: [reservations]
-      summary: Detalle de una reserva (rider/owner/admin)
+      summary: Detalle o teaser de una reserva (misma URI, MIME distinto)
+      description: >
+        `Accept: application/vnd.paw.reservation.v1+json` → detalle completo;
+        `Accept: application/vnd.paw.reservation.summary.v1+json` → teaser para
+        tarjetas de listado (misma URN canónica).
+      parameters:
+        - name: Accept
+          in: header
+          schema:
+            type: string
+            example: application/vnd.paw.reservation.v1+json
       responses:
         "200":
           description: Reserva.
           content:
             application/vnd.paw.reservation.v1+json:
               schema: { $ref: "#/components/schemas/ReservationDto" }
+            application/vnd.paw.reservation.summary.v1+json:
+              schema: { $ref: "#/components/schemas/ReservationSummaryDto" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
@@ -1093,77 +1292,6 @@ paths:
         "204": { description: Subido. }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  # --- Reviews de una reserva (entidad fuerte: id propio; UNIQUE(reserva, made_by_rider)) ---
-  /reservations/{id}/reviews:
-    parameters:
-      - $ref: "#/components/parameters/idPath"
-    get:
-      tags: [reviews, reservations]
-      summary: Reseñas de la reserva (0, 1 o 2)
-      responses:
-        "200":
-          description: Reseñas de la reserva.
-          content:
-            application/vnd.paw.review.v1+json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/ReviewDto" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    post:
-      tags: [reviews, reservations]
-      summary: Dejar una reseña (rider→owner u owner→rider)
-      description: >
-        Reemplaza /owner-review-rider y /rider-review-owner. El lado (made_by_rider)
-        se deriva del rol del llamante en la reserva. Solo si la reserva está
-        FINISHED y no existe ya una reseña de ese lado (UNIQUE(reservation_id, made_by_rider)).
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                rating: { type: integer, minimum: 1, maximum: 5 }
-                comment: { type: string }
-                image: { type: string, format: binary }
-            encoding:
-              image: { contentType: image/* }
-      responses:
-        "201":
-          description: Reseña creada.
-          headers:
-            Location: { $ref: "#/components/headers/Location" }
-          content:
-            application/vnd.paw.review.v1+json:
-              schema: { $ref: "#/components/schemas/ReviewDto" }
-        "400": { $ref: "#/components/responses/ValidationError" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "409":
-          description: Ya existe reseña de ese lado, o la reserva no está FINISHED.
-
-  /reservations/{id}/reviews/{reviewId}:
-    parameters:
-      - $ref: "#/components/parameters/idPath"
-      - name: reviewId
-        in: path
-        required: true
-        schema: { type: integer, format: int64 }
-    get:
-      tags: [reviews, reservations]
-      summary: Reseña individual por su id propio (URN única)
-      description: >
-        Recurso canónico de una Review — es el mismo destino de links.self tanto
-        en ReviewDto (/cars/{id}/reviews, /reservations/{id}/reviews) como en
-        UserReviewDto (/users/{id}/reviews).
-      responses:
-        "200":
-          description: La reseña.
-          content:
-            application/vnd.paw.review.v1+json:
-              schema: { $ref: "#/components/schemas/ReviewDto" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "404": { $ref: "#/components/responses/NotFound" }
-
   #############################################################################
   # RESERVATION MESSAGES (chat) — entidad débil
   #############################################################################
@@ -1176,9 +1304,14 @@ paths:
       description: >
         Reemplaza GET /messages y el endpoint de polling: el "polling" se hace
         con el mismo recurso + query param `afterId` (o paginación por `Link`).
+
+        **Representación embebida (patrón B):** sub-recurso débil del chat bajo
+        la reserva. El listado incluye cuerpo/adjuntos porque la UI de chat y
+        el polling necesitan el contenido en la misma respuesta. Cada mensaje
+        trae `links.self` → `GET /reservations/{id}/messages/{messageId}`.
       parameters:
         - $ref: "#/components/parameters/page"
-        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/pageSizeMessages"
         - name: afterId
           in: query
           schema: { type: integer, format: int64 }
@@ -1217,6 +1350,25 @@ paths:
               schema: { $ref: "#/components/schemas/MessageDto" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /reservations/{id}/messages/{messageId}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: messageId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [reservations]
+      summary: Detalle de un mensaje del chat
+      responses:
+        "200":
+          description: Mensaje.
+          content:
+            application/vnd.paw.message.v1+json:
+              schema: { $ref: "#/components/schemas/MessageDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /reservations/{id}/messages/{messageId}/attachment:
     parameters:
       - $ref: "#/components/parameters/idPath"
@@ -1239,6 +1391,11 @@ paths:
     get:
       tags: [catalog]
       summary: Listar marcas
+      description: >
+        **Representación embebida (patrón B):** catálogo de referencia pequeño;
+        la colección es la representación principal de cada marca (`BrandDto`
+        con `links.self`). No apunta a recursos canónicos definidos en otro
+        agregado.
       parameters:
         - name: validated
           in: query
@@ -1295,10 +1452,7 @@ paths:
         required: true
         content:
           application/vnd.paw.brand.v1+json:
-            schema:
-              type: object
-              properties:
-                validated: { type: boolean }
+            schema: { $ref: "#/components/schemas/CatalogApprovalDto" }
       responses:
         "200":
           description: Marca actualizada.
@@ -1349,6 +1503,77 @@ paths:
             application/vnd.paw.model.v1+json:
               schema: { $ref: "#/components/schemas/ModelDto" }
 
+  /brands/{id}/models/{modelId}:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: modelId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [catalog]
+      summary: Detalle de modelo (canónico bajo su marca)
+      responses:
+        "200":
+          description: Modelo.
+          content:
+            application/vnd.paw.model.v1+json:
+              schema: { $ref: "#/components/schemas/ModelDto" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [catalog]
+      summary: Aprobar modelo (admin)
+      description: '{ "validated": true } aprueba el modelo (solo admin).'
+      requestBody:
+        required: true
+        content:
+          application/vnd.paw.model.v1+json:
+            schema: { $ref: "#/components/schemas/CatalogApprovalDto" }
+      responses:
+        "200":
+          description: Modelo actualizado.
+          content:
+            application/vnd.paw.model.v1+json:
+              schema: { $ref: "#/components/schemas/ModelDto" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [catalog]
+      summary: Rechazar/eliminar modelo (admin)
+      responses:
+        "204": { description: Eliminado. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /brands/{id}/models/{modelId}/price-insight:
+    parameters:
+      - $ref: "#/components/parameters/idPath"
+      - name: modelId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    get:
+      tags: [catalog]
+      summary: Estadísticas de precio comparables para el modelo (canónico)
+      description: >
+        Sin `excludeCarId`, 204 (no hay auto de referencia a excluir). Con
+        `excludeCarId`, agrega min/max/promedio de `dayPrice` entre los autos
+        elegibles del mismo par marca/modelo (catálogo validado, dueño no
+        bloqueado, con disponibilidad activa), excluyendo ese auto; 204 si no
+        hay comparables.
+      parameters:
+        - name: excludeCarId
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Estadísticas de precio.
+          content:
+            application/vnd.paw.pricemarketinsight.v1+json:
+              schema: { $ref: "#/components/schemas/PriceMarketInsightDto" }
+        "204": { description: Sin auto de referencia o sin comparables. }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /models:
     get:
       tags: [catalog]
@@ -1357,6 +1582,9 @@ paths:
         Listado admin de modelos pendientes de aprobación. Sólo soporta la proyección
         pendiente (validated=false): devuelve TODOS los modelos pendientes, incluidos
         los de marcas ya validadas (que de otro modo quedarían invisibles para el admin).
+
+        **Representación embebida (patrón B):** catálogo admin; cada `ModelDto`
+        incluye `links.self`.
       parameters:
         - name: validated
           in: query
@@ -1377,70 +1605,6 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
-  /models/{id}:
-    parameters:
-      - $ref: "#/components/parameters/idPath"
-    get:
-      tags: [catalog]
-      summary: Detalle de modelo
-      responses:
-        "200":
-          description: Modelo.
-          content:
-            application/vnd.paw.model.v1+json:
-              schema: { $ref: "#/components/schemas/ModelDto" }
-        "404": { $ref: "#/components/responses/NotFound" }
-    patch:
-      tags: [catalog]
-      summary: Aprobar modelo (admin)
-      description: '{ "validated": true } aprueba el modelo (solo admin).'
-      requestBody:
-        required: true
-        content:
-          application/vnd.paw.model.v1+json:
-            schema:
-              type: object
-              properties:
-                validated: { type: boolean }
-      responses:
-        "200":
-          description: Modelo actualizado.
-          content:
-            application/vnd.paw.model.v1+json:
-              schema: { $ref: "#/components/schemas/ModelDto" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-    delete:
-      tags: [catalog]
-      summary: Rechazar/eliminar modelo (admin)
-      responses:
-        "204": { description: Eliminado. }
-        "403": { $ref: "#/components/responses/Forbidden" }
-
-  /models/{id}/price-insight:
-    parameters:
-      - $ref: "#/components/parameters/idPath"
-    get:
-      tags: [catalog]
-      summary: Estadísticas de precio comparables para el modelo (marca/modelo), excluyendo un auto
-      description: >
-        Sin `excludeCarId`, 204 (no hay auto de referencia a excluir). Con
-        `excludeCarId`, agrega min/max/promedio de `dayPrice` entre los autos
-        elegibles del mismo par marca/modelo (catálogo validado, dueño no
-        bloqueado, con disponibilidad activa), excluyendo ese auto; 204 si no
-        hay comparables.
-      parameters:
-        - name: excludeCarId
-          in: query
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: Estadísticas de precio.
-          content:
-            application/vnd.paw.pricemarketinsight.v1+json:
-              schema: { $ref: "#/components/schemas/PriceMarketInsightDto" }
-        "204": { description: Sin auto de referencia o sin comparables. }
-        "404": { $ref: "#/components/responses/NotFound" }
-
   #############################################################################
   # LOCATIONS
   #############################################################################
@@ -1448,6 +1612,10 @@ paths:
     get:
       tags: [locations]
       summary: Listar barrios (catálogo para selects de ubicación)
+      description: >
+        **Representación embebida (patrón B):** catálogo de referencia para
+        filtros y formularios; lista completa sin paginación; cada ítem con
+        `links.self`.
       responses:
         "200":
           description: Barrios.
@@ -1501,7 +1669,35 @@ components:
     pageSize:
       name: pageSize
       in: query
-      schema: { type: integer, minimum: 1, maximum: 100, default: 12 }
+      schema: { type: integer, minimum: 1, maximum: 100, default: 8 }
+      description: >
+        Tamaño de página efectivo (clamp máx. 100). Default 8 para colecciones
+        generales (usuarios, reservas, favoritos, marcas).
+    pageSizeBrowse:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 8 }
+      description: Default 8 — grillas de búsqueda / home (`GET /cars`).
+    pageSizeReviews:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 6 }
+      description: Default 6 — reseñas públicas de auto o perfil.
+    pageSizeAvailabilities:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 4 }
+      description: Default 4 — períodos de disponibilidad del auto.
+    pageSizePictures:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 8 }
+      description: Default 8 — galería del auto (fotos/videos).
+    pageSizeMessages:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      description: Default 50 — chat de reserva (también límite de polling {@code afterId}).
 
   headers:
     Location:
@@ -1552,7 +1748,7 @@ components:
     ValidationError:
       description: 400 — Request mal formado o validación fallida.
       content:
-        application/vnd.paw.error.v1+json:
+        application/vnd.paw.validation-error.v1+json:
           schema: { $ref: "#/components/schemas/ValidationErrorDto" }
     BinaryImage:
       description: Bytes de una imagen (content-type detectado).
@@ -1578,18 +1774,22 @@ components:
     ApiIndex:
       type: object
       properties:
-        resources:
+        links:
           type: object
           additionalProperties: { type: string, format: uri }
-          example:
-            users: /users
-            cars: /cars
-            reservations: /reservations
-            brands: /brands
-            models: /models
-            neighborhoods: /neighborhoods
-            credentials: /credentials
-            image: /image
+          description: rel → href navigation map (includes self).
+        resources:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ApiIndexResourceDescriptor"
+    ApiIndexResourceDescriptor:
+      type: object
+      properties:
+        href: { type: string, format: uri }
+        queryParams:
+          type: array
+          items: { type: string }
+      required: [href, queryParams]
 
     # ----- USER -----
     UserDto:
@@ -1705,6 +1905,33 @@ components:
       enum: [below_market, at_market, above_market]
       description: Consumer browse card badge relative to same brand/model market average.
 
+    CarSummaryDto:
+      type: object
+      description: >
+        Teaser para colecciones (`Accept: application/vnd.paw.car.summary.v1+json`).
+        Browse, favoritos y "mis autos" usan esta vista; el detalle completo es `CarDto`.
+      properties:
+        brandName: { type: string }
+        modelName: { type: string }
+        status: { $ref: "#/components/schemas/CarStatus" }
+        minimumRentalDays: { type: integer }
+        ratingAvg: { type: number, nullable: true }
+        dayPrice:
+          type: number
+          nullable: true
+          description: Lowest active day price when published.
+        modelValidated: { type: boolean }
+        priceMarketPositionModifier:
+          allOf:
+            - $ref: "#/components/schemas/PriceMarketPosition"
+          nullable: true
+        marketAveragePrice: { type: number, nullable: true }
+        marketSampleCount: { type: integer, format: int64, nullable: true }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, owner, cover (browse), pictures, availabilities, reviews, similar.
+
     CarDto:
       type: object
       properties:
@@ -1743,7 +1970,7 @@ components:
         links:
           allOf:
             - $ref: "#/components/schemas/Links"
-          description: self, owner, model, brand, pictures, availabilities, insurance, reviews.
+          description: self, owner, model, brand, pictures, availabilities, insurance, reviews, similar.
 
     CarCreateDto:
       type: object
@@ -1759,7 +1986,12 @@ components:
         brandName: { type: string }
         modelName: { type: string }
         type: { $ref: "#/components/schemas/CarType" }
-        modelUri: { type: string, format: uri, description: Alternativa a brand/model name si el modelo ya existe (se navega su link). }
+        modelUri:
+          type: string
+          format: uri
+          description: >
+            URN anidada del modelo existente (`/brands/{brandId}/models/{modelId}` desde `links.self`).
+            Alternativa a brand/model name en el body de creación.
 
     CarPatchDto:
       type: object
@@ -1836,6 +2068,22 @@ components:
         - cancelled_due_to_missing_payment_proof
         - finished
 
+    ReservationSummaryDto:
+      type: object
+      description: >
+        Teaser para colecciones (`Accept: application/vnd.paw.reservation.summary.v1+json`).
+      properties:
+        startDate: { type: string, format: date-time, description: UTC. }
+        endDate: { type: string, format: date-time, description: UTC. }
+        status: { $ref: "#/components/schemas/ReservationStatus" }
+        totalPrice: { type: number }
+        brandName: { type: string, description: Marca del auto de la reserva (denormalizada para listados). }
+        modelName: { type: string, description: Modelo del auto de la reserva (denormalizada para listados). }
+        links:
+          allOf:
+            - $ref: "#/components/schemas/Links"
+          description: self, car, messages, reviews, cover (cuando hay imagen).
+
     ReservationDto:
       type: object
       properties:
@@ -1844,6 +2092,13 @@ components:
         status: { $ref: "#/components/schemas/ReservationStatus" }
         totalPrice: { type: number }
         carReturned: { type: boolean }
+        carReturnedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Momento en que el dueño marcó la devolución (UTC). Inicio de la ventana
+            de reseña del owner (app.reservation.review-auto-skip-days).
         paymentProofDeadlineAt: { type: string, format: date-time, nullable: true }
         refundProofDeadlineAt: { type: string, format: date-time, nullable: true }
         paymentRefundRequired: { type: boolean }
@@ -1911,8 +2166,7 @@ components:
       description: >
         Review es una entidad fuerte (id propio); (reservation_id, made_by_rider)
         queda como UNIQUE para la regla de "una reseña por lado", ya no como PK.
-        Esto le da a cada reseña una URN única (links.self), aunque se la liste
-        desde /cars/{id}/reviews, /users/{id}/reviews o /reservations/{id}/reviews.
+        Esto le da a cada reseña una URN única (`links.self` → `/reviews/{id}`).
       properties:
         rating: { type: integer, minimum: 1, maximum: 5, nullable: true }
         comment: { type: string, nullable: true }
@@ -1922,24 +2176,7 @@ components:
           allOf:
             - $ref: "#/components/schemas/Links"
           description: >
-            self (único, /reservations/{id}/reviews/{reviewId}), reservation, car,
-            author, image (si hay).
-
-    UserReviewDto:
-      type: object
-      description: >
-        Reseña RECIBIDA por un usuario (perfil público). Proyección de solo
-        lectura desde ReviewItemDto; no expone el id en el cuerpo, pero
-        links.self ya es la URN única de la reseña (mismo recurso que ReviewDto).
-      properties:
-        rating: { type: integer, minimum: 1, maximum: 5 }
-        comment: { type: string, nullable: true }
-        authorName: { type: string, description: Nombre del que dejó la reseña. }
-        createdAt: { type: string, format: date, description: Fecha local de la reseña. }
-        links:
-          allOf:
-            - $ref: "#/components/schemas/Links"
-          description: self (único, /reservations/{id}/reviews/{reviewId}).
+            self (`/reviews/{id}`), reservation, car, author, image (si hay).
 
     # ----- CATALOG -----
     BrandDto:
@@ -1956,6 +2193,11 @@ components:
       required: [name]
       properties:
         name: { type: string }
+    CatalogApprovalDto:
+      type: object
+      required: [validated]
+      properties:
+        validated: { type: boolean, example: true }
     ModelDto:
       type: object
       properties:

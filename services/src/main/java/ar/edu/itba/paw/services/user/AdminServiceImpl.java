@@ -165,7 +165,7 @@ public class AdminServiceImpl implements AdminService {
                 reservationService.cancelReservation(r.getId());
             }
         }
-        LOGGER.info("Admin {} paused car {}", actingAdminId, carId);
+        LOGGER.atInfo().addArgument(actingAdminId).addArgument(carId).log("Admin {} paused car {}");
         final User owner = car.getOwner();
         final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
                 + (car.getBrand() != null && car.getModel() != null ? " " : "")
@@ -183,7 +183,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void adminResumeCar(final long carId, final long actingAdminId) {
         carService.releaseAdminCarPause(carId);
-        LOGGER.info("Admin {} resumed car {}", actingAdminId, carId);
+        LOGGER.atInfo().addArgument(actingAdminId).addArgument(carId).log("Admin {} resumed car {}");
     }
 
     @Override
@@ -197,8 +197,10 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void rejectCarBrand(final long brandId) {
         carBrandService.findById(brandId).ifPresent(brand -> {
-            LOGGER.warn("Admin rejecting brand id={} name='{}'; cars referencing this brand/model become orphaned",
-                    brandId, brand.getName());
+            LOGGER.atWarn()
+                    .addArgument(brandId)
+                    .addArgument(brand.getName())
+                    .log("Admin rejecting brand id={} name='{}'; cars referencing this brand/model become orphaned");
             carBrandService.deleteById(brandId);
         });
     }

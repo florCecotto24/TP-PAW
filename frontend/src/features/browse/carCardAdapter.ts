@@ -1,23 +1,23 @@
 import { idFromUri, lastPathSegment } from '../../api/uri';
 import { carDetail } from '../../routes/paths';
-import type { CarDto } from './types';
+import type { CarSummaryDto } from './types';
 
-export function isCarOwnedByUser(car: CarDto, userSelf: string | null | undefined): boolean {
-  if (!userSelf || !car.links.owner) return false;
+export function isCarOwnedByUser(car: CarSummaryDto, userSelf: string | null | undefined): boolean {
+  if (!userSelf || !car.links?.owner) return false;
   return lastPathSegment(car.links.owner) === lastPathSegment(userSelf);
 }
 
 export function isCarFavoritable(
-  car: CarDto,
+  car: CarSummaryDto,
   isLoggedIn: boolean,
   userSelf: string | null | undefined,
 ): boolean {
-  if (!isLoggedIn || !userSelf || !car.links.owner) return false;
+  if (!isLoggedIn || !userSelf || !car.links?.owner) return false;
   return !isCarOwnedByUser(car, userSelf);
 }
 
-export function carDtoToConsumerCard(car: CarDto) {
-  const carIdRaw = idFromUri(car.links.self);
+export function carDtoToConsumerCard(car: CarSummaryDto) {
+  const carIdRaw = idFromUri(car.links?.self);
   const carId = carIdRaw != null ? Number(carIdRaw) : 0;
   return {
     carId: Number.isFinite(carId) ? carId : 0,
@@ -32,8 +32,8 @@ export function carDtoToConsumerCard(car: CarDto) {
   };
 }
 
-export function carDetailHref(car: CarDto, extraQuery?: Record<string, string>): string | null {
-  const carId = idFromUri(car.links.self);
+export function carDetailHref(car: CarSummaryDto, extraQuery?: Record<string, string>): string | null {
+  const carId = idFromUri(car.links?.self);
   if (!carId) return null;
   return carDetail(carId, extraQuery ?? undefined);
 }

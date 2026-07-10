@@ -14,7 +14,6 @@ import './styles/counterparty-profile.css';
 import './styles/publish-car-gallery.css';
 import App from './App';
 import './i18n';
-import './js/price-market-insight.js';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Root container #root not found');

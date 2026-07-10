@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MediaTypes } from '../../../api/mediaTypes';
 import type { UserDto } from '../../../api/types';
+import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { useSessionStore } from '../../../session/sessionStore';
 import { openAuthenticatedBinary, patchUser, userDocumentPath } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -12,6 +13,14 @@ import { usePagedList } from '../usePagedList';
 
 type RoleFilter = '' | 'user' | 'admin';
 type BlockedFilter = '' | 'true' | 'false';
+
+interface UserListFilters {
+  q: string;
+  role: RoleFilter;
+  blocked: BlockedFilter;
+}
+
+const EMPTY_FILTERS: UserListFilters = { q: '', role: '', blocked: '' };
 
 function UserDocRow({
   type,
@@ -72,29 +81,25 @@ export default function AdminUsersPage() {
   const { t } = useTranslation();
   const errorMessage = useAdminErrorMessage();
   const currentUser = useSessionStore((s) => s.currentUser);
-  const currentUserId = currentUser ? idFromSelf(currentUser.links) : '';
+  const currentUserId = idFromSelf(currentUser?.links);
 
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('');
-  const [blockedFilter, setBlockedFilter] = useState<BlockedFilter>('');
-  const [queryInput, setQueryInput] = useState('');
-  const [queryApplied, setQueryApplied] = useState('');
+  const [draft, setDraft] = useState<UserListFilters>(EMPTY_FILTERS);
+  const [applied, setApplied] = useState<UserListFilters>(EMPTY_FILTERS);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [busySelf, setBusySelf] = useState<string | null>(null);
 
   const listPath = useMemo(() => {
     const params = new URLSearchParams({ page: '1' });
-    if (roleFilter) params.set('role', roleFilter);
-    if (blockedFilter) params.set('blocked', blockedFilter);
-    if (queryApplied.trim()) params.set('q', queryApplied.trim());
+    if (applied.role) params.set('role', applied.role);
+    if (applied.blocked) params.set('blocked', applied.blocked);
+    if (applied.q) params.set('q', applied.q);
     return `/users?${params.toString()}`;
-  }, [roleFilter, blockedFilter, queryApplied]);
+  }, [applied]);
 
-  const list = usePagedList<UserDto>(listPath, MediaTypes.userPrivate, [
-    roleFilter,
-    blockedFilter,
-    queryApplied,
-  ]);
+  const list = usePagedList<UserDto>(listPath, MediaTypes.userPrivate, [applied]);
+
+  const hasActiveFilters = Boolean(applied.q || applied.role || applied.blocked);
 
   const runAction = useCallback(
     async (user: UserDto, action: () => Promise<unknown>) => {
@@ -112,9 +117,18 @@ export default function AdminUsersPage() {
     [errorMessage, list],
   );
 
-  const onApplyFilters = (e: React.FormEvent) => {
+  const onSubmitFilters = (e: React.FormEvent) => {
     e.preventDefault();
-    setQueryApplied(queryInput);
+    setApplied({
+      q: draft.q.trim(),
+      role: draft.role,
+      blocked: draft.blocked,
+    });
+  };
+
+  const onClearFilters = () => {
+    setDraft(EMPTY_FILTERS);
+    setApplied(EMPTY_FILTERS);
   };
 
   const onViewDocument = async (user: UserDto, type: 'license' | 'identity') => {
@@ -128,7 +142,7 @@ export default function AdminUsersPage() {
     <>
       <AdminPageHeader title={t('admin.users.title')} subtitle={t('admin.users.subtitle')} />
 
-      <form className="row g-2 align-items-end mb-3" onSubmit={onApplyFilters}>
+      <form className="row g-2 align-items-end mb-3" onSubmit={onSubmitFilters}>
         <div className="col-md-4">
           <label className="form-label small mb-1" htmlFor="adminUserSearch">
             {t('admin.users.filter.search')}
@@ -138,8 +152,9 @@ export default function AdminUsersPage() {
             type="search"
             className="form-control form-control-sm"
             placeholder={t('admin.users.filter.searchPlaceholder')}
-            value={queryInput}
-            onChange={(e) => setQueryInput(e.target.value)}
+            value={draft.q}
+            onChange={(e) => setDraft((prev) => ({ ...prev, q: e.target.value }))}
+            autoComplete="off"
           />
         </div>
         <div className="col-md-3">
@@ -149,55 +164,70 @@ export default function AdminUsersPage() {
           <select
             id="adminUserRole"
             className="form-select form-select-sm"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}
+            value={draft.role}
+            onChange={(e) => setDraft((prev) => ({ ...prev, role: e.target.value as RoleFilter }))}
           >
             <option value="">{t('admin.users.filter.roleAll')}</option>
             <option value="user">{t('admin.users.roles.user')}</option>
             <option value="admin">{t('admin.users.roles.admin')}</option>
           </select>
         </div>
-        <div className="col-md-3">
+        <div className="col-md-2">
           <label className="form-label small mb-1" htmlFor="adminUserBlocked">
             {t('admin.users.filter.status')}
           </label>
           <select
             id="adminUserBlocked"
             className="form-select form-select-sm"
-            value={blockedFilter}
-            onChange={(e) => setBlockedFilter(e.target.value as BlockedFilter)}
+            value={draft.blocked}
+            onChange={(e) =>
+              setDraft((prev) => ({ ...prev, blocked: e.target.value as BlockedFilter }))
+            }
           >
             <option value="">{t('admin.users.filter.statusAll')}</option>
             <option value="false">{t('admin.users.filter.statusActive')}</option>
             <option value="true">{t('admin.users.filter.statusBlocked')}</option>
           </select>
         </div>
-        <div className="col-md-2">
-          <button type="submit" className="btn btn-outline-primary btn-sm w-100">
-            {t('admin.users.filter.apply')}
+        <div className="col-md-3 d-flex gap-2">
+          <button type="submit" className="btn btn-primary btn-sm flex-grow-1">
+            {t('admin.users.filter.search')}
           </button>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm flex-grow-1"
+              onClick={onClearFilters}
+            >
+              {t('admin.users.filter.clear')}
+            </button>
+          ) : null}
         </div>
       </form>
 
       {displayError ? <div className="alert alert-danger" role="alert">{displayError}</div> : null}
-      {list.loading ? <p className="text-secondary" role="status">{t('app.loading')}</p> : null}
+      {list.loading ? <LoadingBlock variant="page" className="py-4" /> : null}
 
       {!list.loading && list.items.length === 0 ? (
-        <p className="text-secondary">{t('admin.users.empty')}</p>
+        <EmptyState
+          icon="people"
+          title={hasActiveFilters ? t('admin.users.emptyFiltered') : t('admin.users.empty')}
+          inCard
+        />
       ) : null}
 
       {!list.loading && list.items.length > 0 ? (
         <div className="card border-0 shadow-sm bg-white overflow-hidden">
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
+            <table className="table table-hover align-middle mb-0 admin-table admin-table--users">
               <thead className="table-light">
                 <tr>
                   <th scope="col">{t('admin.users.col.name')}</th>
                   <th scope="col">{t('admin.users.col.email')}</th>
                   <th scope="col">{t('admin.users.col.role')}</th>
                   <th scope="col">{t('admin.users.col.status')}</th>
-                  <th scope="col">{t('admin.users.col.docs')}</th>
-                  <th scope="col" className="text-end">{t('admin.users.col.actions')}</th>
+                  <th scope="col" className="admin-table__cell--wrap">{t('admin.users.col.docs')}</th>
+                  <th scope="col" className="text-end admin-table__cell--wrap">{t('admin.users.col.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,7 +248,7 @@ export default function AdminUsersPage() {
                       <td>{user.email ?? '—'}</td>
                       <td>{t(`admin.users.roles.${roleKey}`)}</td>
                       <td>{t(`admin.users.statuses.${statusKey}`)}</td>
-                      <td className="small" style={{ minWidth: 200 }}>
+                      <td className="small admin-table__cell--wrap">
                         <UserDocRow
                           type="license"
                           uploaded={user.licenseUploaded}
@@ -244,7 +274,7 @@ export default function AdminUsersPage() {
                           }
                         />
                       </td>
-                      <td className="text-end">
+                      <td className="text-end admin-table__cell--wrap">
                         <div className="d-flex flex-wrap gap-1 justify-content-end">
                           {user.role !== 'admin' && !isMe ? (
                             <button
