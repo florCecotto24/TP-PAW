@@ -79,23 +79,24 @@ export function formatDateTime(value: string | null | undefined, language?: stri
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   const locale = resolveIntlLocale(language);
-  const opts: Intl.DateTimeFormatOptions = {
-    timeZone: APP_TIMEZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-  };
+  // Do not mix dateStyle/timeStyle with hour/minute — V8 throws "Invalid option : option".
   if (isSpanishLanguage(language)) {
     return new Intl.DateTimeFormat(locale, {
-      ...opts,
+      timeZone: APP_TIMEZONE,
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(d);
   }
   return new Intl.DateTimeFormat(locale, {
-    ...opts,
-    dateStyle: 'short',
-    timeStyle: 'short',
+    timeZone: APP_TIMEZONE,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(d);
 }
 

@@ -1635,10 +1635,17 @@ hr {
 
 /* ------------------------------------------------------------------
    30. NAVBAR SLIDING ACTIVE INDICATOR — replaces pill bg
+   Also neutralize Bootstrap's .nav-pills .show > .nav-link (open dropdown
+   toggle) so the avatar menu stays grey instead of primary blue.
    ------------------------------------------------------------------ */
-.navbar-nav .nav-link.active {
+.navbar-nav .nav-link.active,
+.navbar-nav.nav-pills .show > .nav-link,
+.nav-pills .show > .nav-link {
     --bs-nav-pills-link-active-bg: transparent !important;
+    --bs-nav-pills-link-active-color: inherit !important;
     background: transparent !important;
+    background-color: transparent !important;
+    color: inherit !important;
 }
 
 .nav-active-pill {

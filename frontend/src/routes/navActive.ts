@@ -1,3 +1,4 @@
+import { matchPath } from 'react-router-dom';
 import { paths } from '../routes/paths';
 
 /** Detalle de reserva en flujo dueño (desde reservas de mis autos). */
@@ -17,7 +18,10 @@ export function isRiderReservationsNavActive(pathname: string, search: string): 
 
 /** Dropdown "Reservas de mis autos". */
 export function isOwnerReservationsNavActive(pathname: string, search: string): boolean {
-  if (pathname === paths.ownerReservations || pathname.startsWith(`${paths.ownerReservations}/`)) {
+  if (
+    matchPath({ path: paths.ownerReservations, end: true }, pathname) ||
+    matchPath({ path: `${paths.ownerReservations}/:carId`, end: true }, pathname)
+  ) {
     return true;
   }
   return isOwnerReservationDetailPath(pathname, search);
@@ -25,8 +29,8 @@ export function isOwnerReservationsNavActive(pathname: string, search: string): 
 
 /** Dropdown "Mis autos" — solo flota / detalle de auto, no el flujo de reservas. */
 export function isMyCarsNavActive(pathname: string, _search: string = ''): boolean {
-  if (pathname === paths.ownerReservations || pathname.startsWith(`${paths.ownerReservations}/`)) {
-    return false;
-  }
-  return pathname === paths.myCars || pathname.startsWith(`${paths.myCars}/`);
+  return (
+    matchPath({ path: paths.myCars, end: true }, pathname) != null ||
+    matchPath({ path: '/my-cars/car/:id', end: true }, pathname) != null
+  );
 }

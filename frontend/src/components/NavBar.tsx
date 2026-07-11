@@ -124,6 +124,7 @@ export default function NavBar() {
               {isAuthenticated && (
                 <NavDropdown
                   align="end"
+                  active={false}
                   title={
                     <span
                       className="navbar-user-menu-toggle rounded-circle d-inline-flex align-items-center justify-content-center p-0 overflow-hidden"
