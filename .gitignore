@@ -69,6 +69,9 @@ skills-lock.json
 *~
 
 
+# Local Tomcat install (see start-tomcat.sh)
+apache-tomcat-*/
+
 # === SMARTTOMCAT / generated webapp conf ===
 .smarttomcat/
 .smarttomcat/**

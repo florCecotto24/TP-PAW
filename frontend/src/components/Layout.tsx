@@ -14,29 +14,27 @@ export default function Layout() {
 
   const currentUser = useSessionStore((s) => s.currentUser);
   const showBlockedBanner = currentUser?.blocked === true;
+  const isHomeRoute = location.pathname === paths.home || location.pathname === '/';
+
   useEffect(() => {
-    const isHomeRoute = location.pathname === paths.home || location.pathname === '/';
     document.body.classList.add('bg-light');
-    if (isHomeRoute) {
-      document.body.classList.remove('has-fixed-navbar');
-    } else {
-      document.body.classList.add('has-fixed-navbar');
-    }
     return () => {
-      document.body.classList.remove('has-fixed-navbar', 'bg-light');
+      document.body.classList.remove('bg-light');
     };
-  }, [location.pathname]);
+  }, []);
 
   return (
     <div className="bg-cream min-vh-100">
       <NavBar />
-      {showBlockedBanner ? (
-        <BlockedUserBanner singleReservationId={currentUser?.blockedOverdueReservationId} />
-      ) : null}
-      <main>
-        <Outlet />
-      </main>
-      <Footer />
+      <div className={isHomeRoute ? 'app-shell app-shell--flush' : 'app-shell'}>
+        {showBlockedBanner ? (
+          <BlockedUserBanner singleReservationId={currentUser?.blockedOverdueReservationId} />
+        ) : null}
+        <main>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
     </div>
   );
 }

@@ -228,6 +228,10 @@
         <artifactId>jetty-maven-plugin</artifactId>
         <configuration>
           <useTestScope>true</useTestScope>
+          <!-- Jetty 10+: contextPath lives under webApp (same as Tomcat WAR + Vite base). -->
+          <webApp>
+            <contextPath>/webapp</contextPath>
+          </webApp>
           <httpConnector>
             <port>8080</port>
           </httpConnector>

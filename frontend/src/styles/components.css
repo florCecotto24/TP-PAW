@@ -101,27 +101,26 @@ body {
     font-family: inherit;
 }
 
-body.has-fixed-navbar {
+.app-shell {
     padding-top: var(--ryden-navbar-h);
 }
 
-/* Global "your account is blocked" banner injected by navbar.tag.
+.app-shell--flush {
+    padding-top: 0;
+}
+
+/* Global "your account is blocked" banner.
    Stays in the normal document flow (scrolls away with the rest of the content) and only needs to
    clear the .fixed-top navbar on its initial render.
-   - On pages with body.has-fixed-navbar the body already reserves padding-top equal to --navbar-height,
-     so the banner naturally sits right below it (margin-top is neutralised below).
-   - On pages without that class (e.g. home.jsp, where the hero is intentionally flush against the
-     top of the viewport) the banner needs an explicit margin-top equal to --navbar-height. The
-     paired padding-top: 0.1px on the body prevents that margin from collapsing into the body's
-     own margin (which would leave the banner hidden behind the fixed navbar). */
+   - On pages with .app-shell (not flush) the shell already reserves padding-top equal to
+     --ryden-navbar-h, so the banner naturally sits right below it (margin-top is neutralised below).
+   - On flush pages (home, where the hero is intentionally under the navbar) the banner needs an
+     explicit margin-top equal to --ryden-navbar-h. */
 .ryden-blocked-banner {
     margin-top: var(--ryden-navbar-h);
 }
-body.has-fixed-navbar .ryden-blocked-banner {
+.app-shell:not(.app-shell--flush) .ryden-blocked-banner {
     margin-top: 0;
-}
-body:not(.has-fixed-navbar):has(.ryden-blocked-banner) {
-    padding-top: 0.1px;
 }
 
 /* Login / register: fit viewport; scroll only on very short screens inside main */
@@ -1276,10 +1275,6 @@ select.form-select.ryden-car-spec-select option {
 
 body.reservation-chat-body {
     overflow: hidden;
-    height: 100dvh;
-}
-
-body.reservation-chat-body.has-fixed-navbar {
     height: 100dvh;
 }
 

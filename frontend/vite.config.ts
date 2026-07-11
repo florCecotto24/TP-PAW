@@ -47,22 +47,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   server: {
-    // Dev server: proxy unified API mount (/api) to the backend (Jetty context /).
+    // Dev server: proxy API to Jetty/Tomcat at context /webapp.
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8080/webapp',
         changeOrigin: true,
       },
-      // dev:war (base /webapp/): strip WAR context when Jetty runs with server.servlet.context-path=/.
       '/webapp/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/webapp(?=\/|$)/, '') || '/',
       },
       '/webapp': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/webapp(?=\/|$)/, '') || '/',
         bypass: bypassWebappDevProxy,
       },
     },

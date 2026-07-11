@@ -53,7 +53,7 @@ mvn jetty:run -pl webapp
 
 Alternatively, deploy the **`webapp`** WAR (`webapp/target/webapp.war`) to **Tomcat** on Pampero. The Vite `base` is set in `frontend/vite.config.ts` (`/webapp/`, matching the WAR name).
 
-Local Jetty uses port **8080** and context path **`/`** (`server.servlet.context-path` in `application.properties`). If you test the WAR embedded in Jetty with that context path, build the frontend with `npm run build:root` in `frontend/` (base `/`). The SPA and API share the same origin; API routes are REST nouns (`/users`, `/cars`, …) with no `/api` prefix.
+Local Jetty uses port **8080** and context path **`/webapp`** (same as the Tomcat WAR and Vite `base`). Open `http://localhost:8080/webapp/`. The SPA and API share that origin (`/webapp/api/…`).
 
 ### SPA dev server (optional)
 
