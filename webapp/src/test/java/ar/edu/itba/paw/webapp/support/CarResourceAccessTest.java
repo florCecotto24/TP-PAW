@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.services.car.CarService;
+import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,17 +28,22 @@ class CarResourceAccessTest {
     private CarService carService;
 
     @Mock
+    private ReservationService reservationService;
+
+    @Mock
     private Car car;
 
     private CarResourceAccess access;
     private RydenUserDetails ownerViewer;
     private RydenUserDetails otherViewer;
+    private RydenUserDetails riderViewer;
 
     @BeforeEach
     void setUp() {
-        access = new CarResourceAccess(carService);
+        access = new CarResourceAccess(carService, reservationService);
         ownerViewer = viewer(10L);
         otherViewer = viewer(20L);
+        riderViewer = viewer(30L);
     }
 
     @Test
@@ -59,6 +65,8 @@ class CarResourceAccessTest {
         // 1.Arrange
         when(car.getStatus()).thenReturn(Car.Status.DEACTIVATED);
         when(car.getOwnerId()).thenReturn(10L);
+        when(car.getId()).thenReturn(5L);
+        when(reservationService.existsRiderReservationForCar(20L, 5L)).thenReturn(false);
 
         // 2.Act
         final boolean publiclyReadable = access.isPubliclyReadable(car);
@@ -74,11 +82,43 @@ class CarResourceAccessTest {
     }
 
     @Test
+    void testDeactivatedCarVisibleToRiderWithReservation() {
+        // 1.Arrange
+        when(car.getStatus()).thenReturn(Car.Status.DEACTIVATED);
+        when(car.getOwnerId()).thenReturn(10L);
+        when(car.getId()).thenReturn(5L);
+        when(reservationService.existsRiderReservationForCar(30L, 5L)).thenReturn(true);
+
+        // 2.Act
+        final boolean riderCanView = access.canViewCar(car, riderViewer);
+
+        // 3.Assert
+        assertTrue(riderCanView);
+    }
+
+    @Test
+    void testDeactivatedCarHiddenFromStrangerWithoutReservation() {
+        // 1.Arrange
+        when(car.getStatus()).thenReturn(Car.Status.PAUSED);
+        when(car.getOwnerId()).thenReturn(10L);
+        when(car.getId()).thenReturn(5L);
+        when(reservationService.existsRiderReservationForCar(20L, 5L)).thenReturn(false);
+
+        // 2.Act
+        final boolean strangerCanView = access.canViewCar(car, otherViewer);
+
+        // 3.Assert
+        assertFalse(strangerCanView);
+    }
+
+    @Test
     void testCanViewCarByIdRespectsOwnerVisibility() {
         // 1.Arrange
         when(car.getStatus()).thenReturn(Car.Status.DEACTIVATED);
         when(car.getOwnerId()).thenReturn(10L);
+        when(car.getId()).thenReturn(5L);
         when(carService.getCarById(5L)).thenReturn(Optional.of(car));
+        when(reservationService.existsRiderReservationForCar(20L, 5L)).thenReturn(false);
 
         // 2.Act
         final boolean ownerCanView = access.canViewCarById(5L, ownerViewer);
@@ -117,7 +157,9 @@ class CarResourceAccessTest {
         // 1.Arrange
         when(car.getStatus()).thenReturn(Car.Status.DEACTIVATED);
         when(car.getOwnerId()).thenReturn(10L);
+        when(car.getId()).thenReturn(5L);
         when(carService.getCarById(5L)).thenReturn(Optional.of(car));
+        when(reservationService.existsRiderReservationForCar(20L, 5L)).thenReturn(false);
 
         // 2.Act / 3.Assert
         assertThrows(CarNotFoundException.class, () -> access.requireViewableCar(5L, otherViewer));

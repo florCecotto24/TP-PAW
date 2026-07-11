@@ -72,6 +72,13 @@ public interface ReservationDao {
 
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
 
+    /**
+     * Whether {@code riderId} has any reservation (any status) for {@code carId}.
+     * Used so reservation riders can follow hypermedia {@code links.car} even when the car is
+     * no longer publicly readable.
+     */
+    boolean existsByRiderIdAndCarId(long riderId, long carId);
+
     Page<ReservationCard> getRiderReservationCards(ReservationSearchCriteria criteria);
 
     List<Reservation> getReminderReservations(final OffsetDateTime from, final OffsetDateTime to);

@@ -33,6 +33,12 @@ public interface ReservationService {
     /** Reservation row only if {@code ownerId} owns the car tied to that reservation. */
     Optional<Reservation> getOwnerReservationById(long ownerId, long reservationId);
 
+    /**
+     * Whether {@code riderId} has any reservation (any status) for {@code carId}.
+     * Lets reservation riders follow {@code links.car} when the car is no longer publicly listed.
+     */
+    boolean existsRiderReservationForCar(long riderId, long carId);
+
     /** Paginated rider “my reservations” cards from sanitized criteria. */
     Page<ReservationCard> getRiderReservationCards(ReservationSearchCriteria criteria);
 

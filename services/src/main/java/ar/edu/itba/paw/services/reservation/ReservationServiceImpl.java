@@ -136,6 +136,12 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
+    public boolean existsRiderReservationForCar(final long riderId, final long carId) {
+        return reservationDao.existsByRiderIdAndCarId(riderId, carId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<ReservationCard> getRiderReservationCards(final ReservationSearchCriteria criteria) {
         return reservationDao.getRiderReservationCards(criteria);
     }

@@ -448,7 +448,11 @@ export default function ReservationDetailPage() {
                 )}
               </div>
               <div className="min-w-0">
-                {carQuery.data ? (
+                {carQuery.isLoading ? (
+                  <LoadingBlock variant="inline" />
+                ) : carQuery.isError || !carQuery.data ? (
+                  <p className="text-secondary mb-0">{t('res.detail.carLoadError')}</p>
+                ) : (
                   <>
                     <p className="fw-semibold mb-1">
                       {carQuery.data.brandName} {carQuery.data.modelName}
@@ -465,8 +469,6 @@ export default function ReservationDetailPage() {
                       </Link>
                     ) : null}
                   </>
-                ) : (
-                  <LoadingBlock variant="inline" />
                 )}
               </div>
             </div>

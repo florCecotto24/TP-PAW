@@ -251,6 +251,17 @@ public class ReservationJpaDao implements ReservationDao {
     }
 
     @Override
+    public boolean existsByRiderIdAndCarId(final long riderId, final long carId) {
+        final Number count = (Number) em.createQuery(
+                        "SELECT COUNT(r) FROM Reservation r "
+                                + "WHERE r.rider.id = :riderId AND r.car.id = :carId")
+                .setParameter("riderId", riderId)
+                .setParameter("carId", carId)
+                .getSingleResult();
+        return count != null && count.longValue() > 0;
+    }
+
+    @Override
     public Page<ReservationCard> getRiderReservationCards(final ReservationSearchCriteria criteria) {
         final int page = criteria.getPage();
         final int pageSize = criteria.getPageSize();

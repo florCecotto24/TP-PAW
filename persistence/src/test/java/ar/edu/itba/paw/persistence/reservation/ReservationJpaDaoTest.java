@@ -134,6 +134,30 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
         Assertions.assertEquals(0L, count);
     }
 
+    @Test
+    void testExistsByRiderIdAndCarIdReturnsTrueWhenRiderHasReservation() {
+        // 1. Arrange
+        insertReservation("accepted", false, null, null);
+
+        // 2. Act
+        final boolean exists = dao.existsByRiderIdAndCarId(riderId, carId);
+
+        // 3. Assert
+        Assertions.assertTrue(exists);
+    }
+
+    @Test
+    void testExistsByRiderIdAndCarIdReturnsFalseForUnrelatedRider() {
+        // 1. Arrange
+        insertReservation("accepted", false, null, null);
+
+        // 2. Act
+        final boolean exists = dao.existsByRiderIdAndCarId(riderId + 9999L, carId);
+
+        // 3. Assert
+        Assertions.assertFalse(exists);
+    }
+
     private long insertReservation(
             final String statusLower,
             final boolean refundRequired,
