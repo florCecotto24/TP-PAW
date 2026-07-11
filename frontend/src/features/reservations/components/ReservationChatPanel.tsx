@@ -60,7 +60,7 @@ function ChatMessageBubble({
       <span className="reservation-chat__time">{formatTime(msg.createdAt, locale)}</span>
       {mine ? (
         <span
-          className={`reservation-chat__receipt bi ${msg.seen ? 'bi-check2-all reservation-chat__receipt--seen' : 'bi-check2'}`}
+          className={`reservation-chat__receipt bi bi-check2-all${msg.seen ? ' reservation-chat__receipt--seen' : ''}`}
           aria-hidden="true"
         />
       ) : null}
