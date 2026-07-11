@@ -5,23 +5,35 @@
 ## Commands
 
 ```bash
-# Build all modules
+# Build all modules (includes frontend npm build → WAR)
 mvn clean install
 
-# Run the web application
+# Run the web application (API + packaged SPA)
 mvn jetty:run -pl webapp
+
+# SPA dev server (proxies /api and /webapp/api → Jetty)
+cd frontend && npm run dev
 
 # Run all tests
 mvn test
 
 # Run tests for a specific module
 mvn test -pl persistence
+mvn test -pl frontend
 
 # Run a single test class
-mvn test -pl persistence -Dtest=ListingHibernateDaoTest
+mvn test -pl persistence -Dtest=CarJpaDaoTest
+
+# Frontend Vitest only
+cd frontend && npm test
 ```
 
-The app is served at `http://localhost:8080/` with context path **`/webapp`** (see `application/application.properties`), so routes look like `http://localhost:8080/webapp/home`.
+The app is served at `http://localhost:8080/` with context path **`/webapp`** (see `application/application.properties`):
+
+- **SPA UI**: `http://localhost:8080/webapp/...` (client routes)
+- **REST API**: `http://localhost:8080/webapp/api/...`
+
+During SPA development, Vite typically serves the UI on its own port with `base: '/'` and proxies API calls to Jetty.
 
 ## Building and running
 
@@ -30,12 +42,14 @@ The app is served at `http://localhost:8080/` with context path **`/webapp`** (s
 - Java 21
 - Maven
 - PostgreSQL reachable with credentials in **`webapp/src/main/resources/application/application.properties`** (`spring.datasource.url`, `spring.datasource.username`, `spring.datasource.password`). Optional overrides: `application-${spring.profiles.active}.properties` (see `@PropertySources` in `WebConfig`). Local development: use `application-local.properties` for a local PostgreSQL instance.
+- **Node 20+** for local SPA work. Full Maven builds install Node via `frontend-maven-plugin`. For shell npm without a global Node, use `frontend/use-node.sh` to put the Maven-managed Node on `PATH`.
 
 ### Key commands
 
 ```text
 mvn clean install
 mvn jetty:run -pl webapp
+cd frontend && npm run dev
 mvn test
 ```
 
@@ -51,59 +65,62 @@ At runtime, **`WebConfig#entityManagerFactory`** configures Hibernate with `hibe
 
 ## Architecture
 
-This is a **car rental platform**: a Java web app on **Spring Framework 5.3**, multi-module **Maven**, strict layer separation.
+This is a **car rental platform**: multi-module **Maven**, strict layer separation. The browser UI is a **React SPA**; the server exposes a **Jersey/JAX-RS** hypermedia REST API. Spring Framework 5.3 provides DI, transactions, JPA, security, and mail — not MVC view rendering.
 
 ### Module dependency chain
 
 ```
-webapp → services → persistence → models
-              ↑            ↑
-   service-contracts  persistence-contracts
+frontend  →  (assets into WAR)  webapp → services → persistence → models
+                                         ↑            ↑
+                              service-contracts  persistence-contracts
 ```
+
+`frontend` builds with `frontend-maven-plugin` before `webapp`; `maven-war-plugin` embeds `frontend/dist` into the WAR.
 
 ### Module responsibilities
 
 - **models** — Organised by *feature/role* rather than by type:
-  - `domain/` — JPA entities (`@Entity`): `Car`, `User`, `Listing`, `CarAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, `AvailabilityPeriod`, etc.
-  - `dto/` — transport objects grouped by business domain: `dto/car/` (cards, projections, market insight + `dto/car/detail/` for the public car page), `dto/listing/` (editor page model), `dto/profile/` (counterparty + profile page models), `dto/reservation/` (cards, page models, message DTOs). `dto/Page<T>` is the only generic that stays in the root.
+  - `domain/` — JPA entities (`@Entity`): `Car`, `User`, `CarAvailability`, `Reservation`, `Image`, `CarPicture`, `StoredFile`, `AvailabilityPeriod`, etc.
+  - `dto/` — transport / page-model objects grouped by business domain: `dto/car/` (cards, projections, market insight + `dto/car/detail/`), `dto/profile/`, `dto/reservation/` (cards, page models, message DTOs). `dto/Page<T>` is the only generic that stays in the root. REST wire DTOs for the API live under **`webapp/.../dto/rest/`**, not here.
   - `email/` — typed mail payloads consumed by `services/mail/`.
   - `pagination/` — `Page` slice (`SingleLayerPageWindow`) and `UiPaging`. UI page sizes live in `AppPaginationProperties` (webapp); DAOs paginate in SQL with `LIMIT`/`OFFSET` from those sizes. Services do not read pagination policy.
   - `security/` — `UserRole`.
   - `util/` — split by concern: `util/time/` (`AppTimezone`, wall-clock parsing/format, bookable calendar), `util/search/` (search criteria + sort sanitisers), `util/format/` (money, email normalisation), `util/rules/` (CBU, supported locales), `util/media/` (gallery + chat attachment content types). Business timezone single source of truth is `util/time/AppTimezone.WALL_ZONE`.
-- **persistence-contracts** — DAO interfaces (`ListingDao`, `ReservationDao`, …).
-- **persistence** — Hibernate/JPA DAOs under `persistence/hibernate/` (`*HibernateDao`). Tests run against HSQLDB. The legacy `persistence/jdbc/` tree remains as **reference** (typically not registered as Spring beans when Hibernate is active).
+- **persistence-contracts** — DAO interfaces (`CarDao`, `ReservationDao`, …).
+- **persistence** — JPA DAOs under feature packages (`persistence/car/`, `persistence/reservation/`, …) as `*JpaDao`. Tests run against HSQLDB.
 - **service-contracts** — Service interfaces, shared exceptions, `MessageKeys` for i18n codes.
-- **services** — Business logic, email, async mail tasks.
-- **webapp** — Spring MVC controllers, JSPs, `application/application.properties`, static assets, Thymeleaf mail under `classpath:mail/`.
+- **services** — Business logic, email, async mail tasks, scheduling.
+- **frontend** — Vite + React 18 + TypeScript SPA (`ryden-spa`). Feature-sliced UI under `frontend/src/features/`; hypermedia client under `frontend/src/api/`.
+- **webapp** — Jersey JAX-RS resources (`controller/`, mapped at `/api/*`), REST DTOs (`dto/rest/`), JWT security, `SpaFallbackFilter`, `application/application.properties`, static SPA shell (`index.html` + `/public/`), Thymeleaf mail under `classpath:mail/`.
 
 ### Key conventions
 
 - **Dependency injection**: Constructor injection with `@Autowired`.
-- **Persistence**: JPA via Hibernate. DAOs use `@PersistenceContext EntityManager em` with `em.find`, `em.persist`, JQL (`em.createQuery("FROM …", …)`), and **`em.createNativeQuery`** for DTO projections (`Object[]`) and read-only reporting. For **writable** work, prefer mutating **managed entities** (dirty checking at flush) over bulk JPQL `UPDATE`/`DELETE` or native `executeUpdate()` on entity-mapped tables unless the PR documents a justified exception. Prefer **named parameters** (`:name`) in native SQL for clarity and safe binding. `*HibernateDao` classes are `@Repository` and `@Transactional` where appropriate; `EntityManagerFactory` and `JpaTransactionManager` are wired in `WebConfig` (runtime) and `TestPersistenceConfig` (tests). Entities are scanned from `ar.edu.itba.paw.models`.
-- **Entity mapping**: Foreign keys are often modeled as scalar `long` fields (`listingId`, `riderId`, …) with explicit JQL joins (`FROM Reservation r, Listing l WHERE l.id = r.listingId …`). If you add `@ManyToOne` / `@OneToMany`, prefer `FetchType.LAZY` and consider `OpenEntityManagerInViewFilter` for JSP navigation.
-- **Enum persistence**: taxonomy enums (`Car.Type`, …) may use `@Enumerated(EnumType.STRING)`; lifecycle enums (`Listing.Status`, `Reservation.Status`) use **`AttributeConverter`** implementations that persist **lowercase** names to match legacy SQL and `LOWER(status)` filters.
+- **Persistence**: JPA via Hibernate. DAOs use `@PersistenceContext EntityManager em` with `em.find`, `em.persist`, JQL (`em.createQuery("FROM …", …)`), and **`em.createNativeQuery`** for DTO projections (`Object[]`) and read-only reporting. For **writable** work, prefer mutating **managed entities** (dirty checking at flush) over bulk JPQL `UPDATE`/`DELETE` or native `executeUpdate()` on entity-mapped tables unless the PR documents a justified exception. Prefer **named parameters** (`:name`) in native SQL for clarity and safe binding. `*JpaDao` classes are `@Repository` and `@Transactional` where appropriate; `EntityManagerFactory` and `JpaTransactionManager` are wired in `WebConfig` (runtime) and `TestPersistenceConfig` (tests). Entities are scanned from `ar.edu.itba.paw.models`.
+- **Entity mapping**: Prefer `@ManyToOne` / associations with `FetchType.LAZY` where the domain already models them (e.g. `Reservation` → `Car`, `Car` → `User` owner). Older scalar-FK + explicit JQL join patterns may still appear in places; do not introduce new ones without cause. Consider `OpenEntityManagerInViewFilter` for lazy navigation inside REST handlers (not view rendering).
+- **Enum persistence**: taxonomy enums (`Car.Type`, …) may use `@Enumerated(EnumType.STRING)`; lifecycle enums (`Car.Status`, `Reservation.Status`) use **`AttributeConverter`** implementations that persist **lowercase** names to match legacy SQL and `LOWER(status)` filters.
 - **IDs**: sequences use `@GeneratedValue(strategy = GenerationType.SEQUENCE, …)` with `@SequenceGenerator(…, allocationSize = 1)` aligned with PostgreSQL sequences.
 - **Pagination**: paginate in SQL (`LIMIT`/`OFFSET` + separate `COUNT`) — never overfetch and slice in memory. For entity queries with joins, avoid relying on `setFirstResult` / `setMaxResults` alone on large sets — prefer ID-page + `IN` fetch or DTO-native queries.
-- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, `ValidationWebConfig`) plus `web.xml` for servlet bootstrap. Properties from `application.properties`; profile overrides from `application-{profile}.properties` if present.
-- **Dependency versions**: Root `pom.xml` `<dependencyManagement>`; child POMs omit versions where managed. JPA stack: Hibernate 5.6.x, `javax.persistence-api` 2.2, `spring-orm` aligned with Spring 5.3.
-- **Views**: JSPs in `webapp/src/main/webapp/WEB-INF/views/`, tags in `WEB-INF/tags/`, assets under `css/`, `js/`, `assets/`.
-- **Component scan** (`WebConfig`): `ar.edu.itba.paw.webapp.controller`, `.advice`, `.exception`, `.util`, `.support`, `.security`, `.validation`, `.interceptor`, plus `ar.edu.itba.paw.services` and `ar.edu.itba.paw.persistence`. `webapp.form` and `webapp.dto` are not scanned; `CurrentUserArgumentResolver` in `webapp.support` is registered on the MVC adapter. Servlet listeners (e.g. `webapp.listener`) are declared in `WEB-INF/web.xml`.
+- **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, …) plus `web.xml` for servlet bootstrap (Jersey `ServletContainer` on `/api/*`). Properties from `application.properties`; profile overrides from `application-{profile}.properties` if present.
+- **Dependency versions**: Root `pom.xml` `<dependencyManagement>`; child POMs omit versions where managed. JPA stack: Hibernate 5.6.x, `javax.persistence-api` 2.2, `spring-orm` aligned with Spring 5.3. Jersey version: `jersey.version` in root POM.
+- **UI**: source in `frontend/src/`; production assets packaged into the WAR as `index.html` + `/public/` under `webapp/src/main/webapp/`. Deep links are handled by `SpaFallbackFilter` (HTML GETs → `/index.html`).
+- **Component scan** (`WebConfig`): `ar.edu.itba.paw.webapp.controller`, `.exception.mapper`, `.util`, `.support`, `.security`, `.validation`, `.config.properties`, plus `ar.edu.itba.paw.services`, `.persistence`, `.mail`, `.policy`, `.scheduling`, `.util`. **Excludes** Spring `@Controller` (no MVC controllers). Servlet listeners are declared in `WEB-INF/web.xml`.
 
 ### Domain overview
 
-A `User` owns `Car`s. A `Car` can have a `Listing` with price and availability (`car_availability`). Other users create `Reservation`s. `Image`s are stored as byte arrays and linked via `CarPicture`.
+A `User` owns `Car`s. A `Car` has price/status and availability (`CarAvailability` / periods). Other users create `Reservation`s. `Image`s are stored as byte arrays and linked via `CarPicture`.
 
-Key enums (on model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, `Listing.Status` (active/paused/finished), `Reservation.Status` (pending, accepted, started, participant/automated cancellation variants, finished — see `Reservation.Status` in code).
+Key enums (on model classes): `Car.Type`, `Car.Powertrain`, `Car.Transmission`, `Car.Status` (active, paused, admin_paused, lack_doc, unavailable, deactivated), `Reservation.Status` (pending, accepted, started, participant/automated cancellation variants, finished — see `Reservation.Status` in code).
 
 ## Technologies
 
-- **Backend**: Java 21, Spring 5.3 (MVC, JDBC, Context, TX, ORM, Context Support for mail), Spring Security 5.8.10.
+- **Backend**: Java 21, Spring 5.3 (Context, TX, ORM, JDBC, Context Support for mail), Spring Security **5.8.10**, **Jersey 2.x** (JAX-RS) for the HTTP API.
 - **Database**: PostgreSQL (runtime), HSQLDB (DAO / persistence tests). Baseline **`db/ryden_baseline.sql`** + **Flyway** (`V2__`, `V3__`, … under `classpath:db/migration/`).
 - **ORM**: Hibernate / JPA (`EntityManager`, `LocalContainerEntityManagerFactoryBean` in `WebConfig`).
-- **Web UI**: JSP, Spring form tags, custom JSP tags under `WEB-INF/tags/`.
-- **Client scripts**: Shared JS in `webapp/src/main/webapp/js/` (e.g. **Flatpickr** for date/range pickers, CDN in `header.jsp` / `footer.jsp`).
+- **API contract**: repo-root **`openapi.yaml`** (vendor MIME types, hypermedia links, JWT headers, `Link` pagination). Consumed by backend and frontend contract tests — not a generated client.
+- **Web UI**: React 18 + TypeScript + Vite 5, React Router 6, TanStack Query, Zustand, Bootstrap 5 + react-bootstrap, i18next, Flatpickr.
 - **Email**: JavaMail, **Thymeleaf** HTML (`webapp/src/main/resources/mail/html/`), separate `ResourceBundleMessageSource` for mail copy (`mail/MailMessages` + locale variants).
-- **Build**: Maven. **Runtime**: Jetty (`jetty-maven-plugin` on the `webapp` module).
+- **Build**: Maven reactor including `frontend`. **Runtime**: Jetty (`jetty-maven-plugin` on the `webapp` module) or Tomcat WAR.
 
 ## Database
 
@@ -119,10 +136,10 @@ New migrations: `V<number>__<description>.sql` (e.g. `V4__add_reviews.sql`). Exa
 
 ## Internationalization (i18n)
 
-- **UI/errors**: `ReloadableResourceBundleMessageSource` with `classpath:messages` and `classpath:exception-messages`. Default **English**; Spanish: `messages_es.properties`, `exception-messages_es.properties`.
-- **Locale**: `AcceptHeaderLocaleResolver` in `WebConfig` — `Accept-Language`; supported **English** and **Spanish (`es`)**; defaults to English.
-- **`LocaleMessages`** (`webapp.util`): resolves keys via `MessageSource` + `LocaleContextHolder`.
-- **Mail**: `mail/MailMessages.properties` and `mail/MailMessages_es.properties`. `@Async` mail must not rely on `LocaleContextHolder` — capture locale on the request thread (e.g. `ReservationMailPayload` / related payload getters).
+- **Server messages / errors**: `ReloadableResourceBundleMessageSource` with `classpath:messages/messages` and `classpath:messages/exception/exception-messages`. Used by Jersey exception mappers, Bean Validation, and related server copy. Spanish and English property files.
+- **Server locale**: `RydenLocaleResolver` — **does not** use `Accept-Language`. Priority: signed-in user's `latest_locale`, else `RYDEN_LOCALE` cookie, else **Spanish** (`SupportedLocales.DEFAULT`). `LocaleMessages` resolves keys via `MessageSource` + `LocaleContextHolder`.
+- **SPA UI**: **i18next** + react-i18next in `frontend/src/i18n/` — default **`es`**, fallback **`en`**. Feature modules export `*I18n` `{ es, en }` (e.g. `features/profile/i18n.ts`) merged with shared `locales/*.json`. Logged-in preference can sync via user `latestLocale` (PATCH `/users/{id}`).
+- **Mail**: `mail/MailMessages.properties` and `mail/MailMessages_es.properties`. `@Async` mail must not rely on `LocaleContextHolder` — capture locale on the request thread (e.g. reservation mail payload getters).
 - **Exception keys**: `exception-messages.properties`, aligned with `ar.edu.itba.paw.exception.MessageKeys`.
 
 ## Email
@@ -133,14 +150,20 @@ New migrations: `V<number>__<description>.sql` (e.g. `V4__add_reviews.sql`). Exa
 
 ## Security
 
-Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`, `SecurityFilterChain`, `RydenAuthenticationProvider`, `RydenUserDetailsService`. Remember-me, session auth, CSRF. **Do not** add or replace auth configuration outside `WebAuthConfig`.
+Configured in **`WebAuthConfig`**: Spring Security 5.8.10, `@EnableWebSecurity`, `SecurityFilterChain`, `RydenAuthenticationProvider`, `RydenUserDetailsService`, **`JwtAuthenticationFilter`**. **Stateless** JWT (`SessionCreationPolicy.STATELESS`); **CSRF disabled**; no remember-me / form-login session auth.
+
+- **Login**: `Authorization: Basic` on a probe request → response headers `X-Access-Token` / `X-Refresh-Token`; `Link` rel `authenticated-user` carries the user URN (no `/me`).
+- **API calls**: `Authorization: Bearer <access>`; refresh with the refresh token when access expires (SPA retries once on 401).
+- **SPA storage**: Zustand session store + localStorage (`frontend/src/session/`).
+
+**Do not** add or replace auth configuration outside `WebAuthConfig`. Do not reintroduce cookie session login for the API.
 
 ## Dates and business rules (high level)
 
-- Listing availability and reservation datetimes use wall zone `AppTimezone.WALL_ZONE` (Argentina) when parsing server-side. `AppTimezone` (in `models/util/`) is the single source of truth — never hardcode `ZoneId.of("America/Argentina/Buenos_Aires")` again.
-- **Publishing**: valid date order; period start not before **today** in that zone (`ListingServiceImpl`).
-- **Reserving**: pickup day not before **today**; interval must fit published availability (`ReservationServiceImpl`).
-- **Flatpickr**: `minDate: 'today'` in `components.js` complements server validation.
+- Car availability and reservation datetimes use wall zone `AppTimezone.WALL_ZONE` (Argentina) when parsing server-side. `AppTimezone` (in `models/util/`) is the single source of truth — never hardcode `ZoneId.of("America/Argentina/Buenos_Aires")` again.
+- **Publishing / availability**: valid date order; period end not before **today** in that zone (`CarAvailabilityServiceImpl` and related car services).
+- **Reserving**: pickup day not before **today**; interval must fit published availability (`ReservationPricingServiceImpl` / reservation services).
+- **Flatpickr**: `minDate: 'today'` in SPA calendars (e.g. `useSearchDatePickers`, `DetailReservationInlineCalendar`) complements server validation.
 
 ## Development conventions
 
@@ -148,18 +171,18 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 
 - **DI**: Constructor `@Autowired` as in existing code.
 - **Service ↔ persistence**: Each `*ServiceImpl` injects its own DAOs. Cross-aggregate access goes through peer services (`UserService`, `ReservationService`, …). Use `@Lazy` on one constructor param when two services need each other to break cycles.
-- **Scheduling** (`services/.../scheduling`): `@Scheduled` beans call services only, not DAOs.
-- **Validation**: `ValidationWebConfig` registers `LocalValidatorFactoryBean` as the MVC validator.
-- **Javadoc**: Public contracts in `*-contracts` in **English**. Avoid HTML `<p>` in Javadoc; use extra `*` lines or `{@code}` / `{@link}`. Controllers: short **English** class summary where it helps.
+- **Scheduling** (`services/.../scheduling` or `ar.edu.itba.paw.scheduling`): `@Scheduled` beans call services only, not DAOs.
+- **Validation**: `LocalValidatorFactoryBean` in `WebConfig`, bound into Jersey via `SpringValidatorBinder` / `ValidationContextResolver`. Use `@Valid` and form validation support on resources — not Spring MVC validators.
+- **Javadoc**: Public contracts in `*-contracts` in **English**. Avoid HTML `<p>` in Javadoc; use extra `*` lines or `{@code}` / `{@link}`. Resources: short **English** class summary where it helps.
 
 ### Quality and security (recurring audit)
 
-- **Spring versions**: Root `pom.xml` (`spring.version`, `spring-security.version`).
-- **Controllers**: Call **services** only, not DAOs. No embedded business rules or direct mail sends; use service APIs. Prefer constructor injection and minimal visibility.
-- **Exceptions & UX**: Domain failures → `RydenException` + message keys; `UnhandledExceptionHandler` must not expose raw `Throwable#getMessage()` (i18n keys; escape dynamic text with JSTL `c:out` when shown).
+- **Spring versions**: Root `pom.xml` (`spring.version`, `spring-security.version`, `jersey.version`).
+- **JAX-RS resources**: Call **services** only, not DAOs. No embedded business rules or direct mail sends; use service APIs. Prefer constructor injection and minimal visibility.
+- **Exceptions & UX**: Domain failures → `RydenException` + message keys; Jersey **`ExceptionMapper`s** under `webapp.exception.mapper` must not expose raw `Throwable#getMessage()` to clients (i18n keys / structured error DTOs).
 - **SQL / queries**: Use parameterized JQL or native SQL with **bound parameters** (named or positional); never concatenate user input into queries.
-- **N+1 queries (strictly prohibited)**: Never return a `List<entity>` from a DAO and let callers trigger per-row lazy loads on LAZY associations. DAO methods that return a list of entities must pre-hydrate every association the known caller chain will navigate — typically via `JOIN FETCH` in JPQL, or ID-page + `IN` fetch / DTO-native projections (see **Pagination**). FK-only convenience accessors like `Reservation#getCarId()` / `#getRiderId()` are safe and need no fetch; property navigation across a non-FK association (`car.getOwner()`, `carModel.getBrand()`, …) is not. The fix belongs in the DAO; services and controllers must not work around it. Existing pattern examples: `findReservationsWithOverdueRefundProof`, `findReservationsRequiringRefundProofForOwner`, and `loadReservationCardsByIdNativeQuery` in `ReservationJpaDao`.
-- **Logging**: Production `logback/logback-prod.xml` (typically **INFO+** for `ar.edu.itba.paw`); local may use `logback-local.xml` with **DEBUG** or **TRACE** on persistence packages when diagnosing listing/reservation SQL. Use **SLF4J 2** with parameterized messages — never string concatenation. **DEBUG** must use the fluent API (`LOGGER.atDebug()…log()`), not `LOGGER.debug(…)`; use `.setCause(throwable)` when the catch block swallows an exception but still needs traceability. **INFO** / **WARN** / **ERROR** use the matching fluent helpers (`atInfo`, `atWarn`, `atError`) for the same style.
+- **N+1 queries (strictly prohibited)**: Never return a `List<entity>` from a DAO and let callers trigger per-row lazy loads on LAZY associations. DAO methods that return a list of entities must pre-hydrate every association the known caller chain will navigate — typically via `JOIN FETCH` in JPQL, or ID-page + `IN` fetch / DTO-native projections (see **Pagination**). FK-only convenience accessors like `Reservation#getCarId()` / `#getRiderId()` are safe and need no fetch; property navigation across a non-FK association (`car.getOwner()`, `carModel.getBrand()`, …) is not. The fix belongs in the DAO; services and resources must not work around it. Existing pattern examples: `findReservationsWithOverdueRefundProof`, `findReservationsRequiringRefundProofForOwner`, and `loadReservationCardsByIdNativeQuery` in `ReservationJpaDao`.
+- **Logging**: Production `logback/logback-prod.xml` (typically **INFO+** for `ar.edu.itba.paw`); local may use `logback-local.xml` with **DEBUG** or **TRACE** on persistence packages when diagnosing car/reservation SQL. Use **SLF4J 2** with parameterized messages — never string concatenation. **DEBUG** must use the fluent API (`LOGGER.atDebug()…log()`), not `LOGGER.debug(…)`; use `.setCause(throwable)` when the catch block swallows an exception but still needs traceability. **INFO** / **WARN** / **ERROR** use the matching fluent helpers (`atInfo`, `atWarn`, `atError`) for the same style.
 - **Tests**: Arrange / Act / assert outcomes, not wiring. **No `Mockito.verify`** (or call-count tricks). Skip tests that only mirror a one-line delegate.
 - **Style**: `final` where appropriate, private constructors on utility classes, immutable DTOs/criteria where practical; avoid magic numbers — read limits from `application.properties` (documented JVM fallbacks only where needed, e.g. `AppPaginationProperties`).
 - **Constructors (Effective Java)**: At most **one public constructor** per class. Do not overload constructors — use **static factories** (`of`, `forUpload`, `denied`, `wrapping`, …) or a **builder** when several creation shapes exist. JPA entities may keep a **package-private** no-arg constructor for Hibernate plus a single public constructor (or static factory) for application code. Spring beans: one `@Autowired` constructor only.
@@ -176,7 +199,7 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 - **One behavior per test**: Prefer a single clear behavior per `@Test`; when both return value and DB state matter, split into focused tests rather than asserting everything in one method.
 - **Unit tests**: JUnit 5 + Mockito (`services`, `models`).
 - **Persistence**: HSQLDB, DAO-style tests under `persistence/src/test`.
-- **DAO integration tests** (`*HibernateDaoTest`, `*JdbcDaoTest`, `DaoIntegrationTestSupport`): After a **write** (`create*`, `update*`, `delete*`), call **`em.flush()`** when using JPA in the same transaction, then assert with **`JdbcTemplate`** / SQL fixtures — **never** verify persistence only via another method on the **same** DAO (e.g. `createCar` + `getCarById`) and avoid asserting writes solely with **`em.find`** (first-level cache). For ordered reads with fixtures, optional ground-truth `ORDER BY` via `JdbcTemplate`.
+- **DAO integration tests** (`*JpaDaoTest`, `DaoIntegrationTestSupport`): After a **write** (`create*`, `update*`, `delete*`), call **`em.flush()`** when using JPA in the same transaction, then assert with **`JdbcTemplate`** / SQL fixtures — **never** verify persistence only via another method on the **same** DAO (e.g. `createCar` + `getCarById`) and avoid asserting writes solely with **`em.find`** (first-level cache). For ordered reads with fixtures, optional ground-truth `ORDER BY` via `JdbcTemplate`.
 - **No interaction verification**: No `verify`, `verifyNoInteractions`, `never()`, `times()`, `InOrder`, captors for call wiring.
 - **Do not emulate verify**: No counters or collector lists whose sole purpose is call counts.
 - **Matchers**: Do not use `Mockito.anyLong()` (or `any*()`) as the **value** inside `when(...)` — use fixed literals.
@@ -184,10 +207,25 @@ Configured in **`WebAuthConfig`**: Spring Security 5.7.14, `@EnableWebSecurity`,
 
 #### Frontend (`frontend/`, Vitest)
 
-- **Solo contrato**: tests en `*.contract.test.ts` — alineación con `openapi.yaml`, hipermedia (`Link`, `X-Total-Count`, resolución de URNs `/webapp/api`), multipart y paridad i18n `es`/`en`. Sin tests de lógica UI, routing ni validación cliente aislada.
-- **Unitarios**: sin red real; `fetch` mockeado cuando hace falta.
-- **AAA**: cada `it` con `// 1.Arrange`, `// 2.Act`, `// 3.Assert` (o `// 2.Act / 3.Assert` cuando aplique).
-- **Nombres**: prefijo `test` + comportamiento (`testParseLinkHeaderReadsNextAndLastRels`).
+- **Primary style — contract tests** in `*.contract.test.ts`: alignment with `openapi.yaml`, hypermedia (`Link`, `X-Total-Count`, URN resolution under `/webapp/api`), JWT, multipart, and i18n `es`/`en` parity. Prefer these over UI/routing/client-validation unit tests.
+- **Unit helpers**: no real network; mock `fetch` when needed (e.g. `dateFormat.test.ts`, `navActive.test.ts`).
+- **AAA**: each `it` with `// 1.Arrange`, `// 2.Act`, `// 3.Assert` (or `// 2.Act / 3.Assert` when applicable).
+- **Names**: prefix `test` + behaviour (`testParseLinkHeaderReadsNextAndLastRels`).
+
+### Frontend SPA conventions
+
+- **Stack**: React 18, TypeScript, Vite 5, React Router 6 (`basename` from `appBasePath()`), TanStack Query, Zustand session, Bootstrap / react-bootstrap, i18next, Flatpickr.
+- **Layout** (`frontend/src/`):
+  - `api/` — `HypermediaClient`, JWT helpers, vendor MIME types, URI/URN resolution, contract tests
+  - `features/` — domain slices (`admin`, `auth`, `browse`, `owner`, `profile`, `reservations`)
+  - `components/` — shell (`Layout`, `NavBar`, `RequireAuth`) + shared `ryden/*` UI kit
+  - `router/`, `routes/` — `AppRouter`, `paths.ts`, nav helpers
+  - `session/` — Zustand store + session client
+  - `i18n/`, `styles/` — locales + `ryden-theme.css` / component CSS
+- **Hypermedia**: navigate via DTO `links` and `HypermediaClient` (`follow()`, `followLinkCollection`, `getLinkCollectionPage` in **`frontend/src/api/client.ts`**). Never invent API URLs from bare IDs.
+- **MIME types**: always versioned vendor types from `mediaTypes.ts` (`application/vnd.paw.*.v1+json`). Never use bare `application/json` for API resources.
+- **Feature modules**: pages, hooks, `api.ts`, `types.ts`, routes, and `i18n.ts` live with the feature; shared interaction UI under `components/ryden/`.
+- **SPA routes**: English path shapes in `routes/paths.ts` (aligned with legacy URL shapes for mail CTAs and bookmarks).
 
 ### Message keys
 
@@ -195,23 +233,24 @@ Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`
 
 ### Application properties
 
-- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp`), uploads, validation, pagination, reservation timing, `app.scheduler.*` crons/zones.
+- **Main**: `webapp/src/main/resources/application/application.properties` — port, context path (`/webapp`), uploads, validation, pagination, reservation timing, JWT, `app.scheduler.*` crons/zones.
 - **Profiles**: `application-local.properties`, `application-deployed.properties` (examples in folder); secrets not committed.
 - **Mail**: `mail/emailconfig.properties`, `mail/javamail.properties` under `webapp/src/main/resources/mail/`.
 
 ### Directory structure (per module)
 
 - `src/main/java`, `src/main/resources`, `src/test/java` as usual.
-- `webapp/src/main/webapp`: JSPs, CSS, JS, `WEB-INF/web.xml`.
+- `webapp/src/main/webapp`: `index.html`, `public/` (Vite assets), `assets/`, `WEB-INF/web.xml`.
+- `frontend/src`: see **Frontend SPA conventions** above.
 
 ### Key services and DAOs (orientation)
 
 - **User**: `UserService` / `UserDao`.
-- **Car & listing**: `CarService` / `CarDao`, `ListingService` / `ListingDao`.
-- **Reservation**: `ReservationService` / `ReservationDao`.
+- **Car & availability**: `CarService` / `CarDao`, `CarAvailabilityService` / `CarAvailabilityDao`.
+- **Reservation**: `ReservationService` (and related workflow/pricing services) / `ReservationDao`.
 - **Email & verification**: `EmailService`, `EmailVerificationService`, `PasswordResetService` and related DAOs.
 - **Images**: `ImageService` / `ImageDao`, `CarPictureService` / `CarPictureDao`.
-- **Session**: e.g. `PublishCarStashSessionListener` for publish-form stash cleanup.
+- **Reviews / favorites / location**: matching `*Service` / `*Dao` pairs under the same feature packages.
 
 ## Logging
 
@@ -266,17 +305,14 @@ rg "@Transactional\\(readOnly\\s*=\\s*true\\)|@Transactional" services/src/main/
 rg "this\\.[a-zA-Z0-9_]+\\(" services/src/main/java/ar/edu/itba/paw/services
 ```
 
-## Controller cross-cutting concerns
-
-### Shared model attributes
-
-Use `@ControllerAdvice` to expose `@ModelAttribute` beans across controllers.
+## API / resource cross-cutting concerns
 
 ### REST URL routing
 
-- **Resource identity on GET**: Identifiers that name the resource being accessed (`carId`, `userId`, `reservationId`, `documentType`, …) belong in the path as `@PathVariable`s — e.g. `GET /cars/{carId}`, `GET /users/{userId}/profile`, `GET /profile/documents/{documentType}` — not as `@RequestParam` query parameters. Prefer `/cars/123` over `/car-detail?carId=123`.
-- **Query params for everything else**: Pagination, sorting, filters, and UI/breadcrumb state (`page`, `sort`, `status`, `role`, `src`, `fromCar`, `tab`, …) stay as query params.
-- **Consistency**: New controllers, JSP/tag links, mail CTA URLs, JS fetch endpoints, and `redirect:` strings must follow the same shape. Canonical examples already in the app: `/my-cars/car/{carId}`, `/my-reservations/{reservationId}`.
+- **Resource identity on GET**: Identifiers that name the resource being accessed (`carId`, `userId`, `reservationId`, `documentType`, …) belong in the path as JAX-RS `@PathParam`s — e.g. `GET /cars/{carId}`, `GET /users/{userId}/profile`, `GET /users/{userId}/documents/{documentType}` — not as `@QueryParam`s. Prefer `/cars/123` over `/car-detail?carId=123`.
+- **Query params for everything else**: Pagination, sorting, filters, and UI state (`page`, `sort`, `status`, `role`, `src`, `fromCar`, `tab`, …) stay as query params.
+- **Consistency**: New resources, OpenAPI paths, SPA routes (`frontend/src/routes/paths.ts`), mail CTA URLs, and client `follow()` targets must agree. Canonical API base: `/webapp/api`. Canonical SPA examples: owner car detail and reservation detail paths in `paths.ts`.
+- **Contract source of truth**: [openapi.yaml](openapi.yaml) at the repo root — agents should consult it for MIME types, link relations, auth headers, and collection shapes before inventing endpoints.
 
 ### Hypermedia collections (embedded teasers vs link-only)
 
@@ -321,7 +357,7 @@ Collection MIME returns `array` of `Links`. Client `Accept`s item MIME on each `
 | `GET /reviews` | `review.links.v1+json` | `review.v1+json` |
 | `GET /reservations` | `reservation.links.v1+json` | `reservation.summary.v1+json` |
 
-Frontend helper: `frontend/src/api/linkCollection.ts` (`followLinkCollection`, `getLinkCollectionPage`).
+Frontend helpers: `followLinkCollection`, `getLinkCollectionPage` in `frontend/src/api/client.ts`.
 
 #### Pattern B — embedded (documented tradeoff)
 
@@ -351,10 +387,10 @@ Same proxy rule as `@Transactional`: only applies to **public** methods invoked 
 
 ### Background contrast rule
 
-The page body uses Bootstrap's `bg-light` (`#f8f9fa`, "cream/off-white"). Any section or card rendered directly on this background **must** carry `bg-white` so it visually pops. Nested elements placed *inside* a `bg-white` section that need their own background should use `bg-light` (the cream tone) to keep the alternating contrast going.
+The SPA page body uses Bootstrap's `bg-light` (`#f8f9fa`, "cream/off-white"). Any section or card rendered directly on this background **must** carry `bg-white` so it visually pops. Nested elements placed *inside* a `bg-white` section that need their own background should use `bg-light` (the cream tone) to keep the alternating contrast going.
 
 Quick checklist when adding a new section card:
 - Section sits on `bg-light` page → add `bg-white` to the card/container.
 - Sub-element sits on `bg-white` card → use `bg-light` for its background.
 
-This applies to JSP fragments, tag files, and any inline HTML added to existing views.
+This applies to React components and CSS under `frontend/` (especially `styles/ryden-theme.css` and feature styles).
