@@ -43,6 +43,9 @@ public final class SpaFallbackFilter extends OncePerRequestFilter {
         }
 
         if (indexExists(request.getServletContext())) {
+            // SPA shell must not be cached: it points at content-hashed /public/*.js.
+            // Without this, deep-links keep an old index.html and an immutable stale bundle.
+            response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
             request.getRequestDispatcher(INDEX_HTML).forward(request, response);
             return;
         }

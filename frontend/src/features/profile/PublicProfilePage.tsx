@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser, fetchUserCars, getUserReviews, userCarsLink, userReviewsLink } from './api';
-import { formatDateLong } from '../../i18n/dateFormat';
+import { formatDateLong, formatMonthYear } from '../../i18n/dateFormat';
 import { LoadingBlock, ReviewCard } from '../../components/ryden';
 import { apiAssetUrl, profilePictureAssetUrl } from '../../api/uri';
 import { useUserBrief } from '../browse/hooks';
@@ -59,7 +59,7 @@ function Avatar({ src, alt, initials }: { src?: string; alt: string; initials: s
 }
 
 export default function PublicProfilePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const userUri = id ? `/users/${id}` : null;
 
@@ -140,7 +140,9 @@ export default function PublicProfilePage() {
                     {user.memberSince && (
                       <p className="counterparty-member-since mb-0">
                         <span className="text-secondary">{t('profile.public.memberSince')}</span>{' '}
-                        <span className="fw-semibold">{user.memberSince}</span>
+                        <span className="fw-semibold">
+                          {formatMonthYear(user.memberSince, i18n.language)}
+                        </span>
                       </p>
                     )}
                   </div>

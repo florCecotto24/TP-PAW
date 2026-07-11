@@ -18,7 +18,7 @@ import {
 } from './api';
 import type { DocumentType, ProfileFormValues, UserDto, UserPatchDto } from './types';
 import { apiErrorMessage } from '../auth/errorMessage';
-import { formatDate } from '../../i18n/dateFormat';
+import { formatDate, formatMonthYear } from '../../i18n/dateFormat';
 
 // =============================================================================
 // MyProfilePage — perfil propio editable. Markup espejo del profile.jsp original
@@ -127,7 +127,7 @@ export default function MyProfilePage() {
 
 // --- Card de avatar + nombre + email ----------------------------------------
 function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // El backend incluye links.profilePicture SOLO si el usuario tiene foto, así que
   // su presencia indica si existe (mostramos imagen y la opción "quitar"); si está
   // ausente, mostramos el placeholder de iniciales. El onError queda como red de
@@ -243,7 +243,9 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
           {user.memberSince && (
             <p className="profile-card__member-since">
               <span className="profile-card__member-since-label">{t('profile.me.memberSince')}</span>{' '}
-              <span className="profile-card__member-since-value">{user.memberSince}</span>
+              <span className="profile-card__member-since-value">
+                {formatMonthYear(user.memberSince, i18n.language)}
+              </span>
             </p>
           )}
           {user.email && <p className="profile-card__email ryden-text-break">{user.email}</p>}

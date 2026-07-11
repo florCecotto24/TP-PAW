@@ -137,9 +137,9 @@ export function formatDateRange(
   return `${left} – ${right}`;
 }
 
-/** Mes calendario (`YYYY-MM`) legible: "Julio 2026" / "July 2026". */
+/** Mes calendario (`YYYY-MM` o `YYYY-MM-DD`) legible: "Julio 2026" / "July 2026". */
 export function formatMonthYear(yyyyMm: string, language?: string): string {
-  const match = /^(\d{4})-(\d{2})$/.exec(yyyyMm);
+  const match = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(yyyyMm);
   if (!match) return yyyyMm;
   const y = Number(match[1]);
   const m = Number(match[2]);
