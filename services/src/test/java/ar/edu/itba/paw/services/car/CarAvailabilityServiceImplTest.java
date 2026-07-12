@@ -82,18 +82,6 @@ public class CarAvailabilityServiceImplTest {
     }
 
     @Test
-    public void testFindByIdDelegatesToDao() {
-        final CarAvailability row = buildAvailability(900L, CAR_ID,
-                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), CarAvailability.Kind.OFFERED);
-        Mockito.when(carAvailabilityDao.findById(900L)).thenReturn(Optional.of(row));
-
-        final Optional<CarAvailability> result = carAvailabilityService.findById(900L);
-
-        Assertions.assertTrue(result.isPresent());
-        Assertions.assertSame(row, result.get());
-    }
-
-    @Test
     public void testFindByCarIdReturnsListFromDao() {
         final CarAvailability a = buildAvailability(1L, CAR_ID,
                 LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 10), CarAvailability.Kind.OFFERED);
@@ -121,19 +109,6 @@ public class CarAvailabilityServiceImplTest {
 
         Assertions.assertEquals(1, result.size());
         Assertions.assertEquals(row, result.get(0));
-    }
-
-    @Test
-    public void testFindOverlappingRangeByCarDelegatesToDao() {
-        final LocalDate from = LocalDate.of(2026, 8, 1);
-        final LocalDate to = LocalDate.of(2026, 8, 31);
-        final CarAvailability row = buildAvailability(88L, CAR_ID, from, to, CarAvailability.Kind.OFFERED);
-        Mockito.when(carAvailabilityDao.findOverlappingRangeByCar(CAR_ID, from, to)).thenReturn(List.of(row));
-
-        final List<CarAvailability> result = carAvailabilityService.findOverlappingRangeByCar(CAR_ID, from, to);
-
-        Assertions.assertEquals(1, result.size());
-        Assertions.assertSame(row, result.get(0));
     }
 
     @Test

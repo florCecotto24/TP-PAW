@@ -5,6 +5,7 @@ import {
   parseLinkHeader,
   extractPageLinks,
   parseContentDispositionFileName,
+  conditionalGetCacheKey,
   type TokenAccessors,
 } from './client';
 import {
@@ -14,6 +15,7 @@ import {
   carCoverAssetUrl,
   canonicalApiUserPath,
   collapseDuplicateSlashes,
+  hrefToRelativeApiPath,
   joinBaseAndPath,
   profilePictureAssetUrlFromSelf,
   resolveApiUrl,
@@ -26,6 +28,15 @@ function makeResponse(
   headers: Record<string, string> = {},
 ): Response {
   const h = new Headers(headers);
+  if (status === 304) {
+    return {
+      status: 304,
+      ok: true,
+      headers: h,
+      text: async () => '',
+      blob: async () => new Blob(),
+    } as unknown as Response;
+  }
   const text = body === undefined ? '' : typeof body === 'string' ? body : JSON.stringify(body);
   return new Response(status === 204 ? null : text, { status, headers: h });
 }
@@ -124,6 +135,17 @@ describe('hypermedia contract (frontend)', () => {
       // 3.Assert
       expect(apiIndex).toBe('/webapp/api');
       expect(base).toBe('/webapp/api');
+    });
+
+    it('testHrefToRelativeApiPathStripsApiRootFromAbsoluteIndexHref', () => {
+      // 1.Arrange
+      vi.stubEnv('BASE_URL', '/webapp/');
+
+      // 2.Act
+      const path = hrefToRelativeApiPath('http://localhost:8080/webapp/api/cars');
+
+      // 3.Assert
+      expect(path).toBe('/cars');
     });
 
     it('testResolveApiUrlKeepsAbsoluteJerseyLinksUntouched', () => {
@@ -458,6 +480,65 @@ describe('hypermedia contract (frontend)', () => {
       expect((mainInit.headers as Headers).get('Authorization')).toBe('Bearer fresh-access');
       expect(onTokens).toHaveBeenCalledWith('fresh-access', 'fresh-refresh');
       vi.useRealTimers();
+    });
+
+    it('testConditionalGetSendsIfNoneMatchOnRefetch', async () => {
+      // 1.Arrange
+      vi.stubEnv('BASE_URL', '/webapp/');
+      const accept = 'application/vnd.paw.car.v1+json';
+      const car = { plate: 'ABC123', links: { self: '/cars/1' } };
+      fetchMock
+        .mockResolvedValueOnce(
+          makeResponse(200, car, { ETag: '"car-1-detail-1700000000000"' }),
+        )
+        .mockResolvedValueOnce(makeResponse(304, undefined, { ETag: '"car-1-detail-1700000000000"' }));
+
+      // 2.Act
+      const first = await client.get('/cars/1', { accept });
+      const second = await client.get('/cars/1', { accept });
+
+      // 3.Assert
+      expect(first.data).toEqual(car);
+      expect(first.notModified).toBeUndefined();
+      const firstInit = fetchMock.mock.calls[0][1] as RequestInit;
+      expect((firstInit.headers as Headers).get('If-None-Match')).toBeNull();
+      const secondInit = fetchMock.mock.calls[1][1] as RequestInit;
+      expect((secondInit.headers as Headers).get('If-None-Match')).toBe(
+        '"car-1-detail-1700000000000"',
+      );
+      expect(second.status).toBe(304);
+      expect(second.notModified).toBe(true);
+      expect(second.data).toEqual(car);
+    });
+
+    it('testConditionalGetCacheKeySeparatesAcceptNegotiation', () => {
+      // 1.Arrange
+      const url = '/webapp/api/cars/1';
+
+      // 2.Act / 3.Assert
+      expect(conditionalGetCacheKey(url, 'application/vnd.paw.car.v1+json')).not.toBe(
+        conditionalGetCacheKey(url, 'application/vnd.paw.car.summary.v1+json'),
+      );
+    });
+
+    it('testClearConditionalGetCacheDropsStoredEtag', async () => {
+      // 1.Arrange
+      const accept = 'application/vnd.paw.car.v1+json';
+      fetchMock
+        .mockResolvedValueOnce(
+          makeResponse(200, { plate: 'ABC123' }, { ETag: '"car-1-detail-1"' }),
+        )
+        .mockResolvedValueOnce(makeResponse(200, { plate: 'ABC123' }, { ETag: '"car-1-detail-1"' }));
+      await client.get('/cars/1', { accept });
+      client.clearConditionalGetCache();
+      fetchMock.mockClear();
+
+      // 2.Act
+      await client.get('/cars/1', { accept });
+
+      // 3.Assert
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      expect((init.headers as Headers).get('If-None-Match')).toBeNull();
     });
   });
 });

@@ -65,7 +65,8 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
     @Override
     public List<CarAvailability> findOverlappingRangeByCar(final long carId, final LocalDate from, final LocalDate to) {
         return em.createQuery(
-                        "FROM CarAvailability la WHERE la.car.id = :carId "
+                        "FROM CarAvailability la LEFT JOIN FETCH la.neighborhood "
+                                + "WHERE la.car.id = :carId "
                                 + "AND la.startInclusive <= :to AND la.endInclusive >= :from "
                                 + "ORDER BY la.createdAt DESC, la.id DESC",
                         CarAvailability.class)
@@ -114,7 +115,7 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
     @Override
     public List<CarAvailability> findByCarId(final long carId) {
         return em.createQuery(
-                        "FROM CarAvailability la WHERE la.car.id = :carId ORDER BY la.startInclusive ASC",
+                        "FROM CarAvailability la LEFT JOIN FETCH la.neighborhood WHERE la.car.id = :carId ORDER BY la.startInclusive ASC",
                         CarAvailability.class)
                 .setParameter("carId", carId)
                 .getResultList();
@@ -126,7 +127,7 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
             return Collections.emptyList();
         }
         final StringBuilder jpql = new StringBuilder(
-                "FROM CarAvailability la WHERE la.car.id IN :carIds");
+                "FROM CarAvailability la LEFT JOIN FETCH la.neighborhood WHERE la.car.id IN :carIds");
         if (minEndDate != null) {
             jpql.append(" AND la.endInclusive >= :minEndDate");
         }
@@ -136,63 +137,6 @@ public class CarAvailabilityJpaDao implements CarAvailabilityDao {
             query.setParameter("minEndDate", minEndDate);
         }
         return query.getResultList();
-    }
-
-    @Override
-    public int countMonthOfferedByCar(final long carId, final LocalDate monthStart, final LocalDate monthEnd) {
-        final Number count = (Number) em.createNativeQuery(
-                        "SELECT COUNT(*) FROM car_availability la "
-                                + "WHERE la.car_id = :carId "
-                                + "AND la.kind = 'offered' "
-                                + "AND la.start_date <= :monthEnd AND la.end_date >= :monthStart")
-                .setParameter("carId", carId)
-                .setParameter("monthStart", monthStart)
-                .setParameter("monthEnd", monthEnd)
-                .getSingleResult();
-        return count != null ? count.intValue() : 0;
-    }
-
-    @Override
-    public List<CarAvailability> findMonthOfferedByCar(
-            final long carId, final LocalDate monthStart, final LocalDate monthEnd,
-            final int limit, final int offset) {
-        @SuppressWarnings("unchecked")
-        final List<Number> ids = em.createNativeQuery(
-                        "SELECT la.id FROM car_availability la "
-                                + "WHERE la.car_id = :carId "
-                                + "AND la.kind = 'offered' "
-                                + "AND la.start_date <= :monthEnd AND la.end_date >= :monthStart "
-                                + "ORDER BY la.start_date ASC "
-                                + "LIMIT :limit OFFSET :offset")
-                .setParameter("carId", carId)
-                .setParameter("monthStart", monthStart)
-                .setParameter("monthEnd", monthEnd)
-                .setParameter("limit", limit)
-                .setParameter("offset", offset)
-                .getResultList();
-        if (ids.isEmpty()) {
-            return List.of();
-        }
-        final List<Long> orderedIds = ids.stream()
-                .map(Number::longValue)
-                .collect(java.util.stream.Collectors.toList());
-        final List<CarAvailability> fetched = em.createQuery(
-                        "FROM CarAvailability la WHERE la.id IN :ids",
-                        CarAvailability.class)
-                .setParameter("ids", orderedIds)
-                .getResultList();
-        final Map<Long, CarAvailability> byId = new HashMap<>(fetched.size());
-        for (final CarAvailability la : fetched) {
-            byId.put(la.getId(), la);
-        }
-        final List<CarAvailability> result = new java.util.ArrayList<>(orderedIds.size());
-        for (final long id : orderedIds) {
-            final CarAvailability la = byId.get(id);
-            if (la != null) {
-                result.add(la);
-            }
-        }
-        return result;
     }
 
     @Override

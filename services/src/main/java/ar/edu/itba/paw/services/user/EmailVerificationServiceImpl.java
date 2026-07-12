@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.services.user;
 
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 
@@ -18,6 +17,7 @@ import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
 import ar.edu.itba.paw.services.email.EmailService;
 /** Uses only {@link EmailVerificationCodeDao}; user and mail side effects go through {@link UserService} and {@link EmailService}. */
@@ -26,21 +26,23 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailVerificationServiceImpl.class);
 
-    private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final EmailVerificationCodeDao emailVerificationCodeDao;
     private final EmailService emailService;
     private final UserService userService;
+    private final VerificationCodePolicy verificationCodePolicy;
 
     @Autowired
     public EmailVerificationServiceImpl(
             final EmailVerificationCodeDao emailVerificationCodeDao,
             final EmailService emailService,
-            final UserService userService) {
+            final UserService userService,
+            final VerificationCodePolicy verificationCodePolicy) {
         this.emailVerificationCodeDao = emailVerificationCodeDao;
         this.emailService = emailService;
         this.userService = userService;
+        this.verificationCodePolicy = verificationCodePolicy;
     }
 
     @Override
@@ -104,9 +106,10 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
     }
 
     private void insertAndSend(final long userId, final String email, final Locale locale) {
-        final String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        final String code = generateNumericCode();
         final Instant now = Instant.now();
-        emailVerificationCodeDao.insert(userId, code, now.plus(CODE_TTL), now);
+        emailVerificationCodeDao.insert(
+                userId, code, now.plus(verificationCodePolicy.getCodeTtl()), now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
         final Locale mailLocale = userService.resolveMailLocaleOrElse(userId, fallback);
         emailService.sendEmailVerificationCode(EmailVerificationCodeEmailPayload.builder()
@@ -114,6 +117,12 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
                 .recipientEmail(email)
                 .code(code)
                 .build());
+    }
+
+    private String generateNumericCode() {
+        final int length = verificationCodePolicy.getCodeLength();
+        final int upperBound = (int) Math.pow(10, length);
+        return String.format("%0" + length + "d", RANDOM.nextInt(upperBound));
     }
 
     @Override

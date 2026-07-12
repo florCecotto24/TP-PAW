@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
@@ -11,7 +11,7 @@ import {
   isRiderReservationsNavActive,
 } from '../routes/navActive';
 import { resolveProfilePictureAssetUrl } from '../api/uri';
-import { LogoutConfirmModal } from './ryden';
+import { LogoutConfirmModal, Avatar } from './ryden';
 import { useNavActivePill } from './useNavActivePill';
 import logoUrl from '../assets/images/Ryden_logo.ico';
 
@@ -24,7 +24,6 @@ export default function NavBar() {
   const currentUserUri = useSessionStore((s) => s.currentUserUri);
   const logout = useSessionStore((s) => s.logout);
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [avatarFailed, setAvatarFailed] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
 
   const isAuthenticated = status === 'authenticated';
@@ -41,15 +40,7 @@ export default function NavBar() {
     if (next !== lang) void i18n.changeLanguage(next);
   }
 
-  const initials =
-    `${currentUser?.forename?.[0] ?? ''}${currentUser?.surname?.[0] ?? ''}`.toUpperCase();
-  const avatarUrl = avatarFailed
-    ? null
-    : resolveProfilePictureAssetUrl(currentUser?.links, currentUserUri);
-
-  useEffect(() => {
-    setAvatarFailed(false);
-  }, [currentUser?.links?.profilePicture, currentUserUri]);
+  const avatarUrl = resolveProfilePictureAssetUrl(currentUser?.links, currentUserUri);
 
   const riderReservationsActive = isRiderReservationsNavActive(location.pathname, location.search);
   const myCarsActive = isMyCarsNavActive(location.pathname, location.search);
@@ -130,20 +121,16 @@ export default function NavBar() {
                       className="navbar-user-menu-toggle rounded-circle d-inline-flex align-items-center justify-content-center p-0 overflow-hidden"
                       style={{ width: 40, height: 40 }}
                     >
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={t('navbar.avatar.alt')}
-                          width={40}
-                          height={40}
-                          className="navbar-user-menu-toggle__img"
-                          onError={() => setAvatarFailed(true)}
-                        />
-                      ) : initials ? (
-                        <span className="fw-semibold text-primary small user-select-none">{initials}</span>
-                      ) : (
-                        <i className="bi bi-person-fill text-primary" aria-hidden="true" />
-                      )}
+                      <Avatar
+                        src={avatarUrl}
+                        forename={currentUser?.forename}
+                        surname={currentUser?.surname}
+                        alt={t('navbar.avatar.alt')}
+                        className="navbar-user-menu-toggle w-100 h-100"
+                        imgClassName="navbar-user-menu-toggle__img w-100 h-100"
+                        placeholderClassName="d-flex align-items-center justify-content-center w-100 h-100"
+                        iconFallback
+                      />
                     </span>
                   }
                   id="navbar-user-menu"

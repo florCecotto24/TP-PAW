@@ -1,30 +1,36 @@
 /** 0-based home carousel page indices from URL (JSP: cheapestPage, recentPage). */
 
+export type HomeCarouselPageKey = 'cheapestPage' | 'recentPage';
+
 export function parseHomeCarouselPages(searchParams: URLSearchParams): {
   cheapestPage: number;
   recentPage: number;
 } {
-  const cheapestRaw = Number(searchParams.get('cheapestPage') ?? '0');
-  const recentRaw = Number(searchParams.get('recentPage') ?? '0');
   return {
-    cheapestPage:
-      Number.isFinite(cheapestRaw) && cheapestRaw >= 0 ? Math.floor(cheapestRaw) : 0,
-    recentPage: Number.isFinite(recentRaw) && recentRaw >= 0 ? Math.floor(recentRaw) : 0,
+    cheapestPage: parseHomeCarouselPage(searchParams, 'cheapestPage'),
+    recentPage: parseHomeCarouselPage(searchParams, 'recentPage'),
   };
 }
 
-export function buildHomeCarouselHref(
+export function parseHomeCarouselPage(
   searchParams: URLSearchParams,
-  carousel: 'cheapest' | 'recent',
-  page: number,
-): string {
-  const params = new URLSearchParams(searchParams);
-  const key = carousel === 'cheapest' ? 'cheapestPage' : 'recentPage';
-  if (page <= 0) {
-    params.delete(key);
+  key: HomeCarouselPageKey,
+): number {
+  const raw = Number(searchParams.get(key) ?? '0');
+  return Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+}
+
+/** Writes a carousel API page index into the current URL (0 removes the param). */
+export function withHomeCarouselPage(
+  searchParams: URLSearchParams,
+  key: HomeCarouselPageKey,
+  pageIndex: number,
+): URLSearchParams {
+  const next = new URLSearchParams(searchParams);
+  if (pageIndex <= 0) {
+    next.delete(key);
   } else {
-    params.set(key, String(page));
+    next.set(key, String(pageIndex));
   }
-  const qs = params.toString();
-  return qs ? `/?${qs}` : '/';
+  return next;
 }

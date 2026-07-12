@@ -234,6 +234,17 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<Long, List<Long>> findOverdueRefundProofReservationIdsByOwnerIds(
+            final Collection<Long> ownerUserIds) {
+        if (ownerUserIds == null || ownerUserIds.isEmpty()) {
+            return Map.of();
+        }
+        return reservationDao.findOverdueRefundProofReservationIdsByOwnerIds(
+                ownerUserIds, OffsetDateTime.now(ZoneOffset.UTC));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Set<Long> findOwnerReservationIdsRequiringRefundProof(final long ownerUserId) {
         return reservationDao.findReservationsRequiringRefundProofForOwner(ownerUserId)
                 .stream()
@@ -325,6 +336,19 @@ public class ReservationServiceImpl implements ReservationService {
         workflowService.markCarReturnedByOwner(ownerUserId, reservationId);
     }
 
+    @Override
+    @Transactional
+    public Reservation patchReservation(
+            final long viewerUserId,
+            final long reservationId,
+            final Reservation.Status cancellationStatus,
+            final Boolean carReturned,
+            final String fromDateTimeWall,
+            final String untilDateTimeWall) {
+        return workflowService.patchReservation(
+                viewerUserId, reservationId, cancellationStatus, carReturned, fromDateTimeWall, untilDateTimeWall);
+    }
+
     // ---------------------------------------------------------------------------------------
     // Payment side → payment service
     // ---------------------------------------------------------------------------------------
@@ -333,6 +357,12 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional
     public void cancelExpiredPendingPaymentReservations() {
         paymentService.cancelExpiredPendingPaymentReservations();
+    }
+
+    @Override
+    @Transactional
+    public void transitionAcceptedReservationsToStarted() {
+        schedulerService.transitionAcceptedReservationsToStarted();
     }
 
     @Override
@@ -518,6 +548,16 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Override
     @Transactional
+    public int applyAdminCarPauseCancellation(
+            final long reservationId,
+            final boolean paymentRefundRequired,
+            final OffsetDateTime refundProofDeadlineAtOrNull) {
+        return reservationDao.applyAdminCarPauseCancellation(
+                reservationId, paymentRefundRequired, refundProofDeadlineAtOrNull);
+    }
+
+    @Override
+    @Transactional
     public int markCarReturned(final long reservationId, final long ownerUserId) {
         return reservationDao.markCarReturned(reservationId, ownerUserId);
     }
@@ -537,9 +577,28 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
+    @Transactional
+    public int cancelPendingMissingPaymentProofIfEligible(
+            final long reservationId, final OffsetDateTime now) {
+        return reservationDao.cancelPendingMissingPaymentProofIfEligible(reservationId, now);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<Reservation> findPendingPaymentPastDeadline(final OffsetDateTime now) {
         return reservationDao.findPendingPaymentPastDeadline(now);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> findAcceptedReservationIdsWithStartOnOrBefore(final OffsetDateTime now) {
+        return reservationDao.findAcceptedReservationIdsWithStartOnOrBefore(now);
+    }
+
+    @Override
+    @Transactional
+    public int transitionAcceptedToStartedIfDue(final long reservationId, final OffsetDateTime now) {
+        return reservationDao.transitionAcceptedToStartedIfDue(reservationId, now);
     }
 
     @Override

@@ -144,10 +144,7 @@ public final class ReservationDto {
             dto.createdAt = reservation.getCreatedAt() == null
                     ? null
                     : ISO_OFFSET.format(reservation.getCreatedAt());
-            dto.links = ReservationLinks.reservation(reservation, ownerId, uriInfo)
-                    .hasPaymentReceipt(hasPaymentReceipt)
-                    .hasRefundReceipt(hasRefundReceipt)
-                    .build();
+            dto.links = ReservationLinks.reservation(reservation, ownerId, uriInfo).build();
             return dto;
         }
     }

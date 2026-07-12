@@ -1,7 +1,6 @@
 package ar.edu.itba.paw.services.user;
 
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
@@ -21,6 +20,7 @@ import ar.edu.itba.paw.models.util.format.EmailNormalizer;
 import ar.edu.itba.paw.models.email.user.PasswordResetCodeEmailPayload;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 import ar.edu.itba.paw.persistence.user.PasswordResetCodeDao;
 
 import ar.edu.itba.paw.services.email.EmailService;
@@ -30,13 +30,13 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PasswordResetServiceImpl.class);
 
-    private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final PasswordResetCodeDao passwordResetCodeDao;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final UserValidationPolicy validationPolicy;
+    private final VerificationCodePolicy verificationCodePolicy;
     private final UserService userService;
 
     @Autowired
@@ -45,11 +45,13 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             final EmailService emailService,
             final PasswordEncoder passwordEncoder,
             final UserValidationPolicy validationPolicy,
+            final VerificationCodePolicy verificationCodePolicy,
             final UserService userService) {
         this.passwordResetCodeDao = passwordResetCodeDao;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.validationPolicy = validationPolicy;
+        this.verificationCodePolicy = verificationCodePolicy;
         this.userService = userService;
     }
 
@@ -70,8 +72,9 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             return false;
         }
         passwordResetCodeDao.deleteForUser(user.getId());
-        final String code = String.format("%06d", RANDOM.nextInt(1_000_000));
-        passwordResetCodeDao.insert(user.getId(), code, now.plus(CODE_TTL), now);
+        final String code = generateNumericCode();
+        passwordResetCodeDao.insert(
+                user.getId(), code, now.plus(verificationCodePolicy.getCodeTtl()), now);
         final Locale fallback = locale != null ? locale : Locale.ENGLISH;
         final Locale mailLocale = userService.resolveMailLocaleOrElse(user.getId(), fallback);
         emailService.sendPasswordResetCode(PasswordResetCodeEmailPayload.builder()
@@ -81,6 +84,12 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 .build());
         LOGGER.atInfo().addArgument(user.getId()).log("Password reset code issued for user id={}");
         return true;
+    }
+
+    private String generateNumericCode() {
+        final int length = verificationCodePolicy.getCodeLength();
+        final int upperBound = (int) Math.pow(10, length);
+        return String.format("%0" + length + "d", RANDOM.nextInt(upperBound));
     }
 
     @Override

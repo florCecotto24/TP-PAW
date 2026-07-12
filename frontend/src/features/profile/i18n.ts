@@ -50,7 +50,7 @@ export const profileI18n = {
         passwordChanged: 'Contraseña actualizada.',
         passwordMismatch: 'Las contraseñas no coinciden.',
         phoneInvalid: 'Solo dígitos y +, hasta 14 caracteres.',
-        cbuInvalid: 'El CBU debe tener exactamente 22 dígitos.',
+        cbuInvalid: 'El CBU debe tener exactamente {{digits}} dígitos.',
         birthDateFuture: 'La fecha de nacimiento no puede ser futura.',
       },
       photo: {
@@ -171,7 +171,7 @@ export const profileI18n = {
         passwordChanged: 'Password updated.',
         passwordMismatch: 'Passwords do not match.',
         phoneInvalid: 'Digits and + only, up to 14 characters.',
-        cbuInvalid: 'The CBU must be exactly 22 digits.',
+        cbuInvalid: 'The CBU must be exactly {{digits}} digits.',
         birthDateFuture: 'The date of birth cannot be in the future.',
       },
       photo: {

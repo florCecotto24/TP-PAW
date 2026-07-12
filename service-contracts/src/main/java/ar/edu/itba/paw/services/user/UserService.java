@@ -13,6 +13,7 @@ import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
+import ar.edu.itba.paw.models.dto.profile.UserPatchCommand;
 import ar.edu.itba.paw.models.security.UserRole;
 
 import ar.edu.itba.paw.services.email.EmailService;
@@ -80,6 +81,13 @@ public interface UserService {
      *         operation rolls back.
      */
     void updateProfile(long userId, ProfileUpdateRequest request);
+
+    /**
+     * Applies non-password fields from a {@code PATCH /users/{id}} body in one transaction.
+     * Profile and admin facets are applied only when the corresponding properties are non-null.
+     * Authorization (self vs admin) is enforced here so callers only supply the acting user id.
+     */
+    void patchUser(long userId, UserPatchCommand patch, long actingUserId);
 
     /**
      * Stores a new profile picture and removes the previous image row when present.

@@ -113,9 +113,7 @@ public class UserFavoritesController {
             @P("id") @PathParam("id") final long id, @PathParam("carId") final long carId) {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        if (!favCarService.isFavorited(carId, id)) {
-            favCarService.toggleFavorite(carId, id);
-        }
+        favCarService.addFavorite(carId, id);
         return Response.noContent().build();
     }
 
@@ -126,9 +124,7 @@ public class UserFavoritesController {
             @P("id") @PathParam("id") final long id, @PathParam("carId") final long carId) {
         userService.getUserById(id)
                 .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
-        if (favCarService.isFavorited(carId, id)) {
-            favCarService.toggleFavorite(carId, id);
-        }
+        favCarService.removeFavorite(carId, id);
         return Response.noContent().build();
     }
 }

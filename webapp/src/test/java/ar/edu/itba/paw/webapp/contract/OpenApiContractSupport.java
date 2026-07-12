@@ -64,7 +64,7 @@ final class OpenApiContractSupport {
         final int from = startMatcher.end();
         final String tail = yaml.substring(from);
         final Set<String> props = new LinkedHashSet<>();
-        final Pattern propLine = Pattern.compile("^        (\\w+):");
+        final Pattern propLine = Pattern.compile("^        ([\\w-]+):");
         for (final String line : tail.split("\\R", -1)) {
             if (line.isBlank()) {
                 break;

@@ -29,6 +29,7 @@ import ar.edu.itba.paw.policy.UserValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
+import ar.edu.itba.paw.services.user.AdminService;
 @ExtendWith(MockitoExtension.class)
 public class UserServiceImplTest {
 
@@ -50,6 +51,9 @@ public class UserServiceImplTest {
     @Mock
     private UserProfileMediaService userProfileMediaService;
 
+    @Mock
+    private AdminService adminService;
+
     private UserServiceImpl userService;
 
     @BeforeEach
@@ -61,7 +65,8 @@ public class UserServiceImplTest {
                 UserValidationPolicy.fromValidatedConfiguration(8, 72, 50, 50, 20, 500, "^[0-9+]+$"),
                 emailVerificationService,
                 carService,
-                userProfileMediaService);
+                userProfileMediaService,
+                adminService);
     }
 
     @Test
@@ -85,7 +90,7 @@ public class UserServiceImplTest {
     @Test
     public void testGetUserByIdWhenUserDoesNotExist() {
         // 1. Arrange
-        Mockito.when(userDao.getUserById(Mockito.anyLong())).thenReturn(Optional.empty());
+        Mockito.when(userDao.getUserById(1L)).thenReturn(Optional.empty());
 
         // 2. Execute
         final Optional<User> result = userService.getUserById(1L);
@@ -106,7 +111,7 @@ public class UserServiceImplTest {
                 .emailValidated(false)
                 .build();
         Mockito.when(userDao.findByEmail("test@test.com")).thenReturn(Optional.empty());
-        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("ENC");
+        Mockito.when(passwordEncoder.encode("password12")).thenReturn("ENC");
         Mockito.when(userDao.createUser(Mockito.eq("test@test.com"), Mockito.eq("TestName"), Mockito.eq("TestSurname"), Mockito.eq("ENC")))
                 .thenReturn(user);
 

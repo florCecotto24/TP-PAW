@@ -31,7 +31,6 @@ import org.springframework.stereotype.Component;
 import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
-import ar.edu.itba.paw.models.domain.reservation.ReservationParticipantRole;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.util.search.MyHubSortSanitizer;
@@ -223,37 +222,24 @@ public class ReservationController {
             @Valid final ReservationPatchForm form) {
         final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
 
-        if (form.getStatus() != null && !form.getStatus().isBlank()) {
-            applyStatusPatch(id, viewer, form.getStatus());
-        }
-        if (Boolean.TRUE.equals(form.getCarReturned())) {
-            reservationResourceAccess.requireOwner(id, viewer);
-            reservationService.markCarReturnedByOwner(viewer.getUserId(), id);
-        }
-        if (form.getStartDate() != null) {
-            reservationResourceAccess.requireRider(id, viewer);
-            reservationService.editPendingReservationByRider(
-                    viewer.getUserId(),
-                    id,
-                    ReservationRestDateTimes.toWallLocalInput(form.getStartDate()),
-                    ReservationRestDateTimes.toWallLocalInput(form.getEndDate()));
-        }
+        final Reservation.Status cancellationStatus = form.getStatus() != null && !form.getStatus().isBlank()
+                ? ReservationRestEnums.parseStatus(form.getStatus())
+                : null;
+        final String fromWall = form.getStartDate() != null
+                ? ReservationRestDateTimes.toWallLocalInput(form.getStartDate())
+                : null;
+        final String untilWall = form.getEndDate() != null
+                ? ReservationRestDateTimes.toWallLocalInput(form.getEndDate())
+                : null;
+        final Reservation updated = reservationService.patchReservation(
+                viewer.getUserId(),
+                id,
+                cancellationStatus,
+                form.getCarReturned(),
+                fromWall,
+                untilWall);
 
-        return Response.ok(toReservationDto(id, viewer)).build();
-    }
-
-    private void applyStatusPatch(final long id, final RydenUserDetails viewer, final String statusRaw) {
-        final Reservation.Status status = ReservationRestEnums.parseStatus(statusRaw);
-        if (status == Reservation.Status.CANCELLED_BY_RIDER) {
-            reservationService.cancelReservationAsParticipantScoped(
-                    viewer.getUserId(), id, ReservationParticipantRole.RIDER);
-            return;
-        }
-        if (status == Reservation.Status.CANCELLED_BY_OWNER) {
-            reservationService.cancelReservationAsParticipantScoped(
-                    viewer.getUserId(), id, ReservationParticipantRole.OWNER);
-            return;
-        }
+        return Response.ok(toReservationDto(updated, viewer)).build();
     }
 
     private ReservationDto toReservationDto(final long id, final RydenUserDetails viewer) {

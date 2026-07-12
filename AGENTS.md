@@ -9,6 +9,7 @@
 mvn clean install
 
 # Run the web application (API + packaged SPA)
+mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 
 # SPA dev server (proxies /api and /webapp/api → Jetty)
@@ -48,12 +49,15 @@ During SPA development, Vite typically serves the UI on its own port with `base:
 
 ```text
 mvn clean install
+mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 cd frontend && npm run dev
 mvn test
 ```
 
 Base URL depends on `server.port` and `server.servlet.context-path` in `application.properties`.
+
+**Jetty + SPA:** `jetty:run` serves `target/webapp-composite/` (static shell from `webapp/src/main/webapp/` merged with `frontend/dist/` from the last `npm run build`). Run `mvn compile -pl webapp -am` before Jetty so the frontend build is current; do not commit hashed bundles under `webapp/src/main/webapp/public/`.
 
 ### Data source and schema (JPA)
 
@@ -103,7 +107,7 @@ frontend  →  (assets into WAR)  webapp → services → persistence → models
 - **Pagination**: paginate in SQL (`LIMIT`/`OFFSET` + separate `COUNT`) — never overfetch and slice in memory. For entity queries with joins, avoid relying on `setFirstResult` / `setMaxResults` alone on large sets — prefer ID-page + `IN` fetch or DTO-native queries.
 - **Configuration**: Java `@Configuration` (`WebConfig`, `SpringMailConfig`, `WebAuthConfig`, …) plus `web.xml` for servlet bootstrap (Jersey `ServletContainer` on `/api/*`). Properties from `application.properties`; profile overrides from `application-{profile}.properties` if present.
 - **Dependency versions**: Root `pom.xml` `<dependencyManagement>`; child POMs omit versions where managed. JPA stack: Hibernate 5.6.x, `javax.persistence-api` 2.2, `spring-orm` aligned with Spring 5.3. Jersey version: `jersey.version` in root POM.
-- **UI**: source in `frontend/src/`; production assets packaged into the WAR as `index.html` + `/public/` under `webapp/src/main/webapp/`. Deep links are handled by `SpaFallbackFilter` (HTML GETs → `/index.html`).
+- **UI**: source in `frontend/src/`; production assets come from `frontend/dist/` (`index.html` + `/public/`) and are merged into the WAR and Jetty composite webapp at build time. Static images not produced by Vite live under `webapp/src/main/webapp/assets/`. Deep links are handled by `SpaFallbackFilter` (HTML GETs → `/index.html`).
 - **Component scan** (`WebConfig`): `ar.edu.itba.paw.webapp.controller`, `.exception.mapper`, `.util`, `.support`, `.security`, `.validation`, `.config.properties`, plus `ar.edu.itba.paw.services`, `.persistence`, `.mail`, `.policy`, `.scheduling`, `.util`. **Excludes** Spring `@Controller` (no MVC controllers). Servlet listeners are declared in `WEB-INF/web.xml`.
 
 ### Domain overview
@@ -223,6 +227,7 @@ Configured in **`WebAuthConfig`**: Spring Security 5.8.10, `@EnableWebSecurity`,
   - `session/` — Zustand store + session client
   - `i18n/`, `styles/` — locales + `ryden-theme.css` / component CSS
 - **Hypermedia**: navigate via DTO `links` and `HypermediaClient` (`follow()`, `followLinkCollection`, `getLinkCollectionPage` in **`frontend/src/api/client.ts`**). Never invent API URLs from bare IDs.
+- **API discovery**: on boot, **`frontend/src/api/apiDiscovery.ts`** loads `GET /api/` (`ApiIndex`) and caches top-level `links` (including `config` for **`clientConfig.ts`**). Feature code should follow those links rather than hardcoding `/webapp/api/...` paths.
 - **MIME types**: always versioned vendor types from `mediaTypes.ts` (`application/vnd.paw.*.v1+json`). Never use bare `application/json` for API resources.
 - **Feature modules**: pages, hooks, `api.ts`, `types.ts`, routes, and `i18n.ts` live with the feature; shared interaction UI under `components/ryden/`.
 - **SPA routes**: English path shapes in `routes/paths.ts` (aligned with legacy URL shapes for mail CTAs and bookmarks).
@@ -240,7 +245,7 @@ Domain / validation exception copy: **`exception-messages.properties`** (+ `_es`
 ### Directory structure (per module)
 
 - `src/main/java`, `src/main/resources`, `src/test/java` as usual.
-- `webapp/src/main/webapp`: `index.html`, `public/` (Vite assets), `assets/`, `WEB-INF/web.xml`.
+- `webapp/src/main/webapp`: `WEB-INF/web.xml`, `assets/` (static images). Vite output (`index.html`, `public/*`) is **not** committed here — it is copied from `frontend/dist/` at build time.
 - `frontend/src`: see **Frontend SPA conventions** above.
 
 ### Key services and DAOs (orientation)

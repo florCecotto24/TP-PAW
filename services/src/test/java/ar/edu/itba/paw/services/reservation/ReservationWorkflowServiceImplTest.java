@@ -18,7 +18,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException;
 import ar.edu.itba.paw.exception.reservation.RiderReservationException;
+import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
 import ar.edu.itba.paw.models.domain.reservation.Reservation;
@@ -39,6 +41,15 @@ import ar.edu.itba.paw.services.user.UserService;
  */
 @ExtendWith(MockitoExtension.class)
 class ReservationWorkflowServiceImplTest {
+
+    private static final String WALL_FROM = "2030-06-01T10:00";
+    private static final String WALL_UNTIL = "2030-06-02T18:00";
+    private static final OffsetDateTime INTERVAL_START =
+            AvailabilityPeriod.parseWallLocalDateTimeToUtc(WALL_FROM);
+    private static final OffsetDateTime INTERVAL_END =
+            AvailabilityPeriod.parseWallLocalDateTimeToUtc(WALL_UNTIL);
+    private static final LocalDate INTERVAL_START_DAY = LocalDate.of(2030, 6, 1);
+    private static final LocalDate INTERVAL_END_DAY = LocalDate.of(2030, 6, 2);
 
     @Mock
     private ReservationService reservationService;
@@ -124,19 +135,13 @@ class ReservationWorkflowServiceImplTest {
 
         Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(rider));
-        Mockito.when(pricingService.reservationIntervalFitsCarAvailability(
-                Mockito.eq(carId), Mockito.eq(availabilityId), Mockito.any(), Mockito.any())).thenReturn(true);
-        Mockito.when(userService.hasUploadedLicenseAndIdentity(rider)).thenReturn(true);
-        Mockito.when(userService.getUserCbu(ownerId)).thenReturn("12345678901234567890123");
-        Mockito.when(pricingService.getConfiguredMaxReservationBillableDays()).thenReturn(30);
-        Mockito.when(pricingService.getConfiguredPaymentProofDeadlineHours()).thenReturn(24);
-        // Two wall days between 2030-06-01 and 2030-06-02 — below the car's minimum of 5.
-        Mockito.when(pricingService.calculateBillableDays(Mockito.any(), Mockito.any())).thenReturn(2L);
-        // Plan is computed but the billable-day check fails first; stubbed lenient for completeness.
-        Mockito.lenient().when(pricingService.planReservationByCar(
-                        Mockito.eq(carId), Mockito.any(LocalDate.class), Mockito.any(LocalDate.class)))
-                .thenReturn(Optional.of(new ReservationPlan(
-                        new BigDecimal("200.00"), new LinkedHashSet<>(Set.of(availabilityId)), avRow)));
+        Mockito.doThrow(new RiderReservationException(MessageKeys.RESERVATION_RIDER_BELOW_MINIMUM_DAYS, 5))
+                .when(pricingService).validateRiderReservationPricingInterval(
+                        Mockito.eq(carId),
+                        Mockito.eq(availabilityId),
+                        Mockito.any(),
+                        Mockito.any(),
+                        Mockito.eq(5));
 
         final RiderReservationException thrown = Assertions.assertThrows(
                 RiderReservationException.class,
@@ -160,8 +165,8 @@ class ReservationWorkflowServiceImplTest {
                 .build();
         Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
         Mockito.when(userService.getUserById(sharedId)).thenReturn(Optional.of(user));
-        Mockito.when(pricingService.reservationIntervalFitsCarAvailability(
-                Mockito.eq(carId), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(true);
+        Mockito.doNothing().when(pricingService).validateRiderReservationPricingInterval(
+                Mockito.eq(carId), Mockito.isNull(), Mockito.any(), Mockito.any(), Mockito.eq(1));
 
         final RiderReservationException thrown = Assertions.assertThrows(
                 RiderReservationException.class,
@@ -212,27 +217,25 @@ class ReservationWorkflowServiceImplTest {
 
         Mockito.when(carService.getCarById(carId)).thenReturn(Optional.of(car));
         Mockito.when(userService.getUserById(riderId)).thenReturn(Optional.of(rider));
-        Mockito.when(pricingService.reservationIntervalFitsCarAvailability(
-                Mockito.eq(carId), Mockito.eq(availabilityId), Mockito.any(), Mockito.any())).thenReturn(true);
+        Mockito.doNothing().when(pricingService).validateRiderReservationPricingInterval(
+                Mockito.eq(carId), Mockito.eq(availabilityId), Mockito.any(), Mockito.any(), Mockito.eq(1));
         Mockito.when(userService.hasUploadedLicenseAndIdentity(rider)).thenReturn(true);
         Mockito.when(userService.getUserCbu(ownerId)).thenReturn("12345678901234567890123");
         Mockito.when(pricingService.getConfiguredPaymentProofDeadlineHours()).thenReturn(24);
-        Mockito.when(pricingService.getConfiguredMaxReservationBillableDays()).thenReturn(30);
-        Mockito.when(pricingService.calculateBillableDays(Mockito.any(), Mockito.any())).thenReturn(2L);
         Mockito.when(reservationService.hasActiveOverlapByCar(
-                Mockito.eq(carId), Mockito.any(), Mockito.any())).thenReturn(false);
+                Mockito.eq(carId), Mockito.eq(INTERVAL_START), Mockito.eq(INTERVAL_END))).thenReturn(false);
         Mockito.when(pricingService.planReservationByCar(
-                        Mockito.eq(carId), Mockito.any(LocalDate.class), Mockito.any(LocalDate.class)))
+                        Mockito.eq(carId), Mockito.eq(INTERVAL_START_DAY), Mockito.eq(INTERVAL_END_DAY)))
                 .thenReturn(Optional.of(new ReservationPlan(
                         expectedTotal,
                         new LinkedHashSet<>(Set.of(availabilityId)),
                         avRow)));
         Mockito.when(reservationService.createReservationForCar(
                         Mockito.eq(riderId), Mockito.eq(carId),
-                        Mockito.any(), Mockito.any(),
+                        Mockito.eq(INTERVAL_START), Mockito.eq(INTERVAL_END),
                         Mockito.eq(Reservation.Status.PENDING),
                         Mockito.eq(expectedTotal),
-                        Mockito.any()))
+                        Mockito.isNotNull()))
                 .thenReturn(persisted);
 
         // 2. Act
@@ -310,6 +313,8 @@ class ReservationWorkflowServiceImplTest {
         Mockito.when(reservationService.getReservationById(reservationId))
                 .thenReturn(Optional.of(pending))
                 .thenReturn(Optional.of(cancelledByRider));
+        Mockito.when(reservationService.updateParticipantCancellationWithRefundMeta(
+                reservationId, "cancelled_by_rider", false, null)).thenReturn(1);
 
         // 2. Act
         final Optional<Reservation> result = workflowService.cancelReservationAsParticipant(riderId, reservationId);
@@ -333,7 +338,7 @@ class ReservationWorkflowServiceImplTest {
                 .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL)
                 .build();
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        final StoredFile receipt = new StoredFile(
+        final StoredFile receipt = StoredFile.identified(
                 500L, rider, "receipt.pdf", "application/pdf", new byte[] {1}, null);
         final Reservation accepted = Reservation.builder()
                 .id(reservationId).rider(rider).car(car)
@@ -357,7 +362,12 @@ class ReservationWorkflowServiceImplTest {
         Mockito.when(reservationService.getReservationById(reservationId))
                 .thenReturn(Optional.of(accepted))
                 .thenReturn(Optional.of(cancelledByOwner));
-        Mockito.when(pricingService.getConfiguredPaymentProofDeadlineHours()).thenReturn(24);
+        Mockito.when(pricingService.getConfiguredRefundProofDeadlineHours()).thenReturn(24);
+        Mockito.when(reservationService.updateParticipantCancellationWithRefundMeta(
+                Mockito.eq(reservationId),
+                Mockito.eq("cancelled_by_owner"),
+                Mockito.eq(true),
+                ArgumentMatchers.any(OffsetDateTime.class))).thenReturn(1);
 
         // 2. Act
         final Optional<Reservation> result = workflowService.cancelReservationAsParticipant(ownerId, reservationId);
@@ -410,5 +420,61 @@ class ReservationWorkflowServiceImplTest {
 
         // 2. Act and 3. Assert — orchestration completes without surfacing an exception.
         Assertions.assertDoesNotThrow(() -> workflowService.markCarReturnedByOwner(ownerId, reservationId));
+    }
+
+    @Test
+    void testPatchReservationThrowsWhenCancellationStatusIsNotParticipantCancel() {
+        Assertions.assertThrows(
+                ReservationCancelNotAllowedException.class,
+                () -> workflowService.patchReservation(
+                        20L, 100L, Reservation.Status.ACCEPTED, null, null, null));
+    }
+
+    @Test
+    void testPatchReservationReturnsReloadedReservationAfterParticipantCancel() {
+        // 1. Arrange
+        final long reservationId = 200L;
+        final long riderId = 20L;
+        final long ownerId = 10L;
+        final User owner = User.identities(ownerId, "owner@test.com", "Owner", "Test");
+        final User rider = User.identities(riderId, "rider@test.com", "Rider", "Test");
+        final Car car = Car.builder()
+                .id(1L).owner(owner).plate("ABC123")
+                .powertrain(Car.Powertrain.GASOLINE).transmission(Car.Transmission.MANUAL)
+                .build();
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final Reservation pending = Reservation.builder()
+                .id(reservationId).rider(rider).car(car)
+                .status(Reservation.Status.PENDING)
+                .totalPrice(new BigDecimal("100.00"))
+                .startDate(now.plusDays(5))
+                .endDate(now.plusDays(7))
+                .createdAt(now).updatedAt(now)
+                .build();
+        final Reservation cancelled = Reservation.builder()
+                .id(reservationId).rider(rider).car(car)
+                .status(Reservation.Status.CANCELLED_BY_RIDER)
+                .totalPrice(new BigDecimal("100.00"))
+                .startDate(pending.getStartDate())
+                .endDate(pending.getEndDate())
+                .createdAt(now).updatedAt(now)
+                .build();
+        Mockito.when(queryService.getRiderReservationById(riderId, reservationId))
+                .thenReturn(Optional.of(pending));
+        Mockito.when(reservationService.updateParticipantCancellationWithRefundMeta(
+                Mockito.eq(reservationId),
+                Mockito.eq("cancelled_by_rider"),
+                Mockito.eq(false),
+                ArgumentMatchers.isNull())).thenReturn(1);
+        Mockito.when(reservationService.getReservationById(reservationId))
+                .thenReturn(Optional.of(pending))
+                .thenReturn(Optional.of(cancelled));
+
+        // 2. Act
+        final Reservation result = workflowService.patchReservation(
+                riderId, reservationId, Reservation.Status.CANCELLED_BY_RIDER, null, null, null);
+
+        // 3. Assert
+        Assertions.assertEquals(Reservation.Status.CANCELLED_BY_RIDER, result.getStatus());
     }
 }

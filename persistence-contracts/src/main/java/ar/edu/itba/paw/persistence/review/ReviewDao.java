@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.persistence.review;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.dto.Page;
@@ -52,6 +54,18 @@ public interface ReviewDao {
      * value rounded to two decimals.
      */
     BigDecimal findAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
+
+    /**
+     * Batch variant of {@link #findAverageRatingForCounterparty(long, boolean)} with
+     * {@code counterpartyIsOwner=true}. Missing keys mean no rated reviews for that user.
+     */
+    Map<Long, BigDecimal> findAverageRatingsAsOwnerForUserIds(Collection<Long> userIds);
+
+    /**
+     * Batch variant of {@link #findAverageRatingForCounterparty(long, boolean)} with
+     * {@code counterpartyIsOwner=false}. Missing keys mean no rated reviews for that user.
+     */
+    Map<Long, BigDecimal> findAverageRatingsAsRiderForUserIds(Collection<Long> userIds);
 
     /**
      * Average rating for a car's reviews (both sides). Returns {@code null} when no rated reviews

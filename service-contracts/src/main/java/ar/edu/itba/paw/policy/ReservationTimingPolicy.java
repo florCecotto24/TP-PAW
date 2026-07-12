@@ -7,6 +7,9 @@ public interface ReservationTimingPolicy {
 
     int getPaymentProofDeadlineHours();
 
+    /** Hours for the owner to upload refund proof after a confirmed cancellation that requires reimbursement. */
+    int getRefundProofDeadlineHours();
+
     /** Lead window for the pending payment-proof rider email. */
     int getPaymentProofReminderLeadHours();
 

@@ -136,7 +136,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     // ----- Tests -----------------------------------------------------------------------------
 
     @Test
-    void findCarPublicReviewsReturnsMostRecentFirstAndExcludesOmittedReviews() {
+    void testFindCarPublicReviewsReturnsMostRecentFirstAndExcludesOmittedReviews() {
         // 1. Arrange — three rider reviews on the same car, one with rating=null (omitted).
         final long carId = insertCar("REV001");
         final long resOld = insertFinishedReservation(carId, riderId);
@@ -161,7 +161,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findCarPublicReviewsExcludesReviewsOfOtherCars() {
+    void testFindCarPublicReviewsExcludesReviewsOfOtherCars() {
         // 1. Arrange
         final long carA = insertCar("REV010");
         final long carB = insertCar("REV011");
@@ -180,7 +180,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findCarPublicReviewsPaginatesAtSqlLevel() {
+    void testFindCarPublicReviewsPaginatesAtSqlLevel() {
         // 1. Arrange — three reviews on the same car, paged 2-per-page.
         final long carId = insertCar("REV020");
         final long resA = insertFinishedReservation(carId, riderId);
@@ -204,7 +204,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findCarPublicReviewsHydratesImageIdWhenReviewHasAttachedImage() {
+    void testFindCarPublicReviewsHydratesImageIdWhenReviewHasAttachedImage() {
         // 1. Arrange
         final long carId = insertCar("REV030");
         final long reservationId = insertFinishedReservation(carId, riderId);
@@ -222,7 +222,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findCarPublicReviewsReturnsEmptyPageWhenCarHasNoReviews() {
+    void testFindCarPublicReviewsReturnsEmptyPageWhenCarHasNoReviews() {
         // 1. Arrange
         final long carId = insertCar("REV040");
 
@@ -235,7 +235,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void countReviewsForCarCountsOnlyRatedReviewsOfThatCar() {
+    void testCountReviewsForCarCountsOnlyRatedReviewsOfThatCar() {
         // 1. Arrange
         final long carA = insertCar("REV050");
         final long carB = insertCar("REV051");
@@ -259,7 +259,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void countReviewsForCarReturnsZeroForCarWithoutReviews() {
+    void testCountReviewsForCarReturnsZeroForCarWithoutReviews() {
         // 1. Arrange
         final long carId = insertCar("REV060");
 
@@ -271,7 +271,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findReviewsForUserPageMergesOwnerAndRiderDirectionsOrderedByDateDesc() {
+    void testFindReviewsForUserPageMergesOwnerAndRiderDirectionsOrderedByDateDesc() {
         // 1. Arrange — ownerId receives a rider review as owner of carA, and an owner review as
         // rider of carB (owned by otherRiderId). The two rows come from opposite `made_by_rider`
         // branches and must be merged into a single date-ordered feed.
@@ -294,7 +294,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findReviewsForUserPagePaginatesAtSqlLevel() {
+    void testFindReviewsForUserPagePaginatesAtSqlLevel() {
         // 1. Arrange — three rider reviews of the same owner, paged 2-per-page.
         final long carId = insertCar("REV080", ownerId);
         final long resA = insertFinishedReservation(carId, riderId);
@@ -318,7 +318,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findReviewsForUserPageExcludesOmittedReviewsAndOtherUsers() {
+    void testFindReviewsForUserPageExcludesOmittedReviewsAndOtherUsers() {
         // 1. Arrange
         final long carId = insertCar("REV090", ownerId);
         final long resRated = insertFinishedReservation(carId, riderId);
@@ -337,7 +337,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findByIdReturnsHydratedReviewMatchingItsOwnSurrogateId() {
+    void testFindByIdReturnsHydratedReviewMatchingItsOwnSurrogateId() {
         // 1. Arrange
         final long carId = insertCar("REV100");
         final long reservationId = insertFinishedReservation(carId, riderId);
@@ -356,7 +356,7 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findByIdReturnsEmptyForUnknownId() {
+    void testFindByIdReturnsEmptyForUnknownId() {
         // 2. Act
         final Optional<Review> found = dao.findById(Long.MAX_VALUE);
 
@@ -365,7 +365,29 @@ class ReviewJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void reviewsOnTheSameReservationGetDistinctSurrogateIds() {
+    void testInsertReviewPersistsRatingCommentAndMadeByRider() {
+        // 1.Arrange
+        final long carId = insertCar("REV120");
+        final long reservationId = insertFinishedReservation(carId, riderId);
+
+        // 2.Act
+        dao.insertReview(reservationId, true, 5, "Excellent trip", null);
+        em.flush();
+
+        // 3.Assert
+        Assertions.assertEquals(Boolean.TRUE, jdbcTemplate.queryForObject(
+                "SELECT made_by_rider FROM reviews WHERE reservation_id = ?", Boolean.class, reservationId));
+        Assertions.assertEquals(5, jdbcTemplate.queryForObject(
+                "SELECT rating FROM reviews WHERE reservation_id = ?", Integer.class, reservationId));
+        Assertions.assertEquals("Excellent trip", jdbcTemplate.queryForObject(
+                "SELECT comment FROM reviews WHERE reservation_id = ?", String.class, reservationId));
+        Assertions.assertEquals(carId, jdbcTemplate.queryForObject(
+                "SELECT car_id FROM reviews WHERE reservation_id = ?", Long.class, reservationId));
+        Assertions.assertTrue(dao.existsReview(reservationId, true));
+    }
+
+    @Test
+    void testReviewsOnTheSameReservationGetDistinctSurrogateIds() {
         // 1. Arrange — owner and rider both review the same finished reservation.
         final long carId = insertCar("REV110");
         final long reservationId = insertFinishedReservation(carId, riderId);

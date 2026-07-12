@@ -50,8 +50,8 @@ public class CarPictureServiceImplTest {
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
         final byte[] data = {0x01, 0x02};
-        final Image image = new Image(imageId, "photo.jpg", "image/jpeg", data);
-        final CarPicture carPicture = new CarPicture(10L, Mockito.mock(Car.class), image, displayOrder, createdAt, updatedAt);
+        final Image image = Image.identified(imageId, "photo.jpg", "image/jpeg", data);
+        final CarPicture carPicture = CarPicture.identifiedForImage(10L, Mockito.mock(Car.class), image, displayOrder, createdAt, updatedAt);
 
         Mockito.when(imageService.getImageById(imageId)).thenReturn(Optional.of(image));
         Mockito.when(carPictureDao.createCarPicture(carId, imageId, displayOrder)).thenReturn(carPicture);
@@ -102,7 +102,7 @@ public class CarPictureServiceImplTest {
         final int displayOrder = 1;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
-        final CarPicture carPicture = new CarPicture(pictureId, Mockito.mock(Car.class), new Image(imageId, "img.jpg", "image/jpeg", new byte[0]), displayOrder, createdAt, updatedAt);
+        final CarPicture carPicture = CarPicture.identifiedForImage(pictureId, Mockito.mock(Car.class), Image.identified(imageId, "img.jpg", "image/jpeg", new byte[0]), displayOrder, createdAt, updatedAt);
         Mockito.when(carPictureDao.getCarPictureById(pictureId)).thenReturn(Optional.of(carPicture));
 
         // 2. Execute
@@ -132,8 +132,8 @@ public class CarPictureServiceImplTest {
         final long carId = 7L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-04-01T08:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-04-02T08:00:00Z");
-        final CarPicture p1 = new CarPicture(100L, Mockito.mock(Car.class), new Image(20L, "img.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
-        final CarPicture p2 = new CarPicture(101L, Mockito.mock(Car.class), new Image(21L, "img.jpg", "image/jpeg", new byte[0]), 2, createdAt, updatedAt);
+        final CarPicture p1 = CarPicture.identifiedForImage(100L, Mockito.mock(Car.class), Image.identified(20L, "img.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
+        final CarPicture p2 = CarPicture.identifiedForImage(101L, Mockito.mock(Car.class), Image.identified(21L, "img.jpg", "image/jpeg", new byte[0]), 2, createdAt, updatedAt);
         final List<CarPicture> pictures = new ArrayList<>();
         pictures.add(p1);
         pictures.add(p2);
@@ -154,7 +154,7 @@ public class CarPictureServiceImplTest {
         final int displayOrder = 1;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-01-01T10:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-01-02T10:00:00Z");
-        final StoredFile storedFile = new StoredFile(
+        final StoredFile storedFile = StoredFile.identified(
                 storedFileId,
                 User.identities(2L, "u@test.com", "U", "U"),
                 "clip.mp4",
@@ -211,8 +211,8 @@ public class CarPictureServiceImplTest {
         final long carId = 9L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
-        final CarPicture first = new CarPicture(
-                1L, Mockito.mock(Car.class), new Image(11L, "a.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
+        final CarPicture first = CarPicture.identifiedForImage(
+                1L, Mockito.mock(Car.class), Image.identified(11L, "a.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
         Mockito.when(carPictureDao.findFirstByCarIdOrderByDisplayOrderAsc(carId)).thenReturn(Optional.of(first));
 
         // 2. Execute
@@ -242,8 +242,8 @@ public class CarPictureServiceImplTest {
         final long carId = 11L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
         final OffsetDateTime updatedAt = OffsetDateTime.parse("2026-03-02T12:00:00Z");
-        final CarPicture first = new CarPicture(
-                1L, Mockito.mock(Car.class), new Image(11L, "a.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
+        final CarPicture first = CarPicture.identifiedForImage(
+                1L, Mockito.mock(Car.class), Image.identified(11L, "a.jpg", "image/jpeg", new byte[0]), 1, createdAt, updatedAt);
         Mockito.when(carPictureDao.countByCarId(carId)).thenReturn(3L);
         Mockito.when(carPictureDao.findByCarIdOrderByDisplayOrderAsc(carId, 0, 2)).thenReturn(List.of(first));
 

@@ -102,10 +102,10 @@ class ModelsToStringTest {
         // Arrange
         final Car cpCarRef = Mockito.mock(Car.class);
         Mockito.when(cpCarRef.getId()).thenReturn(2L);
-        final CarPicture picture = new CarPicture(
+        final CarPicture picture = CarPicture.identifiedForImage(
                 1L,
                 cpCarRef,
-                new Image(3L, "img.jpg", "image/jpeg", new byte[0]),
+                Image.identified(3L, "img.jpg", "image/jpeg", new byte[0]),
                 0,
                 OffsetDateTime.parse("2026-04-05T10:00:00Z"),
                 OffsetDateTime.parse("2026-04-05T10:05:00Z"));
@@ -120,7 +120,7 @@ class ModelsToStringTest {
     @Test
     void testImageToStringIncludesAllFieldsIncludingData() {
         // Arrange
-        final Image image = new Image(1L, "cover.jpg", "image/jpeg", new byte[] {1, 2, -1});
+        final Image image = Image.identified(1L, "cover.jpg", "image/jpeg", new byte[] {1, 2, -1});
         // Act
         final String result = image.toString();
         // Assert

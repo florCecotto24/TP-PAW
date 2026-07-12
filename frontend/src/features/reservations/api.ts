@@ -1,9 +1,10 @@
 // Capa de acceso a la API para el área RESERVATIONS.
 // Thin wrapper sobre sessionClient: una llamada por operación, sin lógica de UI.
+import { getCollectionPath } from '../../api/apiDiscovery';
 import { type ApiResponse, getLinkCollectionPage } from '../../api/client';
 import { encodeMultipart } from '../../api/multipart';
 import { sessionClient } from '../../session/sessionStore';
-import { CHAT_HISTORY_PAGE_SIZE } from './chatAttachment';
+import { getChatHistoryPageSize } from './chatAttachment';
 import { MediaTypes } from '../../api/mediaTypes';
 import { idFromUri } from '../../api/uri';
 import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
@@ -18,7 +19,8 @@ import type {
 import type { MultipartPart } from '../../api/multipart';
 
 // Las URN canónicas viven en `links`; el carId de la ruta /reservar/:carId se
-// recibe del front, por eso se arma carUri a alto nivel. El resto se navega.
+// recibe del front para la URL del SPA. Preferir `location.state.carSelf` o
+// `links.*` del DTO padre; el fallback `/cars/{id}` queda solo para bookmarks.
 
 // idFromUri ("/reservations/42" -> "42") vive en api/uri (helper compartido);
 // se re-exporta para no tocar los call sites que lo importan desde aquí.
@@ -52,27 +54,31 @@ function toQueryArray(value?: string | string[]): string[] | undefined {
 export async function listReservations(
   q: ReservationListQuery,
 ): Promise<ApiResponse<ReservationSummaryDto[]>> {
-  const collectionRes = await getLinkCollectionPage<ReservationSummaryDto>(sessionClient, '/reservations', {
-    collectionAccept: MediaTypes.reservationLinks,
-    itemAccept: MediaTypes.reservationSummary,
-    query: {
-      riderId: q.riderId,
-      ownerId: q.ownerId,
-      carId: q.carId,
-      status: toQueryArray(q.status),
-      riderStatus: toQueryArray(q.riderStatus),
-      q: q.q,
-      category: toQueryArray(q.category),
-      transmission: toQueryArray(q.transmission),
-      powertrain: toQueryArray(q.powertrain),
-      priceMin: q.priceMin,
-      priceMax: q.priceMax,
-      rating: toQueryArray(q.rating),
-      sort: q.sort,
-      page: q.page,
-      pageSize: q.pageSize,
+  const collectionRes = await getLinkCollectionPage<ReservationSummaryDto>(
+    sessionClient,
+    getCollectionPath('reservations'),
+    {
+      collectionAccept: MediaTypes.reservationLinks,
+      itemAccept: MediaTypes.reservationSummary,
+      query: {
+        riderId: q.riderId,
+        ownerId: q.ownerId,
+        carId: q.carId,
+        status: toQueryArray(q.status),
+        riderStatus: toQueryArray(q.riderStatus),
+        q: q.q,
+        category: toQueryArray(q.category),
+        transmission: toQueryArray(q.transmission),
+        powertrain: toQueryArray(q.powertrain),
+        priceMin: q.priceMin,
+        priceMax: q.priceMax,
+        rating: toQueryArray(q.rating),
+        sort: q.sort,
+        page: q.page,
+        pageSize: q.pageSize,
+      },
     },
-  });
+  );
   return collectionRes;
 }
 
@@ -157,11 +163,16 @@ export function getAvailability(uri: string): Promise<ApiResponse<AvailabilityVi
 
 /** Sube un documento del rider (licencia/identidad) — PUT octet-stream. */
 export function uploadUserDocument(
-  userUri: string,
+  user: Pick<RiderUserView, 'links'>,
   type: 'license' | 'identity',
   file: File,
 ): Promise<ApiResponse<unknown>> {
-  return sessionClient.request(`${userUri.replace(/\/$/, '')}/documents/${type}`, {
+  const documentsLink = user.links.documents;
+  if (!documentsLink) {
+    throw new Error('reservation.user.missingDocumentsLink');
+  }
+  const base = documentsLink.endsWith('/') ? documentsLink.slice(0, -1) : documentsLink;
+  return sessionClient.request(`${base}/${type}`, {
     method: 'PUT',
     body: file,
     contentType: file.type || 'application/octet-stream',
@@ -169,10 +180,9 @@ export function uploadUserDocument(
 }
 
 export function listCarAvailabilities(
-  carUri: string,
+  availabilitiesLink: string,
 ): Promise<ApiResponse<AvailabilityView[]>> {
-  const base = carUri.endsWith('/') ? carUri.slice(0, -1) : carUri;
-  return sessionClient.get<AvailabilityView[]>(`${base}/availabilities`, {
+  return sessionClient.follow<AvailabilityView[]>(availabilitiesLink, {
     accept: MediaTypes.availability,
   });
 }
@@ -185,7 +195,7 @@ export async function openBinaryLink(link: string): Promise<boolean> {
 export function createReservation(
   body: ReservationCreateDto,
 ): Promise<ApiResponse<ReservationDto>> {
-  return sessionClient.post<ReservationDto>('/reservations', body, {
+  return sessionClient.post<ReservationDto>(getCollectionPath('reservations'), body, {
     accept: MediaTypes.reservation,
     contentType: MediaTypes.reservation,
   });
@@ -278,7 +288,7 @@ export async function listMessagesLatestPage(
 ): Promise<ApiResponse<MessageDto[]>> {
   const probe = await sessionClient.get<MessageDto[]>(messagesUri, {
     accept: MediaTypes.message,
-    query: { page: 1, pageSize: CHAT_HISTORY_PAGE_SIZE },
+    query: { page: 1, pageSize: getChatHistoryPageSize() },
   });
   if (probe.status === 204 || (probe.page.total ?? 0) === 0) {
     return { ...probe, data: [] };
@@ -287,8 +297,9 @@ export async function listMessagesLatestPage(
     return sessionClient.follow<MessageDto[]>(probe.page.last, { accept: MediaTypes.message });
   }
   const total = probe.page.total ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / CHAT_HISTORY_PAGE_SIZE));
-  return listMessages(messagesUri, { page: lastPage, pageSize: CHAT_HISTORY_PAGE_SIZE });
+  const pageSize = getChatHistoryPageSize();
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  return listMessages(messagesUri, { page: lastPage, pageSize });
 }
 
 /** Envía un mensaje (multipart: body + file opcional). */

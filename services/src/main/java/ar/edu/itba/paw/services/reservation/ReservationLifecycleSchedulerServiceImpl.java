@@ -212,6 +212,20 @@ public class ReservationLifecycleSchedulerServiceImpl implements ReservationLife
         LOGGER.atInfo().addArgument(oDone).log("Review auto-skip (owner) run: closed {} review(s)");
     }
 
+    @Override
+    @Transactional
+    public void transitionAcceptedReservationsToStarted() {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final List<Long> candidateIds = reservationService.findAcceptedReservationIdsWithStartOnOrBefore(now);
+        LOGGER.atInfo().addArgument(candidateIds.size())
+                .log("Reservation start transition run: {} accepted reservation(s) at or past pickup time");
+        int started = 0;
+        for (final Long reservationId : candidateIds) {
+            started += reservationService.transitionAcceptedToStartedIfDue(reservationId, now);
+        }
+        LOGGER.atInfo().addArgument(started).log("Reservation start transition run: marked {} reservation(s) as started");
+    }
+
     // ---------------------------------------------------------------------------------------
     // Per-car analytics
     // ---------------------------------------------------------------------------------------

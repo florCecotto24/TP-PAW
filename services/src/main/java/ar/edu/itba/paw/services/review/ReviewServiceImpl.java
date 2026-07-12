@@ -3,7 +3,9 @@ package ar.edu.itba.paw.services.review;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,6 +118,18 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public BigDecimal getAverageRatingForCounterparty(final long counterpartyUserId, final boolean counterpartyIsOwner) {
         return reviewDao.findAverageRatingForCounterparty(counterpartyUserId, counterpartyIsOwner);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, BigDecimal> getAverageRatingsAsOwnerForUserIds(final Collection<Long> userIds) {
+        return reviewDao.findAverageRatingsAsOwnerForUserIds(userIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, BigDecimal> getAverageRatingsAsRiderForUserIds(final Collection<Long> userIds) {
+        return reviewDao.findAverageRatingsAsRiderForUserIds(userIds);
     }
 
     @Override

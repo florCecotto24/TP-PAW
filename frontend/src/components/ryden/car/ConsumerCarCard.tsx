@@ -1,4 +1,6 @@
 import CarCard, { type CarCardProps } from './CarCard';
+import type { To } from 'react-router-dom';
+import type { AppLinkTarget } from '../../../routes/navigationState';
 
 /** Datos mínimos de tarjeta de consumidor (equiv. {@code VehicleCardView} del JSP). */
 export interface ConsumerCarCardData {
@@ -19,7 +21,7 @@ export interface ConsumerCarCardData {
 export interface ConsumerCarCardProps {
   card: ConsumerCarCardData;
   image?: string | null;
-  href?: string | null;
+  href?: To | AppLinkTarget | null;
   reviewCount?: number | null;
   onToggleFavorite?: (carId: number) => void;
   imageSlot?: CarCardProps['imageSlot'];

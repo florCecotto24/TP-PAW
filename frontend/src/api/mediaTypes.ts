@@ -8,6 +8,7 @@
 
 export const MediaTypes = {
   api: 'application/vnd.paw.api.v1+json',
+  config: 'application/vnd.paw.config.v1+json',
   user: 'application/vnd.paw.user.v1+json',
   // Vista privada del usuario (email, cbu, teléfono, rol, blocked, KYC). El server la devuelve solo a
   // self/admin y tira 403 si se pide sin permiso. Se usa para "mi perfil", el publisher y el admin.

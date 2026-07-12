@@ -4,7 +4,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.annotation.security.RolesAllowed;
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -21,6 +20,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.exception.car.CarBrandNotFoundException;
@@ -40,6 +42,7 @@ import ar.edu.itba.paw.webapp.dto.rest.CatalogApprovalDto;
 import ar.edu.itba.paw.webapp.form.catalog.ModelCreateForm;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
+import ar.edu.itba.paw.webapp.security.auth.AuthenticationAuthorities;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
@@ -50,7 +53,7 @@ import ar.edu.itba.paw.webapp.util.RestUriUtils;
  */
 @Path("/brands")
 @Component
-public final class BrandController {
+public class BrandController {
 
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
@@ -81,6 +84,9 @@ public final class BrandController {
             @QueryParam("validated") final Boolean validated,
             @QueryParam("page") @javax.ws.rs.DefaultValue("1") final int page,
             @QueryParam("pageSize") final Integer pageSizeParam) {
+        if (Boolean.FALSE.equals(validated)) {
+            requireAdmin();
+        }
         final PaginationParams paging = paginationSupport.forDefaultCollection(page, pageSizeParam);
         final Page<CarBrand> brandPage =
                 carBrandService.findPage(validated, paging.getZeroBasedPage(), paging.getPageSize());
@@ -118,14 +124,13 @@ public final class BrandController {
     @Path("/{id}")
     @Produces(VndMediaType.BRAND_V1_JSON)
     public Response getBrand(@PathParam("id") final long id) {
-        final CarBrand brand = carBrandService.findById(id)
-                .orElseThrow(() -> new CarBrandNotFoundException(id));
+        final CarBrand brand = requireReadableBrand(id);
         return Response.ok(BrandDto.from(brand, uriInfo)).build();
     }
 
     @PATCH
     @Path("/{id}")
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("@userResourceAccess.isAdmin()")
     @Consumes(VndMediaType.BRAND_V1_JSON)
     @Produces(VndMediaType.BRAND_V1_JSON)
     public Response approveBrand(@PathParam("id") final long id, @Valid final CatalogApprovalDto patch) {
@@ -141,7 +146,7 @@ public final class BrandController {
 
     @DELETE
     @Path("/{id}")
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("@userResourceAccess.isAdmin()")
     public Response rejectBrand(@PathParam("id") final long id) {
         if (carBrandService.findById(id).isEmpty()) {
             throw new CarBrandNotFoundException(id);
@@ -159,9 +164,13 @@ public final class BrandController {
         carBrandService.findById(id)
                 .orElseThrow(() -> new CarBrandNotFoundException(id));
 
-        final List<CarModel> models = Boolean.TRUE.equals(validated)
-                ? carModelService.findValidatedByBrandIdOrdered(id)
-                : carModelService.findByBrandIdOrdered(id);
+        final List<CarModel> models;
+        if (validated == null || Boolean.TRUE.equals(validated)) {
+            models = carModelService.findValidatedByBrandIdOrdered(id);
+        } else {
+            requireAdmin();
+            models = carModelService.findByBrandIdOrdered(id);
+        }
         final List<ModelDto> dtos = models.stream()
                 .map(model -> ModelDto.from(model, uriInfo))
                 .collect(Collectors.toList());
@@ -190,5 +199,25 @@ public final class BrandController {
 
         final URI location = RestUriUtils.modelUri(uriInfo, id, model.getId());
         return Response.created(location).entity(ModelDto.from(model, uriInfo)).build();
+    }
+
+    private void requireAdmin() {
+        if (!AuthenticationAuthorities.hasAdminRole(SecurityContextHolder.getContext().getAuthentication())) {
+            throw new AccessDeniedException("Admin role required.");
+        }
+    }
+
+    /**
+     * Validated brands are public; pending ({@code validated = false}) brands are visible to admins only.
+     * Non-admins receive the same 404 as a missing id so pending moderation rows are not enumerable.
+     */
+    private CarBrand requireReadableBrand(final long id) {
+        final CarBrand brand = carBrandService.findById(id)
+                .orElseThrow(() -> new CarBrandNotFoundException(id));
+        if (!brand.isValidated() && !AuthenticationAuthorities.hasAdminRole(
+                SecurityContextHolder.getContext().getAuthentication())) {
+            throw new CarBrandNotFoundException(id);
+        }
+        return brand;
     }
 }

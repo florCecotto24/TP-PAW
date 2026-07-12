@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.exception.admin.AdminCannotBlockGrantorException;
 import ar.edu.itba.paw.exception.admin.AdminCannotBlockSelfException;
+import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
 import ar.edu.itba.paw.exception.admin.AdminCannotPauseAdminCarException;
 import ar.edu.itba.paw.exception.car.CarBrandNotFoundException;
 import ar.edu.itba.paw.exception.car.CarModelNotFoundException;
@@ -28,7 +29,6 @@ import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.domain.reservation.ReservationMessage;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
-import ar.edu.itba.paw.models.dto.reservation.AdminReservationChatPageModel;
 import ar.edu.itba.paw.models.dto.reservation.ReservationCard;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.email.admin.AdminInvitationEmailPayload;
@@ -42,6 +42,7 @@ import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.services.reservation.ReservationService;
+import ar.edu.itba.paw.services.reservation.ReservationWorkflowService;
 /**
  * Admin operations: user management, car moderation, catalog validation, and reservation inspection.
  *
@@ -61,6 +62,7 @@ public class AdminServiceImpl implements AdminService {
     private final CarBrandService carBrandService;
     private final CarModelService carModelService;
     private final ReservationService reservationService;
+    private final ReservationWorkflowService reservationWorkflowService;
     private final ReservationMessageService reservationMessageService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -72,6 +74,7 @@ public class AdminServiceImpl implements AdminService {
             final CarBrandService carBrandService,
             final CarModelService carModelService,
             final ReservationService reservationService,
+            final ReservationWorkflowService reservationWorkflowService,
             final ReservationMessageService reservationMessageService,
             final EmailService emailService,
             final PasswordEncoder passwordEncoder) {
@@ -80,6 +83,7 @@ public class AdminServiceImpl implements AdminService {
         this.carBrandService = carBrandService;
         this.carModelService = carModelService;
         this.reservationService = reservationService;
+        this.reservationWorkflowService = reservationWorkflowService;
         this.reservationMessageService = reservationMessageService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
@@ -87,11 +91,13 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void promoteUserToAdmin(final long targetUserId, final long assignedByUserId) {
+        assertAdminCaller(assignedByUserId);
         userService.promoteToAdmin(targetUserId, assignedByUserId);
     }
 
     @Override
     public void demoteUserFromAdmin(final long targetUserId, final long assignedByUserId) {
+        assertAdminCaller(assignedByUserId);
         userService.demoteFromAdmin(targetUserId, assignedByUserId);
     }
 
@@ -103,6 +109,7 @@ public class AdminServiceImpl implements AdminService {
             final String temporaryPassword,
             final long assignedByUserId,
             final Locale locale) {
+        assertAdminCaller(assignedByUserId);
         final User newUser = userService.createAdminUserWithEncodedPassword(
                 email, forename, surname, passwordEncoder.encode(temporaryPassword), assignedByUserId);
         emailService.sendAdminInvitation(
@@ -117,6 +124,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void blockUser(final long targetUserId, final long actingAdminId) {
+        assertAdminCaller(actingAdminId);
         if (actingAdminId == targetUserId) {
             throw new AdminCannotBlockSelfException();
         }
@@ -131,13 +139,15 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void unblockUser(final long targetUserId) {
+    public void unblockUser(final long targetUserId, final long actingAdminId) {
+        assertAdminCaller(actingAdminId);
         userService.unblockUser(targetUserId);
     }
 
     @Override
     @Transactional
     public void deleteUser(final long targetUserId, final long actingAdminId) {
+        assertAdminCaller(actingAdminId);
         if (targetUserId == actingAdminId) {
             throw new AdminCannotBlockSelfException();
         }
@@ -153,18 +163,14 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void adminPauseCar(final long carId, final long actingAdminId, final Locale locale) {
+        assertAdminCaller(actingAdminId);
         final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new CarNotFoundException(carId));
         if (car.getOwner().isAdmin()) {
             throw new AdminCannotPauseAdminCarException(carId);
         }
         carService.markCarAsAdminPaused(carId);
-        final List<Reservation> blocking = reservationService.findBlockingReservationsByCarId(carId);
-        for (final Reservation r : blocking) {
-            if (r.getStatus() == Reservation.Status.PENDING || r.getStatus() == Reservation.Status.ACCEPTED) {
-                reservationService.cancelReservation(r.getId());
-            }
-        }
+        reservationWorkflowService.cancelBlockingReservationsForAdminCarPause(carId);
         LOGGER.atInfo().addArgument(actingAdminId).addArgument(carId).log("Admin {} paused car {}");
         final User owner = car.getOwner();
         final String vehicleLabel = (car.getBrand() != null ? car.getBrand() : "")
@@ -182,6 +188,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void adminResumeCar(final long carId, final long actingAdminId) {
+        assertAdminCaller(actingAdminId);
         carService.releaseAdminCarPause(carId);
         LOGGER.atInfo().addArgument(actingAdminId).addArgument(carId).log("Admin {} resumed car {}");
     }
@@ -366,20 +373,10 @@ public class AdminServiceImpl implements AdminService {
         return reservationMessageService.countMessages(reservationId);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<AdminReservationChatPageModel> loadReservationChatPage(
-            final long reservationId, final int page, final int pageSize) {
-        final int safePage = Math.max(0, page);
-        final int safePageSize = Math.max(1, pageSize);
-        return reservationService.getReservationById(reservationId)
-                .map(reservation -> new AdminReservationChatPageModel(
-                        reservation,
-                        reservationMessageService.getAdminChatMessages(
-                                reservationId, safePage * safePageSize, safePageSize),
-                        reservationMessageService.countMessages(reservationId),
-                        safePage,
-                        safePageSize));
+    private void assertAdminCaller(final long actingAdminId) {
+        if (!userService.findRolesForUser(actingAdminId).contains(UserRole.ADMIN)) {
+            throw new AdminPromoterNotAdminException();
+        }
     }
 
 }

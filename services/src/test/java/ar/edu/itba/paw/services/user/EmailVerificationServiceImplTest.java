@@ -20,6 +20,7 @@ import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.email.user.EmailVerificationCodeEmailPayload;
 import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
+import ar.edu.itba.paw.policy.VerificationCodePolicy;
 
 import ar.edu.itba.paw.services.support.RecordingEmailService;
 
@@ -43,7 +44,8 @@ class EmailVerificationServiceImplTest {
         // State-based double instead of a Mockito captor: rule TEST-8 forbids doAnswer-style
         // payload capture, so the test reads the recorded payload directly from the fake.
         emailService = new RecordingEmailService();
-        service = new EmailVerificationServiceImpl(dao, emailService, userService);
+        service = new EmailVerificationServiceImpl(
+                dao, emailService, userService, VerificationCodePolicy.fromValidatedConfiguration(6, 5));
     }
 
     @Test

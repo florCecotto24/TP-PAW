@@ -7,7 +7,8 @@ import { MediaTypes } from '../../api/mediaTypes';
 import { paths } from '../../routes/paths';
 import type { ForgotStep, PasswordResetCodeRequest, PasswordResetPatch } from './types';
 import { apiErrorMessage } from './errorMessage';
-import PasswordField from './PasswordField';
+import { validatePasswordPair, registrationPasswordLimits } from './passwordValidation';
+import { PasswordField } from '../../components/ryden';
 
 function basicAuthHeader(email: string, secret: string): string {
   return `Basic ${btoa(`${email}:${secret}`)}`;
@@ -66,15 +67,17 @@ export default function ForgotResetPage() {
     setError(null);
     setInfo(null);
 
-    if (password.length < 8) {
-      setError(t('auth.register.passwordTooShort', { count: 8 }));
+    const limits = registrationPasswordLimits();
+    const passwordError = validatePasswordPair(password, passwordConfirm);
+    if (passwordError === 'tooShort') {
+      setError(t('auth.register.passwordTooShort', { count: limits.registrationPasswordMinLength }));
       return;
     }
-    if (password.length > 72) {
-      setError(t('auth.register.passwordTooLong', { count: 72 }));
+    if (passwordError === 'tooLong') {
+      setError(t('auth.register.passwordTooLong', { count: limits.registrationPasswordMaxLength }));
       return;
     }
-    if (password !== passwordConfirm) {
+    if (passwordError === 'mismatch') {
       setError(t('validation.passwordMismatch'));
       return;
     }
@@ -205,7 +208,12 @@ export default function ForgotResetPage() {
                     autoComplete="new-password"
                     required
                   />
-                  <Form.Text className="text-muted">{t('auth.register.passwordHint')}</Form.Text>
+                  <Form.Text className="text-muted">
+                    {t('auth.register.passwordHint', {
+                      min: registrationPasswordLimits().registrationPasswordMinLength,
+                      max: registrationPasswordLimits().registrationPasswordMaxLength,
+                    })}
+                  </Form.Text>
                 </Form.Group>
                 <Form.Group className="mb-4" controlId="passwordConfirm">
                   <Form.Label>{t('auth.forgot.confirmPassword')}</Form.Label>

@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { isAppLinkTarget, type AppLinkTarget } from '../../../routes/navigationState';
 
 export interface BreadcrumbTrailProps {
   currentLabel: string;
   homeLabel?: string;
   homeHref?: string;
   midLabel?: string;
-  midHref?: string;
+  midHref?: string | AppLinkTarget;
   mid2Label?: string;
-  mid2Href?: string;
+  mid2Href?: string | AppLinkTarget;
   showHome?: boolean;
 }
 
@@ -25,17 +26,19 @@ export default function BreadcrumbTrail({
   const { t } = useTranslation();
   const resolvedHomeLabel = homeLabel ?? t('breadcrumb.home');
 
-  function CrumbLink({ href, label }: { href: string; label: string }) {
-    const internal = href.startsWith('/') && !href.startsWith('//');
+  function CrumbLink({ href, label }: { href: string | AppLinkTarget; label: string }) {
+    const pathname = isAppLinkTarget(href) ? href.pathname : href;
+    const state = isAppLinkTarget(href) ? href.state : undefined;
+    const internal = pathname.startsWith('/') && !pathname.startsWith('//');
     if (internal) {
       return (
-        <Link to={href} className="text-decoration-none">
+        <Link to={pathname} state={state} className="text-decoration-none">
           {label}
         </Link>
       );
     }
     return (
-      <a href={href} className="text-decoration-none">
+      <a href={pathname} className="text-decoration-none">
         {label}
       </a>
     );

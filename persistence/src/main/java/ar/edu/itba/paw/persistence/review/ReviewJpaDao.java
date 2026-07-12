@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -252,6 +253,45 @@ public class ReviewJpaDao implements ReviewDao {
                 .setParameter("userId", counterpartyUserId)
                 .getSingleResult();
         return round2(avg);
+    }
+
+    @Override
+    public Map<Long, BigDecimal> findAverageRatingsAsOwnerForUserIds(final Collection<Long> userIds) {
+        return findAverageRatingsForUserIds(userIds, true);
+    }
+
+    @Override
+    public Map<Long, BigDecimal> findAverageRatingsAsRiderForUserIds(final Collection<Long> userIds) {
+        return findAverageRatingsForUserIds(userIds, false);
+    }
+
+    private Map<Long, BigDecimal> findAverageRatingsForUserIds(
+            final Collection<Long> userIds, final boolean counterpartyIsOwner) {
+        /*
+         * Batch scalar aggregate (not entity hydration): one JPQL round-trip with GROUP BY
+         * counterparty user id. Path navigation (reservation → car → owner, or reservation → rider)
+         * becomes SQL JOINs; mirrors {@link #findAverageRatingForCounterparty(long, boolean)}.
+         * Users with no rated reviews are omitted from the map (callers treat missing keys as null).
+         * Native SQL would be equivalent here; JPQL keeps the object-graph filter in one place.
+         */
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        final String jpql = counterpartyIsOwner
+                ? "SELECT r.reservation.car.owner.id, AVG(r.rating) FROM Review r "
+                        + "WHERE r.madeByRider = true AND r.reservation.car.owner.id IN :userIds "
+                        + "AND r.rating IS NOT NULL GROUP BY r.reservation.car.owner.id"
+                : "SELECT r.reservation.rider.id, AVG(r.rating) FROM Review r "
+                        + "WHERE r.madeByRider = false AND r.reservation.rider.id IN :userIds "
+                        + "AND r.rating IS NOT NULL GROUP BY r.reservation.rider.id";
+        final List<Object[]> rows = em.createQuery(jpql, Object[].class)
+                .setParameter("userIds", userIds)
+                .getResultList();
+        final Map<Long, BigDecimal> averages = new java.util.HashMap<>();
+        for (final Object[] row : rows) {
+            averages.put((Long) row[0], round2((Double) row[1]));
+        }
+        return averages;
     }
 
     @Override

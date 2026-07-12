@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, type To } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '../../../api/format';
+import { isAppLinkTarget, type AppLinkTarget } from '../../../routes/navigationState';
 
 export type PriceMarketPosition = 'below_market' | 'at_market' | 'above_market';
 
@@ -11,7 +12,7 @@ export interface CarCardProps {
   price: number;
   image?: string | null;
   pricePeriod?: 'hour' | 'day';
-  href?: string | null;
+  href?: To | AppLinkTarget | null;
   ratingAvg?: number | null;
   reviewCount?: number | null;
   priceMarketPositionModifier?: PriceMarketPosition | null;
@@ -160,7 +161,8 @@ export default function CarCard({
 
       {href ? (
         <Link
-          to={href}
+          to={isAppLinkTarget(href) ? href.pathname : href}
+          state={isAppLinkTarget(href) ? href.state : undefined}
           className="stretched-link carcard-stretched-link"
           aria-label={t('carCard.viewAriaLabel', { brand: trimmedBrand, model: trimmedModel })}
         />

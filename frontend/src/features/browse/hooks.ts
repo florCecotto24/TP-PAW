@@ -14,6 +14,7 @@ import {
   type InfiniteData,
 } from '@tanstack/react-query';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
+import { getCollectionPath } from '../../api/apiDiscovery';
 import { MediaTypes } from '../../api/mediaTypes';
 import { ApiError, followAllPages, followLinkCollection, getLinkCollectionPage, type ApiResponse } from '../../api/client';
 import type { UserDto, Links } from '../../api/types';
@@ -29,7 +30,7 @@ import type {
   ReviewDto,
 } from './types';
 
-const CARS_PATH = '/cars';
+const CARS_PATH = () => getCollectionPath('cars');
 
 function stripTrailingSlash(s: string): string {
   return s.endsWith('/') ? s.slice(0, -1) : s;
@@ -42,7 +43,7 @@ function useCarCarousel(sort: string, pageIndex: number) {
   return useQuery({
     queryKey: ['browse', 'cars', 'carousel', sort, pageIndex],
     queryFn: async () => {
-      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH, {
+      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH(), {
         accept: MediaTypes.carSummary,
         query: { sort, page: pageIndex + 1, pageSize: HOME_CAROUSEL_PAGE_SIZE },
       });
@@ -74,7 +75,7 @@ export function useSearchCars(filters: SearchFilters, pageSize = 12) {
         const res = await sessionClient.follow<CarSummaryDto[]>(pageParam, { accept: MediaTypes.carSummary });
         return { items: res.data ?? [], page: res.page };
       }
-      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH, {
+      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH(), {
         accept: MediaTypes.carSummary,
         query: { ...filtersToApiParams(filters), pageSize },
       });
@@ -106,7 +107,7 @@ export function useSearchCarsPage(filters: SearchFilters, page: number, pageSize
   return useQuery({
     queryKey: ['browse', 'cars', 'search-page', filtersToApiParams(filters), page, pageSize],
     queryFn: async () => {
-      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH, {
+      const res = await sessionClient.get<CarSummaryDto[]>(CARS_PATH(), {
         accept: MediaTypes.carSummary,
         query: { ...filtersToApiParams(filters), page, pageSize },
       });
@@ -121,12 +122,16 @@ export function pageCount(total: number | undefined, pageSize: number): number {
 }
 
 // --- Detalle de auto ---------------------------------------------------------
-export function useCar(id: string | undefined) {
+export function useCar(id: string | undefined, carSelf?: string | undefined) {
   return useQuery({
-    queryKey: ['browse', 'car', id],
-    enabled: !!id,
+    queryKey: ['browse', 'car', carSelf ?? id],
+    enabled: !!(carSelf || id),
     queryFn: async () => {
-      const res = await sessionClient.get<CarDto>(`${CARS_PATH}/${id}`, {
+      if (carSelf) {
+        const res = await sessionClient.follow<CarDto>(carSelf, { accept: MediaTypes.car });
+        return res.data;
+      }
+      const res = await sessionClient.get<CarDto>(`${CARS_PATH()}/${id}`, {
         accept: MediaTypes.car,
       });
       return res.data;
@@ -209,7 +214,7 @@ export function useNeighborhoods() {
     queryKey: ['browse', 'neighborhoods'],
     staleTime: 60 * 60 * 1000, // catálogo casi estático
     queryFn: async () => {
-      const res = await sessionClient.get<NeighborhoodDto[]>('/neighborhoods', {
+      const res = await sessionClient.get<NeighborhoodDto[]>(getCollectionPath('neighborhoods'), {
         accept: MediaTypes.neighborhood,
       });
       return res.data ?? [];
@@ -413,12 +418,12 @@ export interface BookableSegmentDto {
 }
 
 /** Rider bookable wall-day segments for the car-detail reservation picker. */
-export function useCarBookableSegments(carId: string | undefined) {
+export function useCarBookableSegments(bookableSegmentsLink: string | undefined) {
   return useQuery({
-    queryKey: ['browse', 'bookable-segments', carId],
-    enabled: !!carId,
+    queryKey: ['browse', 'bookable-segments', bookableSegmentsLink],
+    enabled: !!bookableSegmentsLink,
     queryFn: async () => {
-      const res = await sessionClient.get<BookableSegmentDto[]>(`/cars/${carId}/bookable-segments`, {
+      const res = await sessionClient.get<BookableSegmentDto[]>(bookableSegmentsLink!, {
         accept: MediaTypes.bookableSegment,
       });
       return res.data ?? [];

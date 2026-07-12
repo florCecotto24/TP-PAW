@@ -3,7 +3,6 @@ package ar.edu.itba.paw.webapp.controller.catalog;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -14,6 +13,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.services.car.CarModelService;
@@ -23,7 +23,7 @@ import ar.edu.itba.paw.webapp.dto.rest.ModelDto;
 /** Admin pending-model collection only ({@code GET /models?validated=false}). */
 @Path("/models")
 @Component
-public final class ModelController {
+public class ModelController {
 
     private final CarModelService carModelService;
 
@@ -36,7 +36,7 @@ public final class ModelController {
     }
 
     @GET
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("@userResourceAccess.isAdmin()")
     @Produces(VndMediaType.MODEL_V1_JSON)
     public Response listPendingModels(@QueryParam("validated") final Boolean validated) {
         if (validated == null || Boolean.TRUE.equals(validated)) {

@@ -50,6 +50,13 @@ public interface ReservationWorkflowService {
     Optional<Reservation> cancelReservation(long reservationId);
 
     /**
+     * Cancels every blocking reservation on {@code carId} when an admin pauses the listing.
+     * Unpaid pending rows become {@code cancelled_due_to_missing_payment_proof}; confirmed rows
+     * ({@code accepted}/{@code started}) become {@code cancelled_by_owner} with refund metadata when paid.
+     */
+    void cancelBlockingReservationsForAdminCarPause(long carId);
+
+    /**
      * Rider or owner may cancel {@code PENDING} without payment receipt, or either may cancel
      * {@code ACCEPTED} before pickup. Confirmed cancellations with a prior payment receipt
      * require the owner to upload a refund proof (handled via {@link ReservationPaymentService}).
@@ -75,4 +82,20 @@ public interface ReservationWorkflowService {
      * {@code accepted}/{@code started}.
      */
     void markCarReturnedByOwner(long ownerUserId, long reservationId);
+
+    /**
+     * Applies all fields present in a {@code PATCH /reservations/{id}} body inside one transaction.
+     * {@code cancellationStatus} must be {@link Reservation.Status#CANCELLED_BY_RIDER} or
+     * {@link Reservation.Status#CANCELLED_BY_OWNER} when non-null.
+     *
+     * @throws ar.edu.itba.paw.exception.reservation.ReservationCancelNotAllowedException when
+     *         {@code cancellationStatus} is another lifecycle value
+     */
+    Reservation patchReservation(
+            long viewerUserId,
+            long reservationId,
+            Reservation.Status cancellationStatus,
+            Boolean carReturned,
+            String fromDateTimeWall,
+            String untilDateTimeWall);
 }

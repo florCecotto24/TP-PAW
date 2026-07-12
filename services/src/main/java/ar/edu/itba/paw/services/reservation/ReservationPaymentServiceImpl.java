@@ -6,7 +6,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -83,13 +82,13 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     @Override
     @Transactional
     public void cancelExpiredPendingPaymentReservations() {
-        final Reservation.Status status = Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF;
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         int cancelled = 0;
-        for (final Reservation r : reservationService.findPendingPaymentPastDeadline(OffsetDateTime.now(ZoneOffset.UTC))) {
-            if (reservationService.updateReservationStatus(r.getId(), status.name().toLowerCase(Locale.ROOT)) > 0) {
+        for (final Reservation r : reservationService.findPendingPaymentPastDeadline(now)) {
+            if (reservationService.cancelPendingMissingPaymentProofIfEligible(r.getId(), now) > 0) {
                 mailComposer.sendCancellationEmail(r, true);
+                cancelled++;
             }
-            cancelled++;
         }
         LOGGER.atInfo().addArgument(cancelled).log("Payment proof deadline sweep: cancelled {} pending reservation(s)");
     }
@@ -110,10 +109,12 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
                 MessageKeys.RESERVATION_PAYMENT_RECEIPT_TOO_LARGE);
         final Reservation r = queryService.getRiderReservationById(riderId, reservationId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
-        if (r.getStatus() != Reservation.Status.PENDING) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        if (r.getPaymentProofDeadlineAt().isPresent() && now.isAfter(r.getPaymentProofDeadlineAt().get())) {
+            throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_PROOF_DEADLINE_PASSED);
         }
         final StoredFile file = storedFileService.create(riderId, originalFilename, contentType, data);
+        // PENDING / no-receipt eligibility is enforced atomically in attachPaymentReceiptAndAccept.
         final int updated = reservationService.attachPaymentReceiptAndAccept(reservationId, riderId, file.getId());
         if (updated == 0) {
             throw new RiderReservationException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);

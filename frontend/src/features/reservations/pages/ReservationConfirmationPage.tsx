@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
-import { LoadingBlock } from '../../../components/ryden';
+import { LoadingBlock, ReceiptUploadPicker } from '../../../components/ryden';
 import { getCar, getReservation, idFromUri, uploadReceipt } from '../api';
-import ReceiptUploadPicker from '../components/ReceiptUploadPicker';
 import { formatDateTime, formatPrice } from '../format';
-import { paths, carDetail, myReservationDetail } from '../../../routes/paths';
+import { paths, myReservationDetail } from '../../../routes/paths';
+import { carDetailTo } from '../../../routes/navigationState';
 import { useSessionStore } from '../../../session/sessionStore';
 
 /** Espejo de reservationConfirmation.jsp: agradecimiento + subida de comprobante de pago. */
@@ -46,7 +46,8 @@ export default function ReservationConfirmationPage() {
 
   const onConfirmUpload = async (file: File) => {
     if (!reservation) throw new Error('missing reservation');
-    const uri = `${reservation.links.self.replace(/\/$/, '')}/payment-receipt`;
+    const uri = reservation.links['payment-receipt'];
+    if (!uri) throw new Error('missing payment-receipt link');
     setUploading(true);
     try {
       await uploadReceipt(uri, file);
@@ -59,6 +60,9 @@ export default function ReservationConfirmationPage() {
 
   const heading = t('res.confirmation.title');
   const receiptLocked = Boolean(reservation?.hasPaymentReceipt || uploadDone);
+  const carDetailLink = reservation?.links?.car
+    ? carDetailTo(idFromUri(reservation.links.car) ?? '', reservation.links.car)
+    : null;
 
   return (
     <main className="container py-5 reservation-confirmation">
@@ -140,9 +144,10 @@ export default function ReservationConfirmationPage() {
                     >
                       {t('res.confirmation.viewReservation')}
                     </Link>
-                    {reservation.links.car ? (
+                    {carDetailLink ? (
                       <Link
-                        to={carDetail(idFromUri(reservation.links.car) ?? '')}
+                        to={carDetailLink.pathname}
+                        state={carDetailLink.state}
                         className="btn btn-sm btn-outline-secondary px-3"
                       >
                         {t('res.confirmation.viewCar')}

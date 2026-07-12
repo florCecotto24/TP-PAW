@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Form } from 'react-bootstrap';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BreadcrumbTrail, LoadingBlock, FieldView } from '../../components/ryden';
-import ReceiptUploadPicker from '../reservations/components/ReceiptUploadPicker';
+import { Avatar, BreadcrumbTrail, LoadingBlock, FieldView, ReceiptUploadPicker } from '../../components/ryden';
 import { profilePictureAssetUrl } from '../../api/uri';
+import { getClientConfig } from '../../api/clientConfig';
 import { useSessionStore } from '../../session/sessionStore';
 import { useMyUserUri } from './hooks';
 import {
@@ -50,10 +50,6 @@ function diffPatch(original: UserDto, form: ProfileFormValues): UserPatchDto {
   if (form.about !== (original.about ?? '')) patch.about = form.about;
   if (form.cbu !== (original.cbu ?? '')) patch.cbu = form.cbu;
   return patch;
-}
-
-function initials(u: UserDto): string {
-  return `${(u.forename ?? '').charAt(0)}${(u.surname ?? '').charAt(0)}`.toUpperCase();
 }
 
 export default function MyProfilePage() {
@@ -130,16 +126,11 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
   const { t, i18n } = useTranslation();
   // El backend incluye links.profilePicture SOLO si el usuario tiene foto, así que
   // su presencia indica si existe (mostramos imagen y la opción "quitar"); si está
-  // ausente, mostramos el placeholder de iniciales. El onError queda como red de
-  // seguridad ante un GET que falle igual (replica el gating por imageId del JSP).
-  const [imgFailed, setImgFailed] = useState(false);
-  const pictureLink = imgFailed ? undefined : profilePictureAssetUrl(user.links) ?? undefined;
+  // ausente, mostramos el placeholder de iniciales.
+  const pictureLink = profilePictureAssetUrl(user.links) ?? undefined;
   const fileRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [banner, setBanner] = useState<'saved' | 'removed' | null>(null);
-
-  // Si cambia la foto (tras subir/borrar), reseteamos el estado de error.
-  useEffect(() => setImgFailed(false), [user.links?.profilePicture]);
 
   // Cierra el menú al clickear fuera (espejo del comportamiento del JSP).
   useEffect(() => {
@@ -168,18 +159,17 @@ function ProfilePictureCard({ user, onChanged }: { user: UserDto; onChanged: () 
     <div className="profile-card">
       <div className="profile-card__header">
         <div className="profile-card__avatar">
-          {pictureLink ? (
-            <img
-              src={pictureLink}
-              alt={`${user.forename} ${user.surname}`}
-              className="profile-card__avatar-img"
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <div className="profile-card__avatar-placeholder">
-              <span>{initials(user)}</span>
-            </div>
-          )}
+          <Avatar
+            src={pictureLink}
+            alt={`${user.forename} ${user.surname}`}
+            forename={user.forename}
+            surname={user.surname}
+            className="profile-card__avatar"
+            imgClassName="profile-card__avatar-img"
+            placeholderClassName="profile-card__avatar-placeholder"
+            colored
+            barePhoto
+          />
 
           <button
             type="button"
@@ -281,6 +271,7 @@ function ProfileDataCard({
   const [form, setForm] = useState<ProfileFormValues>(() => toForm(user));
   const [done, setDone] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const userLimits = getClientConfig().user;
 
   // Resincroniza si el usuario base cambia (tras invalidate).
   useEffect(() => setForm(toForm(user)), [user]);
@@ -308,13 +299,14 @@ function ProfileDataCard({
       setValidationError(t('profile.me.phoneInvalid'));
       return;
     }
-    const cbu = form.cbu.trim();
-    if (cbu && !/^[0-9]{22}$/.test(cbu)) {
-      setValidationError(t('profile.me.cbuInvalid'));
-      return;
-    }
     if (form.birthDate && form.birthDate > new Date().toISOString().slice(0, 10)) {
       setValidationError(t('profile.me.birthDateFuture'));
+      return;
+    }
+    const cbuDigits = getClientConfig().cbuRequiredDigits;
+    const cbu = form.cbu.trim();
+    if (cbu && !new RegExp(`^\\d{${cbuDigits}}$`).test(cbu)) {
+      setValidationError(t('profile.me.cbuInvalid', { digits: cbuDigits }));
       return;
     }
     setValidationError(null);
@@ -379,6 +371,7 @@ function ProfileDataCard({
             <Form.Control
               value={form.forename}
               autoComplete="given-name"
+              maxLength={userLimits.displayNamePartMaxLength}
               onChange={(e) => update('forename', e.target.value)}
               required
             />
@@ -388,6 +381,7 @@ function ProfileDataCard({
             <Form.Control
               value={form.surname}
               autoComplete="family-name"
+              maxLength={userLimits.displayNamePartMaxLength}
               onChange={(e) => update('surname', e.target.value)}
               required
             />
@@ -415,6 +409,7 @@ function ProfileDataCard({
             <Form.Control
               value={form.cbu}
               inputMode="numeric"
+              maxLength={getClientConfig().cbuRequiredDigits}
               onChange={(e) => update('cbu', e.target.value)}
             />
           </Form.Group>
@@ -424,6 +419,7 @@ function ProfileDataCard({
               as="textarea"
               rows={4}
               value={form.about}
+              maxLength={userLimits.profileAboutMaxLength}
               onChange={(e) => update('about', e.target.value)}
             />
           </Form.Group>

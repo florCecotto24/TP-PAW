@@ -2,7 +2,6 @@ package ar.edu.itba.paw.webapp.controller.catalog;
 
 import java.util.Locale;
 
-import javax.annotation.security.RolesAllowed;
 import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -18,6 +17,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.models.domain.car.CarModel;
@@ -30,7 +30,7 @@ import ar.edu.itba.paw.webapp.support.ModelCatalogSupport;
  */
 @Path("/brands/{id}/models/{modelId}")
 @Component
-public final class BrandModelItemController {
+public class BrandModelItemController {
 
     private final ModelCatalogSupport modelCatalogSupport;
 
@@ -62,7 +62,7 @@ public final class BrandModelItemController {
     }
 
     @PATCH
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("@userResourceAccess.isAdmin()")
     @Consumes(VndMediaType.MODEL_V1_JSON)
     @Produces(VndMediaType.MODEL_V1_JSON)
     public Response approveModel(
@@ -77,7 +77,7 @@ public final class BrandModelItemController {
     }
 
     @DELETE
-    @RolesAllowed("ROLE_ADMIN")
+    @PreAuthorize("@userResourceAccess.isAdmin()")
     public Response rejectModel(
             @PathParam("id") final long brandId, @PathParam("modelId") final long modelId) {
         modelCatalogSupport.requireModelForBrand(brandId, modelId);

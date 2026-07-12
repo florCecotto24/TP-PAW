@@ -23,6 +23,7 @@ public final class ApiIndexDto {
         final var base = uriInfo.getBaseUriBuilder();
 
         dto.links.put("self", base.build().toString());
+        dto.links.put("config", href(uriInfo, "config"));
         dto.links.put("users", href(uriInfo, "users"));
         dto.links.put("cars", href(uriInfo, "cars"));
         dto.links.put("reservations", href(uriInfo, "reservations"));
@@ -33,24 +34,24 @@ public final class ApiIndexDto {
         dto.links.put("credentials", href(uriInfo, "credentials"));
         dto.links.put("image", href(uriInfo, "image"));
 
-        dto.resources.put("users", new ResourceDescriptor(href(uriInfo, "users"),
+        dto.resources.put("users", ResourceDescriptor.of(href(uriInfo, "users"),
                 List.of("page", "pageSize", "blocked", "role", "q")));
-        dto.resources.put("cars", new ResourceDescriptor(href(uriInfo, "cars"),
+        dto.resources.put("cars", ResourceDescriptor.of(href(uriInfo, "cars"),
                 List.of("page", "pageSize", "q", "ownerId", "category", "transmission", "powertrain",
                         "priceMin", "priceMax", "rating", "neighborhoodId", "from", "until", "flexible",
                         "flexMonth", "flexDays", "status", "sort")));
-        dto.resources.put("reservations", new ResourceDescriptor(href(uriInfo, "reservations"),
+        dto.resources.put("reservations", ResourceDescriptor.of(href(uriInfo, "reservations"),
                 List.of("page", "pageSize", "riderId", "ownerId", "carId", "status", "riderStatus", "q",
                         "category", "transmission", "powertrain", "priceMin", "priceMax", "rating", "sort")));
-        dto.resources.put("reviews", new ResourceDescriptor(href(uriInfo, "reviews"),
+        dto.resources.put("reviews", ResourceDescriptor.of(href(uriInfo, "reviews"),
                 List.of("carId", "recipientUserId", "reservationId", "page", "pageSize")));
-        dto.resources.put("brands", new ResourceDescriptor(href(uriInfo, "brands"),
+        dto.resources.put("brands", ResourceDescriptor.of(href(uriInfo, "brands"),
                 List.of("validated", "page", "pageSize")));
-        dto.resources.put("models", new ResourceDescriptor(href(uriInfo, "models"),
+        dto.resources.put("models", ResourceDescriptor.of(href(uriInfo, "models"),
                 List.of("validated")));
-        dto.resources.put("neighborhoods", new ResourceDescriptor(href(uriInfo, "neighborhoods"), List.of()));
-        dto.resources.put("credentials", new ResourceDescriptor(href(uriInfo, "credentials"), List.of()));
-        dto.resources.put("image", new ResourceDescriptor(href(uriInfo, "image"), List.of()));
+        dto.resources.put("neighborhoods", ResourceDescriptor.of(href(uriInfo, "neighborhoods"), List.of()));
+        dto.resources.put("credentials", ResourceDescriptor.of(href(uriInfo, "credentials"), List.of()));
+        dto.resources.put("image", ResourceDescriptor.of(href(uriInfo, "image"), List.of()));
 
         return dto;
     }
@@ -81,12 +82,15 @@ public final class ApiIndexDto {
         private String href;
         private List<String> queryParams;
 
+        /** Jackson / Bean Validation no-arg constructor. */
         public ResourceDescriptor() {
         }
 
-        public ResourceDescriptor(final String href, final List<String> queryParams) {
-            this.href = href;
-            this.queryParams = queryParams;
+        public static ResourceDescriptor of(final String href, final List<String> queryParams) {
+            final ResourceDescriptor descriptor = new ResourceDescriptor();
+            descriptor.href = href;
+            descriptor.queryParams = queryParams;
+            return descriptor;
         }
 
         public String getHref() {

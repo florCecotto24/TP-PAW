@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../i18n/dateFormat';
+import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -10,13 +11,14 @@ import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { useAdminGuard } from '../useAdminGuard';
 import { usePagedList } from '../usePagedList';
 import { adminReservationChat } from '../../../routes/paths';
+import type { AdminReservationChatLocationState } from '../../../routes/navigationState';
 
 export default function AdminReservationsPage() {
   const { t, i18n } = useTranslation();
   const errorMessage = useAdminErrorMessage();
   const { isAdmin, loading: guardLoading } = useAdminGuard();
   const list = usePagedList<ReservationSummaryDto>(
-    guardLoading || !isAdmin ? '' : '/reservations?page=1',
+    guardLoading || !isAdmin ? '' : collectionQueryPath('reservations', { page: '1' }),
     MediaTypes.reservationLinks,
     [],
     MediaTypes.reservationSummary,
@@ -63,6 +65,11 @@ export default function AdminReservationsPage() {
                       <td className="text-end admin-table__cell--wrap">
                         <Link
                           to={adminReservationChat(reservationId)}
+                          state={
+                            reservation.links.messages
+                              ? ({ messagesLink: reservation.links.messages } satisfies AdminReservationChatLocationState)
+                              : undefined
+                          }
                           className="btn btn-outline-primary btn-sm"
                         >
                           {t('admin.reservations.actions.viewChat')}

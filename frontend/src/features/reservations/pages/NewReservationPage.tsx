@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
 import { LoadingBlock } from '../../../components/ryden';
@@ -19,7 +19,8 @@ import { formatDateTime } from '../../../i18n/dateFormat';
 import { reservationActionError } from '../reservationError';
 import { useCurrentUser } from '../useCurrentUser';
 import { useSessionStore } from '../../../session/sessionStore';
-import { paths, carDetail, reservationConfirmation } from '../../../routes/paths';
+import { paths, reservationConfirmation } from '../../../routes/paths';
+import { carDetailTo, type NewReservationLocationState } from '../../../routes/navigationState';
 
 function billableDays(startIso: string, endIso: string): number {
   const a = new Date(startIso).getTime();
@@ -39,11 +40,13 @@ export default function NewReservationPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { carId } = useParams<{ carId: string }>();
+  const location = useLocation();
+  const carSelfFromNav = (location.state as NewReservationLocationState | null)?.carSelf;
   const [searchParams] = useSearchParams();
   const { id: myId, isAuthenticated } = useCurrentUser();
   const userUri = useSessionStore((s) => s.currentUserUri);
 
-  const carUri = carId ? `/cars/${carId}` : null;
+  const carUri = carSelfFromNav ?? (carId ? `/cars/${carId}` : null);
 
   const carQuery = useQuery({
     queryKey: ['reservations', 'new', 'car', carUri],
@@ -52,12 +55,14 @@ export default function NewReservationPage() {
   });
 
   const availQuery = useQuery({
-    queryKey: ['reservations', 'new', 'availabilities', carUri],
+    queryKey: ['reservations', 'new', 'availabilities', carQuery.data?.links?.availabilities],
     queryFn: async () => {
-      const res = await listCarAvailabilities(carUri as string);
+      const link = carQuery.data?.links?.availabilities;
+      if (!link) return [];
+      const res = await listCarAvailabilities(link);
       return (res.data ?? []).filter((a) => a.kind === 'offered' || a.kind == null);
     },
-    enabled: !!carUri,
+    enabled: !!carQuery.data?.links?.availabilities,
   });
 
   const userQuery = useQuery({
@@ -159,7 +164,8 @@ export default function NewReservationPage() {
   };
 
   const onSaveDocs = async () => {
-    if (!userUri) return;
+    const user = userQuery.data;
+    if (!user) return;
     const needLicense = !licenseUploaded;
     const needIdentity = !identityUploaded;
     if ((needLicense && !pendingLicenseFile) || (needIdentity && !pendingIdentityFile)) {
@@ -172,10 +178,10 @@ export default function NewReservationPage() {
     setDocsError(null);
     try {
       if (needLicense && pendingLicenseFile) {
-        await uploadUserDocument(userUri, 'license', pendingLicenseFile);
+        await uploadUserDocument(user, 'license', pendingLicenseFile);
       }
       if (needIdentity && pendingIdentityFile) {
-        await uploadUserDocument(userUri, 'identity', pendingIdentityFile);
+        await uploadUserDocument(user, 'identity', pendingIdentityFile);
       }
       await queryClient.invalidateQueries({ queryKey: ['reservations', 'new', 'user', userUri] });
       setDocsModalOpen(false);
@@ -208,12 +214,14 @@ export default function NewReservationPage() {
   }
 
   const loading = carQuery.isLoading || availQuery.isLoading || userQuery.isLoading;
+  const carSelf = carSelfFromNav ?? carQuery.data?.links?.self;
+  const carDetailLink = carId ? carDetailTo(carId, carSelf) : null;
 
   return (
     <main className="container py-5">
       <BreadcrumbTrail
         midLabel={carName}
-        midHref={carDetail(carId)}
+        midHref={carDetailLink ?? undefined}
         currentLabel={t('res.new.title')}
       />
       <div className="row justify-content-center">
@@ -273,7 +281,11 @@ export default function NewReservationPage() {
                       </div>
 
                       <div className="d-flex gap-2 mt-2">
-                        <Link to={carDetail(carId)} className="btn btn-outline-secondary w-50">
+                        <Link
+                          to={carDetailLink?.pathname ?? paths.search}
+                          state={carDetailLink?.state}
+                          className="btn btn-outline-secondary w-50"
+                        >
                           {t('res.new.back')}
                         </Link>
                         <button

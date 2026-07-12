@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.webapp.util;
 
 import java.net.URI;
+import java.util.Optional;
 
 import javax.ws.rs.core.UriInfo;
 
@@ -114,6 +115,27 @@ public final class RestUriUtils {
                 .build();
     }
 
+    /**
+     * Extracts the neighborhood primary key from a canonical {@code /neighborhoods/{id}} link
+     * (absolute or relative). Returns empty for null/blank input or when the path suffix is not
+     * a numeric id.
+     */
+    public static Optional<Long> parseNeighborhoodId(final String neighborhoodUri) {
+        if (neighborhoodUri == null || neighborhoodUri.isBlank()) {
+            return Optional.empty();
+        }
+        final String path = neighborhoodUri.split("\\?")[0].replaceAll("/+$", "");
+        final int lastSlash = path.lastIndexOf('/');
+        if (lastSlash < 0 || lastSlash == path.length() - 1) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Long.parseLong(path.substring(lastSlash + 1)));
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
     public static URI carPicturesUri(final UriInfo uriInfo, final long carId) {
         return uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
@@ -139,6 +161,13 @@ public final class RestUriUtils {
         return uriInfo.getBaseUriBuilder()
                 .path("cars").path(String.valueOf(carId))
                 .path("availabilities")
+                .build();
+    }
+
+    public static URI carBookableSegmentsUri(final UriInfo uriInfo, final long carId) {
+        return uriInfo.getBaseUriBuilder()
+                .path("cars").path(String.valueOf(carId))
+                .path("bookable-segments")
                 .build();
     }
 
@@ -197,14 +226,6 @@ public final class RestUriUtils {
     /** Canonical URN for a single review ({@code GET /reviews/{id}}). */
     public static URI reviewUri(final UriInfo uriInfo, final long reviewId) {
         return uriInfo.getBaseUriBuilder().path("reviews").path(String.valueOf(reviewId)).build();
-    }
-
-    /**
-     * @deprecated Prefer {@link #reviewUri(UriInfo, long)} for {@code links.self}.
-     */
-    @Deprecated
-    public static URI reservationReviewUri(final UriInfo uriInfo, final long reservationId, final long reviewId) {
-        return reviewUri(uriInfo, reviewId);
     }
 
     public static URI reservationUri(final UriInfo uriInfo, final long reservationId) {

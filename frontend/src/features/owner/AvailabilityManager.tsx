@@ -9,6 +9,8 @@ import { NeighborhoodPicker } from '../../components/ryden';
 import PriceMarketInsightCard from '../../components/ryden/car/PriceMarketInsightCard';
 import { formatDateRange, flatpickrLocale, formatMonthYear, shiftMonth } from '../../i18n/dateFormat';
 import { idFromUri } from '../../api/uri';
+import { getClientConfig } from '../../api/clientConfig';
+import { firstAvailabilityValidationError } from './availabilityValidation';
 import {
   createAvailability,
   deleteAvailability,
@@ -42,7 +44,7 @@ const EMPTY_FORM: AvailabilityCreateDto = {
   dayPrice: 0,
   startPointStreet: '',
   startPointNumber: '',
-  neighborhoodId: undefined,
+  neighborhoodUri: '',
   checkInTime: '10:00',
   checkOutTime: '20:00',
 };
@@ -50,6 +52,7 @@ const EMPTY_FORM: AvailabilityCreateDto = {
 export default function AvailabilityManager({ car }: { car: CarDto }) {
   const { t, i18n } = useTranslation();
   const errorMessage = useApiErrorMessage();
+  const listingLimits = getClientConfig().listing;
 
   const [month, setMonth] = useState(currentMonth());
   const [periods, setPeriods] = useState<AvailabilityDto[]>([]);
@@ -73,10 +76,16 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     () =>
       neighborhoods.map((n) => {
         const nid = n.links.self.split('?')[0].replace(/\/+$/, '').split('/').pop();
-        return { id: Number(nid), name: n.name };
+        return { id: Number(nid), name: n.name, uri: n.links.self };
       }),
     [neighborhoods],
   );
+
+  const selectedNeighborhoodId = useMemo(() => {
+    if (!form.neighborhoodUri) return null;
+    const match = neighborhoodOptions.find((n) => n.uri === form.neighborhoodUri);
+    return match?.id ?? null;
+  }, [form.neighborhoodUri, neighborhoodOptions]);
 
   useEffect(() => {
     let active = true;
@@ -90,7 +99,7 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
       .then((res) => {
         if (!active) return;
         const data = res.data;
-        if (data && data.sampleCount > 0) {
+        if (data && data.sampleCount >= 2 && data.maxPrice > data.minPrice) {
           setPriceInsight({
             minPrice: data.minPrice,
             maxPrice: data.maxPrice,
@@ -231,16 +240,13 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
     // Repoblamos el barrio desde su link (antes quedaba undefined y al guardar la
     // edición se perdía el barrio salvo que se re-eligiera).
     const nbLink = p.links.neighborhood;
-    const nbId = nbLink
-      ? Number(nbLink.split('?')[0].replace(/\/+$/, '').split('/').pop())
-      : undefined;
     setForm({
       startDate: p.startDate,
       endDate: p.endDate,
       dayPrice: p.dayPrice,
       startPointStreet: p.startPointStreet,
       startPointNumber: p.startPointNumber ?? '',
-      neighborhoodId: nbId && !Number.isNaN(nbId) ? nbId : undefined,
+      neighborhoodUri: nbLink ?? '',
       checkInTime: p.checkInTime,
       checkOutTime: p.checkOutTime,
     });
@@ -254,21 +260,13 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    // Validaciones client-side que el JSP mostraba inline (form:errors).
-    if (!form.startDate || !form.endDate) {
-      setError(t('owner.availability.errors.datesRequired'));
-      return;
-    }
-    if (form.endDate < form.startDate) {
-      setError(t('owner.availability.errors.invalidDateRange'));
-      return;
-    }
-    if (!(form.dayPrice > 0)) {
-      setError(t('owner.availability.errors.priceInvalid'));
-      return;
-    }
-    if (!form.startPointStreet?.trim()) {
-      setError(t('owner.availability.errors.streetRequired'));
+    const validationError = firstAvailabilityValidationError(form);
+    if (validationError) {
+      setError(t(`owner.availability.errors.${validationError}`, {
+        min: getClientConfig().listing.pricePerDayMin,
+        integer: getClientConfig().listing.pricePerDayIntegerDigits,
+        fraction: getClientConfig().listing.pricePerDayFractionDigits,
+      }));
       return;
     }
     setBusy(true);
@@ -435,10 +433,11 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
                 selectFieldLabel={t('owner.availability.neighborhood')}
                 toggleAriaLabel={t('owner.availability.neighborhood')}
                 allowMultiple={false}
-                selectedNeighborhoodId={form.neighborhoodId ?? null}
+                selectedNeighborhoodId={selectedNeighborhoodId}
                 onSelectionChange={(ids) => {
                   const raw = ids[0];
-                  update('neighborhoodId', raw != null && raw !== '' ? Number(raw) : undefined);
+                  const match = neighborhoodOptions.find((n) => String(n.id) === String(raw));
+                  update('neighborhoodUri', match?.uri ?? '');
                 }}
               />
             </div>
@@ -446,11 +445,11 @@ export default function AvailabilityManager({ car }: { car: CarDto }) {
             <div className="row g-3 mb-3">
               <div className="col-md-8">
                 <label className="form-label required-label" htmlFor="availStreet">{t('owner.availability.street')}</label>
-                <input id="availStreet" className="form-control" value={form.startPointStreet} onChange={(e) => update('startPointStreet', e.target.value)} required />
+                <input id="availStreet" className="form-control" maxLength={listingLimits.addressStreetMaxLength} value={form.startPointStreet} onChange={(e) => update('startPointStreet', e.target.value)} required />
               </div>
               <div className="col-md-4">
                 <label className="form-label" htmlFor="availNumber">{t('owner.availability.streetNumber')}</label>
-                <input id="availNumber" className="form-control" value={form.startPointNumber ?? ''} onChange={(e) => update('startPointNumber', e.target.value)} />
+                <input id="availNumber" className="form-control" maxLength={listingLimits.addressNumberMaxLength} value={form.startPointNumber ?? ''} onChange={(e) => update('startPointNumber', e.target.value)} />
               </div>
             </div>
 

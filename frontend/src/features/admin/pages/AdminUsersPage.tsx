@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
 import type { UserDto } from '../../../api/types';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
@@ -90,11 +91,12 @@ export default function AdminUsersPage() {
   const [busySelf, setBusySelf] = useState<string | null>(null);
 
   const listPath = useMemo(() => {
-    const params = new URLSearchParams({ page: '1' });
-    if (applied.role) params.set('role', applied.role);
-    if (applied.blocked) params.set('blocked', applied.blocked);
-    if (applied.q) params.set('q', applied.q);
-    return `/users?${params.toString()}`;
+    return collectionQueryPath('users', {
+      page: '1',
+      role: applied.role || undefined,
+      blocked: applied.blocked || undefined,
+      q: applied.q || undefined,
+    });
   }, [applied]);
 
   const list = usePagedList<UserDto>(listPath, MediaTypes.userPrivate, [applied]);
@@ -132,7 +134,7 @@ export default function AdminUsersPage() {
   };
 
   const onViewDocument = async (user: UserDto, type: 'license' | 'identity') => {
-    const ok = await openAuthenticatedBinary(userDocumentPath(user.links.self, type));
+    const ok = await openAuthenticatedBinary(userDocumentPath(user, type));
     if (!ok) setActionError(t('admin.users.docs.openFailed'));
   };
 

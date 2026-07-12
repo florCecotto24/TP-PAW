@@ -20,6 +20,7 @@ public final class MessageKeys {
     public static final String RESERVATION_RIDER_DATES_NOT_FROM_TODAY = "reservation.rider.datesNotFromToday";
     public static final String RESERVATION_RIDER_PICKUP_MIN_24H = "reservation.rider.pickupMin24h";
     public static final String RESERVATION_PAYMENT_RECEIPT_INVALID = "reservation.paymentReceipt.invalid";
+    public static final String RESERVATION_PAYMENT_PROOF_DEADLINE_PASSED = "reservation.paymentProof.deadlinePassed";
     public static final String RESERVATION_PAYMENT_RECEIPT_TOO_LARGE = "reservation.paymentReceipt.tooLarge";
     public static final String RESERVATION_PAYMENT_RECEIPT_NOT_FOUND = "reservation.paymentReceipt.notFound";
     public static final String RESERVATION_CANCEL_NOT_ALLOWED = "reservation.cancel.notAllowed";
@@ -107,6 +108,7 @@ public final class MessageKeys {
     public static final String CAR_NOT_OWNED = "car.notOwned";
     public static final String PAGINATION_LIMIT_POSITIVE = "pagination.limit.positive";
     public static final String CAR_AVAILABILITY_PICKUP_LOCATION_REQUIRED = "carAvailability.pickupLocation.required";
+    public static final String CAR_AVAILABILITY_NEIGHBORHOOD_INVALID = "carAvailability.neighborhood.invalid";
     public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_DIGITS_ONLY = "carAvailability.pickupStreetNumber.digitsOnly";
     public static final String CAR_AVAILABILITY_PICKUP_STREET_NUMBER_MAX_DIGITS = "carAvailability.pickupStreetNumber.maxDigits";
     public static final String CAR_PUBLISH_CBU_REQUIRED = "car.publish.cbuRequired";
@@ -152,4 +154,16 @@ public final class MessageKeys {
 
     /** Catch-all for unmapped server failures (never expose raw {@code Throwable#getMessage()}). */
     public static final String ERROR_UNEXPECTED = "error.unexpected";
+
+    /** Generic unauthorized (no raw Spring/Jersey message to clients). */
+    public static final String ERROR_UNAUTHORIZED = "error.unauthorized";
+
+    /** Generic forbidden (no raw Spring/Jersey message to clients). */
+    public static final String ERROR_FORBIDDEN = "error.forbidden";
+
+    /** Generic not found when the framework exception carries no i18n code. */
+    public static final String ERROR_NOT_FOUND = "error.notFound";
+
+    /** Invalid path/query/header parameter (Jersey {@code ParamException}). */
+    public static final String ERROR_INVALID_REQUEST_PARAMETER = "error.invalidRequestParameter";
 }

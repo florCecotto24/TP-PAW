@@ -13,9 +13,11 @@ export interface HomeCarouselBlockProps {
   items: CarSummaryDto[];
   isLoading: boolean;
   isError: boolean;
-  prevPageHref?: string;
-  nextPageHref?: string;
   emptyMessage?: string;
+  pageIndex: number;
+  onPageChange: (pageIndex: number) => void;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
 }
 
 /** Home carousel section: loading/error feedback + {@link CarouselSection} of {@link BrowseCarCard}s. */
@@ -28,9 +30,11 @@ export default function HomeCarouselBlock({
   items,
   isLoading,
   isError,
-  prevPageHref,
-  nextPageHref,
   emptyMessage,
+  pageIndex,
+  onPageChange,
+  hasPrevPage,
+  hasNextPage,
 }: HomeCarouselBlockProps) {
   const { t } = useTranslation();
 
@@ -48,8 +52,11 @@ export default function HomeCarouselBlock({
           title={title}
           subtitle={subtitle}
           emptyMessage={emptyMessage ?? t('carousel.noVehicles')}
-          prevPageHref={prevPageHref}
-          nextPageHref={nextPageHref}
+          pageIndex={pageIndex}
+          onPrevPage={hasPrevPage ? () => onPageChange(pageIndex - 1) : undefined}
+          onNextPage={hasNextPage ? () => onPageChange(pageIndex + 1) : undefined}
+          prevPageDisabled={!hasPrevPage}
+          nextPageDisabled={!hasNextPage}
           renderItem={(car: CarSummaryDto): ReactNode => <BrowseCarCard car={car} />}
         />
       )}

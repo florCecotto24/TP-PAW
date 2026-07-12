@@ -66,6 +66,13 @@ public interface ReservationDao {
 
     List<Reservation> findPendingPaymentPastDeadline(OffsetDateTime now);
 
+    /**
+     * Payment-proof deadline sweep: cancels only when the row is still {@link Reservation.Status#PENDING},
+     * has no payment receipt, and the deadline has passed. Returns 0 when a concurrent receipt upload
+     * already moved the row to {@code accepted} (or attached a receipt).
+     */
+    int cancelPendingMissingPaymentProofIfEligible(long reservationId, OffsetDateTime now);
+
     int attachPaymentReceiptAndAccept(long reservationId, long riderId, long storedFileId);
 
     Optional<Reservation> getReservationById(long id);
@@ -82,6 +89,20 @@ public interface ReservationDao {
     Page<ReservationCard> getRiderReservationCards(ReservationSearchCriteria criteria);
 
     List<Reservation> getReminderReservations(final OffsetDateTime from, final OffsetDateTime to);
+
+    /**
+     * Ids of {@link Reservation.Status#ACCEPTED} rows whose pickup {@code start_date} is on or before
+     * {@code now} (UTC). Used by the scheduled job that transitions confirmed rentals to
+     * {@link Reservation.Status#STARTED} once pickup time is reached.
+     */
+    List<Long> findAcceptedReservationIdsWithStartOnOrBefore(OffsetDateTime now);
+
+    /**
+     * When the row is still {@link Reservation.Status#ACCEPTED} and {@code startDate <= now}, sets
+     * {@link Reservation.Status#STARTED} via dirty checking. Returns 0 if the row is absent, already
+     * started, or pickup is still in the future.
+     */
+    int transitionAcceptedToStartedIfDue(long reservationId, OffsetDateTime now);
 
     Page<ReservationCard> getOwnerReservationCards(ReservationSearchCriteria criteria);
 
@@ -164,10 +185,20 @@ public interface ReservationDao {
 
     /**
      * Participant cancellation: status plus optional refund obligation (confirmed reservation with prior payment).
+     * Returns 0 when the row is absent, not in a cancellable state, or a concurrent receipt upload won the race.
      */
     int updateParticipantCancellationWithRefundMeta(
             long reservationId,
             String statusLower,
+            boolean paymentRefundRequired,
+            OffsetDateTime refundProofDeadlineAtOrNull);
+
+    /**
+     * Admin car-pause cascade: cancels blocking reservations with the correct terminal status
+     * ({@code cancelled_due_to_missing_payment_proof} only for unpaid pending rows).
+     */
+    int applyAdminCarPauseCancellation(
+            long reservationId,
             boolean paymentRefundRequired,
             OffsetDateTime refundProofDeadlineAtOrNull);
 
@@ -197,6 +228,13 @@ public interface ReservationDao {
      * number of pending refund proofs (typically 1), so loading entities here is cheap.
      */
     List<Reservation> findOverdueRefundProofReservationsForOwner(long ownerUserId, OffsetDateTime now);
+
+    /**
+     * Batch variant of {@link #findOverdueRefundProofReservationsForOwner}: maps each owner id to the
+     * ordered list of overdue refund-proof reservation ids (same ordering as the single-owner query).
+     */
+    Map<Long, List<Long>> findOverdueRefundProofReservationIdsByOwnerIds(
+            Collection<Long> ownerUserIds, OffsetDateTime now);
 
     /**
      * Reservations of {@code ownerUserId} that still require a refund-proof upload (no receipt yet),

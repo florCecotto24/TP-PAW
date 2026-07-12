@@ -181,18 +181,6 @@ export function isMinRentalDaysViolated(
   return billableDaysInclusive(fromDateTime, untilDateTime) < minD;
 }
 
-export function formatReservationCurrency(amount: number, locale: string): string {
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: 'ARS',
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `$${Math.round(amount)}`;
-  }
-}
-
 export function initialDefaultDates(
   segments: BookableSegment[],
   searchNeighborhoodIds: number[],

@@ -15,8 +15,7 @@ import {
   uploadInsurance,
 } from './api';
 import { hasCbu, useApiErrorMessage, useCarReservationPreview, useCurrentUserId } from './hooks';
-import { LoadingBlock, FieldView } from '../../components/ryden';
-import ReceiptUploadPicker from '../reservations/components/ReceiptUploadPicker';
+import { LoadingBlock, FieldView, ReceiptUploadPicker } from '../../components/ryden';
 import ReservationListCard from '../reservations/components/ReservationListCard';
 import AvailabilityManager from './AvailabilityManager';
 import GalleryManager from './GalleryManager';

@@ -3,8 +3,8 @@ import { MediaTypes } from '../../api/mediaTypes';
 import { resolveApiUrl } from '../../api/uri';
 import { sessionClient, useSessionStore } from '../../session/sessionStore';
 import {
-  CHAT_MAX_ATTACHMENT_MB,
   computeUploadTimeoutMs,
+  getChatMaxAttachmentMb,
   UPLOAD_MAX_RETRIES,
 } from './chatAttachment';
 import type { MessageDto } from './types';
@@ -123,7 +123,7 @@ export async function sendChatMessage(
   fd.append('body', body);
   if (file) fd.append('file', file);
 
-  const maxMb = options?.maxAttachmentMb ?? CHAT_MAX_ATTACHMENT_MB;
+  const maxMb = options?.maxAttachmentMb ?? getChatMaxAttachmentMb();
   const timeoutMs = file ? computeUploadTimeoutMs(maxMb) : 60_000;
   const uploadOpts = { timeoutMs, onProgress: options?.onProgress };
 

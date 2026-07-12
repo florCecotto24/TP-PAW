@@ -38,7 +38,7 @@ public class ImageServiceImplTest {
     public void testGetImageByIdWhenImageExists() {
         // 1. Arrange
         final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
-        final Image image = new Image(1L, "imageName", "image/png", imageData);
+        final Image image = Image.identified(1L, "imageName", "image/png", imageData);
         Mockito.when(imageDao.getImageById(1L)).thenReturn(Optional.of(image));
 
         // 2. Execute
@@ -55,7 +55,7 @@ public class ImageServiceImplTest {
     @Test
     public void testGetImageByIdWhenImageDoesNotExist() {
         // 1. Arrange
-        Mockito.when(imageDao.getImageById(Mockito.anyLong())).thenReturn(Optional.empty());
+        Mockito.when(imageDao.getImageById(1L)).thenReturn(Optional.empty());
 
         // 2. Execute
         final Optional<Image> result = imageService.getImageById(1L);
@@ -68,8 +68,8 @@ public class ImageServiceImplTest {
     public void testCreateImage() {
         // 1. Arrange
         final byte[] imageData = {0x00, 0x01, 0x02, 0x03};
-        final Image image = new Image(1L, "imageName", "image/png", imageData);
-        Mockito.when(imageDao.createImage(Mockito.anyString(), Mockito.anyString(), Mockito.any())).thenReturn(image);
+        final Image image = Image.identified(1L, "imageName", "image/png", imageData);
+        Mockito.when(imageDao.createImage("imageName", "image/png", imageData)).thenReturn(image);
 
         // 2. Execute
         final Image result = imageService.createImage("imageName", "image/png", imageData);

@@ -157,11 +157,6 @@ export function filtersToApiParams(filters: SearchFilters): Record<string, strin
   return out;
 }
 
-/** @deprecated Usar {@link filtersToApiParams} para API o {@link filtersToSearchParams} para URL. */
-export function filtersToParams(filters: SearchFilters): Record<string, string> {
-  return filtersToApiParams(filters);
-}
-
 /**
  * Serializa filtros a URL (paridad JSP: `query`, sort `date,desc`, …).
  */

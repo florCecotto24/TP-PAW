@@ -85,7 +85,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     // ----- Tests -----------------------------------------------------------------------------
 
     @Test
-    void addFavorite_persistsRowInFavCarsTable() {
+    void testAddFavoritePersistsRowInFavCarsTable() {
         // 1. Arrange — only seed the car via JdbcTemplate; fav_cars must be empty.
         final long carId = insertCar("FAV001", "active");
 
@@ -99,7 +99,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void isFavorited_returnsTrueWhenRowExistsAndFalseOtherwise() {
+    void testIsFavoritedReturnsTrueWhenRowExistsAndFalseOtherwise() {
         // 1. Arrange — insert one favorite directly via JdbcTemplate.
         final long carId = insertCar("FAV010", "active");
         insertFavorite(carId, viewerId, OffsetDateTime.now(ZoneOffset.UTC));
@@ -114,7 +114,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void removeFavorite_deletesRowFromFavCarsTable() {
+    void testRemoveFavoriteDeletesRowFromFavCarsTable() {
         // 1. Arrange — seed both the car and the favorite via JdbcTemplate.
         final long carId = insertCar("FAV002", "active");
         insertFavorite(carId, viewerId, OffsetDateTime.now(ZoneOffset.UTC));
@@ -128,7 +128,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void removeFavoriteIsNoOpWhenPairAbsent() {
+    void testRemoveFavoriteIsNoOpWhenPairAbsent() {
         // 1. Arrange — car exists but the (car, user) favorite does not.
         final long carId = insertCar("FAV020", "active");
 
@@ -141,7 +141,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findFavoriteCarCardsReturnsMostRecentFirst_andRespectsStatusFilter() {
+    void testFindFavoriteCarCardsReturnsMostRecentFirstAndRespectsStatusFilter() {
         // 1. Arrange — three favorites: one each in ACTIVE, PAUSED and DEACTIVATED. The
         // deactivated one must be filtered out; the remaining two must come back in
         // most-recently-favorited-first order.
@@ -170,7 +170,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findFavoriteCarCardsTotalCountIgnoresFavoritesPointingToFilteredStatuses() {
+    void testFindFavoriteCarCardsTotalCountIgnoresFavoritesPointingToFilteredStatuses() {
         // 1. Arrange
         final long activeCarId = insertCar("FAVC01", "active");
         final long deactivatedCarId = insertCar("FAVC02", "deactivated");
@@ -187,7 +187,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void findFavoriteCarCardsPaginatesAtSqlLevel() {
+    void testFindFavoriteCarCardsPaginatesAtSqlLevel() {
         // 1. Arrange — three favorites with ascending timestamps so the desired order is C, B, A.
         final long carA = insertCar("FAVP01", "active");
         final long carB = insertCar("FAVP02", "active");
@@ -211,7 +211,7 @@ class FavCarJpaDaoTest extends DaoIntegrationTestSupport {
     }
 
     @Test
-    void filterFavoritedCarIdsReturnsIntersection() {
+    void testFilterFavoritedCarIdsReturnsIntersection() {
         // 1. Arrange
         final long favoritedCar = insertCar("FAVS01", "active");
         final long otherCar = insertCar("FAVS02", "active");

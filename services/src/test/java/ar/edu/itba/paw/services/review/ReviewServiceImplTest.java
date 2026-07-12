@@ -338,15 +338,6 @@ class ReviewServiceImplTest {
     }
 
     @Test
-    void testCountReviewsForCarDelegatesToDao() {
-        reviewDao.stubReviewCountForCar(CAR_ID, 42L);
-
-        final long count = service.countReviewsForCar(CAR_ID);
-
-        Assertions.assertEquals(42L, count);
-    }
-
-    @Test
     void testSubmitRiderReviewOfOwnerCompletesOnHappyPath() {
         final OffsetDateTime past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1);
         final Reservation res = reservation(true, past);

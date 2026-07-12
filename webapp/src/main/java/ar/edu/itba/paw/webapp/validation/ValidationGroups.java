@@ -25,10 +25,6 @@ public final class ValidationGroups {
     public interface OnListingEdit {
     }
 
-    /** Rider reservation submit ({@code /reservation} POST). */
-    public interface OnReservationSubmit {
-    }
-
     /** Forgot-password reset with code ({@code /forgot-password/reset} POST). */
     public interface OnForgotPasswordReset {
     }

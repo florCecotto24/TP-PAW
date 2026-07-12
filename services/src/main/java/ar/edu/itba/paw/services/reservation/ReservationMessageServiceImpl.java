@@ -28,6 +28,7 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageAttachmentDto;
 import ar.edu.itba.paw.models.dto.reservation.ReservationMessageDto;
+import ar.edu.itba.paw.models.util.format.TextTruncationLimits;
 import ar.edu.itba.paw.models.pagination.UiPaging;
 import ar.edu.itba.paw.models.email.reservation.chat.ReservationChatDigestConversationEntry;
 import ar.edu.itba.paw.models.email.reservation.chat.ReservationChatDigestEmailPayload;
@@ -49,7 +50,7 @@ import ar.edu.itba.paw.services.user.UserService;
 public class ReservationMessageServiceImpl implements ReservationMessageService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReservationMessageServiceImpl.class);
-    private static final int EMAIL_PREVIEW_MAX_LENGTH = 200;
+    private static final int EMAIL_PREVIEW_MAX_LENGTH = TextTruncationLimits.RESERVATION_ATTACHMENT_FILENAME;
 
     private final ReservationMessageDao reservationMessageDao;
     private final ReservationService reservationService;
@@ -523,7 +524,9 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
         if (cleaned.isBlank()) {
             return "attachment";
         }
-        return cleaned.length() > 200 ? cleaned.substring(0, 200) : cleaned;
+        return cleaned.length() > TextTruncationLimits.RESERVATION_ATTACHMENT_FILENAME
+                ? cleaned.substring(0, TextTruncationLimits.RESERVATION_ATTACHMENT_FILENAME)
+                : cleaned;
     }
 
     private static String normalizeContentType(final String contentType) {
@@ -531,6 +534,8 @@ public class ReservationMessageServiceImpl implements ReservationMessageService 
             return "application/octet-stream";
         }
         final String t = contentType.trim();
-        return t.length() > 100 ? t.substring(0, 100) : t;
+        return t.length() > TextTruncationLimits.CONTENT_TYPE_HEADER_MAX
+                ? t.substring(0, TextTruncationLimits.CONTENT_TYPE_HEADER_MAX)
+                : t;
     }
 }

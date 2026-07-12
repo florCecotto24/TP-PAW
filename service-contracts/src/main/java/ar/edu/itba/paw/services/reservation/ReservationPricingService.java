@@ -43,6 +43,9 @@ public interface ReservationPricingService {
     /** Hours to upload payment proof after creating a pending reservation. */
     int getConfiguredPaymentProofDeadlineHours();
 
+    /** Hours for the owner to upload refund proof after a confirmed cancellation requiring reimbursement. */
+    int getConfiguredRefundProofDeadlineHours();
+
     /** Hours before {@code end_date} to email the rider to return the vehicle. */
     int getConfiguredReturnReminderHoursBeforeCheckout();
 
@@ -61,9 +64,28 @@ public interface ReservationPricingService {
 
     /**
      * Formatted total for UI when {@code carId} and wall-local range parse; uses car
-     * availability day price.
+     * availability day price. Applies the same calendar, availability, billable-day, and overlap
+     * guards as {@link ReservationWorkflowService#submitRiderReservationByCar} before pricing.
      */
     Optional<String> reservationTotalDisplayByCar(Long carId, String fromDateTime, String untilDateTime);
+
+    /**
+     * Same as {@link #reservationTotalDisplayByCar(Long, String, String)}; when {@code availabilityId}
+     * is non-null the interval must fit inside that availability row.
+     */
+    Optional<String> reservationTotalDisplayByCar(
+            Long carId, Long availabilityId, String fromDateTime, String untilDateTime);
+
+    /**
+     * Shared calendar / availability / billable-day guards for rider quote and submit flows.
+     * Does not check rider identity, documentation, payment details, or overlap.
+     */
+    void validateRiderReservationPricingInterval(
+            long carId,
+            Long availabilityId,
+            OffsetDateTime startDate,
+            OffsetDateTime endDate,
+            int minimumRentalDays);
 
     /** Total price for the car and UTC interval using configured billable-day rules. */
     Optional<BigDecimal> calculateTotalByCar(long carId, OffsetDateTime startDate, OffsetDateTime endDate);

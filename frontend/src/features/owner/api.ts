@@ -3,6 +3,7 @@
 // paginación por header). Reusa el cliente del core (sessionClient).
 
 import { sessionClient } from '../../session/sessionStore';
+import { getCollectionPath } from '../../api/apiDiscovery';
 import { openAuthenticatedBinary } from '../../api/openAuthenticatedBinary';
 import { MediaTypes } from '../../api/mediaTypes';
 import type { ApiResponse } from '../../api/client';
@@ -60,8 +61,8 @@ export function patchCbu(userUri: string, cbu: string): Promise<ApiResponse<User
 }
 
 /**
- * PUT /users/{id}/documents/identity (multipart, campo `file`): sube el documento
- * de identidad. Mismo mecanismo que usa el área PROFILE. Tras subirlo, la identidad
+ * PUT /users/{id}/documents/identity (octet-stream): sube el documento de identidad.
+ * Mismo mecanismo que usa el área PROFILE y reservas. Tras subirlo, la identidad
  * queda "en revisión" (identityValidated lo fija el admin), pero el documento ya
  * está en el sistema y el prerequisito de publicación se considera cumplido.
  */
@@ -71,9 +72,11 @@ export function uploadIdentityDocument(
 ): Promise<ApiResponse<unknown>> {
   const base = user.links.documents ?? userSubResource(user.links.self, 'documents');
   const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
-  const fd = new FormData();
-  fd.append('file', file);
-  return sessionClient.request(`${normalized}/identity`, { method: 'PUT', body: fd });
+  return sessionClient.request(`${normalized}/identity`, {
+    method: 'PUT',
+    body: file,
+    contentType: file.type || 'application/octet-stream',
+  });
 }
 
 // ---- Catálogo ----
@@ -82,7 +85,7 @@ export function uploadIdentityDocument(
  * en la DB local, así que se siguen los {@code Link: next} hasta completar.
  */
 export async function fetchBrands(): Promise<ApiResponse<BrandDto[]>> {
-  const first = await sessionClient.get<BrandDto[]>('/brands', {
+  const first = await sessionClient.get<BrandDto[]>(getCollectionPath('brands'), {
     accept: MediaTypes.brand,
     query: { page: 1, pageSize: 100 },
   });
@@ -106,7 +109,7 @@ export function fetchModels(brand: BrandDto): Promise<ApiResponse<ModelDto[]>> {
 }
 
 export function createBrand(name: string): Promise<ApiResponse<BrandDto>> {
-  return sessionClient.post<BrandDto>('/brands', { name }, {
+  return sessionClient.post<BrandDto>(getCollectionPath('brands'), { name }, {
     accept: MediaTypes.brand,
     contentType: MediaTypes.brand,
   });
@@ -144,7 +147,7 @@ export function fetchOwnerCars(
   ownerId: string,
   opts: OwnerCarsQuery = {},
 ): Promise<ApiResponse<CarSummaryDto[]>> {
-  return sessionClient.get<CarSummaryDto[]>('/cars', {
+  return sessionClient.get<CarSummaryDto[]>(getCollectionPath('cars'), {
     accept: MediaTypes.carSummary,
     query: {
       ownerId,
@@ -201,7 +204,7 @@ export async function publishCar(
   }
 
   const { body, contentType } = await encodeMultipart(parts);
-  return sessionClient.post<CarDto>('/cars', body, {
+  return sessionClient.post<CarDto>(getCollectionPath('cars'), body, {
     accept: MediaTypes.car,
     contentType,
   });
@@ -283,18 +286,24 @@ export async function fetchPictures(car: CarDto): Promise<ApiResponse<PictureDto
   };
 }
 
-export function addPicture(
+export async function addPicture(
   car: CarDto,
   file: File,
-  displayOrder?: number,
 ): Promise<ApiResponse<unknown>> {
-  const fd = new FormData();
-  fd.append('file', file);
-  if (displayOrder != null) fd.append('displayOrder', String(displayOrder));
+  const parts = [
+    {
+      name: 'file',
+      value: file,
+      filename: file.name || 'picture',
+      contentType: file.type || 'application/octet-stream',
+    },
+  ];
+  const { body, contentType } = await encodeMultipart(parts);
   return sessionClient.request(car.links.pictures, {
     method: 'POST',
     accept: MediaTypes.picture,
-    body: fd,
+    body,
+    contentType,
   });
 }
 
@@ -316,7 +325,7 @@ export async function openInsurance(car: CarDto): Promise<boolean> {
 
 // ---- Neighborhoods (catálogo para el select de disponibilidad) ----
 export function fetchNeighborhoods(): Promise<ApiResponse<NeighborhoodDto[]>> {
-  return sessionClient.get<NeighborhoodDto[]>('/neighborhoods', {
+  return sessionClient.get<NeighborhoodDto[]>(getCollectionPath('neighborhoods'), {
     accept: MediaTypes.neighborhood,
   });
 }

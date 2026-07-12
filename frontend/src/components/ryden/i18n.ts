@@ -212,6 +212,8 @@ export const rydenI18n = {
     'car.price.insight.min': 'Mínimo',
     'car.price.insight.avg': 'Promedio',
     'car.price.insight.max': 'Máximo',
+    'car.price.insight.noMarket':
+      'No hay otros autos del mismo modelo publicados; ingresá el precio manualmente.',
   },
   en: {
     'common.day': 'day',
@@ -422,5 +424,7 @@ export const rydenI18n = {
     'car.price.insight.min': 'Minimum',
     'car.price.insight.avg': 'Average',
     'car.price.insight.max': 'Maximum',
+    'car.price.insight.noMarket':
+      'No other cars of the same model are published; enter the price manually.',
   },
 } as const;

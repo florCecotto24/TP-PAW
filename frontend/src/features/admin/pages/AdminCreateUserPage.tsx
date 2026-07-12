@@ -5,7 +5,7 @@ import { Alert, Button, Form } from 'react-bootstrap';
 import { ApiError } from '../../../api/client';
 import { paths } from '../../../routes/paths';
 import BreadcrumbTrail from '../../../components/ryden/layout/BreadcrumbTrail';
-import PasswordField from '../../auth/PasswordField';
+import { PasswordField } from '../../../components/ryden';
 import { createAdminUser } from '../api';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 

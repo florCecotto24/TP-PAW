@@ -13,7 +13,6 @@ import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
 import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
@@ -65,6 +64,12 @@ public interface CarService {
 
     /** Loads a car by primary key when present. */
     Optional<Car> getCarById(final long id);
+
+    /**
+     * Serializes reservation creates/edits for one car. Must run in the same transaction as the
+     * subsequent overlap check and insert.
+     */
+    void lockForReservationWrite(long carId);
 
     /** All cars for the owner (with or without an active/paused listing), paginated and filtered. */
     Page<CarCard> getOwnerCarCards(OwnerCarSearchCriteria criteria);
@@ -187,13 +192,6 @@ public interface CarService {
     Map<Long, ConsumerCarCardMarketContext> resolveConsumerPriceMarketContexts(List<CarCard> cards);
 
     /**
-     * Owner car detail page model assembled from the car, its availabilities, pictures, and reservation analytics.
-     * Returns empty when the car cannot be found.
-     */
-    Optional<OwnerCarDetailPageModel> buildOwnerCarDetailPageModel(
-            long carId, Locale locale);
-
-    /**
      * For each car of the owner whose status is {@link Car.Status#ACTIVE} or {@link Car.Status#PAUSED},
      * transitions it to {@link Car.Status#LACK_DOC} and sends one email per affected car to the owner.
      */
@@ -232,6 +230,15 @@ public interface CarService {
 
     /** Updates optional free-text description for a car owned by {@code ownerId}. */
     void updateDescription(long ownerId, long carId, String description);
+
+    /**
+     * Applies a car status transition after verifying the acting user may request {@code target}.
+     *
+     * @throws ar.edu.itba.paw.exception.car.CarValidationException when the transition is not allowed
+     * @throws ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException when admin-only targets
+     *         are requested by a non-admin caller
+     */
+    void applyStatusTransition(long carId, Car.Status target, long actingUserId, Locale locale);
 
     // -----------------------------------------------------------------------------------------------------------
     // Admin-orchestrated operations on car rows.

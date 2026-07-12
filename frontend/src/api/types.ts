@@ -24,8 +24,7 @@ export interface UserDto {
   licenseUploaded?: boolean;
   identityUploaded?: boolean;
   blocked?: boolean;
-  /** Deep-link a la reserva con comprobante de reembolso vencido, cuando hay exactamente una (banner bloqueado). */
-  blockedOverdueReservationId?: number | null;
+  /** Deep-link a la reserva con comprobante de reembolso vencido (links.blocked-overdue-reservation). */
   role?: 'user' | 'admin';
   ratingAsRider?: number | null;
   ratingAsOwner?: number | null;

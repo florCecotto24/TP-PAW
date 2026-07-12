@@ -84,6 +84,7 @@ public final class CarLinks {
                     .withRelated("brand", brandId != null ? RestUriUtils.brandUri(uriInfo, brandId).toString() : null)
                     .withRelated("pictures", RestUriUtils.carPicturesUri(uriInfo, carId).toString())
                     .withRelated("availabilities", RestUriUtils.carAvailabilitiesUri(uriInfo, carId).toString())
+                    .withRelated("bookable-segments", RestUriUtils.carBookableSegmentsUri(uriInfo, carId).toString())
                     .withRelated("insurance", RestUriUtils.carInsuranceUri(uriInfo, carId).toString())
                     .withRelated("reviews", RestUriUtils.carReviewsUri(uriInfo, carId).toString())
                     .withRelated("similar", RestUriUtils.carSimilarUri(uriInfo, carId).toString());

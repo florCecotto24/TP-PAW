@@ -61,18 +61,6 @@ public interface CarAvailabilityDao {
     List<CarAvailability> findByCarIdsEndingOnOrAfter(Collection<Long> carIds, LocalDate minEndDate);
 
     /**
-     * Count of OFFERED rows for {@code carId} whose window overlaps {@code [monthStart, monthEnd]}.
-     * Used as an approximate upper bound for paginated effectiveness display.
-     */
-    int countMonthOfferedByCar(long carId, LocalDate monthStart, LocalDate monthEnd);
-
-    /**
-     * OFFERED rows for {@code carId} overlapping {@code [monthStart, monthEnd]}, ordered by
-     * {@code startInclusive ASC}, for the given pagination window.
-     */
-    List<CarAvailability> findMonthOfferedByCar(long carId, LocalDate monthStart, LocalDate monthEnd, int limit, int offset);
-
-    /**
      * Returns {@code true} when the car has at least one {@link CarAvailability.Kind#OFFERED} row.
      * Lightweight existence check (no full row scan).
      */

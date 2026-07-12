@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.webapp.util;
 
+import ar.edu.itba.paw.models.util.format.TextTruncationLimits;
+
 /** Safe {@code Content-Disposition} filename for binary downloads. */
 public final class DownloadFileNameSanitizer {
 
@@ -14,6 +16,8 @@ public final class DownloadFileNameSanitizer {
         if (trimmed.isBlank()) {
             return fallback;
         }
-        return trimmed.length() > 120 ? trimmed.substring(0, 120) : trimmed;
+        return trimmed.length() > TextTruncationLimits.DOWNLOAD_FILENAME
+                ? trimmed.substring(0, TextTruncationLimits.DOWNLOAD_FILENAME)
+                : trimmed;
     }
 }

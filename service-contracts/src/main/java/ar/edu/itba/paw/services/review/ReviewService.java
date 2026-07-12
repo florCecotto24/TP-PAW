@@ -1,7 +1,9 @@
 package ar.edu.itba.paw.services.review;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.review.Review;
@@ -107,6 +109,12 @@ public interface ReviewService {
      * ({@code counterpartyIsOwner} selects which side of the reservation is the rated party).
      */
     BigDecimal getAverageRatingForCounterparty(long counterpartyUserId, boolean counterpartyIsOwner);
+
+    /** Batch owner-side ratings for admin user listings. Missing keys mean no rated reviews. */
+    Map<Long, BigDecimal> getAverageRatingsAsOwnerForUserIds(Collection<Long> userIds);
+
+    /** Batch rider-side ratings for admin user listings. Missing keys mean no rated reviews. */
+    Map<Long, BigDecimal> getAverageRatingsAsRiderForUserIds(Collection<Long> userIds);
 
     /**
      * Recent rated reviews for the counterparty profile snippet. Comment-less reviews are included

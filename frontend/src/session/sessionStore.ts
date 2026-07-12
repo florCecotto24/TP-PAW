@@ -155,6 +155,7 @@ export const useSessionStore = create<SessionState>((set, get) => {
 
   logout: () => {
     userFetchSeq++;
+    sessionClient.clearConditionalGetCache();
     set({
       accessToken: null,
       refreshToken: null,

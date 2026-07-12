@@ -28,10 +28,10 @@ import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
 import ar.edu.itba.paw.models.dto.car.PriceMarketPosition;
 import ar.edu.itba.paw.persistence.car.CarDao;
 
-import ar.edu.itba.paw.services.car.view.OwnerCarDetailViewService;
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
+import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.UserService;
 @ExtendWith(MockitoExtension.class)
 public class CarServiceImplTest {
@@ -61,13 +61,14 @@ public class CarServiceImplTest {
     private CarSearchService carSearchService;
 
     @Mock
-    private OwnerCarDetailViewService ownerCarDetailViewService;
+    private AdminService adminService;
 
     @InjectMocks
     private CarServiceImpl carService;
 
     @Test
-    public void testCreateCar(){
+    public void testCreateCar() {
+        // 1.Arrange
         final long carId = 1L;
         final long ownerId = 2L;
         final long carModelId = 10L;
@@ -85,8 +86,10 @@ public class CarServiceImplTest {
                 .build();
         Mockito.when(carDao.createCar(ownerId, plate, carModelId, year, powertrain, transmission)).thenReturn(car);
 
+        // 2.Act
         final Car result = carService.createCar(ownerId, plate, carModelId, year, powertrain, transmission);
 
+        // 3.Assert
         Assertions.assertNotNull(result);
         Assertions.assertEquals(car, result);
         Assertions.assertEquals(carId, result.getId());
@@ -99,6 +102,7 @@ public class CarServiceImplTest {
 
     @Test
     public void testGetCarByIdWhenCarExists(){
+        // 1.Arrange
         final long carId = 100L;
         final long ownerId = 200L;
         final String plate = "plateTest";
@@ -113,29 +117,38 @@ public class CarServiceImplTest {
                 .build();
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(car));
 
+        // 2.Act
         final Optional<Car> result = carService.getCarById(carId);
 
+        // 3.Assert
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(car, result.get());
     }
 
     @Test
     public void testGetCarByIdWhenCarDoesNotExist(){
+        // 1.Arrange
         final long carId = 101L;
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.empty());
 
+        // 2.Act
         final Optional<Car> result = carService.getCarById(carId);
 
+        // 3.Assert
         Assertions.assertTrue(result.isEmpty());
     }
 
     @Test
     public void testGetPriceMarketInsightForCarWhenCarIsNull() {
+        // 1.Arrange — null car
+
+        // 2.Act / 3.Assert
         Assertions.assertTrue(carService.getPriceMarketInsightForCar(null, null).isEmpty());
     }
 
     @Test
     public void testGetPriceMarketInsightForCarWhenBrandOrModelBlank() {
+        // 1.Arrange
         final Car car = Car.builder()
                 .id(1L)
                 .owner(User.identities(2L, "o@test.com", "O", "O"))
@@ -144,11 +157,13 @@ public class CarServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .build();
 
+        // 2.Act / 3.Assert
         Assertions.assertTrue(carService.getPriceMarketInsightForCar(car, null).isEmpty());
     }
 
     @Test
     public void testGetPriceMarketInsightForCarReturnsInsightFromDao() {
+        // 1.Arrange
         final CarBrand brand = CarBrand.builder().id(1L).name("Toyota").validated(true).build();
         final CarModel carModel = CarModel.builder()
                 .id(10L)
@@ -173,14 +188,17 @@ public class CarServiceImplTest {
         Mockito.when(carDao.findActiveDayPriceMarketInsightByBrandAndModel("Toyota", "Corolla", 42L))
                 .thenReturn(Optional.of(insight));
 
+        // 2.Act
         final Optional<CarPriceMarketInsight> result = carService.getPriceMarketInsightForCar(car, 42L);
 
+        // 3.Assert
         Assertions.assertTrue(result.isPresent());
         Assertions.assertEquals(insight, result.get());
     }
 
     @Test
     public void testGetPriceMarketInsightForCarWhenDaoEmpty() {
+        // 1.Arrange
         final CarBrand brand = CarBrand.builder().id(1L).name("Ford").validated(true).build();
         final CarModel carModel = CarModel.builder()
                 .id(10L)
@@ -200,11 +218,13 @@ public class CarServiceImplTest {
         Mockito.when(carDao.findActiveDayPriceMarketInsightByBrandAndModel("Ford", "Ka", null))
                 .thenReturn(Optional.empty());
 
+        // 2.Act / 3.Assert
         Assertions.assertTrue(carService.getPriceMarketInsightForCar(car, null).isEmpty());
     }
 
     @Test
     public void testResolveConsumerPriceMarketContextsWhenSampleCountBelowTwo() {
+        // 1.Arrange
         final CarCard card = CarCard.builder()
                 .carId(5L)
                 .brand("Toyota")
@@ -218,14 +238,17 @@ public class CarServiceImplTest {
         Mockito.when(carDao.findActiveDayPricesForBrandModelPairs(List.of("Toyota"), List.of("Corolla")))
                 .thenReturn(List.of(new CarModelPriceSample("Toyota", "Corolla", 6L, new BigDecimal("8000.00"))));
 
+        // 2.Act
         final Map<Long, ConsumerCarCardMarketContext> contexts =
                 carService.resolveConsumerPriceMarketContexts(List.of(card));
 
+        // 3.Assert
         Assertions.assertTrue(contexts.isEmpty());
     }
 
     @Test
     public void testResolveConsumerPriceMarketContextsReturnsPositionWhenComparable() {
+        // 1.Arrange
         final CarCard card = CarCard.builder()
                 .carId(5L)
                 .brand("Toyota")
@@ -241,9 +264,11 @@ public class CarServiceImplTest {
                         new CarModelPriceSample("Toyota", "Corolla", 6L, new BigDecimal("8000.00")),
                         new CarModelPriceSample("Toyota", "Corolla", 7L, new BigDecimal("12000.00"))));
 
+        // 2.Act
         final Map<Long, ConsumerCarCardMarketContext> contexts =
                 carService.resolveConsumerPriceMarketContexts(List.of(card));
 
+        // 3.Assert
         Assertions.assertEquals(1, contexts.size());
         Assertions.assertEquals(
                 PriceMarketPosition.BELOW_MARKET,
@@ -252,6 +277,7 @@ public class CarServiceImplTest {
 
     @Test
     public void testResolveConsumerPriceMarketContextsIssuesOneDaoCallForMultipleCardsSharingModel() {
+        // 1.Arrange
         // Regression test for the N+1 bug: the old cache key wrongly included card.getCarId(), so a
         // page with N cards issued N DAO calls even when several cards shared the same brand/model.
         final CarCard cardA = CarCard.builder()
@@ -266,14 +292,17 @@ public class CarServiceImplTest {
                         new CarModelPriceSample("Toyota", "Corolla", 6L, new BigDecimal("11000.00")),
                         new CarModelPriceSample("Toyota", "Corolla", 7L, new BigDecimal("10000.00"))));
 
+        // 2.Act
         final Map<Long, ConsumerCarCardMarketContext> contexts =
                 carService.resolveConsumerPriceMarketContexts(List.of(cardA, cardB));
 
+        // 3.Assert
         Assertions.assertEquals(2, contexts.size());
     }
 
     @Test
     public void testToggleCarStatusFromPausedToActiveThrowsWhenOwnerIsBlocked() {
+        // 1.Arrange
         final long ownerId = 42L;
         final long carId = 99L;
         final User blockedOwner = User.builder()
@@ -296,9 +325,12 @@ public class CarServiceImplTest {
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(blockedOwner));
         Mockito.when(userService.hasValidCbu(blockedOwner)).thenReturn(true);
 
+        // 2.Act
         final CarValidationException thrown = Assertions.assertThrows(
                 CarValidationException.class,
                 () -> carService.toggleCarStatus(ownerId, carId));
+
+        // 3.Assert
         Assertions.assertEquals(
                 MessageKeys.CAR_ACTIVATE_OWNER_BLOCKED,
                 thrown.getMessageCode());
@@ -306,6 +338,7 @@ public class CarServiceImplTest {
 
     @Test
     public void testToggleCarStatusFromActiveToPausedSucceedsRegardlessOfBlocked() {
+        // 1.Arrange
         // Pausing an active listing has no blocked-owner check; only ACTIVE→PAUSED.
         final long ownerId = 42L;
         final long carId = 99L;
@@ -326,13 +359,16 @@ public class CarServiceImplTest {
                 .build();
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(activeCar));
 
+        // 2.Act
         final Car.Status next = carService.toggleCarStatus(ownerId, carId);
 
+        // 3.Assert
         Assertions.assertEquals(Car.Status.PAUSED, next);
     }
 
     @Test
     public void testReleaseAdminCarPauseSetsLackDocWhenInsuranceMissing() {
+        // 1.Arrange
         // markCarAsAdminPaused accepts LACK_DOC inputs, so unpausing must re-check documentation
         // before promoting the listing back to ACTIVE; otherwise the car becomes bookable without
         // the insurance file the Car.Status javadoc requires for ACTIVE.
@@ -357,13 +393,16 @@ public class CarServiceImplTest {
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
         Mockito.when(userService.hasValidCbu(owner)).thenReturn(true);
 
+        // 2.Act
         carService.releaseAdminCarPause(carId);
 
+        // 3.Assert
         Assertions.assertEquals(Car.Status.LACK_DOC, adminPausedCar.getStatus());
     }
 
     @Test
     public void testReleaseAdminCarPauseSetsLackDocWhenCbuMissing() {
+        // 1.Arrange
         final long ownerId = 42L;
         final long carId = 99L;
         final User owner = User.builder()
@@ -380,19 +419,22 @@ public class CarServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .status(Car.Status.ADMIN_PAUSED)
                 .build();
-        adminPausedCar.setInsuranceFile(new StoredFile(
+        adminPausedCar.setInsuranceFile(StoredFile.identified(
                 7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
         Mockito.when(userService.hasValidCbu(owner)).thenReturn(false);
 
+        // 2.Act
         carService.releaseAdminCarPause(carId);
 
+        // 3.Assert
         Assertions.assertEquals(Car.Status.LACK_DOC, adminPausedCar.getStatus());
     }
 
     @Test
     public void testReleaseAdminCarPauseSetsActiveWhenDocumentationComplete() {
+        // 1.Arrange
         final long ownerId = 42L;
         final long carId = 99L;
         final User owner = User.builder()
@@ -410,37 +452,51 @@ public class CarServiceImplTest {
                 .transmission(Car.Transmission.MANUAL)
                 .status(Car.Status.ADMIN_PAUSED)
                 .build();
-        adminPausedCar.setInsuranceFile(new StoredFile(
+        adminPausedCar.setInsuranceFile(StoredFile.identified(
                 7L, owner, "policy.pdf", "application/pdf", new byte[]{1}, null));
         Mockito.when(carDao.getCarById(carId)).thenReturn(Optional.of(adminPausedCar));
         Mockito.when(userService.getUserById(ownerId)).thenReturn(Optional.of(owner));
         Mockito.when(userService.hasValidCbu(owner)).thenReturn(true);
 
+        // 2.Act
         carService.releaseAdminCarPause(carId);
 
+        // 3.Assert
         Assertions.assertEquals(Car.Status.ACTIVE, adminPausedCar.getStatus());
     }
 
     @Test
     public void testResolveOwnerListingStatusesReturnsRequestedStatusesWhenPresent() {
+        // 1.Arrange
         final List<Car.Status> requested = List.of(Car.Status.PAUSED, Car.Status.DEACTIVATED);
 
+        // 2.Act
         final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(requested, false);
 
+        // 3.Assert
         Assertions.assertEquals(requested, resolved);
     }
 
     @Test
     public void testResolveOwnerListingStatusesReturnsNullForSelfOrAdminWithoutFilter() {
-        final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(List.of(), true);
+        // 1.Arrange
+        final List<Car.Status> requested = List.of();
 
+        // 2.Act
+        final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(requested, true);
+
+        // 3.Assert
         Assertions.assertNull(resolved);
     }
 
     @Test
     public void testResolveOwnerListingStatusesDefaultsToActiveOnlyForOtherViewers() {
+        // 1.Arrange — null status filter
+
+        // 2.Act
         final List<Car.Status> resolved = carService.resolveOwnerListingStatuses(null, false);
 
+        // 3.Assert
         Assertions.assertEquals(List.of(Car.Status.ACTIVE), resolved);
     }
 }

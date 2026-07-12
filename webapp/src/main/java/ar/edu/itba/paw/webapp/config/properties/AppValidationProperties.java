@@ -6,7 +6,6 @@ import org.springframework.core.env.Environment;
 
 import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
-import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
 import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
@@ -42,10 +41,8 @@ public record AppValidationProperties(
         BigDecimal listingPricePerDayMin,
         int listingPricePerDayIntegerDigits,
         int listingPricePerDayFractionDigits,
-        int reservationDeliveryLocationMaxLength,
-        int reservationCarNameMaxLength,
-        int reservationDatetimeInputMaxLength,
-        int verificationCodeLength) {
+        int verificationCodeLength,
+        int otpCodeTtlMinutes) {
 
     private static final String REGISTRATION_PASSWORD_MIN_LENGTH = "app.validation.registration-password-min-length";
     private static final String REGISTRATION_PASSWORD_MAX_LENGTH = "app.validation.registration-password-max-length";
@@ -75,13 +72,8 @@ public record AppValidationProperties(
     private static final String LISTING_PRICE_PER_DAY_INTEGER_DIGITS = "app.validation.listing-price-per-day-integer-digits";
     private static final String LISTING_PRICE_PER_DAY_FRACTION_DIGITS = "app.validation.listing-price-per-day-fraction-digits";
 
-    private static final String RESERVATION_DELIVERY_LOCATION_MAX_LENGTH =
-            "app.validation.reservation-delivery-location-max-length";
-    private static final String RESERVATION_CAR_NAME_MAX_LENGTH = "app.validation.reservation-car-name-max-length";
-    private static final String RESERVATION_DATETIME_INPUT_MAX_LENGTH =
-            "app.validation.reservation-datetime-input-max-length";
-
     private static final String VERIFICATION_CODE_LENGTH = "app.validation.verification-code-length";
+    private static final String OTP_CODE_TTL_MINUTES = "app.validation.otp-code-ttl-minutes";
 
     public static AppValidationProperties fromEnvironment(final Environment environment) {
         return new AppValidationProperties(
@@ -110,10 +102,8 @@ public record AppValidationProperties(
                 environment.getProperty(LISTING_PRICE_PER_DAY_MIN, BigDecimal.class, new BigDecimal("0.01")),
                 environment.getProperty(LISTING_PRICE_PER_DAY_INTEGER_DIGITS, Integer.class, 8),
                 environment.getProperty(LISTING_PRICE_PER_DAY_FRACTION_DIGITS, Integer.class, 2),
-                environment.getProperty(RESERVATION_DELIVERY_LOCATION_MAX_LENGTH, Integer.class, 250),
-                environment.getProperty(RESERVATION_CAR_NAME_MAX_LENGTH, Integer.class, 120),
-                environment.getProperty(RESERVATION_DATETIME_INPUT_MAX_LENGTH, Integer.class, 40),
-                environment.getProperty(VERIFICATION_CODE_LENGTH, Integer.class, 6));
+                environment.getProperty(VERIFICATION_CODE_LENGTH, Integer.class, 6),
+                environment.getProperty(OTP_CODE_TTL_MINUTES, Integer.class, 5));
     }
 
     public UserValidationPolicy toUserValidationPolicy() {
@@ -159,14 +149,7 @@ public record AppValidationProperties(
                 listingPricePerDayFractionDigits);
     }
 
-    public ReservationFormValidationPolicy toReservationFormValidationPolicy() {
-        return ReservationFormValidationPolicy.fromValidatedConfiguration(
-                reservationDeliveryLocationMaxLength,
-                reservationCarNameMaxLength,
-                reservationDatetimeInputMaxLength);
-    }
-
     public VerificationCodePolicy toVerificationCodePolicy() {
-        return VerificationCodePolicy.fromValidatedCodeLength(verificationCodeLength);
+        return VerificationCodePolicy.fromValidatedConfiguration(verificationCodeLength, otpCodeTtlMinutes);
     }
 }

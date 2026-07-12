@@ -2,6 +2,7 @@ package ar.edu.itba.paw.persistence.reservation;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -223,14 +224,46 @@ public class ReservationJpaDao implements ReservationDao {
 
     @Override
     @Transactional
-    public int attachPaymentReceiptAndAccept(final long reservationId, final long riderId, final long storedFileId) {
+    public int cancelPendingMissingPaymentProofIfEligible(final long reservationId, final OffsetDateTime now) {
         final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
-        if (r == null || r.getRiderId() != riderId || r.getStatus() != Reservation.Status.PENDING) {
+        if (r == null
+                || r.getStatus() != Reservation.Status.PENDING
+                || hasPaymentReceiptFileId(reservationId)) {
+            return 0;
+        }
+        if (r.getPaymentProofDeadlineAt().map(deadline -> !now.isAfter(deadline)).orElse(true)) {
+            return 0;
+        }
+        r.setStatus(Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF);
+        r.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        return 1;
+    }
+
+    private boolean hasPaymentReceiptFileId(final long reservationId) {
+        final Number count = (Number) em.createNativeQuery(
+                        "SELECT COUNT(*) FROM reservations WHERE id = :id AND payment_receipt_file_id IS NOT NULL")
+                .setParameter("id", reservationId)
+                .getSingleResult();
+        return count != null && count.longValue() > 0L;
+    }
+
+    @Override
+    @Transactional
+    public int attachPaymentReceiptAndAccept(final long reservationId, final long riderId, final long storedFileId) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null
+                || r.getRiderId() != riderId
+                || r.getStatus() != Reservation.Status.PENDING
+                || r.getPaymentReceiptFileId().isPresent()) {
+            return 0;
+        }
+        if (r.getPaymentProofDeadlineAt().map(now::isAfter).orElse(false)) {
             return 0;
         }
         r.setStatus(Reservation.Status.ACCEPTED);
         r.setPaymentReceiptFile(em.getReference(StoredFile.class, storedFileId));
-        r.setUpdatedAt(OffsetDateTime.now());
+        r.setUpdatedAt(now);
         return 1;
     }
 
@@ -310,6 +343,32 @@ public class ReservationJpaDao implements ReservationDao {
                 .setParameter("from", from)
                 .setParameter("to", to)
                 .getResultList();
+    }
+
+    @Override
+    public List<Long> findAcceptedReservationIdsWithStartOnOrBefore(final OffsetDateTime now) {
+        return em.createQuery(
+                        "SELECT r.id FROM Reservation r "
+                                + "WHERE r.status = :status AND r.startDate <= :now "
+                                + "ORDER BY r.startDate ASC, r.id ASC",
+                        Long.class)
+                .setParameter("status", Reservation.Status.ACCEPTED)
+                .setParameter("now", now)
+                .getResultList();
+    }
+
+    @Override
+    @Transactional
+    public int transitionAcceptedToStartedIfDue(final long reservationId, final OffsetDateTime now) {
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null
+                || r.getStatus() != Reservation.Status.ACCEPTED
+                || r.getStartDate().isAfter(now)) {
+            return 0;
+        }
+        r.setStatus(Reservation.Status.STARTED);
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
     }
 
     @Override
@@ -681,11 +740,13 @@ public class ReservationJpaDao implements ReservationDao {
         return em.createQuery(
                         "FROM Reservation r "
                                 + FETCH_RESERVATION_CAR_CATALOG_FOR_MAIL
-                                + "WHERE r.paymentProofDeadlineAt IS NOT NULL "
+                                + "WHERE r.status = :status "
+                                + "AND r.paymentProofDeadlineAt IS NOT NULL "
                                 + "AND r.paymentProofDeadlineAt <= :windowEnd "
                                 + "AND r.paymentReceiptFile IS NULL "
                                 + "AND r.pendingPaymentProofEmailSent = FALSE",
                         Reservation.class)
+                .setParameter("status", Reservation.Status.PENDING)
                 .setParameter("windowEnd", windowEnd)
                 .getResultList();
     }
@@ -709,16 +770,83 @@ public class ReservationJpaDao implements ReservationDao {
             final String statusLower,
             final boolean paymentRefundRequired,
             final OffsetDateTime refundProofDeadlineAtOrNull) {
-        final Reservation r = em.find(Reservation.class, reservationId);
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
         if (r == null) {
             return 0;
         }
-        r.setStatus(Reservation.Status.valueOf(statusLower.toUpperCase(Locale.ROOT)));
+        final Reservation.Status target = Reservation.Status.valueOf(statusLower.toUpperCase(Locale.ROOT));
+        if (target != Reservation.Status.CANCELLED_BY_RIDER && target != Reservation.Status.CANCELLED_BY_OWNER) {
+            return 0;
+        }
+        final Reservation.Status current = r.getStatus();
+        if (current == Reservation.Status.PENDING) {
+            if (r.getPaymentReceiptFileId().isPresent() || paymentRefundRequired) {
+                return 0;
+            }
+        } else if (current == Reservation.Status.ACCEPTED) {
+            final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            if (!now.isBefore(r.getStartDate())) {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+        r.setStatus(target);
         r.setPaymentRefundRequired(paymentRefundRequired);
         r.setRefundProofDeadlineAt(refundProofDeadlineAtOrNull);
         r.setPaymentRefundReceiptFile(null);
         r.setPendingRefundEmailSent(false);
         r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
+    }
+
+    @Override
+    @Transactional
+    public int applyAdminCarPauseCancellation(
+            final long reservationId,
+            final boolean paymentRefundRequired,
+            final OffsetDateTime refundProofDeadlineAtOrNull) {
+        final Reservation r = em.find(Reservation.class, reservationId, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null) {
+            return 0;
+        }
+        switch (r.getStatus()) {
+            case PENDING -> {
+                if (r.getPaymentReceiptFileId().isPresent()) {
+                    return applyConfirmedAdminPauseCancellation(
+                            r, paymentRefundRequired, refundProofDeadlineAtOrNull);
+                }
+                r.setStatus(Reservation.Status.CANCELLED_DUE_TO_MISSING_PAYMENT_PROOF);
+                r.setPaymentRefundRequired(false);
+                r.setRefundProofDeadlineAt(null);
+                r.setPaymentRefundReceiptFile(null);
+                r.setPendingRefundEmailSent(false);
+            }
+            case ACCEPTED, STARTED -> {
+                final int updated = applyConfirmedAdminPauseCancellation(
+                        r, paymentRefundRequired, refundProofDeadlineAtOrNull);
+                if (updated == 0) {
+                    return 0;
+                }
+            }
+            default -> {
+                return 0;
+            }
+        }
+        r.setUpdatedAt(OffsetDateTime.now());
+        return 1;
+    }
+
+    private static int applyConfirmedAdminPauseCancellation(
+            final Reservation r,
+            final boolean paymentRefundRequired,
+            final OffsetDateTime refundProofDeadlineAtOrNull) {
+        final boolean refundRequired = paymentRefundRequired || r.getPaymentReceiptFileId().isPresent();
+        r.setStatus(Reservation.Status.CANCELLED_BY_OWNER);
+        r.setPaymentRefundRequired(refundRequired);
+        r.setRefundProofDeadlineAt(refundRequired ? refundProofDeadlineAtOrNull : null);
+        r.setPaymentRefundReceiptFile(null);
+        r.setPendingRefundEmailSent(false);
         return 1;
     }
 
@@ -848,6 +976,35 @@ public class ReservationJpaDao implements ReservationDao {
                 .setParameter("now", now)
                 .setParameter("cancelledStatuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
                 .getResultList();
+    }
+
+    @Override
+    public Map<Long, List<Long>> findOverdueRefundProofReservationIdsByOwnerIds(
+            final Collection<Long> ownerUserIds,
+            final OffsetDateTime now) {
+        if (ownerUserIds == null || ownerUserIds.isEmpty()) {
+            return Map.of();
+        }
+        final List<Object[]> rows = em.createQuery(
+                        "SELECT r.car.owner.id, r.id FROM Reservation r "
+                                + "WHERE r.car.owner.id IN :ownerUserIds "
+                                + "AND r.paymentRefundRequired = TRUE "
+                                + "AND r.paymentRefundReceiptFile IS NULL "
+                                + "AND r.refundProofDeadlineAt IS NOT NULL "
+                                + "AND r.refundProofDeadlineAt < :now "
+                                + "AND r.status IN :cancelledStatuses "
+                                + "ORDER BY r.car.owner.id ASC, r.refundProofDeadlineAt ASC",
+                        Object[].class)
+                .setParameter("ownerUserIds", ownerUserIds)
+                .setParameter("now", now)
+                .setParameter("cancelledStatuses", REFUND_ELIGIBLE_CANCELLED_STATUSES)
+                .getResultList();
+        final Map<Long, List<Long>> grouped = new java.util.HashMap<>();
+        for (final Object[] row : rows) {
+            grouped.computeIfAbsent((Long) row[0], ignored -> new java.util.ArrayList<>())
+                    .add((Long) row[1]);
+        }
+        return grouped;
     }
 
     @Override

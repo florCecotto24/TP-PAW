@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BreadcrumbTrail, ConfirmModal, LoadingBlock, ReviewImageInput, StarRatingInput } from '../../../components/ryden';
+import { BreadcrumbTrail, ConfirmModal, LoadingBlock, ReceiptUploadPicker, ReviewImageInput, StarRatingInput, Avatar } from '../../../components/ryden';
 import { carCoverAssetUrl, profilePictureAssetUrl } from '../../../api/uri';
 import {
   getCar,
@@ -17,10 +17,10 @@ import {
 } from '../api';
 import ReservationChatPanel from '../components/ReservationChatPanel';
 import ReservationReviewItem from '../components/ReservationReviewItem';
-import ReceiptUploadPicker from '../components/ReceiptUploadPicker';
 import { formatDateTime, formatPrice, statusLabelKey } from '../format';
 import { isChatAvailable } from '../reservationChat';
-import { paths, carDetail, publicProfile, ownerReservationsCar } from '../../../routes/paths';
+import { paths, publicProfile, ownerReservationsCar } from '../../../routes/paths';
+import { carDetailTo } from '../../../routes/navigationState';
 import { reservationActionError } from '../reservationError';
 import {
   availableActions,
@@ -31,7 +31,7 @@ import {
 import { useCurrentUser } from '../useCurrentUser';
 import type { ReservationDto, ReviewDto } from '../types';
 
-const REVIEW_COMMENT_MAX = 200;
+import { getClientConfig } from '../../../api/clientConfig';
 
 function pickupAddress(reservation: ReservationDto): string {
   const parts = [
@@ -50,6 +50,7 @@ function userAlreadyReviewed(reviews: ReviewDto[], side: Side): boolean {
 
 export default function ReservationDetailPage() {
   const { t } = useTranslation();
+  const reviewCommentMaxLength = getClientConfig().review.commentMaxLength;
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const fromCarId = searchParams.get('fromCar');
@@ -120,6 +121,8 @@ export default function ReservationDetailPage() {
   const [carImageFailed, setCarImageFailed] = useState(false);
 
   const carId = reservation ? idFromUri(reservation.links?.car) : null;
+  const carSelf = reservation?.links?.car ?? null;
+  const carDetailLink = carId ? carDetailTo(carId, carSelf) : null;
   const carCoverUrl = useMemo(
     () => carCoverAssetUrl(reservation?.links?.car, carQuery.data?.links?.cover),
     [reservation?.links?.car, carQuery.data?.links?.cover],
@@ -133,7 +136,6 @@ export default function ReservationDetailPage() {
     ? idFromUri(counterpartyQuery.data.links.self)
     : null;
 
-  const reservationSelf = reservation?.links?.self?.replace(/\/$/, '') ?? '';
   const paymentReceiptDownloadLink =
     reservation?.hasPaymentReceipt && reservation.links['payment-receipt']
       ? reservation.links['payment-receipt']
@@ -198,8 +200,9 @@ export default function ReservationDetailPage() {
     if (!reservation) throw new Error('missing reservation');
     const uri =
       kind === 'payment'
-        ? `${reservationSelf}/payment-receipt`
-        : `${reservationSelf}/refund-receipt`;
+        ? reservation.links['payment-receipt']
+        : reservation.links['refund-receipt'];
+    if (!uri) throw new Error(`missing ${kind}-receipt link`);
     await runAction(
       () => uploadReceipt(uri, file).then(() => undefined),
       t('res.confirmation.uploadSuccess'),
@@ -208,8 +211,8 @@ export default function ReservationDetailPage() {
 
   const onSubmitReview = () => {
     if (!reviewsUri) return;
-    if (reviewComment.length > REVIEW_COMMENT_MAX) {
-      setActionError(t('res.review.commentTooLong', { max: REVIEW_COMMENT_MAX }));
+    if (reviewComment.length > reviewCommentMaxLength) {
+      setActionError(t('res.review.commentTooLong', { max: reviewCommentMaxLength }));
       return;
     }
     void runAction(async () => {
@@ -463,8 +466,12 @@ export default function ReservationDetailPage() {
                         {powertrainLabel ? <span className="badge text-bg-light border">{powertrainLabel}</span> : null}
                       </div>
                     ) : null}
-                    {carId ? (
-                      <Link to={carDetail(carId)} className="btn btn-outline-primary btn-sm">
+                    {carDetailLink ? (
+                      <Link
+                        to={carDetailLink.pathname}
+                        state={carDetailLink.state}
+                        className="btn btn-outline-primary btn-sm"
+                      >
                         {t('res.detail.viewCar')}
                       </Link>
                     ) : null}
@@ -558,12 +565,12 @@ export default function ReservationDetailPage() {
                   id="reviewComment"
                   className="form-control form-control-sm"
                   rows={3}
-                  maxLength={REVIEW_COMMENT_MAX}
+                  maxLength={reviewCommentMaxLength}
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
                 />
                 <div className="form-text">
-                  {t('res.review.commentCounter', { count: reviewComment.length, max: REVIEW_COMMENT_MAX })}
+                  {t('res.review.commentCounter', { count: reviewComment.length, max: reviewCommentMaxLength })}
                 </div>
               </div>
               <div className="mb-3">
@@ -611,20 +618,16 @@ export default function ReservationDetailPage() {
                     <div className="counterparty-summary-card__identity d-flex align-items-center gap-2 mb-3">
                       {counterpartyId ? (
                         <Link to={publicProfile(counterpartyId)} className="text-decoration-none">
-                          {counterpartyAvatarUrl ? (
-                            <img
-                              src={counterpartyAvatarUrl}
-                              alt=""
-                              className="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"
-                            />
-                          ) : (
-                            <div
-                              className="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar counterparty-summary-card__avatar--placeholder d-flex align-items-center justify-content-center"
-                              aria-hidden="true"
-                            >
-                              <i className="bi bi-person-fill" />
-                            </div>
-                          )}
+                          <Avatar
+                            src={counterpartyAvatarUrl}
+                            forename={counterpartyQuery.data.forename}
+                            surname={counterpartyQuery.data.surname}
+                            className="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"
+                            imgClassName="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar"
+                            placeholderClassName="rounded-circle border flex-shrink-0 counterparty-summary-card__avatar counterparty-summary-card__avatar--placeholder d-flex align-items-center justify-content-center"
+                            barePhoto
+                            iconFallback
+                          />
                         </Link>
                       ) : null}
                       <p className="mb-0 fw-semibold">
@@ -655,8 +658,12 @@ export default function ReservationDetailPage() {
               ) : null}
 
               <div className="d-flex flex-column gap-2">
-              {carId ? (
-                <Link to={carDetail(carId)} className="btn btn-outline-warm w-100">
+              {carDetailLink ? (
+                <Link
+                  to={carDetailLink.pathname}
+                  state={carDetailLink.state}
+                  className="btn btn-outline-warm w-100"
+                >
                   <i className="bi bi-eye me-2"></i>{t('res.detail.viewCar')}
                 </Link>
               ) : null}
@@ -789,6 +796,8 @@ export default function ReservationDetailPage() {
             counterpartyQuery.data
               ? {
                   name: `${counterpartyQuery.data.forename} ${counterpartyQuery.data.surname}`.trim(),
+                  forename: counterpartyQuery.data.forename,
+                  surname: counterpartyQuery.data.surname,
                   avatarUrl: counterpartyAvatarUrl,
                 }
               : undefined

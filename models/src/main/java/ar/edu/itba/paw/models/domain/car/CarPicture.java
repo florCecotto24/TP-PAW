@@ -52,7 +52,7 @@ public class CarPicture {
         // For Hibernate
     }
 
-    public CarPicture(
+    /* package */ CarPicture(
             final long id,
             final Car car,
             final Image image,
@@ -80,6 +80,17 @@ public class CarPicture {
         picture.createdAt = createdAt;
         picture.updatedAt = updatedAt;
         return picture;
+    }
+
+    /** Rehydrates a persisted photo row (tests and in-memory fixtures). */
+    public static CarPicture identifiedForImage(
+            final long id,
+            final Car car,
+            final Image image,
+            final int displayOrder,
+            final OffsetDateTime createdAt,
+            final OffsetDateTime updatedAt) {
+        return new CarPicture(id, car, image, displayOrder, createdAt, updatedAt);
     }
 
     public static CarPicture forVideo(

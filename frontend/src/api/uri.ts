@@ -112,6 +112,36 @@ export function resolveApiUrl(uri: string): string {
   return ensureApiPath(path, ctx);
 }
 
+/** Converts an absolute API index {@code href} to a JAX-RS-relative path (e.g. {@code /cars}). */
+export function hrefToRelativeApiPath(href: string): string {
+  const resolved = resolveApiUrl(href);
+  const apiRoot = apiBasePath();
+  if (resolved.startsWith('http://') || resolved.startsWith('https://')) {
+    try {
+      let pathname = new URL(resolved).pathname;
+      pathname = collapseDuplicateSlashes(pathname);
+      if (pathname === apiRoot) {
+        return '/';
+      }
+      if (pathname.startsWith(`${apiRoot}/`)) {
+        const relative = pathname.slice(apiRoot.length);
+        return relative || '/';
+      }
+      return pathname;
+    } catch {
+      return href;
+    }
+  }
+  if (resolved === apiRoot) {
+    return '/';
+  }
+  if (resolved.startsWith(`${apiRoot}/`)) {
+    const relative = resolved.slice(apiRoot.length);
+    return relative || '/';
+  }
+  return resolved.startsWith('/') ? resolved : `/${resolved}`;
+}
+
 /** Resuelve una URN relativa de la API (p.ej. `/image/3`) a URL absoluta para `<img src>`. */
 export function apiAssetUrl(uri: string): string {
   return resolveApiUrl(uri);

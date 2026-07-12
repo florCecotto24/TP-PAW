@@ -133,6 +133,13 @@ public interface CarAvailabilityService {
     void applyOwnerWithdrawRangeByCar(long carId, LocalDate startInclusive, LocalDate endInclusive);
 
     /**
+     * Parses ISO wall dates and withdraws the inclusive range for the car owner calendar.
+     *
+     * @throws ar.edu.itba.paw.exception.car.CarValidationException when dates are missing or out of order
+     */
+    void parseAndApplyWithdrawRange(long carId, String fromInclusive, String untilInclusive);
+
+    /**
      * Computes the set of bookable wall-calendar days for the car.
      * Availability OFFERED rows are expanded to days; blocking reservations are subtracted.
      * The result is a compressed list of contiguous {@link AvailabilityPeriod} ranges.

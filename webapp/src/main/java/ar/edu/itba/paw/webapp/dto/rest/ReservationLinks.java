@@ -24,8 +24,6 @@ public final class ReservationLinks {
         private final Reservation reservation;
         private final long ownerId;
         private final UriInfo uriInfo;
-        private boolean hasPaymentReceipt;
-        private boolean hasRefundReceipt;
 
         private ReservationBuilder(
                 final Reservation reservation,
@@ -34,16 +32,6 @@ public final class ReservationLinks {
             this.reservation = reservation;
             this.ownerId = ownerId;
             this.uriInfo = uriInfo;
-        }
-
-        public ReservationBuilder hasPaymentReceipt(final boolean hasPaymentReceipt) {
-            this.hasPaymentReceipt = hasPaymentReceipt;
-            return this;
-        }
-
-        public ReservationBuilder hasRefundReceipt(final boolean hasRefundReceipt) {
-            this.hasRefundReceipt = hasRefundReceipt;
-            return this;
         }
 
         public LinksDto build() {
@@ -56,16 +44,12 @@ public final class ReservationLinks {
                     .withRelated("reviews", RestUriUtils.reservationReviewsUri(uriInfo, reservationId).toString())
                     .withRelated("counterparty",
                             RestUriUtils.reservationUri(uriInfo, reservationId).toString() + "/counterparty");
-            if (hasPaymentReceipt) {
-                links = links.withRelated(
-                        "payment-receipt",
-                        RestUriUtils.reservationPaymentReceiptUri(uriInfo, reservationId).toString());
-            }
-            if (hasRefundReceipt) {
-                links = links.withRelated(
-                        "refund-receipt",
-                        RestUriUtils.reservationRefundReceiptUri(uriInfo, reservationId).toString());
-            }
+            links = links.withRelated(
+                    "payment-receipt",
+                    RestUriUtils.reservationPaymentReceiptUri(uriInfo, reservationId).toString());
+            links = links.withRelated(
+                    "refund-receipt",
+                    RestUriUtils.reservationRefundReceiptUri(uriInfo, reservationId).toString());
             return links;
         }
     }

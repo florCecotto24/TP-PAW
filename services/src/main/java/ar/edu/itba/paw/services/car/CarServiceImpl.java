@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.exception.MessageKeys;
+import ar.edu.itba.paw.exception.admin.AdminPromoterNotAdminException;
 import ar.edu.itba.paw.exception.car.CarNotAdminPausedException;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
@@ -35,9 +36,9 @@ import ar.edu.itba.paw.models.dto.car.CarCard;
 import ar.edu.itba.paw.models.dto.car.CarModelPriceSample;
 import ar.edu.itba.paw.models.dto.car.CarPriceMarketInsight;
 import ar.edu.itba.paw.models.dto.car.ConsumerCarCardMarketContext;
-import ar.edu.itba.paw.models.dto.car.OwnerCarDetailPageModel;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.email.listing.CarPausedMissingCbuOwnerEmailPayload;
+import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.media.CarGalleryMediaContentTypes;
 import ar.edu.itba.paw.models.util.search.CarSearchCriteria;
@@ -45,10 +46,10 @@ import ar.edu.itba.paw.models.util.search.CarSearchRequest;
 import ar.edu.itba.paw.models.util.search.OwnerCarSearchCriteria;
 import ar.edu.itba.paw.persistence.car.CarDao;
 
-import ar.edu.itba.paw.services.car.view.OwnerCarDetailViewService;
 import ar.edu.itba.paw.services.email.EmailService;
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
+import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.UserService;
 @Service
 public class CarServiceImpl implements CarService {
@@ -63,7 +64,7 @@ public class CarServiceImpl implements CarService {
     private final EmailService emailService;
     private final StoredFileService storedFileService;
     private final CarSearchService carSearchService;
-    private final OwnerCarDetailViewService ownerCarDetailViewService;
+    private final AdminService adminService;
 
     @Autowired
     public CarServiceImpl(
@@ -75,7 +76,7 @@ public class CarServiceImpl implements CarService {
             final EmailService emailService,
             final StoredFileService storedFileService,
             @Lazy final CarSearchService carSearchService,
-            @Lazy final OwnerCarDetailViewService ownerCarDetailViewService) {
+            @Lazy final AdminService adminService) {
         this.carDao = carDao;
         this.imageService = imageService;
         this.carPictureService = carPictureService;
@@ -84,7 +85,7 @@ public class CarServiceImpl implements CarService {
         this.emailService = emailService;
         this.storedFileService = storedFileService;
         this.carSearchService = carSearchService;
-        this.ownerCarDetailViewService = ownerCarDetailViewService;
+        this.adminService = adminService;
     }
 
     @Override
@@ -190,6 +191,12 @@ public class CarServiceImpl implements CarService {
     }
 
     @Override
+    @Transactional
+    public void lockForReservationWrite(final long carId) {
+        carDao.lockForReservationWrite(carId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<CarCard> getOwnerCarCards(final OwnerCarSearchCriteria criteria) {
         return carDao.getOwnerCarCards(criteria);
@@ -240,6 +247,72 @@ public class CarServiceImpl implements CarService {
         }
         carDao.setCarStatus(carId, Car.Status.DEACTIVATED);
         return true;
+    }
+
+    @Override
+    @Transactional
+    public void applyStatusTransition(
+            final long carId,
+            final Car.Status target,
+            final long actingUserId,
+            final Locale locale) {
+        final Car car = carDao.getCarById(carId)
+                .orElseThrow(() -> new CarNotFoundException(carId));
+        assertStatusPatchAuthorized(car, target, actingUserId);
+        switch (target) {
+            case ACTIVE -> {
+                if (car.getStatus() == Car.Status.ADMIN_PAUSED) {
+                    adminService.adminResumeCar(carId, actingUserId);
+                } else {
+                    if (car.getStatus() != Car.Status.PAUSED) {
+                        throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+                    }
+                    toggleCarStatus(actingUserId, carId);
+                }
+            }
+            case PAUSED -> {
+                if (car.getStatus() != Car.Status.ACTIVE) {
+                    throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+                }
+                toggleCarStatus(actingUserId, carId);
+            }
+            case ADMIN_PAUSED -> adminService.adminPauseCar(carId, actingUserId, locale);
+            case DEACTIVATED -> {
+                if (!deactivateCar(actingUserId, carId)) {
+                    throw new CarNotFoundException(carId);
+                }
+            }
+            default -> throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void assertStatusPatchAuthorized(
+            final Car car,
+            final Car.Status target,
+            final long actingUserId) {
+        final boolean actingUserIsAdmin = userService.findRolesForUser(actingUserId).contains(UserRole.ADMIN);
+        switch (target) {
+            case ACTIVE -> {
+                if (car.getStatus() == Car.Status.ADMIN_PAUSED) {
+                    if (!actingUserIsAdmin) {
+                        throw new AdminPromoterNotAdminException();
+                    }
+                } else if (car.getOwnerId() != actingUserId) {
+                    throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
+                }
+            }
+            case PAUSED, DEACTIVATED -> {
+                if (car.getOwnerId() != actingUserId) {
+                    throw new CarValidationException(MessageKeys.CAR_NOT_FOUND);
+                }
+            }
+            case ADMIN_PAUSED -> {
+                if (!actingUserIsAdmin) {
+                    throw new AdminPromoterNotAdminException();
+                }
+            }
+            default -> throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
+        }
     }
 
     @Override
@@ -366,6 +439,10 @@ public class CarServiceImpl implements CarService {
                 carStatus, rating, textQuery, page, pageSize, sort, excludeCarId);
     }
 
+    /**
+     * Default status filter for owner car listings when the client omits {@code status}.
+     * Pure in-memory policy (no persistence) — intentionally without {@code @Transactional}.
+     */
     @Override
     public List<Car.Status> resolveOwnerListingStatuses(
             final List<Car.Status> requestedStatuses, final boolean viewerIsSelfOrAdmin) {
@@ -702,13 +779,6 @@ public class CarServiceImpl implements CarService {
             return Optional.empty();
         }
         return Optional.of(new String[] {brand.trim(), model.trim()});
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<OwnerCarDetailPageModel> buildOwnerCarDetailPageModel(
-            final long carId, final Locale locale) {
-        return ownerCarDetailViewService.buildOwnerCarDetailPageModel(carId, locale);
     }
 
     /**

@@ -18,9 +18,6 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.MessageKeys;
-import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
-import ar.edu.itba.paw.models.domain.reservation.Reservation;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
@@ -70,11 +67,6 @@ public class ReservationPaymentReceiptController {
     public Response upload(@P("id") @PathParam("id") final long reservationId, final InputStream body)
             throws IOException {
         final RydenUserDetails viewer = currentUserResolver.requirePrincipal();
-        final Reservation reservation = reservationService.getRiderReservationById(viewer.getUserId(), reservationId)
-                .orElseThrow(() -> new javax.ws.rs.NotFoundException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
-        if (reservation.getStatus() != Reservation.Status.PENDING) {
-            throw new ReservationConflictException(MessageKeys.RESERVATION_PAYMENT_RECEIPT_INVALID);
-        }
         final byte[] bytes = binaryPayloadSupport.readValidatedBody(body);
         final String contentType = httpHeaders.getMediaType() != null
                 ? httpHeaders.getMediaType().toString()

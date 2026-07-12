@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.webapp.dto.rest.ErrorDto;
 import ar.edu.itba.paw.webapp.util.LocaleMessages;
 
@@ -32,15 +33,17 @@ public final class JaxRsNotFoundExceptionMapper implements ExceptionMapper<NotFo
 
     @Override
     public Response toResponse(final NotFoundException exception) {
-        LOGGER.atDebug().addArgument(exception.getMessage()).log("NotFoundException: {}");
+        LOGGER.atDebug().setCause(exception).log("NotFoundException");
         final Response.Status status = Response.Status.NOT_FOUND;
-        String code = "not_found";
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            message = status.getReasonPhrase();
-        } else if (looksLikeMessageCode(message)) {
-            code = message;
-            message = localeMessages.msg(message);
+        final String raw = exception.getMessage();
+        final String code;
+        final String message;
+        if (raw != null && !raw.isBlank() && looksLikeMessageCode(raw)) {
+            code = raw;
+            message = localeMessages.msg(raw);
+        } else {
+            code = MessageKeys.ERROR_NOT_FOUND;
+            message = localeMessages.msg(MessageKeys.ERROR_NOT_FOUND);
         }
         return Response.status(status)
                 .type(ErrorDto.mediaType())

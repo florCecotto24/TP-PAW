@@ -56,7 +56,7 @@ public class Image {
         return t.regionMatches(true, 0, "image/", 0, 6);
     }
 
-    public Image(final long id, final String name, final String contentType, final byte[] data) {
+    /* package */ Image(final long id, final String name, final String contentType, final byte[] data) {
         this.id = id;
         this.name = name;
         this.contentType = contentType;
@@ -65,6 +65,11 @@ public class Image {
 
     public static Image forUpload(final String name, final String contentType, final byte[] data) {
         return new Image(0L, name, contentType, data);
+    }
+
+    /** Rehydrates a persisted row (tests and in-memory fixtures). */
+    public static Image identified(final long id, final String name, final String contentType, final byte[] data) {
+        return new Image(id, name, contentType, data);
     }
 
     public String getContentType() {

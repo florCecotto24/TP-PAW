@@ -116,7 +116,7 @@ export interface AvailabilityCreateDto {
   dayPrice: number;
   startPointStreet: string;
   startPointNumber?: string;
-  neighborhoodId?: number;
+  neighborhoodUri: string;
   checkInTime: string;
   checkOutTime: string;
 }

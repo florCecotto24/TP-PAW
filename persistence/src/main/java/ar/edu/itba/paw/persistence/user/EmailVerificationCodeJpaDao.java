@@ -11,7 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 import ar.edu.itba.paw.models.domain.user.EmailVerificationCode;
 import ar.edu.itba.paw.persistence.user.EmailVerificationCodeDao;
 
-@Transactional 
+/**
+ * OTP persistence for email verification.
+ *
+ * Bulk JPQL {@code DELETE} on {@code deleteForUser} / {@code deleteIfValid} is intentional:
+ * codes are ephemeral credentials; atomic consume-and-delete must not race with dirty checking,
+ * and replace-all-on-resend does not map to a single managed entity lifecycle.
+ */
+@Transactional
 @Repository
 public class EmailVerificationCodeJpaDao implements EmailVerificationCodeDao {
 

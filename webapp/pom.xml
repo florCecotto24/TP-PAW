@@ -12,6 +12,10 @@
   <packaging>war</packaging>
   <name>webapp Maven Webapp</name>
 
+  <properties>
+    <webapp.jetty.composite.dir>${project.build.directory}/${webapp.jetty.composite.dirname}</webapp.jetty.composite.dir>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>ar.edu.itba.paw</groupId>
@@ -210,6 +214,41 @@
     <finalName>webapp</finalName>
     <plugins>
       <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-webapp-static-shell</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${webapp.jetty.composite.dir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/webapp</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-frontend-dist-for-jetty</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${webapp.jetty.composite.dir}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>../frontend/dist</directory>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-war-plugin</artifactId>
         <configuration>
           <webResources>
@@ -228,6 +267,8 @@
         <artifactId>jetty-maven-plugin</artifactId>
         <configuration>
           <useTestScope>true</useTestScope>
+          <!-- Merged src/main/webapp (WEB-INF, static images) + frontend/dist (index.html, hashed bundles). -->
+          <webAppSourceDirectory>${webapp.jetty.composite.dir}</webAppSourceDirectory>
           <!-- Jetty 10+: contextPath lives under webApp (same as Tomcat WAR + Vite base). -->
           <webApp>
             <contextPath>/webapp</contextPath>

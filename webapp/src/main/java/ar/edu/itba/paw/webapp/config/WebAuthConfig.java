@@ -22,8 +22,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -82,16 +80,6 @@ public class WebAuthConfig {
     public AuthenticationManager authenticationManager(
             final RydenAuthenticationProvider rydenAuthenticationProvider) {
         return new ProviderManager(List.of(rydenAuthenticationProvider));
-    }
-
-    /**
-     * Legacy MVC beans ({@code UserSessionService}, etc.) still expect a {@link SessionRegistry}.
-     * Under JWT stateless no HTTP sessions are registered here; the bean exists only so the context
-     * starts while MVC controllers coexist with the migration (removed in F7).
-     */
-    @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
     }
 
     @Bean
@@ -154,6 +142,7 @@ public class WebAuthConfig {
                         .requestMatchers(
                                 ant(HttpMethod.GET, "/api"),
                                 ant(HttpMethod.GET, "/api/"),
+                                ant(HttpMethod.GET, "/api/config"),
                                 ant(HttpMethod.GET, "/api/cars"),
                                 ant(HttpMethod.GET, "/api/cars/**"),
                                 ant(HttpMethod.GET, "/api/brands"),
@@ -171,8 +160,9 @@ public class WebAuthConfig {
                         .requestMatchers(ant(HttpMethod.POST, "/api/users")).permitAll()
                         .requestMatchers(ant(HttpMethod.POST, "/api/credentials")).permitAll()
                         .requestMatchers(ant(HttpMethod.POST, "/api/users/*/credentials")).permitAll()
-                        // PATCH /users/{id}: password reset via Basic OTP, or self/admin profile updates.
-                        .requestMatchers(ant(HttpMethod.PATCH, "/api/users/*")).permitAll()
+                        // PATCH /users/{id}: password reset via Basic OTP (authenticated with
+                        // ROLE_PASSWORD_RESET_OTP), or self/admin profile updates (Bearer JWT).
+                        .requestMatchers(ant(HttpMethod.PATCH, "/api/users/*")).authenticated()
                         // Everything else needs authentication; owner/admin/participant scoping is per-resource.
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

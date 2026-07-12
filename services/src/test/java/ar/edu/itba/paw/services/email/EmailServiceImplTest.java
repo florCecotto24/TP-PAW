@@ -92,8 +92,12 @@ public class EmailServiceImplTest {
 
     @Test
     public void testSendReservationConfirmationEmail() {
-        Mockito.when(mailPublicUrls.absolutePath(Mockito.anyString()))
-                .thenAnswer(invocation -> "http://localhost" + invocation.getArgument(0));
+        Mockito.when(mailPublicUrls.absolutePath(Mockito.eq("/")))
+                .thenReturn("http://localhost/");
+        Mockito.when(mailPublicUrls.absolutePath(Mockito.eq("/my-reservations/1")))
+                .thenReturn("http://localhost/my-reservations/1");
+        Mockito.when(mailPublicUrls.absolutePath(Mockito.eq("/my-cars/car/10")))
+                .thenReturn("http://localhost/my-cars/car/10");
 
         final Locale locale = Locale.ENGLISH;
         final String riderEmail = "rider@test.com";
@@ -132,13 +136,15 @@ public class EmailServiceImplTest {
                 .thenReturn("noreply@localhost");
         Mockito.when(environment.getProperty("mail.from.address", "noreply@localhost"))
                 .thenReturn("noreply@app.test");
-        Mockito.when(emailMessageSource.getMessage(Mockito.eq(SUBJECT_KEY_RIDER), Mockito.any(), Mockito.any(Locale.class)))
+        Mockito.when(emailMessageSource.getMessage(
+                        Mockito.eq(SUBJECT_KEY_RIDER), Mockito.eq(new Object[] { vehicleLabel }), Mockito.eq(locale)))
                 .thenReturn(subjectRider);
-        Mockito.when(emailMessageSource.getMessage(Mockito.eq(SUBJECT_KEY_OWNER), Mockito.any(), Mockito.any(Locale.class)))
+        Mockito.when(emailMessageSource.getMessage(
+                        Mockito.eq(SUBJECT_KEY_OWNER), Mockito.eq(new Object[] { vehicleLabel }), Mockito.eq(locale)))
                 .thenReturn(subjectOwner);
-        Mockito.when(htmlTemplateEngine.process(Mockito.eq(TEMPLATE_RIDER), Mockito.any(Context.class)))
+        Mockito.when(htmlTemplateEngine.process(Mockito.eq(TEMPLATE_RIDER), Mockito.isA(Context.class)))
                 .thenReturn("<html>rider</html>");
-        Mockito.when(htmlTemplateEngine.process(Mockito.eq(TEMPLATE_OWNER), Mockito.any(Context.class)))
+        Mockito.when(htmlTemplateEngine.process(Mockito.eq(TEMPLATE_OWNER), Mockito.isA(Context.class)))
                 .thenReturn("<html>owner</html>");
 
         emailService.sendReservationConfirmationEmail(payload);

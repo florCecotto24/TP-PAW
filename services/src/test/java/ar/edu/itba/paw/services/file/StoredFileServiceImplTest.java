@@ -31,7 +31,7 @@ public class StoredFileServiceImplTest {
         final String contentType = "application/pdf";
         final byte[] data = {1, 2, 3};
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-01T12:00:00Z");
-        final StoredFile file = new StoredFile(99L, User.identities(uploaderId, "u@test.com", "U", "U"), name, contentType, data, createdAt);
+        final StoredFile file = StoredFile.identified(99L, User.identities(uploaderId, "u@test.com", "U", "U"), name, contentType, data, createdAt);
         Mockito.when(storedFileDao.create(uploaderId, name, contentType, data)).thenReturn(file);
 
         final StoredFile result = storedFileService.create(uploaderId, name, contentType, data);
@@ -44,7 +44,7 @@ public class StoredFileServiceImplTest {
     public void testFindByIdDelegates() {
         final long id = 40L;
         final OffsetDateTime createdAt = OffsetDateTime.parse("2026-03-02T08:00:00Z");
-        final StoredFile file = new StoredFile(id, User.identities(1L, "u@test.com", "U", "U"), "a.bin", "application/octet-stream", new byte[0], createdAt);
+        final StoredFile file = StoredFile.identified(id, User.identities(1L, "u@test.com", "U", "U"), "a.bin", "application/octet-stream", new byte[0], createdAt);
         Mockito.when(storedFileDao.findById(id)).thenReturn(Optional.of(file));
 
         final Optional<StoredFile> result = storedFileService.findById(id);

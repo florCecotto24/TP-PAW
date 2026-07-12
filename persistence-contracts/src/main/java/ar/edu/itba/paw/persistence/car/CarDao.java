@@ -24,6 +24,12 @@ public interface CarDao {
 
     Optional<Car> getCarById(final long id);
 
+    /**
+     * Serializes reservation creates/edits for one car ({@code SELECT FOR UPDATE} on the car row).
+     * Call before overlap checks so check-and-insert cannot race across concurrent riders.
+     */
+    void lockForReservationWrite(long carId);
+
     /** All cars for the owner (LEFT JOIN to non-finished listings), with the same filters as the owner listing grid. */
     Page<CarCard> getOwnerCarCards(OwnerCarSearchCriteria criteria);
 

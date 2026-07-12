@@ -29,6 +29,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
@@ -45,9 +46,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
 import ar.edu.itba.paw.dto.PublishCarOutcome;
 import ar.edu.itba.paw.dto.PublishCarRequest;
-import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
-import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.car.CarCard;
@@ -69,7 +68,9 @@ import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
 import ar.edu.itba.paw.webapp.support.CarCreateRequestSupport;
 import ar.edu.itba.paw.webapp.support.CarRepresentationSupport;
+import ar.edu.itba.paw.webapp.support.CarRepresentationVersions;
 import ar.edu.itba.paw.webapp.support.CarResourceAccess;
+import ar.edu.itba.paw.webapp.support.ConditionalJsonResponses;
 import ar.edu.itba.paw.webapp.support.CarRestEnums;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
@@ -318,17 +319,21 @@ public class CarController {
     @GET
     @Path("/{id}")
     @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
-    public Response getCar(@PathParam("id") final long id) {
+    public Response getCar(@PathParam("id") final long id, @Context final Request request) {
         final Car car = carResourceAccess.requireViewableCar(
                 id, currentUserResolver.currentPrincipalOrNull());
         if (carRepresentationSupport.acceptsCarSummary(httpHeaders)) {
-            return Response.ok(CarSummaryDto.from(car, uriInfo))
-                    .type(VndMediaType.CAR_SUMMARY_V1_JSON)
-                    .build();
+            return ConditionalJsonResponses.okOrNotModified(
+                    request,
+                    CarRepresentationVersions.etagValue(car, CarRepresentationVersions.SUMMARY),
+                    VndMediaType.CAR_SUMMARY_V1_JSON,
+                    () -> CarSummaryDto.from(car, uriInfo));
         }
-        return Response.ok(CarDto.from(car, uriInfo))
-                .type(VndMediaType.CAR_V1_JSON)
-                .build();
+        return ConditionalJsonResponses.okOrNotModified(
+                request,
+                CarRepresentationVersions.etagValue(car, CarRepresentationVersions.DETAIL),
+                VndMediaType.CAR_V1_JSON,
+                () -> CarDto.from(car, uriInfo));
     }
 
     /**
@@ -371,10 +376,7 @@ public class CarController {
     }
 
     // Not a @PreAuthorize candidate: "status" transitions apply owner- or admin-only rules
-    // depending on the *target* status (a state-machine decision, see applyStatusPatch below),
-    // and "description"/"minimumRentalDays" apply an owner-or-admin rule — both depend on which
-    // fields the caller sent, so they stay imperative (this overlaps with A12's broader point
-    // about status-transition business rules living in this controller).
+    // depending on the *target* status; authorization is enforced in CarService#applyStatusTransition.
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.CAR_V1_JSON)
@@ -385,7 +387,9 @@ public class CarController {
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
 
         if (patch.getStatus() != null) {
-            applyStatusPatch(car, patch.getStatus(), viewer);
+            final Car.Status target = CarRestEnums.parseStatus(patch.getStatus());
+            carService.applyStatusTransition(
+                    car.getId(), target, viewer.getUserId(), LocaleContextHolder.getLocale());
         }
         if (patch.getDescription() != null || patch.getMinimumRentalDays() != null) {
             carResourceAccess.requireOwnerOrAdmin(car, viewer);
@@ -412,41 +416,6 @@ public class CarController {
             throw new CarNotFoundException(id);
         }
         return Response.noContent().build();
-    }
-
-    private void applyStatusPatch(final Car car, final String rawStatus, final RydenUserDetails viewer) {
-        final Car.Status target = CarRestEnums.parseStatus(rawStatus);
-        switch (target) {
-            case ACTIVE -> {
-                if (car.getStatus() == Car.Status.ADMIN_PAUSED) {
-                    carResourceAccess.requireAdmin();
-                    adminService.adminResumeCar(car.getId(), viewer.getUserId());
-                } else {
-                    carResourceAccess.requireOwner(car, viewer);
-                    if (car.getStatus() != Car.Status.PAUSED) {
-                        throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
-                    }
-                    carService.toggleCarStatus(car.getOwnerId(), car.getId());
-                }
-            }
-            case PAUSED -> {
-                carResourceAccess.requireOwner(car, viewer);
-                if (car.getStatus() != Car.Status.ACTIVE) {
-                    throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
-                }
-                carService.toggleCarStatus(car.getOwnerId(), car.getId());
-            }
-            case ADMIN_PAUSED -> {
-                carResourceAccess.requireAdmin();
-                adminService.adminPauseCar(
-                        car.getId(), viewer.getUserId(), LocaleContextHolder.getLocale());
-            }
-            case DEACTIVATED -> {
-                carResourceAccess.requireOwner(car, viewer);
-                carService.deactivateCar(car.getOwnerId(), car.getId());
-            }
-            default -> throw new CarValidationException(MessageKeys.CAR_INVALID_STATUS_TRANSITION);
-        }
     }
 
     private Response pagedCarSummariesFromCards(

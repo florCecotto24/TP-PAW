@@ -15,6 +15,7 @@ import ar.edu.itba.paw.exception.reservation.ReservationConflictException;
 import ar.edu.itba.paw.exception.reservation.ReservationMessageException;
 import ar.edu.itba.paw.exception.user.EmailAlreadyExistsException;
 import ar.edu.itba.paw.exception.user.PasswordResetCodeInvalidException;
+import ar.edu.itba.paw.exception.user.UserForbiddenException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.exception.user.VerificationCodeInvalidException;
 
@@ -44,7 +45,8 @@ public final class RydenExceptionHttpStatus {
             return Response.Status.UNAUTHORIZED;
         }
         if (exception instanceof ReservationAccessDeniedException
-                || exception instanceof CarPublishPrerequisitesMissingException) {
+                || exception instanceof CarPublishPrerequisitesMissingException
+                || exception instanceof UserForbiddenException) {
             return Response.Status.FORBIDDEN;
         }
         if (exception instanceof ReservationMessageException messageException) {

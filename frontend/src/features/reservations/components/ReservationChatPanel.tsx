@@ -7,9 +7,9 @@ import { sessionClient } from '../../../session/sessionStore';
 import { idFromUri, listMessages, listMessagesLatestPage } from '../api';
 import {
   CHAT_FILE_ACCEPT,
-  CHAT_MAX_ATTACHMENT_MB,
-  CHAT_MESSAGE_MAX_LENGTH,
   formatFileSize,
+  getChatMaxAttachmentMb,
+  getChatMessageMaxLength,
   validateChatFile,
 } from '../chatAttachment';
 import { formatDayLabel, groupMessagesByDay, latestMessageId, mergeMessages } from '../chatLog';
@@ -18,7 +18,7 @@ import { isChatAvailable } from '../reservationChat';
 import { useReservationChatStickyDay } from '../useReservationChatStickyDay';
 import { useCurrentUser } from '../useCurrentUser';
 import type { MessageDto, ReservationDto } from '../types';
-import ChatAttachmentPreview from './ChatAttachmentPreview';
+import { ChatAttachmentPreview, Avatar } from '../../../components/ryden';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -98,6 +98,8 @@ function ChatMessageBubble({
 
 export interface CounterpartyChatInfo {
   name: string;
+  forename?: string;
+  surname?: string;
   avatarUrl?: string | null;
 }
 
@@ -108,17 +110,28 @@ export interface ReservationChatPanelProps {
   counterparty?: CounterpartyChatInfo;
 }
 
-function ChatAvatar({ avatarUrl, className }: { avatarUrl?: string | null; className: string }) {
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt="" className={className} />;
-  }
+function ChatAvatar({
+  avatarUrl,
+  forename,
+  surname,
+  className,
+}: {
+  avatarUrl?: string | null;
+  forename?: string;
+  surname?: string;
+  className: string;
+}) {
   return (
-    <div
-      className={`${className} reservation-chat-header__avatar--placeholder d-flex align-items-center justify-content-center`}
-      aria-hidden="true"
-    >
-      <i className="bi bi-person-fill" />
-    </div>
+    <Avatar
+      src={avatarUrl}
+      forename={forename}
+      surname={surname}
+      className={className}
+      imgClassName={className}
+      placeholderClassName={`${className} reservation-chat-header__avatar--placeholder d-flex align-items-center justify-content-center`}
+      barePhoto
+      iconFallback
+    />
   );
 }
 
@@ -231,7 +244,7 @@ export default function ReservationChatPanel({
     }
     const validation = validateChatFile(next);
     if (validation === 'tooLarge') {
-      setSendError(t('res.chat.tooLarge', { max: CHAT_MAX_ATTACHMENT_MB }));
+      setSendError(t('res.chat.tooLarge', { max: getChatMaxAttachmentMb() }));
       return;
     }
     if (validation === 'invalidType') {
@@ -299,7 +312,7 @@ export default function ReservationChatPanel({
     if (file) {
       const validation = validateChatFile(file);
       if (validation === 'tooLarge') {
-        setSendError(t('res.chat.tooLarge', { max: CHAT_MAX_ATTACHMENT_MB }));
+        setSendError(t('res.chat.tooLarge', { max: getChatMaxAttachmentMb() }));
         return;
       }
       if (validation === 'invalidType') {
@@ -520,7 +533,7 @@ export default function ReservationChatPanel({
               id="chatBody"
               className="form-control reservation-chat-page__input"
               rows={1}
-              maxLength={CHAT_MESSAGE_MAX_LENGTH}
+              maxLength={getChatMessageMaxLength()}
               value={body}
               disabled={composerDisabled}
               onChange={(e) => setBody(e.target.value)}
@@ -561,6 +574,8 @@ export default function ReservationChatPanel({
         >
           <ChatAvatar
             avatarUrl={counterparty?.avatarUrl}
+            forename={counterparty?.forename}
+            surname={counterparty?.surname}
             className="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
           />
           <span className="reservation-chat-widget__launcher-name text-truncate">{displayName}</span>
@@ -571,6 +586,8 @@ export default function ReservationChatPanel({
           <header className="reservation-chat-widget__header">
             <ChatAvatar
               avatarUrl={counterparty?.avatarUrl}
+              forename={counterparty?.forename}
+              surname={counterparty?.surname}
               className="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
             />
             <span className="reservation-chat-widget__header-name text-truncate">{displayName}</span>

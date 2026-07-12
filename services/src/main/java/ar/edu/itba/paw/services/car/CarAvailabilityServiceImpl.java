@@ -387,6 +387,21 @@ public class CarAvailabilityServiceImpl implements CarAvailabilityService {
     }
 
     @Override
+    @Transactional
+    public void parseAndApplyWithdrawRange(
+            final long carId,
+            final String fromInclusive,
+            final String untilInclusive) {
+        if (fromInclusive == null || fromInclusive.isBlank()
+                || untilInclusive == null || untilInclusive.isBlank()) {
+            throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_INVALID_ORDER);
+        }
+        final LocalDate start = LocalDate.parse(fromInclusive);
+        final LocalDate end = LocalDate.parse(untilInclusive);
+        applyOwnerWithdrawRangeByCar(carId, start, end);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<AvailabilityPeriod> getBookableWallAvailabilityPeriodsByCar(final long carId) {
         return carAvailabilityCalendarService.getBookableWallAvailabilityPeriodsByCar(carId);

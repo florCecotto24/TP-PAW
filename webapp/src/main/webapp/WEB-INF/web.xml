@@ -94,7 +94,7 @@
     </init-param>
     <init-param>
       <param-name>jersey.config.server.provider.classnames</param-name>
-      <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature,org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature,org.glassfish.jersey.server.validation.ValidationFeature,ar.edu.itba.paw.webapp.config.SpringValidatorBinder</param-value>
+      <param-value>org.glassfish.jersey.media.multipart.MultiPartFeature,org.glassfish.jersey.server.validation.ValidationFeature,ar.edu.itba.paw.webapp.config.SpringValidatorBinder</param-value>
     </init-param>
     <init-param>
       <param-name>jersey.config.servlet.filter.forwardOn404</param-name>

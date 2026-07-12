@@ -22,6 +22,7 @@ import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.glassfish.jersey.media.multipart.FormDataBodyPart;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.method.P;
@@ -29,7 +30,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
 import ar.edu.itba.paw.dto.GalleryMediaUpload;
+import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
+import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.dto.Page;
@@ -128,18 +131,22 @@ public class CarPictureController {
     @PreAuthorize("@carResourceAccess.isOwnerById(#id, @currentUserResolver.currentPrincipalOrNull())")
     public Response addPicture(
             @P("id") @PathParam("id") final long carId,
-            @FormDataParam("file") final InputStream fileBody,
-            @FormDataParam("file") final org.glassfish.jersey.media.multipart.FormDataContentDisposition fileMeta,
-            @FormDataParam("displayOrder") final Integer displayOrder) throws IOException {
+            @FormDataParam("file") final FormDataBodyPart filePart) throws IOException {
         final Car car = requireCarExists(carId);
-        final byte[] bytes = binaryPayloadSupport.readValidatedBody(fileBody);
-        final String filename = fileMeta != null ? fileMeta.getFileName() : "upload";
-        final String contentType = fileMeta != null && fileMeta.getType() != null
-                ? fileMeta.getType()
+        if (filePart == null) {
+            throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
+        }
+        final byte[] bytes = filePart.getEntityAs(byte[].class);
+        if (bytes == null || bytes.length == 0) {
+            throw new CarValidationException(MessageKeys.CAR_GALLERY_MEDIA_INVALID_TYPE);
+        }
+        final String filename = filePart.getContentDisposition() != null
+                ? filePart.getContentDisposition().getFileName()
+                : "upload";
+        final String contentType = filePart.getMediaType() != null
+                ? filePart.getMediaType().toString()
                 : MediaType.APPLICATION_OCTET_STREAM;
-        final int order = displayOrder != null && displayOrder > 0
-                ? displayOrder
-                : carGalleryUploadSupport.nextDisplayOrder(carId);
+        final int order = carGalleryUploadSupport.nextDisplayOrder(carId);
         carGalleryUploadSupport.attachGalleryMedia(
                 car.getOwnerId(),
                 carId,

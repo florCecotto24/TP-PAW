@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { approveBrand, approveModel, fetchPendingModels, rejectBrand, rejectModel } from '../api';
@@ -13,7 +14,10 @@ export default function AdminCatalogPage() {
   const { t } = useTranslation();
   const errorMessage = useAdminErrorMessage();
 
-  const brands = usePagedList<BrandDto>('/brands?validated=false&page=1', MediaTypes.brand);
+  const brands = usePagedList<BrandDto>(
+    collectionQueryPath('brands', { validated: 'false', page: '1' }),
+    MediaTypes.brand,
+  );
   const [models, setModels] = useState<ModelDto[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState<string | null>(null);

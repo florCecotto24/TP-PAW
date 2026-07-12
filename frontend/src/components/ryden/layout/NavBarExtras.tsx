@@ -1,15 +1,19 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { paths, myReservationDetail } from '../../../routes/paths';
+import { idFromUri } from '../../../api/uri';
 import Modal from '../primitives/Modal';
 
 export interface BlockedUserBannerProps {
-  singleReservationId?: number | null;
+  blockedOverdueReservationUri?: string | null;
 }
 
 /** Banner de cuenta bloqueada (extraído de {@code navbar.tag}). */
-export function BlockedUserBanner({ singleReservationId }: BlockedUserBannerProps) {
+export function BlockedUserBanner({ blockedOverdueReservationUri }: BlockedUserBannerProps) {
   const { t } = useTranslation();
+  const singleReservationId = blockedOverdueReservationUri
+    ? idFromUri(blockedOverdueReservationUri)
+    : null;
 
   return (
     <div

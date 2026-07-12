@@ -206,6 +206,18 @@ export default function PriceMarketInsightCard({
     }
   };
 
+  if (!insight) {
+    return (
+      <div>
+        <label htmlFor={priceInputId} className="form-label required-label mb-2">
+          {t('publishCar.form.pricePerDay')}
+        </label>
+        {children}
+        <small className="text-muted d-block mt-2">{t('car.price.insight.noMarket')}</small>
+      </div>
+    );
+  }
+
   const zoneClass =
     zone === 'red'
       ? ' ryden-price-insight--zone-red'
@@ -222,7 +234,7 @@ export default function PriceMarketInsightCard({
           {t('publishCar.form.pricePerDay')}
         </label>
         <div className="ryden-price-insight__price-field mb-2">{children}</div>
-        {insight && layout ? (
+        {layout ? (
           <>
             <div className="ryden-price-insight__bar-wrap">
               <div

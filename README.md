@@ -31,10 +31,16 @@ Those files hold JDBC settings, SMTP password, JWT secret (recommended in deploy
 
 ```bash
 mvn clean install
+```
+
+Or, for a quicker local backend + SPA on one port:
+
+```bash
+mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 ```
 
-`mvn compile` / `mvn package` also build the frontend (`npm install` + `npm run build` in the `frontend` module) and package `frontend/dist/` into the WAR.
+`mvn compile` / `mvn package` build the frontend (`npm install` + `npm run build` in the `frontend` module) and package `frontend/dist/` into the WAR. **Jetty** serves a merged tree at `webapp/target/webapp-composite/` (`src/main/webapp` shell + fresh `frontend/dist`); run `compile -pl webapp -am` before `jetty:run` so hashed bundles match `index.html`. Hashed Vite assets are **not** stored under `webapp/src/main/webapp/public/` in git.
 
 **JVM options** (Spring profile + test Logback), same as configuring **VM options** in your IDE when you run Jetty/Tomcat:
 
@@ -48,6 +54,7 @@ From a Unix shell at the repo root you can use:
 
 ```bash
 export MAVEN_OPTS="-Dspring.profiles.active=local -Dlogback.configurationFile=classpath:logback/logback-local.xml -Dfile.encoding=UTF-8"
+mvn compile -pl webapp -am
 mvn jetty:run -pl webapp
 ```
 

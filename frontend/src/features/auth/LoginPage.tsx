@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form } from 'react-bootstrap';
 import { useSessionStore } from '../../session/sessionStore';
 import { paths } from '../../routes/paths';
-import PasswordField from './PasswordField';
+import { PasswordField } from '../../components/ryden';
 
 // /ingresar — autentica con email+password vía useSessionStore.login (que hace
 // Basic → tokens, sin /login). Al autenticar navega a la ruta de origen (o "/").

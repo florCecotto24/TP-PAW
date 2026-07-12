@@ -4,6 +4,7 @@ import { ConsumerCarCard } from '../../../components/ryden';
 import { apiAssetUrl } from '../../../api/uri';
 import { carDetailHref, carDtoToConsumerCard } from '../carCardAdapter';
 import { useBrowseCarFavorite } from '../hooks';
+import type { To } from 'react-router-dom';
 import type { CarSummaryDto } from '../types';
 
 /** Tarjeta de auto para home/búsqueda — delega en {@link ConsumerCarCard} (tag JSP). */
@@ -13,7 +14,7 @@ export default function BrowseCarCard({
   searchQuery,
 }: {
   car: CarSummaryDto;
-  href?: string | null;
+  href?: To | string | null;
   searchQuery?: Record<string, string>;
 }) {
   const { t } = useTranslation();

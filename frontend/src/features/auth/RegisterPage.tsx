@@ -6,10 +6,12 @@ import { sessionClient } from '../../session/sessionStore';
 import { MediaTypes } from '../../api/mediaTypes';
 import { paths } from '../../routes/paths';
 import { ApiError } from '../../api/client';
+import { getCollectionPath } from '../../api/apiDiscovery';
 import type { UserDto } from '../../api/types';
 import type { RegisterForm } from './types';
 import { apiErrorMessage } from './errorMessage';
-import PasswordField from './PasswordField';
+import { validatePasswordPair, registrationPasswordLimits } from './passwordValidation';
+import { PasswordField } from '../../components/ryden';
 
 // /registrarse — "registrarse" = crear el recurso usuario (POST /users,
 // anónimo, contentType vendor user). En 201 la API devuelve Location con la URN
@@ -46,9 +48,27 @@ export default function RegisterPage() {
     setError(null);
     setFieldErrors({});
 
+    const passwordError = validatePasswordPair(form.password, form.passwordConfirm);
+    if (passwordError === 'tooShort') {
+      setError(t('auth.register.passwordTooShort', {
+        count: registrationPasswordLimits().registrationPasswordMinLength,
+      }));
+      return;
+    }
+    if (passwordError === 'tooLong') {
+      setError(t('auth.register.passwordTooLong', {
+        count: registrationPasswordLimits().registrationPasswordMaxLength,
+      }));
+      return;
+    }
+    if (passwordError === 'mismatch') {
+      setError(t('validation.passwordMismatch'));
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const res = await sessionClient.post<UserDto>('/users', form, {
+      const res = await sessionClient.post<UserDto>(getCollectionPath('users'), form, {
         accept: MediaTypes.user,
         contentType: MediaTypes.user,
         anonymous: true,
@@ -76,6 +96,8 @@ export default function RegisterPage() {
     }
   }
 
+  const userLimits = registrationPasswordLimits();
+
   return (
     <div className="auth-page__shell auth-page__shell--tall-form">
       <div className="auth-page__brand">
@@ -100,6 +122,7 @@ export default function RegisterPage() {
                 <Form.Control
                   value={form.forename}
                   autoComplete="given-name"
+                  maxLength={userLimits.displayNamePartMaxLength}
                   onChange={(e) => update('forename', e.target.value)}
                   isInvalid={!!fieldErrors.forename}
                   required
@@ -113,6 +136,7 @@ export default function RegisterPage() {
                 <Form.Control
                   value={form.surname}
                   autoComplete="family-name"
+                  maxLength={userLimits.displayNamePartMaxLength}
                   onChange={(e) => update('surname', e.target.value)}
                   isInvalid={!!fieldErrors.surname}
                   required
@@ -127,6 +151,7 @@ export default function RegisterPage() {
                   type="email"
                   value={form.email}
                   autoComplete="email"
+                  maxLength={userLimits.registrationEmailMaxLength}
                   onChange={(e) => update('email', e.target.value)}
                   isInvalid={!!fieldErrors.email}
                   required
@@ -148,7 +173,12 @@ export default function RegisterPage() {
                 {fieldErrors.password ? (
                   <div className="text-danger small d-block mt-1">{fieldErrors.password}</div>
                 ) : null}
-                <Form.Text className="text-muted">{t('auth.register.passwordHint')}</Form.Text>
+                <Form.Text className="text-muted">
+                  {t('auth.register.passwordHint', {
+                    min: userLimits.registrationPasswordMinLength,
+                    max: userLimits.registrationPasswordMaxLength,
+                  })}
+                </Form.Text>
               </Form.Group>
               <Form.Group className="mb-4" controlId="passwordConfirm">
                 <Form.Label>{t('auth.register.passwordConfirm')}</Form.Label>

@@ -36,6 +36,7 @@ import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.domain.user.User;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.profile.UserPatchCommand;
 import ar.edu.itba.paw.services.user.AdminService;
 import ar.edu.itba.paw.services.user.PasswordResetService;
 import ar.edu.itba.paw.services.user.UserService;
@@ -54,7 +55,6 @@ import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
 import ar.edu.itba.paw.webapp.support.UserRepresentationSupport;
 import ar.edu.itba.paw.webapp.support.UserResourceAccess;
-import ar.edu.itba.paw.webapp.support.UserSessionService;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
 
@@ -63,6 +63,10 @@ import ar.edu.itba.paw.webapp.validation.constraint.user.ValidUserRole;
  *
  * Public vs private representations are selected via {@code Accept} (two fixed schemas),
  * not by trimming fields for the same MIME type.
+ *
+ * {@code PATCH /users/{id}} uses a single JSON partial body ({@link UserPatchForm}) rather than
+ * vendor MIME types per operation (contrast MenuMate). One resource URI, field presence routes to
+ * profile / password / admin updates — defendible under LINEAMIENTOS (resource identity in the path).
  */
 @Path("/users")
 @Component
@@ -75,7 +79,6 @@ public class UserController {
     private final CurrentUserResolver currentUserResolver;
     private final UserRepresentationSupport userRepresentationSupport;
     private final UserResourceAccess userResourceAccess;
-    private final UserSessionService userSessionService;
     private final PaginationSupport paginationSupport;
 
     @Context
@@ -93,7 +96,6 @@ public class UserController {
             final CurrentUserResolver currentUserResolver,
             final UserRepresentationSupport userRepresentationSupport,
             final UserResourceAccess userResourceAccess,
-            final UserSessionService userSessionService,
             final PaginationSupport paginationSupport) {
         this.userService = userService;
         this.adminService = adminService;
@@ -102,7 +104,6 @@ public class UserController {
         this.currentUserResolver = currentUserResolver;
         this.userRepresentationSupport = userRepresentationSupport;
         this.userResourceAccess = userResourceAccess;
-        this.userSessionService = userSessionService;
         this.paginationSupport = paginationSupport;
     }
 
@@ -121,9 +122,7 @@ public class UserController {
         if (usersPage.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
-        final List<UserPrivateDto> dtos = usersPage.getContent().stream()
-                .map(user -> userRepresentationSupport.toPrivateDto(user, uriInfo))
-                .collect(Collectors.toList());
+        final List<UserPrivateDto> dtos = userRepresentationSupport.toPrivateDtos(usersPage.getContent(), uriInfo);
         final Response.ResponseBuilder builder = Response.ok(new GenericEntity<List<UserPrivateDto>>(dtos) {})
                 .type(VndMediaType.USER_PRIVATE_V1_JSON)
                 .header("X-Total-Count", usersPage.getTotalItems());
@@ -207,20 +206,15 @@ public class UserController {
         final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
         final long actingUserId = viewer.getUserId();
         if (actingUserId == id) {
-            userSessionService.invalidateSessionsForUser(id);
             userService.deleteUser(id);
         } else {
             adminService.deleteUser(id, actingUserId);
-            userSessionService.invalidateSessionsForUser(id);
         }
         return Response.noContent().build();
     }
 
-    // Not a @PreAuthorize candidate: this single PATCH endpoint routes password/profile/admin
-    // fields to three *different* authorization rules depending on which fields the caller
-    // actually sent (plus an OTP bypass branch for password reset) — a method-level precondition
-    // can't express that, so the three sub-checks stay imperative, delegated to the same
-    // UserResourceAccess predicates used everywhere else.
+    // Not a @PreAuthorize candidate: password reset uses OTP credentials in the security
+    // context; profile/admin field authorization is enforced in UserService#patchUser.
     @PATCH
     @Path("/{id}")
     @Consumes(VndMediaType.USER_V1_JSON)
@@ -233,13 +227,12 @@ public class UserController {
         if (patch.getPassword() != null) {
             applyPasswordPatch(user, patch, viewer);
         }
-        if (hasProfilePatchFields(patch)) {
-            userResourceAccess.requireSelfOrAdmin(id, viewer);
-            applyProfilePatch(user, patch);
-        }
-        if (hasAdminPatchFields(patch)) {
-            userResourceAccess.requireAdmin();
-            applyAdminPatch(user, patch, viewer);
+        final UserPatchCommand command = toPatchCommand(patch);
+        if (command.hasProfileFields() || command.hasAdminFields()) {
+            final long actingUserId = viewer != null
+                    ? viewer.getUserId()
+                    : currentUserResolver.requireUserId();
+            userService.patchUser(id, command, actingUserId);
         }
 
         final User updated = userService.getUserById(id)
@@ -247,58 +240,42 @@ public class UserController {
         return userRepresentationSupport.buildUserResponse(updated, uriInfo, viewer, httpHeaders);
     }
 
-    private void applyProfilePatch(final User user, final UserPatchForm patch) {
-        if (patch.getForename() != null || patch.getSurname() != null) {
-            userService.updateDisplayName(
-                    user.getId(),
-                    patch.getForename() != null ? patch.getForename() : user.getForename(),
-                    patch.getSurname() != null ? patch.getSurname() : user.getSurname());
+    private static UserPatchCommand toPatchCommand(final UserPatchForm patch) {
+        final UserPatchCommand.Builder builder = UserPatchCommand.builder();
+        if (patch.getForename() != null) {
+            builder.forename(patch.getForename());
+        }
+        if (patch.getSurname() != null) {
+            builder.surname(patch.getSurname());
         }
         if (patch.getPhoneNumber() != null) {
-            userService.updatePhoneNumber(user.getId(), patch.getPhoneNumber());
+            builder.phoneNumber(patch.getPhoneNumber());
         }
         if (patch.getBirthDate() != null) {
-            userService.updateBirthDate(user.getId(), toBirthDate(patch.getBirthDate()));
+            builder.birthDate(toBirthDate(patch.getBirthDate()));
         }
         if (patch.getAbout() != null) {
-            userService.updateAbout(user.getId(), patch.getAbout());
+            builder.about(patch.getAbout());
         }
         if (patch.getCbu() != null) {
-            userService.updateCbu(user.getId(), patch.getCbu());
+            builder.cbu(patch.getCbu());
         }
         if (patch.getLatestLocale() != null) {
-            userService.updateLatestLocale(user.getId(), patch.getLatestLocale());
+            builder.latestLocale(patch.getLatestLocale());
         }
-    }
-
-    private void applyAdminPatch(
-            final User user,
-            final UserPatchForm patch,
-            final RydenUserDetails viewer) {
-        final long actingAdminId = viewer != null
-                ? viewer.getUserId()
-                : currentUserResolver.requireUserId();
         if (patch.getRole() != null) {
-            if ("admin".equalsIgnoreCase(patch.getRole())) {
-                adminService.promoteUserToAdmin(user.getId(), actingAdminId);
-            } else {
-                adminService.demoteUserFromAdmin(user.getId(), actingAdminId);
-            }
+            builder.role(patch.getRole());
         }
         if (patch.getBlocked() != null) {
-            if (patch.getBlocked()) {
-                adminService.blockUser(user.getId(), actingAdminId);
-                userSessionService.invalidateSessionsForUser(user.getId());
-            } else {
-                adminService.unblockUser(user.getId());
-            }
+            builder.blocked(patch.getBlocked());
         }
         if (patch.getIdentityValidated() != null) {
-            userService.updateIdentityValidated(user.getId(), patch.getIdentityValidated());
+            builder.identityValidated(patch.getIdentityValidated());
         }
         if (patch.getLicenseValidated() != null) {
-            userService.updateLicenseValidated(user.getId(), patch.getLicenseValidated());
+            builder.licenseValidated(patch.getLicenseValidated());
         }
+        return builder.build();
     }
 
     private void applyPasswordPatch(
@@ -340,22 +317,5 @@ public class UserController {
             return null;
         }
         return LocalDate.parse(raw.trim());
-    }
-
-    private static boolean hasProfilePatchFields(final UserPatchForm patch) {
-        return patch.getForename() != null
-                || patch.getSurname() != null
-                || patch.getPhoneNumber() != null
-                || patch.getBirthDate() != null
-                || patch.getAbout() != null
-                || patch.getCbu() != null
-                || patch.getLatestLocale() != null;
-    }
-
-    private static boolean hasAdminPatchFields(final UserPatchForm patch) {
-        return patch.getRole() != null
-                || patch.getBlocked() != null
-                || patch.getIdentityValidated() != null
-                || patch.getLicenseValidated() != null;
     }
 }

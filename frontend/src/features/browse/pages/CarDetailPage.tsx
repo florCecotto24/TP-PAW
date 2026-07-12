@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   BreadcrumbTrail,
@@ -19,6 +19,7 @@ import { formatDateLong } from '../../../i18n/dateFormat';
 import { useSessionStore } from '../../../session/sessionStore';
 import { apiErrorMessage } from '../../auth/errorMessage';
 import { carDetail, paths, publicProfile } from '../../../routes/paths';
+import type { CarDetailLocationState } from '../../../routes/navigationState';
 import DetailReservationForm from '../components/DetailReservationForm';
 import BrowseCarCard from '../components/BrowseCarCard';
 import {
@@ -88,7 +89,9 @@ export default function CarDetailPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { id: resolvedId } = useParams<{ id: string }>();
-  const carQuery = useCar(resolvedId);
+  const location = useLocation();
+  const carSelfFromNav = (location.state as CarDetailLocationState | null)?.carSelf;
+  const carQuery = useCar(resolvedId, carSelfFromNav);
   const car = carQuery.data;
   const picturesQuery = useCarPictures(car?.links?.pictures);
   const isLoggedIn = useSessionStore((s) => s.status === 'authenticated');
@@ -468,7 +471,9 @@ export default function CarDetailPage() {
           <div className="detail-reservation-sticky">
             {resolvedId ? (
               <DetailReservationForm
+                bookableSegmentsLink={car.links['bookable-segments']}
                 carId={Number(resolvedId)}
+                carSelf={car.links.self}
                 carName={title}
                 dailyPrice={minPrice ?? 0}
                 priceFrom={priceFrom}

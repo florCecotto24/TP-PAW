@@ -1,26 +1,38 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
-import { fetchUserPublic, openAuthenticatedBinary } from '../api';
-import { EmptyState, LoadingBlock } from '../../../components/ryden';
+import { fetchUserPublic } from '../api';
+import { Avatar, ChatAttachmentPreview, EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
 import { paths } from '../../../routes/paths';
+import type { AdminReservationChatLocationState } from '../../../routes/navigationState';
 import AdminPagination from '../components/AdminPagination';
 import type { MessageDto } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
 
+type SenderProfile = {
+  forename: string;
+  surname: string;
+};
+
+function messageBody(msg: MessageDto): string {
+  return (msg.body ?? '').trim();
+}
+
 export default function AdminReservationChatPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const messagesLinkFromNav = (location.state as AdminReservationChatLocationState | null)?.messagesLink;
   const errorMessage = useAdminErrorMessage();
 
-  const messagesPath = id ? `/reservations/${id}/messages?page=1` : '';
+  const messagesPath = messagesLinkFromNav ?? (id ? `/reservations/${id}/messages?page=1` : '');
   const list = usePagedList<MessageDto>(messagesPath, MediaTypes.message, [id]);
 
-  const [senderNames, setSenderNames] = useState<Record<string, string>>({});
+  const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
 
   const senderUris = useMemo(() => {
     const uris = new Set<string>();
@@ -33,17 +45,25 @@ export default function AdminReservationChatPage() {
 
   useEffect(() => {
     let active = true;
-    const missing = senderUris.filter((uri) => senderNames[uri] == null);
+    const missing = senderUris.filter((uri) => senderProfiles[uri] == null);
     for (const uri of missing) {
       fetchUserPublic(uri)
         .then((res) => {
           if (!active || !res.data) return;
-          const name = `${res.data.forename} ${res.data.surname}`.trim();
-          setSenderNames((prev) => ({ ...prev, [uri]: name || uri }));
+          setSenderProfiles((prev) => ({
+            ...prev,
+            [uri]: {
+              forename: res.data!.forename ?? '',
+              surname: res.data!.surname ?? '',
+            },
+          }));
         })
         .catch(() => {
           if (!active) return;
-          setSenderNames((prev) => ({ ...prev, [uri]: t('admin.reservationChat.unknownSender') }));
+          setSenderProfiles((prev) => ({
+            ...prev,
+            [uri]: { forename: t('admin.reservationChat.unknownSender'), surname: '' },
+          }));
         });
     }
     return () => {
@@ -52,19 +72,28 @@ export default function AdminReservationChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [senderUris, t]);
 
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
-
-  const onOpenAttachment = async (link: string | undefined) => {
-    if (!link) return;
-    setAttachmentError(null);
-    const ok = await openAuthenticatedBinary(link);
-    if (!ok) setAttachmentError(t('admin.reservationChat.attachmentFailed'));
-  };
-
-  const displayError = list.error ? errorMessage(list.error) : attachmentError;
+  const displayError = list.error ? errorMessage(list.error) : null;
 
   if (!id) {
     return <p className="text-secondary">{t('error.generic')}</p>;
+  }
+
+  if (!messagesLinkFromNav && !list.loading && list.error) {
+    return (
+      <>
+        <AdminPageHeader
+          title={t('admin.reservationChat.title')}
+          actions={(
+            <Link to={paths.admin.reservations} className="btn btn-outline-secondary btn-sm">
+              ← {t('admin.nav.reservations')}
+            </Link>
+          )}
+        />
+        <div className="alert alert-warning" role="alert">
+          {t('admin.reservationChat.openFromList')}
+        </div>
+      </>
+    );
   }
 
   return (
@@ -90,33 +119,41 @@ export default function AdminReservationChatPage() {
           <ul className="list-group list-group-flush">
             {list.items.map((message) => {
               const senderUri = message.links.sender ?? '';
-              const senderLabel = senderNames[senderUri] ?? t('admin.reservationChat.unknownSender');
+              const profile = senderProfiles[senderUri];
+              const bodyText = messageBody(message);
+              const attachmentUri = message.hasAttachment ? message.links.attachment : undefined;
               return (
                 <li key={message.links.self} className="list-group-item">
-                  <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
-                    <span className="fw-semibold">{senderLabel}</span>
-                    <time className="text-secondary small" dateTime={message.createdAt}>
-                      {formatDateTime(message.createdAt, i18n.language)}
-                    </time>
+                  <div className="d-flex gap-3">
+                    <Avatar
+                      forename={profile?.forename}
+                      surname={profile?.surname}
+                      className="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
+                      imgClassName="reservation-chat-widget__avatar rounded-circle flex-shrink-0"
+                      placeholderClassName="reservation-chat-widget__avatar reservation-chat-header__avatar--placeholder rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center"
+                      colored
+                      barePhoto
+                      iconFallback
+                    />
+                    <div className="flex-grow-1 min-w-0">
+                      <div className="d-flex flex-wrap justify-content-between gap-2 mb-1">
+                        <span className="fw-semibold">
+                          {profile
+                            ? `${profile.forename} ${profile.surname}`.trim() || t('admin.reservationChat.unknownSender')
+                            : t('admin.reservationChat.unknownSender')}
+                        </span>
+                        <time className="text-secondary small" dateTime={message.createdAt}>
+                          {formatDateTime(message.createdAt, i18n.language)}
+                        </time>
+                      </div>
+                      {attachmentUri ? (
+                        <div className="mb-2">
+                          <ChatAttachmentPreview attachmentUri={attachmentUri} />
+                        </div>
+                      ) : null}
+                      {bodyText ? <p className="mb-0">{bodyText}</p> : null}
+                    </div>
                   </div>
-                  <p className="mb-1">{message.body}</p>
-                  {message.hasAttachment ? (
-                    message.links.attachment ? (
-                      <button
-                        type="button"
-                        className="btn btn-link btn-sm p-0"
-                        onClick={() => void onOpenAttachment(message.links.attachment)}
-                      >
-                        <i className="bi bi-paperclip me-1" aria-hidden="true" />
-                        {t('admin.reservationChat.attachment')}
-                      </button>
-                    ) : (
-                      <span className="badge text-bg-light border">
-                        <i className="bi bi-paperclip me-1" aria-hidden="true" />
-                        {t('admin.reservationChat.attachment')}
-                      </span>
-                    )
-                  ) : null}
                 </li>
               );
             })}

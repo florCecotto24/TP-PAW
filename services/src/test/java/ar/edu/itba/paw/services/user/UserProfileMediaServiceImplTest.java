@@ -53,7 +53,7 @@ public class UserProfileMediaServiceImplTest {
     public void testUpdateProfilePictureWhenUserExistsDoesNotThrow() {
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));
-        final Image created = new Image(20L, "p.png", "image/png", new byte[] {1, 2});
+        final Image created = Image.identified(20L, "p.png", "image/png", new byte[] {1, 2});
         Mockito.when(imageService.createImage(Mockito.eq("p.png"), Mockito.eq("image/png"), Mockito.any()))
                 .thenReturn(created);
 
@@ -67,7 +67,7 @@ public class UserProfileMediaServiceImplTest {
         final User user = User.identities(1L, "u@mail.com", "A", "B");
         Mockito.when(userService.getUserById(1L)).thenReturn(Optional.of(user));
         Mockito.when(storedFileService.create(1L, "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}))
-                .thenReturn(new StoredFile(10L,
+                .thenReturn(StoredFile.identified(10L,
                         User.identities(1L, "u@test.com", "U", "U"),
                         "licencia.pdf", "application/pdf", new byte[] {1, 2, 3}, null));
 

@@ -23,6 +23,7 @@ import ar.edu.itba.paw.webapp.config.JacksonConfig;
 import ar.edu.itba.paw.webapp.dto.rest.ApiIndexDto;
 import ar.edu.itba.paw.webapp.dto.rest.CarSummaryDto;
 import ar.edu.itba.paw.webapp.dto.rest.CatalogApprovalDto;
+import ar.edu.itba.paw.webapp.dto.rest.ClientConfigDto;
 import ar.edu.itba.paw.webapp.dto.rest.ErrorDto;
 import ar.edu.itba.paw.webapp.dto.rest.LinksDto;
 import ar.edu.itba.paw.webapp.dto.rest.MessageDto;
@@ -348,6 +349,32 @@ class OpenApiContractTest {
     }
 
     @Test
+    void testClientConfigDtoJsonFieldsMatchOpenApi() throws Exception {
+        // 1.Arrange
+        final ClientConfigDto dto = sampleClientConfigDto();
+        final Set<String> expected = OpenApiContractSupport.schemaProperties(openapiYaml, "ClientConfig");
+
+        // 2.Act
+        final Set<String> wire = OpenApiContractSupport.jsonFieldNames(
+                objectMapper.writeValueAsString(dto), objectMapper);
+
+        // 3.Assert
+        assertEquals(expected, wire);
+    }
+
+    @Test
+    void testLinksSchemaDocumentsBlockedOverdueReservationRel() {
+        // 1.Arrange — openapiYaml from @BeforeAll
+
+        // 2.Act
+        final Set<String> props = OpenApiContractSupport.schemaProperties(openapiYaml, "Links");
+
+        // 3.Assert
+        assertTrue(props.contains("self"));
+        assertTrue(props.contains("blocked-overdue-reservation"));
+    }
+
+    @Test
     void testLinksDtoSerializationOmitsNullRelatedHrefs() throws Exception {
         // 1.Arrange
         final LinksDto links = LinksDto.ofSelf("/cars/1")
@@ -426,8 +453,65 @@ class OpenApiContractTest {
                 "cars", "http://localhost/webapp/api/cars"));
         dto.setResources(java.util.Map.of(
                 "cars",
-                new ApiIndexDto.ResourceDescriptor(
+                ApiIndexDto.ResourceDescriptor.of(
                         "http://localhost/webapp/api/cars", java.util.List.of("page", "pageSize", "q"))));
+        return dto;
+    }
+
+    private static ClientConfigDto sampleClientConfigDto() {
+        final ClientConfigDto.CarLimits car = new ClientConfigDto.CarLimits();
+        car.setBrandMinLength(2);
+        car.setBrandMaxLength(30);
+        car.setModelMaxLength(30);
+        car.setPlateMinLength(6);
+        car.setPlateMaxLength(10);
+        car.setDescriptionMaxLength(200);
+        car.setYearMin(1886);
+        car.setGalleryMaxItems(8);
+
+        final ClientConfigDto.UploadLimits upload = new ClientConfigDto.UploadLimits();
+        upload.setMaxImageMegabytes(20);
+        upload.setMaxCarGalleryVideoMegabytes(25);
+        upload.setMaxProfileDocumentMegabytes(5);
+        upload.setMaxPaymentReceiptMegabytes(5);
+
+        final ClientConfigDto.MoneyLimits money = new ClientConfigDto.MoneyLimits();
+        money.setCurrency("ARS");
+        money.setFormatLocale("es-AR");
+
+        final ClientConfigDto.UserLimits user = new ClientConfigDto.UserLimits();
+        user.setDisplayNamePartMaxLength(50);
+        user.setProfileAboutMaxLength(500);
+        user.setRegistrationPasswordMinLength(8);
+        user.setRegistrationPasswordMaxLength(72);
+        user.setRegistrationEmailMaxLength(50);
+        user.setProfilePhoneMaxLength(20);
+
+        final ClientConfigDto.ChatLimits chat = new ClientConfigDto.ChatLimits();
+        chat.setMaxAttachmentMegabytes(25);
+        chat.setMessageMaxLength(1000);
+        chat.setHistoryPageSize(12);
+
+        final ClientConfigDto.ReviewLimits review = new ClientConfigDto.ReviewLimits();
+        review.setCommentMaxLength(200);
+
+        final ClientConfigDto.ListingLimits listing = new ClientConfigDto.ListingLimits();
+        listing.setPricePerDayMin(0.01);
+        listing.setAddressStreetMaxLength(250);
+        listing.setAddressNumberMaxLength(10);
+        listing.setPricePerDayIntegerDigits(8);
+        listing.setPricePerDayFractionDigits(2);
+
+        final ClientConfigDto dto = new ClientConfigDto();
+        dto.setCbuRequiredDigits(22);
+        dto.setMaxBillableDays(30);
+        dto.setCar(car);
+        dto.setUpload(upload);
+        dto.setMoney(money);
+        dto.setUser(user);
+        dto.setChat(chat);
+        dto.setReview(review);
+        dto.setListing(listing);
         return dto;
     }
 

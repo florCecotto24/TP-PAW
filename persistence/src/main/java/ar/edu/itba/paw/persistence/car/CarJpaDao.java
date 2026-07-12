@@ -20,6 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.persistence.PersistenceContext;
 
 import org.springframework.stereotype.Repository;
@@ -146,12 +147,18 @@ public class CarJpaDao implements CarDao {
     @Override
     public Optional<Car> getCarById(final long id) {
         return em.createQuery(
-                        "FROM Car c LEFT JOIN FETCH c.carModel m LEFT JOIN FETCH m.brand WHERE c.id = :id",
+                        "FROM Car c LEFT JOIN FETCH c.carModel m LEFT JOIN FETCH m.brand LEFT JOIN FETCH c.owner WHERE c.id = :id",
                         Car.class)
                 .setParameter("id", id)
                 .getResultList()
                 .stream()
                 .findFirst();
+    }
+
+    @Override
+    @Transactional
+    public void lockForReservationWrite(final long carId) {
+        em.find(Car.class, carId, LockModeType.PESSIMISTIC_WRITE);
     }
 
     // -------------------------------------------------------------------------

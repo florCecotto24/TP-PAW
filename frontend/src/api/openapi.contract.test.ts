@@ -3,6 +3,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { MediaTypes } from './mediaTypes';
+import { CLIENT_CONFIG_FALLBACK } from './clientConfig';
+import {
+  API_COLLECTION_FALLBACK_PATHS,
+  useApiDiscoveryStore,
+} from './apiDiscovery';
+import { hrefToRelativeApiPath } from './uri';
 import type { PriceMarketPosition } from '../components/ryden/car/CarCard';
 import { filtersToApiParams } from '../features/browse/searchFilters';
 import type { ReservationStatus } from '../features/reservations/types';
@@ -57,7 +63,7 @@ function schemaProperties(yaml: string, schemaName: string): string[] {
   for (const line of tail.split(/\r?\n/)) {
     if (line.trim() === '') break;
     if (!line.startsWith('        ')) break;
-    const name = line.match(/^        (\w+):/)?.[1];
+    const name = line.match(/^        ([\w-]+):/)?.[1];
     if (name) props.push(name);
   }
   return props;
@@ -332,5 +338,169 @@ describe('openapi.yaml contract (frontend)', () => {
 
     // 3.Assert
     expect(unknown, `query params not in openapi GET /cars: ${unknown.join(', ')}`).toEqual([]);
+  });
+
+  it('testClientConfigFallbackKeysMatchOpenApiSchema', () => {
+    // 1.Arrange
+    const topLevel = schemaProperties(yaml, 'ClientConfig');
+    const carKeys = [
+      'brandMinLength',
+      'brandMaxLength',
+      'modelMaxLength',
+      'plateMinLength',
+      'plateMaxLength',
+      'descriptionMaxLength',
+      'yearMin',
+      'galleryMaxItems',
+    ];
+    const uploadKeys = [
+      'maxImageMegabytes',
+      'maxCarGalleryVideoMegabytes',
+      'maxProfileDocumentMegabytes',
+      'maxPaymentReceiptMegabytes',
+    ];
+    const moneyKeys = ['currency', 'formatLocale'];
+    const userKeys = [
+      'displayNamePartMaxLength',
+      'profileAboutMaxLength',
+      'registrationPasswordMinLength',
+      'registrationPasswordMaxLength',
+      'registrationEmailMaxLength',
+      'profilePhoneMaxLength',
+    ];
+    const chatKeys = ['maxAttachmentMegabytes', 'messageMaxLength', 'historyPageSize'];
+    const reviewKeys = ['commentMaxLength'];
+    const listingKeys = [
+      'pricePerDayMin',
+      'addressStreetMaxLength',
+      'addressNumberMaxLength',
+      'pricePerDayIntegerDigits',
+      'pricePerDayFractionDigits',
+    ];
+
+    // 2.Act / 3.Assert
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK).sort()).toEqual(topLevel.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.car).sort()).toEqual(carKeys.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.upload).sort()).toEqual(uploadKeys.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.money).sort()).toEqual(moneyKeys.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.user).sort()).toEqual(userKeys.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.chat).sort()).toEqual(chatKeys.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.review).sort()).toEqual(reviewKeys.sort());
+    expect(Object.keys(CLIENT_CONFIG_FALLBACK.listing).sort()).toEqual(listingKeys.sort());
+  });
+
+  it('testApiIndexSchemaPropertiesMatchFrontendDiscoveryDto', () => {
+    // 1.Arrange
+    const specProps = schemaProperties(yaml, 'ApiIndex').sort();
+
+    // 2.Act
+    const clientShape = ['links', 'resources'].sort();
+
+    // 3.Assert
+    expect(clientShape).toEqual(specProps);
+  });
+
+  it('testApiIndexResourceDescriptorSchemaMatchesFrontendType', () => {
+    // 1.Arrange
+    const specProps = schemaProperties(yaml, 'ApiIndexResourceDescriptor').sort();
+
+    // 2.Act
+    const clientShape = ['href', 'queryParams'].sort();
+
+    // 3.Assert
+    expect(clientShape).toEqual(specProps);
+  });
+
+  it('testUserPrivateDtoSchemaCoversProfileUserDtoPrivateFields', () => {
+    // 1.Arrange
+    const specProps = new Set(schemaProperties(yaml, 'UserPrivateDto'));
+    const profilePrivateFields = [
+      'forename',
+      'surname',
+      'email',
+      'phoneNumber',
+      'birthDate',
+      'about',
+      'cbu',
+      'memberSince',
+      'latestLocale',
+      'emailVerified',
+      'licenseValidated',
+      'identityValidated',
+      'licenseUploaded',
+      'identityUploaded',
+      'blocked',
+      'role',
+      'ratingAsRider',
+      'ratingAsOwner',
+      'links',
+    ];
+
+    // 2.Act
+    const missing = profilePrivateFields.filter((field) => !specProps.has(field));
+
+    // 3.Assert
+    expect(missing, `UserPrivateDto missing in openapi: ${missing.join(', ')}`).toEqual([]);
+  });
+
+  it('testApiDiscoveryFallbackPathsAreDocumentedCollectionGetEndpoints', () => {
+    // 1.Arrange
+    const paths = Object.values(API_COLLECTION_FALLBACK_PATHS);
+
+    // 2.Act
+    const undocumented = paths.filter(
+      (path) => !new RegExp(`^  ${path.replace('/', '\\/')}:\\r?\\n    get:`, 'm').test(yaml),
+    );
+
+    // 3.Assert
+    expect(undocumented, `collection paths missing GET in openapi: ${undocumented.join(', ')}`).toEqual(
+      [],
+    );
+  });
+
+  it('testApiDiscoveryCollectionPathPrefersIndexResourceHref', () => {
+    // 1.Arrange
+    const href = 'http://localhost/webapp/api/cars';
+    useApiDiscoveryStore.setState({
+      ready: true,
+      index: {
+        links: { self: 'http://localhost/webapp/api/' },
+        resources: {
+          cars: { href, queryParams: ['page'] },
+        },
+      },
+    });
+
+    // 2.Act
+    const path = useApiDiscoveryStore.getState().collectionPath('cars');
+
+    // 3.Assert
+    expect(path).toBe(hrefToRelativeApiPath(href));
+    expect(path).not.toBe(API_COLLECTION_FALLBACK_PATHS.cars);
+  });
+
+  it('testLinksSchemaDocumentsBlockedOverdueReservationRel', () => {
+    // 1.Arrange
+    const linkProps = schemaProperties(yaml, 'Links');
+
+    // 2.Act / 3.Assert
+    expect(linkProps).toContain('self');
+    expect(linkProps).toContain('blocked-overdue-reservation');
+  });
+
+  it('testClientConfigChatLimitsAreDocumentedInOpenApi', () => {
+    // 1.Arrange
+    const chatBlock = yaml.match(
+      /        chat:\r?\n          type: object\r?\n          description:[\s\S]*?          properties:\r?\n([\s\S]*?)          required: \[maxAttachmentMegabytes, messageMaxLength, historyPageSize\]/,
+    );
+
+    // 2.Act
+    const documented = chatBlock?.[1] ?? '';
+
+    // 3.Assert
+    expect(chatBlock, 'ClientConfig.chat block missing in openapi.yaml').not.toBeNull();
+    expect(documented).toContain('maxAttachmentMegabytes');
+    expect(documented).toContain('messageMaxLength');
+    expect(documented).toContain('historyPageSize');
   });
 });

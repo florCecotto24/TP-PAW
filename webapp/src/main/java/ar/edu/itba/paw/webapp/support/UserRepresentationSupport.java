@@ -2,6 +2,8 @@ package ar.edu.itba.paw.webapp.support;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -17,6 +19,7 @@ import ar.edu.itba.paw.webapp.api.common.VndMediaType;
 import ar.edu.itba.paw.webapp.dto.rest.UserDto;
 import ar.edu.itba.paw.webapp.dto.rest.UserPrivateDto;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /**
  * Builds user GET/PATCH responses with vendor MIME negotiation (public vs private).
@@ -42,12 +45,21 @@ public final class UserRepresentationSupport {
      * refund proof, its id (so the CTA can go straight to the upload button); {@code null} for zero
      * (race with auto-unblock) or many, where the caller should fall back to a listing link instead.
      */
-    private Long resolveBlockedOverdueReservationId(final User user) {
+    private String resolveBlockedOverdueReservationUri(
+            final User user,
+            final List<Long> overdueIds,
+            final javax.ws.rs.core.UriInfo uriInfo) {
         if (!user.isBlocked()) {
             return null;
         }
-        final List<Long> overdueIds = reservationService.findOverdueRefundProofReservationIdsForOwner(user.getId());
-        return overdueIds.size() == 1 ? overdueIds.get(0) : null;
+        if (overdueIds == null || overdueIds.size() != 1) {
+            return null;
+        }
+        return RestUriUtils.reservationUri(uriInfo, overdueIds.get(0)).toString();
+    }
+
+    private List<Long> loadOverdueIdsForUser(final User user) {
+        return reservationService.findOverdueRefundProofReservationIdsForOwner(user.getId());
     }
 
     public boolean acceptsPrivateRepresentation(final HttpHeaders headers) {
@@ -81,7 +93,8 @@ public final class UserRepresentationSupport {
             }
             return Response.ok(UserPrivateDto.builder(user, uriInfo)
                             .ratings(ratingAsOwner, ratingAsRider)
-                            .blockedOverdueReservationId(resolveBlockedOverdueReservationId(user))
+                            .blockedOverdueReservationUri(resolveBlockedOverdueReservationUri(
+                                    user, loadOverdueIdsForUser(user), uriInfo))
                             .build())
                     .type(VndMediaType.USER_PRIVATE_V1_JSON)
                     .build();
@@ -98,7 +111,33 @@ public final class UserRepresentationSupport {
         final BigDecimal ratingAsRider = reviewService.getAverageRatingForCounterparty(user.getId(), false);
         return UserPrivateDto.builder(user, uriInfo)
                 .ratings(ratingAsOwner, ratingAsRider)
-                .blockedOverdueReservationId(resolveBlockedOverdueReservationId(user))
+                .blockedOverdueReservationUri(resolveBlockedOverdueReservationUri(
+                        user, loadOverdueIdsForUser(user), uriInfo))
                 .build();
+    }
+
+    public List<UserPrivateDto> toPrivateDtos(
+            final List<User> users, final javax.ws.rs.core.UriInfo uriInfo) {
+        if (users.isEmpty()) {
+            return List.of();
+        }
+        final List<Long> userIds = users.stream().map(User::getId).toList();
+        final Map<Long, BigDecimal> ratingAsOwnerByUser =
+                reviewService.getAverageRatingsAsOwnerForUserIds(userIds);
+        final Map<Long, BigDecimal> ratingAsRiderByUser =
+                reviewService.getAverageRatingsAsRiderForUserIds(userIds);
+        final Map<Long, List<Long>> overdueIdsByOwner =
+                reservationService.findOverdueRefundProofReservationIdsByOwnerIds(userIds);
+        return users.stream()
+                .map(user -> UserPrivateDto.builder(user, uriInfo)
+                        .ratings(
+                                ratingAsOwnerByUser.get(user.getId()),
+                                ratingAsRiderByUser.get(user.getId()))
+                        .blockedOverdueReservationUri(resolveBlockedOverdueReservationUri(
+                                user,
+                                overdueIdsByOwner.getOrDefault(user.getId(), List.of()),
+                                uriInfo))
+                        .build())
+                .collect(Collectors.toList());
     }
 }

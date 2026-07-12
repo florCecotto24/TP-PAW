@@ -49,7 +49,7 @@ public final class AvailabilityCreateForm implements CarAvailabilityTimeWindow {
     private String startPointNumber;
 
     @NotNull(message = "{validation.neighborhood.notNull}", groups = ValidationGroups.OnCreateListing.class)
-    private Long neighborhoodId;
+    private String neighborhoodUri;
 
     @NotNull(message = "{validation.checkInTime.notNull}", groups = ValidationGroups.OnCreateListing.class)
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
@@ -99,12 +99,12 @@ public final class AvailabilityCreateForm implements CarAvailabilityTimeWindow {
         this.startPointNumber = startPointNumber;
     }
 
-    public Long getNeighborhoodId() {
-        return neighborhoodId;
+    public String getNeighborhoodUri() {
+        return neighborhoodUri;
     }
 
-    public void setNeighborhoodId(final Long neighborhoodId) {
-        this.neighborhoodId = neighborhoodId;
+    public void setNeighborhoodUri(final String neighborhoodUri) {
+        this.neighborhoodUri = neighborhoodUri;
     }
 
     @Override

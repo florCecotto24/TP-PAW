@@ -7,6 +7,7 @@ package ar.edu.itba.paw.webapp.api.common;
 public final class VndMediaType {
 
     public static final String API_V1_JSON = "application/vnd.paw.api.v1+json";
+    public static final String CLIENT_CONFIG_V1_JSON = "application/vnd.paw.config.v1+json";
     public static final String USER_V1_JSON = "application/vnd.paw.user.v1+json";
     /** Link-only collection for {@code GET /users/{id}/favorites} (follow each {@code self} for car summary). */
     public static final String USER_FAVORITES_V1_JSON = "application/vnd.paw.user.favorites.v1+json";

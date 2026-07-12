@@ -28,6 +28,7 @@ import ar.edu.itba.paw.exception.user.InvalidProfileBirthDateException;
 import ar.edu.itba.paw.exception.user.InvalidProfilePhoneException;
 import ar.edu.itba.paw.exception.user.InvalidUserFieldLengthException;
 import ar.edu.itba.paw.exception.user.RegistrationPasswordException;
+import ar.edu.itba.paw.exception.user.UserForbiddenException;
 import ar.edu.itba.paw.exception.user.UserNotFoundException;
 import ar.edu.itba.paw.models.security.UserRole;
 import ar.edu.itba.paw.models.domain.car.Car;
@@ -37,11 +38,13 @@ import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.models.dto.profile.ProfileUpdateRequest;
+import ar.edu.itba.paw.models.dto.profile.UserPatchCommand;
 import ar.edu.itba.paw.models.email.admin.AdminPromotedEmailPayload;
 import ar.edu.itba.paw.models.email.user.MigratedUserPasswordEmailPayload;
 import ar.edu.itba.paw.models.util.time.AppTimezone;
 import ar.edu.itba.paw.models.util.rules.CbuRules;
 import ar.edu.itba.paw.models.util.format.EmailNormalizer;
+import ar.edu.itba.paw.models.util.format.TextTruncationLimits;
 import ar.edu.itba.paw.models.util.rules.SupportedLocales;
 import ar.edu.itba.paw.persistence.user.UserDao;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
@@ -49,6 +52,7 @@ import ar.edu.itba.paw.policy.UserValidationPolicy;
 
 import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.email.EmailService;
+import ar.edu.itba.paw.services.user.AdminService;
 /**
  * User rows via {@link UserDao}; blobs, mail, verification, and listing side effects use peer services.
  * {@code @Lazy} breaks cycles with {@link EmailVerificationService} and {@link CarService}.
@@ -70,6 +74,7 @@ public class UserServiceImpl implements UserService {
     private final EmailVerificationService emailVerificationService;
     private final CarService carService;
     private final UserProfileMediaService userProfileMediaService;
+    private final AdminService adminService;
 
     @Autowired
     public UserServiceImpl(
@@ -79,7 +84,8 @@ public class UserServiceImpl implements UserService {
             final UserValidationPolicy validationPolicy,
             @Lazy final EmailVerificationService emailVerificationService,
             @Lazy final CarService carService,
-            @Lazy final UserProfileMediaService userProfileMediaService) {
+            @Lazy final UserProfileMediaService userProfileMediaService,
+            @Lazy final AdminService adminService) {
         this.userDao = userDao;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
@@ -87,6 +93,7 @@ public class UserServiceImpl implements UserService {
         this.emailVerificationService = emailVerificationService;
         this.carService = carService;
         this.userProfileMediaService = userProfileMediaService;
+        this.adminService = adminService;
     }
 
     @Override
@@ -206,6 +213,76 @@ public class UserServiceImpl implements UserService {
         updateBirthDate(userId, request.getBirthDate().orElse(null));
         updateAbout(userId, request.getAboutRaw());
         updateCbu(userId, request.getCbuRaw());
+    }
+
+    @Override
+    @Transactional
+    public void patchUser(final long userId, final UserPatchCommand patch, final long actingUserId) {
+        assertPatchUserAuthorized(userId, patch, actingUserId);
+        final User user = userDao.getUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(MessageKeys.USER_ACCOUNT_NOT_FOUND));
+        if (patch.hasProfileFields()) {
+            if (patch.getForename() != null || patch.getSurname() != null) {
+                updateDisplayName(
+                        userId,
+                        patch.getForename() != null ? patch.getForename() : user.getForename(),
+                        patch.getSurname() != null ? patch.getSurname() : user.getSurname());
+            }
+            if (patch.getPhoneNumber() != null) {
+                updatePhoneNumber(userId, patch.getPhoneNumber());
+            }
+            if (patch.isBirthDatePresent()) {
+                updateBirthDate(userId, patch.getBirthDate());
+            }
+            if (patch.getAbout() != null) {
+                updateAbout(userId, patch.getAbout());
+            }
+            if (patch.getCbu() != null) {
+                updateCbu(userId, patch.getCbu());
+            }
+            if (patch.getLatestLocale() != null) {
+                updateLatestLocale(userId, patch.getLatestLocale());
+            }
+        }
+        if (patch.hasAdminFields()) {
+            if (patch.getRole() != null) {
+                if ("admin".equalsIgnoreCase(patch.getRole())) {
+                    adminService.promoteUserToAdmin(userId, actingUserId);
+                } else {
+                    adminService.demoteUserFromAdmin(userId, actingUserId);
+                }
+            }
+            if (patch.getBlocked() != null) {
+                if (patch.getBlocked()) {
+                    adminService.blockUser(userId, actingUserId);
+                } else {
+                    adminService.unblockUser(userId, actingUserId);
+                }
+            }
+            if (patch.getIdentityValidated() != null) {
+                updateIdentityValidated(userId, patch.getIdentityValidated());
+            }
+            if (patch.getLicenseValidated() != null) {
+                updateLicenseValidated(userId, patch.getLicenseValidated());
+            }
+        }
+    }
+
+    private void assertPatchUserAuthorized(
+            final long userId,
+            final UserPatchCommand patch,
+            final long actingUserId) {
+        if (!patch.hasProfileFields() && !patch.hasAdminFields()) {
+            return;
+        }
+        final boolean isSelf = userId == actingUserId;
+        final boolean isAdmin = findRolesForUser(actingUserId).contains(UserRole.ADMIN);
+        if (patch.hasProfileFields() && !isSelf && !isAdmin) {
+            throw new UserForbiddenException();
+        }
+        if (patch.hasAdminFields() && !isAdmin) {
+            throw new AdminPromoterNotAdminException();
+        }
     }
 
     @Override
@@ -397,8 +474,8 @@ public class UserServiceImpl implements UserService {
             return;
         }
         String t = localeTag.trim();
-        if (t.length() > 32) {
-            t = t.substring(0, 32);
+        if (t.length() > TextTruncationLimits.PROFILE_LOCALE_TAG) {
+            t = t.substring(0, TextTruncationLimits.PROFILE_LOCALE_TAG);
         }
         userDao.updateLatestLocale(userId, t);
     }

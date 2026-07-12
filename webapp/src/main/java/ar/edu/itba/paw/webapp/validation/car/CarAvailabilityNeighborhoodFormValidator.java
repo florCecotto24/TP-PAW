@@ -2,11 +2,12 @@ package ar.edu.itba.paw.webapp.validation.car;
 
 import ar.edu.itba.paw.services.location.LocationService;
 import ar.edu.itba.paw.webapp.form.car.AvailabilityCreateForm;
-import ar.edu.itba.paw.webapp.form.car.CarAvailabilityEditForm;
-import ar.edu.itba.paw.webapp.form.car.CreateCarAvailabilityForm;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
+
+import java.util.Optional;
 
 /** Spring {@link Validator} ensuring create/edit neighborhood id exists in {@link LocationService}. */
 @Component
@@ -20,28 +21,22 @@ public final class CarAvailabilityNeighborhoodFormValidator implements Validator
 
     @Override
     public boolean supports(final Class<?> clazz) {
-        return CreateCarAvailabilityForm.class.isAssignableFrom(clazz)
-                || CarAvailabilityEditForm.class.isAssignableFrom(clazz)
-                || AvailabilityCreateForm.class.isAssignableFrom(clazz);
+        return AvailabilityCreateForm.class.isAssignableFrom(clazz);
     }
 
     @Override
     public void validate(final Object target, final Errors errors) {
-        final Long neighborhoodId;
-        if (target instanceof CreateCarAvailabilityForm createCarAvailabilityForm) {
-            neighborhoodId = createCarAvailabilityForm.getNeighborhoodId();
-        } else if (target instanceof CarAvailabilityEditForm carAvailabilityEditForm) {
-            neighborhoodId = carAvailabilityEditForm.getNeighborhoodId();
-        } else if (target instanceof AvailabilityCreateForm availabilityCreateForm) {
-            neighborhoodId = availabilityCreateForm.getNeighborhoodId();
-        } else {
+        if (!(target instanceof AvailabilityCreateForm availabilityCreateForm)) {
             return;
         }
-        if (neighborhoodId == null) {
+        final Optional<Long> neighborhoodId =
+                RestUriUtils.parseNeighborhoodId(availabilityCreateForm.getNeighborhoodUri());
+        if (neighborhoodId.isEmpty()) {
+            errors.rejectValue("neighborhoodUri", "validation.neighborhood.invalid");
             return;
         }
-        if (locationService.findNeighborhoodById(neighborhoodId).isEmpty()) {
-            errors.rejectValue("neighborhoodId", "validation.neighborhood.invalid");
+        if (locationService.findNeighborhoodById(neighborhoodId.get()).isEmpty()) {
+            errors.rejectValue("neighborhoodUri", "validation.neighborhood.invalid");
         }
     }
 }

@@ -2,6 +2,7 @@ package ar.edu.itba.paw.services.support;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +88,16 @@ public class RecordingReviewDao implements ReviewDao {
     public BigDecimal findAverageRatingForCounterparty(
             final long counterpartyUserId, final boolean counterpartyIsOwner) {
         return null;
+    }
+
+    @Override
+    public Map<Long, BigDecimal> findAverageRatingsAsOwnerForUserIds(final Collection<Long> userIds) {
+        return Map.of();
+    }
+
+    @Override
+    public Map<Long, BigDecimal> findAverageRatingsAsRiderForUserIds(final Collection<Long> userIds) {
+        return Map.of();
     }
 
     @Override

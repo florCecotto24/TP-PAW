@@ -1,24 +1,19 @@
-/** Límites alineados con `application.properties` / `CarValidationPolicy` / legacy JSP. */
-export const CAR_VALIDATION = {
-  brandMinLength: 2,
-  brandMaxLength: 30,
-  modelMaxLength: 30,
-  plateMinLength: 6,
-  plateMaxLength: 10,
-  descriptionMaxLength: 200,
-  yearMin: 1886,
-  galleryMaxItems: 8,
-  maxImageBytes: 20 * 1024 * 1024,
-  maxVideoBytes: 25 * 1024 * 1024,
-  maxInsuranceBytes: 5 * 1024 * 1024,
-} as const;
+import { getClientConfig, megabytesToBytes } from '../../api/clientConfig';
 
 export function currentCarYearMax(): number {
   return new Date().getFullYear();
 }
 
+function carLimits() {
+  return getClientConfig().car;
+}
+
+function uploadLimits() {
+  return getClientConfig().upload;
+}
+
 export function normalizePlate(raw: string): string {
-  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CAR_VALIDATION.plateMaxLength);
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, carLimits().plateMaxLength);
 }
 
 export function normalizeYearDigits(raw: string): string {
@@ -31,11 +26,12 @@ export function normalizeYearDigits(raw: string): string {
  * Vacío = OK. Devuelve clave i18n o null.
  */
 export function validatePublishCarYear(year: string): string | null {
+  const limits = carLimits();
   const yearRaw = year.trim();
   if (!yearRaw) return null;
   if (!/^\d{1,4}$/.test(yearRaw)) return 'owner.publish.errors.yearInvalid';
   const yearNum = Number(yearRaw);
-  if (yearNum < CAR_VALIDATION.yearMin) return 'owner.publish.errors.yearMin';
+  if (yearNum < limits.yearMin) return 'owner.publish.errors.yearMin';
   if (yearNum > currentCarYearMax()) return 'owner.publish.errors.yearMax';
   return null;
 }
@@ -68,6 +64,11 @@ export type PublishCarValidationInput = {
 
 /** Devuelve la clave i18n (`owner.publish.errors.*`) del primer error encontrado, o null si OK. */
 export function firstPublishCarValidationError(input: PublishCarValidationInput): string | null {
+  const limits = carLimits();
+  const upload = uploadLimits();
+  const maxImageBytes = megabytesToBytes(upload.maxImageMegabytes);
+  const maxVideoBytes = megabytesToBytes(upload.maxCarGalleryVideoMegabytes);
+  const maxInsuranceBytes = megabytesToBytes(upload.maxProfileDocumentMegabytes);
   const OTHER = '__other__';
 
   if (!input.brandSel) return 'owner.publish.errors.brandRequired';
@@ -75,8 +76,7 @@ export function firstPublishCarValidationError(input: PublishCarValidationInput)
   if (input.brandSel === OTHER) {
     const brand = input.newBrandName.trim();
     if (!brand) return 'owner.publish.errors.brandRequired';
-    if (brand.length < CAR_VALIDATION.brandMinLength
-      || brand.length > CAR_VALIDATION.brandMaxLength) {
+    if (brand.length < limits.brandMinLength || brand.length > limits.brandMaxLength) {
       return 'owner.publish.errors.brandSize';
     }
     if (input.modelSel !== OTHER || !input.newModelName.trim()) {
@@ -89,66 +89,85 @@ export function firstPublishCarValidationError(input: PublishCarValidationInput)
   if (input.modelSel === OTHER) {
     const model = input.newModelName.trim();
     if (!model) return 'owner.publish.errors.modelRequired';
-    if (model.length > CAR_VALIDATION.modelMaxLength) return 'owner.publish.errors.modelSize';
+    if (model.length > limits.modelMaxLength) return 'owner.publish.errors.modelSize';
   }
 
   const plate = normalizePlate(input.plate);
   if (!plate) return 'owner.publish.errors.plateRequired';
-  if (plate.length < CAR_VALIDATION.plateMinLength
-    || plate.length > CAR_VALIDATION.plateMaxLength) {
+  if (plate.length < limits.plateMinLength || plate.length > limits.plateMaxLength) {
     return 'owner.publish.errors.plateSize';
   }
 
-  // El año se valida aparte ({@link validatePublishCarYear}) y se muestra bajo el
-  // campo, como `form:errors path="year"` en publishCarForm.jsp.
-
-  if (input.description.trim().length > CAR_VALIDATION.descriptionMaxLength) {
+  if (input.description.trim().length > limits.descriptionMaxLength) {
     return 'owner.publish.errors.descriptionSize';
   }
 
-  const galleryError = validateGalleryFiles(input.pictures);
+  const galleryError = validateGalleryFiles(input.pictures, maxImageBytes, maxVideoBytes);
   if (galleryError) return galleryError;
 
-  const insuranceError = validateInsuranceFile(input.insurance);
+  const insuranceError = validateInsuranceFile(input.insurance, maxInsuranceBytes);
   if (insuranceError) return insuranceError;
 
   return null;
 }
 
-export function validateGalleryFiles(files: File[]): string | null {
+export function validateGalleryFiles(
+  files: File[],
+  maxImageBytes = megabytesToBytes(uploadLimits().maxImageMegabytes),
+  maxVideoBytes = megabytesToBytes(uploadLimits().maxCarGalleryVideoMegabytes),
+): string | null {
+  const galleryMaxItems = carLimits().galleryMaxItems;
   if (files.length === 0) return 'owner.publish.errors.picturesRequired';
-  if (files.length > CAR_VALIDATION.galleryMaxItems) return 'owner.publish.errors.picturesMax';
+  if (files.length > galleryMaxItems) return 'owner.publish.errors.picturesMax';
 
   for (const file of files) {
     if (!isAllowedGalleryMedia(file)) return 'owner.publish.errors.notGalleryMedia';
     if (isImageFile(file)) {
-      if (file.size > CAR_VALIDATION.maxImageBytes) return 'owner.publish.errors.imageTooLarge';
-    } else if (file.size > CAR_VALIDATION.maxVideoBytes) {
+      if (file.size > maxImageBytes) return 'owner.publish.errors.imageTooLarge';
+    } else if (file.size > maxVideoBytes) {
       return 'owner.publish.errors.videoTooLarge';
     }
   }
   return null;
 }
 
-export function validateInsuranceFile(file: File | null): string | null {
+export function validateInsuranceFile(
+  file: File | null,
+  maxInsuranceBytes = megabytesToBytes(uploadLimits().maxProfileDocumentMegabytes),
+): string | null {
   if (!file) return null;
-  if (file.size > CAR_VALIDATION.maxInsuranceBytes) return 'owner.publish.errors.insuranceTooLarge';
+  if (file.size > maxInsuranceBytes) return 'owner.publish.errors.insuranceTooLarge';
   return null;
 }
 
 export function publishValidationI18nParams() {
+  const limits = carLimits();
+  const upload = uploadLimits();
   return {
-    min: CAR_VALIDATION.yearMin,
+    min: limits.yearMin,
     max: currentCarYearMax(),
-    brandMin: CAR_VALIDATION.brandMinLength,
-    brandMax: CAR_VALIDATION.brandMaxLength,
-    modelMax: CAR_VALIDATION.modelMaxLength,
-    plateMin: CAR_VALIDATION.plateMinLength,
-    plateMax: CAR_VALIDATION.plateMaxLength,
-    descriptionMax: CAR_VALIDATION.descriptionMaxLength,
-    galleryMax: CAR_VALIDATION.galleryMaxItems,
-    imageMaxMb: 20,
-    videoMaxMb: 25,
-    insuranceMaxMb: 5,
+    brandMin: limits.brandMinLength,
+    brandMax: limits.brandMaxLength,
+    modelMax: limits.modelMaxLength,
+    plateMin: limits.plateMinLength,
+    plateMax: limits.plateMaxLength,
+    descriptionMax: limits.descriptionMaxLength,
+    galleryMax: limits.galleryMaxItems,
+    imageMaxMb: upload.maxImageMegabytes,
+    videoMaxMb: upload.maxCarGalleryVideoMegabytes,
+    insuranceMaxMb: upload.maxProfileDocumentMegabytes,
+  };
+}
+
+/** UI maxlength / size hints for the publish form (from client config). */
+export function carValidationLimits() {
+  const limits = carLimits();
+  const upload = uploadLimits();
+  return {
+    brandMaxLength: limits.brandMaxLength,
+    modelMaxLength: limits.modelMaxLength,
+    plateMaxLength: limits.plateMaxLength,
+    descriptionMaxLength: limits.descriptionMaxLength,
+    maxInsuranceBytes: megabytesToBytes(upload.maxProfileDocumentMegabytes),
   };
 }

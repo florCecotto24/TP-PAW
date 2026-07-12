@@ -1,9 +1,7 @@
-/** Validación de adjuntos de chat — espejo de `reservation-chat.js`. */
+/** Validación de adjuntos de chat — límites desde GET /config. */
 
-export const CHAT_MAX_ATTACHMENT_MB = 25;
-export const CHAT_MESSAGE_MAX_LENGTH = 1000;
-/** Espejo de {@code app.reservation.chat.history-page-size}. */
-export const CHAT_HISTORY_PAGE_SIZE = 12;
+import { getClientConfig, megabytesToBytes } from '../../api/clientConfig';
+
 export const UPLOAD_MAX_RETRIES = 1;
 
 const MIN_UPLOAD_TIMEOUT_MS = 120_000;
@@ -31,9 +29,29 @@ const ALLOWED_EXTENSIONS: Record<string, true> = {
   pptx: true,
 };
 
-export function computeUploadTimeoutMs(maxAttachmentMb = CHAT_MAX_ATTACHMENT_MB): number {
-  const mb = Number.isFinite(maxAttachmentMb) ? maxAttachmentMb : CHAT_MAX_ATTACHMENT_MB;
-  return Math.max(MIN_UPLOAD_TIMEOUT_MS, mb * MS_PER_MEGABYTE);
+export function chatLimits() {
+  return getClientConfig().chat;
+}
+
+/** @deprecated Prefer {@link chatLimits}.maxAttachmentMegabytes */
+export function getChatMaxAttachmentMb(): number {
+  return chatLimits().maxAttachmentMegabytes;
+}
+
+/** @deprecated Prefer {@link chatLimits}.messageMaxLength */
+export function getChatMessageMaxLength(): number {
+  return chatLimits().messageMaxLength;
+}
+
+/** @deprecated Prefer {@link chatLimits}.historyPageSize */
+export function getChatHistoryPageSize(): number {
+  return chatLimits().historyPageSize;
+}
+
+export function computeUploadTimeoutMs(maxAttachmentMb?: number): number {
+  const mb = maxAttachmentMb ?? chatLimits().maxAttachmentMegabytes;
+  const safe = Number.isFinite(mb) ? mb : chatLimits().maxAttachmentMegabytes;
+  return Math.max(MIN_UPLOAD_TIMEOUT_MS, safe * MS_PER_MEGABYTE);
 }
 
 function fileExtension(name: string): string {
@@ -65,10 +83,11 @@ export type ChatFileValidationError = 'invalidType' | 'tooLarge';
 
 export function validateChatFile(
   file: File | null | undefined,
-  maxAttachmentMb = CHAT_MAX_ATTACHMENT_MB,
+  maxAttachmentMb?: number,
 ): ChatFileValidationError | null {
   if (!file) return 'invalidType';
-  const maxBytes = maxAttachmentMb * 1024 * 1024;
+  const mb = maxAttachmentMb ?? chatLimits().maxAttachmentMegabytes;
+  const maxBytes = megabytesToBytes(mb);
   if (file.size > maxBytes) return 'tooLarge';
   if (!isAllowedChatFile(file)) return 'invalidType';
   return null;

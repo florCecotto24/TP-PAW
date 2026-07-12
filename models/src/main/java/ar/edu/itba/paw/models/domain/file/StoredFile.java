@@ -54,7 +54,7 @@ public class StoredFile {
         // For Hibernate
     }
 
-    public StoredFile(
+    /* package */ StoredFile(
             final long id,
             final User uploader,
             final String fileName,
@@ -76,6 +76,17 @@ public class StoredFile {
             final byte[] data,
             final OffsetDateTime createdAt) {
         return new StoredFile(0L, uploader, fileName, contentType, data, createdAt);
+    }
+
+    /** Rehydrates a persisted row (tests and in-memory fixtures). */
+    public static StoredFile identified(
+            final long id,
+            final User uploader,
+            final String fileName,
+            final String contentType,
+            final byte[] data,
+            final OffsetDateTime createdAt) {
+        return new StoredFile(id, uploader, fileName, contentType, data, createdAt);
     }
 
     public long getId() {

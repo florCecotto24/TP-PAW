@@ -11,9 +11,12 @@ export interface CarouselSectionProps<T> {
   renderItem: (item: T, index: number) => ReactNode;
   itemsPerSlide?: number;
   emptyMessage?: string;
-  prevPageHref?: string;
-  nextPageHref?: string;
   showSlideControls?: boolean;
+  pageIndex?: number;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
+  prevPageDisabled?: boolean;
+  nextPageDisabled?: boolean;
 }
 
 /**
@@ -28,8 +31,12 @@ export default function CarouselSection<T>({
   renderItem,
   itemsPerSlide = 4,
   emptyMessage,
-  prevPageHref,
-  nextPageHref,
+  showSlideControls,
+  pageIndex = 0,
+  onPrevPage,
+  onNextPage,
+  prevPageDisabled,
+  nextPageDisabled,
 }: CarouselSectionProps<T>) {
   const { t } = useTranslation();
   const slides = chunk(items, itemsPerSlide);
@@ -40,16 +47,18 @@ export default function CarouselSection<T>({
         title={title}
         subtitle={subtitle}
         id={id}
-        prevPageHref={prevPageHref}
-        nextPageHref={nextPageHref}
-        showSlideControls={slides.length > 1}
+        showSlideControls={showSlideControls ?? (slides.length > 1 || Boolean(onPrevPage || onNextPage))}
+        onPrevPage={onPrevPage}
+        onNextPage={onNextPage}
+        prevDisabled={prevPageDisabled ?? pageIndex <= 0}
+        nextDisabled={nextPageDisabled ?? false}
       />
       {items.length === 0 ? (
         <div className="alert-project" role="alert">
           {emptyMessage ?? t('carousel.noVehicles')}
         </div>
       ) : (
-        <div id={id} className="carousel slide" data-bs-ride="false">
+        <div id={id} key={`${id}-page-${pageIndex}`} className="carousel slide" data-bs-ride="false">
           <div className="carousel-inner">
             {slides.map((slideItems, slideIndex) => (
               <div

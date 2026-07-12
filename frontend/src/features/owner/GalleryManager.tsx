@@ -29,13 +29,7 @@ export default function GalleryManager({ car }: { car: CarDto }) {
     setError(null);
     setBusy(true);
     try {
-      // El `displayOrder` se basa en cuántas imágenes hay YA en el servidor, no en
-      // el estado local `pictures` (que puede estar desactualizado si el orden se
-      // corrió en el server o si la lista quedó vieja). Releemos el conteo fresco
-      // justo antes de asignar el orden y lo incrementamos por archivo.
-      const current = await fetchPictures(car);
-      let order = current.data?.length ?? 0;
-      for (const f of files) await addPicture(car, f, order++);
+      for (const f of files) await addPicture(car, f);
       setTick((n) => n + 1);
     } catch (err) {
       setError(errorMessage(err, 'owner.gallery.errors.uploadFailed'));

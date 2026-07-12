@@ -146,9 +146,26 @@ public interface ReservationService {
             long viewerUserId, long reservationId, ReservationParticipantRole viewerRole);
 
     /**
+     * Applies all fields present in a {@code PATCH /reservations/{id}} body inside one transaction.
+     */
+    Reservation patchReservation(
+            long viewerUserId,
+            long reservationId,
+            Reservation.Status cancellationStatus,
+            Boolean carReturned,
+            String fromDateTimeWall,
+            String untilDateTimeWall);
+
+    /**
      * Batch job: cancels pending reservations whose payment-proof deadline passed without a receipt, and notifies.
      */
     void cancelExpiredPendingPaymentReservations();
+
+    /**
+     * Batch job: transitions {@link Reservation.Status#ACCEPTED} reservations to
+     * {@link Reservation.Status#STARTED} once their pickup {@code start_date} is reached (UTC).
+     */
+    void transitionAcceptedReservationsToStarted();
 
     /**
      * Rider uploads a payment receipt file; validates rider, state, and size policy, persists file metadata, and may
@@ -307,6 +324,11 @@ public interface ReservationService {
     List<Long> findOverdueRefundProofReservationIdsForOwner(long ownerUserId);
 
     /**
+     * Batch variant of {@link #findOverdueRefundProofReservationIdsForOwner} for admin user pages.
+     */
+    Map<Long, List<Long>> findOverdueRefundProofReservationIdsByOwnerIds(Collection<Long> ownerUserIds);
+
+    /**
      * Reservation ids belonging to {@code ownerUserId} that still require a refund proof upload (no receipt
      * yet), independently of whether the deadline has lapsed. Used by owner-side hub views to render a
      * per-reservation "you must upload a refund receipt" badge.
@@ -376,6 +398,14 @@ public interface ReservationService {
             boolean paymentRefundRequired,
             OffsetDateTime refundProofDeadlineAtOrNull);
 
+    /**
+     * Admin car-pause cascade cancellation with correct terminal status per row state.
+     */
+    int applyAdminCarPauseCancellation(
+            long reservationId,
+            boolean paymentRefundRequired,
+            OffsetDateTime refundProofDeadlineAtOrNull);
+
     /** Marks the car as returned and transitions status to {@code finished} when the gate holds. */
     int markCarReturned(long reservationId, long ownerUserId);
 
@@ -387,6 +417,24 @@ public interface ReservationService {
 
     /** Pending reservations whose payment-proof deadline has lapsed (UTC). */
     List<Reservation> findPendingPaymentPastDeadline(OffsetDateTime now);
+
+    /**
+     * Payment-proof deadline sweep: cancels only when still {@code pending} without receipt.
+     * Returns 0 when a concurrent receipt upload already accepted the row.
+     */
+    int cancelPendingMissingPaymentProofIfEligible(long reservationId, OffsetDateTime now);
+
+    /**
+     * {@link Reservation.Status#ACCEPTED} reservations whose pickup {@code start_date} is on or before {@code now}
+     * (UTC).
+     */
+    List<Long> findAcceptedReservationIdsWithStartOnOrBefore(OffsetDateTime now);
+
+    /**
+     * When still {@link Reservation.Status#ACCEPTED} and {@code startDate <= now}, sets
+     * {@link Reservation.Status#STARTED}. Returns rows updated (0 or 1).
+     */
+    int transitionAcceptedToStartedIfDue(long reservationId, OffsetDateTime now);
 
     /** Reservations that should receive the return-reminder email within the configured hours-before-checkout. */
     List<Reservation> findReservationsForReturnReminderEmail(OffsetDateTime now, int hoursBeforeCheckout);

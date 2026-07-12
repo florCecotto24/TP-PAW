@@ -37,6 +37,11 @@ public interface ReservationLifecycleSchedulerService {
      */
     void dispatchReviewAutoSkips();
 
+    /**
+     * Scheduled job: marks confirmed ({@code accepted}) reservations as {@code started} once pickup time is reached.
+     */
+    void transitionAcceptedReservationsToStarted();
+
     /** Counts reservations per status bucket for the owner's car dashboard charts. */
     Map<String, Long> countCarReservationsByStatus(long ownerId, long carId);
 

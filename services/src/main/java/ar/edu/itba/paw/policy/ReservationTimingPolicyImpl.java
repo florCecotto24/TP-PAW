@@ -10,6 +10,7 @@ public final class ReservationTimingPolicyImpl implements ReservationTimingPolic
 
     private final int pickupLeadHours;
     private final int paymentProofDeadlineHours;
+    private final int refundProofDeadlineHours;
     private final int paymentProofReminderLeadHours;
     private final int returnReminderHoursBeforeCheckout;
     private final int maxBillableDaysPerReservation;
@@ -20,6 +21,8 @@ public final class ReservationTimingPolicyImpl implements ReservationTimingPolic
         this.pickupLeadHours = readPositiveInt(environment, "app.reservation.pickup-lead-hours", 24);
         this.paymentProofDeadlineHours =
                 readPositiveInt(environment, "app.reservation.payment-proof-deadline-hours", 12);
+        this.refundProofDeadlineHours =
+                readPositiveInt(environment, "app.reservation.refund-proof-deadline-hours", 120);
         this.paymentProofReminderLeadHours =
                 readPositiveInt(environment, "app.reservation.payment-proof-reminder-lead-hours", 2);
         this.returnReminderHoursBeforeCheckout =
@@ -52,6 +55,11 @@ public final class ReservationTimingPolicyImpl implements ReservationTimingPolic
     @Override
     public int getPaymentProofDeadlineHours() {
         return paymentProofDeadlineHours;
+    }
+
+    @Override
+    public int getRefundProofDeadlineHours() {
+        return refundProofDeadlineHours;
     }
 
     @Override

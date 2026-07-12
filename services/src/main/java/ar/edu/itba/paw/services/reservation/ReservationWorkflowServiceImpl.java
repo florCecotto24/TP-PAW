@@ -105,12 +105,8 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         final OffsetDateTime[] interval = parseAndOrderInterval(fromDateTime, untilDateTime);
         final OffsetDateTime startDate = interval[0];
         final OffsetDateTime endDate = interval[1];
-        pricingService.validateWallPickupDateNotBeforeToday(startDate);
-        pricingService.validatePickupAtLeastConfiguredLeadAhead(startDate);
-        if (!pricingService.reservationIntervalFitsCarAvailability(carId, availabilityId, startDate, endDate)) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
-        }
-        pricingService.validateHandoverTimesMatchEffectiveAvailability(carId, startDate, endDate);
+        pricingService.validateRiderReservationPricingInterval(
+                carId, availabilityId, startDate, endDate, car.getMinimumRentalDays());
         if (car.getOwner().getId() == rider.getId()) {
             throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_CANNOT_RESERVE_OWN_LISTING);
         }
@@ -152,26 +148,12 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         final OffsetDateTime[] interval = parseAndOrderInterval(fromDateTime, untilDateTime);
         final OffsetDateTime startDate = interval[0];
         final OffsetDateTime endDate = interval[1];
-        pricingService.validateWallPickupDateNotBeforeToday(startDate);
-        pricingService.validatePickupAtLeastConfiguredLeadAhead(startDate);
-
         final long carId = reservation.getCarId();
-        if (!pricingService.reservationIntervalFitsCarAvailability(carId, null, startDate, endDate)) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_OUTSIDE_AVAILABILITY);
-        }
-        pricingService.validateHandoverTimesMatchEffectiveAvailability(carId, startDate, endDate);
-
-        final long billableDays = pricingService.calculateBillableDays(startDate, endDate);
-        final int maxBillableDays = pricingService.getConfiguredMaxReservationBillableDays();
-        if (billableDays > maxBillableDays) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_MAX_BILLABLE_DAYS, maxBillableDays);
-        }
         final Car car = carService.getCarById(carId)
                 .orElseThrow(() -> new RiderReservationException(MessageKeys.RESERVATION_RIDER_LISTING_NOT_FOUND));
-        if (billableDays < car.getMinimumRentalDays()) {
-            throw new RiderReservationException(
-                    MessageKeys.RESERVATION_RIDER_BELOW_MINIMUM_DAYS, car.getMinimumRentalDays());
-        }
+        pricingService.validateRiderReservationPricingInterval(
+                carId, null, startDate, endDate, car.getMinimumRentalDays());
+        carService.lockForReservationWrite(carId);
         if (reservationService.hasActiveOverlapByCarExcluding(carId, startDate, endDate, reservationId)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
@@ -234,15 +216,7 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
             final Reservation.Status status,
             final OffsetDateTime paymentProofDeadlineAt,
             final String ownerCbu) {
-        final long billableDays = pricingService.calculateBillableDays(startDate, endDate);
-        final int maxBillableDays = pricingService.getConfiguredMaxReservationBillableDays();
-        if (billableDays > maxBillableDays) {
-            throw new RiderReservationException(MessageKeys.RESERVATION_RIDER_MAX_BILLABLE_DAYS, maxBillableDays);
-        }
-        if (billableDays < car.getMinimumRentalDays()) {
-            throw new RiderReservationException(
-                    MessageKeys.RESERVATION_RIDER_BELOW_MINIMUM_DAYS, car.getMinimumRentalDays());
-        }
+        carService.lockForReservationWrite(carId);
         if (reservationService.hasActiveOverlapByCar(carId, startDate, endDate)) {
             throw new ReservationConflictException(MessageKeys.RESERVATION_CONFLICT_OVERLAP);
         }
@@ -277,6 +251,54 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
                     .log("Reservation id={} cancelled (missing payment proof)");
         });
         return reservationOpt;
+    }
+
+    @Override
+    @Transactional
+    public void cancelBlockingReservationsForAdminCarPause(final long carId) {
+        final OffsetDateTime nowUtc = OffsetDateTime.now(ZoneOffset.UTC);
+        for (final Reservation r : reservationService.findBlockingReservationsByCarId(carId)) {
+            cancelReservationForAdminCarPause(r, nowUtc);
+        }
+    }
+
+    private void cancelReservationForAdminCarPause(final Reservation r, final OffsetDateTime nowUtc) {
+        final long reservationId = r.getId();
+        switch (r.getStatus()) {
+            case PENDING -> {
+                if (r.getPaymentReceiptFileId().isPresent()) {
+                    cancelConfirmedForAdminPause(reservationId, r, nowUtc);
+                } else {
+                    cancelReservation(reservationId);
+                }
+            }
+            case ACCEPTED, STARTED -> cancelConfirmedForAdminPause(reservationId, r, nowUtc);
+            default -> {
+                // no-op
+            }
+        }
+    }
+
+    private void cancelConfirmedForAdminPause(
+            final long reservationId,
+            final Reservation r,
+            final OffsetDateTime nowUtc) {
+        final boolean refundRequired = r.getPaymentReceiptFileId().isPresent();
+        final OffsetDateTime refundDeadline = refundRequired
+                ? nowUtc.plusHours(pricingService.getConfiguredRefundProofDeadlineHours())
+                : null;
+        if (reservationService.applyAdminCarPauseCancellation(reservationId, refundRequired, refundDeadline) == 0) {
+            return;
+        }
+        final Optional<Reservation> cancelled = reservationService.getReservationById(reservationId);
+        cancelled.ifPresent(res -> {
+            mailComposer.sendCancellationEmail(res, !refundRequired);
+            if (refundRequired) {
+                reservationPaymentService.sendOwnerRefundProofObligationEmail(res, false);
+            }
+            LOGGER.atInfo().addArgument(reservationId)
+                    .log("Admin car pause cancelled reservation id={}");
+        });
     }
 
     @Override
@@ -329,8 +351,11 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         if (r.getPaymentReceiptFileId().isPresent()) {
             return Optional.empty();
         }
-        reservationService.updateParticipantCancellationWithRefundMeta(
+        final int updated = reservationService.updateParticipantCancellationWithRefundMeta(
                 reservationId, cancelledStatus.name().toLowerCase(Locale.ROOT), false, null);
+        if (updated == 0) {
+            return Optional.empty();
+        }
         final Optional<Reservation> cancelled = reservationService.getReservationById(reservationId);
         cancelled.ifPresent(res -> {
             mailComposer.sendCancellationEmail(res, true);
@@ -351,10 +376,13 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
         }
         final boolean refundRequired = r.getPaymentReceiptFileId().isPresent();
         final OffsetDateTime refundDeadline = refundRequired
-                ? nowUtc.plusHours(pricingService.getConfiguredPaymentProofDeadlineHours())
+                ? nowUtc.plusHours(pricingService.getConfiguredRefundProofDeadlineHours())
                 : null;
-        reservationService.updateParticipantCancellationWithRefundMeta(
+        final int updated = reservationService.updateParticipantCancellationWithRefundMeta(
                 reservationId, cancelledStatus.name().toLowerCase(Locale.ROOT), refundRequired, refundDeadline);
+        if (updated == 0) {
+            return Optional.empty();
+        }
         final Optional<Reservation> cancelled = reservationService.getReservationById(reservationId);
         cancelled.ifPresent(res -> {
             mailComposer.sendCancellationEmail(res, !refundRequired);
@@ -365,6 +393,33 @@ public class ReservationWorkflowServiceImpl implements ReservationWorkflowServic
                     .log("Participant userId={} cancelled reservation id={} ({})");
         });
         return cancelled;
+    }
+
+    @Override
+    @Transactional
+    public Reservation patchReservation(
+            final long viewerUserId,
+            final long reservationId,
+            final Reservation.Status cancellationStatus,
+            final Boolean carReturned,
+            final String fromDateTimeWall,
+            final String untilDateTimeWall) {
+        if (cancellationStatus != null) {
+            final ReservationParticipantRole role = switch (cancellationStatus) {
+                case CANCELLED_BY_RIDER -> ReservationParticipantRole.RIDER;
+                case CANCELLED_BY_OWNER -> ReservationParticipantRole.OWNER;
+                default -> throw ReservationCancelNotAllowedException.notAllowed();
+            };
+            cancelReservationAsParticipantScoped(viewerUserId, reservationId, role);
+        }
+        if (Boolean.TRUE.equals(carReturned)) {
+            markCarReturnedByOwner(viewerUserId, reservationId);
+        }
+        if (fromDateTimeWall != null) {
+            editPendingReservationByRider(viewerUserId, reservationId, fromDateTimeWall, untilDateTimeWall);
+        }
+        return reservationService.getReservationById(reservationId)
+                .orElseThrow(ReservationAccessDeniedException::denied);
     }
 
     // ---------------------------------------------------------------------------------------

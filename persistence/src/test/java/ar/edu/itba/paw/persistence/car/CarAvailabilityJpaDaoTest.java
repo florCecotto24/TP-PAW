@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceUnitUtil;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,12 +48,18 @@ class CarAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
     private long insertAvailability(
             final LocalDate start, final LocalDate end, final BigDecimal dayPrice,
             final String kind, final OffsetDateTime createdAt) {
+        return insertAvailability(start, end, dayPrice, kind, createdAt, null);
+    }
+
+    private long insertAvailability(
+            final LocalDate start, final LocalDate end, final BigDecimal dayPrice,
+            final String kind, final OffsetDateTime createdAt, final Long neighborhoodId) {
         jdbcTemplate.update(
                 "INSERT INTO car_availability (car_id, start_date, end_date, day_price, "
-                        + "start_point_street, check_in_time, check_out_time, kind, created_at, updated_at) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        + "start_point_street, neighborhood_id, check_in_time, check_out_time, kind, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 carId, start, end, dayPrice,
-                "Belgrano", LocalTime.of(10, 0), LocalTime.of(18, 0), kind, createdAt, createdAt);
+                "Belgrano", neighborhoodId, LocalTime.of(10, 0), LocalTime.of(18, 0), kind, createdAt, createdAt);
         return jdbcTemplate.queryForObject(
                 "SELECT id FROM car_availability WHERE car_id = ? AND start_date = ? AND end_date = ? AND created_at = ?",
                 Long.class, carId, start, end, createdAt);
@@ -189,5 +196,47 @@ class CarAvailabilityJpaDaoTest extends DaoIntegrationTestSupport {
                 "SELECT car_id FROM car_availability WHERE id = ?", Long.class, created.getId());
         Assertions.assertEquals(carId, persistedCarId.longValue());
         Assertions.assertEquals(carId, created.getCarId());
+    }
+
+    @Test
+    void testFindOverlappingRangeEagerLoadsNeighborhood() {
+        // 1. Arrange
+        final OffsetDateTime t = OffsetDateTime.parse("2026-07-01T10:00:00Z");
+        insertAvailability(
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31),
+                new BigDecimal("110.00"), "offered", t, 22L);
+        em.flush();
+        em.clear();
+
+        // 2. Act
+        final List<CarAvailability> result =
+                dao.findOverlappingRangeByCar(carId, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.size());
+        final PersistenceUnitUtil persistenceUnitUtil = em.getEntityManagerFactory().getPersistenceUnitUtil();
+        Assertions.assertTrue(persistenceUnitUtil.isLoaded(result.get(0), "neighborhood"));
+        Assertions.assertEquals("Palermo", result.get(0).getNeighborhood().getName());
+    }
+
+    @Test
+    void testFindByCarIdsEndingOnOrAfterEagerLoadsNeighborhood() {
+        // 1. Arrange
+        final OffsetDateTime t = OffsetDateTime.parse("2026-07-01T10:00:00Z");
+        insertAvailability(
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31),
+                new BigDecimal("110.00"), "offered", t, 5L);
+        em.flush();
+        em.clear();
+
+        // 2. Act
+        final List<CarAvailability> result =
+                dao.findByCarIdsEndingOnOrAfter(List.of(carId), LocalDate.of(2026, 8, 1));
+
+        // 3. Assert
+        Assertions.assertEquals(1, result.size());
+        final PersistenceUnitUtil persistenceUnitUtil = em.getEntityManagerFactory().getPersistenceUnitUtil();
+        Assertions.assertTrue(persistenceUnitUtil.isLoaded(result.get(0), "neighborhood"));
+        Assertions.assertEquals("Belgrano", result.get(0).getNeighborhood().getName());
     }
 }

@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUser, fetchUserCars, getUserReviews, userCarsLink, userReviewsLink } from './api';
 import { formatDateLong, formatMonthYear } from '../../i18n/dateFormat';
-import { LoadingBlock, ReviewCard } from '../../components/ryden';
+import { Avatar, LoadingBlock, ReviewCard, ReviewStarsRow, starsFromRating } from '../../components/ryden';
 import { apiAssetUrl, profilePictureAssetUrl } from '../../api/uri';
 import { useUserBrief } from '../browse/hooks';
 import type { ReviewDto, CarSummaryDto } from '../browse/types';
@@ -17,46 +17,6 @@ import type { UserDto } from './types';
 //   Autos activos: navegando user.links.cars (GET /cars?ownerId={id}).
 // Markup espejo del counterpartyProfile.jsp (counterparty-* + Bootstrap cards).
 // =============================================================================
-
-function StarRow({ rating }: { rating: number }) {
-  const floor = Math.floor(rating);
-  const frac = rating - floor;
-  return (
-    <div className="d-inline-flex align-items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => {
-        if (star <= floor) {
-          return <i key={star} className="bi bi-star-fill text-warning" aria-hidden="true"></i>;
-        }
-        if (star === floor + 1 && frac >= 0.4 && frac <= 0.6) {
-          return <i key={star} className="bi bi-star-half text-warning" aria-hidden="true"></i>;
-        }
-        return <i key={star} className="bi bi-star text-secondary-subtle" aria-hidden="true"></i>;
-      })}
-    </div>
-  );
-}
-
-// El link profilePicture viene SOLO si hay foto; si está ausente (src undefined)
-// mostramos el placeholder de iniciales. El onError queda como red de seguridad.
-function Avatar({ src, alt, initials }: { src?: string; alt: string; initials: string }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="counterparty-avatar">
-      {src && !failed ? (
-        <img
-          src={src}
-          alt={alt}
-          className="counterparty-avatar__img"
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <div className="counterparty-avatar__placeholder">
-          <span>{initials}</span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function PublicProfilePage() {
   const { t, i18n } = useTranslation();
@@ -117,7 +77,7 @@ export default function PublicProfilePage() {
                       {rating != null ? (
                         <>
                           <span className="counterparty-rating-value">{rating.toFixed(1)}</span>
-                          <StarRow rating={rating} />
+                          <ReviewStarsRow {...starsFromRating(rating)} />
                           {reviewCount > 0 && (
                             <span className="text-secondary small">
                               {t('profile.public.reviewsCount', { count: reviewCount })}

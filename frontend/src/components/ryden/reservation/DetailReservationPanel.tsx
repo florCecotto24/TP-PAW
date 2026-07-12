@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import mapPlaceholderUrl from '../../../assets/images/map-placeholder.svg';
 import { newReservation } from '../../../routes/paths';
 
 export interface DetailReservationPanelProps {
@@ -112,6 +113,12 @@ export default function DetailReservationPanel({
             <p className="mb-0 fw-medium ryden-text-break" id="detail_pickup_location_label">
               {pickupLocationLabel}
             </p>
+            <img
+              src={mapPlaceholderUrl}
+              alt=""
+              className="pickup-map-placeholder img-fluid rounded-3 mt-2 w-100"
+              loading="lazy"
+            />
           </div>
         </div>
 

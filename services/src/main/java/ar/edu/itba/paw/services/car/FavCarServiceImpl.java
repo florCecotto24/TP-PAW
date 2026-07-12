@@ -46,17 +46,39 @@ public class FavCarServiceImpl implements FavCarService {
     @Override
     @Transactional
     public boolean toggleFavorite(final long carId, final long userId) {
-        final Car car = carService.getCarById(carId)
-                .orElseThrow(() -> new FavoriteValidationException(MessageKeys.FAV_CAR_NOT_FOUND));
-        if (car.getOwner().getId() == userId) {
-            throw new FavoriteValidationException(MessageKeys.FAV_CAR_CANNOT_FAV_OWN);
-        }
+        requireFavoriteTarget(carId, userId);
         if (favCarDao.isFavorited(carId, userId)) {
             favCarDao.removeFavorite(carId, userId);
             return false;
         }
         favCarDao.addFavorite(carId, userId, OffsetDateTime.now());
         return true;
+    }
+
+    @Override
+    @Transactional
+    public void addFavorite(final long carId, final long userId) {
+        requireFavoriteTarget(carId, userId);
+        if (!favCarDao.isFavorited(carId, userId)) {
+            favCarDao.addFavorite(carId, userId, OffsetDateTime.now());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removeFavorite(final long carId, final long userId) {
+        requireFavoriteTarget(carId, userId);
+        if (favCarDao.isFavorited(carId, userId)) {
+            favCarDao.removeFavorite(carId, userId);
+        }
+    }
+
+    private void requireFavoriteTarget(final long carId, final long userId) {
+        final Car car = carService.getCarById(carId)
+                .orElseThrow(() -> new FavoriteValidationException(MessageKeys.FAV_CAR_NOT_FOUND));
+        if (car.getOwner().getId() == userId) {
+            throw new FavoriteValidationException(MessageKeys.FAV_CAR_CANNOT_FAV_OWN);
+        }
     }
 
     @Override

@@ -1,8 +1,6 @@
 package ar.edu.itba.paw.webapp.i18n;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
@@ -98,7 +96,6 @@ class RydenLocaleResolverTest {
         SecurityContextHolder.clearContext();
         final MockHttpServletRequest request = new MockHttpServletRequest();
         request.setCookies(new Cookie(RydenLocaleResolver.COOKIE_NAME, "fr"));
-        lenient().when(userService.findUserPreferredLocale(anyLong())).thenReturn(Optional.empty());
 
         // 2.Act
         final Locale resolved = resolver.resolveLocale(request);

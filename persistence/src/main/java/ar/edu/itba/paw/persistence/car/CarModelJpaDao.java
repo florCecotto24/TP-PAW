@@ -24,7 +24,7 @@ public class CarModelJpaDao implements CarModelDao {
     @Override
     public List<CarModel> findByBrandIdOrdered(final long brandId) {
         return em.createQuery(
-                "FROM CarModel m WHERE m.brand.id = :brandId "
+                "FROM CarModel m JOIN FETCH m.brand WHERE m.brand.id = :brandId "
                         + "ORDER BY m.validated DESC, LOWER(m.name) ASC", CarModel.class)
                 .setParameter("brandId", brandId)
                 .getResultList();
@@ -33,7 +33,7 @@ public class CarModelJpaDao implements CarModelDao {
     @Override
     public List<CarModel> findValidatedByBrandIdOrdered(final long brandId) {
         return em.createQuery(
-                "FROM CarModel m WHERE m.brand.id = :brandId AND m.validated = TRUE "
+                "FROM CarModel m JOIN FETCH m.brand WHERE m.brand.id = :brandId AND m.validated = TRUE "
                         + "ORDER BY LOWER(m.name) ASC", CarModel.class)
                 .setParameter("brandId", brandId)
                 .getResultList();

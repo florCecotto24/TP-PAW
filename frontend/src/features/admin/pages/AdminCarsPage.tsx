@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { patchCarStatus } from '../api';
@@ -9,7 +10,7 @@ import AdminPagination from '../components/AdminPagination';
 import { idFromSelf, type CarDto, type CarStatus } from '../types';
 import { useAdminErrorMessage } from '../useAdminErrorMessage';
 import { usePagedList } from '../usePagedList';
-import { carDetail } from '../../../routes/paths';
+import { carDetailTo } from '../../../routes/navigationState';
 
 const STATUS_FILTERS: Array<CarStatus | ''> = [
   '', 'active', 'paused', 'admin_paused', 'lack_doc', 'unavailable', 'deactivated',
@@ -27,9 +28,7 @@ export default function AdminCarsPage() {
   const [pending, setPending] = useState<PendingCarAction | null>(null);
 
   const listPath = useMemo(() => {
-    const params = new URLSearchParams({ page: '1' });
-    if (statusFilter) params.set('status', statusFilter);
-    return `/cars?${params.toString()}`;
+    return collectionQueryPath('cars', { page: '1', status: statusFilter || undefined });
   }, [statusFilter]);
 
   const list = usePagedList<CarDto>(listPath, MediaTypes.car, [statusFilter]);
@@ -96,6 +95,7 @@ export default function AdminCarsPage() {
               <tbody>
                 {list.items.map((car) => {
                   const carId = idFromSelf(car.links);
+                  const carDetailLink = carDetailTo(carId, car.links.self);
                   const busy = busyLink === car.links.self;
                   const canPause = car.status === 'active' || car.status === 'paused';
                   const canUnpause = car.status === 'admin_paused';
@@ -109,7 +109,11 @@ export default function AdminCarsPage() {
                       <td>{t(`admin.cars.statuses.${car.status}`)}</td>
                       <td className="text-end admin-table__cell--wrap">
                         <div className="d-flex flex-wrap gap-1 justify-content-end">
-                          <Link to={carDetail(carId)} className="btn btn-outline-secondary btn-sm">
+                          <Link
+                            to={carDetailLink.pathname}
+                            state={carDetailLink.state}
+                            className="btn btn-outline-secondary btn-sm"
+                          >
                             {t('admin.cars.actions.view')}
                           </Link>
                           {canPause ? (

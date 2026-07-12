@@ -27,9 +27,7 @@ import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Component;
 
-import ar.edu.itba.paw.exception.MessageKeys;
 import ar.edu.itba.paw.exception.car.CarNotFoundException;
-import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.AvailabilityPeriod;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarAvailability;
@@ -48,6 +46,7 @@ import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 import ar.edu.itba.paw.webapp.support.FormValidationSupport;
 import ar.edu.itba.paw.webapp.support.PaginationParams;
 import ar.edu.itba.paw.webapp.support.PaginationSupport;
+import ar.edu.itba.paw.webapp.util.RestUriUtils;
 import ar.edu.itba.paw.webapp.validation.ValidationGroups;
 import ar.edu.itba.paw.webapp.validation.constraint.common.ValidYearMonth;
 
@@ -193,12 +192,7 @@ public class CarAvailabilityController {
             @QueryParam("from") final String from,
             @QueryParam("until") final String until) {
         requireCarExists(carId);
-        if (from == null || from.isBlank() || until == null || until.isBlank()) {
-            throw new CarValidationException(MessageKeys.CAR_AVAILABILITY_INVALID_ORDER);
-        }
-        final LocalDate start = LocalDate.parse(from);
-        final LocalDate end = LocalDate.parse(until);
-        carAvailabilityService.applyOwnerWithdrawRangeByCar(carId, start, end);
+        carAvailabilityService.parseAndApplyWithdrawRange(carId, from, until);
         return Response.noContent().build();
     }
 
@@ -223,7 +217,7 @@ public class CarAvailabilityController {
                 form.getDayPrice(),
                 form.getStartPointStreet(),
                 form.getStartPointNumber(),
-                form.getNeighborhoodId(),
+                RestUriUtils.parseNeighborhoodId(form.getNeighborhoodUri()).orElse(null),
                 form.getCheckInTime(),
                 form.getCheckOutTime(),
                 List.of(new AvailabilityPeriod(form.getStartDate(), form.getEndDate())),

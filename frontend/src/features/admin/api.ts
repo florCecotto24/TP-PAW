@@ -1,4 +1,5 @@
 import { sessionClient } from '../../session/sessionStore';
+import { collectionQueryPath, getCollectionPath } from '../../api/apiDiscovery';
 import { MediaTypes } from '../../api/mediaTypes';
 import { openAuthenticatedBinary as openAuthenticatedBinaryCore } from '../../api/openAuthenticatedBinary';
 import type { ApiResponse } from '../../api/client';
@@ -27,9 +28,16 @@ export async function openAuthenticatedBinary(link: string): Promise<boolean> {
   return openAuthenticatedBinaryCore(link);
 }
 
-export function userDocumentPath(userSelfLink: string, type: 'license' | 'identity'): string {
-  const base = userSelfLink.endsWith('/') ? userSelfLink.slice(0, -1) : userSelfLink;
-  return `${base}/documents/${type}`;
+export function userDocumentPath(
+  user: Pick<UserDto, 'links'>,
+  type: 'license' | 'identity',
+): string {
+  const self = user.links?.self;
+  const documents = user.links?.documents;
+  const base = documents ?? (self ? `${self.replace(/\/$/, '')}/documents` : null);
+  if (!base) throw new Error('admin.user.missingDocumentsLink');
+  const normalized = base.endsWith('/') ? base.slice(0, -1) : base;
+  return `${normalized}/${type}`;
 }
 
 export async function approveBrand(brandSelfLink: string): Promise<ApiResponse<BrandDto>> {
@@ -57,7 +65,10 @@ export async function rejectModel(modelSelfLink: string): Promise<ApiResponse<vo
 }
 
 export async function fetchPendingModels(): Promise<ApiResponse<ModelDto[]>> {
-  return sessionClient.get<ModelDto[]>('/models?validated=false', { accept: MediaTypes.model });
+  return sessionClient.get<ModelDto[]>(
+    collectionQueryPath('models', { validated: 'false' }),
+    { accept: MediaTypes.model },
+  );
 }
 
 export async function patchCarStatus(
@@ -85,7 +96,7 @@ export interface CreateAdminUserPayload {
 export async function createAdminUser(
   payload: CreateAdminUserPayload,
 ): Promise<ApiResponse<UserDto>> {
-  return sessionClient.post<UserDto>('/users', payload, {
+  return sessionClient.post<UserDto>(getCollectionPath('users'), payload, {
     accept: MediaTypes.userPrivate,
     contentType: MediaTypes.adminCreateUser,
   });

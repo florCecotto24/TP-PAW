@@ -1,11 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../../../components/ryden';
 import HomeCarouselBlock from '../components/HomeCarouselBlock';
 import ExploreSearchForm from '../components/ExploreSearchForm';
 import { useCheapestCars, useRecentCars } from '../hooks';
-import { parseHomeCarouselPages } from '../homeCarouselPages';
+import { parseHomeCarouselPages, withHomeCarouselPage, type HomeCarouselPageKey } from '../homeCarouselPages';
 import { useHomePageAnimations } from '../useHomePageAnimations';
 import { appBasePath } from '../../../appBasePath';
 import { paths } from '../../../routes/paths';
@@ -14,10 +14,17 @@ const HERO_PHOTO_URL = `${appBasePath()}/assets/images/homepage-photo.jpg`;
 
 export default function BrowseHomePage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { cheapestPage, recentPage } = useMemo(
     () => parseHomeCarouselPages(searchParams),
     [searchParams],
+  );
+
+  const setCarouselPage = useCallback(
+    (key: HomeCarouselPageKey, pageIndex: number) => {
+      setSearchParams(withHomeCarouselPage(searchParams, key, pageIndex), { replace: true });
+    },
+    [searchParams, setSearchParams],
   );
 
   const cheapest = useCheapestCars(cheapestPage);
@@ -62,6 +69,10 @@ export default function BrowseHomePage() {
           items={cheapestItems}
           isLoading={cheapest.isLoading}
           isError={cheapest.isError}
+          pageIndex={cheapestPage}
+          onPageChange={(page) => setCarouselPage('cheapestPage', page)}
+          hasPrevPage={cheapestPage > 0}
+          hasNextPage={Boolean(cheapest.data?.page?.next)}
         />
 
         <HomeCarouselBlock
@@ -73,6 +84,10 @@ export default function BrowseHomePage() {
           items={recentItems}
           isLoading={recent.isLoading}
           isError={recent.isError}
+          pageIndex={recentPage}
+          onPageChange={(page) => setCarouselPage('recentPage', page)}
+          hasPrevPage={recentPage > 0}
+          hasNextPage={Boolean(recent.data?.page?.next)}
         />
 
         <section

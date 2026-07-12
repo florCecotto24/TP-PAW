@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getClientConfig } from '../../../api/clientConfig';
+import { formatCurrency } from '../../../api/format';
 import { DetailReservationPanel, LoadingBlock } from '../../../components/ryden';
 import { newReservation } from '../../../routes/paths';
+import type { NewReservationLocationState } from '../../../routes/navigationState';
 import {
   applyRangeProjection,
   dayStartFromYmd,
-  formatReservationCurrency,
   hasCompleteRange,
   initialDefaultDates,
   isMaxBillableViolated,
@@ -16,10 +18,10 @@ import {
 import { useCarBookableSegments } from '../hooks';
 import DetailReservationInlineCalendar from './DetailReservationInlineCalendar';
 
-const MAX_BILLABLE_DAYS = 30;
-
 export interface DetailReservationFormProps {
+  bookableSegmentsLink?: string;
   carId: number;
+  carSelf?: string;
   carName: string;
   dailyPrice: number;
   priceFrom?: boolean;
@@ -49,7 +51,9 @@ function mapSegments(raw: ReturnType<typeof useCarBookableSegments>['data']): Bo
 }
 
 export default function DetailReservationForm({
+  bookableSegmentsLink,
   carId,
+  carSelf,
   carName,
   isOwnerRequesting,
   minimumRentalDays,
@@ -57,7 +61,8 @@ export default function DetailReservationForm({
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const segmentsQuery = useCarBookableSegments(String(carId));
+  const maxBillableDays = getClientConfig().maxBillableDays;
+  const segmentsQuery = useCarBookableSegments(bookableSegmentsLink);
 
   const fromParam = searchParams.get('from') ?? undefined;
   const untilParam = searchParams.get('until') ?? undefined;
@@ -102,7 +107,7 @@ export default function DetailReservationForm({
   const maxViolated = isMaxBillableViolated(
     projection.fromDateTime,
     projection.untilDateTime,
-    MAX_BILLABLE_DAYS,
+    maxBillableDays,
   );
   const minViolated = isMinRentalDaysViolated(
     projection.fromDateTime,
@@ -118,7 +123,7 @@ export default function DetailReservationForm({
 
   const totalLabel =
     projection.total != null
-      ? formatReservationCurrency(projection.total, i18n.language)
+      ? formatCurrency(projection.total)
       : null;
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -139,7 +144,10 @@ export default function DetailReservationForm({
     if (projection.total != null) {
       params.set('reservationTotal', String(projection.total));
     }
-    navigate(`${newReservation(carId)}?${params.toString()}`);
+    navigate(
+      { pathname: newReservation(carId), search: `?${params.toString()}` },
+      { state: carSelf ? ({ carSelf } satisfies NewReservationLocationState) : undefined },
+    );
   };
 
   const defaultMonth = searchParams.get('flexMonth') ?? undefined;
@@ -149,7 +157,7 @@ export default function DetailReservationForm({
       carId={carId}
       carName={carName}
       dailyPrice={0}
-      maxBillableDays={MAX_BILLABLE_DAYS}
+      maxBillableDays={maxBillableDays}
       isOwnerRequesting={isOwnerRequesting}
       minimumRentalDays={minimumRentalDays}
       calendarSlot={

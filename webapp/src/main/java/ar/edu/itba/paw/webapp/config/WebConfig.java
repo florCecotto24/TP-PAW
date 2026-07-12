@@ -34,7 +34,6 @@ import ar.edu.itba.paw.policy.CarValidationPolicy;
 import ar.edu.itba.paw.policy.ListingFormValidationPolicy;
 import ar.edu.itba.paw.policy.MoneyFormatPolicy;
 import ar.edu.itba.paw.policy.ReservationChatPolicy;
-import ar.edu.itba.paw.policy.ReservationFormValidationPolicy;
 import ar.edu.itba.paw.policy.ReservationMessageValidationPolicy;
 import ar.edu.itba.paw.policy.ReviewValidationPolicy;
 import ar.edu.itba.paw.policy.UserValidationPolicy;
@@ -150,12 +149,6 @@ public class WebConfig {
     }
 
     @Bean
-    public ReservationFormValidationPolicy reservationFormValidationPolicy(
-            final AppValidationProperties appValidationProperties) {
-        return appValidationProperties.toReservationFormValidationPolicy();
-    }
-
-    @Bean
     public VerificationCodePolicy verificationCodePolicy(final AppValidationProperties appValidationProperties) {
         return appValidationProperties.toVerificationCodePolicy();
     }
@@ -219,11 +212,11 @@ public class WebConfig {
     }
 
     @Bean(name = "mailTaskExecutor")
-    public Executor mailTaskExecutor() {
+    public Executor mailTaskExecutor(final Environment environment) {
         final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(1);
-        executor.setMaxPoolSize(4);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(environment.getProperty("app.mail.pool.core-size", Integer.class, 1));
+        executor.setMaxPoolSize(environment.getProperty("app.mail.pool.max-size", Integer.class, 4));
+        executor.setQueueCapacity(environment.getProperty("app.mail.pool.queue-capacity", Integer.class, 100));
         executor.setThreadNamePrefix("mail-async-");
         final ClassLoader webAppClassLoader = WebConfig.class.getClassLoader();
         executor.setTaskDecorator(runnable -> () -> {
@@ -236,7 +229,8 @@ public class WebConfig {
             }
         });
         executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(30);
+        executor.setAwaitTerminationSeconds(
+                environment.getProperty("app.mail.pool.await-termination-seconds", Integer.class, 30));
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;

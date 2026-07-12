@@ -156,6 +156,7 @@ export const adminI18n = {
         attachment: 'Ver adjunto',
         attachmentFailed: 'No se pudo abrir el adjunto.',
         unknownSender: 'Desconocido',
+        openFromList: 'Abrí el chat desde el listado de reservas para cargar los mensajes.',
       },
       createAdmin: {
         title: 'Crear Usuario Admin',
@@ -324,6 +325,7 @@ export const adminI18n = {
         attachment: 'View attachment',
         attachmentFailed: 'The attachment could not be opened.',
         unknownSender: 'Unknown',
+        openFromList: 'Open the chat from the reservations list to load messages.',
       },
       createAdmin: {
         title: 'Create Admin User',

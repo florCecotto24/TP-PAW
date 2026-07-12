@@ -27,6 +27,20 @@ public interface FavCarService {
     boolean toggleFavorite(long carId, long userId);
 
     /**
+     * Idempotently marks {@code carId} as favorited by {@code userId}.
+     *
+     * @throws FavoriteValidationException when the car does not exist or {@code userId} owns it.
+     */
+    void addFavorite(long carId, long userId);
+
+    /**
+     * Idempotently removes the favorite mark for the (car, user) pair.
+     *
+     * @throws FavoriteValidationException when the car does not exist or {@code userId} owns it.
+     */
+    void removeFavorite(long carId, long userId);
+
+    /**
      * Paginated "Mis favoritos" listing for {@code userId}, ordered by favorited-at timestamp
      * (most recent first). Only cars in {@code ACTIVE} or {@code PAUSED} status are returned.
      */

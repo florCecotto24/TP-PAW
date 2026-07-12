@@ -259,7 +259,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         stubParticipantAndSender();
         final byte[] pdfBytes = new byte[] {1, 2, 3};
-        final StoredFile storedFile = new StoredFile(
+        final StoredFile storedFile = StoredFile.identified(
                 STORED_FILE_ID,
                 User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
                 "receipt.pdf",
@@ -294,7 +294,7 @@ class ReservationMessageServiceImplTest {
         // 1.Arrange
         stubParticipantAndSender();
         final byte[] pngBytes = new byte[] {9};
-        final StoredFile storedFile = new StoredFile(
+        final StoredFile storedFile = StoredFile.identified(
                 STORED_FILE_ID,
                 User.identities(RIDER_ID, "r@test.com", "R", "Rider"),
                 "shot.png",

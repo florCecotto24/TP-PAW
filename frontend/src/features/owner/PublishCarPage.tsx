@@ -6,8 +6,7 @@ import { ApiError } from '../../api/client';
 import { useSessionStore } from '../../session/sessionStore';
 import type { UserDto } from '../../api/types';
 import { paths, myCarDetail } from '../../routes/paths';
-import { BreadcrumbTrail, LoadingBlock } from '../../components/ryden';
-import ReceiptUploadPicker from '../reservations/components/ReceiptUploadPicker';
+import { BreadcrumbTrail, CatalogSelect, LoadingBlock, ReceiptUploadPicker } from '../../components/ryden';
 import {
   createBrand,
   createModel,
@@ -20,11 +19,10 @@ import {
   publishCar,
   uploadIdentityDocument,
 } from './api';
-import CatalogSelect from './CatalogSelect';
 import GalleryPicker from './GalleryPicker';
 import { hasCbu, useApiErrorMessage } from './hooks';
 import {
-  CAR_VALIDATION,
+  carValidationLimits,
   currentCarYearMax,
   firstPublishCarValidationError,
   normalizePlate,
@@ -452,6 +450,7 @@ function PublishCarForm({
 }) {
   const { t } = useTranslation();
   const errorMessage = useApiErrorMessage();
+  const carValidation = carValidationLimits();
 
   // Catálogo.
   const [brands, setBrands] = useState<BrandDto[]>([]);
@@ -674,7 +673,7 @@ function PublishCarForm({
                       id="publishNewBrand"
                       className="form-control"
                       value={newBrandName}
-                      maxLength={CAR_VALIDATION.brandMaxLength}
+                      maxLength={carValidation.brandMaxLength}
                       onChange={(e) => setNewBrandName(e.target.value)}
                       required
                     />
@@ -706,7 +705,7 @@ function PublishCarForm({
                       id="publishNewModel"
                       className="form-control"
                       value={newModelName}
-                      maxLength={CAR_VALIDATION.modelMaxLength}
+                      maxLength={carValidation.modelMaxLength}
                       onChange={(e) => setNewModelName(e.target.value)}
                       required
                     />
@@ -725,7 +724,7 @@ function PublishCarForm({
                     className="form-control"
                     style={{ textTransform: 'uppercase' }}
                     value={plate}
-                    maxLength={CAR_VALIDATION.plateMaxLength}
+                    maxLength={carValidation.plateMaxLength}
                     onChange={(e) => setPlate(normalizePlate(e.target.value))}
                     required
                   />
@@ -810,7 +809,7 @@ function PublishCarForm({
                     id="publishDescription"
                     className="form-control"
                     rows={3}
-                    maxLength={CAR_VALIDATION.descriptionMaxLength}
+                    maxLength={carValidation.descriptionMaxLength}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
@@ -833,7 +832,7 @@ function PublishCarForm({
                     onChange={(e) => {
                       const file = e.target.files?.[0] ?? null;
                       setInsurance(file);
-                      if (file && file.size > CAR_VALIDATION.maxInsuranceBytes) {
+                      if (file && file.size > carValidation.maxInsuranceBytes) {
                         setError(t('owner.publish.errors.insuranceTooLarge', publishValidationI18nParams()));
                         e.target.value = '';
                         setInsurance(null);

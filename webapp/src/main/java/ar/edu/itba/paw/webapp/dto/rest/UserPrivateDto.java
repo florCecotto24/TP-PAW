@@ -30,7 +30,6 @@ public final class UserPrivateDto {
     private boolean licenseUploaded;
     private boolean identityUploaded;
     private boolean blocked;
-    private Long blockedOverdueReservationId;
     private String role;
     private BigDecimal ratingAsRider;
     private BigDecimal ratingAsOwner;
@@ -49,7 +48,7 @@ public final class UserPrivateDto {
         private final UriInfo uriInfo;
         private BigDecimal ratingAsOwner;
         private BigDecimal ratingAsRider;
-        private Long blockedOverdueReservationId;
+        private String blockedOverdueReservationUri;
 
         private Builder(final User user, final UriInfo uriInfo) {
             this.user = user;
@@ -63,11 +62,11 @@ public final class UserPrivateDto {
         }
 
         /**
-         * When the account is blocked and exactly one reservation has an overdue refund proof, its id
-         * (deep-link target for the blocked banner CTA); {@code null} otherwise (zero or many candidates).
+         * When the account is blocked and exactly one reservation has an overdue refund proof, its
+         * canonical reservation URI (deep-link target for the blocked banner CTA).
          */
-        public Builder blockedOverdueReservationId(final Long blockedOverdueReservationId) {
-            this.blockedOverdueReservationId = blockedOverdueReservationId;
+        public Builder blockedOverdueReservationUri(final String blockedOverdueReservationUri) {
+            this.blockedOverdueReservationUri = blockedOverdueReservationUri;
             return this;
         }
 
@@ -88,13 +87,15 @@ public final class UserPrivateDto {
             dto.licenseUploaded = user.getLicenseFileId().isPresent();
             dto.identityUploaded = user.getIdentityFileId().isPresent();
             dto.blocked = user.isBlocked();
-            dto.blockedOverdueReservationId = user.isBlocked() ? blockedOverdueReservationId : null;
             dto.role = user.getUserRole() == null
                     ? UserRole.USER.name().toLowerCase(Locale.ROOT)
                     : user.getUserRole().name().toLowerCase(Locale.ROOT);
             dto.ratingAsOwner = ratingAsOwner;
             dto.ratingAsRider = ratingAsRider;
             dto.links = UserLinks.build(user, uriInfo);
+            if (user.isBlocked() && blockedOverdueReservationUri != null) {
+                dto.links = dto.links.withRelated("blocked-overdue-reservation", blockedOverdueReservationUri);
+            }
             return dto;
         }
     }
@@ -217,14 +218,6 @@ public final class UserPrivateDto {
 
     public void setBlocked(final boolean blocked) {
         this.blocked = blocked;
-    }
-
-    public Long getBlockedOverdueReservationId() {
-        return blockedOverdueReservationId;
-    }
-
-    public void setBlockedOverdueReservationId(final Long blockedOverdueReservationId) {
-        this.blockedOverdueReservationId = blockedOverdueReservationId;
     }
 
     public String getRole() {

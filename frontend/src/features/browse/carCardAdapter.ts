@@ -1,5 +1,5 @@
 import { idFromUri, lastPathSegment } from '../../api/uri';
-import { carDetail } from '../../routes/paths';
+import { carDetailTo, type AppLinkTarget } from '../../routes/navigationState';
 import type { CarSummaryDto } from './types';
 
 export function isCarOwnedByUser(car: CarSummaryDto, userSelf: string | null | undefined): boolean {
@@ -32,8 +32,9 @@ export function carDtoToConsumerCard(car: CarSummaryDto) {
   };
 }
 
-export function carDetailHref(car: CarSummaryDto, extraQuery?: Record<string, string>): string | null {
-  const carId = idFromUri(car.links?.self);
+export function carDetailHref(car: CarSummaryDto, extraQuery?: Record<string, string>): AppLinkTarget | null {
+  const carSelf = car.links?.self;
+  const carId = idFromUri(carSelf);
   if (!carId) return null;
-  return carDetail(carId, extraQuery ?? undefined);
+  return carDetailTo(carId, carSelf, extraQuery);
 }

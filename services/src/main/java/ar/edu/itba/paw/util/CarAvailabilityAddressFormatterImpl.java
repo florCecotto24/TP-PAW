@@ -28,17 +28,23 @@ public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilit
     public String formatPublicPickupLocation(final CarAvailability availability) {
         return formatPublicPickupLocation(
                 availability.getStartPointStreet(),
-                availability.getNeighborhoodId().orElse(null));
+                availability.getNeighborhoodId().orElse(null),
+                availability.getNeighborhood());
     }
 
     private String formatPublicPickupLocation(final String startPointStreet, final Long neighborhoodId) {
+        return formatPublicPickupLocation(startPointStreet, neighborhoodId, null);
+    }
+
+    private String formatPublicPickupLocation(
+            final String startPointStreet,
+            final Long neighborhoodId,
+            final Neighborhood loadedNeighborhood) {
         final String street = startPointStreet == null ? "" : startPointStreet.trim();
         if (neighborhoodId == null) {
             return street;
         }
-        final String neighborhoodName = locationService.findNeighborhoodById(neighborhoodId)
-                .map(Neighborhood::getName)
-                .orElse("");
+        final String neighborhoodName = resolveNeighborhoodName(neighborhoodId, loadedNeighborhood);
         if (neighborhoodName.isBlank()) {
             return street;
         }
@@ -46,6 +52,21 @@ public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilit
             return neighborhoodName.trim();
         }
         return street + ", " + neighborhoodName.trim();
+    }
+
+    private String resolveNeighborhoodName(final Long neighborhoodId, final Neighborhood loadedNeighborhood) {
+        if (loadedNeighborhood != null) {
+            final String loadedName = loadedNeighborhood.getName();
+            if (loadedName != null && !loadedName.isBlank()) {
+                return loadedName.trim();
+            }
+        }
+        if (neighborhoodId == null) {
+            return "";
+        }
+        return locationService.findNeighborhoodById(neighborhoodId)
+                .map(Neighborhood::getName)
+                .orElse("");
     }
 
     /** Whether the rider may see the full address including door number (payment proof uploaded). */
@@ -66,9 +87,9 @@ public final class CarAvailabilityAddressFormatterImpl implements CarAvailabilit
         if (availability.getNeighborhoodId().isEmpty()) {
             return streetWithNumber;
         }
-        final String neighborhoodName = locationService.findNeighborhoodById(availability.getNeighborhoodId().get())
-                .map(Neighborhood::getName)
-                .orElse("");
+        final String neighborhoodName = resolveNeighborhoodName(
+                availability.getNeighborhoodId().get(),
+                availability.getNeighborhood());
         if (neighborhoodName.isBlank()) {
             return streetWithNumber;
         }

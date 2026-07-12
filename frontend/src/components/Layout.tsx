@@ -28,7 +28,9 @@ export default function Layout() {
       <NavBar />
       <div className={isHomeRoute ? 'app-shell app-shell--flush' : 'app-shell'}>
         {showBlockedBanner ? (
-          <BlockedUserBanner singleReservationId={currentUser?.blockedOverdueReservationId} />
+          <BlockedUserBanner
+            blockedOverdueReservationUri={currentUser?.links?.['blocked-overdue-reservation']}
+          />
         ) : null}
         <main>
           <Outlet />

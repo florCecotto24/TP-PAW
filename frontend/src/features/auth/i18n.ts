@@ -26,7 +26,7 @@ const es: Record<string, string> = {
   'auth.register.submitting': 'Creando cuenta...',
   'auth.register.haveAccount': '¿Ya tenés cuenta?',
   'auth.register.emailTaken': 'Ese email ya está registrado.',
-  'auth.register.passwordHint': 'Usá entre 8 y 72 caracteres.',
+  'auth.register.passwordHint': 'Usá entre {{min}} y {{max}} caracteres.',
   'auth.register.passwordTooShort': 'La contraseña debe tener al menos {{count}} caracteres.',
   'auth.register.passwordTooLong': 'La contraseña puede tener como máximo {{count}} caracteres.',
 
@@ -83,7 +83,7 @@ const en: Record<string, string> = {
   'auth.register.submitting': 'Creating account...',
   'auth.register.haveAccount': 'Already have an account?',
   'auth.register.emailTaken': 'That email is already registered.',
-  'auth.register.passwordHint': 'Use between 8 and 72 characters.',
+  'auth.register.passwordHint': 'Use between {{min}} and {{max}} characters.',
   'auth.register.passwordTooShort': 'Password must be at least {{count}} characters.',
   'auth.register.passwordTooLong': 'Password must be at most {{count}} characters.',
 

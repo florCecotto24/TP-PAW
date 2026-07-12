@@ -20,6 +20,8 @@ import { resolveApiUrl } from './uri';
 //   - §1.6  paginación SOLO por header `Link` (RFC 5988) + X-Total-Count.
 //   - hipervínculos: se navega por los `links` de los DTOs (follow), no se
 //     construyen URLs a mano.
+//   - GET condicional: si una respuesta previa trajo `ETag`, los refetch envían
+//     `If-None-Match` y un `304` reutiliza el cuerpo cacheado en memoria.
 //
 // El estado de tokens NO vive acá: se inyecta por callbacks (getAccessToken /
 // getRefreshToken / onTokens / onAuthenticatedUser) para que el sessionStore
@@ -55,6 +57,11 @@ export interface RequestOptions {
   extraHeaders?: Record<string, string>;
   /** Habilita/inhabilita el reintento 401→refresh (default: true). */
   retryOnUnauthorized?: boolean;
+  /**
+   * En GET, revalidar con `If-None-Match` cuando hay un `ETag` cacheado para la
+   * misma URL + `Accept` (default: true). Ignorado en otros verbos.
+   */
+  conditionalGet?: boolean;
 }
 
 /** Respuesta tipada: cuerpo parseado + metadata de paginación + status. */
@@ -66,6 +73,8 @@ export interface ApiResponse<T> {
   location: string | null;
   /** Acceso crudo a headers por si una feature lo necesita. */
   headers: Headers;
+  /** True cuando el server respondió 304 y el cuerpo vino del cache local. */
+  notModified?: boolean;
 }
 
 /** Error de API que conserva status + ErrorDto para mapear a i18n. */
@@ -201,11 +210,27 @@ export async function getLinkCollectionPage<TItem>(
   return { ...collectionRes, data };
 }
 
+interface ConditionalGetCacheEntry {
+  etag: string;
+  data: unknown;
+}
+
+/** Cache key for in-memory conditional GET (resolved URL + negotiated Accept). */
+export function conditionalGetCacheKey(resolvedUrl: string, accept?: string): string {
+  return `${accept ?? ''}\u0000${resolvedUrl}`;
+}
+
 export class HypermediaClient {
   /** Serializa renovaciones concurrentes cuando el access ya expiró. */
   private refreshInFlight: Promise<void> | null = null;
+  private readonly conditionalGetCache = new Map<string, ConditionalGetCacheEntry>();
 
   constructor(private readonly tokens: TokenAccessors) {}
+
+  /** Limpia entradas `If-None-Match` (p.ej. al cerrar sesión). */
+  clearConditionalGetCache(): void {
+    this.conditionalGetCache.clear();
+  }
 
   /**
    * Renueva el par de tokens con el refresh antes del request si el access venció.
@@ -342,7 +367,7 @@ export class HypermediaClient {
 
   private async toApiResponse<T>(res: Response): Promise<ApiResponse<T>> {
     let data: unknown = undefined;
-    if (res.status !== 204 && res.status !== 205) {
+    if (res.status !== 204 && res.status !== 205 && res.status !== 304) {
       const text = await res.text();
       if (text) {
         try {
@@ -408,8 +433,47 @@ export class HypermediaClient {
 
   /** Núcleo del cliente para respuestas JSON/texto (ver {@link fetchWithRetry}). */
   async request<T = unknown>(path: string, opts: RequestOptions = {}): Promise<ApiResponse<T>> {
-    const res = await this.fetchWithRetry(path, opts, opts.method ?? 'GET');
-    return this.toApiResponse<T>(res);
+    const method = opts.method ?? 'GET';
+    const useConditionalGet = method === 'GET' && opts.conditionalGet !== false;
+    const resolvedUrl = this.buildUrl(path, opts.query);
+    const cacheKey = useConditionalGet ? conditionalGetCacheKey(resolvedUrl, opts.accept) : null;
+    const cachedEntry = cacheKey ? this.conditionalGetCache.get(cacheKey) : undefined;
+
+    let requestOpts = opts;
+    if (cachedEntry?.etag) {
+      requestOpts = {
+        ...opts,
+        extraHeaders: {
+          ...opts.extraHeaders,
+          'If-None-Match': cachedEntry.etag,
+        },
+      };
+    }
+
+    const res = await this.fetchWithRetry(path, requestOpts, method);
+
+    if (res.status === 304) {
+      if (!cachedEntry) {
+        throw new ApiError(304);
+      }
+      return {
+        data: cachedEntry.data as T,
+        status: 304,
+        page: extractPageLinks(res.headers),
+        location: null,
+        headers: res.headers,
+        notModified: true,
+      };
+    }
+
+    const apiRes = await this.toApiResponse<T>(res);
+    if (cacheKey && res.status === 200) {
+      const etag = res.headers.get('ETag');
+      if (etag) {
+        this.conditionalGetCache.set(cacheKey, { etag, data: apiRes.data });
+      }
+    }
+    return apiRes;
   }
 
   /**
