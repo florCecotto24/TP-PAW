@@ -16,7 +16,9 @@ public final class CurrentUserResolver {
     public RydenUserDetails requirePrincipal() {
         final RydenUserDetails details = currentPrincipalOrNull();
         if (details == null) {
-            throw new javax.ws.rs.NotAuthorizedException("Authentication required.");
+            // 2-arg overload: (message, challenge). The 1-arg form would treat its String as the
+            // WWW-Authenticate challenge, emitting a malformed header; pass "Bearer" explicitly (RFC 7235).
+            throw new javax.ws.rs.NotAuthorizedException("Authentication required.", "Bearer");
         }
         return details;
     }

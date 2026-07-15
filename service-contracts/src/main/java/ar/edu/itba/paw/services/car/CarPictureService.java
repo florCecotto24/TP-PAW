@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.dto.Page;
+import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
 
 import ar.edu.itba.paw.services.file.ImageService;
 import ar.edu.itba.paw.services.file.StoredFileService;
@@ -27,6 +28,9 @@ public interface CarPictureService {
 
     /** Gallery rows for one SQL page (ascending {@code display_order}). */
     Page<CarPicture> findByCarPaginated(long carId, int zeroBasedPage, int pageSize);
+
+    /** Metadata-only paginated gallery (no blobs loaded); backs the list endpoint. */
+    Page<CarPictureSummary> findSummariesByCarPaginated(long carId, int zeroBasedPage, int pageSize);
 
     /** First gallery item by display order (cover / primary thumbnail). */
     Optional<CarPicture> findPrimaryPictureByCarId(final long carId);

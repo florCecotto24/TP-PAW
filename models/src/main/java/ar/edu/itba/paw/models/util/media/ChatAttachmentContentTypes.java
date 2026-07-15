@@ -1,5 +1,7 @@
 package ar.edu.itba.paw.models.util.media;
 
+import java.util.Locale;
+
 /**
  * Allowed MIME types for reservation chat attachments. Rejects unknown types even when the browser sends a generic
  * {@code application/octet-stream}.
@@ -13,9 +15,9 @@ public final class ChatAttachmentContentTypes {
         if (contentType == null || contentType.isBlank()) {
             return isAllowedByExtension(fileName);
         }
-        final String t = contentType.trim().toLowerCase();
+        final String t = contentType.trim().toLowerCase(Locale.ROOT);
         if (t.startsWith("image/")) {
-            return true;
+            return isAllowedImageType(t);
         }
         if (t.startsWith("video/")) {
             return isAllowedVideoType(t);
@@ -35,6 +37,15 @@ public final class ChatAttachmentContentTypes {
         };
     }
 
+    // Explicit raster allowlist: scriptable image/svg+xml is rejected (inline stored-XSS vector).
+    private static boolean isAllowedImageType(final String contentType) {
+        return "image/jpeg".equals(contentType)
+                || "image/png".equals(contentType)
+                || "image/gif".equals(contentType)
+                || "image/webp".equals(contentType)
+                || "image/bmp".equals(contentType);
+    }
+
     private static boolean isAllowedVideoType(final String contentType) {
         return "video/mp4".equals(contentType)
                 || "video/webm".equals(contentType)
@@ -45,14 +56,14 @@ public final class ChatAttachmentContentTypes {
         if (fileName == null || fileName.isBlank()) {
             return false;
         }
-        final String lower = fileName.trim().toLowerCase();
+        final String lower = fileName.trim().toLowerCase(Locale.ROOT);
         final int dot = lower.lastIndexOf('.');
         if (dot < 0 || dot == lower.length() - 1) {
             return false;
         }
         final String ext = lower.substring(dot + 1);
         return switch (ext) {
-            case "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg" -> true;
+            case "jpg", "jpeg", "png", "gif", "webp", "bmp" -> true;
             case "pdf" -> true;
             case "doc", "docx" -> true;
             case "mp4", "webm", "mov" -> true;

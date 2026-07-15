@@ -313,15 +313,16 @@ public class CarController {
                 .path(String.valueOf(car.getId()))
                 .build();
         final Car refreshed = carService.getCarById(car.getId()).orElse(car);
-        return Response.created(location).entity(CarDto.from(refreshed, uriInfo)).build();
+        // Owner just created this car: it is the owner's own detail view, so the plate is theirs to see.
+        return Response.created(location).entity(CarDto.from(refreshed, uriInfo, true)).build();
     }
 
     @GET
     @Path("/{id}")
     @Produces({VndMediaType.CAR_SUMMARY_V1_JSON, VndMediaType.CAR_V1_JSON})
     public Response getCar(@PathParam("id") final long id, @Context final Request request) {
-        final Car car = carResourceAccess.requireViewableCar(
-                id, currentUserResolver.currentPrincipalOrNull());
+        final RydenUserDetails viewer = currentUserResolver.currentPrincipalOrNull();
+        final Car car = carResourceAccess.requireViewableCar(id, viewer);
         if (carRepresentationSupport.acceptsCarSummary(httpHeaders)) {
             return ConditionalJsonResponses.okOrNotModified(
                     request,
@@ -329,11 +330,13 @@ public class CarController {
                     VndMediaType.CAR_SUMMARY_V1_JSON,
                     () -> CarSummaryDto.from(car, uriInfo));
         }
+        // Plate is a sensitive identifier: only expose it to the owner/admin, never on the public detail.
+        final boolean includePlate = carResourceAccess.isOwnerOrAdmin(car, viewer);
         return ConditionalJsonResponses.okOrNotModified(
                 request,
                 CarRepresentationVersions.etagValue(car, CarRepresentationVersions.DETAIL),
                 VndMediaType.CAR_V1_JSON,
-                () -> CarDto.from(car, uriInfo));
+                () -> CarDto.from(car, uriInfo, includePlate));
     }
 
     /**
@@ -372,7 +375,8 @@ public class CarController {
         carService.updateMinimumRentalDays(id, form.getMinimumRentalDays());
         final Car updated = carService.getCarById(id)
                 .orElseThrow(() -> new CarNotFoundException(id));
-        return Response.ok(CarDto.from(updated, uriInfo)).build();
+        // Owner/admin edit path: the caller is authorized on the car, so the plate is visible to them.
+        return Response.ok(CarDto.from(updated, uriInfo, true)).build();
     }
 
     // Not a @PreAuthorize candidate: "status" transitions apply owner- or admin-only rules
@@ -403,7 +407,8 @@ public class CarController {
 
         final Car updated = carService.getCarById(id)
                 .orElseThrow(() -> new CarNotFoundException(id));
-        return Response.ok(CarDto.from(updated, uriInfo)).build();
+        // Owner/admin edit path: the caller is authorized on the car, so the plate is visible to them.
+        return Response.ok(CarDto.from(updated, uriInfo, true)).build();
     }
 
     @DELETE
@@ -441,8 +446,9 @@ public class CarController {
         if (page.getTotalItems() == 0L) {
             return Response.noContent().build();
         }
+        // Full-car representation is the admin moderation catalog only (admin may see plates).
         final List<CarDto> dtos = page.getContent().stream()
-                .map(car -> CarDto.from(car, uriInfo))
+                .map(car -> CarDto.from(car, uriInfo, true))
                 .collect(Collectors.toList());
         return pagedFullCarsOk(dtos, paging, (int) page.getTotalItems());
     }

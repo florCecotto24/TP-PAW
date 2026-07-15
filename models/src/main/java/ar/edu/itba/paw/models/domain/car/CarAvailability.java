@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -63,11 +64,11 @@ public class CarAvailability {
     public static class KindConverter implements AttributeConverter<Kind, String> {
         @Override
         public String convertToDatabaseColumn(final Kind attribute) {
-            return attribute == null ? null : attribute.name().toLowerCase();
+            return attribute == null ? null : attribute.name().toLowerCase(Locale.ROOT);
         }
         @Override
         public Kind convertToEntityAttribute(final String dbData) {
-            return dbData == null ? null : Kind.valueOf(dbData.toUpperCase());
+            return dbData == null ? null : Kind.valueOf(dbData.toUpperCase(Locale.ROOT));
         }
     }
 

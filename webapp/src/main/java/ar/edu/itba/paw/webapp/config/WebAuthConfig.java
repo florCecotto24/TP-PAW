@@ -126,6 +126,29 @@ public class WebAuthConfig {
                 .authenticationManager(authenticationManager)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(ctx -> ctx.securityContextRepository(securityContextRepository))
+                .headers(headers -> headers
+                        // X-Content-Type-Options: nosniff — never let the browser MIME-sniff a response
+                        // body into an executable type (defence in depth alongside per-binary headers).
+                        .contentTypeOptions(contentTypeOptions -> {
+                        })
+                        // X-Frame-Options: DENY — the SPA never frames itself (clickjacking protection),
+                        // aligned with the CSP frame-ancestors 'none'.
+                        .frameOptions(frameOptions -> frameOptions.deny())
+                        // Referrer-Policy: strip path/query when navigating cross-origin so internal
+                        // resource URLs (which may carry ids) never leak in the Referer header.
+                        .referrerPolicy(referrer -> referrer.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
+                                        .ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        // Conservative CSP. Scripts stay 'self' (the Vite bundle is same-origin). Google
+                        // Fonts are allowed explicitly (the SPA loads them from fonts.googleapis.com /
+                        // fonts.gstatic.com); 'unsafe-inline' on style-src covers React/Bootstrap inline
+                        // styles. Everything else is locked to self, images also allow data: URIs, no
+                        // plugins (object-src 'none'), no framing ancestors, fixed base-uri.
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; img-src 'self' data:; "
+                                        + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                                        + "font-src 'self' https://fonts.gstatic.com; "
+                                        + "object-src 'none'; base-uri 'self'; frame-ancestors 'none'")))
                 .authorizeHttpRequests(auth -> auth
                         // SPA entrypoint + static fallbacks (served by the default servlet on Jersey 404).
                         .requestMatchers(ant("/"), ant("/index.html"), ant("/favicon.ico")).permitAll()

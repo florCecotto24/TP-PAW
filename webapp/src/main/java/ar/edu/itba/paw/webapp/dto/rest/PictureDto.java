@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.dto.rest;
 import javax.ws.rs.core.UriInfo;
 
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
 import ar.edu.itba.paw.webapp.util.RestUriUtils;
 
 /** Gallery item metadata ({@code application/vnd.paw.picture.v1+json}). */
@@ -33,6 +34,28 @@ public final class PictureDto {
         }
         dto.links = LinksDto.ofSelf(
                         RestUriUtils.carPictureUri(uriInfo, carId, picture.getId()).toString())
+                .withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString());
+        return dto;
+    }
+
+    /** Same representation as {@link #from(CarPicture, UriInfo)} but from the blob-free list projection. */
+    public static PictureDto from(final CarPictureSummary summary, final UriInfo uriInfo) {
+        final PictureDto dto = new PictureDto();
+        dto.displayOrder = summary.getDisplayOrder();
+        final long carId = summary.getCarId();
+        if (summary.isVideo()) {
+            dto.kind = "video";
+            dto.contentType = summary.getStoredFileContentType() != null
+                    ? summary.getStoredFileContentType()
+                    : "video/mp4";
+        } else {
+            dto.kind = "image";
+            dto.contentType = summary.getImageContentType() != null
+                    ? summary.getImageContentType()
+                    : "image/jpeg";
+        }
+        dto.links = LinksDto.ofSelf(
+                        RestUriUtils.carPictureUri(uriInfo, carId, summary.getId()).toString())
                 .withRelated("car", RestUriUtils.carUri(uriInfo, carId).toString());
         return dto;
     }

@@ -40,7 +40,7 @@ public final class ChatAttachmentKindResolver {
             if (dot > 0) {
                 final String ext = lower.substring(dot + 1);
                 if (switch (ext) {
-                    case "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg" -> true;
+                    case "jpg", "jpeg", "png", "gif", "webp", "bmp" -> true;
                     default -> false;
                 }) {
                     return ChatAttachmentKind.IMAGE;

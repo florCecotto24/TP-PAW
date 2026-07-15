@@ -1,9 +1,9 @@
 package ar.edu.itba.paw.webapp.security.jwt;
 
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 
@@ -13,6 +13,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
@@ -45,9 +47,9 @@ public final class JwtTokenService implements TokenService {
     private final AppSecurityJwtProperties properties;
     private final SecretKey signingKey;
 
-    public JwtTokenService(final AppSecurityJwtProperties properties) {
+    public JwtTokenService(final AppSecurityJwtProperties properties, final Environment environment) {
         this.properties = properties;
-        this.signingKey = resolveSigningKey(properties.secret());
+        this.signingKey = resolveSigningKey(properties.secret(), environment);
     }
 
     @Override
@@ -131,13 +133,28 @@ public final class JwtTokenService implements TokenService {
         return uri.toString();
     }
 
-    private static SecretKey resolveSigningKey(final String configuredSecret) {
+    private static SecretKey resolveSigningKey(final String configuredSecret, final Environment environment) {
         if (configuredSecret != null && !configuredSecret.isBlank()) {
-            return Keys.hmacShaKeyFor(configuredSecret.getBytes(StandardCharsets.UTF_8));
+            // Derive a fixed 256-bit key via SHA-256 so any configured secret length is accepted
+            // (raw bytes would make hmacShaKeyFor reject secrets shorter than 32 bytes).
+            return Keys.hmacShaKeyFor(sha256(configuredSecret));
         }
-        final byte[] random = new byte[64];
-        new SecureRandom().nextBytes(random);
-        LOGGER.atWarn().log("app.security.jwt.secret is blank — using a random key (tokens reset on restart)");
-        return Keys.hmacShaKeyFor(Base64.getEncoder().encodeToString(random).getBytes(StandardCharsets.UTF_8));
+        // Blank secret: a random key is ephemeral (no operator controls it, tokens die on restart).
+        // Tolerable ONLY under local/test; in a deployed profile we FAIL FAST instead of silently
+        // booting on a throwaway signing key that invalidates every JWT on each redeploy.
+        if (environment != null && environment.acceptsProfiles(Profiles.of("local", "test"))) {
+            LOGGER.atWarn().log("app.security.jwt.secret is blank — using a random key (tokens reset on restart)");
+            return Jwts.SIG.HS256.key().build();
+        }
+        throw new IllegalStateException("app.security.jwt.secret must be configured outside the local/test "
+                + "profiles; refusing to start with a random, ephemeral JWT signing key.");
+    }
+
+    private static byte[] sha256(final String value) {
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+        } catch (final NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 must be available to derive the JWT signing key", e);
+        }
     }
 }

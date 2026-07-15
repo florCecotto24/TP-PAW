@@ -25,4 +25,11 @@ public class ImageTest {
         Assertions.assertFalse(Image.isImageContentType("application/pdf"));
         Assertions.assertFalse(Image.isImageContentType("image"));
     }
+
+    @Test
+    public void testIsImageContentTypeRejectsScriptableSvg() {
+        // 3. Assert — SVG is XML that can carry <script>; serving it inline is a stored-XSS vector.
+        Assertions.assertFalse(Image.isImageContentType("image/svg+xml"));
+        Assertions.assertFalse(Image.isImageContentType("IMAGE/SVG+XML"));
+    }
 }

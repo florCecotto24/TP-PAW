@@ -3,10 +3,18 @@ import type { PageLinks } from '../../../api/types';
 
 interface AdminPaginationProps {
   page: PageLinks;
-  onGo: (link: string | undefined) => void;
+  /** Página actual (0-based, como SearchPage): leída de la URL por la pantalla. */
+  currentPage: number;
+  /** Navega a la página `pageIndex` (0-based); la pantalla la persiste en `?page=N`. */
+  onPageChange: (pageIndex: number) => void;
 }
 
-export default function AdminPagination({ page, onGo }: AdminPaginationProps) {
+/**
+ * Controles de paginación URL-driven. La disponibilidad de prev/next se decide
+ * por los rels del header `Link` (RFC 5988) que vinieron en la respuesta; al
+ * clickear se navega por número de página (la pantalla lo persiste en `?page=N`).
+ */
+export default function AdminPagination({ page, currentPage, onPageChange }: AdminPaginationProps) {
   const { t } = useTranslation();
   if (!page.prev && !page.next && page.total == null) {
     return null;
@@ -26,7 +34,7 @@ export default function AdminPagination({ page, onGo }: AdminPaginationProps) {
           type="button"
           className="btn btn-outline-secondary btn-sm"
           disabled={!page.prev}
-          onClick={() => onGo(page.prev)}
+          onClick={() => onPageChange(Math.max(0, currentPage - 1))}
         >
           {t('admin.common.prev')}
         </button>
@@ -34,7 +42,7 @@ export default function AdminPagination({ page, onGo }: AdminPaginationProps) {
           type="button"
           className="btn btn-outline-secondary btn-sm"
           disabled={!page.next}
-          onClick={() => onGo(page.next)}
+          onClick={() => onPageChange(currentPage + 1)}
         >
           {t('admin.common.next')}
         </button>

@@ -1,10 +1,15 @@
-import { createElement } from 'react';
+import { createElement, lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import { RedirectWithSearch } from '../../router/redirects';
 import { paths } from '../../routes/paths';
+// BrowseHomePage se queda EAGER: es la ruta index (`/`), lo primero que ve
+// cualquier visitante anónimo -- lazy-loadearla sumaría un roundtrip extra
+// (bundle -> fetch del chunk -> primer paint) justo en la página de mayor
+// tráfico. search / cars-detail SÍ son buenos candidatos: solo se llega ahí
+// navegando, nunca son el primer render.
 import BrowseHomePage from './pages/HomePage';
-import SearchPage from './pages/SearchPage';
-import CarDetailPage from './pages/CarDetailPage';
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const CarDetailPage = lazy(() => import('./pages/CarDetailPage'));
 
 export const browseRoutes: RouteObject[] = [
   { index: true, element: createElement(BrowseHomePage) },

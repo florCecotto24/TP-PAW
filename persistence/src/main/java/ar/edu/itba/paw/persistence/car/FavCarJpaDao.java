@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -214,6 +215,6 @@ public class FavCarJpaDao implements FavCarDao {
 
     private static List<String> toStatusDbValues(final Collection<Car.Status> statuses) {
         // Car.StatusConverter stores enum names as lowercase; the IN clause must match that format.
-        return statuses.stream().map(s -> s.name().toLowerCase()).collect(Collectors.toList());
+        return statuses.stream().map(s -> s.name().toLowerCase(Locale.ROOT)).collect(Collectors.toList());
     }
 }

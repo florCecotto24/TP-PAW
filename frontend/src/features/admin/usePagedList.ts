@@ -11,23 +11,38 @@ interface PagedState<T> {
 }
 
 export interface PagedList<T> extends PagedState<T> {
-  /** Recarga la colección desde `initialPath`. */
+  /** Recarga la página actual desde el servidor (tras una mutación). */
   reload: () => void;
-  /** Navega un link de paginación (rel next/prev/first/last). */
-  goTo: (link: string | undefined) => void;
 }
 
 /**
- * Lista paginada genérica del área admin. Hace el primer GET a `initialPath`
- * con el `accept` dado y luego navega por los links de paginación del header
- * `Link` (RFC 5988) — nunca arma URLs a mano. Un 204 (sin resultados) se
- * traduce a lista vacía.
+ * Inyecta `?page=N` (1-based) en una ruta de colección preservando cualquier
+ * query previo (filtros). No arma URNs a mano: `page` es un query param de
+ * colección legítimo (§1.6/§16, @QueryParam("page") @DefaultValue("1")).
+ */
+function pathWithPage(basePath: string, page: number): string {
+  const [path, existing = ''] = basePath.split('?');
+  const usp = new URLSearchParams(existing);
+  usp.set('page', String(Math.max(1, page)));
+  return `${path}?${usp.toString()}`;
+}
+
+/**
+ * Lista paginada genérica del área admin, URL-driven: la PÁGINA la decide el
+ * caller (que la lee de la URL vía useSearchParams) y se la pasa por `page`
+ * (1-based). El hook hace el GET a `basePath?page=N` con el `accept` dado — o,
+ * si se pasa `itemAccept`, resuelve una colección de links (patrón A) siguiendo
+ * cada `self`. La navegación entre páginas es re-render por cambio de `page`
+ * (no se siguen los links del header, pero `res.page` se expone para
+ * habilitar/inhabilitar prev/next y mostrar el total). Un 204 (sin resultados)
+ * -> lista vacía; `basePath` vacío -> lista vacía sin fetch (guards, sin id).
  *
  * `deps` reinicia la carga cuando cambian (p.ej. filtros).
  */
 export function usePagedList<T>(
-  initialPath: string,
+  basePath: string,
   accept: string,
+  page: number,
   deps: unknown[] = [],
   itemAccept?: string,
 ): PagedList<T> {
@@ -63,24 +78,17 @@ export function usePagedList<T>(
   );
 
   useEffect(() => {
-    if (!initialPath) {
+    if (!basePath) {
       setState({ items: [], page: {}, loading: false, error: null });
       return;
     }
-    void fetchPath(initialPath);
+    void fetchPath(pathWithPage(basePath, page));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPath, accept, itemAccept, ...deps]);
+  }, [basePath, accept, itemAccept, page, ...deps]);
 
   const reload = useCallback(() => {
-    void fetchPath(initialPath);
-  }, [fetchPath, initialPath]);
+    if (basePath) void fetchPath(pathWithPage(basePath, page));
+  }, [fetchPath, basePath, page]);
 
-  const goTo = useCallback(
-    (link: string | undefined) => {
-      if (link) void fetchPath(link);
-    },
-    [fetchPath],
-  );
-
-  return { ...state, reload, goTo };
+  return { ...state, reload };
 }

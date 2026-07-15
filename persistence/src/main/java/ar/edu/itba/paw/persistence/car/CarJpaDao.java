@@ -259,7 +259,7 @@ public class CarJpaDao implements CarDao {
         if (!criteria.getCarStatusFilters().isEmpty()) {
             jpql.append("AND c.status IN (:ownerCarStatuses) ");
             params.put("ownerCarStatuses", criteria.getCarStatusFilters().stream()
-                    .map(s -> Car.Status.valueOf(s.toUpperCase()))
+                    .map(s -> Car.Status.valueOf(s.toUpperCase(Locale.ROOT)))
                     .collect(Collectors.toList()));
         }
         final String textQuery = criteria.getTextQuery();
@@ -272,19 +272,19 @@ public class CarJpaDao implements CarDao {
         if (!criteria.getCarTypes().isEmpty()) {
             jpql.append("AND c.carModel.type IN (:ownerCarTypes) ");
             params.put("ownerCarTypes", criteria.getCarTypes().stream()
-                    .map(s -> Car.Type.valueOf(s.toUpperCase()))
+                    .map(s -> Car.Type.valueOf(s.toUpperCase(Locale.ROOT)))
                     .collect(Collectors.toList()));
         }
         if (!criteria.getTransmissions().isEmpty()) {
             jpql.append("AND c.transmission IN (:ownerTransmissions) ");
             params.put("ownerTransmissions", criteria.getTransmissions().stream()
-                    .map(s -> Car.Transmission.valueOf(s.toUpperCase()))
+                    .map(s -> Car.Transmission.valueOf(s.toUpperCase(Locale.ROOT)))
                     .collect(Collectors.toList()));
         }
         if (!criteria.getPowertrains().isEmpty()) {
             jpql.append("AND c.powertrain IN (:ownerPowertrains) ");
             params.put("ownerPowertrains", criteria.getPowertrains().stream()
-                    .map(s -> Car.Powertrain.valueOf(s.toUpperCase()))
+                    .map(s -> Car.Powertrain.valueOf(s.toUpperCase(Locale.ROOT)))
                     .collect(Collectors.toList()));
         }
         if (criteria.getMinPrice() != null || criteria.getMaxPrice() != null) {
@@ -299,6 +299,12 @@ public class CarJpaDao implements CarDao {
             jpql.append("AND EXISTS (SELECT 1 FROM CarAvailability la WHERE la.car = c "
                     + "AND la.kind = :ownerOfferedKind AND la.dayPrice <= :ownerMaxPrice) ");
             params.put("ownerMaxPrice", criteria.getMaxPrice());
+        }
+        // Must mirror the native content query's excludeCarId (see appendOwnerCarNativeSqlFilters): without
+        // it the COUNT overcounts by one whenever a car is excluded, so the total diverges from the page.
+        if (criteria.getExcludeCarId() != null) {
+            jpql.append("AND c.id <> :excludeCarId ");
+            params.put("excludeCarId", criteria.getExcludeCarId());
         }
         appendOwnerCarJpqlRatingBandFilter(jpql, criteria.getRatingBands());
     }

@@ -35,6 +35,7 @@ import ar.edu.itba.paw.exception.car.CarNotFoundException;
 import ar.edu.itba.paw.exception.car.CarValidationException;
 import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
 import ar.edu.itba.paw.models.dto.Page;
 import ar.edu.itba.paw.services.car.CarPictureService;
 import ar.edu.itba.paw.services.car.CarService;
@@ -109,10 +110,11 @@ public class CarPictureController {
             @QueryParam("pageSize") final Integer pageSizeParam) {
         carResourceAccess.requireViewableCar(carId, currentUserResolver.currentPrincipalOrNull());
         final PaginationParams paging = paginationSupport.forCarGallery(page, pageSizeParam);
-        final Page<CarPicture> picturePage = carPictureService.findByCarPaginated(
+        // Metadata-only projection: the gallery list needs id/order/content-type, not the blobs.
+        final Page<CarPictureSummary> picturePage = carPictureService.findSummariesByCarPaginated(
                 carId, paging.getZeroBasedPage(), paging.getPageSize());
         final List<PictureDto> dtos = picturePage.getContent().stream()
-                .map(picture -> PictureDto.from(picture, uriInfo))
+                .map(summary -> PictureDto.from(summary, uriInfo))
                 .collect(Collectors.toList());
         final int totalItems = (int) picturePage.getTotalItems();
         if (totalItems == 0L || dtos.isEmpty()) {

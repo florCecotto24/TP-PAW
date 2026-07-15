@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.car;
 
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,12 @@ public interface CarPictureDao {
     long countByCarId(long carId);
 
     List<CarPicture> findByCarIdOrderByDisplayOrderAsc(long carId, int offset, int limit);
+
+    /**
+     * Metadata-only projection of a gallery page (no blobs materialized). Used by the paginated list
+     * endpoint, which only needs id/order/content-type. The bytes are served separately per picture.
+     */
+    List<CarPictureSummary> findSummariesByCarIdOrderByDisplayOrderAsc(long carId, int offset, int limit);
 
     Optional<CarPicture> findFirstByCarIdOrderByDisplayOrderAsc(long carId);
 

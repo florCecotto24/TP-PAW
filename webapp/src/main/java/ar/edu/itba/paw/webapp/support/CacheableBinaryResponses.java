@@ -30,6 +30,36 @@ public final class CacheableBinaryResponses {
     private CacheableBinaryResponses() {
     }
 
+    /**
+     * Builds a 200 for a SENSITIVE binary (KYC documents, payment/refund receipts, chat attachments):
+     * {@code Cache-Control: private, no-store} so no shared or local cache retains it, {@code nosniff}
+     * so the browser cannot MIME-sniff it into an executable type, and {@code Content-Disposition:
+     * attachment} so it downloads rather than rendering inline (defuses any stored-XSS via a crafted
+     * upload). No ETag/conditional caching: these must never be cached.
+     */
+    public static Response sensitive(final BinaryContent content, final String downloadFileName) {
+        final CacheControl noStore = new CacheControl();
+        noStore.setPrivate(true);
+        noStore.setNoStore(true);
+        noStore.setNoCache(true);
+        final String safeName = sanitizeFileName(downloadFileName);
+        return Response.ok(content.getBytes())
+                .type(content.getContentType())
+                .cacheControl(noStore)
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Disposition", "attachment; filename=\"" + safeName + "\"")
+                .build();
+    }
+
+    private static String sanitizeFileName(final String name) {
+        if (name == null || name.isBlank()) {
+            return "download";
+        }
+        // Strip anything that could break out of the quoted filename or inject header/path characters.
+        final String cleaned = name.replaceAll("[\\r\\n\"\\\\/]", "_").trim();
+        return cleaned.isEmpty() ? "download" : cleaned;
+    }
+
     /** Builds a conditional 200 (or 304 if {@code request}'s {@code If-None-Match} still matches). */
     public static Response of(final Request request, final BinaryContent content) {
         final EntityTag etag = new EntityTag(sha256Hex(content.getBytes()));

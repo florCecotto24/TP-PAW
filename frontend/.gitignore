@@ -3,3 +3,8 @@ dist
 *.local
 .vite
 coverage
+# Node/npm installed by frontend-maven-plugin (now under target/, never in the source tree)
+node/
+use-node.sh
+# TS incremental build cache
+*.tsbuildinfo

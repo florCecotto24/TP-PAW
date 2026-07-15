@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import type { UserDto } from '../../../api/types';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { useSessionStore } from '../../../session/sessionStore';
@@ -90,16 +92,23 @@ export default function AdminUsersPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busySelf, setBusySelf] = useState<string | null>(null);
 
+  // La página vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable y resiste refresh.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageIndex = pageIndexFromParams(searchParams);
+  const goToPage = useCallback(
+    (next: number) => setSearchParams(withPageIndex(searchParams, next)),
+    [searchParams, setSearchParams],
+  );
+
   const listPath = useMemo(() => {
     return collectionQueryPath('users', {
-      page: '1',
       role: applied.role || undefined,
       blocked: applied.blocked || undefined,
       q: applied.q || undefined,
     });
   }, [applied]);
 
-  const list = usePagedList<UserDto>(listPath, MediaTypes.userPrivate, [applied]);
+  const list = usePagedList<UserDto>(listPath, MediaTypes.userPrivate, pageIndex + 1, [applied]);
 
   const hasActiveFilters = Boolean(applied.q || applied.role || applied.blocked);
 
@@ -126,11 +135,14 @@ export default function AdminUsersPage() {
       role: draft.role,
       blocked: draft.blocked,
     });
+    // Cambiar filtros vuelve a la primera página (el conteo cambia).
+    setSearchParams(withPageIndex(searchParams, 0));
   };
 
   const onClearFilters = () => {
     setDraft(EMPTY_FILTERS);
     setApplied(EMPTY_FILTERS);
+    setSearchParams(withPageIndex(searchParams, 0));
   };
 
   const onViewDocument = async (user: UserDto, type: 'license' | 'identity') => {
@@ -345,7 +357,7 @@ export default function AdminUsersPage() {
         </div>
       ) : null}
 
-      <AdminPagination page={list.page} onGo={list.goTo} />
+      <AdminPagination page={list.page} currentPage={pageIndex} onPageChange={goToPage} />
     </>
   );
 }

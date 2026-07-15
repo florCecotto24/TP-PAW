@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import ar.edu.itba.paw.models.domain.car.CarPicture;
+import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
 import ar.edu.itba.paw.persistence.car.CarPictureDao;
 import ar.edu.itba.paw.persistence.support.DaoIntegrationTestSupport;
 
@@ -152,6 +153,33 @@ class CarPictureJpaDaoTest extends DaoIntegrationTestSupport {
         // 2. Act / 3. Assert
         Assertions.assertEquals(Optional.of(5), dao.findMaxDisplayOrderByCarId(carId));
         Assertions.assertTrue(dao.findMaxDisplayOrderByCarId(carId + 9999).isEmpty());
+    }
+
+    @Test
+    void testFindSummariesByCarIdPaginatesAndResolvesContentTypesWithoutBlobs() {
+        // 1. Arrange — two images + one video, out of display order.
+        insertCarPicture(imageId, 2);
+        insertCarPicture(imageId, 1);
+        insertCarPictureFromVideo(carId, storedFileId, 3);
+
+        // 2. Act — first page of 2 (ordered by display_order).
+        final List<CarPictureSummary> pageOne = dao.findSummariesByCarIdOrderByDisplayOrderAsc(carId, 0, 2);
+        final List<CarPictureSummary> pageTwo = dao.findSummariesByCarIdOrderByDisplayOrderAsc(carId, 2, 2);
+
+        // 3. Assert — order preserved, and image vs video content types resolved from the scalar columns.
+        Assertions.assertEquals(2, pageOne.size());
+        Assertions.assertEquals(1, pageTwo.size());
+        Assertions.assertEquals(1, pageOne.get(0).getDisplayOrder());
+        Assertions.assertFalse(pageOne.get(0).isVideo());
+        Assertions.assertEquals("image/jpeg", pageOne.get(0).getImageContentType());
+        Assertions.assertNull(pageOne.get(0).getStoredFileContentType());
+
+        final CarPictureSummary video = pageTwo.get(0);
+        Assertions.assertEquals(3, video.getDisplayOrder());
+        Assertions.assertTrue(video.isVideo());
+        Assertions.assertEquals("video/mp4", video.getStoredFileContentType());
+        Assertions.assertNull(video.getImageContentType());
+        Assertions.assertEquals(carId, video.getCarId());
     }
 
     private void insertCarPicture(final long imageId, final int displayOrder) {

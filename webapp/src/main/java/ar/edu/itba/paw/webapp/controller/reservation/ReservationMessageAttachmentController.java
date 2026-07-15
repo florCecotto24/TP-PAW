@@ -3,6 +3,7 @@ package ar.edu.itba.paw.webapp.controller.reservation;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.reservation.ReservationMessageService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 
 import javax.ws.rs.GET;
@@ -50,8 +51,9 @@ public class ReservationMessageAttachmentController {
     }
 
     private Response binaryResponse(final BinaryContent content) {
-        return Response.ok(content.getBytes())
-                .type(content.getContentType())
-                .build();
+        // Chat attachments are participant-private uploads: never cache, never sniff, always download.
+        // (The SPA previews images via an authenticated fetch + blob URL, so attachment disposition here
+        //  does not break inline preview.)
+        return CacheableBinaryResponses.sensitive(content, content.getFileName());
     }
 }

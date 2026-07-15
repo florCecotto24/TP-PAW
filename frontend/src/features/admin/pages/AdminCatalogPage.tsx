@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { approveBrand, approveModel, fetchPendingModels, rejectBrand, rejectModel } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -14,9 +16,19 @@ export default function AdminCatalogPage() {
   const { t } = useTranslation();
   const errorMessage = useAdminErrorMessage();
 
+  // La página (de marcas pendientes) vive en la URL (?page=N, 0-based como SearchPage)
+  // -> bookmarkeable y resiste refresh.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageIndex = pageIndexFromParams(searchParams);
+  const goToPage = useCallback(
+    (next: number) => setSearchParams(withPageIndex(searchParams, next)),
+    [searchParams, setSearchParams],
+  );
+
   const brands = usePagedList<BrandDto>(
-    collectionQueryPath('brands', { validated: 'false', page: '1' }),
+    collectionQueryPath('brands', { validated: 'false' }),
     MediaTypes.brand,
+    pageIndex + 1,
   );
   const [models, setModels] = useState<ModelDto[]>([]);
   const [modelsLoading, setModelsLoading] = useState(true);
@@ -117,7 +129,7 @@ export default function AdminCatalogPage() {
             </ul>
           </div>
         ) : null}
-        <AdminPagination page={brands.page} onGo={brands.goTo} />
+        <AdminPagination page={brands.page} currentPage={pageIndex} onPageChange={goToPage} />
       </section>
 
       <section>

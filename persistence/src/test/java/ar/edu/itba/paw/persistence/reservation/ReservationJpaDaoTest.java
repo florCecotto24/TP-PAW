@@ -524,6 +524,83 @@ class ReservationJpaDaoTest extends DaoIntegrationTestSupport {
                 riderId, carId, startDate, endDate, status, new BigDecimal("100.00"), null).getId();
     }
 
+    // --- Review scheduler queries (regression for the `rv.madeByRider` JPQL path) -----------------
+    // These three queries navigate `rv.madeByRider` inside a NOT EXISTS subquery. A prior version
+    // referenced `rv.id.madeByRider` (a leftover from an old @EmbeddedId), which Hibernate cannot
+    // dereference against the surrogate-id Review entity: building the query threw at runtime, so
+    // every scheduler run failed. Executing each method here validates the JPQL path end to end.
+
+    @Test
+    void testFindReservationsForRiderReviewInviteEmailExecutesAndRespectsExistingReview() {
+        // 1. Arrange — an ended reservation with no rider review yet.
+        final OffsetDateTime now = OffsetDateTime.parse("2026-06-01T12:00:00Z");
+        final long pendingId = insertReservation("finished", false, null, null);
+
+        // 2. Act
+        final List<Reservation> pending = dao.findReservationsForRiderReviewInviteEmail(now);
+
+        // 3. Assert — surfaces while no rider review exists, disappears once one does.
+        Assertions.assertTrue(pending.stream().map(Reservation::getId).toList().contains(pendingId));
+        insertReview(pendingId, true);
+        Assertions.assertFalse(dao.findReservationsForRiderReviewInviteEmail(now)
+                .stream().map(Reservation::getId).toList().contains(pendingId));
+    }
+
+    @Test
+    void testFindReservationsForRiderReviewAutoSkipExecutesAndRespectsExistingReview() {
+        // 1. Arrange
+        final OffsetDateTime now = OffsetDateTime.parse("2026-06-01T12:00:00Z");
+        final OffsetDateTime cutoff = OffsetDateTime.parse("2026-06-05T00:00:00Z");
+        final long candidateId = insertReservation("finished", false, null, null);
+
+        // 2. Act + 3. Assert
+        Assertions.assertTrue(dao.findReservationsForRiderReviewAutoSkip(now, cutoff)
+                .stream().map(Reservation::getId).toList().contains(candidateId));
+        insertReview(candidateId, true);
+        Assertions.assertFalse(dao.findReservationsForRiderReviewAutoSkip(now, cutoff)
+                .stream().map(Reservation::getId).toList().contains(candidateId));
+    }
+
+    @Test
+    void testFindReservationsForOwnerReviewAutoSkipExecutesAndRespectsExistingReview() {
+        // 1. Arrange — a returned reservation with no owner review yet.
+        final OffsetDateTime now = OffsetDateTime.parse("2026-06-10T12:00:00Z");
+        final OffsetDateTime cutoff = OffsetDateTime.parse("2026-06-15T00:00:00Z");
+        final long candidateId = insertReturnedReservation(
+                "finished", OffsetDateTime.parse("2026-06-08T00:00:00Z"));
+
+        // 2. Act + 3. Assert
+        Assertions.assertTrue(dao.findReservationsForOwnerReviewAutoSkip(now, cutoff)
+                .stream().map(Reservation::getId).toList().contains(candidateId));
+        insertReview(candidateId, false);
+        Assertions.assertFalse(dao.findReservationsForOwnerReviewAutoSkip(now, cutoff)
+                .stream().map(Reservation::getId).toList().contains(candidateId));
+    }
+
+    private void insertReview(final long reservationId, final boolean madeByRider) {
+        jdbcTemplate.update(
+                "INSERT INTO reviews (reservation_id, made_by_rider, car_id, created_at, rating) "
+                        + "VALUES (?, ?, ?, ?, ?)",
+                reservationId, madeByRider, carId, OffsetDateTime.now(ZoneOffset.UTC), 5);
+    }
+
+    private long insertReturnedReservation(final String statusLower, final OffsetDateTime carReturnedAt) {
+        final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        jdbcTemplate.update(
+                "INSERT INTO reservations (rider_id, car_id, start_date, end_date, status, "
+                        + "total_price, created_at, updated_at, car_returned, car_returned_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                riderId, carId,
+                LocalDate.of(2026, 4, 1).atStartOfDay(),
+                LocalDate.of(2026, 4, 3).atStartOfDay(),
+                statusLower, new BigDecimal("100.00"),
+                now, now,
+                true,
+                carReturnedAt);
+        return jdbcTemplate.queryForObject(
+                "SELECT MAX(id) FROM reservations WHERE car_id = ?", Long.class, carId);
+    }
+
     private long insertReservation(
             final String statusLower,
             final boolean refundRequired,

@@ -1,9 +1,12 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import NewReservationPage from './pages/NewReservationPage';
-import MyReservationsPage from './pages/MyReservationsPage';
-import ReservationDetailPage from './pages/ReservationDetailPage';
-import ReservationConfirmationPage from './pages/ReservationConfirmationPage';
 import { reservationsI18n } from './i18n';
+
+// Ninguna es la ruta index de la app -> code-splitting seguro.
+const NewReservationPage = lazy(() => import('./pages/NewReservationPage'));
+const MyReservationsPage = lazy(() => import('./pages/MyReservationsPage'));
+const ReservationDetailPage = lazy(() => import('./pages/ReservationDetailPage'));
+const ReservationConfirmationPage = lazy(() => import('./pages/ReservationConfirmationPage'));
 
 export const reservationsRoutes: RouteObject[] = [
   { path: 'cars/:carId/reservation/new', element: <NewReservationPage /> },

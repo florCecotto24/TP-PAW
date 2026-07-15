@@ -25,6 +25,7 @@ import ar.edu.itba.paw.services.car.CarService;
 import ar.edu.itba.paw.services.file.StoredFileService;
 import ar.edu.itba.paw.webapp.support.BinaryContentResponses;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.facade.CarInsuranceUploadFacade;
 
 /**
@@ -99,7 +100,11 @@ public class CarInsuranceController {
     }
 
     private Response binaryResponse(final BinaryContent content) {
-        return BinaryContentResponses.inline(content, "insurance");
+        // Insurance documents are owner/admin-only and sensitive: never cache, never sniff, always download.
+        final String name = content.getFileName() == null || content.getFileName().isBlank()
+                ? BinaryContentResponses.fallbackFileName("insurance", content.getContentType())
+                : content.getFileName();
+        return CacheableBinaryResponses.sensitive(content, name);
     }
 
     private String resolveUploadFileName(final String contentType) {

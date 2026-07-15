@@ -45,15 +45,24 @@ public class Image {
         // For Hibernate
     }
 
+    /**
+     * Explicit allowlist of safe raster image MIME types (case-insensitive). Anything else is rejected,
+     * notably {@code image/svg+xml}: SVG is an XML document that can carry {@code <script>}/event handlers,
+     * so serving it inline would enable stored XSS. Accepting a blanket {@code image/*} would let SVG (and
+     * any other future vector/markup image type) through, so we enumerate the safe raster formats instead.
+     */
     public static boolean isImageContentType(final String contentType) {
         if (contentType == null) {
             return false;
         }
-        final String t = contentType.trim();
+        final String t = contentType.trim().toLowerCase(java.util.Locale.ROOT);
         if (t.isEmpty()) {
             return false;
         }
-        return t.regionMatches(true, 0, "image/", 0, 6);
+        return switch (t) {
+            case "image/jpeg", "image/png", "image/gif", "image/webp" -> true;
+            default -> false;
+        };
     }
 
     /* package */ Image(final long id, final String name, final String contentType, final byte[] data) {

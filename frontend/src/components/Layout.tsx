@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from './NavBar';
 import Footer from './Footer';
-import { BlockedUserBanner } from './ryden';
+import { BlockedUserBanner, LoadingBlock } from './ryden';
 import { useDocumentTitle } from '../i18n/useDocumentTitle';
 import { useSessionStore } from '../session/sessionStore';
 import { paths } from '../routes/paths';
@@ -33,7 +33,11 @@ export default function Layout() {
           />
         ) : null}
         <main>
-          <Outlet />
+          {/* Suspense boundary: cubre las páginas lazy-loadeadas de browse
+              (excepto Home), owner, reservations, profile y admin. */}
+          <Suspense fallback={<LoadingBlock variant="page" className="py-5" />}>
+            <Outlet />
+          </Suspense>
         </main>
         <Footer />
       </div>

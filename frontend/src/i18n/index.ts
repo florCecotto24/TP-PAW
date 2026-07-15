@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import es from './locales/es.json';
 import en from './locales/en.json';
+import { setAcceptLanguageProvider } from '../api/client';
 import { authI18n } from '../features/auth';
 import { browseI18n } from '../features/browse';
 import { ownerI18n } from '../features/owner';
@@ -16,6 +17,30 @@ import { rydenI18n } from '../components/ryden/i18n';
 
 export const SUPPORTED_LOCALES = ['es', 'en'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
+
+const LOCALE_STORAGE_KEY = 'ryden.locale';
+
+export function isSupported(value: string): value is Locale {
+  return (SUPPORTED_LOCALES as readonly string[]).includes(value);
+}
+
+/**
+ * Idioma inicial (LINEAMIENTOS §3.3, i18n client-side): preferencia previamente elegida
+ * (localStorage, sobrevive refresh) → idioma del browser (`navigator.language`) → default `es`.
+ */
+function detectInitialLocale(): Locale {
+  try {
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (saved && isSupported(saved)) {
+      return saved;
+    }
+  } catch {
+    /* localStorage no disponible (SSR/test sin jsdom): se ignora */
+  }
+  const navLang = typeof navigator !== 'undefined' ? (navigator.language ?? '') : '';
+  const prefix = navLang.slice(0, 2).toLowerCase();
+  return isSupported(prefix) ? prefix : 'es';
+}
 
 type Tree = { [key: string]: string | Tree };
 
@@ -103,12 +128,14 @@ const enBundle = bundle(
   adminI18n.en,
 );
 
+const initialLocale = detectInitialLocale();
+
 void i18n.use(initReactI18next).init({
   resources: {
     es: { translation: esBundle },
     en: { translation: enBundle },
   },
-  lng: 'es',
+  lng: initialLocale,
   fallbackLng: 'en',
   interpolation: { escapeValue: false }, // React ya escapa
   returnNull: false,
@@ -121,7 +148,22 @@ function syncDocumentLang(lng: string): void {
   }
 }
 
-syncDocumentLang(i18n.language);
-i18n.on('languageChanged', syncDocumentLang);
+// lang inicial = idioma resuelto al arrancar (no el 'es' estático del HTML).
+syncDocumentLang(initialLocale);
+
+// El cliente HTTP manda `Accept-Language` con el idioma activo en cada request (LINEAMIENTOS §3.3),
+// sin acoplar la capa api a i18n: se inyecta el idioma vía este provider.
+setAcceptLanguageProvider(() => i18n.language || null);
+
+// Persistimos la elección para que sobreviva al refresh (y alimente detectInitialLocale)
+// y reflejamos el idioma activo en `<html lang>` (a11y/SEO).
+i18n.on('languageChanged', (lng) => {
+  syncDocumentLang(lng);
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, lng);
+  } catch {
+    /* localStorage no disponible: se ignora */
+  }
+});
 
 export default i18n;

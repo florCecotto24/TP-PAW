@@ -48,8 +48,16 @@ public final class CarDto {
     }
 
     public static CarDto from(final Car car, final UriInfo uriInfo) {
+        return from(car, uriInfo, false);
+    }
+
+    /**
+     * @param includePlate whether to expose the licence plate (a sensitive identifier). Only owner/admin
+     *                     callers may see it; public/anonymous detail views must pass {@code false}.
+     */
+    public static CarDto from(final Car car, final UriInfo uriInfo, final boolean includePlate) {
         final CarDto dto = new CarDto();
-        dto.plate = car.getPlate();
+        dto.plate = includePlate ? car.getPlate() : null;
         dto.year = car.getYear().orElse(null);
         dto.powertrain = CarRestEnums.toRestName(car.getPowertrain());
         dto.transmission = CarRestEnums.toRestName(car.getTransmission());

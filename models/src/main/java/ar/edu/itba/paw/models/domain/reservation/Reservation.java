@@ -2,6 +2,7 @@ package ar.edu.itba.paw.models.domain.reservation;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -53,11 +54,11 @@ public class Reservation {
     public static class StatusConverter implements AttributeConverter<Status, String> {
         @Override
         public String convertToDatabaseColumn(final Status attribute) {
-            return attribute == null ? null : attribute.name().toLowerCase();
+            return attribute == null ? null : attribute.name().toLowerCase(Locale.ROOT);
         }
         @Override
         public Status convertToEntityAttribute(final String dbData) {
-            return dbData == null ? null : Status.valueOf(dbData.toUpperCase());
+            return dbData == null ? null : Status.valueOf(dbData.toUpperCase(Locale.ROOT));
         }
     }
 

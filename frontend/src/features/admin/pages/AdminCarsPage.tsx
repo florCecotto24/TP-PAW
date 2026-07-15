@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import { patchCarStatus } from '../api';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -27,11 +28,25 @@ export default function AdminCarsPage() {
   const [busyLink, setBusyLink] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingCarAction | null>(null);
 
+  // La página vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable y resiste refresh.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageIndex = pageIndexFromParams(searchParams);
+  const goToPage = useCallback(
+    (next: number) => setSearchParams(withPageIndex(searchParams, next)),
+    [searchParams, setSearchParams],
+  );
+
   const listPath = useMemo(() => {
-    return collectionQueryPath('cars', { page: '1', status: statusFilter || undefined });
+    return collectionQueryPath('cars', { status: statusFilter || undefined });
   }, [statusFilter]);
 
-  const list = usePagedList<CarDto>(listPath, MediaTypes.car, [statusFilter]);
+  const list = usePagedList<CarDto>(listPath, MediaTypes.car, pageIndex + 1, [statusFilter]);
+
+  const onStatusFilterChange = (value: CarStatus | '') => {
+    setStatusFilter(value);
+    // Cambiar el filtro vuelve a la primera página.
+    setSearchParams(withPageIndex(searchParams, 0));
+  };
 
   const confirmAction = async () => {
     if (!pending) return;
@@ -63,7 +78,7 @@ export default function AdminCarsPage() {
           id="adminCarStatus"
           className="form-select form-select-sm w-auto"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as CarStatus | '')}
+          onChange={(e) => onStatusFilterChange(e.target.value as CarStatus | '')}
         >
           {STATUS_FILTERS.map((s) => (
             <option key={s || 'all'} value={s}>
@@ -147,7 +162,7 @@ export default function AdminCarsPage() {
         </div>
       ) : null}
 
-      <AdminPagination page={list.page} onGo={list.goTo} />
+      <AdminPagination page={list.page} currentPage={pageIndex} onPageChange={goToPage} />
 
       {pending ? (
         <div className="modal d-block" tabIndex={-1} role="dialog" aria-modal="true">

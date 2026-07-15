@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import { fetchUserPublic } from '../api';
 import { Avatar, ChatAttachmentPreview, EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
@@ -29,8 +30,17 @@ export default function AdminReservationChatPage() {
   const messagesLinkFromNav = (location.state as AdminReservationChatLocationState | null)?.messagesLink;
   const errorMessage = useAdminErrorMessage();
 
-  const messagesPath = messagesLinkFromNav ?? (id ? `/reservations/${id}/messages?page=1` : '');
-  const list = usePagedList<MessageDto>(messagesPath, MediaTypes.message, [id]);
+  // La página del chat vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable
+  // y resiste refresh (al recargar se pierde el link de nav y se cae al fallback por id).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageIndex = pageIndexFromParams(searchParams);
+  const goToPage = useCallback(
+    (next: number) => setSearchParams(withPageIndex(searchParams, next)),
+    [searchParams, setSearchParams],
+  );
+
+  const messagesPath = messagesLinkFromNav ?? (id ? `/reservations/${id}/messages` : '');
+  const list = usePagedList<MessageDto>(messagesPath, MediaTypes.message, pageIndex + 1, [id]);
 
   const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
 
@@ -161,7 +171,7 @@ export default function AdminReservationChatPage() {
         </div>
       ) : null}
 
-      <AdminPagination page={list.page} onGo={list.goTo} />
+      <AdminPagination page={list.page} currentPage={pageIndex} onPageChange={goToPage} />
     </>
   );
 }

@@ -37,10 +37,15 @@ public final class ReservationDtoEnricher {
         final boolean hasPaymentReceipt = reservation.getPaymentReceiptFileId().isPresent();
         final boolean hasRefundReceipt = reservation.getPaymentRefundReceiptFileId().isPresent();
 
+        // The owner's CBU is a sensitive bank identifier; expose it only while the reservation is PENDING,
+        // the single state where the rider needs it to transfer the payment. Once accepted/finished/
+        // cancelled there is no reason to keep serving it to any participant.
         String ownerCbu = null;
-        final Optional<User> ownerOpt = userService.getUserById(ownerId);
-        if (ownerOpt.isPresent()) {
-            ownerCbu = ownerOpt.get().getCbu().orElse(null);
+        if (reservation.getStatus() == Reservation.Status.PENDING) {
+            final Optional<User> ownerOpt = userService.getUserById(ownerId);
+            if (ownerOpt.isPresent()) {
+                ownerCbu = ownerOpt.get().getCbu().orElse(null);
+            }
         }
 
         String pickupStreet = null;

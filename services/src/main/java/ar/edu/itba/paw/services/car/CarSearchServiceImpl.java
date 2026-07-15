@@ -308,7 +308,7 @@ public class CarSearchServiceImpl implements CarSearchService {
             if (s == null || s.isBlank()) {
                 continue;
             }
-            final String u = s.trim().toUpperCase();
+            final String u = s.trim().toUpperCase(Locale.ROOT);
             if (RATING_BANDS.contains(u)) {
                 out.add(u);
             }

@@ -121,7 +121,7 @@ public class ReviewJpaDao implements ReviewDao {
                                 + "FROM reviews r "
                                 + "JOIN reservations res ON res.id = r.reservation_id "
                                 + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
-                                + "ORDER BY r.created_at DESC "
+                                + "ORDER BY r.created_at DESC, r.id DESC "
                                 + "LIMIT :limit OFFSET :offset")
                 .setParameter("carId", carId)
                 .setParameter("limit", pageSize)
@@ -133,18 +133,17 @@ public class ReviewJpaDao implements ReviewDao {
         }
 
         final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
-        final List<Review> reviews = em.createQuery(
+        final List<Review> reviews = hydrateInOrder(ids, em.createQuery(
                         "FROM Review r "
                                 + "JOIN FETCH r.reservation res "
                                 + "JOIN FETCH res.rider rider "
                                 + "JOIN FETCH res.car c "
                                 + "JOIN FETCH c.owner owner "
                                 + "LEFT JOIN FETCH r.image img "
-                                + "WHERE r.id IN :ids "
-                                + "ORDER BY r.createdAt DESC",
+                                + "WHERE r.id IN :ids",
                         Review.class)
                 .setParameter("ids", ids)
-                .getResultList();
+                .getResultList());
 
         final List<CarPublicReview> content = reviews.stream()
                 .map(r -> {
@@ -178,7 +177,7 @@ public class ReviewJpaDao implements ReviewDao {
                                 + "FROM reviews r "
                                 + "JOIN reservations res ON res.id = r.reservation_id "
                                 + "WHERE res.car_id = :carId AND r.rating IS NOT NULL "
-                                + "ORDER BY r.created_at DESC "
+                                + "ORDER BY r.created_at DESC, r.id DESC "
                                 + "LIMIT :limit OFFSET :offset")
                 .setParameter("carId", carId)
                 .setParameter("limit", pageSize)
@@ -190,18 +189,17 @@ public class ReviewJpaDao implements ReviewDao {
         }
 
         final List<Long> ids = idRows.stream().map(Number::longValue).collect(Collectors.toList());
-        final List<Review> reviews = em.createQuery(
+        final List<Review> reviews = hydrateInOrder(ids, em.createQuery(
                         "FROM Review r "
                                 + "JOIN FETCH r.reservation res "
                                 + "JOIN FETCH res.rider rider "
                                 + "JOIN FETCH res.car c "
                                 + "JOIN FETCH c.owner owner "
                                 + "LEFT JOIN FETCH r.image img "
-                                + "WHERE r.id IN :ids "
-                                + "ORDER BY r.createdAt DESC",
+                                + "WHERE r.id IN :ids",
                         Review.class)
                 .setParameter("ids", ids)
-                .getResultList();
+                .getResultList());
         return new Page<>(reviews, page, pageSize, total != null ? total : 0L);
     }
 
@@ -327,7 +325,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "JOIN cars c ON c.id = res.car_id "
                     + "WHERE r.made_by_rider = TRUE AND c.owner_id = :userId "
                     + "AND r.rating IS NOT NULL "
-                    + "ORDER BY r.created_at DESC "
+                    + "ORDER BY r.created_at DESC, r.id DESC "
                     + "LIMIT :limit";
         } else {
             // counterparty is the rider -> reviews written by owners -> reviewer = owner
@@ -336,7 +334,7 @@ public class ReviewJpaDao implements ReviewDao {
                     + "JOIN reservations res ON res.id = r.reservation_id "
                     + "WHERE r.made_by_rider = FALSE AND res.rider_id = :userId "
                     + "AND r.rating IS NOT NULL "
-                    + "ORDER BY r.created_at DESC "
+                    + "ORDER BY r.created_at DESC, r.id DESC "
                     + "LIMIT :limit";
         }
         @SuppressWarnings("unchecked")
@@ -442,7 +440,7 @@ public class ReviewJpaDao implements ReviewDao {
                                 + "  (r.made_by_rider = TRUE AND c.owner_id = :userId)"
                                 + "  OR (r.made_by_rider = FALSE AND res.rider_id = :userId)"
                                 + ") "
-                                + "ORDER BY r.created_at DESC "
+                                + "ORDER BY r.created_at DESC, r.id DESC "
                                 + "LIMIT :limit OFFSET :offset")
                 .setParameter("userId", userId)
                 .setParameter("limit", pageSize)
@@ -491,5 +489,25 @@ public class ReviewJpaDao implements ReviewDao {
 
     private static BigDecimal round2(final Double avg) {
         return avg == null ? null : BigDecimal.valueOf(avg).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Reorders the JPQL-hydrated reviews to match the order of the native id step. A JPQL
+     * {@code WHERE r.id IN :ids} query does NOT preserve the {@code :ids} order, so without this the
+     * page would come back in an arbitrary (implementation-defined) order — breaking the stable,
+     * tie-broken {@code created_at DESC, id DESC} ordering established by the id query and causing rows
+     * to appear duplicated or missing across pages.
+     */
+    private static List<Review> hydrateInOrder(final List<Long> ids, final List<Review> hydrated) {
+        final Map<Long, Review> byId = hydrated.stream()
+                .collect(Collectors.toMap(Review::getId, Function.identity()));
+        final List<Review> ordered = new ArrayList<>(ids.size());
+        for (final Long id : ids) {
+            final Review review = byId.get(id);
+            if (review != null) {
+                ordered.add(review);
+            }
+        }
+        return ordered;
     }
 }

@@ -22,6 +22,7 @@ import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.reservation.ReservationService;
 import ar.edu.itba.paw.webapp.security.auth.userdetails.RydenUserDetails;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 import ar.edu.itba.paw.webapp.support.CurrentUserResolver;
 
 /**
@@ -77,8 +78,7 @@ public class ReservationPaymentReceiptController {
     }
 
     private Response binaryResponse(final BinaryContent content) {
-        return Response.ok(content.getBytes())
-                .type(content.getContentType())
-                .build();
+        // Payment/refund receipts are sensitive: never cache, never sniff, always download.
+        return CacheableBinaryResponses.sensitive(content, content.getFileName());
     }
 }

@@ -17,6 +17,7 @@ import ar.edu.itba.paw.models.domain.car.Car;
 import ar.edu.itba.paw.models.domain.car.CarPicture;
 import ar.edu.itba.paw.models.domain.file.Image;
 import ar.edu.itba.paw.models.domain.file.StoredFile;
+import ar.edu.itba.paw.models.dto.car.CarPictureSummary;
 import ar.edu.itba.paw.persistence.car.CarPictureDao;
 
 @Transactional(readOnly = true)
@@ -77,6 +78,25 @@ public class CarPictureJpaDao implements CarPictureDao {
                                 + "LEFT JOIN FETCH cp.storedFile "
                                 + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
                         CarPicture.class)
+                .setParameter("carId", carId)
+                .setFirstResult(Math.max(0, offset))
+                .setMaxResults(Math.max(1, limit))
+                .getResultList();
+    }
+
+    @Override
+    public List<CarPictureSummary> findSummariesByCarIdOrderByDisplayOrderAsc(
+            final long carId, final int offset, final int limit) {
+        // Projection with a plain LEFT JOIN (NOT JOIN FETCH): only the scalar contentType columns are
+        // read, so the image/stored-file byte[] blobs of the whole page are never loaded into memory.
+        return em.createQuery(
+                        "SELECT NEW ar.edu.itba.paw.models.dto.car.CarPictureSummary("
+                                + "cp.id, cp.car.id, cp.displayOrder, img.contentType, sf.contentType) "
+                                + "FROM CarPicture cp "
+                                + "LEFT JOIN cp.image img "
+                                + "LEFT JOIN cp.storedFile sf "
+                                + "WHERE cp.car.id = :carId ORDER BY cp.displayOrder ASC",
+                        CarPictureSummary.class)
                 .setParameter("carId", carId)
                 .setFirstResult(Math.max(0, offset))
                 .setMaxResults(Math.max(1, limit))

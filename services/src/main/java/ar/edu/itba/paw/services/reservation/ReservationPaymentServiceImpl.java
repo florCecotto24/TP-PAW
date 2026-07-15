@@ -51,6 +51,8 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     private final ReservationServiceSupport support;
     private final ReservationQueryService queryService;
     private final ReservationMailComposer mailComposer;
+    private final ExpiredPaymentProofRowCanceller expiredPaymentProofRowCanceller;
+    private final ReservationSweepRowProcessor sweepRowProcessor;
 
     @Autowired
     public ReservationPaymentServiceImpl(
@@ -60,7 +62,9 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
             final PaymentReceiptUploadPolicy paymentReceiptUploadPolicy,
             final ReservationServiceSupport support,
             final ReservationQueryService queryService,
-            final ReservationMailComposer mailComposer) {
+            final ReservationMailComposer mailComposer,
+            final ExpiredPaymentProofRowCanceller expiredPaymentProofRowCanceller,
+            final ReservationSweepRowProcessor sweepRowProcessor) {
         this.reservationService = reservationService;
         this.userService = userService;
         this.storedFileService = storedFileService;
@@ -68,6 +72,8 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         this.support = support;
         this.queryService = queryService;
         this.mailComposer = mailComposer;
+        this.expiredPaymentProofRowCanceller = expiredPaymentProofRowCanceller;
+        this.sweepRowProcessor = sweepRowProcessor;
     }
 
     // ---------------------------------------------------------------------------------------
@@ -75,19 +81,37 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     // ---------------------------------------------------------------------------------------
 
     /**
-     * Batch cancellation for expired proof deadlines. Loops in this method's single
-     * {@code @Transactional} boundary so all per-reservation cancellations participate in the
-     * same transaction.
+     * Batch cancellation for expired proof deadlines. Deliberately NOT {@code @Transactional}: each
+     * reservation is cancelled in its OWN transaction via
+     * {@link ExpiredPaymentProofRowCanceller#cancelExpiredReservation(long, OffsetDateTime)} (propagation
+     * {@code REQUIRES_NEW}), so one failing row can no longer roll back the whole batch and the per-row
+     * lock is released promptly. The cancellation email is sent AFTER the per-row commit and is guarded
+     * by its own try/catch, so a mail failure neither rolls back the (already committed) cancellation nor
+     * aborts the sweep — and, crucially, no email is dispatched for a cancellation that rolled back.
      */
     @Override
-    @Transactional
     public void cancelExpiredPendingPaymentReservations() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         int cancelled = 0;
         for (final Reservation r : reservationService.findPendingPaymentPastDeadline(now)) {
-            if (reservationService.cancelPendingMissingPaymentProofIfEligible(r.getId(), now) > 0) {
-                mailComposer.sendCancellationEmail(r, true);
-                cancelled++;
+            final Optional<Reservation> refreshedOpt;
+            try {
+                refreshedOpt = expiredPaymentProofRowCanceller.cancelExpiredReservation(r.getId(), now);
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(r.getId())
+                        .log("Failed to cancel expired pending reservation (reservation id={})");
+                continue;
+            }
+            if (refreshedOpt.isEmpty()) {
+                continue;
+            }
+            cancelled++;
+            final Reservation refreshed = refreshedOpt.get();
+            try {
+                mailComposer.sendCancellationEmail(refreshed, true);
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(refreshed.getId())
+                        .log("Failed to send expiration cancellation email (reservation id={})");
             }
         }
         LOGGER.atInfo().addArgument(cancelled).log("Payment proof deadline sweep: cancelled {} pending reservation(s)");
@@ -270,8 +294,10 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     // Reminder jobs
     // ---------------------------------------------------------------------------------------
 
+    // Deliberately NOT @Transactional: each reminder is claimed in its own REQUIRES_NEW transaction and
+    // the @Async email is sent only AFTER that claim commits, so a rolled-back batch cannot leave a
+    // reminder marked-sent-but-not-delivered nor re-send a duplicate on the next run.
     @Override
-    @Transactional
     public void dispatchDuePaymentProofReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsWithDuePendingPaymentProof(now);
@@ -284,7 +310,15 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
                         .log("Skipping due payment proof reminder: missing data (reservation id={})");
                 continue;
             }
-            if (reservationService.claimPendingPaymentProofEmailSent(reservation.getId()) == 0) {
+            final boolean claimed;
+            try {
+                claimed = sweepRowProcessor.claimDuePaymentProofReminder(reservation.getId());
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to claim due payment proof reminder (reservation id={})");
+                continue;
+            }
+            if (!claimed) {
                 continue;
             }
             try {
@@ -298,15 +332,24 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         LOGGER.atInfo().addArgument(queued).log("Due payment proof reminder run: queued {} email(s)");
     }
 
+    // Deliberately NOT @Transactional: same per-row claim-then-mail-after-commit pattern as the
+    // due-payment-proof reminder above.
     @Override
-    @Transactional
     public void dispatchDueRefundProofReminderEmails() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> candidates = reservationService.findReservationsWithDuePendingRefundProof(now);
         LOGGER.atInfo().addArgument(candidates.size()).log("Due refund proof reminder run: {} candidate reservation(s)");
         int queued = 0;
         for (final Reservation reservation : candidates) {
-            if (reservationService.claimPendingRefundEmailSent(reservation.getId()) == 0) {
+            final boolean claimed;
+            try {
+                claimed = sweepRowProcessor.claimDueRefundProofReminder(reservation.getId());
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(reservation.getId())
+                        .log("Failed to claim due refund proof reminder (reservation id={})");
+                continue;
+            }
+            if (!claimed) {
                 continue;
             }
             try {
@@ -320,8 +363,8 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         LOGGER.atInfo().addArgument(queued).log("Due refund proof reminder run: queued {} email(s)");
     }
 
+    // Pure @Async mail dispatch (no DB writes): no transaction needed.
     @Override
-    @Transactional
     public void sendOwnerRefundProofObligationEmail(final Reservation reservation, final boolean dueReminder) {
         mailComposer.sendOwnerRefundProofObligation(reservation, dueReminder);
     }
@@ -330,8 +373,10 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
     // Refund overdue sweep
     // ---------------------------------------------------------------------------------------
 
+    // Deliberately NOT @Transactional: each owner is blocked in its own REQUIRES_NEW transaction and the
+    // block email is sent only AFTER that commit, so a rolled-back batch never emails an owner who was not
+    // actually blocked (which would re-block + re-email next run).
     @Override
-    @Transactional
     public void sweepRefundOverdueAndBlockOwners() {
         final OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         final List<Reservation> overdue = reservationService.findReservationsWithOverdueRefundProof(now);
@@ -348,21 +393,23 @@ public class ReservationPaymentServiceImpl implements ReservationPaymentService 
         int blockedCount = 0;
         for (final Map.Entry<Long, List<Reservation>> entry : byOwner.entrySet()) {
             final long ownerId = entry.getKey();
+            final Optional<User> blockedOwner;
             try {
-                final Optional<User> ownerOpt = userService.getUserById(ownerId);
-                if (ownerOpt.isEmpty()) {
-                    continue;
-                }
-                final User owner = ownerOpt.get();
-                if (owner.isBlocked()) {
-                    continue;
-                }
-                userService.blockUser(ownerId);
-                blockedCount++;
-                mailComposer.sendOwnerBlockedEmail(owner, entry.getValue());
+                blockedOwner = sweepRowProcessor.blockOwnerForRefundOverdueIfEligible(ownerId);
             } catch (final RuntimeException e) {
                 LOGGER.atError().setCause(e).addArgument(ownerId)
                         .log("Failed to block ownerId={} during refund-overdue sweep");
+                continue;
+            }
+            if (blockedOwner.isEmpty()) {
+                continue;
+            }
+            blockedCount++;
+            try {
+                mailComposer.sendOwnerBlockedEmail(blockedOwner.get(), entry.getValue());
+            } catch (final RuntimeException e) {
+                LOGGER.atError().setCause(e).addArgument(ownerId)
+                        .log("Failed to send owner-blocked email (ownerId={})");
             }
         }
         LOGGER.atInfo().addArgument(blockedCount).log("Refund-overdue sweep: blocked {} owner(s)");

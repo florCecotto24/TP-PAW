@@ -117,7 +117,7 @@ public class ReservationQueryServiceImpl implements ReservationQueryService {
                 if (r == null || r.isBlank()) {
                     continue;
                 }
-                final String u = r.trim().toUpperCase();
+                final String u = r.trim().toUpperCase(Locale.ROOT);
                 if (RATING_BANDS.contains(u)) {
                     ratingBands.add(u);
                 }

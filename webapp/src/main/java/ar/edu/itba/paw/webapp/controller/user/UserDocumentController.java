@@ -25,6 +25,7 @@ import ar.edu.itba.paw.models.domain.user.UserDocumentType;
 import ar.edu.itba.paw.models.dto.file.BinaryContent;
 import ar.edu.itba.paw.services.user.UserService;
 import ar.edu.itba.paw.webapp.support.BinaryPayloadSupport;
+import ar.edu.itba.paw.webapp.support.CacheableBinaryResponses;
 
 /**
  * Profile documents ({@code /users/{id}/documents/{documentType}}).
@@ -96,9 +97,8 @@ public class UserDocumentController {
     }
 
     private Response binaryResponse(final BinaryContent content) {
-        return Response.ok(content.getBytes())
-                .type(content.getContentType())
-                .build();
+        // KYC documents are sensitive: never cache, never sniff, always download (see helper).
+        return CacheableBinaryResponses.sensitive(content, content.getFileName());
     }
 
     private static UserDocumentType parseDocumentType(final String raw) {

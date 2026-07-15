@@ -39,8 +39,14 @@ public class ModelController {
     @PreAuthorize("@userResourceAccess.isAdmin()")
     @Produces(VndMediaType.MODEL_V1_JSON)
     public Response listPendingModels(@QueryParam("validated") final Boolean validated) {
-        if (validated == null || Boolean.TRUE.equals(validated)) {
-            return Response.status(Response.Status.BAD_REQUEST).build();
+        // This is the admin moderation queue of PENDING models. An omitted `validated` defaults to the
+        // pending view (never a bare 400). `validated=true` has no collection here (validated models are
+        // reached through their brand), so it is a real client error — and it must carry a structured
+        // ErrorDto body (rendered by WebApplicationExceptionMapper), never an empty 400.
+        if (Boolean.TRUE.equals(validated)) {
+            throw new javax.ws.rs.BadRequestException(
+                    "GET /models only serves the pending-model moderation queue; use validated=false (or omit it). "
+                            + "Validated models are reached via their brand.");
         }
         final List<ModelDto> dtos = carModelService.findPendingOrdered().stream()
                 .map(model -> ModelDto.from(model, uriInfo))

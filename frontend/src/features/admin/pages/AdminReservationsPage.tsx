@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../i18n/dateFormat';
 import { collectionQueryPath } from '../../../api/apiDiscovery';
 import { MediaTypes } from '../../../api/mediaTypes';
+import { pageIndexFromParams, withPageIndex } from '../../../api/pageParam';
 import { EmptyState, LoadingBlock } from '../../../components/ryden';
 import AdminPageHeader from '../components/AdminPageHeader';
 import AdminPagination from '../components/AdminPagination';
@@ -17,9 +19,17 @@ export default function AdminReservationsPage() {
   const { t, i18n } = useTranslation();
   const errorMessage = useAdminErrorMessage();
   const { isAdmin, loading: guardLoading } = useAdminGuard();
+  // La página vive en la URL (?page=N, 0-based como SearchPage) -> bookmarkeable y resiste refresh.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageIndex = pageIndexFromParams(searchParams);
+  const goToPage = useCallback(
+    (next: number) => setSearchParams(withPageIndex(searchParams, next)),
+    [searchParams, setSearchParams],
+  );
   const list = usePagedList<ReservationSummaryDto>(
-    guardLoading || !isAdmin ? '' : collectionQueryPath('reservations', { page: '1' }),
+    guardLoading || !isAdmin ? '' : collectionQueryPath('reservations'),
     MediaTypes.reservationLinks,
+    pageIndex + 1,
     [],
     MediaTypes.reservationSummary,
   );
@@ -84,7 +94,7 @@ export default function AdminReservationsPage() {
         </div>
       ) : null}
 
-      <AdminPagination page={list.page} onGo={list.goTo} />
+      <AdminPagination page={list.page} currentPage={pageIndex} onPageChange={goToPage} />
     </>
   );
 }

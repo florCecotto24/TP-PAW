@@ -1,7 +1,11 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import PublishCarPage from './PublishCarPage';
-import MyCarsPage from './MyCarsPage';
-import OwnerCarDetailPage from './OwnerCarDetailPage';
+
+// Ninguna de estas es la ruta index de la app (esa es browse Home, que se queda
+// eager) -> code-splitting seguro: solo se llega acá navegando.
+const PublishCarPage = lazy(() => import('./PublishCarPage'));
+const MyCarsPage = lazy(() => import('./MyCarsPage'));
+const OwnerCarDetailPage = lazy(() => import('./OwnerCarDetailPage'));
 
 export const ownerRoutes: RouteObject[] = [
   { path: 'publish-car', element: <PublishCarPage /> },

@@ -39,6 +39,16 @@ export interface TokenAccessors {
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
+// Provider del idioma activo para el header `Accept-Language` (LINEAMIENTOS §3.3). Se inyecta desde
+// la capa i18n (setAcceptLanguageProvider) para no acoplar este cliente a i18next; por defecto no
+// agrega el header (tests / contexto sin i18n).
+let acceptLanguageProvider: () => string | null = () => null;
+
+/** Registra el proveedor del idioma activo usado en `Accept-Language`. */
+export function setAcceptLanguageProvider(provider: () => string | null): void {
+  acceptLanguageProvider = provider;
+}
+
 export interface RequestOptions {
   method?: HttpMethod;
   /** MIME that se manda en `Accept` (lectura). Default: ninguno. */
@@ -322,6 +332,9 @@ export class HypermediaClient {
   private buildInit(opts: RequestOptions, authorization: string | null): RequestInit {
     const headers = new Headers();
     if (opts.accept) headers.set('Accept', opts.accept);
+    // i18n client-side: el backend negocia idioma por Accept-Language (LINEAMIENTOS §3.3).
+    const acceptLanguage = acceptLanguageProvider();
+    if (acceptLanguage) headers.set('Accept-Language', acceptLanguage);
 
     let body: BodyInit | undefined;
     let isFormData = false;

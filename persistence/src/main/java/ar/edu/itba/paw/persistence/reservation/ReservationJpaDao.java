@@ -654,7 +654,7 @@ public class ReservationJpaDao implements ReservationDao {
                                 + "AND r.endDate < :now "
                                 + "AND NOT EXISTS ("
                                 + "  SELECT 1 FROM Review rv "
-                                + "  WHERE rv.reservation = r AND rv.id.madeByRider = TRUE)",
+                                + "  WHERE rv.reservation = r AND rv.madeByRider = TRUE)",
                         Reservation.class)
                 .setParameter("statuses", RIDER_REVIEW_INVITE_STATUSES)
                 .setParameter("now", now)
@@ -670,7 +670,7 @@ public class ReservationJpaDao implements ReservationDao {
                                 + "AND r.endDate <= :endDateCutoff "
                                 + "AND NOT EXISTS ("
                                 + "  SELECT 1 FROM Review rv "
-                                + "  WHERE rv.reservation = r AND rv.id.madeByRider = TRUE)",
+                                + "  WHERE rv.reservation = r AND rv.madeByRider = TRUE)",
                         Reservation.class)
                 .setParameter("statuses", REVIEW_AUTO_SKIP_STATUSES)
                 .setParameter("endDateCutoff", endDateCutoff)
@@ -690,7 +690,7 @@ public class ReservationJpaDao implements ReservationDao {
                                 + "AND r.carReturnedAt <= :carReturnedAtCutoff "
                                 + "AND NOT EXISTS ("
                                 + "  SELECT 1 FROM Review rv "
-                                + "  WHERE rv.reservation = r AND rv.id.madeByRider = FALSE)",
+                                + "  WHERE rv.reservation = r AND rv.madeByRider = FALSE)",
                         Reservation.class)
                 .setParameter("statuses", REVIEW_AUTO_SKIP_STATUSES)
                 .setParameter("carReturnedAtCutoff", carReturnedAtCutoff)

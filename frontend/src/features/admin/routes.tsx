@@ -1,12 +1,19 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
 import AdminLayout from './components/AdminLayout';
-import AdminPanelPage from './pages/AdminPanelPage';
-import AdminUsersPage from './pages/AdminUsersPage';
-import AdminCreateUserPage from './pages/AdminCreateUserPage';
-import AdminCatalogPage from './pages/AdminCatalogPage';
-import AdminCarsPage from './pages/AdminCarsPage';
-import AdminReservationsPage from './pages/AdminReservationsPage';
-import AdminReservationChatPage from './pages/AdminReservationChatPage';
+
+// Code-splitting: el área admin es solo para rol ADMIN, así que sus páginas se
+// cargan bajo demanda (no inflan el bundle inicial de visitantes anónimos /
+// usuarios comunes). `AdminLayout` (shell + guard + nav) queda eager porque es
+// el punto de entrada de `/admin`; el `<Suspense>` que cubre estos lazy() vive
+// en su `<Outlet>`.
+const AdminPanelPage = lazy(() => import('./pages/AdminPanelPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
+const AdminCreateUserPage = lazy(() => import('./pages/AdminCreateUserPage'));
+const AdminCatalogPage = lazy(() => import('./pages/AdminCatalogPage'));
+const AdminCarsPage = lazy(() => import('./pages/AdminCarsPage'));
+const AdminReservationsPage = lazy(() => import('./pages/AdminReservationsPage'));
+const AdminReservationChatPage = lazy(() => import('./pages/AdminReservationChatPage'));
 
 export const adminRoutes: RouteObject[] = [
   {

@@ -1,6 +1,7 @@
 package ar.edu.itba.paw.persistence.car;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
@@ -73,7 +74,7 @@ public class CarBrandJpaDao implements CarBrandDao {
         }
         return em.createQuery(
                 "FROM CarBrand b WHERE LOWER(b.name) = :name", CarBrand.class)
-                .setParameter("name", normalized.toLowerCase())
+                .setParameter("name", normalized.toLowerCase(Locale.ROOT))
                 .getResultList()
                 .stream()
                 .findFirst();

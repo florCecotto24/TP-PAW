@@ -72,11 +72,21 @@ public final class UserRepresentationSupport {
         }
         final MediaType privateType = MediaType.valueOf(VndMediaType.USER_PRIVATE_V1_JSON);
         for (final MediaType candidate : acceptable) {
+            // A bare wildcard (Accept: */* or absent) must resolve to the PUBLIC representation, not the
+            // private one: otherwise an anonymous GET /users/{id} with */* is compatible with the private
+            // type and gets a 403 instead of the public profile. Only an explicit private MIME opts in.
+            if (isWildcard(candidate)) {
+                continue;
+            }
             if (candidate.isCompatible(privateType)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static boolean isWildcard(final MediaType candidate) {
+        return candidate.isWildcardType() || candidate.isWildcardSubtype();
     }
 
     public Response buildUserResponse(

@@ -10,11 +10,17 @@ spring.datasource.password=change-me-deployed
 # Public base URL for email CTAs (Pampero / production origin, no trailing slash)
 mail.app.base.url=http://pawserver.it.itba.edu.ar/paw-2026a-08
 
-# Spring Security remember-me (use a long random secret in production)
-app.security.remember-me.key=change-me-remember-me-key
+# JWT signing secret (REQUIRED outside local/test: the app fails to start if blank in a deployed profile).
+# Use a long, fixed random value (>= 32 bytes recommended) so tokens survive restarts/redeploys. It is
+# hashed with SHA-256 to derive the HMAC key, so any length is accepted — but a stable value is essential.
+app.security.jwt.secret=change-me-to-a-long-random-secret
 
 # Gmail / SMTP app password
 mail.server.password=change-me-smtp
+
+# Schema is owned by Flyway in production; Hibernate must not auto-mutate it. Use "validate" to fail fast
+# on drift, or "none" to skip the check. Never "update" outside local.
+hibernate.hbm2ddl.auto=none
 
 # CORS is disabled when the "local" profile is inactive (default on Pampero): SPA and API share the same
 # origin from this WAR. Do not re-enable wildcard CORS in production.
